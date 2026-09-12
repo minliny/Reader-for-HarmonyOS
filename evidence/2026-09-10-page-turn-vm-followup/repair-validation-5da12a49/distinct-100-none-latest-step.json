@@ -1,0 +1,37 @@
+{
+  "direction": "previous",
+  "turn": 100,
+  "previous": {
+    "slot": "reader-page-slot-b",
+    "sha256": "fea23076cf477f75f8f0e7e051a18fbca58bb7b79b37e39b766ffce3c70f41fd",
+    "chapter": 25,
+    "ordinal": 2,
+    "total": 4,
+    "start": 260,
+    "end": 525,
+    "bodyLength": 265,
+    "first": [
+      "到前页和后页时是否仍然连续。阅读",
+      "暂停后又继续，段落边界和换行都应"
+    ],
+    "footer": "第 2 / 4 页"
+  },
+  "current": {
+    "slot": "reader-page-slot-a",
+    "sha256": "1e6a7861a17240fa521ae83d6c1d8f0b455b95a6a99479d1b4fd0dc3b3e07463",
+    "chapter": 25,
+    "ordinal": 1,
+    "total": 4,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章025段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 / 4 页"
+  },
+  "extraReads": 0,
+  "observedSettledUpperBoundMs": 1535.1358339999592,
+  "scope": "host action and layout-dump overhead included; read-only followup, no turn retries"
+}

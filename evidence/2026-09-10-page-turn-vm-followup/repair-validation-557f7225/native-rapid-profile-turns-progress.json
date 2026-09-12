@@ -1,0 +1,163 @@
+{
+  "mode": "仿真",
+  "count": 12,
+  "intervalMs": 30,
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+    "chapter": 36,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章036段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "expected": {
+    "slot": "reader-page-slot-a",
+    "sha256": "b92fca93201369c889e6735614d49a33331ac55b64a660ab630685cce72520d4",
+    "chapter": 39,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章039段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "samples": [
+    {
+      "direction": "next",
+      "elapsedSeconds": 2.389608,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "548eb4df8a2e8d7a2b2073c6a678610973b56b9770202b8c3529f7008bc19b26",
+        "chapter": 38,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章038段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 3.2636584579999997,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-b",
+        "sha256": "0c1a9851ba6b3d0df82c6f86964fecc6b282a58795cba220f85fbae018f1d6f9",
+        "chapter": 39,
+        "ordinal": 2,
+        "total": null,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 4.170943749999999,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "b92fca93201369c889e6735614d49a33331ac55b64a660ab630685cce72520d4",
+        "chapter": 39,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章039段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 2.395639000000001,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "b1fc880585e1aa1dbcd1e18f998d7e9fd31fcf8d74ee62eaf4c4c79537b51e9b",
+        "chapter": 37,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章037段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 3.267041375,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-b",
+        "sha256": "4c866c5b84a65a5219053553ffac928a76802dd46b9d0054f8a1c670020c0f02",
+        "chapter": 36,
+        "ordinal": 4,
+        "total": 4,
+        "start": 801,
+        "end": 1050,
+        "bodyLength": 249,
+        "first": [
+          "暂停后又继续，段落边界和换行都应",
+          "保持原来的顺序。这里的编号是测试"
+        ],
+        "footer": "第 4 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 4.145024750000001,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+        "chapter": 36,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章036段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    }
+  ],
+  "next": {
+    "injectionSeconds": 1.702304958,
+    "settledObservationUpperBoundSeconds": 4.170943749999999,
+    "conservativePagesPerSecond": 2.877046711550594,
+    "status": "PASS canonical net target"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "source-snapshot.json": {
+    "checked": 512,
+    "drift": []
+  },
+  "controller-snapshot.json": {
+    "checked": 223,
+    "drift": []
+  },
+  "workspace-contract-snapshot.json": {
+    "checked": 15,
+    "drift": []
+  }
+}

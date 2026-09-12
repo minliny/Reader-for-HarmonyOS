@@ -1,0 +1,117 @@
+{
+  "capturedAt": "2026-09-09T16:49:12.916204+00:00",
+  "boundary": "current local workspace read-only audit; not an installed HAP fingerprint",
+  "root": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+  "files": [
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+      "sha256": "b289e7493a11f40980296f39ceb7bd4b1fb335ddc776cb5ec3ecefb5548dd3d7",
+      "bytes": 49982
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.h",
+      "sha256": "8781a56f9d70f57499b030c39a6185ddfe9b82266b313350aebc11d2ff908aea",
+      "bytes": 9989
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.cpp",
+      "sha256": "5ba39637a00001ce9fea2fbb790a1ecada223ef944c26733cc3789bb49aaa381",
+      "bytes": 38550
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.h",
+      "sha256": "00c735b143581d28aace16bf820f4328dfb61837869777e76654d4770d481f31",
+      "bytes": 5776
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.cpp",
+      "sha256": "1e1d6775d298d4640155ee3ce9bdf099283b23d415786da1616486de2a4339a4",
+      "bytes": 7961
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.h",
+      "sha256": "d1152e041d98e23de3d515ea77dd1273a7e3136f8b1fcb6605b8b533f4e9ac5c",
+      "bytes": 5506
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.cpp",
+      "sha256": "c3a8c05fa929ad2faeb91c84a1165bba178b06e066ed6742a34ec064f2dfaa0d",
+      "bytes": 21459
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_napi.cpp",
+      "sha256": "02dc972024b6db4f875576f23e9f89f00df4068605c19f0025605c1403954155",
+      "bytes": 19412
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "sha256": "e62d6e22186d191d2e1495bbea233dc55a9b0a68bc095af69e307430c17a4b74",
+      "bytes": 436129
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+      "sha256": "27a4b9bc9ca330f2b3a53897f51513a52ee865b0ef1a36606ae747f80a09c92a",
+      "bytes": 23154
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "sha256": "6b56be517323319275e01c3b2c608b81da79dcf3e631287aaf87bb09e143848d",
+      "bytes": 24435
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookTurnSurface.ets",
+      "sha256": "b77725e58912a4828e58c8ddfbe3f3bcc2ee9ec9997220feecbc1320bd78fc3c",
+      "bytes": 807
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/BookTurnPresentationSession.ets",
+      "sha256": "40d3365a33143cb2f7c4263956135ab6feef343b15effd248158c1c17ffeb0db",
+      "bytes": 4826
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/BookTurnTextureBuilder.ets",
+      "sha256": "99fe5cbacf3cb44162137e405b8546eeced305f5c957b94cad6c060964deb145",
+      "bytes": 2178
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_solver_test.cpp",
+      "sha256": "11aaef1f8f9f39cecd06cf440a16466d0ae76c9951e48c45f2dc67d2e90e7035",
+      "bytes": 52213
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_motion_test.cpp",
+      "sha256": "91e5d4d16577adf03f46324cea4480e69e5f971b520a07b1db5ee59d3fd275a2",
+      "bytes": 26710
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_render_state_test.cpp",
+      "sha256": "2ca24148c300731eb72a0c85dc2ff711c99e2afc4225db8c37a8c7b7fc5c0964",
+      "bytes": 13677
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_present_barrier_test.cpp",
+      "sha256": "7096a9e147fb0ea01bc7108ef9c6e03f8f80843abb91d3e715da35dd2b46d209",
+      "bytes": 29753
+    },
+    {
+      "path": "docs/BOOK_PAGE_TURN_CONTRACT_V1_2026-08-28.md",
+      "sha256": "eb2d500dc943384d8a0cb3a288ba937e921c75c4e61969221666e2c1a8e498fb",
+      "bytes": 44125
+    },
+    {
+      "path": "docs/BOOK_PAGE_TURN_CONTRACT_V2_2026-08-29.md",
+      "sha256": "f1675683209b9c11245d14681108ae0ebbe703ec1cd5937f388cc0364b9f312e",
+      "bytes": 35852
+    },
+    {
+      "path": "docs/BOOK_PAGE_RAPID_TURN_CONTRACT_2026-08-31.md",
+      "sha256": "66b3011ab5f084a5d6fd208f0a7cb2c859474d0dc4538b12ac15c87617ad79fd",
+      "bytes": 3396
+    },
+    {
+      "path": "evidence/2026-09-10-page-turn-physical-b1f20b88963d/CURRENT_NATIVE_AUDIT.md",
+      "sha256": "4250d6846767f13248d63171980664419dc3c573e5d3495dcf8a262ef012a29a",
+      "bytes": 16456
+    }
+  ]
+}

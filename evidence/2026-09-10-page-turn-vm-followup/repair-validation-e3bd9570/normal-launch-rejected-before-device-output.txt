@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/tmp/reader_vm_actions.py", line 1, in <module>
+    exec(open('/tmp/reader_vm_common.py').read())
+  File "<string>", line 13, in <module>
+  File "<string>", line 9, in run
+AssertionError

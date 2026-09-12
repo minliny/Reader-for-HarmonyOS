@@ -1,0 +1,137 @@
+{
+  "status": "PASS",
+  "mode": "无动画",
+  "results": [
+    {
+      "direction": "next",
+      "before": {
+        "slot": "reader-page-slot-a",
+        "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+        "chapter": 37,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章037段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      },
+      "after": {
+        "slot": "reader-page-slot-b",
+        "sha256": "38d3594f312aacdffacb313be19de78bf3097ec46c84b94b73e6f51d107fff4e",
+        "chapter": 37,
+        "ordinal": 2,
+        "total": 4,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 / 4 页"
+      },
+      "samples": [
+        {
+          "requestedSeconds": 1.2,
+          "completedAtSeconds": 1.460744709,
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/reader-control-moved-hold-none-next-held-0.png",
+          "inputStillRunning": true
+        },
+        {
+          "requestedSeconds": 3,
+          "completedAtSeconds": 3.272940125,
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/reader-control-moved-hold-none-next-held-1.png",
+          "inputStillRunning": true
+        },
+        {
+          "requestedSeconds": 5,
+          "completedAtSeconds": 5.2642675,
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/reader-control-moved-hold-none-next-held-2.png",
+          "inputStillRunning": true
+        }
+      ],
+      "bodyMeanDifferenceHeldFirstLast": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bodyChangedPixelsOver8": 0,
+      "bodyMeanDifferenceFromOrigin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inputElapsedSeconds": 6.524461625000001
+    },
+    {
+      "direction": "previous",
+      "before": {
+        "slot": "reader-page-slot-b",
+        "sha256": "38d3594f312aacdffacb313be19de78bf3097ec46c84b94b73e6f51d107fff4e",
+        "chapter": 37,
+        "ordinal": 2,
+        "total": 4,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 / 4 页"
+      },
+      "after": {
+        "slot": "reader-page-slot-a",
+        "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+        "chapter": 37,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章037段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      },
+      "samples": [
+        {
+          "requestedSeconds": 1.2,
+          "completedAtSeconds": 1.459331208,
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/reader-control-moved-hold-none-previous-held-0.png",
+          "inputStillRunning": true
+        },
+        {
+          "requestedSeconds": 3,
+          "completedAtSeconds": 3.2590288750000003,
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/reader-control-moved-hold-none-previous-held-1.png",
+          "inputStillRunning": true
+        },
+        {
+          "requestedSeconds": 5,
+          "completedAtSeconds": 5.264040083000001,
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/reader-control-moved-hold-none-previous-held-2.png",
+          "inputStillRunning": true
+        }
+      ],
+      "bodyMeanDifferenceHeldFirstLast": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "bodyChangedPixelsOver8": 0,
+      "bodyMeanDifferenceFromOrigin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "inputElapsedSeconds": 6.5413274170000015
+    }
+  ],
+  "scope": "public uinput move400ms then keep6000ms; screenshots1.2/3/5s compare body while command remains alive; exact canonical release and reverse restoration. Input tool keep behavior follows live help, no claim of first-event touch-to-photon timing."
+}

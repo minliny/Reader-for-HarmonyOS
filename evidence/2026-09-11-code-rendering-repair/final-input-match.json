@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-09-11T14:27:00.524Z",
+  "runId": "20260911T142055Z-35f2f99a-5dc18ed4",
+  "snapshots": {
+    "source": {
+      "fileCount": 518,
+      "fingerprint": "af695aa808b84e2105b3d31865c223fde68a64d0039896907868258529d752b0",
+      "expectedFingerprint": "5dc18ed47636fdaa4d651dec60d78b69a853d7c1012aa5684c3bbe2c1fadff39",
+      "match": false
+    },
+    "controller": {
+      "fileCount": 227,
+      "fingerprint": "97ebabb002ae8eb0aac96bf74ab99c59ac81fed27d0ff40186c8eb0d449cc13f",
+      "expectedFingerprint": "0ddcc12c11f442695e761579860bcbf792bee630aa14f89a1e4704ccce3924d4",
+      "match": false
+    },
+    "workspace": {
+      "fileCount": 15,
+      "fingerprint": "f9f1aa580c47d545de2492c04918db9e3a81ff865852707ba93d06e0f5e2e6aa",
+      "expectedFingerprint": "f9f1aa580c47d545de2492c04918db9e3a81ff865852707ba93d06e0f5e2e6aa",
+      "match": true
+    }
+  }
+}

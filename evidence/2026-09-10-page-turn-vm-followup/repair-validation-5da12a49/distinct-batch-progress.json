@@ -1,0 +1,30 @@
+[
+  {
+    "mode": "滑动",
+    "result": "distinct-100-slide-result.json",
+    "status": "PASS",
+    "elapsedSeconds": 310.59026383400004,
+    "extraReadTurns": 0
+  },
+  {
+    "mode": "覆盖",
+    "result": "distinct-100-cover-result.json",
+    "status": "PASS",
+    "elapsedSeconds": 310.44747912500003,
+    "extraReadTurns": 0
+  },
+  {
+    "mode": "仿真",
+    "result": "distinct-100-simulation-result.json",
+    "status": "PASS",
+    "elapsedSeconds": 310.11351824999997,
+    "extraReadTurns": 1
+  },
+  {
+    "mode": "无动画",
+    "result": "distinct-100-none-result.json",
+    "status": "PASS",
+    "elapsedSeconds": 333.21549029100004,
+    "extraReadTurns": 0
+  }
+]

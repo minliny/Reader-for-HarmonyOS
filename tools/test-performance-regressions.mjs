@@ -19,9 +19,13 @@ const multiSelect = read('entry/src/main/ets/features/bookshelf/BookshelfMultiSe
 const management = read('entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets');
 const sourceTools = read('entry/src/main/ets/features/source/SourceToolsPage.ets');
 
-assert.match(index, /SEARCH_DETAIL_WARMUP_LIMIT = 2/);
-assert.match(index, /const cacheAttempt = this\.openCachedSearchCandidate[\s\S]*const onlineAttempt =/);
-assert.match(index, /firstSuccessfulDetailAdmission\(\[cacheAttempt, onlineAttempt\]\)/);
+const acquisition = read('entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const scheduler = read('entry/src/main/ets/app/BookRequestScheduler.ts');
+assert.match(acquisition, /this\.preparationActive < 2/);
+assert.match(scheduler, /job\.priority !== 'foreground' && this\.active >= 5/,
+  'reading retains reserved capacity while source/search work is running');
+assert.match(index, /bookAcquisitions\(\)[\s\S]*?acquireBookWithBackgroundRefresh\(seeds\[0\]/,
+  'first-click detail admission must use the shared cache-first/background-refresh coordinator');
 assert.match(index, /PERF search-detail-admission/,
   'device runs must expose first-click admission latency instead of relying on subjective timing');
 
@@ -43,7 +47,7 @@ assert.ok(reading.indexOf('this.loadInitialToc(isCurrent)') < reading.indexOf('a
   'initial TOC/progress must begin before the appearance barrier');
 assert.match(reading, /chapterImageByStartScalar: Map<number, ReadingSessionImage>/);
 assert.match(reading, /continuousFragmentIndexByStartScalar: Map<number, number>/);
-assert.match(continuous, /fragmentDataSource\.update\(this\.changedFragmentIndex/);
+assert.match(continuous, /fragmentDataSource\.update\(changed/);
 assert.match(reading, /PAGETURN_PERF style=%\{public\}s path=%\{public\}s/,
   'every paged transition must expose end-to-end device timing');
 assert.match(pageTurnStage, /\.renderGroup\(this\.compositorIsolation\)/,
@@ -61,10 +65,14 @@ assert.equal((shelfFlow.match(/loadBookshelf\(/g) ?? []).length, 1,
 for (const [name, source] of [
   ['multi-select', multiSelect],
   ['management', management],
-  ['source-tools', sourceTools],
 ]) {
   assert.match(source, /Repeat\([\s\S]*virtualScroll\(\{ reusable: true \}\)/,
     `${name} long collections must use reusable virtual rows`);
 }
+assert.match(sourceTools,
+  /class SourceToolListDataSource implements IDataSource[\s\S]*LazyForEach\(this\.sourceDataSource/,
+  'source-tools long collection must use the V1-compatible lazy data-source path');
+assert.doesNotMatch(sourceTools, /Repeat\([\s\S]*virtualScroll/,
+  'source-tools V1 component must not use unsupported Repeat virtualScroll');
 
 console.log('performance regression contracts: PASS');

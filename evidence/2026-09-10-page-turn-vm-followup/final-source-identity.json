@@ -1,0 +1,62 @@
+{
+  "at": "2026-09-10T11:01:50.044825+00:00",
+  "manifest": ".reader-artifacts/hap/20260910T013945Z-35f2f99a-9821e2a2/manifest.json",
+  "rows": [
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+      "currentSha256": "b289e7493a11f40980296f39ceb7bd4b1fb335ddc776cb5ec3ecefb5548dd3d7",
+      "manifestSha256": "b289e7493a11f40980296f39ceb7bd4b1fb335ddc776cb5ec3ecefb5548dd3d7",
+      "matches": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.cpp",
+      "currentSha256": "5ba39637a00001ce9fea2fbb790a1ecada223ef944c26733cc3789bb49aaa381",
+      "manifestSha256": "5ba39637a00001ce9fea2fbb790a1ecada223ef944c26733cc3789bb49aaa381",
+      "matches": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "currentSha256": "fd84a108ecb51b8ca060b7358ce52f59943861782b66b7459b024a6a18d04b85",
+      "manifestSha256": "fd84a108ecb51b8ca060b7358ce52f59943861782b66b7459b024a6a18d04b85",
+      "matches": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "currentSha256": "4223d363b719d583fd14d25b9bed3514f2f0f78aacbceb7e05445359cea344e6",
+      "manifestSha256": "4223d363b719d583fd14d25b9bed3514f2f0f78aacbceb7e05445359cea344e6",
+      "matches": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageChrome.ets",
+      "currentSha256": "468be42d12b78c68bebb2b6ad8a427b88394cd3d979e1e372a5bbed75bb4b90a",
+      "manifestSha256": "468be42d12b78c68bebb2b6ad8a427b88394cd3d979e1e372a5bbed75bb4b90a",
+      "matches": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+      "currentSha256": "27a4b9bc9ca330f2b3a53897f51513a52ee865b0ef1a36606ae747f80a09c92a",
+      "manifestSha256": "27a4b9bc9ca330f2b3a53897f51513a52ee865b0ef1a36606ae747f80a09c92a",
+      "matches": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "currentSha256": "6b56be517323319275e01c3b2c608b81da79dcf3e631287aaf87bb09e143848d",
+      "manifestSha256": "6b56be517323319275e01c3b2c608b81da79dcf3e631287aaf87bb09e143848d",
+      "matches": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+      "currentSha256": "1426a9cbd4a425d27fa16ff207723ff243537f35f68857d11c8ff83e20fa4115",
+      "manifestSha256": "1426a9cbd4a425d27fa16ff207723ff243537f35f68857d11c8ff83e20fa4115",
+      "matches": true
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/ReaderShell.ets",
+      "currentSha256": "92e77916c3a0b98ad994c8dbc31d9048844d2ebc33492e7512f70326d697dbe4",
+      "manifestSha256": "92e77916c3a0b98ad994c8dbc31d9048844d2ebc33492e7512f70326d697dbe4",
+      "matches": true
+    }
+  ],
+  "allListedMatch": true,
+  "scope": "Listed source files only; installed package inspected before VM acquisition; shared worktree contains unrelated changes."
+}

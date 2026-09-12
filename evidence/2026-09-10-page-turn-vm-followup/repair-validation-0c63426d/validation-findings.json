@@ -1,0 +1,10 @@
+{
+  "coldContinuousEntry": "FAIL",
+  "visibleStage": "paged fallback with 11% and no page total; center input inert",
+  "failedScenarios": [
+    "scroll-restore stopped before swipe because no continuous row existed",
+    "final-scroll-select stopped because center control did not open"
+  ],
+  "cause": "plain projection array changed after saved continuous setting admitted; render branch and paged overlay did not subscribe to continuousRenderRevision",
+  "repairCandidate": "reactive hasContinuousRenderContent shared by branch and overlay; build in progress"
+}

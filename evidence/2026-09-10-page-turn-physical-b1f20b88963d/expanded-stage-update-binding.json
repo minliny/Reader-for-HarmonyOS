@@ -1,0 +1,24 @@
+{
+  "sourceSha256": "fd84a108ecb51b8ca060b7358ce52f59943861782b66b7459b024a6a18d04b85",
+  "compiledSha256": "5d2abf3bd77583b8b883c71e99062c836f5ac9c26bfe8577281fee7daa640232",
+  "comparedBindings": {
+    "currentPage": "this.currentPageTurnRenderPage()",
+    "currentPageSlot": "this.pageTurnCurrentSlot",
+    "currentPageSnapshotId": "this.usesBookTurnSimulation() ?\n    READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID : ''",
+    "previousPage": "this.preparedPageTurnRenderPage('previous')",
+    "nextPage": "this.preparedPageTurnRenderPage('next')",
+    "pageTurnStyle": "this.effectivePageTurnStyle()",
+    "turnDirection": "this.pageTurnDirection",
+    "offsetX": "this.pageTurnOffsetX",
+    "viewportWidth": "this.pageTurnStageViewportWidth()",
+    "layout": "this.readingLayout()",
+    "appearance": "this.appearanceSnapshot",
+    "ttsHighlightStart": "this.ttsFollowHighlight ? this.ttsState.charStart : undefined",
+    "ttsHighlightEnd": "this.ttsFollowHighlight ? this.ttsState.charEnd : undefined",
+    "autoPageHighlightStart": "this.autoPageHighlightStart()",
+    "autoPageHighlightEnd": "this.autoPageHighlightEnd()",
+    "longPressSelectText": "this.readerTextSelectionEnabled()",
+    "translateY": "this.bookmarkPageOffsetY"
+  },
+  "callbackExpression": "{\n    currentPage: this.currentPageTurnRenderPage(),\n    currentPageSlot: this.pageTurnCurrentSlot,\n    currentPageSnapshotId: this.usesBookTurnSimulation() ?\n        READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID : '',\n    previousPage: this.preparedPageTurnRenderPage('previous'),\n    nextPage: this.preparedPageTurnRenderPage('next'),\n    pageTurnStyle: this.effectivePageTurnStyle(),\n    turnDirection: this.pageTurnDirection,\n    offsetX: this.pageTurnOffsetX,\n    viewportWidth: this.pageTurnStageViewportWidth(),\n    layout: this.readingLayout(),\n    appearance: this.appearanceSnapshot,\n    ttsHighlightStart: this.ttsFollowHighlight ? this.ttsState.charStart : undefined,\n    ttsHighlightEnd: this.ttsFollowHighlight ? this.ttsState.charEnd : undefined,\n    autoPageHighlightStart: this.autoPageHighlightStart(),\n    autoPageHighlightEnd: this.autoPageHighlightEnd(),\n    longPressSelectText: this.readerTextSelectionEnabled(),\n    translateY: this.bookmarkPageOffsetY\n}"
+}

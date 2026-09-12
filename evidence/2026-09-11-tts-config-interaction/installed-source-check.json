@@ -1,0 +1,11 @@
+{
+  "entry/src/main/ets/app/HarmonyHttpTtsHost.ts": true,
+  "entry/src/main/ets/app/HarmonySystemTtsHost.ts": true,
+  "entry/src/main/ets/features/reading/LocalReadingExperience.ets": true,
+  "entry/src/main/ets/features/reading/ReaderControlPanel.ets": true,
+  "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets": true,
+  "entry/src/main/ets/features/reading/ReaderHttpTtsManagerPanel.ets": true,
+  "entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts": true,
+  "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets": true,
+  "entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts": true
+}

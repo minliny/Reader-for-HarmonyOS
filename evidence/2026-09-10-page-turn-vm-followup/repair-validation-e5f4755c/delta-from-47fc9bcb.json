@@ -1,0 +1,8 @@
+{
+  "source-snapshot.json": [
+    "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets"
+  ],
+  "controller-snapshot.json": [
+    "tools/test-reader-page-input-runtime.mjs"
+  ]
+}

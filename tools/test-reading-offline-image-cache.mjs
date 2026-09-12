@@ -30,6 +30,16 @@ assert.match(
 );
 assert.match(cache, /inFlightWrites[\s\S]*writeLaneA[\s\S]*writeLaneB/,
   'ordinary background image persistence must be same-key coalesced and bounded to two lanes');
+assert.match(cache, /bookMutationTails[\s\S]*enqueueBookMutation/,
+  'clear/remove operations must serialize with background writes for one book');
+assert.match(cache, /bookMutationKey\(sourceId: string, bookId: string\)[\s\S]*JSON\.stringify\(\[sourceId, bookId\]\)/,
+  'per-book mutation keys must not collide when opaque IDs contain the delimiter');
+assert.match(cache, /async storeResource[\s\S]*enqueueBookMutation/,
+  'resource writes must enter the per-book mutation lane before filesystem I/O');
+assert.match(cache, /async removeResource[\s\S]*enqueueBookMutation/,
+  'resource removal must not race an in-flight prefetch write');
+assert.match(cache, /async clearBook[\s\S]*enqueueBookMutation/,
+  'book deletion must not be followed by a stale queued write');
 assert.doesNotMatch(cache, /writeSync|openSync|renameSync/);
 assert.match(cache, /pruneUnreferencedResources/);
 assert.doesNotMatch(cache, /bodyBase64|PixelMap/,

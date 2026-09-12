@@ -1,0 +1,4 @@
+ eader.harmonyos-2181    (   2181) [000] .... 419722.490522: tracing_mark_write: B|2181|H:DispatchTouchEvent id:10000, pointX=641.000000 pointY=1628.000000 type=0|M0539
+ eader.harmonyos-2181    (   2181) [000] .... 419722.554638: tracing_mark_write: B|2181|H:DispatchTouchEvent id:10000, pointX=641.000000 pointY=1628.000000 type=1|M0539
+ eader.harmonyos-2181    (   2181) [003] .... 419722.647150: tracing_mark_write: B|2181|H:DispatchTouchEvent id:10000, pointX=641.000000 pointY=1545.000000 type=0|M0539
+ eader.harmonyos-2181    (   2181) [000] .... 419726.689034: tracing_mark_write: B|2181|H:DispatchTouchEvent id:10000, pointX=641.000000 pointY=1580.000000 type=1|M0539

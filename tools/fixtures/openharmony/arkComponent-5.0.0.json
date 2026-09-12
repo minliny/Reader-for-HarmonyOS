@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/openharmony/arkui_ace_engine",
+  "ref": "OpenHarmony-5.0.0-Release",
+  "path": "frameworks/bridge/declarative_frontend/engine/arkComponent.js",
+  "gitBlob": "db887af84f29a4b7a4b26e6e25e80af753eaa344",
+  "sha256": "8cbdebc3527666e80915c7c455ce850e2cd4a8db5b646bc31f6741715b7dde71",
+  "license": "Apache-2.0",
+  "scope": "Unmodified upstream test fixture only; production uses installed ArkUI SDK API 23; this is not the VM runtime."
+}

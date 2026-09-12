@@ -1,0 +1,311 @@
+{
+  "mode": "仿真",
+  "count": 40,
+  "intervalMs": 30,
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+    "chapter": 36,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章036段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "expected": {
+    "slot": "reader-page-slot-a",
+    "sha256": "a05fdf57eadc91d68f4c7dd55c5c29db978c8369a324be46e6ad56ead3bd9b1f",
+    "chapter": 46,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章046段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "samples": [
+    {
+      "direction": "next",
+      "elapsedSeconds": 6.1492325,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "334f602222382a833dfb43d4430534c49c39eff56b35f405661aa69768fd357a",
+        "chapter": 41,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章041段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 7.089594041,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1f1758e73173d1ee6abd6d41564de250722ebcfc4b6975174c5eaae5a0c9c6fa",
+        "chapter": 42,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章042段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 7.9770903330000005,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "de6e65afc822c8b3259768ee63a8a76acffde8fa7118f7a52cd0a7ade757edd2",
+        "chapter": 43,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章043段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 8.853913749999998,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "2233f1af9a1b1dfaeaba038db5247007ee33ddb0aa3dd1ad0e2bc65992f6dde8",
+        "chapter": 44,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章044段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 9.720858415999999,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eacb9a5a6c9351702361df52a82093dbe4f33762bab8d3604e7ecd83392c8744",
+        "chapter": 45,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章045段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 10.579374708,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-b",
+        "sha256": "1e31ba4dc0e2e69fdb7d40315a10a14c8ab6557641e8f3f57b2eea228abb13cf",
+        "chapter": 46,
+        "ordinal": 2,
+        "total": null,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 11.447650207999999,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "a05fdf57eadc91d68f4c7dd55c5c29db978c8369a324be46e6ad56ead3bd9b1f",
+        "chapter": 46,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章046段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 6.174552582999999,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "b86ea6549f71c7943d88e3b30b17344eb5fe92b4e732df0ab2ed031d690b8826",
+        "chapter": 41,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章041段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 7.035492708000001,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-b",
+        "sha256": "19353a59912a9970bf5100c8156a8d8e0218998e8db33b3944c19a96fefe2ad3",
+        "chapter": 40,
+        "ordinal": 2,
+        "total": 4,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 7.906956207999999,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "af3df88efd60a454aba89e4972ea0c8e36394e1871aea69a4c7c576d07840fd3",
+        "chapter": 39,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章039段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 8.767068,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "640a7c7bdc500bfd195450279bade05492ad14444243e15b6c3363463b698b64",
+        "chapter": 38,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章038段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 9.641551250000001,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-b",
+        "sha256": "38d3594f312aacdffacb313be19de78bf3097ec46c84b94b73e6f51d107fff4e",
+        "chapter": 37,
+        "ordinal": 2,
+        "total": 4,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 10.547585583000002,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+        "chapter": 36,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章036段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    }
+  ],
+  "next": {
+    "injectionSeconds": 5.46966575,
+    "settledObservationUpperBoundSeconds": 11.447650207999999,
+    "conservativePagesPerSecond": 3.4941668616015775,
+    "status": "PASS canonical net target"
+  },
+  "previous": {
+    "injectionSeconds": 5.512861208000002,
+    "settledObservationUpperBoundSeconds": 10.547585583000002,
+    "conservativePagesPerSecond": 3.792337088448917,
+    "status": "PASS canonical net target"
+  },
+  "status": "PASS",
+  "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+}

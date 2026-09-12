@@ -24,14 +24,19 @@ assert.match(index, /private addDetailBook\(\): void \{[\s\S]*new ReaderCoreGate
 assert.match(index, /new SourceGateway\(owner\)\.loadSources\(\)[\s\S]*source\.sourceId !== session\.identity\.sourceId/,
   'a persisted shelf book must resolve its display name from the existing Core source registry');
 const remoteOpen = index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private openReading('));
-assert.ok(remoteOpen.indexOf("this.route = 'detail'") < remoteOpen.indexOf('gateway.openSession(seed, { isCurrent })'),
-  'remote navigation must mount the inert detail shell before serialized Core/network admission completes');
-assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.remoteReadingSession !== undefined && this\.detailToc\.length > 0/,
-  'the provisional detail shell must not expose reading/source-switch actions before session and TOC readiness');
+assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('gateway.openSession(seed, { isCurrent })'),
+  'remote navigation must publish the chosen shelf or detail entry before Core/network admission');
+assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.bookshelfRemovalActiveKey\.length === 0/,
+  'source browsing remains available even when the current source catalog failed');
 assert.match(index, /readingEnabled: this\.remoteContentVerdict === 'readable'/,
   'the start-reading action is enabled only after the leading-chapter verdict admits the content');
-assert.match(index, /probeRemoteContentVerdict\(gateway, session, isCurrent\)/,
-  'the verdict probe must reuse the admitted session instead of opening a second one');
+assert.match(index, /const contentProbe = this\.probeRemoteContentVerdict\([\s\S]*preferredResumeChapterIndex/,
+  'the verdict probe must reuse the admitted session and probe the exact persisted resume chapter');
+assert.match(remoteOpen,
+  /if \(resumeImmediately\) \{[\s\S]*contentProbe\.then[\s\S]*readableChapterIndex === undefined[\s\S]*this\.openReading/,
+  'a shelf resume must wait for a readable chapter verdict before mounting the reader');
+assert.doesNotMatch(remoteOpen, /if \(resumeImmediately\) \{\s*this\.openReading\(/,
+  'a shelf resume must never bypass chapter-body admission');
 assert.doesNotMatch(remoteOpen, /remoteShelf|remoteBookshelf|shelfBooks\s*=\s*new Map/,
   'remote books must not create a second UI-owned shelf store');
 assert.match(index, /this\.remoteReadingSession = session/);
@@ -39,8 +44,8 @@ assert.match(index, /this\.detailToc = session\.entries\.map/);
 assert.ok(remoteOpen.indexOf('this.detailToc = session.entries.map') <
   remoteOpen.indexOf('void bookshelf.loadShelfBook'),
   'remote detail readiness must not wait for the non-mutating shelf reconciliation');
-assert.match(index, /this\.route = 'detail'/,
-  'a validated remote session must enter the shared detail route');
+assert.match(remoteOpen, /const entryRoute = resumeImmediately \? this\.readingOriginRoute : 'detail';[\s\S]*this\.route = entryRoute/,
+  'a remote preview enters detail while shelf resume retains its already chosen origin');
 assert.doesNotMatch(index, /remote search result has no admitted detail flow/);
 assert.doesNotMatch(index, /remote reading not yet wired/);
 assert.match(index, /private reopenSwitchedBook\(book: ShelfBook\): void \{\s*this\.openShelfBook\(book\)/,

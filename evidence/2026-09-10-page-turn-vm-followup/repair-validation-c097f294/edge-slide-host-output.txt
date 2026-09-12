@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/tmp/reader_vm_long_edge_inputs.py", line 6, in <module>
+    n,total=ordinal(origin);assert 1<n<total,'need a middle page'
+AssertionError: need a middle page

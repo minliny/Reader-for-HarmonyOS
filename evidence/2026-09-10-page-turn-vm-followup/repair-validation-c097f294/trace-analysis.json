@@ -1,0 +1,6071 @@
+[
+  {
+    "file": "native-rapid-profile-trace.ftrace",
+    "entries": [
+      "entries-in-buffer/entries-written: 272591/272591   #P:4"
+    ],
+    "appPid": 2813,
+    "unmatchedAppEnds": 0,
+    "unmatchedAppStarts": 0,
+    "frames": [
+      {
+        "tid": 2813,
+        "start": 412884.996804,
+        "end": 412884.998313,
+        "wallMs": 1.509,
+        "name": "H:OnVsyncEvent now:412884995314142",
+        "guestScheduledMs": 1.509,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.49
+      },
+      {
+        "tid": 2813,
+        "start": 412885.014418,
+        "end": 412885.018181,
+        "wallMs": 3.763,
+        "name": "H:OnVsyncEvent now:412885010899797",
+        "guestScheduledMs": 2.375,
+        "guestOffCpuMs": 1.388,
+        "vsyncCallbackDelayMs": 3.518
+      },
+      {
+        "tid": 2813,
+        "start": 412885.028381,
+        "end": 412885.030697,
+        "wallMs": 2.316,
+        "name": "H:OnVsyncEvent now:412885026511287",
+        "guestScheduledMs": 0.98,
+        "guestOffCpuMs": 1.336,
+        "vsyncCallbackDelayMs": 1.87
+      },
+      {
+        "tid": 2813,
+        "start": 412885.09008,
+        "end": 412885.0918,
+        "wallMs": 1.72,
+        "name": "H:OnVsyncEvent now:412885089059939",
+        "guestScheduledMs": 1.666,
+        "guestOffCpuMs": 0.054,
+        "vsyncCallbackDelayMs": 1.02
+      },
+      {
+        "tid": 2813,
+        "start": 412885.105783,
+        "end": 412885.105965,
+        "wallMs": 0.182,
+        "name": "H:OnVsyncEvent now:412885104681958",
+        "guestScheduledMs": 0.182,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.101
+      },
+      {
+        "tid": 2813,
+        "start": 412885.137324,
+        "end": 412885.138866,
+        "wallMs": 1.542,
+        "name": "H:OnVsyncEvent now:412885135936660",
+        "guestScheduledMs": 1.53,
+        "guestOffCpuMs": 0.012,
+        "vsyncCallbackDelayMs": 1.387
+      },
+      {
+        "tid": 2813,
+        "start": 412885.151711,
+        "end": 412885.151793,
+        "wallMs": 0.082,
+        "name": "H:OnVsyncEvent now:412885151573706",
+        "guestScheduledMs": 0.082,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.137
+      },
+      {
+        "tid": 2813,
+        "start": 412885.183434,
+        "end": 412885.183601,
+        "wallMs": 0.167,
+        "name": "H:OnVsyncEvent now:412885182839918",
+        "guestScheduledMs": 0.167,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.594
+      },
+      {
+        "tid": 2813,
+        "start": 412885.323663,
+        "end": 412885.323976,
+        "wallMs": 0.313,
+        "name": "H:OnVsyncEvent now:412885323497968",
+        "guestScheduledMs": 0.313,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.165
+      },
+      {
+        "tid": 2813,
+        "start": 412885.339305,
+        "end": 412885.339389,
+        "wallMs": 0.084,
+        "name": "H:OnVsyncEvent now:412885339134212",
+        "guestScheduledMs": 0.084,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.171
+      },
+      {
+        "tid": 2813,
+        "start": 412885.387515,
+        "end": 412885.388103,
+        "wallMs": 0.588,
+        "name": "H:OnVsyncEvent now:412885386011748",
+        "guestScheduledMs": 0.588,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.503
+      },
+      {
+        "tid": 2813,
+        "start": 412885.403963,
+        "end": 412885.406498,
+        "wallMs": 2.535,
+        "name": "H:OnVsyncEvent now:412885401613826",
+        "guestScheduledMs": 2.535,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 2.349
+      },
+      {
+        "tid": 2813,
+        "start": 412885.418964,
+        "end": 412885.419057,
+        "wallMs": 0.093,
+        "name": "H:OnVsyncEvent now:412885417225573",
+        "guestScheduledMs": 0.093,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.738
+      },
+      {
+        "tid": 2813,
+        "start": 412885.433652,
+        "end": 412885.433839,
+        "wallMs": 0.187,
+        "name": "H:OnVsyncEvent now:412885432852997",
+        "guestScheduledMs": 0.176,
+        "guestOffCpuMs": 0.011,
+        "vsyncCallbackDelayMs": 0.799
+      },
+      {
+        "tid": 2813,
+        "start": 412885.449306,
+        "end": 412885.449501,
+        "wallMs": 0.195,
+        "name": "H:OnVsyncEvent now:412885448479078",
+        "guestScheduledMs": 0.155,
+        "guestOffCpuMs": 0.04,
+        "vsyncCallbackDelayMs": 0.827
+      },
+      {
+        "tid": 2813,
+        "start": 412885.464247,
+        "end": 412885.464406,
+        "wallMs": 0.159,
+        "name": "H:OnVsyncEvent now:412885464115901",
+        "guestScheduledMs": 0.159,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.131
+      },
+      {
+        "tid": 2813,
+        "start": 412885.481348,
+        "end": 412885.481601,
+        "wallMs": 0.253,
+        "name": "H:OnVsyncEvent now:412885479729700",
+        "guestScheduledMs": 0.23,
+        "guestOffCpuMs": 0.023,
+        "vsyncCallbackDelayMs": 1.618
+      },
+      {
+        "tid": 2813,
+        "start": 412885.49549,
+        "end": 412885.495668,
+        "wallMs": 0.178,
+        "name": "H:OnVsyncEvent now:412885495366533",
+        "guestScheduledMs": 0.166,
+        "guestOffCpuMs": 0.012,
+        "vsyncCallbackDelayMs": 0.123
+      },
+      {
+        "tid": 2813,
+        "start": 412885.513166,
+        "end": 412885.514225,
+        "wallMs": 1.059,
+        "name": "H:OnVsyncEvent now:412885510971257",
+        "guestScheduledMs": 0.149,
+        "guestOffCpuMs": 0.91,
+        "vsyncCallbackDelayMs": 2.195
+      },
+      {
+        "tid": 2813,
+        "start": 412885.526737,
+        "end": 412885.526974,
+        "wallMs": 0.237,
+        "name": "H:OnVsyncEvent now:412885526608299",
+        "guestScheduledMs": 0.171,
+        "guestOffCpuMs": 0.066,
+        "vsyncCallbackDelayMs": 0.129
+      },
+      {
+        "tid": 2813,
+        "start": 412885.54278,
+        "end": 412885.543015,
+        "wallMs": 0.235,
+        "name": "H:OnVsyncEvent now:412885542239612",
+        "guestScheduledMs": 0.175,
+        "guestOffCpuMs": 0.06,
+        "vsyncCallbackDelayMs": 0.54
+      },
+      {
+        "tid": 2813,
+        "start": 412885.558013,
+        "end": 412885.558243,
+        "wallMs": 0.23,
+        "name": "H:OnVsyncEvent now:412885557876418",
+        "guestScheduledMs": 0.172,
+        "guestOffCpuMs": 0.058,
+        "vsyncCallbackDelayMs": 0.137
+      },
+      {
+        "tid": 2813,
+        "start": 412885.573669,
+        "end": 412885.573925,
+        "wallMs": 0.256,
+        "name": "H:OnVsyncEvent now:412885573512998",
+        "guestScheduledMs": 0.19,
+        "guestOffCpuMs": 0.066,
+        "vsyncCallbackDelayMs": 0.156
+      },
+      {
+        "tid": 2813,
+        "start": 412885.589392,
+        "end": 412885.58957,
+        "wallMs": 0.178,
+        "name": "H:OnVsyncEvent now:412885589148755",
+        "guestScheduledMs": 0.166,
+        "guestOffCpuMs": 0.012,
+        "vsyncCallbackDelayMs": 0.243
+      },
+      {
+        "tid": 2813,
+        "start": 412885.605358,
+        "end": 412885.60557,
+        "wallMs": 0.212,
+        "name": "H:OnVsyncEvent now:412885604778764",
+        "guestScheduledMs": 0.204,
+        "guestOffCpuMs": 0.008,
+        "vsyncCallbackDelayMs": 0.579
+      },
+      {
+        "tid": 2813,
+        "start": 412885.622545,
+        "end": 412885.622826,
+        "wallMs": 0.281,
+        "name": "H:OnVsyncEvent now:412885620384007",
+        "guestScheduledMs": 0.202,
+        "guestOffCpuMs": 0.079,
+        "vsyncCallbackDelayMs": 2.161
+      },
+      {
+        "tid": 2813,
+        "start": 412885.637473,
+        "end": 412885.637715,
+        "wallMs": 0.242,
+        "name": "H:OnVsyncEvent now:412885635999940",
+        "guestScheduledMs": 0.178,
+        "guestOffCpuMs": 0.064,
+        "vsyncCallbackDelayMs": 1.473
+      },
+      {
+        "tid": 2813,
+        "start": 412885.651845,
+        "end": 412885.65208,
+        "wallMs": 0.235,
+        "name": "H:OnVsyncEvent now:412885651636599",
+        "guestScheduledMs": 0.191,
+        "guestOffCpuMs": 0.044,
+        "vsyncCallbackDelayMs": 0.208
+      },
+      {
+        "tid": 2813,
+        "start": 412885.671304,
+        "end": 412885.671451,
+        "wallMs": 0.147,
+        "name": "H:OnVsyncEvent now:412885667218623",
+        "guestScheduledMs": 0.147,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 4.085
+      },
+      {
+        "tid": 2813,
+        "start": 412885.683342,
+        "end": 412885.683488,
+        "wallMs": 0.146,
+        "name": "H:OnVsyncEvent now:412885682855919",
+        "guestScheduledMs": 0.146,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.486
+      },
+      {
+        "tid": 2813,
+        "start": 412885.698752,
+        "end": 412885.698925,
+        "wallMs": 0.173,
+        "name": "H:OnVsyncEvent now:412885698493053",
+        "guestScheduledMs": 0.17,
+        "guestOffCpuMs": 0.003,
+        "vsyncCallbackDelayMs": 0.259
+      },
+      {
+        "tid": 2813,
+        "start": 412885.714637,
+        "end": 412885.714765,
+        "wallMs": 0.128,
+        "name": "H:OnVsyncEvent now:412885714129947",
+        "guestScheduledMs": 0.128,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.507
+      },
+      {
+        "tid": 2813,
+        "start": 412885.730358,
+        "end": 412885.730519,
+        "wallMs": 0.161,
+        "name": "H:OnVsyncEvent now:412885729766744",
+        "guestScheduledMs": 0.161,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.591
+      },
+      {
+        "tid": 2813,
+        "start": 412885.74603,
+        "end": 412885.749153,
+        "wallMs": 3.123,
+        "name": "H:OnVsyncEvent now:412885745403998",
+        "guestScheduledMs": 3.123,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.626
+      },
+      {
+        "tid": 2813,
+        "start": 412885.762058,
+        "end": 412885.774604,
+        "wallMs": 12.546,
+        "name": "H:OnVsyncEvent now:412885761040367",
+        "guestScheduledMs": 12.485,
+        "guestOffCpuMs": 0.061,
+        "vsyncCallbackDelayMs": 1.018
+      },
+      {
+        "tid": 2813,
+        "start": 412885.777832,
+        "end": 412885.780039,
+        "wallMs": 2.207,
+        "name": "H:OnVsyncEvent now:412885776676545",
+        "guestScheduledMs": 2.207,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.155
+      },
+      {
+        "tid": 2813,
+        "start": 412885.79295,
+        "end": 412885.802706,
+        "wallMs": 9.756,
+        "name": "H:OnVsyncEvent now:412885792312564",
+        "guestScheduledMs": 9.756,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.637
+      },
+      {
+        "tid": 2813,
+        "start": 412885.808951,
+        "end": 412885.809694,
+        "wallMs": 0.743,
+        "name": "H:OnVsyncEvent now:412885807948569",
+        "guestScheduledMs": 0.743,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.002
+      },
+      {
+        "tid": 2813,
+        "start": 412885.823781,
+        "end": 412885.82388,
+        "wallMs": 0.099,
+        "name": "H:OnVsyncEvent now:412885823584275",
+        "guestScheduledMs": 0.099,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.197
+      },
+      {
+        "tid": 2813,
+        "start": 412885.855163,
+        "end": 412885.855334,
+        "wallMs": 0.171,
+        "name": "H:OnVsyncEvent now:412885854854434",
+        "guestScheduledMs": 0.171,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.309
+      },
+      {
+        "tid": 2813,
+        "start": 412885.917484,
+        "end": 412885.921219,
+        "wallMs": 3.735,
+        "name": "H:OnVsyncEvent now:412885917349251",
+        "guestScheduledMs": 0.449,
+        "guestOffCpuMs": 3.286,
+        "vsyncCallbackDelayMs": 0.135
+      },
+      {
+        "tid": 2813,
+        "start": 412885.934055,
+        "end": 412885.93462,
+        "wallMs": 0.565,
+        "name": "H:OnVsyncEvent now:412885932970829",
+        "guestScheduledMs": 0.555,
+        "guestOffCpuMs": 0.01,
+        "vsyncCallbackDelayMs": 1.084
+      },
+      {
+        "tid": 2813,
+        "start": 412885.949586,
+        "end": 412885.950498,
+        "wallMs": 0.912,
+        "name": "H:OnVsyncEvent now:412885948593668",
+        "guestScheduledMs": 0.833,
+        "guestOffCpuMs": 0.079,
+        "vsyncCallbackDelayMs": 0.992
+      },
+      {
+        "tid": 2813,
+        "start": 412885.964347,
+        "end": 412885.966848,
+        "wallMs": 2.501,
+        "name": "H:OnVsyncEvent now:412885964229425",
+        "guestScheduledMs": 2.401,
+        "guestOffCpuMs": 0.1,
+        "vsyncCallbackDelayMs": 0.118
+      },
+      {
+        "tid": 2813,
+        "start": 412885.980118,
+        "end": 412885.994517,
+        "wallMs": 14.399,
+        "name": "H:OnVsyncEvent now:412885979864906",
+        "guestScheduledMs": 13.461,
+        "guestOffCpuMs": 0.938,
+        "vsyncCallbackDelayMs": 0.253
+      },
+      {
+        "tid": 2813,
+        "start": 412885.996391,
+        "end": 412885.999577,
+        "wallMs": 3.186,
+        "name": "H:OnVsyncEvent now:412885995500308",
+        "guestScheduledMs": 2.939,
+        "guestOffCpuMs": 0.247,
+        "vsyncCallbackDelayMs": 0.891
+      },
+      {
+        "tid": 2813,
+        "start": 412886.011759,
+        "end": 412886.023455,
+        "wallMs": 11.696,
+        "name": "H:OnVsyncEvent now:412886011135525",
+        "guestScheduledMs": 11.459,
+        "guestOffCpuMs": 0.237,
+        "vsyncCallbackDelayMs": 0.623
+      },
+      {
+        "tid": 2813,
+        "start": 412886.0286,
+        "end": 412886.029392,
+        "wallMs": 0.792,
+        "name": "H:OnVsyncEvent now:412886026754219",
+        "guestScheduledMs": 0.651,
+        "guestOffCpuMs": 0.141,
+        "vsyncCallbackDelayMs": 1.846
+      },
+      {
+        "tid": 2813,
+        "start": 412886.042957,
+        "end": 412886.043189,
+        "wallMs": 0.232,
+        "name": "H:OnVsyncEvent now:412886042389431",
+        "guestScheduledMs": 0.232,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.568
+      },
+      {
+        "tid": 2813,
+        "start": 412886.074268,
+        "end": 412886.074826,
+        "wallMs": 0.558,
+        "name": "H:OnVsyncEvent now:412886073653234",
+        "guestScheduledMs": 0.547,
+        "guestOffCpuMs": 0.011,
+        "vsyncCallbackDelayMs": 0.615
+      },
+      {
+        "tid": 2813,
+        "start": 412886.090783,
+        "end": 412886.091664,
+        "wallMs": 0.881,
+        "name": "H:OnVsyncEvent now:412886089268154",
+        "guestScheduledMs": 0.806,
+        "guestOffCpuMs": 0.075,
+        "vsyncCallbackDelayMs": 1.515
+      },
+      {
+        "tid": 2813,
+        "start": 412886.105631,
+        "end": 412886.109849,
+        "wallMs": 4.218,
+        "name": "H:OnVsyncEvent now:412886104900262",
+        "guestScheduledMs": 3.936,
+        "guestOffCpuMs": 0.282,
+        "vsyncCallbackDelayMs": 0.731
+      },
+      {
+        "tid": 2813,
+        "start": 412886.121514,
+        "end": 412886.137637,
+        "wallMs": 16.123,
+        "name": "H:OnVsyncEvent now:412886120535296",
+        "guestScheduledMs": 15.63,
+        "guestOffCpuMs": 0.493,
+        "vsyncCallbackDelayMs": 0.979
+      },
+      {
+        "tid": 2813,
+        "start": 412886.137694,
+        "end": 412886.1404,
+        "wallMs": 2.706,
+        "name": "H:OnVsyncEvent now:412886136170203",
+        "guestScheduledMs": 2.691,
+        "guestOffCpuMs": 0.015,
+        "vsyncCallbackDelayMs": 1.524
+      },
+      {
+        "tid": 2813,
+        "start": 412886.152754,
+        "end": 412886.164086,
+        "wallMs": 11.332,
+        "name": "H:OnVsyncEvent now:412886151804945",
+        "guestScheduledMs": 11.115,
+        "guestOffCpuMs": 0.217,
+        "vsyncCallbackDelayMs": 0.949
+      },
+      {
+        "tid": 2813,
+        "start": 412886.168211,
+        "end": 412886.16895,
+        "wallMs": 0.739,
+        "name": "H:OnVsyncEvent now:412886167439615",
+        "guestScheduledMs": 0.637,
+        "guestOffCpuMs": 0.102,
+        "vsyncCallbackDelayMs": 0.771
+      },
+      {
+        "tid": 2813,
+        "start": 412886.187871,
+        "end": 412886.188133,
+        "wallMs": 0.262,
+        "name": "H:OnVsyncEvent now:412886183073884",
+        "guestScheduledMs": 0.262,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 4.797
+      },
+      {
+        "tid": 2813,
+        "start": 412886.214524,
+        "end": 412886.215102,
+        "wallMs": 0.578,
+        "name": "H:OnVsyncEvent now:412886214338626",
+        "guestScheduledMs": 0.567,
+        "guestOffCpuMs": 0.011,
+        "vsyncCallbackDelayMs": 0.185
+      },
+      {
+        "tid": 2813,
+        "start": 412886.234392,
+        "end": 412886.235434,
+        "wallMs": 1.042,
+        "name": "H:OnVsyncEvent now:412886229906427",
+        "guestScheduledMs": 1.029,
+        "guestOffCpuMs": 0.013,
+        "vsyncCallbackDelayMs": 4.486
+      },
+      {
+        "tid": 2813,
+        "start": 412886.248925,
+        "end": 412886.255824,
+        "wallMs": 6.899,
+        "name": "H:OnVsyncEvent now:412886245540493",
+        "guestScheduledMs": 6.829,
+        "guestOffCpuMs": 0.07,
+        "vsyncCallbackDelayMs": 3.385
+      },
+      {
+        "tid": 2813,
+        "start": 412886.265262,
+        "end": 412886.279725,
+        "wallMs": 14.463,
+        "name": "H:OnVsyncEvent now:412886261175456",
+        "guestScheduledMs": 13.478,
+        "guestOffCpuMs": 0.985,
+        "vsyncCallbackDelayMs": 4.087
+      },
+      {
+        "tid": 2813,
+        "start": 412886.279778,
+        "end": 412886.282718,
+        "wallMs": 2.94,
+        "name": "H:OnVsyncEvent now:412886276801038",
+        "guestScheduledMs": 2.885,
+        "guestOffCpuMs": 0.055,
+        "vsyncCallbackDelayMs": 2.977
+      },
+      {
+        "tid": 2813,
+        "start": 412886.293159,
+        "end": 412886.306419,
+        "wallMs": 13.26,
+        "name": "H:OnVsyncEvent now:412886292435918",
+        "guestScheduledMs": 13.202,
+        "guestOffCpuMs": 0.058,
+        "vsyncCallbackDelayMs": 0.723
+      },
+      {
+        "tid": 2813,
+        "start": 412886.30894,
+        "end": 412886.309958,
+        "wallMs": 1.018,
+        "name": "H:OnVsyncEvent now:412886308070248",
+        "guestScheduledMs": 0.877,
+        "guestOffCpuMs": 0.141,
+        "vsyncCallbackDelayMs": 0.87
+      },
+      {
+        "tid": 2813,
+        "start": 412886.323968,
+        "end": 412886.324096,
+        "wallMs": 0.128,
+        "name": "H:OnVsyncEvent now:412886323704465",
+        "guestScheduledMs": 0.128,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.264
+      },
+      {
+        "tid": 2813,
+        "start": 412886.355155,
+        "end": 412886.355818,
+        "wallMs": 0.663,
+        "name": "H:OnVsyncEvent now:412886354973083",
+        "guestScheduledMs": 0.663,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.182
+      },
+      {
+        "tid": 2813,
+        "start": 412886.371018,
+        "end": 412886.372118,
+        "wallMs": 1.1,
+        "name": "H:OnVsyncEvent now:412886370603862",
+        "guestScheduledMs": 1.1,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.414
+      },
+      {
+        "tid": 2813,
+        "start": 412886.386851,
+        "end": 412886.390303,
+        "wallMs": 3.452,
+        "name": "H:OnVsyncEvent now:412886386238004",
+        "guestScheduledMs": 3.218,
+        "guestOffCpuMs": 0.234,
+        "vsyncCallbackDelayMs": 0.613
+      },
+      {
+        "tid": 2813,
+        "start": 412886.40205,
+        "end": 412886.419309,
+        "wallMs": 17.259,
+        "name": "H:OnVsyncEvent now:412886401872025",
+        "guestScheduledMs": 14.513,
+        "guestOffCpuMs": 2.746,
+        "vsyncCallbackDelayMs": 0.178
+      },
+      {
+        "tid": 2813,
+        "start": 412886.419368,
+        "end": 412886.422769,
+        "wallMs": 3.401,
+        "name": "H:OnVsyncEvent now:412886417503255",
+        "guestScheduledMs": 3.401,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.865
+      },
+      {
+        "tid": 2813,
+        "start": 412886.433756,
+        "end": 412886.446533,
+        "wallMs": 12.777,
+        "name": "H:OnVsyncEvent now:412886433137090",
+        "guestScheduledMs": 12.733,
+        "guestOffCpuMs": 0.044,
+        "vsyncCallbackDelayMs": 0.619
+      },
+      {
+        "tid": 2813,
+        "start": 412886.449706,
+        "end": 412886.450916,
+        "wallMs": 1.21,
+        "name": "H:OnVsyncEvent now:412886448770659",
+        "guestScheduledMs": 1.091,
+        "guestOffCpuMs": 0.119,
+        "vsyncCallbackDelayMs": 0.935
+      },
+      {
+        "tid": 2813,
+        "start": 412886.464626,
+        "end": 412886.464735,
+        "wallMs": 0.109,
+        "name": "H:OnVsyncEvent now:412886464404216",
+        "guestScheduledMs": 0.109,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.222
+      },
+      {
+        "tid": 2813,
+        "start": 412886.496383,
+        "end": 412886.497088,
+        "wallMs": 0.705,
+        "name": "H:OnVsyncEvent now:412886495662787",
+        "guestScheduledMs": 0.705,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.72
+      },
+      {
+        "tid": 2813,
+        "start": 412886.515064,
+        "end": 412886.516092,
+        "wallMs": 1.028,
+        "name": "H:OnVsyncEvent now:412886511239972",
+        "guestScheduledMs": 1.028,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 3.824
+      },
+      {
+        "tid": 2813,
+        "start": 412886.527399,
+        "end": 412886.528311,
+        "wallMs": 0.912,
+        "name": "H:OnVsyncEvent now:412886526869360",
+        "guestScheduledMs": 0.397,
+        "guestOffCpuMs": 0.515,
+        "vsyncCallbackDelayMs": 0.53
+      },
+      {
+        "tid": 2813,
+        "start": 412886.543663,
+        "end": 412886.54962,
+        "wallMs": 5.957,
+        "name": "H:OnVsyncEvent now:412886542489149",
+        "guestScheduledMs": 5.553,
+        "guestOffCpuMs": 0.404,
+        "vsyncCallbackDelayMs": 1.174
+      },
+      {
+        "tid": 2813,
+        "start": 412886.558332,
+        "end": 412886.57638,
+        "wallMs": 18.048,
+        "name": "H:OnVsyncEvent now:412886558123330",
+        "guestScheduledMs": 17.327,
+        "guestOffCpuMs": 0.721,
+        "vsyncCallbackDelayMs": 0.209
+      },
+      {
+        "tid": 2813,
+        "start": 412886.576445,
+        "end": 412886.579515,
+        "wallMs": 3.07,
+        "name": "H:OnVsyncEvent now:412886573757305",
+        "guestScheduledMs": 2.803,
+        "guestOffCpuMs": 0.267,
+        "vsyncCallbackDelayMs": 2.688
+      },
+      {
+        "tid": 2813,
+        "start": 412886.591442,
+        "end": 412886.607629,
+        "wallMs": 16.187,
+        "name": "H:OnVsyncEvent now:412886589367066",
+        "guestScheduledMs": 15.866,
+        "guestOffCpuMs": 0.321,
+        "vsyncCallbackDelayMs": 2.075
+      },
+      {
+        "tid": 2813,
+        "start": 412886.608002,
+        "end": 412886.608789,
+        "wallMs": 0.787,
+        "name": "H:OnVsyncEvent now:412886605001027",
+        "guestScheduledMs": 0.771,
+        "guestOffCpuMs": 0.016,
+        "vsyncCallbackDelayMs": 3.001
+      },
+      {
+        "tid": 2813,
+        "start": 412886.621004,
+        "end": 412886.621131,
+        "wallMs": 0.127,
+        "name": "H:OnVsyncEvent now:412886620633055",
+        "guestScheduledMs": 0.127,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.371
+      },
+      {
+        "tid": 2813,
+        "start": 412886.667733,
+        "end": 412886.668022,
+        "wallMs": 0.289,
+        "name": "H:OnVsyncEvent now:412886667526049",
+        "guestScheduledMs": 0.289,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.207
+      },
+      {
+        "tid": 2813,
+        "start": 412886.714549,
+        "end": 412886.715007,
+        "wallMs": 0.458,
+        "name": "H:OnVsyncEvent now:412886714416576",
+        "guestScheduledMs": 0.458,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.132
+      },
+      {
+        "tid": 2813,
+        "start": 412886.730331,
+        "end": 412886.731118,
+        "wallMs": 0.787,
+        "name": "H:OnVsyncEvent now:412886730049326",
+        "guestScheduledMs": 0.771,
+        "guestOffCpuMs": 0.016,
+        "vsyncCallbackDelayMs": 0.282
+      },
+      {
+        "tid": 2813,
+        "start": 412886.747567,
+        "end": 412886.748782,
+        "wallMs": 1.215,
+        "name": "H:OnVsyncEvent now:412886745656461",
+        "guestScheduledMs": 1.201,
+        "guestOffCpuMs": 0.014,
+        "vsyncCallbackDelayMs": 1.911
+      },
+      {
+        "tid": 2813,
+        "start": 412886.761624,
+        "end": 412886.763419,
+        "wallMs": 1.795,
+        "name": "H:OnVsyncEvent now:412886761289977",
+        "guestScheduledMs": 1.67,
+        "guestOffCpuMs": 0.125,
+        "vsyncCallbackDelayMs": 0.334
+      },
+      {
+        "tid": 2813,
+        "start": 412886.777921,
+        "end": 412886.800221,
+        "wallMs": 22.3,
+        "name": "H:OnVsyncEvent now:412886776911306",
+        "guestScheduledMs": 21.483,
+        "guestOffCpuMs": 0.817,
+        "vsyncCallbackDelayMs": 1.01
+      },
+      {
+        "tid": 2813,
+        "start": 412886.800835,
+        "end": 412886.805111,
+        "wallMs": 4.276,
+        "name": "H:OnVsyncEvent now:412886792544864",
+        "guestScheduledMs": 4.189,
+        "guestOffCpuMs": 0.087,
+        "vsyncCallbackDelayMs": 8.29
+      },
+      {
+        "tid": 2813,
+        "start": 412886.811577,
+        "end": 412886.814051,
+        "wallMs": 2.474,
+        "name": "H:OnVsyncEvent now:412886808177818",
+        "guestScheduledMs": 2.451,
+        "guestOffCpuMs": 0.023,
+        "vsyncCallbackDelayMs": 3.399
+      },
+      {
+        "tid": 2813,
+        "start": 412886.825135,
+        "end": 412886.826206,
+        "wallMs": 1.071,
+        "name": "H:OnVsyncEvent now:412886823793950",
+        "guestScheduledMs": 1.044,
+        "guestOffCpuMs": 0.027,
+        "vsyncCallbackDelayMs": 1.341
+      },
+      {
+        "tid": 2813,
+        "start": 412886.839601,
+        "end": 412886.83972,
+        "wallMs": 0.119,
+        "name": "H:OnVsyncEvent now:412886839427630",
+        "guestScheduledMs": 0.119,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.173
+      },
+      {
+        "tid": 2813,
+        "start": 412886.85611,
+        "end": 412886.870692,
+        "wallMs": 14.582,
+        "name": "H:OnVsyncEvent now:412886855047102",
+        "guestScheduledMs": 14.159,
+        "guestOffCpuMs": 0.423,
+        "vsyncCallbackDelayMs": 1.063
+      },
+      {
+        "tid": 2813,
+        "start": 412886.871247,
+        "end": 412886.871341,
+        "wallMs": 0.094,
+        "name": "H:OnVsyncEvent now:412886870680573",
+        "guestScheduledMs": 0.094,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.566
+      },
+      {
+        "tid": 2813,
+        "start": 412886.950143,
+        "end": 412886.950932,
+        "wallMs": 0.789,
+        "name": "H:OnVsyncEvent now:412886948811613",
+        "guestScheduledMs": 0.789,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.331
+      },
+      {
+        "tid": 2813,
+        "start": 412886.964639,
+        "end": 412886.965812,
+        "wallMs": 1.173,
+        "name": "H:OnVsyncEvent now:412886964445187",
+        "guestScheduledMs": 1.173,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.194
+      },
+      {
+        "tid": 2813,
+        "start": 412886.981797,
+        "end": 412886.989228,
+        "wallMs": 7.431,
+        "name": "H:OnVsyncEvent now:412886980063721",
+        "guestScheduledMs": 7.237,
+        "guestOffCpuMs": 0.194,
+        "vsyncCallbackDelayMs": 1.733
+      },
+      {
+        "tid": 2813,
+        "start": 412886.996194,
+        "end": 412887.019682,
+        "wallMs": 23.488,
+        "name": "H:OnVsyncEvent now:412886995693110",
+        "guestScheduledMs": 22.371,
+        "guestOffCpuMs": 1.117,
+        "vsyncCallbackDelayMs": 0.501
+      },
+      {
+        "tid": 2813,
+        "start": 412887.019775,
+        "end": 412887.023118,
+        "wallMs": 3.343,
+        "name": "H:OnVsyncEvent now:412887011326587",
+        "guestScheduledMs": 3.138,
+        "guestOffCpuMs": 0.205,
+        "vsyncCallbackDelayMs": 8.448
+      },
+      {
+        "tid": 2813,
+        "start": 412887.027145,
+        "end": 412887.042261,
+        "wallMs": 15.116,
+        "name": "H:OnVsyncEvent now:412887026960001",
+        "guestScheduledMs": 14.733,
+        "guestOffCpuMs": 0.383,
+        "vsyncCallbackDelayMs": 0.185
+      },
+      {
+        "tid": 2813,
+        "start": 412887.042803,
+        "end": 412887.0436,
+        "wallMs": 0.797,
+        "name": "H:OnVsyncEvent now:412887042593325",
+        "guestScheduledMs": 0.78,
+        "guestOffCpuMs": 0.017,
+        "vsyncCallbackDelayMs": 0.21
+      },
+      {
+        "tid": 2813,
+        "start": 412887.058464,
+        "end": 412887.058596,
+        "wallMs": 0.132,
+        "name": "H:OnVsyncEvent now:412887058226533",
+        "guestScheduledMs": 0.132,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.237
+      },
+      {
+        "tid": 2813,
+        "start": 412887.090108,
+        "end": 412887.090933,
+        "wallMs": 0.825,
+        "name": "H:OnVsyncEvent now:412887089489209",
+        "guestScheduledMs": 0.801,
+        "guestOffCpuMs": 0.024,
+        "vsyncCallbackDelayMs": 0.619
+      },
+      {
+        "tid": 2813,
+        "start": 412887.105415,
+        "end": 412887.1084,
+        "wallMs": 2.985,
+        "name": "H:OnVsyncEvent now:412887105121089",
+        "guestScheduledMs": 2.398,
+        "guestOffCpuMs": 0.587,
+        "vsyncCallbackDelayMs": 0.294
+      },
+      {
+        "tid": 2813,
+        "start": 412887.124061,
+        "end": 412887.129715,
+        "wallMs": 5.654,
+        "name": "H:OnVsyncEvent now:412887120753533",
+        "guestScheduledMs": 5.259,
+        "guestOffCpuMs": 0.395,
+        "vsyncCallbackDelayMs": 3.307
+      },
+      {
+        "tid": 2813,
+        "start": 412887.138109,
+        "end": 412887.17083,
+        "wallMs": 32.721,
+        "name": "H:OnVsyncEvent now:412887136362779",
+        "guestScheduledMs": 26.848,
+        "guestOffCpuMs": 5.873,
+        "vsyncCallbackDelayMs": 1.746
+      },
+      {
+        "tid": 2813,
+        "start": 412887.171256,
+        "end": 412887.175749,
+        "wallMs": 4.493,
+        "name": "H:OnVsyncEvent now:412887151995773",
+        "guestScheduledMs": 4.3,
+        "guestOffCpuMs": 0.193,
+        "vsyncCallbackDelayMs": 19.26
+      },
+      {
+        "tid": 2813,
+        "start": 412887.183527,
+        "end": 412887.207056,
+        "wallMs": 23.529,
+        "name": "H:OnVsyncEvent now:412887183232192",
+        "guestScheduledMs": 18.89,
+        "guestOffCpuMs": 4.639,
+        "vsyncCallbackDelayMs": 0.295
+      },
+      {
+        "tid": 2813,
+        "start": 412887.207558,
+        "end": 412887.208518,
+        "wallMs": 0.96,
+        "name": "H:OnVsyncEvent now:412887198865236",
+        "guestScheduledMs": 0.942,
+        "guestOffCpuMs": 0.018,
+        "vsyncCallbackDelayMs": 8.693
+      },
+      {
+        "tid": 2813,
+        "start": 412887.214773,
+        "end": 412887.21487,
+        "wallMs": 0.097,
+        "name": "H:OnVsyncEvent now:412887214498290",
+        "guestScheduledMs": 0.097,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.275
+      },
+      {
+        "tid": 2813,
+        "start": 412887.261636,
+        "end": 412887.262541,
+        "wallMs": 0.905,
+        "name": "H:OnVsyncEvent now:412887261377938",
+        "guestScheduledMs": 0.905,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.258
+      },
+      {
+        "tid": 2813,
+        "start": 412887.277512,
+        "end": 412887.278996,
+        "wallMs": 1.484,
+        "name": "H:OnVsyncEvent now:412887277007125",
+        "guestScheduledMs": 1.484,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.505
+      },
+      {
+        "tid": 2813,
+        "start": 412887.293454,
+        "end": 412887.298084,
+        "wallMs": 4.63,
+        "name": "H:OnVsyncEvent now:412887292639900",
+        "guestScheduledMs": 4.482,
+        "guestOffCpuMs": 0.148,
+        "vsyncCallbackDelayMs": 0.814
+      },
+      {
+        "tid": 2813,
+        "start": 412887.310279,
+        "end": 412887.339231,
+        "wallMs": 28.952,
+        "name": "H:OnVsyncEvent now:412887308250562",
+        "guestScheduledMs": 25.126,
+        "guestOffCpuMs": 3.826,
+        "vsyncCallbackDelayMs": 2.028
+      },
+      {
+        "tid": 2813,
+        "start": 412887.339337,
+        "end": 412887.348744,
+        "wallMs": 9.407,
+        "name": "H:OnVsyncEvent now:412887323859155",
+        "guestScheduledMs": 7.319,
+        "guestOffCpuMs": 2.088,
+        "vsyncCallbackDelayMs": 15.478
+      },
+      {
+        "tid": 2813,
+        "start": 412887.349498,
+        "end": 412887.35145,
+        "wallMs": 1.952,
+        "name": "H:OnVsyncEvent now:412887339491798",
+        "guestScheduledMs": 1.952,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 10.006
+      },
+      {
+        "tid": 2813,
+        "start": 412887.355419,
+        "end": 412887.35861,
+        "wallMs": 3.191,
+        "name": "H:OnVsyncEvent now:412887355125067",
+        "guestScheduledMs": 1.438,
+        "guestOffCpuMs": 1.753,
+        "vsyncCallbackDelayMs": 0.294
+      },
+      {
+        "tid": 2813,
+        "start": 412887.372098,
+        "end": 412887.372245,
+        "wallMs": 0.147,
+        "name": "H:OnVsyncEvent now:412887370758159",
+        "guestScheduledMs": 0.147,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.34
+      },
+      {
+        "tid": 2813,
+        "start": 412887.40244,
+        "end": 412887.423711,
+        "wallMs": 21.271,
+        "name": "H:OnVsyncEvent now:412887402023193",
+        "guestScheduledMs": 19.422,
+        "guestOffCpuMs": 1.849,
+        "vsyncCallbackDelayMs": 0.417
+      },
+      {
+        "tid": 2813,
+        "start": 412887.424137,
+        "end": 412887.424225,
+        "wallMs": 0.088,
+        "name": "H:OnVsyncEvent now:412887417639673",
+        "guestScheduledMs": 0.088,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 6.497
+      },
+      {
+        "tid": 2813,
+        "start": 412887.434014,
+        "end": 412887.434299,
+        "wallMs": 0.285,
+        "name": "H:OnVsyncEvent now:412887433265074",
+        "guestScheduledMs": 0.285,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.749
+      },
+      {
+        "tid": 2813,
+        "start": 412887.480368,
+        "end": 412887.481346,
+        "wallMs": 0.978,
+        "name": "H:OnVsyncEvent now:412887480130928",
+        "guestScheduledMs": 0.96,
+        "guestOffCpuMs": 0.018,
+        "vsyncCallbackDelayMs": 0.237
+      },
+      {
+        "tid": 2813,
+        "start": 412887.496014,
+        "end": 412887.497647,
+        "wallMs": 1.633,
+        "name": "H:OnVsyncEvent now:412887495764170",
+        "guestScheduledMs": 1.616,
+        "guestOffCpuMs": 0.017,
+        "vsyncCallbackDelayMs": 0.25
+      },
+      {
+        "tid": 2813,
+        "start": 412887.511716,
+        "end": 412887.519072,
+        "wallMs": 7.356,
+        "name": "H:OnVsyncEvent now:412887511397213",
+        "guestScheduledMs": 5.047,
+        "guestOffCpuMs": 2.309,
+        "vsyncCallbackDelayMs": 0.319
+      },
+      {
+        "tid": 2813,
+        "start": 412887.52777,
+        "end": 412887.577736,
+        "wallMs": 49.966,
+        "name": "H:OnVsyncEvent now:412887527022835",
+        "guestScheduledMs": 49.761,
+        "guestOffCpuMs": 0.205,
+        "vsyncCallbackDelayMs": 0.747
+      },
+      {
+        "tid": 2813,
+        "start": 412887.578111,
+        "end": 412887.584888,
+        "wallMs": 6.777,
+        "name": "H:OnVsyncEvent now:412887542647752",
+        "guestScheduledMs": 6.578,
+        "guestOffCpuMs": 0.199,
+        "vsyncCallbackDelayMs": 35.463
+      },
+      {
+        "tid": 2813,
+        "start": 412887.589853,
+        "end": 412887.592255,
+        "wallMs": 2.402,
+        "name": "H:OnVsyncEvent now:412887589539480",
+        "guestScheduledMs": 2.36,
+        "guestOffCpuMs": 0.042,
+        "vsyncCallbackDelayMs": 0.314
+      },
+      {
+        "tid": 2813,
+        "start": 412887.607205,
+        "end": 412887.641554,
+        "wallMs": 34.349,
+        "name": "H:OnVsyncEvent now:412887605149460",
+        "guestScheduledMs": 34.0,
+        "guestOffCpuMs": 0.349,
+        "vsyncCallbackDelayMs": 2.056
+      },
+      {
+        "tid": 2813,
+        "start": 412887.642553,
+        "end": 412887.642765,
+        "wallMs": 0.212,
+        "name": "H:OnVsyncEvent now:412887620781997",
+        "guestScheduledMs": 0.212,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 21.771
+      },
+      {
+        "tid": 2813,
+        "start": 412887.73069,
+        "end": 412887.734381,
+        "wallMs": 3.691,
+        "name": "H:OnVsyncEvent now:412887730186257",
+        "guestScheduledMs": 3.6,
+        "guestOffCpuMs": 0.091,
+        "vsyncCallbackDelayMs": 0.504
+      },
+      {
+        "tid": 2813,
+        "start": 412887.748609,
+        "end": 412887.753131,
+        "wallMs": 4.522,
+        "name": "H:OnVsyncEvent now:412887745781111",
+        "guestScheduledMs": 4.478,
+        "guestOffCpuMs": 0.044,
+        "vsyncCallbackDelayMs": 2.828
+      },
+      {
+        "tid": 2813,
+        "start": 412887.761882,
+        "end": 412887.762244,
+        "wallMs": 0.362,
+        "name": "H:OnVsyncEvent now:412887761412355",
+        "guestScheduledMs": 0.303,
+        "guestOffCpuMs": 0.059,
+        "vsyncCallbackDelayMs": 0.47
+      },
+      {
+        "tid": 2813,
+        "start": 412887.778018,
+        "end": 412887.778576,
+        "wallMs": 0.558,
+        "name": "H:OnVsyncEvent now:412887777033992",
+        "guestScheduledMs": 0.396,
+        "guestOffCpuMs": 0.162,
+        "vsyncCallbackDelayMs": 0.984
+      },
+      {
+        "tid": 2813,
+        "start": 412887.794062,
+        "end": 412887.794571,
+        "wallMs": 0.509,
+        "name": "H:OnVsyncEvent now:412887792649256",
+        "guestScheduledMs": 0.303,
+        "guestOffCpuMs": 0.206,
+        "vsyncCallbackDelayMs": 1.413
+      },
+      {
+        "tid": 2813,
+        "start": 412887.808754,
+        "end": 412887.809124,
+        "wallMs": 0.37,
+        "name": "H:OnVsyncEvent now:412887808282115",
+        "guestScheduledMs": 0.277,
+        "guestOffCpuMs": 0.093,
+        "vsyncCallbackDelayMs": 0.472
+      },
+      {
+        "tid": 2813,
+        "start": 412887.824587,
+        "end": 412887.824983,
+        "wallMs": 0.396,
+        "name": "H:OnVsyncEvent now:412887823908397",
+        "guestScheduledMs": 0.277,
+        "guestOffCpuMs": 0.119,
+        "vsyncCallbackDelayMs": 0.679
+      },
+      {
+        "tid": 2813,
+        "start": 412887.841433,
+        "end": 412887.841769,
+        "wallMs": 0.336,
+        "name": "H:OnVsyncEvent now:412887839517798",
+        "guestScheduledMs": 0.259,
+        "guestOffCpuMs": 0.077,
+        "vsyncCallbackDelayMs": 1.915
+      },
+      {
+        "tid": 2813,
+        "start": 412887.855374,
+        "end": 412887.855748,
+        "wallMs": 0.374,
+        "name": "H:OnVsyncEvent now:412887855151232",
+        "guestScheduledMs": 0.273,
+        "guestOffCpuMs": 0.101,
+        "vsyncCallbackDelayMs": 0.223
+      },
+      {
+        "tid": 2813,
+        "start": 412887.871429,
+        "end": 412887.871713,
+        "wallMs": 0.284,
+        "name": "H:OnVsyncEvent now:412887870782583",
+        "guestScheduledMs": 0.216,
+        "guestOffCpuMs": 0.068,
+        "vsyncCallbackDelayMs": 0.646
+      },
+      {
+        "tid": 2813,
+        "start": 412887.886622,
+        "end": 412887.886945,
+        "wallMs": 0.323,
+        "name": "H:OnVsyncEvent now:412887886415912",
+        "guestScheduledMs": 0.234,
+        "guestOffCpuMs": 0.089,
+        "vsyncCallbackDelayMs": 0.206
+      },
+      {
+        "tid": 2813,
+        "start": 412887.902247,
+        "end": 412887.902559,
+        "wallMs": 0.312,
+        "name": "H:OnVsyncEvent now:412887902049146",
+        "guestScheduledMs": 0.225,
+        "guestOffCpuMs": 0.087,
+        "vsyncCallbackDelayMs": 0.198
+      },
+      {
+        "tid": 2813,
+        "start": 412887.917963,
+        "end": 412887.91825,
+        "wallMs": 0.287,
+        "name": "H:OnVsyncEvent now:412887917682294",
+        "guestScheduledMs": 0.227,
+        "guestOffCpuMs": 0.06,
+        "vsyncCallbackDelayMs": 0.281
+      },
+      {
+        "tid": 2813,
+        "start": 412887.93353,
+        "end": 412887.933887,
+        "wallMs": 0.357,
+        "name": "H:OnVsyncEvent now:412887933315269",
+        "guestScheduledMs": 0.272,
+        "guestOffCpuMs": 0.085,
+        "vsyncCallbackDelayMs": 0.215
+      },
+      {
+        "tid": 2813,
+        "start": 412887.951771,
+        "end": 412887.952017,
+        "wallMs": 0.246,
+        "name": "H:OnVsyncEvent now:412887948909263",
+        "guestScheduledMs": 0.192,
+        "guestOffCpuMs": 0.054,
+        "vsyncCallbackDelayMs": 2.862
+      },
+      {
+        "tid": 2813,
+        "start": 412887.966023,
+        "end": 412887.966334,
+        "wallMs": 0.311,
+        "name": "H:OnVsyncEvent now:412887964527545",
+        "guestScheduledMs": 0.311,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.495
+      },
+      {
+        "tid": 2813,
+        "start": 412887.981449,
+        "end": 412887.981756,
+        "wallMs": 0.307,
+        "name": "H:OnVsyncEvent now:412887980146091",
+        "guestScheduledMs": 0.286,
+        "guestOffCpuMs": 0.021,
+        "vsyncCallbackDelayMs": 1.303
+      },
+      {
+        "tid": 2813,
+        "start": 412887.998681,
+        "end": 412887.99907,
+        "wallMs": 0.389,
+        "name": "H:OnVsyncEvent now:412887995739639",
+        "guestScheduledMs": 0.389,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 2.941
+      },
+      {
+        "tid": 2813,
+        "start": 412888.011783,
+        "end": 412888.012066,
+        "wallMs": 0.283,
+        "name": "H:OnVsyncEvent now:412888011373814",
+        "guestScheduledMs": 0.283,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.409
+      },
+      {
+        "tid": 2813,
+        "start": 412888.029447,
+        "end": 412888.029878,
+        "wallMs": 0.431,
+        "name": "H:OnVsyncEvent now:412888026974506",
+        "guestScheduledMs": 0.421,
+        "guestOffCpuMs": 0.01,
+        "vsyncCallbackDelayMs": 2.472
+      },
+      {
+        "tid": 2813,
+        "start": 412888.04411,
+        "end": 412888.044591,
+        "wallMs": 0.481,
+        "name": "H:OnVsyncEvent now:412888042589455",
+        "guestScheduledMs": 0.474,
+        "guestOffCpuMs": 0.007,
+        "vsyncCallbackDelayMs": 1.521
+      },
+      {
+        "tid": 2813,
+        "start": 412888.058516,
+        "end": 412888.059002,
+        "wallMs": 0.486,
+        "name": "H:OnVsyncEvent now:412888058224028",
+        "guestScheduledMs": 0.486,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.292
+      },
+      {
+        "tid": 2813,
+        "start": 412888.074738,
+        "end": 412888.074969,
+        "wallMs": 0.231,
+        "name": "H:OnVsyncEvent now:412888073858220",
+        "guestScheduledMs": 0.231,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.88
+      },
+      {
+        "tid": 2813,
+        "start": 412888.092391,
+        "end": 412888.107461,
+        "wallMs": 15.07,
+        "name": "H:OnVsyncEvent now:412888089491982",
+        "guestScheduledMs": 13.141,
+        "guestOffCpuMs": 1.929,
+        "vsyncCallbackDelayMs": 2.899
+      },
+      {
+        "tid": 2813,
+        "start": 412888.107576,
+        "end": 412888.140243,
+        "wallMs": 32.667,
+        "name": "H:OnVsyncEvent now:412888105126236",
+        "guestScheduledMs": 28.02,
+        "guestOffCpuMs": 4.647,
+        "vsyncCallbackDelayMs": 2.45
+      },
+      {
+        "tid": 2813,
+        "start": 412888.140343,
+        "end": 412888.144595,
+        "wallMs": 4.252,
+        "name": "H:OnVsyncEvent now:412888120759893",
+        "guestScheduledMs": 3.799,
+        "guestOffCpuMs": 0.453,
+        "vsyncCallbackDelayMs": 19.583
+      },
+      {
+        "tid": 2813,
+        "start": 412888.152487,
+        "end": 412888.174361,
+        "wallMs": 21.874,
+        "name": "H:OnVsyncEvent now:412888152022578",
+        "guestScheduledMs": 20.772,
+        "guestOffCpuMs": 1.102,
+        "vsyncCallbackDelayMs": 0.464
+      },
+      {
+        "tid": 2813,
+        "start": 412888.176224,
+        "end": 412888.180489,
+        "wallMs": 4.265,
+        "name": "H:OnVsyncEvent now:412888167656181",
+        "guestScheduledMs": 4.015,
+        "guestOffCpuMs": 0.25,
+        "vsyncCallbackDelayMs": 8.568
+      },
+      {
+        "tid": 2813,
+        "start": 412888.183502,
+        "end": 412888.183587,
+        "wallMs": 0.085,
+        "name": "H:OnVsyncEvent now:412888183289714",
+        "guestScheduledMs": 0.085,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.212
+      },
+      {
+        "tid": 2813,
+        "start": 412888.26166,
+        "end": 412888.261982,
+        "wallMs": 0.322,
+        "name": "H:OnVsyncEvent now:412888261443722",
+        "guestScheduledMs": 0.322,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.216
+      },
+      {
+        "tid": 2813,
+        "start": 412889.808597,
+        "end": 412889.808884,
+        "wallMs": 0.287,
+        "name": "H:OnVsyncEvent now:412889808448784",
+        "guestScheduledMs": 0.267,
+        "guestOffCpuMs": 0.02,
+        "vsyncCallbackDelayMs": 0.148
+      },
+      {
+        "tid": 2813,
+        "start": 412889.825338,
+        "end": 412889.825471,
+        "wallMs": 0.133,
+        "name": "H:OnVsyncEvent now:412889824066547",
+        "guestScheduledMs": 0.133,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.271
+      },
+      {
+        "tid": 2813,
+        "start": 412889.871125,
+        "end": 412889.872201,
+        "wallMs": 1.076,
+        "name": "H:OnVsyncEvent now:412889870933420",
+        "guestScheduledMs": 1.076,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.192
+      },
+      {
+        "tid": 2813,
+        "start": 412889.886822,
+        "end": 412889.891802,
+        "wallMs": 4.98,
+        "name": "H:OnVsyncEvent now:412889886567072",
+        "guestScheduledMs": 4.98,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.255
+      },
+      {
+        "tid": 2813,
+        "start": 412889.904122,
+        "end": 412889.904496,
+        "wallMs": 0.374,
+        "name": "H:OnVsyncEvent now:412889902174984",
+        "guestScheduledMs": 0.283,
+        "guestOffCpuMs": 0.091,
+        "vsyncCallbackDelayMs": 1.947
+      },
+      {
+        "tid": 2813,
+        "start": 412889.918123,
+        "end": 412889.918626,
+        "wallMs": 0.503,
+        "name": "H:OnVsyncEvent now:412889917808626",
+        "guestScheduledMs": 0.459,
+        "guestOffCpuMs": 0.044,
+        "vsyncCallbackDelayMs": 0.314
+      },
+      {
+        "tid": 2813,
+        "start": 412889.934188,
+        "end": 412889.934485,
+        "wallMs": 0.297,
+        "name": "H:OnVsyncEvent now:412889933434890",
+        "guestScheduledMs": 0.297,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.753
+      },
+      {
+        "tid": 2813,
+        "start": 412889.95043,
+        "end": 412889.951402,
+        "wallMs": 0.972,
+        "name": "H:OnVsyncEvent now:412889949051748",
+        "guestScheduledMs": 0.326,
+        "guestOffCpuMs": 0.646,
+        "vsyncCallbackDelayMs": 1.378
+      },
+      {
+        "tid": 2813,
+        "start": 412889.964963,
+        "end": 412889.965321,
+        "wallMs": 0.358,
+        "name": "H:OnVsyncEvent now:412889964685961",
+        "guestScheduledMs": 0.337,
+        "guestOffCpuMs": 0.021,
+        "vsyncCallbackDelayMs": 0.277
+      },
+      {
+        "tid": 2813,
+        "start": 412889.981019,
+        "end": 412889.981197,
+        "wallMs": 0.178,
+        "name": "H:OnVsyncEvent now:412889980318492",
+        "guestScheduledMs": 0.178,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.701
+      },
+      {
+        "tid": 2813,
+        "start": 412889.997785,
+        "end": 412889.998249,
+        "wallMs": 0.464,
+        "name": "H:OnVsyncEvent now:412889995928379",
+        "guestScheduledMs": 0.423,
+        "guestOffCpuMs": 0.041,
+        "vsyncCallbackDelayMs": 1.857
+      },
+      {
+        "tid": 2813,
+        "start": 412890.01181,
+        "end": 412890.012113,
+        "wallMs": 0.303,
+        "name": "H:OnVsyncEvent now:412890011562680",
+        "guestScheduledMs": 0.286,
+        "guestOffCpuMs": 0.017,
+        "vsyncCallbackDelayMs": 0.247
+      },
+      {
+        "tid": 2813,
+        "start": 412890.027513,
+        "end": 412890.027751,
+        "wallMs": 0.238,
+        "name": "H:OnVsyncEvent now:412890027196701",
+        "guestScheduledMs": 0.221,
+        "guestOffCpuMs": 0.017,
+        "vsyncCallbackDelayMs": 0.316
+      },
+      {
+        "tid": 2813,
+        "start": 412890.043411,
+        "end": 412890.044133,
+        "wallMs": 0.722,
+        "name": "H:OnVsyncEvent now:412890042829585",
+        "guestScheduledMs": 0.669,
+        "guestOffCpuMs": 0.053,
+        "vsyncCallbackDelayMs": 0.581
+      },
+      {
+        "tid": 2813,
+        "start": 412890.058619,
+        "end": 412890.05917,
+        "wallMs": 0.551,
+        "name": "H:OnVsyncEvent now:412890058463529",
+        "guestScheduledMs": 0.518,
+        "guestOffCpuMs": 0.033,
+        "vsyncCallbackDelayMs": 0.155
+      },
+      {
+        "tid": 2813,
+        "start": 412890.077474,
+        "end": 412890.077997,
+        "wallMs": 0.523,
+        "name": "H:OnVsyncEvent now:412890074080532",
+        "guestScheduledMs": 0.141,
+        "guestOffCpuMs": 0.382,
+        "vsyncCallbackDelayMs": 3.393
+      },
+      {
+        "tid": 2813,
+        "start": 412890.094552,
+        "end": 412890.094933,
+        "wallMs": 0.381,
+        "name": "H:OnVsyncEvent now:412890089713169",
+        "guestScheduledMs": 0.381,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 4.839
+      },
+      {
+        "tid": 2813,
+        "start": 412890.121585,
+        "end": 412890.121763,
+        "wallMs": 0.178,
+        "name": "H:OnVsyncEvent now:412890120950179",
+        "guestScheduledMs": 0.178,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.635
+      },
+      {
+        "tid": 2813,
+        "start": 412890.138122,
+        "end": 412890.13844,
+        "wallMs": 0.318,
+        "name": "H:OnVsyncEvent now:412890136565963",
+        "guestScheduledMs": 0.318,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.556
+      },
+      {
+        "tid": 2813,
+        "start": 412890.152818,
+        "end": 412890.153027,
+        "wallMs": 0.209,
+        "name": "H:OnVsyncEvent now:412890152195347",
+        "guestScheduledMs": 0.209,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.623
+      },
+      {
+        "tid": 2813,
+        "start": 412890.169192,
+        "end": 412890.169409,
+        "wallMs": 0.217,
+        "name": "H:OnVsyncEvent now:412890167812226",
+        "guestScheduledMs": 0.17,
+        "guestOffCpuMs": 0.047,
+        "vsyncCallbackDelayMs": 1.38
+      },
+      {
+        "tid": 2813,
+        "start": 412890.184451,
+        "end": 412890.184657,
+        "wallMs": 0.206,
+        "name": "H:OnVsyncEvent now:412890183434403",
+        "guestScheduledMs": 0.166,
+        "guestOffCpuMs": 0.04,
+        "vsyncCallbackDelayMs": 1.017
+      },
+      {
+        "tid": 2813,
+        "start": 412890.199398,
+        "end": 412890.199604,
+        "wallMs": 0.206,
+        "name": "H:OnVsyncEvent now:412890199068442",
+        "guestScheduledMs": 0.161,
+        "guestOffCpuMs": 0.045,
+        "vsyncCallbackDelayMs": 0.33
+      },
+      {
+        "tid": 2813,
+        "start": 412890.215389,
+        "end": 412890.220439,
+        "wallMs": 5.05,
+        "name": "H:OnVsyncEvent now:412890214702511",
+        "guestScheduledMs": 4.931,
+        "guestOffCpuMs": 0.119,
+        "vsyncCallbackDelayMs": 0.686
+      },
+      {
+        "tid": 2813,
+        "start": 412890.233077,
+        "end": 412890.24997,
+        "wallMs": 16.893,
+        "name": "H:OnVsyncEvent now:412890230336348",
+        "guestScheduledMs": 16.204,
+        "guestOffCpuMs": 0.689,
+        "vsyncCallbackDelayMs": 2.741
+      },
+      {
+        "tid": 2813,
+        "start": 412890.250117,
+        "end": 412890.252034,
+        "wallMs": 1.917,
+        "name": "H:OnVsyncEvent now:412890245970292",
+        "guestScheduledMs": 1.917,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 4.147
+      },
+      {
+        "tid": 2813,
+        "start": 412890.262692,
+        "end": 412890.273257,
+        "wallMs": 10.565,
+        "name": "H:OnVsyncEvent now:412890261604162",
+        "guestScheduledMs": 10.376,
+        "guestOffCpuMs": 0.189,
+        "vsyncCallbackDelayMs": 1.088
+      },
+      {
+        "tid": 2813,
+        "start": 412890.278358,
+        "end": 412890.279216,
+        "wallMs": 0.858,
+        "name": "H:OnVsyncEvent now:412890277237899",
+        "guestScheduledMs": 0.838,
+        "guestOffCpuMs": 0.02,
+        "vsyncCallbackDelayMs": 1.12
+      },
+      {
+        "tid": 2813,
+        "start": 412890.293399,
+        "end": 412890.29354,
+        "wallMs": 0.141,
+        "name": "H:OnVsyncEvent now:412890292871629",
+        "guestScheduledMs": 0.141,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.527
+      },
+      {
+        "tid": 2813,
+        "start": 412890.340621,
+        "end": 412890.3412,
+        "wallMs": 0.579,
+        "name": "H:OnVsyncEvent now:412890339764138",
+        "guestScheduledMs": 0.579,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.857
+      },
+      {
+        "tid": 2813,
+        "start": 412890.35558,
+        "end": 412890.356403,
+        "wallMs": 0.823,
+        "name": "H:OnVsyncEvent now:412890355397532",
+        "guestScheduledMs": 0.823,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.182
+      },
+      {
+        "tid": 2813,
+        "start": 412890.371229,
+        "end": 412890.371693,
+        "wallMs": 0.464,
+        "name": "H:OnVsyncEvent now:412890371030799",
+        "guestScheduledMs": 0.464,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.198
+      },
+      {
+        "tid": 2813,
+        "start": 412890.387019,
+        "end": 412890.392806,
+        "wallMs": 5.787,
+        "name": "H:OnVsyncEvent now:412890386664032",
+        "guestScheduledMs": 4.454,
+        "guestOffCpuMs": 1.333,
+        "vsyncCallbackDelayMs": 0.355
+      },
+      {
+        "tid": 2813,
+        "start": 412890.403244,
+        "end": 412890.423546,
+        "wallMs": 20.302,
+        "name": "H:OnVsyncEvent now:412890402287191",
+        "guestScheduledMs": 16.893,
+        "guestOffCpuMs": 3.409,
+        "vsyncCallbackDelayMs": 0.957
+      },
+      {
+        "tid": 2813,
+        "start": 412890.424562,
+        "end": 412890.427579,
+        "wallMs": 3.017,
+        "name": "H:OnVsyncEvent now:412890417920306",
+        "guestScheduledMs": 2.879,
+        "guestOffCpuMs": 0.138,
+        "vsyncCallbackDelayMs": 6.642
+      },
+      {
+        "tid": 2813,
+        "start": 412890.433752,
+        "end": 412890.447506,
+        "wallMs": 13.754,
+        "name": "H:OnVsyncEvent now:412890433553372",
+        "guestScheduledMs": 12.501,
+        "guestOffCpuMs": 1.253,
+        "vsyncCallbackDelayMs": 0.199
+      },
+      {
+        "tid": 2813,
+        "start": 412890.4494,
+        "end": 412890.451233,
+        "wallMs": 1.833,
+        "name": "H:OnVsyncEvent now:412890449186238",
+        "guestScheduledMs": 0.853,
+        "guestOffCpuMs": 0.98,
+        "vsyncCallbackDelayMs": 0.214
+      },
+      {
+        "tid": 2813,
+        "start": 412890.465022,
+        "end": 412890.465139,
+        "wallMs": 0.117,
+        "name": "H:OnVsyncEvent now:412890464819054",
+        "guestScheduledMs": 0.117,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.203
+      },
+      {
+        "tid": 2813,
+        "start": 412890.496558,
+        "end": 412890.496783,
+        "wallMs": 0.225,
+        "name": "H:OnVsyncEvent now:412890496079571",
+        "guestScheduledMs": 0.225,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.478
+      },
+      {
+        "tid": 2813,
+        "start": 412890.559967,
+        "end": 412890.560556,
+        "wallMs": 0.589,
+        "name": "H:OnVsyncEvent now:412890558579105",
+        "guestScheduledMs": 0.589,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.388
+      },
+      {
+        "tid": 2813,
+        "start": 412890.574928,
+        "end": 412890.575782,
+        "wallMs": 0.854,
+        "name": "H:OnVsyncEvent now:412890574203277",
+        "guestScheduledMs": 0.854,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.725
+      },
+      {
+        "tid": 2813,
+        "start": 412890.589989,
+        "end": 412890.593663,
+        "wallMs": 3.674,
+        "name": "H:OnVsyncEvent now:412890589836032",
+        "guestScheduledMs": 3.64,
+        "guestOffCpuMs": 0.034,
+        "vsyncCallbackDelayMs": 0.153
+      },
+      {
+        "tid": 2813,
+        "start": 412890.607916,
+        "end": 412890.622719,
+        "wallMs": 14.803,
+        "name": "H:OnVsyncEvent now:412890605434176",
+        "guestScheduledMs": 14.716,
+        "guestOffCpuMs": 0.087,
+        "vsyncCallbackDelayMs": 2.482
+      },
+      {
+        "tid": 2813,
+        "start": 412890.623692,
+        "end": 412890.626409,
+        "wallMs": 2.717,
+        "name": "H:OnVsyncEvent now:412890621066957",
+        "guestScheduledMs": 2.555,
+        "guestOffCpuMs": 0.162,
+        "vsyncCallbackDelayMs": 2.625
+      },
+      {
+        "tid": 2813,
+        "start": 412890.640442,
+        "end": 412890.651552,
+        "wallMs": 11.11,
+        "name": "H:OnVsyncEvent now:412890636699985",
+        "guestScheduledMs": 10.981,
+        "guestOffCpuMs": 0.129,
+        "vsyncCallbackDelayMs": 3.742
+      },
+      {
+        "tid": 2813,
+        "start": 412890.652497,
+        "end": 412890.653231,
+        "wallMs": 0.734,
+        "name": "H:OnVsyncEvent now:412890652332907",
+        "guestScheduledMs": 0.676,
+        "guestOffCpuMs": 0.058,
+        "vsyncCallbackDelayMs": 0.164
+      },
+      {
+        "tid": 2813,
+        "start": 412890.668214,
+        "end": 412890.668311,
+        "wallMs": 0.097,
+        "name": "H:OnVsyncEvent now:412890667965320",
+        "guestScheduledMs": 0.097,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.249
+      },
+      {
+        "tid": 2813,
+        "start": 412890.68511,
+        "end": 412890.685468,
+        "wallMs": 0.358,
+        "name": "H:OnVsyncEvent now:412890683577422",
+        "guestScheduledMs": 0.358,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.533
+      },
+      {
+        "tid": 2813,
+        "start": 412890.699364,
+        "end": 412890.699952,
+        "wallMs": 0.588,
+        "name": "H:OnVsyncEvent now:412890699210217",
+        "guestScheduledMs": 0.564,
+        "guestOffCpuMs": 0.024,
+        "vsyncCallbackDelayMs": 0.154
+      },
+      {
+        "tid": 2813,
+        "start": 412890.716435,
+        "end": 412890.717554,
+        "wallMs": 1.119,
+        "name": "H:OnVsyncEvent now:412890714820699",
+        "guestScheduledMs": 1.018,
+        "guestOffCpuMs": 0.101,
+        "vsyncCallbackDelayMs": 1.614
+      },
+      {
+        "tid": 2813,
+        "start": 412890.730582,
+        "end": 412890.731827,
+        "wallMs": 1.245,
+        "name": "H:OnVsyncEvent now:412890730453822",
+        "guestScheduledMs": 1.152,
+        "guestOffCpuMs": 0.093,
+        "vsyncCallbackDelayMs": 0.128
+      },
+      {
+        "tid": 2813,
+        "start": 412890.746345,
+        "end": 412890.761953,
+        "wallMs": 15.608,
+        "name": "H:OnVsyncEvent now:412890746085094",
+        "guestScheduledMs": 15.418,
+        "guestOffCpuMs": 0.19,
+        "vsyncCallbackDelayMs": 0.26
+      },
+      {
+        "tid": 2813,
+        "start": 412890.762556,
+        "end": 412890.768742,
+        "wallMs": 6.186,
+        "name": "H:OnVsyncEvent now:412890761717988",
+        "guestScheduledMs": 4.966,
+        "guestOffCpuMs": 1.22,
+        "vsyncCallbackDelayMs": 0.838
+      },
+      {
+        "tid": 2813,
+        "start": 412890.779991,
+        "end": 412890.785489,
+        "wallMs": 5.498,
+        "name": "H:OnVsyncEvent now:412890777311801",
+        "guestScheduledMs": 4.275,
+        "guestOffCpuMs": 1.223,
+        "vsyncCallbackDelayMs": 2.679
+      },
+      {
+        "tid": 2813,
+        "start": 412890.793101,
+        "end": 412890.796281,
+        "wallMs": 3.18,
+        "name": "H:OnVsyncEvent now:412890792945098",
+        "guestScheduledMs": 2.231,
+        "guestOffCpuMs": 0.949,
+        "vsyncCallbackDelayMs": 0.156
+      },
+      {
+        "tid": 2813,
+        "start": 412890.809419,
+        "end": 412890.811912,
+        "wallMs": 2.493,
+        "name": "H:OnVsyncEvent now:412890808567876",
+        "guestScheduledMs": 1.513,
+        "guestOffCpuMs": 0.98,
+        "vsyncCallbackDelayMs": 0.851
+      },
+      {
+        "tid": 2813,
+        "start": 412890.824665,
+        "end": 412890.838095,
+        "wallMs": 13.43,
+        "name": "H:OnVsyncEvent now:412890824196184",
+        "guestScheduledMs": 12.329,
+        "guestOffCpuMs": 1.101,
+        "vsyncCallbackDelayMs": 0.469
+      },
+      {
+        "tid": 2813,
+        "start": 412890.840149,
+        "end": 412890.840221,
+        "wallMs": 0.072,
+        "name": "H:OnVsyncEvent now:412890839829366",
+        "guestScheduledMs": 0.072,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.32
+      },
+      {
+        "tid": 2813,
+        "start": 412890.888512,
+        "end": 412890.889809,
+        "wallMs": 1.297,
+        "name": "H:OnVsyncEvent now:412890886703541",
+        "guestScheduledMs": 1.239,
+        "guestOffCpuMs": 0.058,
+        "vsyncCallbackDelayMs": 1.808
+      },
+      {
+        "tid": 2813,
+        "start": 412890.902526,
+        "end": 412890.903661,
+        "wallMs": 1.135,
+        "name": "H:OnVsyncEvent now:412890902336696",
+        "guestScheduledMs": 1.135,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.189
+      },
+      {
+        "tid": 2813,
+        "start": 412890.920214,
+        "end": 412890.928481,
+        "wallMs": 8.267,
+        "name": "H:OnVsyncEvent now:412890917938309",
+        "guestScheduledMs": 6.921,
+        "guestOffCpuMs": 1.346,
+        "vsyncCallbackDelayMs": 2.276
+      },
+      {
+        "tid": 2813,
+        "start": 412890.933829,
+        "end": 412890.954106,
+        "wallMs": 20.277,
+        "name": "H:OnVsyncEvent now:412890933571409",
+        "guestScheduledMs": 17.888,
+        "guestOffCpuMs": 2.389,
+        "vsyncCallbackDelayMs": 0.258
+      },
+      {
+        "tid": 2813,
+        "start": 412890.955205,
+        "end": 412890.957847,
+        "wallMs": 2.642,
+        "name": "H:OnVsyncEvent now:412890949204618",
+        "guestScheduledMs": 2.461,
+        "guestOffCpuMs": 0.181,
+        "vsyncCallbackDelayMs": 6.0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.964982,
+        "end": 412890.977715,
+        "wallMs": 12.733,
+        "name": "H:OnVsyncEvent now:412890964837895",
+        "guestScheduledMs": 12.58,
+        "guestOffCpuMs": 0.153,
+        "vsyncCallbackDelayMs": 0.144
+      },
+      {
+        "tid": 2813,
+        "start": 412890.980754,
+        "end": 412890.981536,
+        "wallMs": 0.782,
+        "name": "H:OnVsyncEvent now:412890980469413",
+        "guestScheduledMs": 0.761,
+        "guestOffCpuMs": 0.021,
+        "vsyncCallbackDelayMs": 0.285
+      },
+      {
+        "tid": 2813,
+        "start": 412890.996702,
+        "end": 412890.996804,
+        "wallMs": 0.102,
+        "name": "H:OnVsyncEvent now:412890996096378",
+        "guestScheduledMs": 0.102,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.606
+      },
+      {
+        "tid": 2813,
+        "start": 412891.027548,
+        "end": 412891.028223,
+        "wallMs": 0.675,
+        "name": "H:OnVsyncEvent now:412891027362337",
+        "guestScheduledMs": 0.66,
+        "guestOffCpuMs": 0.015,
+        "vsyncCallbackDelayMs": 0.186
+      },
+      {
+        "tid": 2813,
+        "start": 412891.043202,
+        "end": 412891.044644,
+        "wallMs": 1.442,
+        "name": "H:OnVsyncEvent now:412891042995164",
+        "guestScheduledMs": 1.186,
+        "guestOffCpuMs": 0.256,
+        "vsyncCallbackDelayMs": 0.207
+      },
+      {
+        "tid": 2813,
+        "start": 412891.058832,
+        "end": 412891.063272,
+        "wallMs": 4.44,
+        "name": "H:OnVsyncEvent now:412891058627936",
+        "guestScheduledMs": 4.093,
+        "guestOffCpuMs": 0.347,
+        "vsyncCallbackDelayMs": 0.204
+      },
+      {
+        "tid": 2813,
+        "start": 412891.074476,
+        "end": 412891.090946,
+        "wallMs": 16.47,
+        "name": "H:OnVsyncEvent now:412891074260530",
+        "guestScheduledMs": 15.638,
+        "guestOffCpuMs": 0.832,
+        "vsyncCallbackDelayMs": 0.215
+      },
+      {
+        "tid": 2813,
+        "start": 412891.09194,
+        "end": 412891.09521,
+        "wallMs": 3.27,
+        "name": "H:OnVsyncEvent now:412891089893011",
+        "guestScheduledMs": 3.241,
+        "guestOffCpuMs": 0.029,
+        "vsyncCallbackDelayMs": 2.047
+      },
+      {
+        "tid": 2813,
+        "start": 412891.107143,
+        "end": 412891.12035,
+        "wallMs": 13.207,
+        "name": "H:OnVsyncEvent now:412891105502697",
+        "guestScheduledMs": 12.746,
+        "guestOffCpuMs": 0.461,
+        "vsyncCallbackDelayMs": 1.64
+      },
+      {
+        "tid": 2813,
+        "start": 412891.121285,
+        "end": 412891.122058,
+        "wallMs": 0.773,
+        "name": "H:OnVsyncEvent now:412891121135437",
+        "guestScheduledMs": 0.714,
+        "guestOffCpuMs": 0.059,
+        "vsyncCallbackDelayMs": 0.15
+      },
+      {
+        "tid": 2813,
+        "start": 412891.136943,
+        "end": 412891.137043,
+        "wallMs": 0.1,
+        "name": "H:OnVsyncEvent now:412891136768051",
+        "guestScheduledMs": 0.1,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.175
+      },
+      {
+        "tid": 2813,
+        "start": 412891.169785,
+        "end": 412891.170677,
+        "wallMs": 0.892,
+        "name": "H:OnVsyncEvent now:412891168007972",
+        "guestScheduledMs": 0.704,
+        "guestOffCpuMs": 0.188,
+        "vsyncCallbackDelayMs": 1.777
+      },
+      {
+        "tid": 2813,
+        "start": 412891.185222,
+        "end": 412891.186247,
+        "wallMs": 1.025,
+        "name": "H:OnVsyncEvent now:412891183618223",
+        "guestScheduledMs": 1.005,
+        "guestOffCpuMs": 0.02,
+        "vsyncCallbackDelayMs": 1.604
+      },
+      {
+        "tid": 2813,
+        "start": 412891.20146,
+        "end": 412891.201561,
+        "wallMs": 0.101,
+        "name": "H:OnVsyncEvent now:412891199219421",
+        "guestScheduledMs": 0.101,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 2.241
+      },
+      {
+        "tid": 2813,
+        "start": 412891.218768,
+        "end": 412891.223335,
+        "wallMs": 4.567,
+        "name": "H:OnVsyncEvent now:412891214795161",
+        "guestScheduledMs": 4.174,
+        "guestOffCpuMs": 0.393,
+        "vsyncCallbackDelayMs": 3.973
+      },
+      {
+        "tid": 2813,
+        "start": 412891.233585,
+        "end": 412891.248564,
+        "wallMs": 14.979,
+        "name": "H:OnVsyncEvent now:412891230382709",
+        "guestScheduledMs": 14.826,
+        "guestOffCpuMs": 0.153,
+        "vsyncCallbackDelayMs": 3.202
+      },
+      {
+        "tid": 2813,
+        "start": 412891.248618,
+        "end": 412891.251314,
+        "wallMs": 2.696,
+        "name": "H:OnVsyncEvent now:412891246017480",
+        "guestScheduledMs": 2.696,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 2.601
+      },
+      {
+        "tid": 2813,
+        "start": 412891.261814,
+        "end": 412891.273968,
+        "wallMs": 12.154,
+        "name": "H:OnVsyncEvent now:412891261652159",
+        "guestScheduledMs": 12.154,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.162
+      },
+      {
+        "tid": 2813,
+        "start": 412891.278361,
+        "end": 412891.279014,
+        "wallMs": 0.653,
+        "name": "H:OnVsyncEvent now:412891277272144",
+        "guestScheduledMs": 0.631,
+        "guestOffCpuMs": 0.022,
+        "vsyncCallbackDelayMs": 1.089
+      },
+      {
+        "tid": 2813,
+        "start": 412891.29316,
+        "end": 412891.293311,
+        "wallMs": 0.151,
+        "name": "H:OnVsyncEvent now:412891292905951",
+        "guestScheduledMs": 0.151,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.254
+      },
+      {
+        "tid": 2813,
+        "start": 412891.35555,
+        "end": 412891.355938,
+        "wallMs": 0.388,
+        "name": "H:OnVsyncEvent now:412891355415807",
+        "guestScheduledMs": 0.388,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.134
+      },
+      {
+        "tid": 2813,
+        "start": 412891.371192,
+        "end": 412891.374444,
+        "wallMs": 3.252,
+        "name": "H:OnVsyncEvent now:412891371050279",
+        "guestScheduledMs": 0.874,
+        "guestOffCpuMs": 2.378,
+        "vsyncCallbackDelayMs": 0.142
+      },
+      {
+        "tid": 2813,
+        "start": 412891.388698,
+        "end": 412891.399175,
+        "wallMs": 10.477,
+        "name": "H:OnVsyncEvent now:412891386658559",
+        "guestScheduledMs": 10.291,
+        "guestOffCpuMs": 0.186,
+        "vsyncCallbackDelayMs": 2.039
+      },
+      {
+        "tid": 2813,
+        "start": 412891.402436,
+        "end": 412891.402568,
+        "wallMs": 0.132,
+        "name": "H:OnVsyncEvent now:412891402293154",
+        "guestScheduledMs": 0.132,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.143
+      },
+      {
+        "tid": 2813,
+        "start": 412891.42011,
+        "end": 412891.422744,
+        "wallMs": 2.634,
+        "name": "H:OnVsyncEvent now:412891417898098",
+        "guestScheduledMs": 2.452,
+        "guestOffCpuMs": 0.182,
+        "vsyncCallbackDelayMs": 2.212
+      },
+      {
+        "tid": 2813,
+        "start": 412891.434368,
+        "end": 412891.457898,
+        "wallMs": 23.53,
+        "name": "H:OnVsyncEvent now:412891433523350",
+        "guestScheduledMs": 19.963,
+        "guestOffCpuMs": 3.567,
+        "vsyncCallbackDelayMs": 0.845
+      },
+      {
+        "tid": 2813,
+        "start": 412891.458013,
+        "end": 412891.462382,
+        "wallMs": 4.369,
+        "name": "H:OnVsyncEvent now:412891449158102",
+        "guestScheduledMs": 4.369,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 8.855
+      },
+      {
+        "tid": 2813,
+        "start": 412891.465015,
+        "end": 412891.472649,
+        "wallMs": 7.634,
+        "name": "H:OnVsyncEvent now:412891464792661",
+        "guestScheduledMs": 5.977,
+        "guestOffCpuMs": 1.657,
+        "vsyncCallbackDelayMs": 0.222
+      },
+      {
+        "tid": 2813,
+        "start": 412891.480646,
+        "end": 412891.48556,
+        "wallMs": 4.914,
+        "name": "H:OnVsyncEvent now:412891480427258",
+        "guestScheduledMs": 3.896,
+        "guestOffCpuMs": 1.018,
+        "vsyncCallbackDelayMs": 0.219
+      },
+      {
+        "tid": 2813,
+        "start": 412891.496238,
+        "end": 412891.500335,
+        "wallMs": 4.097,
+        "name": "H:OnVsyncEvent now:412891496061667",
+        "guestScheduledMs": 2.82,
+        "guestOffCpuMs": 1.277,
+        "vsyncCallbackDelayMs": 0.176
+      },
+      {
+        "tid": 2813,
+        "start": 412891.511932,
+        "end": 412891.514523,
+        "wallMs": 2.591,
+        "name": "H:OnVsyncEvent now:412891511695971",
+        "guestScheduledMs": 1.461,
+        "guestOffCpuMs": 1.13,
+        "vsyncCallbackDelayMs": 0.236
+      },
+      {
+        "tid": 2813,
+        "start": 412891.527565,
+        "end": 412891.540947,
+        "wallMs": 13.382,
+        "name": "H:OnVsyncEvent now:412891527329909",
+        "guestScheduledMs": 13.375,
+        "guestOffCpuMs": 0.007,
+        "vsyncCallbackDelayMs": 0.235
+      },
+      {
+        "tid": 2813,
+        "start": 412891.543127,
+        "end": 412891.543188,
+        "wallMs": 0.061,
+        "name": "H:OnVsyncEvent now:412891542963990",
+        "guestScheduledMs": 0.061,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.163
+      },
+      {
+        "tid": 2813,
+        "start": 412891.590323,
+        "end": 412891.591388,
+        "wallMs": 1.065,
+        "name": "H:OnVsyncEvent now:412891589864362",
+        "guestScheduledMs": 1.044,
+        "guestOffCpuMs": 0.021,
+        "vsyncCallbackDelayMs": 0.459
+      },
+      {
+        "tid": 2813,
+        "start": 412891.606106,
+        "end": 412891.607995,
+        "wallMs": 1.889,
+        "name": "H:OnVsyncEvent now:412891605496548",
+        "guestScheduledMs": 1.477,
+        "guestOffCpuMs": 0.412,
+        "vsyncCallbackDelayMs": 0.609
+      },
+      {
+        "tid": 2813,
+        "start": 412891.621876,
+        "end": 412891.628211,
+        "wallMs": 6.335,
+        "name": "H:OnVsyncEvent now:412891621129727",
+        "guestScheduledMs": 6.294,
+        "guestOffCpuMs": 0.041,
+        "vsyncCallbackDelayMs": 0.746
+      },
+      {
+        "tid": 2813,
+        "start": 412891.637911,
+        "end": 412891.65797,
+        "wallMs": 20.059,
+        "name": "H:OnVsyncEvent now:412891636761601",
+        "guestScheduledMs": 19.176,
+        "guestOffCpuMs": 0.883,
+        "vsyncCallbackDelayMs": 1.149
+      },
+      {
+        "tid": 2813,
+        "start": 412891.658034,
+        "end": 412891.6609,
+        "wallMs": 2.866,
+        "name": "H:OnVsyncEvent now:412891652393831",
+        "guestScheduledMs": 2.832,
+        "guestOffCpuMs": 0.034,
+        "vsyncCallbackDelayMs": 5.64
+      },
+      {
+        "tid": 2813,
+        "start": 412891.668622,
+        "end": 412891.683278,
+        "wallMs": 14.656,
+        "name": "H:OnVsyncEvent now:412891668021717",
+        "guestScheduledMs": 13.149,
+        "guestOffCpuMs": 1.507,
+        "vsyncCallbackDelayMs": 0.6
+      },
+      {
+        "tid": 2813,
+        "start": 412891.683831,
+        "end": 412891.685801,
+        "wallMs": 1.97,
+        "name": "H:OnVsyncEvent now:412891683654714",
+        "guestScheduledMs": 0.892,
+        "guestOffCpuMs": 1.078,
+        "vsyncCallbackDelayMs": 0.176
+      },
+      {
+        "tid": 2813,
+        "start": 412891.699511,
+        "end": 412891.699626,
+        "wallMs": 0.115,
+        "name": "H:OnVsyncEvent now:412891699287658",
+        "guestScheduledMs": 0.115,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.223
+      },
+      {
+        "tid": 2813,
+        "start": 412891.730724,
+        "end": 412891.731499,
+        "wallMs": 0.775,
+        "name": "H:OnVsyncEvent now:412891730538165",
+        "guestScheduledMs": 0.775,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.186
+      },
+      {
+        "tid": 2813,
+        "start": 412891.749232,
+        "end": 412891.750512,
+        "wallMs": 1.28,
+        "name": "H:OnVsyncEvent now:412891746125929",
+        "guestScheduledMs": 1.28,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 3.106
+      },
+      {
+        "tid": 2813,
+        "start": 412891.761899,
+        "end": 412891.765796,
+        "wallMs": 3.897,
+        "name": "H:OnVsyncEvent now:412891761759595",
+        "guestScheduledMs": 3.642,
+        "guestOffCpuMs": 0.255,
+        "vsyncCallbackDelayMs": 0.139
+      },
+      {
+        "tid": 2813,
+        "start": 412891.778553,
+        "end": 412891.794087,
+        "wallMs": 15.534,
+        "name": "H:OnVsyncEvent now:412891777377423",
+        "guestScheduledMs": 15.434,
+        "guestOffCpuMs": 0.1,
+        "vsyncCallbackDelayMs": 1.176
+      },
+      {
+        "tid": 2813,
+        "start": 412891.794147,
+        "end": 412891.796424,
+        "wallMs": 2.277,
+        "name": "H:OnVsyncEvent now:412891793000521",
+        "guestScheduledMs": 2.261,
+        "guestOffCpuMs": 0.016,
+        "vsyncCallbackDelayMs": 1.146
+      },
+      {
+        "tid": 2813,
+        "start": 412891.81193,
+        "end": 412891.824382,
+        "wallMs": 12.452,
+        "name": "H:OnVsyncEvent now:412891808585354",
+        "guestScheduledMs": 12.329,
+        "guestOffCpuMs": 0.123,
+        "vsyncCallbackDelayMs": 3.345
+      },
+      {
+        "tid": 2813,
+        "start": 412891.824647,
+        "end": 412891.825289,
+        "wallMs": 0.642,
+        "name": "H:OnVsyncEvent now:412891824219742",
+        "guestScheduledMs": 0.627,
+        "guestOffCpuMs": 0.015,
+        "vsyncCallbackDelayMs": 0.427
+      },
+      {
+        "tid": 2813,
+        "start": 412891.841439,
+        "end": 412891.841534,
+        "wallMs": 0.095,
+        "name": "H:OnVsyncEvent now:412891839832111",
+        "guestScheduledMs": 0.095,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.607
+      },
+      {
+        "tid": 2813,
+        "start": 412891.889127,
+        "end": 412891.88976,
+        "wallMs": 0.633,
+        "name": "H:OnVsyncEvent now:412891886694402",
+        "guestScheduledMs": 0.62,
+        "guestOffCpuMs": 0.013,
+        "vsyncCallbackDelayMs": 2.433
+      },
+      {
+        "tid": 2813,
+        "start": 412891.902548,
+        "end": 412891.903686,
+        "wallMs": 1.138,
+        "name": "H:OnVsyncEvent now:412891902329079",
+        "guestScheduledMs": 1.045,
+        "guestOffCpuMs": 0.093,
+        "vsyncCallbackDelayMs": 0.219
+      },
+      {
+        "tid": 2813,
+        "start": 412891.918867,
+        "end": 412891.92283,
+        "wallMs": 3.963,
+        "name": "H:OnVsyncEvent now:412891917952104",
+        "guestScheduledMs": 3.82,
+        "guestOffCpuMs": 0.143,
+        "vsyncCallbackDelayMs": 0.915
+      },
+      {
+        "tid": 2813,
+        "start": 412891.933734,
+        "end": 412891.948626,
+        "wallMs": 14.892,
+        "name": "H:OnVsyncEvent now:412891933586727",
+        "guestScheduledMs": 14.693,
+        "guestOffCpuMs": 0.199,
+        "vsyncCallbackDelayMs": 0.147
+      },
+      {
+        "tid": 2813,
+        "start": 412891.949467,
+        "end": 412891.952407,
+        "wallMs": 2.94,
+        "name": "H:OnVsyncEvent now:412891949219831",
+        "guestScheduledMs": 2.809,
+        "guestOffCpuMs": 0.131,
+        "vsyncCallbackDelayMs": 0.247
+      },
+      {
+        "tid": 2813,
+        "start": 412891.965007,
+        "end": 412891.981728,
+        "wallMs": 16.721,
+        "name": "H:OnVsyncEvent now:412891964854298",
+        "guestScheduledMs": 12.711,
+        "guestOffCpuMs": 4.01,
+        "vsyncCallbackDelayMs": 0.153
+      },
+      {
+        "tid": 2813,
+        "start": 412891.982042,
+        "end": 412891.98275,
+        "wallMs": 0.708,
+        "name": "H:OnVsyncEvent now:412891980488644",
+        "guestScheduledMs": 0.683,
+        "guestOffCpuMs": 0.025,
+        "vsyncCallbackDelayMs": 1.553
+      },
+      {
+        "tid": 2813,
+        "start": 412891.996352,
+        "end": 412891.996473,
+        "wallMs": 0.121,
+        "name": "H:OnVsyncEvent now:412891996122742",
+        "guestScheduledMs": 0.121,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.229
+      },
+      {
+        "tid": 2813,
+        "start": 412892.044374,
+        "end": 412892.045007,
+        "wallMs": 0.633,
+        "name": "H:OnVsyncEvent now:412892043005995",
+        "guestScheduledMs": 0.633,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.368
+      },
+      {
+        "tid": 2813,
+        "start": 412892.059947,
+        "end": 412892.061009,
+        "wallMs": 1.062,
+        "name": "H:OnVsyncEvent now:412892058622324",
+        "guestScheduledMs": 1.062,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.325
+      },
+      {
+        "tid": 2813,
+        "start": 412892.074893,
+        "end": 412892.075065,
+        "wallMs": 0.172,
+        "name": "H:OnVsyncEvent now:412892074256517",
+        "guestScheduledMs": 0.151,
+        "guestOffCpuMs": 0.021,
+        "vsyncCallbackDelayMs": 0.636
+      },
+      {
+        "tid": 2813,
+        "start": 412892.090184,
+        "end": 412892.090391,
+        "wallMs": 0.207,
+        "name": "H:OnVsyncEvent now:412892089890471",
+        "guestScheduledMs": 0.188,
+        "guestOffCpuMs": 0.019,
+        "vsyncCallbackDelayMs": 0.294
+      },
+      {
+        "tid": 2813,
+        "start": 412892.107175,
+        "end": 412892.107398,
+        "wallMs": 0.223,
+        "name": "H:OnVsyncEvent now:412892105501415",
+        "guestScheduledMs": 0.207,
+        "guestOffCpuMs": 0.016,
+        "vsyncCallbackDelayMs": 1.674
+      },
+      {
+        "tid": 2813,
+        "start": 412892.121289,
+        "end": 412892.121492,
+        "wallMs": 0.203,
+        "name": "H:OnVsyncEvent now:412892121135573",
+        "guestScheduledMs": 0.187,
+        "guestOffCpuMs": 0.016,
+        "vsyncCallbackDelayMs": 0.153
+      },
+      {
+        "tid": 2813,
+        "start": 412892.138719,
+        "end": 412892.138966,
+        "wallMs": 0.247,
+        "name": "H:OnVsyncEvent now:412892136741459",
+        "guestScheduledMs": 0.204,
+        "guestOffCpuMs": 0.043,
+        "vsyncCallbackDelayMs": 1.978
+      },
+      {
+        "tid": 2813,
+        "start": 412892.153101,
+        "end": 412892.153454,
+        "wallMs": 0.353,
+        "name": "H:OnVsyncEvent now:412892152374227",
+        "guestScheduledMs": 0.299,
+        "guestOffCpuMs": 0.054,
+        "vsyncCallbackDelayMs": 0.727
+      },
+      {
+        "tid": 2813,
+        "start": 412892.169502,
+        "end": 412892.169747,
+        "wallMs": 0.245,
+        "name": "H:OnVsyncEvent now:412892167997518",
+        "guestScheduledMs": 0.221,
+        "guestOffCpuMs": 0.024,
+        "vsyncCallbackDelayMs": 1.504
+      },
+      {
+        "tid": 2813,
+        "start": 412892.184228,
+        "end": 412892.184442,
+        "wallMs": 0.214,
+        "name": "H:OnVsyncEvent now:412892183631849",
+        "guestScheduledMs": 0.196,
+        "guestOffCpuMs": 0.018,
+        "vsyncCallbackDelayMs": 0.596
+      },
+      {
+        "tid": 2813,
+        "start": 412892.201122,
+        "end": 412892.201292,
+        "wallMs": 0.17,
+        "name": "H:OnVsyncEvent now:412892199242994",
+        "guestScheduledMs": 0.17,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.879
+      },
+      {
+        "tid": 2813,
+        "start": 412892.21503,
+        "end": 412892.215241,
+        "wallMs": 0.211,
+        "name": "H:OnVsyncEvent now:412892214877439",
+        "guestScheduledMs": 0.197,
+        "guestOffCpuMs": 0.014,
+        "vsyncCallbackDelayMs": 0.153
+      },
+      {
+        "tid": 2813,
+        "start": 412892.232116,
+        "end": 412892.232296,
+        "wallMs": 0.18,
+        "name": "H:OnVsyncEvent now:412892230488996",
+        "guestScheduledMs": 0.167,
+        "guestOffCpuMs": 0.013,
+        "vsyncCallbackDelayMs": 1.627
+      },
+      {
+        "tid": 2813,
+        "start": 412892.246644,
+        "end": 412892.246842,
+        "wallMs": 0.198,
+        "name": "H:OnVsyncEvent now:412892246123578",
+        "guestScheduledMs": 0.181,
+        "guestOffCpuMs": 0.017,
+        "vsyncCallbackDelayMs": 0.52
+      },
+      {
+        "tid": 2813,
+        "start": 412892.262305,
+        "end": 412892.262499,
+        "wallMs": 0.194,
+        "name": "H:OnVsyncEvent now:412892261758035",
+        "guestScheduledMs": 0.176,
+        "guestOffCpuMs": 0.018,
+        "vsyncCallbackDelayMs": 0.547
+      },
+      {
+        "tid": 2813,
+        "start": 412892.277948,
+        "end": 412892.278134,
+        "wallMs": 0.186,
+        "name": "H:OnVsyncEvent now:412892277392021",
+        "guestScheduledMs": 0.17,
+        "guestOffCpuMs": 0.016,
+        "vsyncCallbackDelayMs": 0.556
+      },
+      {
+        "tid": 2813,
+        "start": 412892.293692,
+        "end": 412892.293923,
+        "wallMs": 0.231,
+        "name": "H:OnVsyncEvent now:412892293026200",
+        "guestScheduledMs": 0.211,
+        "guestOffCpuMs": 0.02,
+        "vsyncCallbackDelayMs": 0.666
+      },
+      {
+        "tid": 2813,
+        "start": 412892.309841,
+        "end": 412892.310172,
+        "wallMs": 0.331,
+        "name": "H:OnVsyncEvent now:412892308644796",
+        "guestScheduledMs": 0.316,
+        "guestOffCpuMs": 0.015,
+        "vsyncCallbackDelayMs": 1.196
+      },
+      {
+        "tid": 2813,
+        "start": 412892.324656,
+        "end": 412892.324873,
+        "wallMs": 0.217,
+        "name": "H:OnVsyncEvent now:412892324275589",
+        "guestScheduledMs": 0.202,
+        "guestOffCpuMs": 0.015,
+        "vsyncCallbackDelayMs": 0.38
+      },
+      {
+        "tid": 2813,
+        "start": 412892.341651,
+        "end": 412892.341838,
+        "wallMs": 0.187,
+        "name": "H:OnVsyncEvent now:412892339884974",
+        "guestScheduledMs": 0.173,
+        "guestOffCpuMs": 0.014,
+        "vsyncCallbackDelayMs": 1.766
+      },
+      {
+        "tid": 2813,
+        "start": 412892.3557,
+        "end": 412892.35592,
+        "wallMs": 0.22,
+        "name": "H:OnVsyncEvent now:412892355519205",
+        "guestScheduledMs": 0.209,
+        "guestOffCpuMs": 0.011,
+        "vsyncCallbackDelayMs": 0.181
+      },
+      {
+        "tid": 2813,
+        "start": 412892.371362,
+        "end": 412892.371543,
+        "wallMs": 0.181,
+        "name": "H:OnVsyncEvent now:412892371153375",
+        "guestScheduledMs": 0.181,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.209
+      },
+      {
+        "tid": 2813,
+        "start": 412892.387038,
+        "end": 412892.387251,
+        "wallMs": 0.213,
+        "name": "H:OnVsyncEvent now:412892386787183",
+        "guestScheduledMs": 0.213,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.251
+      },
+      {
+        "tid": 2813,
+        "start": 412892.402605,
+        "end": 412892.406553,
+        "wallMs": 3.948,
+        "name": "H:OnVsyncEvent now:412892402421099",
+        "guestScheduledMs": 3.948,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.184
+      },
+      {
+        "tid": 2813,
+        "start": 412892.419273,
+        "end": 412892.434329,
+        "wallMs": 15.056,
+        "name": "H:OnVsyncEvent now:412892418039362",
+        "guestScheduledMs": 14.76,
+        "guestOffCpuMs": 0.296,
+        "vsyncCallbackDelayMs": 1.234
+      },
+      {
+        "tid": 2813,
+        "start": 412892.434388,
+        "end": 412892.438351,
+        "wallMs": 3.963,
+        "name": "H:OnVsyncEvent now:412892433673283",
+        "guestScheduledMs": 3.956,
+        "guestOffCpuMs": 0.007,
+        "vsyncCallbackDelayMs": 0.715
+      },
+      {
+        "tid": 2813,
+        "start": 412892.450304,
+        "end": 412892.453565,
+        "wallMs": 3.261,
+        "name": "H:OnVsyncEvent now:412892449294689",
+        "guestScheduledMs": 3.218,
+        "guestOffCpuMs": 0.043,
+        "vsyncCallbackDelayMs": 1.009
+      },
+      {
+        "tid": 2813,
+        "start": 412892.465275,
+        "end": 412892.467791,
+        "wallMs": 2.516,
+        "name": "H:OnVsyncEvent now:412892464928643",
+        "guestScheduledMs": 2.504,
+        "guestOffCpuMs": 0.012,
+        "vsyncCallbackDelayMs": 0.346
+      },
+      {
+        "tid": 2813,
+        "start": 412892.480854,
+        "end": 412892.484515,
+        "wallMs": 3.661,
+        "name": "H:OnVsyncEvent now:412892480562459",
+        "guestScheduledMs": 3.632,
+        "guestOffCpuMs": 0.029,
+        "vsyncCallbackDelayMs": 0.292
+      },
+      {
+        "tid": 2813,
+        "start": 412892.496648,
+        "end": 412892.51171,
+        "wallMs": 15.062,
+        "name": "H:OnVsyncEvent now:412892496193885",
+        "guestScheduledMs": 12.523,
+        "guestOffCpuMs": 2.539,
+        "vsyncCallbackDelayMs": 0.454
+      },
+      {
+        "tid": 2813,
+        "start": 412892.512103,
+        "end": 412892.512167,
+        "wallMs": 0.064,
+        "name": "H:OnVsyncEvent now:412892511827350",
+        "guestScheduledMs": 0.064,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.276
+      },
+      {
+        "tid": 2813,
+        "start": 412892.591001,
+        "end": 412892.591196,
+        "wallMs": 0.195,
+        "name": "H:OnVsyncEvent now:412892589967854",
+        "guestScheduledMs": 0.195,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.033
+      }
+    ],
+    "inputs": [
+      {
+        "tid": 2813,
+        "start": 412885.311758,
+        "end": 412885.312422,
+        "wallMs": 0.664,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.664,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.37166,
+        "end": 412885.372726,
+        "wallMs": 1.066,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 1.066,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.443094,
+        "end": 412885.443424,
+        "wallMs": 0.33,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.247,
+        "guestOffCpuMs": 0.083
+      },
+      {
+        "tid": 2813,
+        "start": 412885.50388,
+        "end": 412885.504396,
+        "wallMs": 0.516,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.513,
+        "guestOffCpuMs": 0.003
+      },
+      {
+        "tid": 2813,
+        "start": 412885.575685,
+        "end": 412885.57587,
+        "wallMs": 0.185,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.185,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.638315,
+        "end": 412885.638586,
+        "wallMs": 0.271,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.271,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.709441,
+        "end": 412885.709646,
+        "wallMs": 0.205,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.205,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.775044,
+        "end": 412885.77522,
+        "wallMs": 0.176,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.176,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.842069,
+        "end": 412885.842692,
+        "wallMs": 0.623,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.507,
+        "guestOffCpuMs": 0.116
+      },
+      {
+        "tid": 2813,
+        "start": 412885.903475,
+        "end": 412885.904052,
+        "wallMs": 0.577,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.523,
+        "guestOffCpuMs": 0.054
+      },
+      {
+        "tid": 2813,
+        "start": 412885.974966,
+        "end": 412885.975299,
+        "wallMs": 0.333,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.223,
+        "guestOffCpuMs": 0.11
+      },
+      {
+        "tid": 2813,
+        "start": 412886.038323,
+        "end": 412886.038981,
+        "wallMs": 0.658,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.482,
+        "guestOffCpuMs": 0.176
+      },
+      {
+        "tid": 2813,
+        "start": 412886.111894,
+        "end": 412886.112178,
+        "wallMs": 0.284,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.245,
+        "guestOffCpuMs": 0.039
+      },
+      {
+        "tid": 2813,
+        "start": 412886.17309,
+        "end": 412886.17371,
+        "wallMs": 0.62,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.577,
+        "guestOffCpuMs": 0.043
+      },
+      {
+        "tid": 2813,
+        "start": 412886.247151,
+        "end": 412886.247736,
+        "wallMs": 0.585,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.222,
+        "guestOffCpuMs": 0.363
+      },
+      {
+        "tid": 2813,
+        "start": 412886.30725,
+        "end": 412886.307818,
+        "wallMs": 0.568,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.466,
+        "guestOffCpuMs": 0.102
+      },
+      {
+        "tid": 2813,
+        "start": 412886.376051,
+        "end": 412886.376167,
+        "wallMs": 0.116,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.116,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.447094,
+        "end": 412886.447713,
+        "wallMs": 0.619,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.424,
+        "guestOffCpuMs": 0.195
+      },
+      {
+        "tid": 2813,
+        "start": 412886.516536,
+        "end": 412886.516659,
+        "wallMs": 0.123,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.123,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.580456,
+        "end": 412886.580949,
+        "wallMs": 0.493,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.268,
+        "guestOffCpuMs": 0.225
+      },
+      {
+        "tid": 2813,
+        "start": 412886.651124,
+        "end": 412886.652124,
+        "wallMs": 1.0,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.841,
+        "guestOffCpuMs": 0.159
+      },
+      {
+        "tid": 2813,
+        "start": 412886.71217,
+        "end": 412886.712853,
+        "wallMs": 0.683,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.673,
+        "guestOffCpuMs": 0.01
+      },
+      {
+        "tid": 2813,
+        "start": 412886.80059,
+        "end": 412886.800745,
+        "wallMs": 0.155,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.155,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.845322,
+        "end": 412886.845951,
+        "wallMs": 0.629,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.608,
+        "guestOffCpuMs": 0.021
+      },
+      {
+        "tid": 2813,
+        "start": 412889.805531,
+        "end": 412889.806389,
+        "wallMs": 0.858,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.803,
+        "guestOffCpuMs": 0.055
+      },
+      {
+        "tid": 2813,
+        "start": 412889.867937,
+        "end": 412889.869332,
+        "wallMs": 1.395,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 1.384,
+        "guestOffCpuMs": 0.011
+      },
+      {
+        "tid": 2813,
+        "start": 412889.941229,
+        "end": 412889.942136,
+        "wallMs": 0.907,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.907,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.003321,
+        "end": 412890.004345,
+        "wallMs": 1.024,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 1.011,
+        "guestOffCpuMs": 0.013
+      },
+      {
+        "tid": 2813,
+        "start": 412890.077241,
+        "end": 412890.077395,
+        "wallMs": 0.154,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.154,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.139316,
+        "end": 412890.139526,
+        "wallMs": 0.21,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.21,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.211795,
+        "end": 412890.212113,
+        "wallMs": 0.318,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.318,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.274138,
+        "end": 412890.27447,
+        "wallMs": 0.332,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.332,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.34502,
+        "end": 412890.345251,
+        "wallMs": 0.231,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.231,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.424139,
+        "end": 412890.424421,
+        "wallMs": 0.282,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.282,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.480613,
+        "end": 412890.481108,
+        "wallMs": 0.495,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.495,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.544459,
+        "end": 412890.545348,
+        "wallMs": 0.889,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.63,
+        "guestOffCpuMs": 0.259
+      },
+      {
+        "tid": 2813,
+        "start": 412890.623192,
+        "end": 412890.623583,
+        "wallMs": 0.391,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.25,
+        "guestOffCpuMs": 0.141
+      },
+      {
+        "tid": 2813,
+        "start": 412890.678154,
+        "end": 412890.678748,
+        "wallMs": 0.594,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.572,
+        "guestOffCpuMs": 0.022
+      },
+      {
+        "tid": 2813,
+        "start": 412890.762313,
+        "end": 412890.762458,
+        "wallMs": 0.145,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.126,
+        "guestOffCpuMs": 0.019
+      },
+      {
+        "tid": 2813,
+        "start": 412890.813062,
+        "end": 412890.813893,
+        "wallMs": 0.831,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.69,
+        "guestOffCpuMs": 0.141
+      },
+      {
+        "tid": 2813,
+        "start": 412890.890638,
+        "end": 412890.891178,
+        "wallMs": 0.54,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.315,
+        "guestOffCpuMs": 0.225
+      },
+      {
+        "tid": 2813,
+        "start": 412890.954558,
+        "end": 412890.955095,
+        "wallMs": 0.537,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.375,
+        "guestOffCpuMs": 0.162
+      },
+      {
+        "tid": 2813,
+        "start": 412891.022135,
+        "end": 412891.022356,
+        "wallMs": 0.221,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.163,
+        "guestOffCpuMs": 0.058
+      },
+      {
+        "tid": 2813,
+        "start": 412891.091313,
+        "end": 412891.091856,
+        "wallMs": 0.543,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.284,
+        "guestOffCpuMs": 0.259
+      },
+      {
+        "tid": 2813,
+        "start": 412891.157704,
+        "end": 412891.157827,
+        "wallMs": 0.123,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.123,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.223595,
+        "end": 412891.223925,
+        "wallMs": 0.33,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.191,
+        "guestOffCpuMs": 0.139
+      },
+      {
+        "tid": 2813,
+        "start": 412891.292384,
+        "end": 412891.292778,
+        "wallMs": 0.394,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.394,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.353418,
+        "end": 412891.354083,
+        "wallMs": 0.665,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.625,
+        "guestOffCpuMs": 0.04
+      }
+    ],
+    "longestCustomUpdates": [
+      {
+        "tid": 2813,
+        "start": 412887.529218,
+        "end": 412887.556604,
+        "wallMs": 27.386,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 27.386,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412888.110618,
+        "end": 412888.121893,
+        "wallMs": 11.275,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 7.515,
+        "guestOffCpuMs": 3.76
+      },
+      {
+        "tid": 2813,
+        "start": 412887.150048,
+        "end": 412887.160922,
+        "wallMs": 10.874,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 8.147,
+        "guestOffCpuMs": 2.727
+      },
+      {
+        "tid": 2813,
+        "start": 412887.140171,
+        "end": 412887.150046,
+        "wallMs": 9.875,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 7.202,
+        "guestOffCpuMs": 2.673
+      },
+      {
+        "tid": 2813,
+        "start": 412891.38872,
+        "end": 412891.398256,
+        "wallMs": 9.536,
+        "name": "H:CustomNodeUpdate name:ReadingExperience,id:239",
+        "guestScheduledMs": 9.35,
+        "guestOffCpuMs": 0.186
+      },
+      {
+        "tid": 2813,
+        "start": 412887.556606,
+        "end": 412887.56553,
+        "wallMs": 8.924,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 8.924,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.320459,
+        "end": 412887.328261,
+        "wallMs": 7.802,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 6.355,
+        "guestOffCpuMs": 1.447
+      },
+      {
+        "tid": 2813,
+        "start": 412888.121895,
+        "end": 412888.129614,
+        "wallMs": 7.719,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 7.421,
+        "guestOffCpuMs": 0.298
+      },
+      {
+        "tid": 2813,
+        "start": 412887.312796,
+        "end": 412887.320456,
+        "wallMs": 7.66,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 6.601,
+        "guestOffCpuMs": 1.059
+      },
+      {
+        "tid": 2813,
+        "start": 412886.999076,
+        "end": 412887.006546,
+        "wallMs": 7.47,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 6.863,
+        "guestOffCpuMs": 0.607
+      },
+      {
+        "tid": 2813,
+        "start": 412886.778901,
+        "end": 412886.785318,
+        "wallMs": 6.417,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 6.125,
+        "guestOffCpuMs": 0.292
+      },
+      {
+        "tid": 2813,
+        "start": 412890.405424,
+        "end": 412890.411725,
+        "wallMs": 6.301,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 5.104,
+        "guestOffCpuMs": 1.197
+      },
+      {
+        "tid": 2813,
+        "start": 412890.937324,
+        "end": 412890.942757,
+        "wallMs": 5.433,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 5.02,
+        "guestOffCpuMs": 0.413
+      },
+      {
+        "tid": 2813,
+        "start": 412886.559478,
+        "end": 412886.564887,
+        "wallMs": 5.409,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 5.179,
+        "guestOffCpuMs": 0.23
+      },
+      {
+        "tid": 2813,
+        "start": 412891.436988,
+        "end": 412891.442224,
+        "wallMs": 5.236,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.512,
+        "guestOffCpuMs": 0.724
+      },
+      {
+        "tid": 2813,
+        "start": 412887.006549,
+        "end": 412887.011636,
+        "wallMs": 5.087,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 5.081,
+        "guestOffCpuMs": 0.006
+      },
+      {
+        "tid": 2813,
+        "start": 412886.403728,
+        "end": 412886.408742,
+        "wallMs": 5.014,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.203,
+        "guestOffCpuMs": 0.811
+      },
+      {
+        "tid": 2813,
+        "start": 412891.079687,
+        "end": 412891.084633,
+        "wallMs": 4.946,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 4.532,
+        "guestOffCpuMs": 0.414
+      },
+      {
+        "tid": 2813,
+        "start": 412891.639836,
+        "end": 412891.644656,
+        "wallMs": 4.82,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.801,
+        "guestOffCpuMs": 0.019
+      },
+      {
+        "tid": 2813,
+        "start": 412886.122722,
+        "end": 412886.127525,
+        "wallMs": 4.803,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.748,
+        "guestOffCpuMs": 0.055
+      },
+      {
+        "tid": 2813,
+        "start": 412886.78532,
+        "end": 412886.790111,
+        "wallMs": 4.791,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 4.791,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.235729,
+        "end": 412890.240282,
+        "wallMs": 4.553,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.553,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.779803,
+        "end": 412891.784263,
+        "wallMs": 4.46,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.389,
+        "guestOffCpuMs": 0.071
+      },
+      {
+        "tid": 2813,
+        "start": 412886.564889,
+        "end": 412886.56928,
+        "wallMs": 4.391,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 4.391,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.644658,
+        "end": 412891.649039,
+        "wallMs": 4.381,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 4.381,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.127526,
+        "end": 412886.131904,
+        "wallMs": 4.378,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 4.378,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.934817,
+        "end": 412891.939194,
+        "wallMs": 4.377,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.286,
+        "guestOffCpuMs": 0.091
+      },
+      {
+        "tid": 2813,
+        "start": 412891.2388,
+        "end": 412891.243164,
+        "wallMs": 4.364,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1407",
+        "guestScheduledMs": 4.364,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.608991,
+        "end": 412890.613275,
+        "wallMs": 4.284,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.284,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.234538,
+        "end": 412891.238799,
+        "wallMs": 4.261,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 4.183,
+        "guestOffCpuMs": 0.078
+      }
+    ],
+    "nativeUploadSlices": [
+      {
+        "tid": 2813,
+        "start": 412885.072651,
+        "end": 412885.07266,
+        "wallMs": 0.009,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.009,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.072669,
+        "end": 412885.072716,
+        "wallMs": 0.047,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#547769984256, traceid:0x0",
+        "guestScheduledMs": 0.047,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412885.072744,
+        "end": 412885.077102,
+        "wallMs": 4.358,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 3.535,
+        "guestOffCpuMs": 0.823
+      },
+      {
+        "tid": 2962,
+        "start": 412885.072743,
+        "end": 412885.077108,
+        "wallMs": 4.365,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#547769984256, traceid:0x0",
+        "guestScheduledMs": 3.542,
+        "guestOffCpuMs": 0.823
+      },
+      {
+        "tid": 4765,
+        "start": 412885.077398,
+        "end": 412885.079709,
+        "wallMs": 2.311,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.311,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.077273,
+        "end": 412885.089997,
+        "wallMs": 12.724,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#547769984256, traceid:0x0",
+        "guestScheduledMs": 7.662,
+        "guestOffCpuMs": 5.062
+      },
+      {
+        "tid": 4765,
+        "start": 412885.077396,
+        "end": 412885.092465,
+        "wallMs": 15.069,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.883,
+        "guestOffCpuMs": 12.186
+      },
+      {
+        "tid": 2813,
+        "start": 412885.123059,
+        "end": 412885.123062,
+        "wallMs": 0.003,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.003,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.123066,
+        "end": 412885.123078,
+        "wallMs": 0.012,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#547769984256, traceid:0x0",
+        "guestScheduledMs": 0.012,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412885.123149,
+        "end": 412885.126481,
+        "wallMs": 3.332,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 3.332,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412885.123148,
+        "end": 412885.126483,
+        "wallMs": 3.335,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#547769984256, traceid:0x0",
+        "guestScheduledMs": 3.335,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.126567,
+        "end": 412885.127771,
+        "wallMs": 1.204,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#547769984256, traceid:0x0",
+        "guestScheduledMs": 1.195,
+        "guestOffCpuMs": 0.009
+      },
+      {
+        "tid": 4765,
+        "start": 412885.12664,
+        "end": 412885.128787,
+        "wallMs": 2.147,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.137,
+        "guestOffCpuMs": 0.01
+      },
+      {
+        "tid": 4765,
+        "start": 412885.126639,
+        "end": 412885.132826,
+        "wallMs": 6.187,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.55,
+        "guestOffCpuMs": 3.637
+      },
+      {
+        "tid": 2813,
+        "start": 412885.167089,
+        "end": 412885.167093,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.167097,
+        "end": 412885.16711,
+        "wallMs": 0.013,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545991022720, traceid:0x0",
+        "guestScheduledMs": 0.013,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412885.16714,
+        "end": 412885.171458,
+        "wallMs": 4.318,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 3.942,
+        "guestOffCpuMs": 0.376
+      },
+      {
+        "tid": 2961,
+        "start": 412885.167138,
+        "end": 412885.17146,
+        "wallMs": 4.322,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545991022720, traceid:0x0",
+        "guestScheduledMs": 3.946,
+        "guestOffCpuMs": 0.376
+      },
+      {
+        "tid": 2813,
+        "start": 412885.171513,
+        "end": 412885.172616,
+        "wallMs": 1.103,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545991022720, traceid:0x0",
+        "guestScheduledMs": 1.103,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412885.171581,
+        "end": 412885.173643,
+        "wallMs": 2.062,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.062,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412885.17158,
+        "end": 412885.177441,
+        "wallMs": 5.861,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.473,
+        "guestOffCpuMs": 3.388
+      },
+      {
+        "tid": 2813,
+        "start": 412885.917715,
+        "end": 412885.917719,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.917722,
+        "end": 412885.921028,
+        "wallMs": 3.306,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545184234752, traceid:0x0",
+        "guestScheduledMs": 0.02,
+        "guestOffCpuMs": 3.286
+      },
+      {
+        "tid": 2962,
+        "start": 412885.917744,
+        "end": 412885.921748,
+        "wallMs": 4.004,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412885.917743,
+        "end": 412885.921748,
+        "wallMs": 4.005,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545184234752, traceid:0x0",
+        "guestScheduledMs": 4.005,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412885.921809,
+        "end": 412885.923008,
+        "wallMs": 1.199,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545184234752, traceid:0x0",
+        "guestScheduledMs": 1.173,
+        "guestOffCpuMs": 0.026
+      },
+      {
+        "tid": 4765,
+        "start": 412885.921856,
+        "end": 412885.924125,
+        "wallMs": 2.269,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.269,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412885.921855,
+        "end": 412885.92917,
+        "wallMs": 7.315,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.707,
+        "guestOffCpuMs": 4.608
+      },
+      {
+        "tid": 2813,
+        "start": 412886.046724,
+        "end": 412886.046727,
+        "wallMs": 0.003,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.003,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.04673,
+        "end": 412886.046757,
+        "wallMs": 0.027,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175108864, traceid:0x0",
+        "guestScheduledMs": 0.027,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412886.047534,
+        "end": 412886.05221,
+        "wallMs": 4.676,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.395,
+        "guestOffCpuMs": 0.281
+      },
+      {
+        "tid": 2961,
+        "start": 412886.047533,
+        "end": 412886.052212,
+        "wallMs": 4.679,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175108864, traceid:0x0",
+        "guestScheduledMs": 4.398,
+        "guestOffCpuMs": 0.281
+      },
+      {
+        "tid": 4765,
+        "start": 412886.052434,
+        "end": 412886.054891,
+        "wallMs": 2.457,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.457,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.052337,
+        "end": 412886.05671,
+        "wallMs": 4.373,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175108864, traceid:0x0",
+        "guestScheduledMs": 1.446,
+        "guestOffCpuMs": 2.927
+      },
+      {
+        "tid": 4765,
+        "start": 412886.052433,
+        "end": 412886.058497,
+        "wallMs": 6.064,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.939,
+        "guestOffCpuMs": 3.125
+      },
+      {
+        "tid": 2813,
+        "start": 412886.188469,
+        "end": 412886.188474,
+        "wallMs": 0.005,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.005,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.188478,
+        "end": 412886.188502,
+        "wallMs": 0.024,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545184228608, traceid:0x0",
+        "guestScheduledMs": 0.024,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412886.18854,
+        "end": 412886.192793,
+        "wallMs": 4.253,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.207,
+        "guestOffCpuMs": 0.046
+      },
+      {
+        "tid": 2962,
+        "start": 412886.188538,
+        "end": 412886.192795,
+        "wallMs": 4.257,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545184228608, traceid:0x0",
+        "guestScheduledMs": 4.211,
+        "guestOffCpuMs": 0.046
+      },
+      {
+        "tid": 2813,
+        "start": 412886.192857,
+        "end": 412886.194153,
+        "wallMs": 1.296,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545184228608, traceid:0x0",
+        "guestScheduledMs": 1.283,
+        "guestOffCpuMs": 0.013
+      },
+      {
+        "tid": 4765,
+        "start": 412886.192918,
+        "end": 412886.195471,
+        "wallMs": 2.553,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.553,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412886.192916,
+        "end": 412886.19935,
+        "wallMs": 6.434,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.055,
+        "guestOffCpuMs": 3.379
+      },
+      {
+        "tid": 2813,
+        "start": 412886.331539,
+        "end": 412886.331542,
+        "wallMs": 0.003,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.003,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.331546,
+        "end": 412886.331562,
+        "wallMs": 0.016,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545184225152, traceid:0x0",
+        "guestScheduledMs": 0.016,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412886.331595,
+        "end": 412886.335868,
+        "wallMs": 4.273,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.273,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412886.331593,
+        "end": 412886.33587,
+        "wallMs": 4.277,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545184225152, traceid:0x0",
+        "guestScheduledMs": 4.277,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.335951,
+        "end": 412886.337274,
+        "wallMs": 1.323,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545184225152, traceid:0x0",
+        "guestScheduledMs": 1.323,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412886.336014,
+        "end": 412886.33878,
+        "wallMs": 2.766,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.766,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412886.336013,
+        "end": 412886.342891,
+        "wallMs": 6.878,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.306,
+        "guestOffCpuMs": 3.572
+      },
+      {
+        "tid": 2813,
+        "start": 412886.471289,
+        "end": 412886.471293,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412886.471314,
+        "end": 412886.475856,
+        "wallMs": 4.542,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.542,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412886.471313,
+        "end": 412886.475857,
+        "wallMs": 4.544,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175097344, traceid:0x0",
+        "guestScheduledMs": 4.544,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.471297,
+        "end": 412886.475867,
+        "wallMs": 4.57,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175097344, traceid:0x0",
+        "guestScheduledMs": 0.011,
+        "guestOffCpuMs": 4.559
+      },
+      {
+        "tid": 2813,
+        "start": 412886.475905,
+        "end": 412886.477327,
+        "wallMs": 1.422,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175097344, traceid:0x0",
+        "guestScheduledMs": 1.422,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412886.475993,
+        "end": 412886.479034,
+        "wallMs": 3.041,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 3.041,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412886.475992,
+        "end": 412886.4831,
+        "wallMs": 7.108,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.601,
+        "guestOffCpuMs": 3.507
+      },
+      {
+        "tid": 2813,
+        "start": 412886.714805,
+        "end": 412886.71481,
+        "wallMs": 0.005,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.005,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.714814,
+        "end": 412886.714828,
+        "wallMs": 0.014,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 0.014,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412886.71486,
+        "end": 412886.720489,
+        "wallMs": 5.629,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 5.629,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412886.714859,
+        "end": 412886.720491,
+        "wallMs": 5.632,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 5.632,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.720564,
+        "end": 412886.722169,
+        "wallMs": 1.605,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 1.597,
+        "guestOffCpuMs": 0.008
+      },
+      {
+        "tid": 4765,
+        "start": 412886.720664,
+        "end": 412886.72406,
+        "wallMs": 3.396,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 3.396,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412886.720663,
+        "end": 412886.728672,
+        "wallMs": 8.009,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 4.011,
+        "guestOffCpuMs": 3.998
+      },
+      {
+        "tid": 2813,
+        "start": 412886.915685,
+        "end": 412886.915693,
+        "wallMs": 0.008,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.008,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412886.9157,
+        "end": 412886.918568,
+        "wallMs": 2.868,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545170660992, traceid:0x0",
+        "guestScheduledMs": 0.02,
+        "guestOffCpuMs": 2.848
+      },
+      {
+        "tid": 2962,
+        "start": 412886.915746,
+        "end": 412886.922128,
+        "wallMs": 6.382,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 5.816,
+        "guestOffCpuMs": 0.566
+      },
+      {
+        "tid": 2962,
+        "start": 412886.915745,
+        "end": 412886.92213,
+        "wallMs": 6.385,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545170660992, traceid:0x0",
+        "guestScheduledMs": 5.819,
+        "guestOffCpuMs": 0.566
+      },
+      {
+        "tid": 2813,
+        "start": 412886.922235,
+        "end": 412886.938306,
+        "wallMs": 16.071,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545170660992, traceid:0x0",
+        "guestScheduledMs": 12.32,
+        "guestOffCpuMs": 3.751
+      },
+      {
+        "tid": 4765,
+        "start": 412886.936779,
+        "end": 412886.940283,
+        "wallMs": 3.504,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 3.504,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412886.936777,
+        "end": 412886.945243,
+        "wallMs": 8.466,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 4.176,
+        "guestOffCpuMs": 4.29
+      },
+      {
+        "tid": 2813,
+        "start": 412887.066808,
+        "end": 412887.066813,
+        "wallMs": 0.005,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.005,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.066819,
+        "end": 412887.066838,
+        "wallMs": 0.019,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175097728, traceid:0x0",
+        "guestScheduledMs": 0.019,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412887.066869,
+        "end": 412887.071965,
+        "wallMs": 5.096,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 5.096,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412887.066867,
+        "end": 412887.071967,
+        "wallMs": 5.1,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175097728, traceid:0x0",
+        "guestScheduledMs": 5.1,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.072023,
+        "end": 412887.073602,
+        "wallMs": 1.579,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175097728, traceid:0x0",
+        "guestScheduledMs": 1.579,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412887.072099,
+        "end": 412887.076855,
+        "wallMs": 4.756,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 3.476,
+        "guestOffCpuMs": 1.28
+      },
+      {
+        "tid": 4765,
+        "start": 412887.072097,
+        "end": 412887.082451,
+        "wallMs": 10.354,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 4.244,
+        "guestOffCpuMs": 6.11
+      },
+      {
+        "tid": 2813,
+        "start": 412887.244739,
+        "end": 412887.244745,
+        "wallMs": 0.006,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.006,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.244756,
+        "end": 412887.244785,
+        "wallMs": 0.029,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175107328, traceid:0x0",
+        "guestScheduledMs": 0.029,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412887.244864,
+        "end": 412887.250959,
+        "wallMs": 6.095,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 6.068,
+        "guestOffCpuMs": 0.027
+      },
+      {
+        "tid": 2961,
+        "start": 412887.244861,
+        "end": 412887.250961,
+        "wallMs": 6.1,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175107328, traceid:0x0",
+        "guestScheduledMs": 6.073,
+        "guestOffCpuMs": 0.027
+      },
+      {
+        "tid": 2813,
+        "start": 412887.251057,
+        "end": 412887.252828,
+        "wallMs": 1.771,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175107328, traceid:0x0",
+        "guestScheduledMs": 1.771,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412887.251164,
+        "end": 412887.254614,
+        "wallMs": 3.45,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 3.45,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412887.251163,
+        "end": 412887.259773,
+        "wallMs": 8.61,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 4.255,
+        "guestOffCpuMs": 4.355
+      },
+      {
+        "tid": 2813,
+        "start": 412887.385756,
+        "end": 412887.385762,
+        "wallMs": 0.006,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.006,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.385768,
+        "end": 412887.385795,
+        "wallMs": 0.027,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545184223232, traceid:0x0",
+        "guestScheduledMs": 0.027,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412887.385877,
+        "end": 412887.392937,
+        "wallMs": 7.06,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 7.047,
+        "guestOffCpuMs": 0.013
+      },
+      {
+        "tid": 2962,
+        "start": 412887.385874,
+        "end": 412887.392942,
+        "wallMs": 7.068,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545184223232, traceid:0x0",
+        "guestScheduledMs": 7.055,
+        "guestOffCpuMs": 0.013
+      },
+      {
+        "tid": 2813,
+        "start": 412887.393139,
+        "end": 412887.395396,
+        "wallMs": 2.257,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545184223232, traceid:0x0",
+        "guestScheduledMs": 2.257,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412887.393282,
+        "end": 412887.398237,
+        "wallMs": 4.955,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 4.913,
+        "guestOffCpuMs": 0.042
+      },
+      {
+        "tid": 4765,
+        "start": 412887.39328,
+        "end": 412887.403867,
+        "wallMs": 10.587,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 5.702,
+        "guestOffCpuMs": 4.885
+      },
+      {
+        "tid": 2813,
+        "start": 412887.460974,
+        "end": 412887.460978,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.460983,
+        "end": 412887.461004,
+        "wallMs": 0.021,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545170659840, traceid:0x0",
+        "guestScheduledMs": 0.021,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412887.461076,
+        "end": 412887.46671,
+        "wallMs": 5.634,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 5.634,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412887.461074,
+        "end": 412887.466712,
+        "wallMs": 5.638,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545170659840, traceid:0x0",
+        "guestScheduledMs": 5.638,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.468793,
+        "end": 412887.471481,
+        "wallMs": 2.688,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545170659840, traceid:0x0",
+        "guestScheduledMs": 2.688,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412887.468939,
+        "end": 412887.473206,
+        "wallMs": 4.267,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 4.212,
+        "guestOffCpuMs": 0.055
+      },
+      {
+        "tid": 4765,
+        "start": 412887.468938,
+        "end": 412887.478411,
+        "wallMs": 9.473,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 4.944,
+        "guestOffCpuMs": 4.529
+      },
+      {
+        "tid": 2813,
+        "start": 412887.694745,
+        "end": 412887.69476,
+        "wallMs": 0.015,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.015,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.694775,
+        "end": 412887.69481,
+        "wallMs": 0.035,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545990715776, traceid:0x0",
+        "guestScheduledMs": 0.035,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412887.694977,
+        "end": 412887.709732,
+        "wallMs": 14.755,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 10.494,
+        "guestOffCpuMs": 4.261
+      },
+      {
+        "tid": 2962,
+        "start": 412887.694974,
+        "end": 412887.709735,
+        "wallMs": 14.761,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545990715776, traceid:0x0",
+        "guestScheduledMs": 10.5,
+        "guestOffCpuMs": 4.261
+      },
+      {
+        "tid": 2813,
+        "start": 412887.709873,
+        "end": 412887.713023,
+        "wallMs": 3.15,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545990715776, traceid:0x0",
+        "guestScheduledMs": 3.15,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412887.710571,
+        "end": 412887.71522,
+        "wallMs": 4.649,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 4.649,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412887.710569,
+        "end": 412887.722778,
+        "wallMs": 12.209,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 5.866,
+        "guestOffCpuMs": 6.343
+      },
+      {
+        "tid": 2813,
+        "start": 412888.228837,
+        "end": 412888.228845,
+        "wallMs": 0.008,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.008,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412888.228854,
+        "end": 412888.228879,
+        "wallMs": 0.025,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545170657152, traceid:0x0",
+        "guestScheduledMs": 0.025,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412888.228941,
+        "end": 412888.236059,
+        "wallMs": 7.118,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 6.505,
+        "guestOffCpuMs": 0.613
+      },
+      {
+        "tid": 2963,
+        "start": 412888.228939,
+        "end": 412888.236064,
+        "wallMs": 7.125,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545170657152, traceid:0x0",
+        "guestScheduledMs": 6.512,
+        "guestOffCpuMs": 0.613
+      },
+      {
+        "tid": 2813,
+        "start": 412888.236257,
+        "end": 412888.238286,
+        "wallMs": 2.029,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545170657152, traceid:0x0",
+        "guestScheduledMs": 2.029,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412888.236422,
+        "end": 412888.240366,
+        "wallMs": 3.944,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 3.944,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412888.236419,
+        "end": 412888.245918,
+        "wallMs": 9.499,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 4.722,
+        "guestOffCpuMs": 4.777
+      },
+      {
+        "tid": 2813,
+        "start": 412890.326134,
+        "end": 412890.326138,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.326141,
+        "end": 412890.326159,
+        "wallMs": 0.018,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545180235008, traceid:0x0",
+        "guestScheduledMs": 0.018,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412890.326212,
+        "end": 412890.331916,
+        "wallMs": 5.704,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 5.456,
+        "guestOffCpuMs": 0.248
+      },
+      {
+        "tid": 2963,
+        "start": 412890.326209,
+        "end": 412890.331918,
+        "wallMs": 5.709,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545180235008, traceid:0x0",
+        "guestScheduledMs": 5.461,
+        "guestOffCpuMs": 0.248
+      },
+      {
+        "tid": 4765,
+        "start": 412890.332182,
+        "end": 412890.334633,
+        "wallMs": 2.451,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.451,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.332103,
+        "end": 412890.336507,
+        "wallMs": 4.404,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545180235008, traceid:0x0",
+        "guestScheduledMs": 1.499,
+        "guestOffCpuMs": 2.905
+      },
+      {
+        "tid": 4765,
+        "start": 412890.332181,
+        "end": 412890.339313,
+        "wallMs": 7.132,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.947,
+        "guestOffCpuMs": 4.185
+      },
+      {
+        "tid": 2813,
+        "start": 412890.472043,
+        "end": 412890.472047,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.472052,
+        "end": 412890.472069,
+        "wallMs": 0.017,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175108864, traceid:0x0",
+        "guestScheduledMs": 0.017,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2964,
+        "start": 412890.472105,
+        "end": 412890.476086,
+        "wallMs": 3.981,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 3.981,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2964,
+        "start": 412890.472103,
+        "end": 412890.476087,
+        "wallMs": 3.984,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175108864, traceid:0x0",
+        "guestScheduledMs": 3.984,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.476155,
+        "end": 412890.477435,
+        "wallMs": 1.28,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175108864, traceid:0x0",
+        "guestScheduledMs": 1.274,
+        "guestOffCpuMs": 0.006
+      },
+      {
+        "tid": 4765,
+        "start": 412890.476216,
+        "end": 412890.478808,
+        "wallMs": 2.592,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.592,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412890.476215,
+        "end": 412890.483397,
+        "wallMs": 7.182,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.104,
+        "guestOffCpuMs": 4.078
+      },
+      {
+        "tid": 2813,
+        "start": 412890.685306,
+        "end": 412890.68531,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.685313,
+        "end": 412890.685324,
+        "wallMs": 0.011,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545180236544, traceid:0x0",
+        "guestScheduledMs": 0.011,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412890.685354,
+        "end": 412890.690282,
+        "wallMs": 4.928,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.911,
+        "guestOffCpuMs": 0.017
+      },
+      {
+        "tid": 2963,
+        "start": 412890.685352,
+        "end": 412890.690284,
+        "wallMs": 4.932,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545180236544, traceid:0x0",
+        "guestScheduledMs": 4.915,
+        "guestOffCpuMs": 0.017
+      },
+      {
+        "tid": 2813,
+        "start": 412890.690385,
+        "end": 412890.691715,
+        "wallMs": 1.33,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545180236544, traceid:0x0",
+        "guestScheduledMs": 1.33,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412890.69046,
+        "end": 412890.693098,
+        "wallMs": 2.638,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.638,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412890.690459,
+        "end": 412890.697714,
+        "wallMs": 7.255,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.142,
+        "guestOffCpuMs": 4.113
+      },
+      {
+        "tid": 2813,
+        "start": 412890.86392,
+        "end": 412890.863924,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412890.863929,
+        "end": 412890.863949,
+        "wallMs": 0.02,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175099264, traceid:0x0",
+        "guestScheduledMs": 0.02,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2964,
+        "start": 412890.864215,
+        "end": 412890.868997,
+        "wallMs": 4.782,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.673,
+        "guestOffCpuMs": 0.109
+      },
+      {
+        "tid": 2964,
+        "start": 412890.864214,
+        "end": 412890.868999,
+        "wallMs": 4.785,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175099264, traceid:0x0",
+        "guestScheduledMs": 4.676,
+        "guestOffCpuMs": 0.109
+      },
+      {
+        "tid": 2813,
+        "start": 412890.869105,
+        "end": 412890.870686,
+        "wallMs": 1.581,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175099264, traceid:0x0",
+        "guestScheduledMs": 1.573,
+        "guestOffCpuMs": 0.008
+      },
+      {
+        "tid": 4765,
+        "start": 412890.869206,
+        "end": 412890.872304,
+        "wallMs": 3.098,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.65,
+        "guestOffCpuMs": 0.448
+      },
+      {
+        "tid": 4765,
+        "start": 412890.869205,
+        "end": 412890.877176,
+        "wallMs": 7.971,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.211,
+        "guestOffCpuMs": 4.76
+      },
+      {
+        "tid": 2813,
+        "start": 412891.005259,
+        "end": 412891.005264,
+        "wallMs": 0.005,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.005,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412891.005287,
+        "end": 412891.009622,
+        "wallMs": 4.335,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.335,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412891.005286,
+        "end": 412891.009624,
+        "wallMs": 4.338,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545184229376, traceid:0x0",
+        "guestScheduledMs": 4.338,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.005269,
+        "end": 412891.009636,
+        "wallMs": 4.367,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545184229376, traceid:0x0",
+        "guestScheduledMs": 0.015,
+        "guestOffCpuMs": 4.352
+      },
+      {
+        "tid": 4765,
+        "start": 412891.009746,
+        "end": 412891.012676,
+        "wallMs": 2.93,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.92,
+        "guestOffCpuMs": 0.01
+      },
+      {
+        "tid": 2813,
+        "start": 412891.009703,
+        "end": 412891.013382,
+        "wallMs": 3.679,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545184229376, traceid:0x0",
+        "guestScheduledMs": 1.537,
+        "guestOffCpuMs": 2.142
+      },
+      {
+        "tid": 4765,
+        "start": 412891.009745,
+        "end": 412891.016858,
+        "wallMs": 7.113,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.448,
+        "guestOffCpuMs": 3.665
+      },
+      {
+        "tid": 2813,
+        "start": 412891.142662,
+        "end": 412891.142666,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.142672,
+        "end": 412891.142692,
+        "wallMs": 0.02,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545785633152, traceid:0x0",
+        "guestScheduledMs": 0.02,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2964,
+        "start": 412891.142968,
+        "end": 412891.147089,
+        "wallMs": 4.121,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.121,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2964,
+        "start": 412891.142967,
+        "end": 412891.14709,
+        "wallMs": 4.123,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545785633152, traceid:0x0",
+        "guestScheduledMs": 4.123,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.147182,
+        "end": 412891.148496,
+        "wallMs": 1.314,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545785633152, traceid:0x0",
+        "guestScheduledMs": 1.314,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412891.147247,
+        "end": 412891.150073,
+        "wallMs": 2.826,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.826,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412891.147246,
+        "end": 412891.154303,
+        "wallMs": 7.057,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.337,
+        "guestOffCpuMs": 3.72
+      },
+      {
+        "tid": 2813,
+        "start": 412891.355777,
+        "end": 412891.355781,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.355783,
+        "end": 412891.355798,
+        "wallMs": 0.015,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545180231168, traceid:0x0",
+        "guestScheduledMs": 0.015,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412891.355824,
+        "end": 412891.360678,
+        "wallMs": 4.854,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.854,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412891.355822,
+        "end": 412891.36068,
+        "wallMs": 4.858,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545180231168, traceid:0x0",
+        "guestScheduledMs": 4.858,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.360772,
+        "end": 412891.362052,
+        "wallMs": 1.28,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545180231168, traceid:0x0",
+        "guestScheduledMs": 1.28,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412891.360856,
+        "end": 412891.363462,
+        "wallMs": 2.606,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.606,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412891.360854,
+        "end": 412891.367112,
+        "wallMs": 6.258,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.088,
+        "guestOffCpuMs": 3.17
+      },
+      {
+        "tid": 2813,
+        "start": 412891.565672,
+        "end": 412891.565682,
+        "wallMs": 0.01,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.01,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412891.565704,
+        "end": 412891.570053,
+        "wallMs": 4.349,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.349,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412891.565703,
+        "end": 412891.570055,
+        "wallMs": 4.352,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545784971776, traceid:0x0",
+        "guestScheduledMs": 4.352,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.565687,
+        "end": 412891.570112,
+        "wallMs": 4.425,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545784971776, traceid:0x0",
+        "guestScheduledMs": 0.014,
+        "guestOffCpuMs": 4.411
+      },
+      {
+        "tid": 2813,
+        "start": 412891.570155,
+        "end": 412891.571465,
+        "wallMs": 1.31,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545784971776, traceid:0x0",
+        "guestScheduledMs": 1.302,
+        "guestOffCpuMs": 0.008
+      },
+      {
+        "tid": 4765,
+        "start": 412891.570208,
+        "end": 412891.572989,
+        "wallMs": 2.781,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.781,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412891.570207,
+        "end": 412891.577178,
+        "wallMs": 6.971,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.331,
+        "guestOffCpuMs": 3.64
+      },
+      {
+        "tid": 2813,
+        "start": 412891.705954,
+        "end": 412891.70596,
+        "wallMs": 0.006,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.006,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.705965,
+        "end": 412891.705985,
+        "wallMs": 0.02,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 0.02,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2964,
+        "start": 412891.707364,
+        "end": 412891.712275,
+        "wallMs": 4.911,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.911,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2964,
+        "start": 412891.707362,
+        "end": 412891.712276,
+        "wallMs": 4.914,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 4.914,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.712349,
+        "end": 412891.713813,
+        "wallMs": 1.464,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 1.451,
+        "guestOffCpuMs": 0.013
+      },
+      {
+        "tid": 4765,
+        "start": 412891.712423,
+        "end": 412891.71542,
+        "wallMs": 2.997,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.997,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412891.712421,
+        "end": 412891.72035,
+        "wallMs": 7.929,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.634,
+        "guestOffCpuMs": 4.295
+      },
+      {
+        "tid": 2813,
+        "start": 412891.864563,
+        "end": 412891.864567,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.864573,
+        "end": 412891.864588,
+        "wallMs": 0.015,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545184235136, traceid:0x0",
+        "guestScheduledMs": 0.015,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412891.864621,
+        "end": 412891.868734,
+        "wallMs": 4.113,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.113,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2963,
+        "start": 412891.864619,
+        "end": 412891.868735,
+        "wallMs": 4.116,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545184235136, traceid:0x0",
+        "guestScheduledMs": 4.116,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412891.868799,
+        "end": 412891.870173,
+        "wallMs": 1.374,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545184235136, traceid:0x0",
+        "guestScheduledMs": 1.374,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412891.868859,
+        "end": 412891.871739,
+        "wallMs": 2.88,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.846,
+        "guestOffCpuMs": 0.034
+      },
+      {
+        "tid": 4765,
+        "start": 412891.868858,
+        "end": 412891.875868,
+        "wallMs": 7.01,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.443,
+        "guestOffCpuMs": 3.567
+      },
+      {
+        "tid": 2813,
+        "start": 412892.016992,
+        "end": 412892.016996,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412892.017001,
+        "end": 412892.017017,
+        "wallMs": 0.016,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 0.016,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412892.017046,
+        "end": 412892.021403,
+        "wallMs": 4.357,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.357,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2961,
+        "start": 412892.017045,
+        "end": 412892.021405,
+        "wallMs": 4.36,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 4.36,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412892.021515,
+        "end": 412892.024289,
+        "wallMs": 2.774,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.774,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412892.021474,
+        "end": 412892.026145,
+        "wallMs": 4.671,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175098112, traceid:0x0",
+        "guestScheduledMs": 1.422,
+        "guestOffCpuMs": 3.249
+      },
+      {
+        "tid": 4765,
+        "start": 412892.021514,
+        "end": 412892.027963,
+        "wallMs": 6.449,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.277,
+        "guestOffCpuMs": 3.172
+      },
+      {
+        "tid": 2813,
+        "start": 412892.574534,
+        "end": 412892.574538,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412892.574543,
+        "end": 412892.574559,
+        "wallMs": 0.016,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#545175100800, traceid:0x0",
+        "guestScheduledMs": 0.016,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2962,
+        "start": 412892.574591,
+        "end": 412892.579282,
+        "wallMs": 4.691,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.67,
+        "guestOffCpuMs": 0.021
+      },
+      {
+        "tid": 2962,
+        "start": 412892.574589,
+        "end": 412892.579284,
+        "wallMs": 4.695,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#545175100800, traceid:0x0",
+        "guestScheduledMs": 4.674,
+        "guestOffCpuMs": 0.021
+      },
+      {
+        "tid": 2813,
+        "start": 412892.579367,
+        "end": 412892.580809,
+        "wallMs": 1.442,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#545175100800, traceid:0x0",
+        "guestScheduledMs": 1.442,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412892.579454,
+        "end": 412892.582255,
+        "wallMs": 2.801,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.801,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 4765,
+        "start": 412892.579453,
+        "end": 412892.586171,
+        "wallMs": 6.718,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 3.324,
+        "guestOffCpuMs": 3.394
+      }
+    ],
+    "readingSurfaceLifecycle": [],
+    "longestGcNamedAppSlices": [
+      {
+        "tid": 2813,
+        "start": 412886.922251,
+        "end": 412886.936513,
+        "wallMs": 14.262,
+        "name": "H:PartialGC::RunPhases1;GCReason12;MarkReason3;Sensitive0;IsInBackground0;Startup3;ConMark2;Young27262976;Old10223616;TotalCommit48496640;NativeBindingSize105887648;NativeLimitSize69137524;ObjSizeBeforeSensitive0",
+        "guestScheduledMs": 10.518,
+        "guestOffCpuMs": 3.744
+      },
+      {
+        "tid": 2813,
+        "start": 412891.388731,
+        "end": 412891.398013,
+        "wallMs": 9.282,
+        "name": "H:PartialGC::RunPhases1;GCReason12;MarkReason3;Sensitive0;IsInBackground0;Startup3;ConMark2;Young28573696;Old10485760;TotalCommit50069504;NativeBindingSize82357056;NativeLimitSize69332204;ObjSizeBeforeSensitive0",
+        "guestScheduledMs": 9.096,
+        "guestOffCpuMs": 0.186
+      },
+      {
+        "tid": 2813,
+        "start": 412889.808948,
+        "end": 412889.816658,
+        "wallMs": 7.71,
+        "name": "H:PartialGC::RunPhases1;GCReason12;MarkReason10;Sensitive0;IsInBackground0;Startup3;ConMark2;Young7864320;Old8650752;TotalCommit27525120;NativeBindingSize70591844;NativeLimitSize69219412;ObjSizeBeforeSensitive0",
+        "guestScheduledMs": 7.618,
+        "guestOffCpuMs": 0.092
+      },
+      {
+        "tid": 2813,
+        "start": 412885.081303,
+        "end": 412885.088752,
+        "wallMs": 7.449,
+        "name": "H:PartialGC::RunPhases1;GCReason12;MarkReason10;Sensitive0;IsInBackground0;Startup3;ConMark2;Young9175040;Old8388608;TotalCommit28573696;NativeBindingSize70591788;NativeLimitSize69391916;ObjSizeBeforeSensitive0",
+        "guestScheduledMs": 5.899,
+        "guestOffCpuMs": 1.55
+      },
+      {
+        "tid": 2813,
+        "start": 412888.086611,
+        "end": 412888.091861,
+        "wallMs": 5.25,
+        "name": "H:PartialGC::RunPhases0;GCReason12;MarkReason0;Sensitive0;IsInBackground0;Startup3;ConMark2;Young16515072;Old10223616;TotalCommit37748736;NativeBindingSize58826576;NativeLimitSize69219412;ObjSizeBeforeSensitive0",
+        "guestScheduledMs": 2.724,
+        "guestOffCpuMs": 2.526
+      },
+      {
+        "tid": 2813,
+        "start": 412888.086695,
+        "end": 412888.091837,
+        "wallMs": 5.142,
+        "name": "H:PartialGC::Evacuate",
+        "guestScheduledMs": 2.616,
+        "guestOffCpuMs": 2.526
+      },
+      {
+        "tid": 2813,
+        "start": 412891.972468,
+        "end": 412891.975932,
+        "wallMs": 3.464,
+        "name": "H:PartialGC::RunPhases0;GCReason12;MarkReason0;Sensitive0;IsInBackground0;Startup3;ConMark2;Young16515072;Old10485760;TotalCommit38010880;NativeBindingSize35295984;NativeLimitSize69678668;ObjSizeBeforeSensitive0",
+        "guestScheduledMs": 0.433,
+        "guestOffCpuMs": 3.031
+      },
+      {
+        "tid": 2813,
+        "start": 412888.086759,
+        "end": 412888.09022,
+        "wallMs": 3.461,
+        "name": "H:GC::EvacuateSpace",
+        "guestScheduledMs": 0.982,
+        "guestOffCpuMs": 2.479
+      },
+      {
+        "tid": 2813,
+        "start": 412891.972511,
+        "end": 412891.975904,
+        "wallMs": 3.393,
+        "name": "H:PartialGC::Evacuate",
+        "guestScheduledMs": 0.366,
+        "guestOffCpuMs": 3.027
+      },
+      {
+        "tid": 2813,
+        "start": 412885.077685,
+        "end": 412885.079836,
+        "wallMs": 2.151,
+        "name": "H:GC::MarkRoots",
+        "guestScheduledMs": 0.103,
+        "guestOffCpuMs": 2.048
+      }
+    ],
+    "contactWindowPeakFrame": {
+      "tid": 2813,
+      "start": 412887.52777,
+      "end": 412887.577736,
+      "wallMs": 49.966,
+      "name": "H:OnVsyncEvent now:412887527022835",
+      "guestScheduledMs": 49.761,
+      "guestOffCpuMs": 0.205,
+      "vsyncCallbackDelayMs": 0.747
+    },
+    "longestAppSlices": [
+      {
+        "tid": 2813,
+        "start": 412887.527725,
+        "end": 412887.578,
+        "wallMs": 50.275,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412887527022835 expectedEnd: 412887542649265 vsyncId:276312, fd:32",
+        "guestScheduledMs": 50.07,
+        "guestOffCpuMs": 0.205
+      },
+      {
+        "tid": 2813,
+        "start": 412887.52777,
+        "end": 412887.577736,
+        "wallMs": 49.966,
+        "name": "H:OnVsyncEvent now:412887527022835",
+        "guestScheduledMs": 49.761,
+        "guestOffCpuMs": 0.205,
+        "vsyncCallbackDelayMs": 0.747
+      },
+      {
+        "tid": 2813,
+        "start": 412887.527772,
+        "end": 412887.577734,
+        "wallMs": 49.962,
+        "name": "H:UIVsyncTask[timestamp:412887527022835][vsyncID:276312][instanceID:100000]",
+        "guestScheduledMs": 49.757,
+        "guestOffCpuMs": 0.205
+      },
+      {
+        "tid": 2813,
+        "start": 412887.528045,
+        "end": 412887.567182,
+        "wallMs": 39.137,
+        "name": "H:FlushDirtyNodeUpdate",
+        "guestScheduledMs": 39.137,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.607101,
+        "end": 412887.64158,
+        "wallMs": 34.479,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412887605149460 expectedEnd: 412887620775890 vsyncId:276316, fd:32",
+        "guestScheduledMs": 34.13,
+        "guestOffCpuMs": 0.349
+      },
+      {
+        "tid": 2813,
+        "start": 412887.607205,
+        "end": 412887.641554,
+        "wallMs": 34.349,
+        "name": "H:OnVsyncEvent now:412887605149460",
+        "guestScheduledMs": 34.0,
+        "guestOffCpuMs": 0.349,
+        "vsyncCallbackDelayMs": 2.056
+      },
+      {
+        "tid": 2813,
+        "start": 412887.607209,
+        "end": 412887.641553,
+        "wallMs": 34.344,
+        "name": "H:UIVsyncTask[timestamp:412887605149460][vsyncID:276316][instanceID:100000]",
+        "guestScheduledMs": 33.995,
+        "guestOffCpuMs": 0.349
+      },
+      {
+        "tid": 2813,
+        "start": 412887.138075,
+        "end": 412887.171162,
+        "wallMs": 33.087,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412887136362779 expectedEnd: 412887151989209 vsyncId:276288, fd:32",
+        "guestScheduledMs": 27.196,
+        "guestOffCpuMs": 5.891
+      },
+      {
+        "tid": 2813,
+        "start": 412887.138109,
+        "end": 412887.17083,
+        "wallMs": 32.721,
+        "name": "H:OnVsyncEvent now:412887136362779",
+        "guestScheduledMs": 26.848,
+        "guestOffCpuMs": 5.873,
+        "vsyncCallbackDelayMs": 1.746
+      },
+      {
+        "tid": 2813,
+        "start": 412888.107552,
+        "end": 412888.140271,
+        "wallMs": 32.719,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412888105126236 expectedEnd: 412888120752666 vsyncId:276343, fd:32",
+        "guestScheduledMs": 28.072,
+        "guestOffCpuMs": 4.647
+      },
+      {
+        "tid": 2813,
+        "start": 412887.138112,
+        "end": 412887.170829,
+        "wallMs": 32.717,
+        "name": "H:UIVsyncTask[timestamp:412887136362779][vsyncID:276288][instanceID:100000]",
+        "guestScheduledMs": 26.844,
+        "guestOffCpuMs": 5.873
+      },
+      {
+        "tid": 2813,
+        "start": 412888.107576,
+        "end": 412888.140243,
+        "wallMs": 32.667,
+        "name": "H:OnVsyncEvent now:412888105126236",
+        "guestScheduledMs": 28.02,
+        "guestOffCpuMs": 4.647,
+        "vsyncCallbackDelayMs": 2.45
+      },
+      {
+        "tid": 2813,
+        "start": 412888.107578,
+        "end": 412888.140242,
+        "wallMs": 32.664,
+        "name": "H:UIVsyncTask[timestamp:412888105126236][vsyncID:276343][instanceID:100000]",
+        "guestScheduledMs": 28.017,
+        "guestOffCpuMs": 4.647
+      },
+      {
+        "tid": 2813,
+        "start": 412887.31024,
+        "end": 412887.339256,
+        "wallMs": 29.016,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412887308250562 expectedEnd: 412887323876992 vsyncId:276298, fd:32",
+        "guestScheduledMs": 25.19,
+        "guestOffCpuMs": 3.826
+      },
+      {
+        "tid": 2813,
+        "start": 412887.310279,
+        "end": 412887.339231,
+        "wallMs": 28.952,
+        "name": "H:OnVsyncEvent now:412887308250562",
+        "guestScheduledMs": 25.126,
+        "guestOffCpuMs": 3.826,
+        "vsyncCallbackDelayMs": 2.028
+      },
+      {
+        "tid": 2813,
+        "start": 412887.310281,
+        "end": 412887.33923,
+        "wallMs": 28.949,
+        "name": "H:UIVsyncTask[timestamp:412887308250562][vsyncID:276298][instanceID:100000]",
+        "guestScheduledMs": 25.123,
+        "guestOffCpuMs": 3.826
+      },
+      {
+        "tid": 2813,
+        "start": 412887.529218,
+        "end": 412887.556604,
+        "wallMs": 27.386,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:1404",
+        "guestScheduledMs": 27.386,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.52922,
+        "end": 412887.556602,
+        "wallMs": 27.382,
+        "name": "H:JSView: ExecuteRerender",
+        "guestScheduledMs": 27.382,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2813,
+        "start": 412887.138533,
+        "end": 412887.163257,
+        "wallMs": 24.724,
+        "name": "H:FlushDirtyNodeUpdate",
+        "guestScheduledMs": 19.015,
+        "guestOffCpuMs": 5.709
+      },
+      {
+        "tid": 2813,
+        "start": 412888.107842,
+        "end": 412888.131496,
+        "wallMs": 23.654,
+        "name": "H:FlushDirtyNodeUpdate",
+        "guestScheduledMs": 19.537,
+        "guestOffCpuMs": 4.117
+      },
+      {
+        "tid": 2813,
+        "start": 412887.183496,
+        "end": 412887.207075,
+        "wallMs": 23.579,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412887183232192 expectedEnd: 412887198858622 vsyncId:276291, fd:32",
+        "guestScheduledMs": 18.94,
+        "guestOffCpuMs": 4.639
+      },
+      {
+        "tid": 2813,
+        "start": 412891.434346,
+        "end": 412891.457925,
+        "wallMs": 23.579,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412891433523350 expectedEnd: 412891449149780 vsyncId:276451, fd:32",
+        "guestScheduledMs": 20.012,
+        "guestOffCpuMs": 3.567
+      },
+      {
+        "tid": 2813,
+        "start": 412886.996161,
+        "end": 412887.019704,
+        "wallMs": 23.543,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412886995693110 expectedEnd: 412887011319540 vsyncId:276279, fd:32",
+        "guestScheduledMs": 22.426,
+        "guestOffCpuMs": 1.117
+      },
+      {
+        "tid": 2813,
+        "start": 412891.434368,
+        "end": 412891.457898,
+        "wallMs": 23.53,
+        "name": "H:OnVsyncEvent now:412891433523350",
+        "guestScheduledMs": 19.963,
+        "guestOffCpuMs": 3.567,
+        "vsyncCallbackDelayMs": 0.845
+      },
+      {
+        "tid": 2813,
+        "start": 412887.183527,
+        "end": 412887.207056,
+        "wallMs": 23.529,
+        "name": "H:OnVsyncEvent now:412887183232192",
+        "guestScheduledMs": 18.89,
+        "guestOffCpuMs": 4.639,
+        "vsyncCallbackDelayMs": 0.295
+      },
+      {
+        "tid": 2813,
+        "start": 412891.43437,
+        "end": 412891.457897,
+        "wallMs": 23.527,
+        "name": "H:UIVsyncTask[timestamp:412891433523350][vsyncID:276451][instanceID:100000]",
+        "guestScheduledMs": 19.96,
+        "guestOffCpuMs": 3.567
+      },
+      {
+        "tid": 2813,
+        "start": 412887.18353,
+        "end": 412887.207055,
+        "wallMs": 23.525,
+        "name": "H:UIVsyncTask[timestamp:412887183232192][vsyncID:276291][instanceID:100000]",
+        "guestScheduledMs": 18.886,
+        "guestOffCpuMs": 4.639
+      },
+      {
+        "tid": 2813,
+        "start": 412886.996194,
+        "end": 412887.019682,
+        "wallMs": 23.488,
+        "name": "H:OnVsyncEvent now:412886995693110",
+        "guestScheduledMs": 22.371,
+        "guestOffCpuMs": 1.117,
+        "vsyncCallbackDelayMs": 0.501
+      },
+      {
+        "tid": 2813,
+        "start": 412886.996196,
+        "end": 412887.019681,
+        "wallMs": 23.485,
+        "name": "H:UIVsyncTask[timestamp:412886995693110][vsyncID:276279][instanceID:100000]",
+        "guestScheduledMs": 22.368,
+        "guestOffCpuMs": 1.117
+      },
+      {
+        "tid": 2813,
+        "start": 412886.777903,
+        "end": 412886.800239,
+        "wallMs": 22.336,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412886776911306 expectedEnd: 412886792537736 vsyncId:276268, fd:32",
+        "guestScheduledMs": 21.519,
+        "guestOffCpuMs": 0.817
+      },
+      {
+        "tid": 2813,
+        "start": 412886.777921,
+        "end": 412886.800221,
+        "wallMs": 22.3,
+        "name": "H:OnVsyncEvent now:412886776911306",
+        "guestScheduledMs": 21.483,
+        "guestOffCpuMs": 0.817,
+        "vsyncCallbackDelayMs": 1.01
+      },
+      {
+        "tid": 2813,
+        "start": 412886.777923,
+        "end": 412886.80022,
+        "wallMs": 22.297,
+        "name": "H:UIVsyncTask[timestamp:412886776911306][vsyncID:276268][instanceID:100000]",
+        "guestScheduledMs": 21.48,
+        "guestOffCpuMs": 0.817
+      },
+      {
+        "tid": 2813,
+        "start": 412888.152461,
+        "end": 412888.174381,
+        "wallMs": 21.92,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412888152022578 expectedEnd: 412888167649008 vsyncId:276346, fd:32",
+        "guestScheduledMs": 20.818,
+        "guestOffCpuMs": 1.102
+      },
+      {
+        "tid": 2813,
+        "start": 412888.152487,
+        "end": 412888.174361,
+        "wallMs": 21.874,
+        "name": "H:OnVsyncEvent now:412888152022578",
+        "guestScheduledMs": 20.772,
+        "guestOffCpuMs": 1.102,
+        "vsyncCallbackDelayMs": 0.464
+      },
+      {
+        "tid": 2813,
+        "start": 412888.15249,
+        "end": 412888.17436,
+        "wallMs": 21.87,
+        "name": "H:UIVsyncTask[timestamp:412888152022578][vsyncID:276346][instanceID:100000]",
+        "guestScheduledMs": 20.768,
+        "guestOffCpuMs": 1.102
+      },
+      {
+        "tid": 2813,
+        "start": 412887.402384,
+        "end": 412887.423741,
+        "wallMs": 21.357,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412887402023193 expectedEnd: 412887417649623 vsyncId:276305, fd:32",
+        "guestScheduledMs": 19.508,
+        "guestOffCpuMs": 1.849
+      },
+      {
+        "tid": 2813,
+        "start": 412887.40244,
+        "end": 412887.423711,
+        "wallMs": 21.271,
+        "name": "H:OnVsyncEvent now:412887402023193",
+        "guestScheduledMs": 19.422,
+        "guestOffCpuMs": 1.849,
+        "vsyncCallbackDelayMs": 0.417
+      },
+      {
+        "tid": 2813,
+        "start": 412887.402445,
+        "end": 412887.423708,
+        "wallMs": 21.263,
+        "name": "H:UIVsyncTask[timestamp:412887402023193][vsyncID:276305][instanceID:100000]",
+        "guestScheduledMs": 19.414,
+        "guestOffCpuMs": 1.849
+      },
+      {
+        "tid": 2813,
+        "start": 412891.637106,
+        "end": 412891.657987,
+        "wallMs": 20.881,
+        "name": "H:ReceiveVsync name:WM_2813 dataCount: 24bytes now:412891636761601 expectedEnd: 412891652388031 vsyncId:276463, fd:32",
+        "guestScheduledMs": 19.249,
+        "guestOffCpuMs": 1.632
+      },
+      {
+        "tid": 2813,
+        "start": 412887.310681,
+        "end": 412887.331522,
+        "wallMs": 20.841,
+        "name": "H:FlushDirtyNodeUpdate",
+        "guestScheduledMs": 17.257,
+        "guestOffCpuMs": 3.584
+      }
+    ]
+  }
+]

@@ -1,0 +1,82 @@
+{
+  "runId": "20260911T012526Z-35f2f99a-48bfaca2",
+  "repeatedExitReopen": [
+    {
+      "status": "PASS",
+      "verticalRestoreDeltaPx": 0,
+      "before": "[112,-2982][1168,1077]",
+      "after": "[112,-2982][1168,1077]",
+      "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+      "book": "ReaderIndentCRLF20260910"
+    },
+    {
+      "status": "PASS",
+      "verticalRestoreDeltaPx": 0,
+      "before": "[112,-2982][1168,1077]",
+      "after": "[112,-2982][1168,1077]",
+      "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+      "book": "ReaderIndentCRLF20260910"
+    },
+    {
+      "status": "PASS",
+      "verticalRestoreDeltaPx": 0,
+      "before": "[112,-2982][1168,1077]",
+      "after": "[112,-2982][1168,1077]",
+      "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+      "book": "ReaderIndentCRLF20260910"
+    },
+    {
+      "status": "PASS",
+      "verticalRestoreDeltaPx": 0,
+      "before": "[112,-2982][1168,1077]",
+      "after": "[112,-2982][1168,1077]",
+      "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+      "book": "ReaderIndentCRLF20260910"
+    },
+    {
+      "status": "PASS",
+      "verticalRestoreDeltaPx": 0,
+      "before": "[112,-2982][1168,1077]",
+      "after": "[112,-2982][1168,1077]",
+      "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+      "book": "ReaderIndentCRLF20260910"
+    },
+    {
+      "status": "PASS",
+      "verticalRestoreDeltaPx": 0,
+      "before": "[112,-2982][1168,1077]",
+      "after": "[112,-2982][1168,1077]",
+      "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+      "book": "ReaderIndentCRLF20260910"
+    },
+    {
+      "status": "PASS",
+      "verticalRestoreDeltaPx": 0,
+      "before": "[112,-2982][1168,1077]",
+      "after": "[112,-2982][1168,1077]",
+      "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+      "book": "ReaderIndentCRLF20260910"
+    },
+    {
+      "status": "PASS",
+      "verticalRestoreDeltaPx": 0,
+      "before": "[112,-2982][1168,1077]",
+      "after": "[112,-2982][1168,1077]",
+      "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+      "book": "ReaderIndentCRLF20260910"
+    }
+  ],
+  "firstRestore": {
+    "deltaPx": 1,
+    "evidence": [
+      "reader-control-scroll-initial-2.json",
+      "reader-control-scroll-initial-4.json"
+    ],
+    "scriptStatus": "single-fragment assumption failed after collecting evidence; viewport actually contains two matching fragments"
+  },
+  "excludedScripts": [
+    "scroll-initial",
+    "scroll-repeat"
+  ],
+  "limitation": "TXT two visible fragments; no font/image/failure/cross-chapter coverage"
+}

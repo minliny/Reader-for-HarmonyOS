@@ -1,0 +1,7 @@
+{
+  "bodyBase": "PASS bounded samples; previously blank bottom now contains destination/current text in both directions",
+  "clockBoundary": "OPEN source03:19 vs destination03:20 visible in final-native-next-2.png; paint-finished wait did not alone close this",
+  "next": "reader-control-final-native-next-2.png",
+  "previous": "reader-control-final-native-prev-1.png",
+  "scope": "screenshot samples, not continuous display/alpha/GPU or perceptual acceptance"
+}

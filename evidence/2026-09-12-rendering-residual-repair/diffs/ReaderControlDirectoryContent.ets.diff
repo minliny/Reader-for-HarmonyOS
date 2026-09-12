@@ -1,0 +1,38 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets
++++ current/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets
+@@ -87,6 +87,7 @@
+   private mounted: boolean = false;
+   private lifecycle: number = 0;
+   private positionQueued: boolean = false;
++  private positionTicket: number = -1;
+   private previousRowHeight: number = 32;
+   private leadingRow: number | undefined = undefined;
+   private leadingKey: string | undefined = undefined;
+@@ -124,12 +125,14 @@
+   }
+ 
+   private queuePosition(): void {
+-    if (!this.mounted || this.positionQueued) return;
++    if (!this.mounted) return;
+     const lifecycle = this.lifecycle;
+     const ticket = this.placement.ticket();
++    if (this.positionQueued && this.positionTicket === ticket) return;
+     this.positionQueued = true;
++    this.positionTicket = ticket;
+     this.getUIContext().postFrameCallback(new ControlDirectoryFrame((): void => {
+-      if (!this.mounted || lifecycle !== this.lifecycle) return;
++      if (!this.mounted || lifecycle !== this.lifecycle || this.positionTicket !== ticket) return;
+       this.positionQueued = false;
+       const offset = this.placement.offset(this.snapshot, this.listHeight(), this.rowHeight(), ticket);
+       if (offset === undefined) return;
+@@ -209,7 +212,9 @@
+       if (this.leadingRow === undefined) this.captureLeadingRow();
+       // Native input is disabled and onWillScroll rejects inertia. Do not
+       // round-trip an estimated absolute offset to "stop" the virtual List.
+-    } else if (this.progress === 0 || this.progress === 1) this.leadingRow = undefined;
++    } else if (this.progress === 0 || this.progress === 1) {
++      this.leadingRow = undefined; this.leadingKey = undefined;
++    }
+   }
+ 
+   private userScroll(): void { this.placement.userScroll(); this.leadingRow = undefined; this.leadingKey = undefined; }

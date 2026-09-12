@@ -76,7 +76,7 @@ assert.doesNotMatch(switchWindow, /importing_spinner_(track|arc)/,
 // the no-recycle policy is asserted there.
 const directoryList = read('entry/src/main/ets/features/reading/ReaderDirectoryList.ets');
 assert.match(directoryList,
-  /virtualScroll\(\{ totalCount: this\.entries\.length, reusable: false \}\)/,
+  /LazyForEach\(this\.dataSource/,
   'the quick directory must not recycle a small visible row pool across a long TOC');
 assert.doesNotMatch(directoryList, /virtualScroll\(\{ reusable: true \}\)/,
   'the phone runtime regression must not be reintroduced');

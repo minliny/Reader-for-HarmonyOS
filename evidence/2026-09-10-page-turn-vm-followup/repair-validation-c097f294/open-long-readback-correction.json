@@ -1,0 +1,7 @@
+{
+  "status": "correct book opened; helper false rejection",
+  "evidence": "reader-control-open-long-2.json",
+  "observed": "unique long fixture chapter037 paragraphs01..03; controls hidden",
+  "cause": "helper required book title or chapter title; continuous reading hides both in the settled view",
+  "next": "resume from current reading, no repeated book opening"
+}

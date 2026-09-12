@@ -14,10 +14,10 @@ assert.match(stage, /fragmentsProvider: \(\) => ReadingSurfacePageFragment\[\]/,
 assert.match(stage, /@Prop @Watch\('onContentRevisionChanged'\) contentRevision: number/,
   'a scalar revision must invalidate the stage after the live array is atomically replaced');
 assert.match(stage, /LazyForEach\(this\.fragmentDataSource/);
-assert.match(stage, /fragmentDataSource\.update\(this\.changedFragmentIndex/,
+assert.match(stage, /fragmentDataSource\.update\(changed/,
   'an image-only refresh must notify exactly one lazy row');
-assert.match(stage, /`\$\{this\.chapterIdentity\}:\$\{fragment\.id\}`/,
-  'same-chapter refreshes must preserve unaffected row identities');
+assert.match(stage, /`\$\{this\.chapterIdentity\}:\$\{fragment\.id\}\$\{imageRevision\}`/,
+  'same-chapter refreshes preserve unaffected rows and invalidate decoded image placeholders; production tests cover both');
 assert.doesNotMatch(stage, /\.id\(`\$\{this\.chapterIdentity\}:\$\{this\.contentRevision\}`\)/,
   'same-chapter refreshes must not remount the List and flash at rest');
 assert.match(stage, /private onContentRevisionChanged\(\): void \{[\s\S]*changedFragmentIndex[\s\S]*fragmentDataSource\.replace/,
@@ -75,11 +75,13 @@ assert.match(experience,
   /this\.continuousFragments = fragments;[\s\S]*?this\.continuousRenderChapterIdentity =[\s\S]*?this\.continuousRenderChapterTitle = chapter\.chapterTitle;[\s\S]*?this\.continuousRenderRevision \+= 1/,
   'title, identity, and fragment array must be committed before the only reactive revision');
 assert.match(experience,
-  /!this\.controlVisible && \(this\.readerSettingsSnapshot\.navigationMode === 'paged' \|\|\s*this\.continuousFragments\.length === 0\)/,
+  /interactionEnabled: \(this\.readerSettingsSnapshot\.navigationMode === 'paged' \|\|\s*!this\.hasContinuousRenderContent\(\)\) && this\.isReaderPageInteractionEnabled\(\)/,
   'the paged pointer layer must not cover a live List, but must preserve centre-control access while its projection is empty');
+assert.match(experience, /navigationMode === 'continuous' &&\s*this\.hasContinuousRenderContent\(\)/,
+  'the initial empty-to-ready mode branch must observe the same projection revision as the pointer layer');
 assert.match(experience, /if \(navigationChanged && this\.hasCurrentMaterializedChapter\(\)\)/,
   'mode switching during a background measurement must still build the current continuous projection');
-assert.match(experience, /this\.continuousScroller\.scrollPage\(\{ next: direction === 'next', animation: true \}\)/);
+assert.match(experience, /this\.continuousScroller\.scrollPage\(\{ next: direction === 'next', animation: !this\.reduceMotion \}\)/);
 assert.match(experience, /private onContinuousBoundaryDrag\(direction: 'previous' \| 'next'\)/);
 assert.match(experience,
   /direction === 'next' && !this\.isContinuousScrollerAtEnd\(\)[\s\S]*direction === 'previous' && !this\.isContinuousScrollerAtStart\(\)/,
@@ -88,7 +90,7 @@ assert.match(experience, /const CONTINUOUS_FRAGMENT_MAX_UTF16 = 512/,
   'continuous rows must stay near one viewport so intra-row scalar restoration remains bounded');
 assert.match(stage, /initialFragmentProgress: number = 0/);
 assert.match(stage, /getItemRect\(listIndex\)/);
-assert.match(stage, /scrollBy\(0, rect\.height \* progress\)/,
+assert.match(stage, /scrollBy\(0, rect\.y - this\.layout\.contentTop \+ rect\.height \* progress\)/,
   'initial restoration must retain the intra-fragment scalar fraction');
 assert.match(experience, /private setContinuousInitialAnchor\(scalar: number\)/);
 assert.match(experience, /initialFragmentProgress: this\.continuousInitialFragmentProgress/);
@@ -104,3 +106,8 @@ assert.match(experience, /if \(this\.readerSettingsSnapshot\.navigationMode === 
   'auto-page and volume-key requests must reuse the same continuous page-turn entry');
 
 console.log('reader continuous reading and canonical progress pipeline: PASS');
+
+const continuousBranch = experience.slice(experience.indexOf('ReaderContinuousReadingStage({'), experience.indexOf('ReaderPageTurnStage({'));
+assert.match(continuousBranch, /onPointerStart:.*this\.acquirePagePointer\(pointerId\)/);
+assert.match(continuousBranch, /onPointerEnd:.*this\.releasePagePointer\(pointerId\)/);
+assert.match(stage, /@Prop @Watch\('onInteractionEnabledChanged'\) interactionEnabled/);

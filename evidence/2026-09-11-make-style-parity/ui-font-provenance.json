@@ -1,0 +1,29 @@
+{
+  "source": "entry/src/main/resources/rawfile/NotoSansSC-VF.otf",
+  "sourceSha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
+  "license": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+  "tool": "fonttools 4.60.2 instantiateVariableFont",
+  "outputs": [
+    {
+      "axis": {
+        "wght": 400
+      },
+      "output": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+      "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e"
+    },
+    {
+      "axis": {
+        "wght": 500
+      },
+      "output": "entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf",
+      "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d"
+    },
+    {
+      "axis": {
+        "wght": 700
+      },
+      "output": "entry/src/main/resources/rawfile/NotoSansSC-UIBold.otf",
+      "sha256": "995b908ebac24174fae7965b03324f21371dfe57bbfbe2794116d71ddde262cd"
+    }
+  ]
+}

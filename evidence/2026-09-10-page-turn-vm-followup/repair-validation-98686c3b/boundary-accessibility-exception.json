@@ -1,0 +1,8 @@
+{
+  "allFirstBoundary": "PASS none/slide/cover/simulation",
+  "lastBoundary": "PASS none/slide/cover; simulation transaction committed and screenshot shows150p3 as baseline, canonical dump/restore unverified",
+  "layoutFailure": "several dumpLayout calls returned420byte empty root after10s, both all-window and bundle-targeted; pixels and input remained responsive, appPID9975 unchanged; no new crash/freeze fault file; root cause unknown",
+  "publicInputCapability": "live uinput -T -m x1 y1 x2 y2 -k keepMs moveMs; four modes moved-held tests PASS; previous capability missing conclusion corrected",
+  "currentBook": "own long fixture150p3, normal headerBack requested",
+  "newCandidate": "4a09d31d built, not installed yet"
+}

@@ -1,0 +1,9 @@
+{
+  "at": "2026-09-11T05:39:34.155273+00:00",
+  "released": true,
+  "state": "bookshelf; four books preserved; long fixture chapter25 page1 saved; mode none",
+  "appPid": 21258,
+  "longRun": "PASS 800 canonical-content turns",
+  "probeClose": "invalid action-key quit rejected; process finally released lock; no device action from invalid command",
+  "scope": "release before next manifest candidate install"
+}

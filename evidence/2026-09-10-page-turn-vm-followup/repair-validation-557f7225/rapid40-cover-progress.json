@@ -1,0 +1,83 @@
+{
+  "mode": "覆盖",
+  "count": 40,
+  "intervalMs": 30,
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+    "chapter": 36,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章036段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "expected": {
+    "slot": "reader-page-slot-a",
+    "sha256": "a05fdf57eadc91d68f4c7dd55c5c29db978c8369a324be46e6ad56ead3bd9b1f",
+    "chapter": 46,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章046段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "samples": [
+    {
+      "direction": "next",
+      "elapsedSeconds": 6.141725792,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "a05fdf57eadc91d68f4c7dd55c5c29db978c8369a324be46e6ad56ead3bd9b1f",
+        "chapter": 46,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章046段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 6.12146525,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+        "chapter": 36,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章036段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    }
+  ],
+  "next": {
+    "injectionSeconds": 5.4629457089999995,
+    "settledObservationUpperBoundSeconds": 6.141725792,
+    "conservativePagesPerSecond": 6.512827396511681,
+    "status": "PASS canonical net target"
+  }
+}

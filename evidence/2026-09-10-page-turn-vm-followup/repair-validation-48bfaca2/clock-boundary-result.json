@@ -1,0 +1,12 @@
+{
+  "status": "FAIL",
+  "frameIndices": [
+    1,
+    2,
+    3
+  ],
+  "observation": "current/front/back texture contains paper only; destination body is present",
+  "clock": "09:39",
+  "repairCandidate": "090f1bc7",
+  "causeCandidate": "role snapshot ID transferred across fixed slots, may resolve hidden empty reserve; verify stable physical IDs in next VM package"
+}

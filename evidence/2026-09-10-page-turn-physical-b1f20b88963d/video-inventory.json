@@ -1,0 +1,56 @@
+[
+  {
+    "file": "reader-turn-baseline-20260910-0023.mp4",
+    "bytes": 1063363,
+    "sha256": "9b20ef6203f7e3abf0769f90db67e6e36f4e2d80770e0b585df95967d7bf7b11",
+    "video": [
+      {
+        "codec_name": "h264",
+        "width": 868,
+        "height": 1920,
+        "r_frame_rate": "90000/1",
+        "avg_frame_rate": "882000/249803",
+        "time_base": "1/90000",
+        "duration": "41.633833",
+        "nb_frames": "147",
+        "nb_read_frames": "147"
+      }
+    ]
+  },
+  {
+    "file": "reader-turn-cover-20260910-0030.mp4",
+    "bytes": 11427956,
+    "sha256": "23e43fa4e110209e72abb45627c0566adcae1722d1aa807ddb1354eeeb60c9d7",
+    "video": [
+      {
+        "codec_name": "h264",
+        "width": 868,
+        "height": 1920,
+        "r_frame_rate": "90000/1",
+        "avg_frame_rate": "13050000/2095303",
+        "time_base": "1/90000",
+        "duration": "116.405722",
+        "nb_frames": "725",
+        "nb_read_frames": "725"
+      }
+    ]
+  },
+  {
+    "file": "reader-turn-slide-20260910-0026.mp4",
+    "bytes": 11265419,
+    "sha256": "56fae24097a763c78575eb3eed0fa3747806e57000b97588f505e8819f92036e",
+    "video": [
+      {
+        "codec_name": "h264",
+        "width": 868,
+        "height": 1920,
+        "r_frame_rate": "90000/1",
+        "avg_frame_rate": "52920000/6276443",
+        "time_base": "1/90000",
+        "duration": "69.738256",
+        "nb_frames": "588",
+        "nb_read_frames": "588"
+      }
+    ]
+  }
+]

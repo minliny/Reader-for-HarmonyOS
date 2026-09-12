@@ -1,0 +1,57 @@
+{
+  "recordedAt": "2026-09-11T16:54:55.311612+00:00",
+  "scope": "Residual directory/native lifecycle repair; historical 52-item evidence retained",
+  "runId": "20260911T165233Z-35f2f99a-a1d93f93",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T165233Z-35f2f99a-a1d93f93/manifest.json",
+  "signedSha256": "7936051aa377243b7708f5744ad32d07bb00be6092aa8cba1ed8ed39274e0552",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "repairs": {
+    "R01": "IMPLEMENTED_LOCAL_PASS",
+    "R02": "IMPLEMENTED_LOCAL_PASS",
+    "R03": "IMPLEMENTED_LOCAL_PASS",
+    "R04": "IMPLEMENTED_LOCAL_PASS",
+    "R05": "IMPLEMENTED_LOCAL_PASS"
+  },
+  "verification": {
+    "harmonyContractGroups": 187,
+    "nativePresentBarrierChecks": 245,
+    "nativeEventDispatchChecks": 22,
+    "surfaceRecoveryScenarios": 7,
+    "arktsTypeCheck": "PASS",
+    "nativeCompile": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "packageVerify": "PASS",
+    "inputIdentity": {
+      "checkedAt": "2026-09-11T16:53:33.220Z",
+      "runId": "20260911T165233Z-35f2f99a-a1d93f93",
+      "snapshots": {
+        "source": {
+          "fileCount": 526,
+          "fingerprint": "a1d93f932c6f2b6893b5453a260dbece4112022bdaf4158126503b1010550124",
+          "expectedFingerprint": "a1d93f932c6f2b6893b5453a260dbece4112022bdaf4158126503b1010550124",
+          "match": true
+        },
+        "controller": {
+          "fileCount": 229,
+          "fingerprint": "8b7553701911f1506a9c7aadc06c4e975a402fcd7c9296ef5b5f4173aefe62de",
+          "expectedFingerprint": "8b7553701911f1506a9c7aadc06c4e975a402fcd7c9296ef5b5f4173aefe62de",
+          "match": true
+        },
+        "workspace": {
+          "fileCount": 15,
+          "fingerprint": "f9f1aa580c47d545de2492c04918db9e3a81ff865852707ba93d06e0f5e2e6aa",
+          "expectedFingerprint": "f9f1aa580c47d545de2492c04918db9e3a81ff865852707ba93d06e0f5e2e6aa",
+          "match": true
+        }
+      }
+    }
+  },
+  "deviceAppOperations": false,
+  "vmRenderingAcceptance": "NOT_RUN",
+  "physicalAcceptance": "NOT_RUN",
+  "displayFence": "OPEN",
+  "realSmoothnessAndGpuMetrics": "OPEN",
+  "historical52ItemStatusCountsUnchanged": true,
+  "report": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-12-rendering-residual-repair/REPAIR_REPORT.md"
+}

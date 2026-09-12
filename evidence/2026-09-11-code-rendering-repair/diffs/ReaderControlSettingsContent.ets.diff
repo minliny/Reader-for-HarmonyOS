@@ -1,0 +1,57 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets
++++ current/entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets
+@@ -1,5 +1,5 @@
+-import { PathShape } from '@ohos.arkui.shape';
+-import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
++import { PathShape, RectShape } from '@ohos.arkui.shape';
++import { sampleReaderControlMotionPresentation, ReaderControlMotionClipCache, readerControlMotionSourceFullyVisible,
+   type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
+ import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
+   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
+@@ -46,6 +46,12 @@
+   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
+   @Prop fullViewportHeight: number = 666;
+   private scroller: Scroller = new Scroller();
++  private clipCache: ReaderControlMotionClipCache<PathShape | RectShape> = new ReaderControlMotionClipCache<PathShape | RectShape>(
++    (path: string): PathShape => new PathShape().commands(path),
++    (): RectShape => new RectShape().width('100%').height('100%'));
++  private clipEndpointWidth: number = -1;
++  private clipFullRects: ReaderControlMotionClipRect[] = [];
++  private clipQuickRects: ReaderControlMotionClipRect[] = [];
+   private cachedGeometry: ReaderControlSettingsFrame | undefined = undefined;
+   private geometryProgress: number = -1;
+   private geometryWidth: number = -1;
+@@ -104,13 +110,26 @@
+     return this.cachedGeometry;
+   }
+   private sharedRect(row: number, bar: boolean, p: number): ReaderControlMotionClipRect {
+-    const actor = bar ? readerControlSettingsBar(row, p, this.availableWidth) : readerControlSettingsLabel(row, p);
+-    return { x: actor.x + 15, y: actor.y + 5, width: actor.width, height: actor.height };
+-  }
+-  private sharedClip(row: number, bar: boolean): PathShape {
+-    return new PathShape().commands(readerControlMotionClipPath(readerControlMotionClipRects(this.p(),
+-      this.sharedRect(row, bar, 1), this.sharedRect(row, bar, this.p()), this.sharedRect(row, bar, 0),
+-      this.fullViewportHeight, this.scrollMotion.fullScrollOffset), this.getUIContext().vp2px(1)));
++    if (this.clipEndpointWidth !== this.availableWidth) {
++      this.clipEndpointWidth = this.availableWidth; this.clipFullRects = []; this.clipQuickRects = [];
++    }
++    const index = row * 2 + (bar ? 1 : 0);
++    const cache = p === 1 ? this.clipFullRects : this.clipQuickRects;
++    if ((p === 0 || p === 1) && cache[index] !== undefined) return cache[index];
++    const actor = p === this.p() ? (bar ? this.geometry().bars[row] : this.geometry().labels[row]) :
++      bar ? readerControlSettingsBar(row, p, this.availableWidth) : readerControlSettingsLabel(row, p);
++    const rect: ReaderControlMotionClipRect = { x: actor.x + 15, y: actor.y + 5, width: actor.width, height: actor.height };
++    if (p === 0 || p === 1) cache[index] = rect;
++    return rect;
++  }
++  private sharedClip(row: number, bar: boolean): PathShape | RectShape {
++    const full = this.sharedRect(row, bar, 1);
++    if (readerControlMotionSourceFullyVisible(full, this.fullViewportHeight, this.scrollMotion.fullScrollOffset)) {
++      return this.clipCache.full();
++    }
++    return this.clipCache.sample(`${row}:${bar}`, this.p(), full,
++      this.sharedRect(row, bar, this.p()), this.sharedRect(row, bar, 0),
++      this.fullViewportHeight, this.scrollMotion.fullScrollOffset, this.getUIContext().vp2px(1));
+   }
+   private label(index: number): ReaderControlActorFrame {
+     return this.geometry().labels[index];

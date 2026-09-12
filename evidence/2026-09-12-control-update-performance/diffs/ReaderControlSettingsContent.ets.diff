@@ -1,0 +1,54 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets
++++ after/entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets
+@@ -8,6 +8,7 @@
+ import { TOK_BORDER_W, TOK_LINE, TOK_READ_ELEVATED, TOK_READ_INK,
+   TOK_READ_PRIMARY, TOK_SURFACE_PANEL, TOK_SURFACE_PANEL_SOFT } from '../common/ReaderTokens';
+ import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
++import { ReaderControlSettingsOptionModifier } from './ReaderControlSettingsOptionModifier';
+ import { createDefaultReaderSettingsSnapshot, isReaderPageTurnStyleAvailable,
+   isReaderScreenDirectionAvailable, isReaderScreenTimeoutAvailable, isReaderSettingsToggleAvailable,
+   readerPageTurnStyle, type ReaderPageTurnStyle, type ReaderScreenDirection,
+@@ -57,6 +58,7 @@
+   private geometryWidth: number = -1;
+   private cachedPaint: ReaderControlMotionPresentation | undefined = undefined;
+   private paintProgress: number = -1;
++  private optionModifiers: ReaderControlSettingsOptionModifier[] = [];
+ 
+   aboutToAppear(): void {
+     registerReaderFonts(this.getUIContext().getFont());
+@@ -139,6 +141,17 @@
+   }
+   private choice(group: ReaderControlSettingsGroup, row: number, index: number): ReaderControlActorFrame {
+     return group === 'direction' ? this.geometry().directionChoices[index] : this.geometry().pageChoices[index];
++  }
++  private optionModifier(group: ReaderControlSettingsGroup, row: number, index: number,
++    option: string): ReaderControlSettingsOptionModifier {
++    const slot = row * 5 + index;
++    if (this.optionModifiers[slot] === undefined) {
++      this.optionModifiers[slot] = new ReaderControlSettingsOptionModifier(
++        (): void => this.handleSegment(group, option));
++    }
++    return this.optionModifiers[slot].update(this.choice(group, row, index), this.presentation(),
++      this.isSegmentActive(group, option), this.interactionEnabled && this.isSegmentAvailable(group, option),
++      this.segmentAccessibilityText(group, option));
+   }
+   private group(group: ReaderControlSettingsAddedGroup): ReaderControlActorFrame {
+     return this.geometry().groups[group === 'status' ? 0 : group === 'typography' ? 1 : 2];
+@@ -198,16 +211,7 @@
+     Stack({ alignContent: Alignment.TopStart }) {
+       ForEach(this.groupOptions(group), (option: string, index: number) => {
+         Text(this.optionLabel(group, option))
+-          .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
+-          .width(this.choice(group, row, index).width).height(this.choice(group, row, index).height)
+-          .position({ x: this.choice(group, row, index).x, y: this.choice(group, row, index).y })
+-          .backgroundColor(this.isSegmentActive(group, option) ? TOK_READ_ELEVATED : Color.Transparent)
+-          .borderRadius(6).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium)
+-          .fontSize(9).fontColor(this.isSegmentActive(group, option) ? TOK_READ_PRIMARY : TOK_READ_INK)
+-          .textAlign(TextAlign.Center).maxLines(1)
+-          .enabled(this.interactionEnabled && this.isSegmentAvailable(group, option))
+-          .accessibilityText(this.segmentAccessibilityText(group, option))
+-          .onClick((): void => this.handleSegment(group, option));
++          .attributeModifier(this.optionModifier(group, row, index, option));
+       }, (option: string): string => `reader-control-settings-${group}-${option}`);
+     }
+     .width(this.bar(row).width).height(this.bar(row).height)

@@ -1,0 +1,7 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.021387958, "elapsed": 0.027982792, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.050049833, "elapsed": 0.031329291999999995, "code": 0, "output": "2458\n"}
+{"args": ["shell", "pidof", "io.reader.harmonyos"], "start": 0.081673916, "elapsed": 0.028779666999999995, "code": 0, "output": "14112\n"}
+{"appPid": "14112", "mode": "trace", "direction": "next"}
+{"scriptSha256": "acc81682a42792651e94638e508e79c325a7c52f583658b9ed4ffc385ddafdb2", "localScript": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-8305fd6b/slide-quiet-next-valid-input.sh"}
+{"args": ["file", "send", "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-8305fd6b/slide-quiet-next-valid-input.sh", "/data/local/tmp/reader-control-slide-quiet-next-valid-input.sh"], "start": 0.924321458, "elapsed": 0.03900387500000002, "code": 0, "output": "FileTransfer finish, Size:1168, File count = 1, time:7ms rate:166.86kB/s\n"}
+{"args": ["shell", "sh", "/data/local/tmp/reader-control-slide-quiet-next-valid-input.sh"], "start": 0.964280958, "elapsed": 2.7555006669999997, "code": 0, "output": "/data/local/tmp/reader-control-slide-quiet-next-valid-input.sh[20]: kill: 21371: Permission denied\n"}

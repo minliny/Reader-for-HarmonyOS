@@ -1,0 +1,362 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets
++++ current/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets
+@@ -8,6 +8,9 @@
+   type ReaderTtsState,
+ } from './ReaderTtsState';
+ import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';
++import { ReaderTtsConfigOverlay } from './ReaderTtsConfigOverlay';
++import { readerTtsConfigChoices, readerTtsVoiceId, readerTtsLanguageLabel,
++  type ReaderTtsConfigChoice, type ReaderTtsConfigField } from './ReaderTtsConfigOptions';
+ import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';
+ import type { ReaderControlForm } from './ReaderControlSessionState';
+ import { readerSessionMorphActorId, type ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';
+@@ -22,7 +25,7 @@
+   TOK_TTS_PLAY_START, TOK_TTS_PLAY_END, TOK_TTS_CLAY, TOK_TTS_CLAY_SOFT, TOK_TTS_CLAY_LINE,
+   TOK_TTS_PAPER, TOK_TTS_PAPER_START, TOK_TTS_PAPER_END, TOK_TTS_CARD, TOK_TTS_QUICK_CARD,
+   TOK_TTS_LINE, TOK_TTS_FIELD, TOK_TTS_TRACK } from './ReaderControlTtsStyle';
+-import { sampleReaderControlMotionPresentation, readerControlMotionOutlineOpacity,
++import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionOutlineOpacity,
+   readerControlMotionClipRects, readerControlMotionClipPath,
+   type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
+ 
+@@ -53,6 +56,8 @@
+   @Prop voiceOptions: ReaderTtsVoiceOption[] = [];
+   @Prop language: string = 'zh-CN';
+   @Prop person: number = 0;
++  @Prop @Watch('dismissConfiguration') dismissTemporaryRevision: number = 0;
++  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};
+   onCollapse: () => void = (): void => {};
+   onToggle: () => void = (): void => {};
+   onStop: () => void = (): void => {};
+@@ -77,6 +82,11 @@
+     width: number, height: number) => void =
+     (_kind: ReaderSessionMorphSourceKind, _left: number, _top: number, _width: number, _height: number): void => {};
+   @State private ratePreview: number = -1;
++  private committedSliderRate: number = -1;
++  private committedSliderSeek: number = -1;
++  @State private configField: ReaderTtsConfigField | 'manage' | '' = '';
++  @State private configIdentity: string = '';
++  private configGeneration: number = 0;
+   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
+   @Prop fullViewportHeight: number = 666;
+   private readonly scroller: Scroller = new Scroller();
+@@ -103,6 +113,60 @@
+   private onMotionChanged(): void {
+     this.syncMorphScroll();
+     if (!this.sharedInput()) this.ratePreview = -1;
++    if (!this.fullInput()) this.dismissConfiguration();
++  }
++  aboutToDisappear(): void { this.dismissConfiguration(); }
++
++  private dismissConfiguration(): void {
++    this.configGeneration += 1;
++    this.configField = '';
++    this.configIdentity = '';
++    this.onTemporaryLayerChange(false);
++  }
++
++  private openConfiguration(field: ReaderTtsConfigField | 'manage'): void {
++    if (!this.fullInput()) return;
++    this.configField = field;
++    this.configIdentity = `${field}:${++this.configGeneration}`;
++    this.onTemporaryLayerChange(true);
++  }
++
++  private configurationChoices(): ReaderTtsConfigChoice[] {
++    return readerTtsConfigChoices(this.configField === '' || this.configField === 'manage' ? 'engine' : this.configField,
++      this.engine, this.httpEngines, this.voiceOptions);
++  }
++
++  private configurationSelectedId(): string {
++    if (this.configField === 'engine' || this.configField === 'manage') return this.engine;
++    if (this.configField === 'language') return this.language;
++    if (this.configField === 'voice') return `voice:${this.language}:${this.person}`;
++    if (this.configField === 'session') return this.allowMixing ? 'mix' : 'exclusive';
++    return this.failurePolicy;
++  }
++
++  private configurationMessage(): string {
++    if (this.configField !== 'voice' && this.configField !== 'language') return '';
++    if (this.isHttpEngineSelected()) return '音色和语言由在线服务的配置决定，可在“管理在线 TTS”中编辑。';
++    return this.voiceOptions.length === 0 ? '当前没有可用的系统音色，请先在系统中安装或启用语音服务，也可以配置在线 TTS。' : '';
++  }
++
++  private async commitConfiguration(id: string, identity: string): Promise<void> {
++    if (!this.fullInput() || identity !== this.configIdentity || this.configField === '' ||
++      !this.configurationChoices().some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) return;
++    const field = this.configField;
++    if (field === 'engine' || field === 'manage') {
++      if (id !== this.engine) await this.onEngineChange(id);
++    } else if (field === 'session') {
++      if ((id === 'mix') !== this.allowMixing) this.onAllowMixingChange(id === 'mix');
++    } else if (field === 'failure') {
++      if (id !== this.failurePolicy) this.onFailurePolicyChange(id === 'skip' ? 'skip' : 'stop');
++    } else {
++      const voice = field === 'voice' ? this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => readerTtsVoiceId(item) === id) :
++        this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => item.language === id && item.person === this.person) ??
++        this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => item.language === id);
++      if (voice !== undefined && (voice.language !== this.language || voice.person !== this.person))
++        this.onVoiceChange(voice.language, voice.person);
++    }
+   }
+   private syncMorphScroll(): void {
+     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
+@@ -127,8 +191,14 @@
+   private fullOnlyScrollTranslation(): number {
+     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'fullOnly');
+   }
++  private cachedPaint: ReaderControlMotionPresentation | undefined = undefined;
++  private paintProgress: number = -1;
+   private presentation(): ReaderControlMotionPresentation {
+-    return sampleReaderControlMotionPresentation(this.motionProgress);
++    if (this.cachedPaint === undefined || this.paintProgress !== this.motionProgress) {
++      this.paintProgress = this.motionProgress;
++      this.cachedPaint = sampleReaderControlMotionPresentation(this.motionProgress);
++    }
++    return this.cachedPaint;
+   }
+   private outlineOpacity(kind: ReaderControlTtsSection): number {
+     const seek = (this.state.totalSlices > 1 ? 32 : 0) + (this.state.errorMessage ? 24 : 0);
+@@ -138,20 +208,26 @@
+       this.fullViewportHeight, this.scrollMotion.fullScrollOffset);
+   }
+   private fullInput(): boolean { return this.interactionEnabled && this.p() === 1; }
++  private pathCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
++    (path: string): PathShape => new PathShape().commands(path));
+   private sharedClip(kind: ReaderControlTtsSection): PathShape {
+-    const seek = (this.state.totalSlices > 1 ? 32 : 0) + (this.state.errorMessage ? 24 : 0);
+-    const full = sampleReaderControlTts(1, this.availableWidth, 0, seek);
+-    const quick = sampleReaderControlTts(0, this.availableWidth, 0, seek);
+-    const current = this.frame();
+-    const a = kind === 'playback' ? full.playback : kind === 'timer' ? full.timer : full.speed;
+-    const b = kind === 'playback' ? current.playback : kind === 'timer' ? current.timer : current.speed;
+-    const c = kind === 'playback' ? quick.playback : kind === 'timer' ? quick.timer : quick.speed;
+-    const clips = readerControlMotionClipRects(this.p(), a, b, c,
+-      this.fullViewportHeight, this.scrollMotion.fullScrollOffset);
+-    return new PathShape().commands(readerControlMotionClipPath(kind === 'timer' ?
+-      readerControlTtsTimerVisibleRects(clips, current,
+-        readerControlMotionClipRects(this.p(), full.speed, current.speed, quick.speed,
+-          this.fullViewportHeight, this.scrollMotion.fullScrollOffset)) : clips, this.getUIContext().vp2px(1)));
++    const density = this.getUIContext().vp2px(1);
++    return this.pathCache.sample(kind, [this.motionProgress, this.availableWidth, this.fullViewportHeight,
++      this.scrollMotion.fullScrollOffset, density, this.state.totalSlices > 1 ? 32 : 0, this.state.errorMessage ? 24 : 0, this.effectiveRate()], (): string => {
++      const seek = (this.state.totalSlices > 1 ? 32 : 0) + (this.state.errorMessage ? 24 : 0);
++      const full = sampleReaderControlTts(1, this.availableWidth, 0, seek);
++      const quick = sampleReaderControlTts(0, this.availableWidth, 0, seek);
++      const current = this.frame();
++      const a = kind === 'playback' ? full.playback : kind === 'timer' ? full.timer : full.speed;
++      const b = kind === 'playback' ? current.playback : kind === 'timer' ? current.timer : current.speed;
++      const c = kind === 'playback' ? quick.playback : kind === 'timer' ? quick.timer : quick.speed;
++      const clips = readerControlMotionClipRects(this.p(), a, b, c,
++        this.fullViewportHeight, this.scrollMotion.fullScrollOffset);
++      return readerControlMotionClipPath(kind === 'timer' ?
++        readerControlTtsTimerVisibleRects(clips, current,
++          readerControlMotionClipRects(this.p(), full.speed, current.speed, quick.speed,
++            this.fullViewportHeight, this.scrollMotion.fullScrollOffset)) : clips, density);
++    });
+   }
+   private sharedInput(): boolean { return this.interactionEnabled && (this.p() === 0 || this.p() === 1); }
+   private playbackLabel(): string {
+@@ -212,12 +288,30 @@
+           .height(Math.max(this.frame().contentHeight,
+             this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion)));
+       }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
+-        .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.fullInput())
++        .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.fullInput() && this.configField === '')
+         .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
+           this.nativeScrollDelta(y, source))
+         .onDidScroll((): void => this.onFullDidScroll());
++      this.configurationOverlay();
+     }.width(this.availableWidth).height(this.availableHeight).clip(true)
+       .id(this.actorId(false)).onAreaChange((_old: Area, area: Area): void => this.measureActor(false, area));
++  }
++
++  @Builder
++  private configurationOverlay() {
++    if (this.configField !== '') {
++      ReaderTtsConfigOverlay({ title: this.configField === 'manage' ? '管理在线 TTS' : this.fieldLabel(this.configField),
++        choices: this.configurationChoices(), selectedId: this.configurationSelectedId(),
++        message: this.configurationMessage(), manager: this.configField === 'manage',
++        showManage: this.configField === 'engine' || this.configurationMessage().length > 0,
++        availableWidth: this.availableWidth, availableHeight: this.availableHeight,
++        engines: this.httpEngines, engine: this.engine, selectionId: this.configIdentity,
++        onChoose: (id: string, identity: string): Promise<void> => this.commitConfiguration(id, identity),
++        onPut: this.onHttpEnginePut, onDelete: this.onHttpEngineDelete,
++        onManage: (): void => this.openConfiguration('manage'),
++        onClose: (identity: string): void => { if (identity === this.configIdentity) this.dismissConfiguration(); },
++      });
++    }
+   }
+ 
+   private headerActor(kind: ReaderControlTtsSection): ReaderControlActorFrame {
+@@ -325,7 +419,7 @@
+             .selectedColor(TOK_TTS_TEAL).enabled(this.fullInput()).opacity(this.p())
+             .accessibilityText('跳转朗读句子')
+             .onChange((value: number, mode: SliderChangeMode): void => {
+-              if (mode === SliderChangeMode.End && this.fullInput()) this.onSeek(Math.round(value));
++              this.changeSeekSlider(value, mode);
+             });
+         }
+         if (this.state.errorMessage !== undefined && this.state.errorMessage.length > 0) {
+@@ -522,11 +616,7 @@
+           .position({ x: this.frame().speedTrack.x, y: this.frame().speedTrack.y - 20 })
+           .opacity(0.001).enabled(this.sharedInput()).accessibilityText('调整朗读语速')
+           .onChange((value: number, mode: SliderChangeMode): void => {
+-            if (!this.sharedInput()) { this.ratePreview = -1; return; }
+-            this.ratePreview = Math.round(value * READER_TTS_RATE_STEP_SCALE) / READER_TTS_RATE_STEP_SCALE;
+-            if (mode === SliderChangeMode.End) {
+-              const rate = this.ratePreview; this.ratePreview = -1; this.onRateChange(rate);
+-            }
++            this.changeRateSlider(value, mode);
+           });
+       }.width(this.frame().speed.width).height(this.frame().speed.height)
+         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
+@@ -599,7 +689,7 @@
+       .onClick((): void => this.selectTtsServiceType(http));
+   }
+ 
+-  /** Existing read-only engine/language/session/failure values remain real. */
++  /** Each value opens a real choice list without cycling hidden state. */
+   @Builder
+   private ttsClosedConfigPanel() {
+     Column({ space: 0 }) {
+@@ -630,8 +720,7 @@
+       Text('音色').layoutWeight(1).fontFamily('ReaderInter').fontSize(12).fontColor(TOK_TTS_INK);
+       this.ttsSelectValueField('voice');
+     }.width('100%').height(52).padding({ left: 14, right: 14 }).alignItems(VerticalAlign.Center)
+-      .enabled(this.voiceSelectionAvailable()).opacity(this.voiceSelectionAvailable() ? 1 : 0.72)
+-      .onClick((): void => { if (this.voiceSelectionAvailable()) this.selectNextVoice(); });
++      .enabled(this.fullInput());
+   }
+   @Builder
+   private ttsSelectValueField(kind: ReaderControlTtsField) {
+@@ -639,13 +728,12 @@
+       Text(this.fieldValue(kind)).layoutWeight(1).fontFamily('ReaderInter').fontSize(12)
+         .fontColor(TOK_TTS_INK).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+         .textAlign(TextAlign.End);
+-      if (kind === 'voice') {
+-        Image($r('app.media.reader_chevron_right')).width(12).height(12);
+-      }
++      Image($r('app.media.reader_chevron_right')).width(12).height(12);
+     }.width(this.fieldWidth(kind)).height(kind === 'voice' ? 30 : 36)
+       .padding({ left: 10, right: 8 }).alignItems(VerticalAlign.Center)
+-      .backgroundColor(kind === 'voice' ? TOK_TTS_FIELD : Color.Transparent).borderRadius(999)
+-      .accessibilityText(`${this.fieldLabel(kind)}：${this.fieldValue(kind)}${kind === 'voice' ? '' : '，暂不可展开'}`);
++      .backgroundColor(TOK_TTS_FIELD).borderRadius(999).enabled(this.fullInput())
++      .accessibilityText(`${this.fieldLabel(kind)}：${this.fieldValue(kind)}，选择配置`)
++      .onClick((): void => this.openConfiguration(kind));
+   }
+   @Builder
+   private toggleRow(kind: ReaderControlTtsToggle) {
+@@ -661,13 +749,9 @@
+       .border({ width: { top: 0.5 }, color: TOK_TTS_LINE });
+   }
+ 
+-  private voiceSelectionAvailable(): boolean {
+-    return !this.isHttpEngineSelected() && this.voiceOptions.length > 1;
+-  }
+-
+   private fieldLabel(kind: ReaderControlTtsField): string {
+     if (kind === 'voice') return '音色选项';
+-    if (kind === 'engine') return '系统引擎';
++    if (kind === 'engine') return '朗读引擎';
+     if (kind === 'language') return '语言';
+     return kind === 'session' ? '音频会话' : '不可用处理';
+   }
+@@ -675,9 +759,9 @@
+   private fieldValue(kind: ReaderControlTtsField): string {
+     if (kind === 'voice') return this.currentVoiceLabel();
+     if (kind === 'engine') return this.systemEngineDisplay();
+-    if (kind === 'language') return this.language;
++    if (kind === 'language') return this.isHttpEngineSelected() ? '由在线服务提供' : readerTtsLanguageLabel(this.language);
+     if (kind === 'session') return this.allowMixing ? '混音播放' : '语音播放';
+-    return this.failurePolicy === 'skip' ? '跳过不可用内容' : '提示安装或启用';
++    return this.failurePolicy === 'skip' ? '跳过不可用内容' : '停止并提示';
+   }
+ 
+   private fieldWidth(kind: ReaderControlTtsField): number {
+@@ -690,6 +774,7 @@
+   }
+ 
+   private changeToggle(kind: ReaderControlTtsToggle): void {
++    if (!this.fullInput()) return;
+     const next = !this.toggleValue(kind);
+     if (kind === 'followHighlight') this.onFollowHighlightChange(next);
+     else if (kind === 'pauseOnInterruption') this.onPauseOnInterruptionChange(next);
+@@ -717,6 +802,28 @@
+     return this.ratePreview >= READER_TTS_RATE_MIN ? this.ratePreview : this.state.rate;
+   }
+ 
++  private changeRateSlider(value: number, mode: SliderChangeMode): void {
++    if (!this.sharedInput()) { this.ratePreview = -1; return; }
++    if (mode === SliderChangeMode.Begin) this.committedSliderRate = -1;
++    this.ratePreview = Math.round(value * READER_TTS_RATE_STEP_SCALE) / READER_TTS_RATE_STEP_SCALE;
++    if (mode !== SliderChangeMode.End && mode !== SliderChangeMode.Click) return;
++    const rate = this.ratePreview;
++    this.ratePreview = -1;
++    if (this.committedSliderRate === rate) return;
++    this.committedSliderRate = rate;
++    this.onRateChange(rate);
++  }
++
++  private changeSeekSlider(value: number, mode: SliderChangeMode): void {
++    if (!this.fullInput()) return;
++    if (mode === SliderChangeMode.Begin) this.committedSliderSeek = -1;
++    if (mode !== SliderChangeMode.End && mode !== SliderChangeMode.Click) return;
++    const index = Math.round(value);
++    if (index === this.committedSliderSeek) return;
++    this.committedSliderSeek = index;
++    this.onSeek(index);
++  }
++
+   private isHttpEngineSelected(): boolean {
+     return this.engine.startsWith('http-tts:');
+   }
+@@ -726,12 +833,7 @@
+   }
+ 
+   private selectTtsServiceType(http: boolean): void {
+-    if (!http) {
+-      if (this.isHttpEngineSelected()) this.requestEngineChange('system');
+-      return;
+-    }
+-    if (this.isHttpEngineSelected() || this.httpEngines.length === 0) return;
+-    this.requestEngineChange(`http-tts:${this.httpEngines[0].id}`);
++    this.openConfiguration(http && this.httpEngines.length === 0 ? 'manage' : 'engine');
+   }
+ 
+   private onlineTtsAccessibilityText(): string {
+@@ -750,17 +852,11 @@
+   }
+ 
+   private currentVoiceLabel(): string {
++    if (this.isHttpEngineSelected()) return '由在线服务提供';
++    if (this.voiceOptions.length === 0) return '暂无可用音色';
+     return this.voiceOptions.find((option: ReaderTtsVoiceOption): boolean =>
+       option.language === this.language && option.person === this.person)?.label ??
+       `${this.language} · 音色 ${this.person}`;
+-  }
+-
+-  private selectNextVoice(): void {
+-    if (this.voiceOptions.length === 0) return;
+-    const index = this.voiceOptions.findIndex((option: ReaderTtsVoiceOption): boolean =>
+-      option.language === this.language && option.person === this.person);
+-    const next = this.voiceOptions[(index + 1 + this.voiceOptions.length) % this.voiceOptions.length];
+-    this.onVoiceChange(next.language, next.person);
+   }
+ 
+   private statusText(): string {
+@@ -777,13 +873,6 @@
+     return '未开始';
+   }
+ 
+-  private requestEngineChange(engine: string): void {
+-    void this.onEngineChange(engine).catch((_error: Error): void => {
+-      // The owner projects the same failure into ReaderTtsState; the manager
+-      // variant additionally keeps its inline draft/error surface.
+-    });
+-  }
+-
+   private controlText(kind: 'previous' | 'toggle' | 'stop' | 'next'): string {
+     if (kind === 'previous') return '上一句';
+     if (kind === 'next') return '下一句';

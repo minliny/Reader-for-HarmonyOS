@@ -1,0 +1,649 @@
+{
+  "schemaVersion": 1,
+  "capturedAtUtc": "2026-09-05 13:16:53 UTC",
+  "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+  "purpose": "Read-only live context for content-only TTS and AutoPage migration. Raw motion snippets, not implementation output.",
+  "tts": {
+    "rootNodeId": "1691:2097",
+    "motion": {
+      "nodes": [
+        {
+          "nodeId": "1973:690",
+          "nodeName": "PersistentActor/PanelMotionRoot/TTS",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1973_690_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1973_690_translate_0 { 0% { translate: 0px 406px; } 14.815% { animation-timing-function: ease-out; translate: 0px 406px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:2166",
+          "fallbackNodeId": "770:5329",
+          "nodeName": "PersistentActor/SheetSurface",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_2166_height_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_2166_height_0 { 0% { height: 330px; } 14.815% { animation-timing-function: ease-out; height: 330px; } 100% { height: 736px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:2174",
+          "fallbackNodeId": "772:2083",
+          "nodeName": "AddedActor/FullContentSurface",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_2174_opacity_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_2174_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } }"
+          }
+        },
+        {
+          "nodeId": "1691:2781",
+          "nodeName": "ContentViewport/TTS",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1691_2781_height_0 1.35s linear, kf_1691_2781_width_0 1.35s linear, kf_1691_2781_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_2781_height_0 { 0% { height: 190px; } 14.815% { animation-timing-function: ease-out; height: 190px; } 100% { height: 666px; } } @keyframes kf_1691_2781_width_0 { 0% { width: 286px; } 14.815% { animation-timing-function: ease-out; width: 286px; } 100% { width: 338px; } } @keyframes kf_1691_2781_translate_0 { 0% { translate: 0px -28px; } 14.815% { animation-timing-function: ease-out; translate: 0px -28px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3104",
+          "nodeName": "PersistentModule/TTS/Playback",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3104_height_0 1.35s linear, kf_1691_3104_width_0 1.35s linear, kf_1691_3104_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3104_height_0 { 0% { height: 66px; } 14.815% { animation-timing-function: ease-out; height: 66px; } 100% { height: 128px; } } @keyframes kf_1691_3104_width_0 { 0% { width: 264px; } 14.815% { animation-timing-function: ease-out; width: 264px; } 100% { width: 312px; } } @keyframes kf_1691_3104_translate_0 { 0% { translate: -2px 2px; } 14.815% { animation-timing-function: ease-out; translate: -2px 2px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3105",
+          "fallbackNodeId": "785:2626",
+          "nodeName": "AddedActor/PlaybackHeader",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3105_opacity_0 1.35s linear, kf_1691_3105_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3105_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1691_3105_translate_0 { 0% { translate: 0px 8px; } 14.815% { animation-timing-function: ease-out; translate: 0px 8px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1701:12",
+          "nodeName": "PersistentActor/Transport/Previous · RigidShell+IntactIcon",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1701_12_height_0 1.35s linear, kf_1701_12_width_0 1.35s linear, kf_1701_12_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1701_12_height_0 { 0% { height: 32px; } 14.815% { animation-timing-function: ease-out; height: 32px; } 100% { height: 44px; } } @keyframes kf_1701_12_width_0 { 0% { width: 32px; } 14.815% { animation-timing-function: ease-out; width: 32px; } 100% { width: 44px; } } @keyframes kf_1701_12_translate_0 { 0% { translate: 60px -43px; } 14.815% { animation-timing-function: ease-out; translate: 60px -43px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1701:37",
+          "nodeName": "PersistentActor/Transport/Play · RigidShell+IntactIcon",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1701_37_height_0 1.35s linear, kf_1701_37_width_0 1.35s linear, kf_1701_37_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1701_37_height_0 { 0% { height: 32px; } 14.815% { animation-timing-function: ease-out; height: 32px; } 100% { height: 52px; } } @keyframes kf_1701_37_width_0 { 0% { width: 32px; } 14.815% { animation-timing-function: ease-out; width: 32px; } 100% { width: 52px; } } @keyframes kf_1701_37_translate_0 { 0% { translate: 48px -39px; } 14.815% { animation-timing-function: ease-out; translate: 48px -39px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1701:62",
+          "nodeName": "PersistentActor/Transport/Stop · RigidShell+IntactIcon",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1701_62_height_0 1.35s linear, kf_1701_62_width_0 1.35s linear, kf_1701_62_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1701_62_height_0 { 0% { height: 32px; } 14.815% { animation-timing-function: ease-out; height: 32px; } 100% { height: 44px; } } @keyframes kf_1701_62_width_0 { 0% { width: 32px; } 14.815% { animation-timing-function: ease-out; width: 32px; } 100% { width: 44px; } } @keyframes kf_1701_62_translate_0 { 0% { translate: 28px -43px; } 14.815% { animation-timing-function: ease-out; translate: 28px -43px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1701:87",
+          "nodeName": "PersistentActor/Transport/Next · RigidShell+IntactIcon",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1701_87_height_0 1.35s linear, kf_1701_87_width_0 1.35s linear, kf_1701_87_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1701_87_height_0 { 0% { height: 32px; } 14.815% { animation-timing-function: ease-out; height: 32px; } 100% { height: 44px; } } @keyframes kf_1701_87_width_0 { 0% { width: 32px; } 14.815% { animation-timing-function: ease-out; width: 32px; } 100% { width: 44px; } } @keyframes kf_1701_87_translate_0 { 0% { translate: 16px -43px; } 14.815% { animation-timing-function: ease-out; translate: 16px -43px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3359",
+          "fallbackNodeId": "1023:17790",
+          "nodeName": "OutgoingActor/QuickLabel/Playback",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3359_opacity_0 1.35s linear, kf_1691_3359_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3359_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } } @keyframes kf_1691_3359_translate_0 { 0% { translate: 0px 0px; } 14.815% { animation-timing-function: ease-out; translate: 0px 0px; } 100% { translate: 0px 8px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3258",
+          "nodeName": "PersistentModule/TTS/Speed",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3258_height_0 1.35s linear, kf_1691_3258_width_0 1.35s linear, kf_1691_3258_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3258_height_0 { 0% { height: 42px; } 14.815% { animation-timing-function: ease-out; height: 42px; } 100% { height: 105px; } } @keyframes kf_1691_3258_width_0 { 0% { width: 264px; } 14.815% { animation-timing-function: ease-out; width: 264px; } 100% { width: 312px; } } @keyframes kf_1691_3258_translate_0 { 0% { translate: -2px -324px; } 14.815% { animation-timing-function: ease-out; translate: -2px -324px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3259",
+          "fallbackNodeId": "785:2626",
+          "nodeName": "AddedActor/SpeedHeader",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3259_opacity_0 1.35s linear, kf_1691_3259_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3259_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1691_3259_translate_0 { 0% { translate: 0px 8px; } 14.815% { animation-timing-function: ease-out; translate: 0px 8px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3260",
+          "nodeName": "AddedActor/SpeedMin",
+          "nodeType": "TEXT",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3260_opacity_0 1.35s linear, kf_1691_3260_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3260_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1691_3260_translate_0 { 0% { translate: 0px 6px; } 14.815% { animation-timing-function: ease-out; translate: 0px 6px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3261",
+          "nodeName": "AddedActor/SpeedMax",
+          "nodeType": "TEXT",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3261_opacity_0 1.35s linear, kf_1691_3261_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3261_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1691_3261_translate_0 { 0% { translate: 0px 6px; } 14.815% { animation-timing-function: ease-out; translate: 0px 6px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3262",
+          "nodeName": "PersistentActor/SpeedTrack",
+          "nodeType": "ROUNDED_RECTANGLE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3262_height_0 1.35s linear, kf_1691_3262_width_0 1.35s linear, kf_1691_3262_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3262_height_0 { 0% { height: 2px; } 14.815% { animation-timing-function: ease-out; height: 2px; } 100% { height: 4px; } } @keyframes kf_1691_3262_width_0 { 0% { width: 116px; } 14.815% { animation-timing-function: ease-out; width: 116px; } 100% { width: 255px; } } @keyframes kf_1691_3262_translate_0 { 0% { translate: 62.5px -50px; } 14.815% { animation-timing-function: ease-out; translate: 62.5px -50px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3263",
+          "nodeName": "PersistentActor/SpeedProgress",
+          "nodeType": "ROUNDED_RECTANGLE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3263_height_0 1.35s linear, kf_1691_3263_width_0 1.35s linear, kf_1691_3263_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3263_height_0 { 0% { height: 2px; } 14.815% { animation-timing-function: ease-out; height: 2px; } 100% { height: 4px; } } @keyframes kf_1691_3263_width_0 { 0% { width: 38.667px; } 14.815% { animation-timing-function: ease-out; width: 38.667px; } 100% { width: 85px; } } @keyframes kf_1691_3263_translate_0 { 0% { translate: 62.5px -50px; } 14.815% { animation-timing-function: ease-out; translate: 62.5px -50px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3264",
+          "nodeName": "PersistentActor/SpeedThumb",
+          "nodeType": "ELLIPSE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3264_height_0 1.35s linear, kf_1691_3264_width_0 1.35s linear, kf_1691_3264_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3264_height_0 { 0% { height: 18px; } 100% { height: 18px; } } @keyframes kf_1691_3264_width_0 { 0% { width: 18px; } 100% { width: 18px; } } @keyframes kf_1691_3264_translate_0 { 0% { translate: 16.167px -51px; } 14.815% { animation-timing-function: ease-out; translate: 16.167px -51px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3425",
+          "fallbackNodeId": "1023:17798",
+          "nodeName": "OutgoingActor/QuickLabel/Speed",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3425_opacity_0 1.35s linear, kf_1691_3425_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3425_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } } @keyframes kf_1691_3425_translate_0 { 0% { translate: 0px 0px; } 14.815% { animation-timing-function: ease-out; translate: 0px 0px; } 100% { translate: 0px 8px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3440",
+          "nodeName": "OutgoingActor/QuickSpeedValue",
+          "nodeType": "TEXT",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3440_opacity_0 1.35s linear, kf_1691_3440_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3440_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } } @keyframes kf_1691_3440_translate_0 { 0% { translate: 0px 0px; } 14.815% { animation-timing-function: ease-out; translate: 0px 0px; } 100% { translate: 0px 8px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:2784",
+          "fallbackNodeId": "786:2672",
+          "nodeName": "AddedModule/TTS/Detail",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_2784_opacity_0 1.35s linear, kf_1691_2784_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_2784_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1691_2784_translate_0 { 0% { translate: 0px 26px; } 14.815% { animation-timing-function: ease-out; translate: 0px 26px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:2785",
+          "fallbackNodeId": "786:2697",
+          "nodeName": "AddedModule/TTS/Config",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_2785_opacity_0 1.35s linear, kf_1691_2785_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_2785_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1691_2785_translate_0 { 0% { translate: 0px 34px; } 14.815% { animation-timing-function: ease-out; translate: 0px 34px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3195",
+          "nodeName": "PersistentModule/TTS/Timer",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3195_height_0 1.35s linear, kf_1691_3195_width_0 1.35s linear, kf_1691_3195_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3195_height_0 { 0% { height: 42px; } 14.815% { animation-timing-function: ease-out; height: 42px; } 100% { height: 320px; } } @keyframes kf_1691_3195_width_0 { 0% { width: 264px; } 14.815% { animation-timing-function: ease-out; width: 264px; } 100% { width: 312px; } } @keyframes kf_1691_3195_translate_0 { 0% { translate: -2px -52px; } 14.815% { animation-timing-function: ease-out; translate: -2px -52px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3196",
+          "fallbackNodeId": "785:2626",
+          "nodeName": "AddedActor/TimerHeader",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3196_opacity_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3196_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3387",
+          "fallbackNodeId": "1023:17794",
+          "nodeName": "OutgoingActor/QuickLabel/Timer",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3387_opacity_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3387_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } }"
+          }
+        },
+        {
+          "nodeId": "1691:3405",
+          "fallbackNodeId": "750:1053",
+          "nodeName": "OutgoingActor/QuickTimerSelect/5min",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_3405_opacity_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_3405_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } }"
+          }
+        },
+        {
+          "nodeId": "1721:22529",
+          "nodeName": "AddedActor/FullHeader",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1721_22529_opacity_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1721_22529_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } }"
+          }
+        },
+        {
+          "nodeId": "1691:2809",
+          "fallbackNodeId": "1023:18606",
+          "nodeName": "OutgoingActor/BrightnessRail",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_2809_opacity_0 1.35s linear, kf_1691_2809_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_2809_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } } @keyframes kf_1691_2809_translate_0 { 0% { translate: 0px 0px; } 14.815% { animation-timing-function: ease-out; translate: 0px 0px; } 100% { translate: 0px 15px; } }"
+          }
+        },
+        {
+          "nodeId": "1691:2907",
+          "fallbackNodeId": "1023:17729",
+          "nodeName": "OutgoingActor/ModuleNav",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1691_2907_opacity_0 1.35s linear, kf_1691_2907_translate_0 1.35s linear; animation-iteration-count: infinite; @keyframes kf_1691_2907_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } } @keyframes kf_1691_2907_translate_0 { 0% { translate: 0px 0px; } 14.815% { animation-timing-function: ease-out; translate: 0px 0px; } 100% { translate: 0px 20px; } }"
+          }
+        }
+      ],
+      "timelineCohorts": [
+        {
+          "rootNodeId": "1691:2097",
+          "durationMs": 1350,
+          "loopMode": "loop",
+          "memberNodeIds": [
+            "1973:690",
+            "1691:2166",
+            "1691:2174",
+            "1691:2781",
+            "1691:3104",
+            "1691:3105",
+            "1701:12",
+            "1701:37",
+            "1701:62",
+            "1701:87",
+            "1691:3359",
+            "1691:3258",
+            "1691:3259",
+            "1691:3260",
+            "1691:3261",
+            "1691:3262",
+            "1691:3263",
+            "1691:3264",
+            "1691:3425",
+            "1691:3440",
+            "1691:2784",
+            "1691:2785",
+            "1691:3195",
+            "1691:3196",
+            "1691:3387",
+            "1691:3405",
+            "1721:22529",
+            "1691:2809",
+            "1691:2907"
+          ]
+        }
+      ]
+    }
+  },
+  "autoPage": {
+    "rootNodeId": "1938:6245",
+    "motion": {
+      "nodes": [
+        {
+          "nodeId": "1938:7518",
+          "nodeName": "PersistentActor/UnifiedSheetSurface",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1938_7518_height_0 1.35s linear, kf_1938_7518_width_0 1.35s linear, kf_1938_7518_translate_0 1.35s linear; @keyframes kf_1938_7518_height_0 { 0% { height: 330px; } 14.815% { animation-timing-function: ease-out; height: 330px; } 100% { height: 736px; } } @keyframes kf_1938_7518_width_0 { 0% { width: 364.896px; } 14.815% { animation-timing-function: ease-out; width: 364.896px; } 100% { width: 364px; } } @keyframes kf_1938_7518_translate_0 { 0% { translate: -0.448px 406.443px; } 14.815% { animation-timing-function: ease-out; translate: -0.448px 406.443px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1938:7519",
+          "nodeName": "AddedActor/FullHeader",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1938_7519_opacity_0 1.35s linear, kf_1938_7519_translate_0 1.35s linear; @keyframes kf_1938_7519_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1938_7519_translate_0 { 0% { translate: 0px 18px; } 14.815% { animation-timing-function: ease-out; translate: 0px 18px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1938:7532",
+          "nodeName": "AddedActor/ControlHeader",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1938_7532_opacity_0 1.35s linear, kf_1938_7532_translate_0 1.35s linear; @keyframes kf_1938_7532_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1938_7532_translate_0 { 0% { translate: 0px 14px; } 14.815% { animation-timing-function: ease-out; translate: 0px 14px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1939:785",
+          "nodeName": "PersistentActor/PreviousChapter",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1939_785_width_0 1.35s linear, kf_1939_785_translate_0 1.35s linear; @keyframes kf_1939_785_width_0 { 0% { width: 62px; } 14.815% { animation-timing-function: ease-out; width: 62px; } 100% { width: 72px; } } @keyframes kf_1939_785_translate_0 { 0% { translate: -6.45px -9.841px; } 14.815% { animation-timing-function: ease-out; translate: -6.45px -9.841px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1939:800",
+          "nodeName": "PersistentActor/Play",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1939_800_height_0 1.35s linear, kf_1939_800_width_0 1.35s linear, kf_1939_800_translate_0 1.35s linear; @keyframes kf_1939_800_height_0 { 0% { height: 32px; } 14.815% { animation-timing-function: ease-out; height: 32px; } 100% { height: 52px; } } @keyframes kf_1939_800_width_0 { 0% { width: 32px; } 14.815% { animation-timing-function: ease-out; width: 32px; } 100% { width: 95px; } } @keyframes kf_1939_800_translate_0 { 0% { translate: 5.058px -7.341px; } 14.815% { animation-timing-function: ease-out; translate: 5.058px -7.341px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1939:801",
+          "nodeName": "Italic Text",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1939_801_translate_0 1.35s linear; @keyframes kf_1939_801_translate_0 { 0% { translate: -31.492px -2.5px; } 14.815% { animation-timing-function: ease-out; translate: -31.492px -2.5px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1939:817",
+          "nodeName": "PersistentActor/NextChapter",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1939_817_width_0 1.35s linear, kf_1939_817_translate_0 1.35s linear; @keyframes kf_1939_817_width_0 { 0% { width: 62px; } 14.815% { animation-timing-function: ease-out; width: 62px; } 100% { width: 72px; } } @keyframes kf_1939_817_translate_0 { 0% { translate: -36.4px -9.841px; } 14.815% { animation-timing-function: ease-out; translate: -36.4px -9.841px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1939:832",
+          "nodeName": "PersistentActor/Stop",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1939_832_translate_0 1.35s linear; @keyframes kf_1939_832_translate_0 { 0% { translate: -33.106px -9.841px; } 14.815% { animation-timing-function: ease-out; translate: -33.106px -9.841px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1939:840",
+          "nodeName": "PersistentActor/StopLabel",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1939_840_translate_0 1.35s linear; @keyframes kf_1939_840_translate_0 { 0% { translate: -33.106px -9.841px; } 14.815% { animation-timing-function: ease-out; translate: -33.106px -9.841px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1938:7559",
+          "nodeName": "AddedModule/AutoPage/Timer",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1938_7559_opacity_0 1.35s linear, kf_1938_7559_translate_0 1.35s linear; @keyframes kf_1938_7559_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1938_7559_translate_0 { 0% { translate: 0px 22px; } 14.815% { animation-timing-function: ease-out; translate: 0px 22px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1938:8073",
+          "nodeName": "AddedActor/SpeedHeader",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1938_8073_opacity_0 1.35s linear, kf_1938_8073_translate_0 1.35s linear; @keyframes kf_1938_8073_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1938_8073_translate_0 { 0% { translate: 0px 18px; } 14.815% { animation-timing-function: ease-out; translate: 0px 18px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1938:8091",
+          "nodeName": "AddedActor/FollowHighlight",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1938_8091_opacity_0 1.35s linear, kf_1938_8091_translate_0 1.35s linear; @keyframes kf_1938_8091_opacity_0 { 0% { opacity: 0; } 14.815% { animation-timing-function: ease-out; opacity: 0; } 100% { opacity: 1; } } @keyframes kf_1938_8091_translate_0 { 0% { translate: 0px 18px; } 14.815% { animation-timing-function: ease-out; translate: 0px 18px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1939:848",
+          "nodeName": "PersistentActor/PageSpeed",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1939_848_height_0 1.35s linear, kf_1939_848_width_0 1.35s linear, kf_1939_848_translate_0 1.35s linear; @keyframes kf_1939_848_height_0 { 0% { height: 32px; } 14.815% { animation-timing-function: ease-out; height: 32px; } 100% { height: 64px; } } @keyframes kf_1939_848_width_0 { 0% { width: 264px; } 14.815% { animation-timing-function: ease-out; width: 264px; } 100% { width: 306px; } } @keyframes kf_1939_848_translate_0 { 0% { translate: -5.45px -208.623px; } 14.815% { animation-timing-function: ease-out; translate: -5.45px -208.623px; } 100% { translate: 0px 0px; } }"
+          }
+        },
+        {
+          "nodeId": "1938:8527",
+          "fallbackNodeId": "1023:18606",
+          "nodeName": "OutgoingActor/BrightnessRail",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1938_8527_opacity_0 1.35s linear, kf_1938_8527_translate_0 1.35s linear; @keyframes kf_1938_8527_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } } @keyframes kf_1938_8527_translate_0 { 0% { translate: 0px 0px; } 14.815% { animation-timing-function: ease-out; translate: 0px 0px; } 100% { translate: 0px 18px; } }"
+          }
+        },
+        {
+          "nodeId": "1938:8544",
+          "fallbackNodeId": "1023:17719",
+          "nodeName": "OutgoingActor/ModuleNav",
+          "nodeType": "INSTANCE",
+          "codeSnippets": {
+            "css": "animation: kf_1938_8544_opacity_0 1.35s linear, kf_1938_8544_translate_0 1.35s linear; @keyframes kf_1938_8544_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } } @keyframes kf_1938_8544_translate_0 { 0% { translate: 0px 0px; } 14.815% { animation-timing-function: ease-out; translate: 0px 0px; } 100% { translate: 0px 20px; } }"
+          }
+        },
+        {
+          "nodeId": "1938:8590",
+          "nodeName": "OutgoingActor/Back",
+          "nodeType": "FRAME",
+          "codeSnippets": {
+            "css": "animation: kf_1938_8590_opacity_0 1.35s linear, kf_1938_8590_translate_0 1.35s linear; @keyframes kf_1938_8590_opacity_0 { 0% { opacity: 1; } 14.815% { animation-timing-function: ease-out; opacity: 1; } 100% { opacity: 0; } } @keyframes kf_1938_8590_translate_0 { 0% { translate: 0px 0px; } 14.815% { animation-timing-function: ease-out; translate: 0px 0px; } 100% { translate: 0px 14px; } }"
+          }
+        }
+      ],
+      "timelineCohorts": [
+        {
+          "rootNodeId": "1938:6245",
+          "durationMs": 1350,
+          "loopMode": "once",
+          "memberNodeIds": [
+            "1938:7518",
+            "1938:7519",
+            "1938:7532",
+            "1939:785",
+            "1939:800",
+            "1939:801",
+            "1939:817",
+            "1939:832",
+            "1939:840",
+            "1938:7559",
+            "1938:8073",
+            "1938:8091",
+            "1939:848",
+            "1938:8527",
+            "1938:8544",
+            "1938:8590"
+          ]
+        }
+      ]
+    }
+  },
+  "designReads": [
+    "1691:2097",
+    "1938:6245 (sparse)",
+    "1938:7518 (sparse)",
+    "1938:7531",
+    "1938:8072",
+    "1938:7559"
+  ],
+  "staticBounds": {
+    "1691:3104": {
+      "x": 13,
+      "y": 11,
+      "width": 312,
+      "height": 128
+    },
+    "1691:3105": {
+      "x": 0,
+      "y": 12,
+      "width": 312,
+      "height": 24
+    },
+    "1701:12": {
+      "x": 58,
+      "y": 60,
+      "width": 44,
+      "height": 44
+    },
+    "1701:37": {
+      "x": 106,
+      "y": 56,
+      "width": 52,
+      "height": 52
+    },
+    "1701:62": {
+      "x": 162,
+      "y": 60,
+      "width": 44,
+      "height": 44
+    },
+    "1701:87": {
+      "x": 210,
+      "y": 60,
+      "width": 44,
+      "height": 44
+    },
+    "1691:3359": {
+      "x": 12,
+      "y": 23,
+      "width": 106,
+      "height": 20
+    },
+    "1691:3195": {
+      "x": 13,
+      "y": 139,
+      "width": 312,
+      "height": 320
+    },
+    "1691:3196": {
+      "x": 0,
+      "y": 12,
+      "width": 312,
+      "height": 24
+    },
+    "1691:3387": {
+      "x": 11,
+      "y": 11,
+      "width": 148,
+      "height": 20
+    },
+    "1691:3405": {
+      "x": 167,
+      "y": 6,
+      "width": 86,
+      "height": 30
+    },
+    "1691:3258": {
+      "x": 13,
+      "y": 459,
+      "width": 312,
+      "height": 105
+    },
+    "1691:3259": {
+      "x": 0,
+      "y": 12,
+      "width": 312,
+      "height": 24
+    },
+    "1691:3262": {
+      "x": 28.5,
+      "y": 70,
+      "width": 255,
+      "height": 4
+    },
+    "1691:3264": {
+      "x": 104.5,
+      "y": 63,
+      "width": 18,
+      "height": 18
+    },
+    "1691:3425": {
+      "x": 11,
+      "y": 11,
+      "width": 72,
+      "height": 20
+    },
+    "1691:3440": {
+      "x": 215,
+      "y": 15,
+      "width": 38,
+      "height": 12
+    },
+    "1691:2784": {
+      "x": 13,
+      "y": 564,
+      "width": 312,
+      "height": 242
+    },
+    "1691:2785": {
+      "x": 13,
+      "y": 806,
+      "width": 312,
+      "height": 371
+    },
+    "1938:7532": {
+      "x": 4,
+      "y": 10,
+      "width": 306,
+      "height": 14.3906
+    },
+    "1939:785": {
+      "x": 9.75,
+      "y": 5,
+      "width": 72,
+      "height": 52
+    },
+    "1939:800": {
+      "x": 105.4921875,
+      "y": 5,
+      "width": 95,
+      "height": 52
+    },
+    "1939:801": {
+      "x": 31.4921875,
+      "y": 2.5,
+      "width": 32,
+      "height": 32
+    },
+    "1939:817": {
+      "x": 224.25,
+      "y": 5,
+      "width": 72,
+      "height": 52
+    },
+    "1939:832": {
+      "x": 188.65625,
+      "y": 15.5,
+      "width": 24,
+      "height": 24
+    },
+    "1939:840": {
+      "x": 191.65625,
+      "y": 44,
+      "width": 18,
+      "height": 9
+    },
+    "1938:7559": {
+      "x": 0,
+      "y": 104.391,
+      "width": 314,
+      "height": 181.391
+    },
+    "1938:8073": {
+      "x": 4,
+      "y": 11,
+      "width": 306,
+      "height": 14.3906
+    },
+    "1939:848": {
+      "x": 4,
+      "y": 33.3906,
+      "width": 306,
+      "height": 64
+    },
+    "1938:8091": {
+      "x": 4,
+      "y": 103.3906,
+      "width": 306,
+      "height": 36
+    }
+  },
+  "staticBoundsNotes": "Values transcribed from live design-context code/metadata; x/y stay in production named-parent coordinate space. Timer/Speed AutoPage sections subtract preceding parent padding. CSS snippets round translate decimals to 3 decimals; staticBounds retain exact source coordinates where available. No screenshots or expiring asset URLs encoded as authority."
+}

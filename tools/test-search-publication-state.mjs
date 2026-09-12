@@ -28,7 +28,7 @@ assert.match(orchestrator, /if \(admitsResult\(book\)\)/,
 // Publication state: searching N/M, returned count, failed count.
 assert.match(orchestrator, /failedSourceCount: failures\.length/,
   'every results publication carries the failed-source count');
-assert.match(page, /正在搜索 \$\{this\.presentation\.completedSourceCount\}\/\$\{this\.presentation\.totalSourceCount\} 个书源,已返回 \$\{results\.length\} 个/,
+assert.match(page, /正在搜索 \$\{this\.presentation\.completedSourceCount\}\/\$\{this\.presentation\.totalSourceCount\} 个书源,已返回 \$\{this\.visibleGroups\.length\} 个/,
   'the results header must state sweeping N/M and the returned count');
 assert.match(page, /失败 \$\{this\.presentation\.failedSourceCount\} 个书源/,
   'the results header must state the failed-source count');
@@ -36,9 +36,9 @@ assert.match(page, /失败 \$\{this\.presentation\.failedSourceCount\} 个书源
 // Visual aggregation must never merge per-source data.
 assert.match(page, /admit\(book: SearchBook, inBookshelf: boolean\): void \{\s*this\.variants\.push\(book\);/,
   'each same-book variant keeps its own full SearchBook row');
-assert.match(page, /Text\(book\.sourceName\.length > 0 \? book\.sourceName : book\.sourceId\)/,
+assert.match(page, /Text\(this\.group\.book\.sourceName\.length > 0 \? this\.group\.book\.sourceName : this\.group\.book\.sourceId\)/,
   'every result card displays its source name');
-assert.match(page, /\.onClick\(\(\): void => this\.onSelectResult\(book, variants\)\)/,
+assert.match(page, /\.onClick\(\(\): void => this\.onSelectResult\(this\.group\.book, this\.group\.variants\)\)/,
   'the clicked variant identity flows to detail admission');
 
 console.log('search publication identity contract: PASS');

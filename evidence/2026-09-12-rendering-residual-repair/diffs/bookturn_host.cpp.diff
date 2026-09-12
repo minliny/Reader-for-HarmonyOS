@@ -1,0 +1,48 @@
+--- before/entry/src/main/cpp/bookturn/bookturn_host.cpp
++++ current/entry/src/main/cpp/bookturn/bookturn_host.cpp
+@@ -542,12 +542,18 @@
+             retainTimeoutLoggedGeneration_ = 0;
+             { std::lock_guard<std::mutex> frameLock(frameMutex_); submittedFrame_ = {}; }
+             pendingHighlights_.reset();
++            // A later attach and its accepted highlights can already be in
++            // the mailbox while this detach waits for an old GL upload. The
++            // payload is discarded above; its acceptance must be discarded
++            // too, otherwise the new surface's retry is mistaken for a hit.
++            acceptedHighlights_.reset();
++            acceptedHighlightSurfaceSerial_ = 0;
+             highlightFrameDirty_ = false;
+             consecutiveDrawFailures_ = 0;
+             firstFrameNotifiedGeneration_ = 0;
+             detachCompleteSerial_ = serial;
+             lock.unlock();
+-            Notify(HostEvent::SURFACE_LOST, lostGeneration, 0);
++            Notify(HostEvent::SURFACE_LOST, lostGeneration, 0, serial);
+             surfaceCondition_.notify_all();
+             lock.lock();
+             continue;
+@@ -997,14 +1003,14 @@
+         static_cast<unsigned long long>(terminalRetainedGeneration_), elapsedMs);
+ }
+ 
+-void BookTurnHost::Notify(HostEvent event, uint64_t generation, int32_t detail)
++void BookTurnHost::Notify(HostEvent event, uint64_t generation, int32_t detail, uint64_t surfaceEpoch)
+ {
+     HostEventCallback callback;
+     {
+         std::lock_guard<std::mutex> lock(callbackMutex_);
+         callback = callback_;
+     }
+-    if (callback) callback(event, generation, detail);
++    if (callback) callback(event, generation, detail, surfaceEpoch);
+ }
+ 
+ bool BookTurnHost::IsSurfaceLifecycleCurrent(uint64_t serial) const
+@@ -1020,7 +1026,7 @@
+     // by host shutdown) before either operation can invalidate the old EGL
+     // surface.  A stale worker completion therefore cannot enqueue a READY,
+     // TEXTURE, FRAME, SLOTS or failure event for the replacement surface.
+-    if (IsSurfaceLifecycleCurrent(serial)) Notify(event, generation, detail);
++    if (IsSurfaceLifecycleCurrent(serial)) Notify(event, generation, detail, serial);
+ }
+ 
+ void BookTurnHost::RecordFrameDiag(float solveMs, float drawMs)

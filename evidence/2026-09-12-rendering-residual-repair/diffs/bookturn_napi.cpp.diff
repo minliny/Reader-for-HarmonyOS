@@ -1,0 +1,58 @@
+--- before/entry/src/main/cpp/bookturn/bookturn_napi.cpp
++++ current/entry/src/main/cpp/bookturn/bookturn_napi.cpp
+@@ -7,6 +7,7 @@
+ #include <node_api.h>
+ 
+ #include <algorithm>
++#include <atomic>
+ #include <cstdint>
+ #include <memory>
+ #include <mutex>
+@@ -20,13 +21,19 @@
+ 
+ constexpr uint64_t kMaximumTexturePixels = 3'000'000ULL;
+ 
++struct CallbackBridge;
++
+ struct EventPayload {
+     HostEvent event;
+     uint64_t generation;
+     int32_t detail;
++    uint64_t surfaceEpoch;
++    std::weak_ptr<BookTurnHost> host;
++    std::weak_ptr<CallbackBridge> bridge;
+ };
+ 
+ struct CallbackBridge {
++    std::atomic<bool> active { true };
+     napi_threadsafe_function function = nullptr;
+     ~CallbackBridge()
+     {
+@@ -201,6 +208,10 @@
+ {
+     std::unique_ptr<EventPayload> payload(static_cast<EventPayload*>(data));
+     if (env == nullptr || jsCallback == nullptr || payload == nullptr) return;
++    const auto host = payload->host.lock();
++    const auto bridge = payload->bridge.lock();
++    if (host == nullptr || bridge == nullptr || !bridge->active.load(std::memory_order_acquire) ||
++        payload->surfaceEpoch == 0 || host->SurfaceEpoch() != payload->surfaceEpoch) return;
+     napi_value undefined = nullptr;
+     napi_get_undefined(env, &undefined);
+     napi_value arguments[3] = {};
+@@ -624,10 +635,14 @@
+     }
+     {
+         std::lock_guard<std::mutex> lock(g_registryMutex);
++        const auto previous = g_callbacks.find(id);
++        if (previous != g_callbacks.end()) previous->second->active.store(false, std::memory_order_release);
+         g_callbacks[id] = bridge;
+     }
+-    host->SetEventCallback([bridge](HostEvent event, uint64_t generation, int32_t detail) {
+-        auto payload = std::make_unique<EventPayload>(EventPayload { event, generation, detail });
++    const std::weak_ptr<BookTurnHost> weakHost = host;
++    host->SetEventCallback([bridge, weakHost](HostEvent event, uint64_t generation, int32_t detail, uint64_t surfaceEpoch) {
++        if (!bridge->active.load(std::memory_order_acquire)) return;
++        auto payload = std::make_unique<EventPayload>(EventPayload { event, generation, detail, surfaceEpoch, weakHost, bridge });
+         if (napi_call_threadsafe_function(bridge->function, payload.get(), napi_tsfn_nonblocking) == napi_ok) {
+             payload.release();
+         }

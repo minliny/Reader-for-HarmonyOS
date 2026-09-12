@@ -1,0 +1,1095 @@
+{
+  "recordedAt": "2026-09-10T19:24:40.137858+00:00",
+  "scope": "full repair execution and eight additional VM-discovered repairs; bounded VM validation, full acceptance OPEN",
+  "runId": "20260910T191155Z-35f2f99a-b2b32102",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T191155Z-35f2f99a-b2b32102/manifest.json",
+  "signedSha256": "a98e3a682ae3678a471c6e93b36d62911767bb279ff23c019c5b75e2cc59faa6",
+  "acceptanceEligible": false,
+  "harmonyContractGroups": 180,
+  "nativeChecks": {
+    "solver": 235,
+    "motion": 538,
+    "renderer": 373,
+    "barrier": 159
+  },
+  "vm": {
+    "install": "PASS",
+    "interaction": "PARTIAL",
+    "target": "127.0.0.1:5555",
+    "name": "Mate 80 Pro",
+    "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+    "dataPreserved": true,
+    "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T191155Z-35f2f99a-b2b32102/deploy-vm-6460677a198b-20260910T191350Z.json",
+    "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-b2b32102",
+    "fullAcceptance": "OPEN",
+    "release": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-b2b32102/VM_RELEASE.json",
+    "finalMode": "slide"
+  },
+  "observedBaselineDeltaNotAllAttributableToThisTask": [
+    {
+      "path": "entry/src/main/ets/features/reading/BookTurnPresentationSession.ets",
+      "before": "40d3365a33143cb2f7c4263956135ab6feef343b15effd248158c1c17ffeb0db",
+      "after": "2b17b186fa36b8c759a70335a0de5e6fa8f9ee10f9d02cd53bf7c930ec3b9824"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingPaginationIndex.ts",
+      "before": "e5f981c9c70e1134f62b8c8e2467578c0c12b6691284b46997c244eefd14ab36",
+      "after": "cbc11ebb1837d4ba919b2e2304925a62b2ca4d53343989601d69e47f3187d4ee"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+      "before": "d310c6dc9880ebdb4e4b9bff71e30a04e8943f02693a599c20f8589dbaa40fd8",
+      "after": "22f5fef7d07504c29b340d8e647ce5c1ac8911fd184710259b55451afbbf994e"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+      "before": "566c4c7315397f48b9426c182f545505717d10c661ec38a4a1a89ffb361f738f",
+      "after": "573b4d8a3a472967503692bae1a3883add0f74068cf3dfb68a35fb1766840b95"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+      "before": "1426a9cbd4a425d27fa16ff207723ff243537f35f68857d11c8ff83e20fa4115",
+      "after": "b2decc47a2276a9838dd6dba00f79589088f388f9bfca3221e50c7ac67a8b151"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts",
+      "before": "ec1af1bea79d6856cefd52ab1ef915f41ed8080e2769467dd2b9ebaa7fc88c66",
+      "after": "428ec2368c79d9596436af530b33d7e20c386b232296d27adcfb800475f10ff8"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "before": "6b56be517323319275e01c3b2c608b81da79dcf3e631287aaf87bb09e143848d",
+      "after": "f28cf81a4d1a5a22f23fc33fa36f92108178a0a38ef6e5e9726e924ed4cbe26d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts",
+      "before": "632c44dbb72d34fe2af6447c6eefce970c83426f2470bc3e10c79041c067b4ef",
+      "after": "c13524d817272aee3a0361ecb3fa20e02541c7d5b4bef9c52c03294991263194"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageGestureState.ts",
+      "before": "0930d59f21c33ca28fd9f68904497a2b5c1d0a65c9063dbf2e4d80e594aa7649",
+      "after": "0bd98963d31ec43027b0b29272b1eb1d1be8546ff0c7bc6f3e47456844e7ea23"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+      "before": "27a4b9bc9ca330f2b3a53897f51513a52ee865b0ef1a36606ae747f80a09c92a",
+      "after": "35bbb9321a9836a7e3f522b38606c92cb754743326b53c630495299600f3274f"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "before": "fd84a108ecb51b8ca060b7358ce52f59943861782b66b7459b024a6a18d04b85",
+      "after": "e3216743a9958f0c8a3607de51b62a829ffacd1421c8f0807153a6507b2749c2"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "before": "4223d363b719d583fd14d25b9bed3514f2f0f78aacbceb7e05445359cea344e6",
+      "after": "08cafd3338fb799f652491c709d4d6fd55e9c3b43c809817212c1fb2ba245c97"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts",
+      "before": "2c230b4f11e3aba829ba34f6beea6c27d054244344db6dbcbc20119e56b27e35",
+      "after": "38e9498674620a6d2cbbad6509a41e15c9761a1b04d7cf4c743fb5c4d121ae4d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSettingsState.ts",
+      "before": "01210a8cdc2710c7dd6573d5f04909cf53642cb434912310925421fe15ea855a",
+      "after": "9bfbaf2b183ed409494359de5d0e091f36bab33f69b0f775c3ed3e92a09c370d"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.h",
+      "before": "d1152e041d98e23de3d515ea77dd1273a7e3136f8b1fcb6605b8b533f4e9ac5c",
+      "after": "94d1fa454225d65b4b375cc8f8506614c5a1cf5cd78c2914276cf637570cb159"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.h",
+      "before": "8781a56f9d70f57499b030c39a6185ddfe9b82266b313350aebc11d2ff908aea",
+      "after": "85c3092a524cc2ea73776c6940fdcd7696055b68f9062511b0116f87af5c1d13"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+      "before": "b289e7493a11f40980296f39ceb7bd4b1fb335ddc776cb5ec3ecefb5548dd3d7",
+      "after": "053cdae351ccade0bf0b79096da67e6c34efe11ea4842840c32e388ca99981d4"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.cpp",
+      "before": "c3a8c05fa929ad2faeb91c84a1165bba178b06e066ed6742a34ec064f2dfaa0d",
+      "after": "39c45c4a82ce08d0e026e8510bb325678cd9982e776143b04ab1d3c5370f5e7a"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.cpp",
+      "before": "1e1d6775d298d4640155ee3ce9bdf099283b23d415786da1616486de2a4339a4",
+      "after": "6a00615a7c2d9db554ee4782441ad01b5cf8accf49996751c945e579c0983a2d"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_napi.cpp",
+      "before": "02dc972024b6db4f875576f23e9f89f00df4068605c19f0025605c1403954155",
+      "after": "16ebe8cc733555627388a3ed23dbe7aa95fc47df73273a68849ff7416d003dab"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.h",
+      "before": "e367692b13b6079267e92f2c9f5b0d102fb16752c7a6b29f611ecc939dbd9eb4",
+      "after": "46e77e148c4f309a74007ce9a21732b763a51f9fbabb33acc80f23c00e82ef3d"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.h",
+      "before": "00c735b143581d28aace16bf820f4328dfb61837869777e76654d4770d481f31",
+      "after": "515e004672b206e1cd35327432825156a98316a07bfcae25830ff7b2a5ee3565"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.cpp",
+      "before": "5ba39637a00001ce9fea2fbb790a1ecada223ef944c26733cc3789bb49aaa381",
+      "after": "3940ae68fb54ef03f23732ae14d2f7bbadca1b4a2d99096850d53afcfe938dfc"
+    },
+    {
+      "path": "entry/src/main/cpp/types/libreader_bookturn_napi/Index.d.ts",
+      "before": "ff047a7f304ca9a8ae7185b361ead2020a5aac62ccd46c09a35d411a68da4da0",
+      "after": "05cdf9beac89ac6c702604296137ef55e6a35a0ff26338152324a37a774316b8"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_motion_test.cpp",
+      "before": "91e5d4d16577adf03f46324cea4480e69e5f971b520a07b1db5ee59d3fd275a2",
+      "after": "720038751fe39833de7ff3813917e3036b4468f0030c009051aff3dd6e4436b8"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_present_barrier_test.cpp",
+      "before": "7096a9e147fb0ea01bc7108ef9c6e03f8f80843abb91d3e715da35dd2b46d209",
+      "after": "97b8775ecd7a1ba942b159bc8777aec4c5b5c05c33f5ba25ddca7a3059da3bf5"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_render_state_test.cpp",
+      "before": "2ca24148c300731eb72a0c85dc2ff711c99e2afc4225db8c37a8c7b7fc5c0964",
+      "after": "a21ffd060993f807cf09800128b835552e8c3b39f7daffaa76437bd44817e677"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/mocksdk/ohos_host_mocks.cpp",
+      "before": "b67cebd8df9dcc58222f3b298392715afb7a0872526a4bafdc3624793b6c257d",
+      "after": "84268e0c4f5b16de3d1bc354a6766e62686f4428cd07aa10bec041ba9a694b41"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/gl_mock.cpp",
+      "before": "c9de568cc4ff3cde7c24efcf8c96aaa53daf2cb4f18e481ea89b0fa460fb1cc2",
+      "after": "ecfe4c315193e3408a1108aae9baeaf16eb8d0bc8ccd5afc2b52e2da846c9848"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/GLES3/gl3.h",
+      "before": "3c7dbd5b81688a20351254b5f459459a8a3ad87f6ceda02b56688b5fa4ef2022",
+      "after": "a31771d2b23e7b0fb50a7b72a0ab1d9baf90e18320db37b31ac6a3d6f782b480"
+    },
+    {
+      "path": "tools/test-book-metadata-presentation.mjs",
+      "before": "548df0784f4a1dbe612e0fad7aee4e68eb07ed395d0e6296f61e72c6ccd03d58",
+      "after": "b49f6568f63abe23e0caf4c240befbb94da1cf315e688524e3f4405ff7503f4a"
+    },
+    {
+      "path": "tools/test-reader-book-turn-architecture.mjs",
+      "before": "9e6a1d23a0412b2b6cbdb4907b305175810bc193cd6d3690b98348c0be97bbbd",
+      "after": "bf17ae0787ea9a9e98b432db2d8adf6de89fa74228808e5772e201b0b673afb1"
+    },
+    {
+      "path": "tools/test-reader-continuous-reading.mjs",
+      "before": "4673049fde28972257e312ed53b8b3308ce895b2b53622b4c22999dcefde8c1d",
+      "after": "ef6821eb41c798a7cb1d2bf23d54ea1adb44dadc673c5493d81f7e8b5954f72e"
+    },
+    {
+      "path": "tools/test-performance-regressions.mjs",
+      "before": "f9daea8bcb9902c943cf3a1d10536dbe991216b0d80c2fd51669cc68b3549e08",
+      "after": "6a7400c0d1802b2c535c02bfba1260f9d5e314457ae12b529632fceb403556ee"
+    },
+    {
+      "path": "tools/test-reader-control-replace-host.mjs",
+      "before": "e6f00955e176ce01a2c6cf77dc9fa4610293d8a02952faaf625bb1933bd1b17d",
+      "after": "417ee7a2b0767a88aff23d30d982500c6eb478081dd90050a0f36a293e9396ae"
+    },
+    {
+      "path": "tools/test-search-gateway.mjs",
+      "before": "066cb45919a7874c5328e4104624ed695e5c171409b3009260826ba033b1a91f",
+      "after": "a7c0f0119e194b67f9978201a8c037cdbd841848dd8940c02808265ad1d37d8e"
+    },
+    {
+      "path": "tools/test-search-orchestrator.mjs",
+      "before": "638912662b84f493c79fb3335f1a4d23d53c0a084ba27f57ece0498206cd5297",
+      "after": "b03cd843e5cb8d2497e1ec474fd0cfd386c026b6fce944c8aba96bbe8a3f6870"
+    },
+    {
+      "path": "tools/test-reader-control-playback-host-intents.mjs",
+      "before": "c27f068f3a779a7a9943fccfcd18b6b4dc190650e1c2f0d43d47148a77607d9c",
+      "after": "e16dea617c1be532933bc007327ebcf3586078f32063ee5168297a20ba50a72b"
+    },
+    {
+      "path": "tools/test-source-switch-gateway.mjs",
+      "before": "5bdcec17bc2282f9d2dbf3880ca4a7384e3bb67f7942098be27144279dc18417",
+      "after": "66f749f744a5df87037a538320701e4e4769b466d23ed110556fa95c78ef4133"
+    },
+    {
+      "path": "tools/test-reading-whole-book-progress.mjs",
+      "before": "2b632fd500d8e60597292429d5b32b3ef97c2e91f334e3322a027f8a6a851bc4",
+      "after": "515b4cb8d0ccac4eb0860fb0134a575b94603ad4c5bab0a864f0c00092fb2ac5"
+    },
+    {
+      "path": "tools/test-reading-pagination-integration.mjs",
+      "before": "67eefc56a7acef978fb65f5c9ef5b038be587a09e406cae22f1caf92fa75f7a8",
+      "after": "59a630ee844c4ec2a7b634222819bbf4357f55b7f48282d57438376be30559bb"
+    },
+    {
+      "path": "tools/test-reader-cold-entry-recovery.mjs",
+      "before": "e056e635fe2af39ab8047f1f818eb80aa98851698730b5ebbc8be19b35273c1f",
+      "after": "e58ab23a3035fa50fb96b425238e2249d10345df50de0dff72de542f02212b47"
+    },
+    {
+      "path": "tools/test-reading-phone-tablet-shared-architecture.mjs",
+      "before": "e489c3200c4375b1148d8e05ea62cd88f598c50d51ed743aedc64e8fc4d88a14",
+      "after": "4de175c034d9b361ce4bb323bc2ff2d19825b207c9655f3825e7e110ccb8b120"
+    },
+    {
+      "path": "tools/test-reader-control-motion-geometry.mjs",
+      "before": "d8dbe78c26ea32ca81ccf5f4f3727f1df2b6f5aeca68ed44edb8583602c0f6e3",
+      "after": "f963d70a35221261e8d47eebbd5a733742df0ec564a6a852026a08b3cf7c2501"
+    },
+    {
+      "path": "tools/test-responsive-surface-widths.mjs",
+      "before": "d6b8f063be85508cca143e7ae47c93f8bd3bf469ffb4ddf29b0880e54b67ffb5",
+      "after": "587a82f1172faeda90e1ff02e62394ec97a09e8d28f2cb6a3bbdf8c67cf7b1a9"
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-tree.mjs",
+      "before": "29551e3f8cfc3d3d71ad394cd13efbe2a4fdf62d57792efe1f277309f1158d1f",
+      "after": "5eea68e2f86efa829bfe0c390cc227111c68751b21f0aa4c7ac3345933dc27c4"
+    },
+    {
+      "path": "tools/test-reader-control-host-input.mjs",
+      "before": "cf4d5c0def412f8c7dff58a9c7dfe6393114740710962efff9dc18b698af8de9",
+      "after": "a62ddc8a8e4b7c2e204f61a9af140a2cc46e6cb73c1aa0748d71ebf9311e7077"
+    },
+    {
+      "path": "tools/test-reader-page-turn-pipeline.mjs",
+      "before": "31455a34cacfa284cfb39ebe870d440f3f2a772be8c21ae14912ae9c8f9b4a82",
+      "after": "0feac8fb30387f1cfb151aa9332bdb9af166c2c84753383942145dae9e9c11bd"
+    },
+    {
+      "path": "tools/test-reader-control-p0.mjs",
+      "before": "a71eb4e93b6b1177cc5dec14e78da1e7e19afe86c7c8d46e22d754bf7e0a7179",
+      "after": "03f9d85ac712dd76897ea8eb21f8036ba0e9605505828bc96a0e81fbb69ab587"
+    },
+    {
+      "path": "tools/test-reader-page-turn-stage.mjs",
+      "before": "718fbf4088cbfdd10da3080e5dd492b792d0985465bfbe86fc854e45399146ba",
+      "after": "3e3d3eacb3bd9a615f51a51d7b5d31f1a444c385361b47c4b56e53c18fb8376d"
+    },
+    {
+      "path": "tools/lib/reader-motion-method-probe.mjs",
+      "before": "da56b4f4bdfccd7b6a71c3a7143fb6ea6260c0976ab339c6aa6b8b3403cf459f",
+      "after": "0563ec28060c7d6b9d8440f7bc1b94fb141a2e79df4e908a85ecc92ffb0e0fb7"
+    }
+  ],
+  "newTaskFiles": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageSettlementTimeline.ts",
+      "sha256": "188e0fbe43667548fdb6eee6d308bb9962bffddaff12983ac0219ee32d5a619d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts",
+      "sha256": "1f61899aebf179579e6bbd6204754eaa3ee2c3905fea9c35fc68d849ff83b005"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInputClock.ts",
+      "sha256": "57028558015a23278cf1755231b9299514c3631ec2f502f0d1a107101fac6f68"
+    },
+    {
+      "path": "tools/test-reader-page-settlement-runtime.mjs",
+      "sha256": "c397ce9a45920780eb61a7b459a26a0635d2b934357c295544f6e4f7d5a375ed"
+    },
+    {
+      "path": "tools/test-reader-page-progress-runtime.mjs",
+      "sha256": "beacdcdc405b6e77febbece3be8e223d1232095ffda5ff5a91c8b55bf322942b"
+    },
+    {
+      "path": "tools/test-reader-continuous-input-runtime.mjs",
+      "sha256": "f24b3033d61198147b69f0099f58f8d48de722e3f69dc889a7a6df3db59ba9e2"
+    },
+    {
+      "path": "tools/test-reader-dynamic-highlight.mjs",
+      "sha256": "6130c97e6086867f179770c03efeb77edb7b6c3026f332eb0e33f4b858b89b5a"
+    },
+    {
+      "path": "tools/test-reader-page-preparation-runtime.mjs",
+      "sha256": "50b0d5215c87c461df2e984f3fbe053e67d3fd57afa0dda096a2cfcfcb4a50d7"
+    },
+    {
+      "path": "tools/test-reader-book-turn-host-runtime.mjs",
+      "sha256": "979fbf6f3f2b44aaf3a3471e0eb46781de5f36f3b866d1e1af9752eddca1757c"
+    },
+    {
+      "path": "tools/test-reader-page-input-runtime.mjs",
+      "sha256": "51c3ece8724bdc8664e730eeac6d974383a2aa32d3559b1d6d6ee85615612568"
+    }
+  ],
+  "items": [
+    {
+      "id": "F01",
+      "implementation": "RETAINED",
+      "done": "初始化不 swap、可见阶段不提交透明清理帧。",
+      "remaining": "真实显示逐帧回归。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "F02",
+      "implementation": "IMPLEMENTED",
+      "done": "release/隐藏/清理分离，清理完成后才释放输入。",
+      "remaining": "显示交接证据同 N08。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "F03",
+      "implementation": "IMPLEMENTED",
+      "done": "代次首帧门禁；同代次进入收尾保持可见。 补修模式切换正常 SurfaceLost 被误判故障，VM 重入通过。",
+      "remaining": "Surface 重建与迟到回执 VM 验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "F04",
+      "implementation": "IMPLEMENTED",
+      "done": "固定事务 source/destination；业务成功后旋转槽位。 实际卷页发现的离屏空底页已修复；文本页双向中间帧通过。",
+      "remaining": "双向提交/回滚逐帧验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "F05",
+      "implementation": "IMPLEMENTED",
+      "done": "平移/覆盖两个无条件固定槽位，角色及数据更新。 本轮去掉逐帧全页复杂参数复制；有效 slide trace 的 ReadingSurface Build/Destroy 为 0。",
+      "remaining": "对比 VM 正文 Build/Destroy；见 P08。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "F06",
+      "implementation": "RETAINED",
+      "done": "主题不透明底和统一呈现阶段保留。",
+      "remaining": "主题、模式切换和实际呈现。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "F07",
+      "implementation": "IMPLEMENTED",
+      "done": "静态快照排除高亮；ArkUI 字符矩形同步 Native 动态着色。",
+      "remaining": "高亮与卷页、终帧的像素连续性。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "F08",
+      "implementation": "VALIDATION",
+      "done": "全模式/失败/生命周期验收矩阵完整保留。",
+      "remaining": "已保数据安装；平移/覆盖/仿真/无动画同章双向样本及滚动冷进入/普通退出路径已测。滚动精确恢复10px FAIL；全模式失败、完整生命周期和全视觉矩阵仍OPEN。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "F09",
+      "implementation": "RETAINED",
+      "done": "阴影混合保留目标 alpha，GL 状态测试通过。",
+      "remaining": "合成链 alpha 和局部闪烁实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "C01",
+      "implementation": "PARTIAL",
+      "done": "生产 Panel 同帧/端点/布局缓存、准备任务避让已实现。",
+      "remaining": "需新包 trace 证明中段长帧改善，不能宣称用户停顿已消失。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "C02",
+      "implementation": "IMPLEMENTED",
+      "done": "统一帧采样缓存、端点及几何依赖失效。",
+      "remaining": "VM 分配与实际布局成本对比。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "C03",
+      "implementation": "PARTIAL",
+      "done": "稳定 owner 布局对象，避免等值复杂参数反复触发；保留真实文字重排。",
+      "remaining": "真实尺寸变更仍存在，须按新 trace 决定是否进一步拆分固定布局。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "C04",
+      "implementation": "IMPLEMENTED",
+      "done": "目录使用稳定行锚点与一帧一次必要滚动修正。",
+      "remaining": "深滚/反向/再抓及迟到数据的视觉连续性。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "C05",
+      "implementation": "IMPLEMENTED",
+      "done": "稳定行 key，逐行差异更新，移除全量 JSON key。",
+      "remaining": "大列表、筛选排序、删除与异步更新 VM 回归。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "C06",
+      "implementation": "VALIDATION",
+      "done": "保留现有非空中段和轨迹；尚未调整清晰度平台/自动曲线。",
+      "remaining": "先测修复后长帧，再对照 Figma 判断慢尾和平台调整，不能盲改为另一套动画。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "C07",
+      "implementation": "PARTIAL",
+      "done": "移除重复裁剪，控制交互暂停无关邻页测量/快照。",
+      "remaining": "剩余滤镜及宽高布局需 UI/GPU trace 归因。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "C08",
+      "implementation": "SEMANTIC",
+      "done": "保留最近书签原选择规则，未把歧义直接当缺陷修改。",
+      "remaining": "确认产品最近书签是否指当前 scalar 距离。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N01",
+      "implementation": "IMPLEMENTED",
+      "done": "去掉 24ms 回放；VSync 使用最新有效样本。",
+      "remaining": "真实输入接收、消耗、提交及显示时间轴。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N02",
+      "implementation": "IMPLEMENTED",
+      "done": "内部/边缘起手和再抓统一相对抓取锚点。",
+      "remaining": "镜像拖动、停住、反向的 VM 轨迹。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N03",
+      "implementation": "IMPLEMENTED",
+      "done": "原子 endGesture 消费最后位置；迟到 MOVE/重复 UP 被拒绝。",
+      "remaining": "设备事件顺序回归。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N04",
+      "implementation": "IMPLEMENTED",
+      "done": "同事务拖动到收尾保持 Native 可见。",
+      "remaining": "同版本首/终帧及回滚实测。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N05",
+      "implementation": "IMPLEMENTED",
+      "done": "80–320ms 手动收尾、已到端点立即结束；提交前按已提交姿态再抓。",
+      "remaining": "不同时间点反复再抓和位置/倾角连续性。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N06",
+      "implementation": "IMPLEMENTED",
+      "done": "事务纹理保持，视觉切换不提前失效；提交后旋转。",
+      "remaining": "跨章、失败及回滚资源回收。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N07",
+      "implementation": "IMPLEMENTED",
+      "done": "隔离测量 lane；当前/请求方向/另一方向捕获；帧间让出，保存前驱观察。 邻页截图等待绘制完成，VM 双向空底页已修复。",
+      "remaining": "冷/热页与图片场景起手延迟及主线程预算。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N08",
+      "implementation": "PARTIAL",
+      "done": "区分 buffer submit 与 ArkUI 内容准备；保留不透明终帧并校验 revision。",
+      "remaining": "仍使用 postFrame 调度交接，没有显示 fence；固定帧数不构成实际上屏证明。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N09",
+      "implementation": "IMPLEMENTED",
+      "done": "字符矩形、Canvas 正文混色和 Native UV 高亮；64 矩形上限与显式降级，无全页重复上传。",
+      "remaining": "SDK glyph 矩形、中文字体/图片/夜间、GPU shader 及像素实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N10",
+      "implementation": "PARTIAL",
+      "done": "书沟暗带随 tau 连续归零；有效纹理链保留。 时钟和胶囊几何进入 Native 纹理身份，分钟更新在空闲刷新；VM 实际卷页时钟已更新。",
+      "remaining": "颜色空间/过滤/端点差异未测；SetThemePaper 仍是测试入口，生产拒绝无纹理绘制，未新增未经验证的 fallback。 分钟边界source／destination时钟仍可能差1分钟（最终包03:19／03:20），不能标时钟一致性已关闭。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N11",
+      "implementation": "PARTIAL",
+      "done": "每轮最多上传一张，输入之间可重新准入；纹理捕获串行并让帧。",
+      "remaining": "PixelMap 拷贝、转换、上传/GPU 分段耗时与总帧预算。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N12",
+      "implementation": "IMPLEMENTED",
+      "done": "V2.1 普通程序化 320ms、积压 rapid 180ms 上限；移除旧隐式平移动画注册。",
+      "remaining": "≥4.5页/秒是包含保存及交接的目标，尚未实测达标。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N13",
+      "implementation": "PARTIAL",
+      "done": "固定纹理/网格/≤3 draw，静止按住无重复画帧；销毁清高亮数据。",
+      "remaining": "总进程/Canvas/PixelMap/临时副本峰值和长跑趋势；真机温升功耗另验。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N14",
+      "implementation": "IMPLEMENTED",
+      "done": "输入所有权、消费代次、固定纹理身份、上传 surfaceEpoch、再抓尺寸/表面校验；清理失败保留 owner。",
+      "remaining": "乱序与生命周期已补本地用例；旋转/退出/重建 VM 矩阵。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "N15",
+      "implementation": "IMPLEMENTED",
+      "done": "SLOTS_COMMITTED 只做逻辑提交，TERMINAL_RELEASED 后恢复后续绘制。",
+      "remaining": "A 清理/B 首帧交错、丢回执及 Surface 重建实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P01",
+      "implementation": "IMPLEMENTED",
+      "done": "未就绪保留首指与意图，ready 后按当前位置重新锚定，不补播旧位移。",
+      "remaining": "QuietHold 无 MOVE、冷页、抬手及取消 VM 回归。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P02",
+      "implementation": "IMPLEMENTED",
+      "done": "UP 最终位置先归入手势，再区分点击与拖动。",
+      "remaining": "稀疏/仅 UP 越阈值和快速反向实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P03",
+      "implementation": "IMPLEMENTED",
+      "done": "纵向上一页位移映射到正确 X；最终 offset 连续。",
+      "remaining": "平移/覆盖纵向路径实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P04",
+      "implementation": "IMPLEMENTED",
+      "done": "none 取消立即复位并释放；不遗留 settlement。",
+      "remaining": "系统 CANCEL/模式切换回归。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P05",
+      "implementation": "IMPLEMENTED",
+      "done": "权威边界在入队前判断，不能抵消反向有效请求。",
+      "remaining": "首尾和净目标组合 VM 回归。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P06",
+      "implementation": "IMPLEMENTED",
+      "done": "两固定物理槽位，promotion 保留反向页；静态 snapshot id 位于内层。 本轮去掉逐帧全页复杂参数复制；有效 slide trace 的 ReadingSurface Build/Destroy 为 0。",
+      "remaining": "实例挂载计数和快速往返。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P07",
+      "implementation": "IMPLEMENTED",
+      "done": "未知写结果先串行查询 Core；目标确认提交、原页确认回滚、未知保持并仅重试读取。",
+      "remaining": "本地 lost reply/foreign/unavailable 通过；真实慢存储/故障注入未验。Core get/update 同 latency FIFO，无新造 source-switch transactionId。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P08",
+      "implementation": "PARTIAL",
+      "done": "冻结页面投影并以 revision/provider 更新固定槽位，避免首次复杂数组残留。",
+      "remaining": "旧 6/11、44% 往返首行差异尚未在新包复验，根因和关闭仍 OPEN。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P09",
+      "implementation": "IMPLEMENTED",
+      "done": "none 也复用预准备页面；原页保留直到权威保存确认。",
+      "remaining": "点击到正文 ready、跨章和持久化延迟实测。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P10",
+      "implementation": "IMPLEMENTED",
+      "done": "请求方向优先、准备可中断，前驱二分及已发现前缀续算。",
+      "remaining": "热/冷、同章/跨章的双向延迟对比。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P11",
+      "implementation": "PARTIAL",
+      "done": "冷指针续接及旧请求绕过 lease 的确定性路径已修。",
+      "remaining": "不能用单一修复解释全部用户反馈；仍按住但无新 MOVE 的真实响应待 VM。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P12",
+      "implementation": "IMPLEMENTED",
+      "done": "冻结事务两页/布局，metric 索引和页起点二分，稳定数据 provider。 本轮去掉逐帧全页复杂参数复制；有效 slide trace 的 ReadingSurface Build/Destroy 为 0。",
+      "remaining": "正文 build/layout、GC、分配的 VM 对比。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P13",
+      "implementation": "IMPLEMENTED",
+      "done": "DOWN 起统一首指 lease；rapid、Auto Page、音量键及迟到准备不能绕过。",
+      "remaining": "7b包完成100次交替正文检查；连续单向各100次、活跃指针来源冲突及rapid吞吐仍待验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P14",
+      "implementation": "IMPLEMENTED",
+      "done": "首次 owner 授予做完整准入，MOVE 走轻量检查；每手势一个 watchdog。",
+      "remaining": "输入、内存及超时恢复实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "P15",
+      "implementation": "IMPLEMENTED",
+      "done": "统一单调时间，异常时间重建速度样本基线。",
+      "remaining": "设备事件/VSync 时钟关联，不把本地注入当现实异常发生率。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "R01",
+      "implementation": "PARTIAL",
+      "done": "同条目滚动也更新段内位置；停滚、模式切换、退出采样。 补齐冷进入内容版本订阅，按布局帧和实际row y恢复。",
+      "remaining": "VM冷进入与退出重进可用；短滚恢复仍差10px，超过本轮8px阈值。须补精确字形锚点/量化稳定性及多次往返，不能标精确恢复通过。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "R02",
+      "implementation": "IMPLEMENTED",
+      "done": "单个 awaitable 保存 drain，失败保留页面/重试；晚回执校验生命周期与事务序号。",
+      "remaining": "最终包普通短滚→退出→重进可用；退出失败提示/重试、慢写和停止回调设备回归仍OPEN，精确位置偏差见R01。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "R03",
+      "implementation": "IMPLEMENTED",
+      "done": "图前/图内稳定 fragment+fraction 锚点补偿；合并图片批量更新并保留同时手动滚动。",
+      "remaining": "图在视口上方/内部/跨章，SDK 自动布局与用户滚动组合实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "R04",
+      "implementation": "IMPLEMENTED",
+      "done": "额外手指不覆盖首指或结束首指事务。",
+      "remaining": "与原生 List 手势组合的多指 VM 测试。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    },
+    {
+      "id": "R05",
+      "implementation": "IMPLEMENTED",
+      "done": "滚动返回上一章直接请求章节尾部，最终保存实际首可见位置。",
+      "remaining": "超长章耗时、尾部实际视口及恢复验证。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED"
+    }
+  ],
+  "packageVerify": "PASS",
+  "nativeSha256": {
+    "libs/arm64-v8a/libc++_shared.so": "388e0df23d7bfddc2ea01b4e87f8dc359e33df1a7a44705e0a672609ee45b2f9",
+    "libs/arm64-v8a/libreader_bookturn_napi.so": "127836ef07d861376d3cf593c675ac721b703b340cab6fb10eb6bc3119dc0be5",
+    "libs/arm64-v8a/libreader_core_napi.so": "e478119704543e1f7f23b43d99109f909349034b352567b2f13e959549d0c9bb"
+  },
+  "postBuildContentDrift": [],
+  "postBuildControllerDrift": [],
+  "candidateHistory": [
+    {
+      "recordedAt": "2026-09-10T13:12:11.151838+00:00",
+      "runId": "20260910T130842Z-35f2f99a-34d42308",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T130842Z-35f2f99a-34d42308/manifest.json",
+      "signedSha256": "977963bee384432428e4d93b0538d41156070293fa88da0ff4e702d93290ef4d",
+      "harmonyContractGroups": 179,
+      "vm": {
+        "install": "OPEN",
+        "interaction": "OPEN",
+        "reason": "read-only HDC preflight automatic approval review timed out twice; sandbox HDC Connect server failed; no VM app operation performed"
+      }
+    },
+    {
+      "recordedAt": "2026-09-10T17:36:31.925423+00:00",
+      "runId": "20260910T170705Z-35f2f99a-9abcb3e8",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T170705Z-35f2f99a-9abcb3e8/manifest.json",
+      "signedSha256": "0bc29bed8ec44e1ce3b6f739be7f3d0f62169097ee33f237f283085027784526",
+      "harmonyContractGroups": 180,
+      "vm": {
+        "install": "PASS",
+        "interaction": "PARTIAL",
+        "target": "127.0.0.1:5555",
+        "name": "Mate 80 Pro",
+        "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+        "dataPreserved": true,
+        "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T180559Z-35f2f99a-7b396cce/deploy-vm-6460677a198b-20260910T180708Z.json",
+        "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-7b396cce",
+        "fullAcceptance": "OPEN"
+      }
+    },
+    {
+      "recordedAt": "2026-09-10T18:14:59.954521+00:00",
+      "runId": "20260910T180559Z-35f2f99a-7b396cce",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T180559Z-35f2f99a-7b396cce/manifest.json",
+      "signedSha256": "4f5da9ae78a46537049357b757c501fabe0222a73a6cd5c92524191c1ff3653d",
+      "harmonyContractGroups": 180,
+      "vm": {
+        "install": "PASS",
+        "interaction": "PARTIAL",
+        "target": "127.0.0.1:5555",
+        "name": "Mate 80 Pro",
+        "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+        "dataPreserved": true,
+        "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T181928Z-35f2f99a-74ac9927/deploy-vm-6460677a198b-20260910T182230Z.json",
+        "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-74ac9927",
+        "fullAcceptance": "OPEN"
+      }
+    },
+    {
+      "recordedAt": "2026-09-10T18:31:53.789184+00:00",
+      "runId": "20260910T181928Z-35f2f99a-74ac9927",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T181928Z-35f2f99a-74ac9927/manifest.json",
+      "signedSha256": "7d6a4068336c560d8e144a656aafc02da5ae4b4e6ef4df8a166426b7e1e11f9d",
+      "harmonyContractGroups": 180,
+      "vm": {
+        "install": "PASS",
+        "interaction": "PARTIAL",
+        "target": "127.0.0.1:5555",
+        "name": "Mate 80 Pro",
+        "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+        "dataPreserved": true,
+        "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T184854Z-35f2f99a-0c63426d/deploy-vm-6460677a198b-20260910T185511Z.json",
+        "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-0c63426d",
+        "fullAcceptance": "OPEN"
+      }
+    },
+    {
+      "recordedAt": "2026-09-10T19:01:32.571879+00:00",
+      "runId": "20260910T184854Z-35f2f99a-0c63426d",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T184854Z-35f2f99a-0c63426d/manifest.json",
+      "signedSha256": "90e27f5fc307d4ca512c06c32fb0eb10a0772120552df3b21d8ec7df06fa9d28",
+      "harmonyContractGroups": 180,
+      "vm": {
+        "install": "PASS",
+        "interaction": "PARTIAL",
+        "target": "127.0.0.1:5555",
+        "name": "Mate 80 Pro",
+        "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+        "dataPreserved": true,
+        "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T191155Z-35f2f99a-b2b32102/deploy-vm-6460677a198b-20260910T191350Z.json",
+        "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-b2b32102",
+        "fullAcceptance": "OPEN"
+      }
+    }
+  ],
+  "additionalVmRepairs": [
+    {
+      "id": "P12-chrome-measure",
+      "done": "bounded page chrome text measurement cache; text/font/density/scale invalidation",
+      "local": "PASS"
+    },
+    {
+      "id": "P12-prop-copy",
+      "done": "page providers plus primitive content revision avoid full-page Prop array copying along three hops on MOVE",
+      "local": "PASS",
+      "vm": "9ab: slide/cover settled roundtrips PASS; simulation claim WITHDRAWN (UI remained cover); residual reverse and completion long frames remain"
+    },
+    {
+      "id": "N10-clock-texture",
+      "done": "Native texture identity includes clock and capsule geometry; admitted minute schedules idle-only capture",
+      "local": "PASS",
+      "vm": "PARTIAL: clock updates across minutes; source/destination minute consistency still OPEN, observed both 74ac and b2 samples"
+    },
+    {
+      "id": "F03-expected-surface-loss",
+      "done": "ignore lifecycle-ready/lost/failure callbacks when selected mode no longer requests a Native surface; expected teardown no longer disables simulation",
+      "local": "PASS: production callback mode/reduce-motion/unexpected-failure/recovery checks",
+      "vm": "PASS: simulation→slide→cover→simulation→none actual enabled/selected chips and 4 body turns per mode"
+    },
+    {
+      "id": "N07-offscreen-raster",
+      "done": "new offscreen neighbor snapshots wait for rendering to finish, independently of disabled image-load readiness check",
+      "local": "PASS: 180 groups / ArkTS / Native / package verification",
+      "vm": "PASS bounded text-book intermediate frames in 74ac and final b2: both next revealed destination and previous base contain body text. Image/night/full-frame matrix OPEN."
+    },
+    {
+      "id": "R01-restore-layout-origin",
+      "done": "restore through real frame callbacks; compensate actual START-aligned row y using y + height*progress, matching saved -y/height",
+      "local": "PASS: production regressions, 180 contract groups, ArkTS/Native/signature/package verification",
+      "vm": "PARTIAL/FAIL strict 8px criterion: old observed delta258px; b2 short scroll exit/reopen delta10px, -308→-298px. Different scroll positions; not a statistical A/B. Scalar quantization and exact glyph anchor remain OPEN."
+    },
+    {
+      "id": "N10-current-raster-revision",
+      "done": "mounted current snapshot waits for paint before attaching updated texture identity; reuse existing decoded image tree",
+      "local": "PASS: production regressions, 180 contract groups, ArkTS/Native/signature/package verification",
+      "vm": "PARTIAL: final Native current and bottom contain body text; minute-boundary source03:19/destination03:20 still visible in final-native-next-2. Paint wait alone does not close clock consistency."
+    },
+    {
+      "id": "R01-continuous-projection-admission",
+      "done": "cold-entry render branch and paged input overlay read reactive continuousRenderRevision before consulting plain fragment array",
+      "local": "PASS: production empty/ready revision subscription regressions, 180 groups, ArkTS/Native/sign/package verification",
+      "vm": "PASS: saved continuous cold entry now mounts List; same-session short scroll, exit and reopen run without paged fallback"
+    }
+  ],
+  "stressEvidence": {
+    "slideAlternating100": {
+      "runId": "20260910T180559Z-35f2f99a-7b396cce",
+      "turns": 100,
+      "next": 50,
+      "previous": 50,
+      "status": "PASS",
+      "scope": "settled same-chapter content only, no throughput/quiet-hold/continuous-one-direction claim"
+    }
+  },
+  "sourceIdentityCheck": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-b2b32102/final-source-identity.json",
+  "continuingExecution": {
+    "status": "IN_PROGRESS",
+    "updatedAt": "2026-09-11T05:18:18.671288+00:00",
+    "installedRun": "20260911T051040Z-35f2f99a-5da12a49",
+    "currentSourceIncludesLaterControlAndCanvasFixes": false,
+    "verifiedThisContinuation": {
+      "nativeChecks": {
+        "solver": 235,
+        "motion": 538,
+        "renderer": 373,
+        "barrier": 177
+      },
+      "scroll48bfEightReopensDeltaPx": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "clock48bf": "FAIL current texture empty after minute boundary",
+      "clockCb19557b": "PASS bounded next after promotion and minute boundary, source/destination 10:28",
+      "nativeCb19557b": {
+        "copyMs": 5.751,
+        "copyThread": "worker 29592, app main 29472",
+        "convertMs": 2.134,
+        "uploadSubmissionMs": 13.288,
+        "mainBindMs": 0.003,
+        "mainPeakFrameWallMs": 49.031,
+        "thatFrameGuestScheduledMs": 6.188,
+        "thatFrameGuestOffCpuMs": 42.843,
+        "disposeCallbackWallMs": 36.127,
+        "disposeCallbackGuestScheduledMs": 21.237
+      },
+      "settingsCb19557b": {
+        "openMs": 14.318,
+        "expandMs": 8.93,
+        "collapseMs": 9.384,
+        "closeMs": 12.385
+      },
+      "control749cd950": "Seven modules real open/drag-expand/auto-expand/auto-collapse/close endpoints PASS; appearance39.079ms, AutoPage28.658ms with GC, settings-close29.760ms motivated 036 caches. Not a fluent pass.",
+      "native749cd950": "Copy on worker 3.049-3.281ms, convert1.986-2.093ms; async completion1.142-3.474ms. Bounded samples, no GPU completion claim.",
+      "stress03670f1f": {
+        "fourModes": [
+          "slide",
+          "cover",
+          "simulation",
+          "none"
+        ],
+        "turns": 800,
+        "nextPerMode": 100,
+        "previousPerMode": 100,
+        "pagesPerChapterSeen": 10,
+        "status": "PASS",
+        "scope": "bounded chapter sweeps; not 100 uninterrupted distinct next pages and not rapid throughput",
+        "appPid": 7995,
+        "pssKiB": [
+          466157,
+          459362,
+          461020,
+          460848,
+          455814
+        ]
+      },
+      "control03670f1f": {
+        "functionalSevenModules": "PASS",
+        "appearanceDragExpandPeakMs": 9.841,
+        "autoPageDragExpandPeakMs": 16.118,
+        "settingsClosePeakMs": 5.795,
+        "remainingPeakTtsOpenMs": 28.439,
+        "remainingPeakTtsCollapseMs": 26.461,
+        "remainingPeakAppearanceOpenMs": 26.828,
+        "nextRepair": "90be6e9c separates scalar motion from module observer dependencies"
+      },
+      "control90be6e9c": {
+        "functionalSevenModules": "PASS",
+        "ttsOpenPeakMs": 7.157,
+        "ttsCollapsePeakMs": 12.494,
+        "remainingDirectoryDragPeakMs": 21.452,
+        "remainingSettingsDragPeakMs": 26.771,
+        "remainingExplanation": "GC and guest off-CPU; not zero long-frame acceptance",
+        "traces": "repair-validation-90be6e9c/trace-analysis.json"
+      }
+    },
+    "newChanges": [
+      "Physical static snapshot IDs per slot, never role transfer",
+      "Native PixelMap copy async worker; callback rechecks exact capture ownership before queue; surface epoch still checked",
+      "-O2 Native conversion/solver in signed debug build",
+      "No 20%-80% content-opacity plateau; automatic morph smoothstep across full path, preserves actor geometry and gesture continuation",
+      "No unused Canvas in offscreen static/ordinary inline-highlight ReadingSurface",
+      "Chrome metrics shared 64-entry LRU across offscreen instances",
+      "Appearance cached full/quick endpoint geometry, paint and font order; dimensions/drag/order invalidate",
+      "Panel clock session plain; per-actor scalar observation; stable semantic content route prevents every-frame module branch invalidation",
+      "Padded List content origin for canonical scroll save/restore and image fraction",
+      "Continuous raw DOWN/UP/CANCEL registers shared owner; disable/chapter/disappear releases",
+      "Coalesced generation/page/lifecycle-bound on-demand reading of evicted neighbouring chapters"
+    ],
+    "remaining": "All 52 original ledger IDs preserved. Full current-candidate mode/control/lifecycle/performance matrix not yet complete. QuietHold guest tools unavailable; physical measurements outside VM constraint.",
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T051040Z-35f2f99a-5da12a49/manifest.json",
+    "signedSha256": "2cd9b1464088125792a9f4fd14d9bb38b8f3991beea21821e279c4693179057a",
+    "sourceSnapshotFiles": 512,
+    "controllerSnapshotFiles": 223,
+    "sourceDrift": [],
+    "controllerDrift": [],
+    "vmAppPid": null,
+    "vmDataPreserved": true,
+    "originalAnchorCase": {
+      "book": "绍宋",
+      "chapter": 34,
+      "page": "6/11",
+      "progress": "44%",
+      "targetKind": "physical",
+      "evidence": "TEST_PLAN.md; analysis-slide.md:47",
+      "warning": "VM 诡秘之主 and ReaderIndent fixture are not the original case; do not mark P08 closed from either."
+    },
+    "latestBuiltRun": "20260911T051040Z-35f2f99a-5da12a49",
+    "latestBuiltSignedSha256": "2cd9b1464088125792a9f4fd14d9bb38b8f3991beea21821e279c4693179057a",
+    "newScrollInsetRegression": {
+      "candidate": "90be6e9c",
+      "firstRestoreDeltaPx": 45,
+      "repeatDeltasPx": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cause": "getItemRect List-border coordinates saved against zero while START uses contentTop; a positive row y inside the top inset clamps to zero",
+      "repair": "save and restore relative to layout.contentTop; image fraction uses same origin",
+      "localRegression": "actual production methods: positive, zero-aligned and negative row positions; PASS",
+      "newCandidate": "20260911T044943Z-35f2f99a-78b275dc",
+      "newCandidateInstalled": true,
+      "vm78DeltasPx": [
+        -3,
+        0,
+        0,
+        4
+      ],
+      "vm78RepeatDeltasPx": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "vm90beEdgeInputs": {
+      "modes": [
+        "simulation",
+        "slide",
+        "cover",
+        "none"
+      ],
+      "casesPerMode": 6,
+      "status": "PASS",
+      "scope": "changed-UP coordinates without MOVE, 2 and 3 opposing pointers, next and previous; not moved QuietHold or CANCEL"
+    },
+    "vm90beLifecycle": {
+      "modes": [
+        "simulation",
+        "slide",
+        "cover",
+        "none"
+      ],
+      "homeForegroundCyclesPerMode": 3,
+      "status": "PASS",
+      "scope": "same PID, same settled body; not surface loss or process kill"
+    },
+    "installedRunId": "20260911T051040Z-35f2f99a-5da12a49",
+    "installedManifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T051040Z-35f2f99a-5da12a49/manifest.json",
+    "installedSignedSha256": "2cd9b1464088125792a9f4fd14d9bb38b8f3991beea21821e279c4693179057a",
+    "latestCandidateVmTesting": "IN_PROGRESS",
+    "newContinuousPointerLease": {
+      "status": "IMPLEMENTED_LOCAL_PASS",
+      "issue": "native List did not acquire the shared owner until movement; stationary DOWN left Auto Page/volume unguarded",
+      "fix": "shared acquire/release callbacks on raw DOWN/UP/CANCEL; release on disable/chapter/disappear; extra finger ignored"
+    },
+    "evictedPreviousChapterRegression": {
+      "candidate": "78b275dc",
+      "result": "FAIL",
+      "nextPassed": 100,
+      "previousPassed": 4,
+      "cause": "previous body pruned after forward traversal; no demand reload before prepared turn",
+      "fix": "generation/page/lifecycle-bound coalesced neighbour read; retained current page; explicit retry on failure",
+      "nextBuild": "20260911T051040Z-35f2f99a-5da12a49",
+      "vm5daSameBoundary": "PASS chapter25 -> chapter24 tail -> chapter25; canonical original body restored"
+    }
+  }
+}

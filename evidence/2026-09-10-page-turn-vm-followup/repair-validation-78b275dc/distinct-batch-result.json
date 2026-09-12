@@ -1,0 +1,12 @@
+{
+  "status": "FAIL",
+  "mode": "slide",
+  "nextPassed": 100,
+  "previousPassed": 4,
+  "failedAttempt": "previous 5, from chapter25 page1 to chapter24 tail",
+  "followupRead": "still chapter25 page1 after waiting; no repeated turn issued",
+  "cause": "evicted previous chapter absent; preparation never reacquired body",
+  "otherModes": "NOT_RUN due stop-on-failure",
+  "fixSource": "requestPageTurnChapter + missing predecessor branches; local production regression PASS",
+  "scope": "uninterrupted edge taps with canonical body oracle"
+}

@@ -1,0 +1,10 @@
+{
+  "edgeInput": "PASS all four styles 6 cases each",
+  "lifecycle": "PASS all four styles 2 Home/foreground cycles each",
+  "initialEdgeFailure": "test precondition wrongly required middle page; corrected to any page with in-chapter successor",
+  "textPixelReview": {
+    "next-1-2": "visible chapter37 paragraph01..03 source and adjacent text on curl",
+    "previous-1-2": "visible chapter37 paragraph06..08 source with reverse-face glyphs"
+  },
+  "scope": "two inspected curl samples, all 2+2 canonical net targets; not all frames"
+}

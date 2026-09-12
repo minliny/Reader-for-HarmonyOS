@@ -1,0 +1,47 @@
+[
+  {
+    "args": [
+      "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc",
+      "list",
+      "targets"
+    ],
+    "output": "127.0.0.1:5555\n"
+  },
+  {
+    "args": [
+      "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc",
+      "-t",
+      "127.0.0.1:5555",
+      "shell",
+      "param",
+      "get",
+      "bootevent.boot.completed"
+    ],
+    "output": "true \n"
+  },
+  {
+    "args": [
+      "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc",
+      "-t",
+      "127.0.0.1:5555",
+      "shell",
+      "pidof",
+      "com.ohos.sceneboard"
+    ],
+    "output": "2458\n"
+  },
+  {
+    "args": [
+      "ps",
+      "-p",
+      "59198",
+      "-o",
+      "pid=,command="
+    ],
+    "output": "59198 /Applications/DevEco-Studio.app/Contents/tools/emulator/Emulator -hvd Mate 80 Pro -path /Users/minliny/.Huawei/Emulator/deployed -t trace_88943_commandPipe -imageRoot /Users/minliny/Library/Huawei/Sdk\n"
+  },
+  {
+    "path": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro/Log/Emulator.log",
+    "lastBootLine": "2026-09-06 23:19:34.938 13261991936 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!"
+  }
+]

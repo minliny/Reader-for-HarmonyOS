@@ -1,0 +1,62 @@
+--- before/tools/test-reader-control-directory-model.mjs
++++ current/tools/test-reader-control-directory-model.mjs
+@@ -44,16 +44,16 @@
+ 
+ const ui = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets', import.meta.url), 'utf8');
+ const methods = ['captureLeadingRow', 'onProgressChanged', 'queueLeadingCorrection', 'onInputChanged', 'rowHeight', 'value', 'userScroll',
+-  'queuePosition', 'listHeight', 'listTop'].map(name => {
++  'queuePosition', 'listHeight', 'listTop', 'openList', 'refreshData'].map(name => {
+   const start=ui.indexOf('  private '+name+'('); assert.ok(start>=0);
+   const open=ui.indexOf('{',start); let depth=1,end=open+1;
+   while(depth){if(ui[end]==='{')depth++;if(ui[end]==='}')depth--;end++;}
+   return ui.slice(start,end);
+ });
+ const frames=[];
+-const AnchorOwner = new Function('ControlDirectoryFrame','LengthMetrics','ScrollAlign',
++const AnchorOwner = new Function('ControlDirectoryFrame','LengthMetrics','ScrollAlign','readerControlDirectorySnapshot',
+   stripTypeScriptTypes('class Owner { '+methods.join('\n')+' }')+'; return Owner;')(
+-  class { constructor(action){this.action=action;} }, {vp:value=>({value})}, {START:'START',CENTER:'CENTER'});
++  class { constructor(action){this.action=action;} }, {vp:value=>({value})}, {START:'START',CENTER:'CENTER'}, project);
+ const commands=[];
+ const owner=Object.assign(new AnchorOwner(), {mounted:true,lifecycle:1,correctionQueued:false,
+   progress:1,previousRowHeight:40,interactionEnabled:false,availableWidth:338,tab:'directory',
+@@ -80,3 +80,39 @@
+ assert.deepEqual(commands.pop(),[61,false,'CENTER'],
+   'initial centering also targets the real item instead of multiplying estimated offscreen heights');
+ console.log('Production Directory virtual-row capture, fraction, frame coalescing and late-user-input guards PASS');
++
++// Exercise the production opening/data/frame chain, not just the ticket model.
++const residualFailures=[];
++function residual(name, action){try{action();}catch(error){residualFailures.push(`${name}: ${error.message}`);}}
++function pendingList(){
++  const queue=[],scrolls=[];
++  const list=Object.assign(new AnchorOwner(),{mounted:true,lifecycle:1,positionQueued:false,
++    correctionQueued:false,placement:new ReaderControlDirectoryPosition(),sessionKey:'pending',tab:'directory',
++    entries:withBookmarks,query:'',ascending:true,currentChapterIndex:500,progress:1,
++    interactionEnabled:true,availableWidth:338,availableHeight:666,dataSource:{replace(){}},
++    getUIContext:()=>({postFrameCallback:frame=>queue.push(frame),vp2px:x=>x*3}),
++    scroller:{scrollToIndex:(...args)=>scrolls.push(args),getItemRect:()=>({y:-8,height:74})}});
++  return {list,queue,scrolls};
++}
++residual('a new tab owns its queued centering',()=>{
++  const {list,queue,scrolls}=pendingList();list.openList();list.tab='bookmarks';list.openList();
++  while(queue.length)queue.shift().action();
++  assert.deepEqual(scrolls,[[0,false,'CENTER']]);
++});
++residual('endpoint release discards both parts of the anchor',()=>{
++  const {list,queue}=pendingList();list.openList();while(queue.length)queue.shift().action();
++  list.leadingRow=48.2;list.leadingFraction=.2;list.leadingKey=list.snapshot.rows[48].key;
++  list.onInputChanged();list.refreshData();assert.equal(list.leadingRow,undefined);
++  assert.equal(list.leadingKey,undefined);
++});
++residual('a newer positioning callback survives the old callback',()=>{
++  const {list,queue,scrolls}=pendingList();list.openList();list.tab='bookmarks';list.openList();
++  queue.shift().action();list.refreshData();while(queue.length)queue.shift().action();
++  assert.deepEqual(scrolls,[[0,false,'CENTER']]);
++});
++residual('scroll cancels a replacement tab placement',()=>{
++  const {list,queue,scrolls}=pendingList();list.openList();list.tab='bookmarks';list.openList();list.userScroll();
++  while(queue.length)queue.shift().action();assert.deepEqual(scrolls,[]);
++});
++assert.deepEqual(residualFailures,[]);
++console.log('Production Directory rapid tab replacement, endpoint anchor release and user-scroll ownership PASS');

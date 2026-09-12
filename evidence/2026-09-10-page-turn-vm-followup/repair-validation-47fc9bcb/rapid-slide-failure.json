@@ -1,0 +1,364 @@
+{
+  "mode": "滑动",
+  "count": 20,
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "1e6a7861a17240fa521ae83d6c1d8f0b455b95a6a99479d1b4fd0dc3b3e07463",
+    "chapter": 25,
+    "ordinal": 1,
+    "total": 4,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章025段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 / 4 页"
+  },
+  "expected": {
+    "slot": "reader-page-slot-a",
+    "sha256": "46fedd84c421081b7cf8e6adc1115be2eb4d5ef611acb7086c5bf3afa2070629",
+    "chapter": 30,
+    "ordinal": 1,
+    "total": null,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章030段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 页"
+  },
+  "samples": [
+    {
+      "direction": "next",
+      "elapsedSeconds": 5.769503709,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 6.719270709000001,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 7.656856417000001,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 8.574970666999999,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 9.54434175,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 10.488464167,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 11.408870959,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 12.344948542,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 13.260604833999999,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 14.211783209,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 15.213587084,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 16.238309042,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 17.161892124999998,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 18.071782458999998,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 18.985578667,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 19.945899792,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 20.976275167,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "4ce74b4cfd3e23d7e5ddc64a1f514f3dc269dd0a20419308fb74b5e022faf222",
+        "chapter": 27,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章027段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    }
+  ],
+  "status": "FAIL",
+  "settledNetPages": 10,
+  "requested": 20,
+  "cause": "code+production-runtime confirmed DOWN immediately regrabbed the current settlement and replaced its accepted intent; taps must remain separate until a real MOVE claims drag",
+  "repair": "defer regrab to first page-owned MOVE; retain tap-only reservation until then; final-UP-only movement is not a regrab"
+}

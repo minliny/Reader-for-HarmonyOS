@@ -9,7 +9,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const coreRepo = resolve(repo, '../Reader-Core-Native');
 const cli = process.env.READER_CORE_CLI ?? resolve(coreRepo, 'target/debug/reader-cli');
 const sourcePath = resolve(repo,
-  'entry/src/main/resources/rawfile/reader-test-book-sources.json');
+  'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
 
 assert.ok(existsSync(cli),
   `Reader Core CLI is required for the package live gate: ${cli}`);
@@ -17,6 +17,7 @@ const sources = JSON.parse(readFileSync(sourcePath, 'utf8'));
 assert.ok(Array.isArray(sources) && sources.length > 0, 'bundled source document is empty');
 
 const scratch = mkdtempSync(join(tmpdir(), 'reader-bundled-source-live-'));
+console.log('Evidence scope: Core CLI L1-L5 diagnostic; Harmony HTTP/ArkWeb journeys require separate device evidence.');
 try {
   for (const [index, source] of sources.entries()) {
     const keyword = source.ruleSearch?.checkKeyWord;
@@ -49,7 +50,7 @@ try {
       assert.equal(report.levels?.[level]?.status, 'pass',
         `${source.bookSourceName} failed ${level}: ${JSON.stringify(report.levels?.[level] ?? {})}`);
     }
-    console.log(`${basename(sourcePath)}: ${source.bookSourceName} L1-L5 PASS ` +
+    console.log(`${basename(sourcePath)}: ${source.bookSourceName} CLI L1-L5 PASS ` +
       `(${report.duration_ms}ms)`);
   }
 } finally {

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/tmp/reader_vm_book_boundary.py", line 8, in <module>
+    run(args);time.sleep(2);after=page(dump());assert after['sha256']==baseline['sha256'],('invalid boundary requests cancelled valid reverse',side,origin,baseline,after)
+  File "<string>", line 9, in page
+AssertionError: expected one settled page

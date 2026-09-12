@@ -1,0 +1,225 @@
+{
+  "recordedAt": "2026-09-12T00:46:56.663315+08:00",
+  "method": "Direct user-visible Make preview browser interactions and read-only DOM snapshots/evaluation, plus official Make source page version labels. This file transcribes tool observations; it is not a saved browser screenshot or native-device result.",
+  "sourcePageVersions": {
+    "tts": {
+      "fileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "version": 17
+    },
+    "appearance": {
+      "fileKey": "LOYUJr93KwespD5j7N6icw",
+      "version": 9
+    }
+  },
+  "sourceFilesEdited": false,
+  "published": false,
+  "vmOperatedAfterAuditReset": false,
+  "tts": {
+    "fullModuleOrder": [
+      "朗读控制",
+      "语速",
+      "定时停止",
+      "朗读引擎",
+      "播放配置"
+    ],
+    "fullDefaultPlayState": "朗读中",
+    "fullTransportLabels": [
+      "上一章",
+      "暂停",
+      "下一章",
+      "停止"
+    ],
+    "fullSpeedPresets": [
+      "0.75x",
+      "1.0x",
+      "1.25x",
+      "1.5x"
+    ],
+    "fullTimerPresets": [
+      "不开启",
+      "15 分钟",
+      "30 分钟",
+      "45 分钟",
+      "60 分钟",
+      "本章结束"
+    ],
+    "customTimer": {
+      "initialCaption": "25 分",
+      "rangeCaption": "1 – 180 分钟",
+      "stepFromSource": 5
+    },
+    "systemRows": {
+      "语音引擎": "系统默认",
+      "朗读语言": "中文（简体）"
+    },
+    "onlineClick": "Opens service-info branch. The separate 立即配置 button opens the modal; clicking the Online card itself did not open the modal.",
+    "modal": {
+      "title": "第三方 TTS 配置",
+      "fields": [
+        {
+          "label": "服务名称",
+          "kind": "text",
+          "placeholder": "例如 Azure 语音"
+        },
+        {
+          "label": "接口地址",
+          "kind": "text",
+          "placeholder": "https://api.example.com/tts"
+        },
+        {
+          "label": "API 密钥",
+          "kind": "password",
+          "placeholder": "填入访问密钥"
+        },
+        {
+          "label": "发音人 / 音色",
+          "kind": "text",
+          "placeholder": "例如 xiaoxiao"
+        },
+        {
+          "label": "音频格式",
+          "kind": "exclusive-buttons",
+          "options": [
+            "MP3",
+            "WAV",
+            "PCM"
+          ],
+          "default": "MP3"
+        }
+      ],
+      "actions": [
+        "关闭",
+        "取消",
+        "保存"
+      ],
+      "observed": "All five fields visible in DOM and screenshot. Canceled and returned to online branch. Five-field save round trip is verified from source only, not claimed as an executed browser save test."
+    },
+    "voices": [
+      {
+        "name": "清晰女声",
+        "description": "标准 · 温润干净",
+        "tag": "女"
+      },
+      {
+        "name": "温柔女声",
+        "description": "柔和 · 舒缓治愈",
+        "tag": "女"
+      },
+      {
+        "name": "磁性男声",
+        "description": "低沉 · 富有磁性",
+        "tag": "男"
+      },
+      {
+        "name": "标准男声",
+        "description": "沉稳 · 端正大气",
+        "tag": "男"
+      },
+      {
+        "name": "活泼童声",
+        "description": "明亮 · 天真俏皮",
+        "tag": "童"
+      },
+      {
+        "name": "新闻播报",
+        "description": "专业 · 字正腔圆",
+        "tag": "播"
+      }
+    ],
+    "voiceMenuObserved": {
+      "previewButtonCount": 6,
+      "previewButtonText": "试听",
+      "selected": "清晰女声",
+      "selectionClosesMenu": true,
+      "realAudioTested": false
+    },
+    "configToggleDefaults": {
+      "跟随高亮": true,
+      "来电自动暂停": true,
+      "后台播放": true,
+      "朗读时屏幕常亮": false
+    },
+    "quickObserved": {
+      "transport": [
+        "上一句",
+        "暂停",
+        "停止",
+        "下一句"
+      ],
+      "status": "朗读中",
+      "timer": "15 分钟",
+      "speed": "1.0x",
+      "expandButton": "展开完整控制页"
+    },
+    "hiddenLayerBoundary": "Quick imported legacy text such as 15min still appears in DOM beneath the replacing card. It is not a second visible control to implement.",
+    "finalObservedState": "Expanded full panel at default system branch after quick/full transition; no form draft saved."
+  },
+  "appearance": {
+    "menus": {
+      "缩进": [
+        "无",
+        "1 字符",
+        "2 字符"
+      ],
+      "简繁": [
+        "原文",
+        "繁转简",
+        "简转繁"
+      ],
+      "翻页动画": [
+        "平移",
+        "仿真",
+        "淡入",
+        "无"
+      ],
+      "文字两端对齐": [
+        "开启",
+        "关闭"
+      ]
+    },
+    "selectionChecks": [
+      {
+        "field": "翻页动画",
+        "selected": "淡入",
+        "triggerUpdated": true,
+        "restoredTo": "平移"
+      },
+      {
+        "field": "缩进",
+        "selected": "1 字符",
+        "triggerUpdated": true,
+        "restoredTo": "无"
+      },
+      {
+        "field": "文字两端对齐",
+        "selected": "关闭",
+        "triggerUpdated": true,
+        "restoredTo": null
+      }
+    ],
+    "pageTurnMenuMeasurements": {
+      "method": "Read-only getBoundingClientRect and getComputedStyle on observed Typography/Select/Menu buttons.",
+      "innerButtonWidthCssPx": 96,
+      "buttonHeightCssPx": 25,
+      "fontSizeCssPx": 11,
+      "padding": "6px 9px",
+      "menuBoxShadow": "rgba(75, 58, 38, 0.28) 0px 8px 20px -6px",
+      "selectedWeight": "bold",
+      "unselectedWeight": "regular",
+      "boundary": "Measurements are browser CSS pixels at the reference preview, not Harmony vp rendering results."
+    },
+    "stepperCaptions": {
+      "字号": "18px",
+      "行距": "1.96",
+      "段距": "16px",
+      "字距": "0px"
+    },
+    "finalObservedState": {
+      "缩进": "无",
+      "简繁": "原文",
+      "翻页动画": "平移",
+      "文字两端对齐": "关闭"
+    },
+    "localPreviewOnly": "Selection changes affect only this preview component state, not the source Figma file."
+  }
+}

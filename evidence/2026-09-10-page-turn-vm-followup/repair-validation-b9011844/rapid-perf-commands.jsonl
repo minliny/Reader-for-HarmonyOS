@@ -1,0 +1,4 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.019773791, "elapsed": 0.027669625000000003, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.047581416, "elapsed": 0.029507499999999992, "code": 0, "output": "2458\n"}
+{"args": ["shell", "pidof", "io.reader.harmonyos"], "start": 0.077235583, "elapsed": 0.029147083000000004, "code": 0, "output": "797\n"}
+{"args": ["shell", "hilog", "-x", "-P", "797", "-e", "PAGETURN_PERF|DRAGFOLLOW"], "start": 0.106515, "elapsed": 0.02683025, "code": 0, "output": "/bin/sh: DRAGFOLLOW: inaccessible or not found\n"}

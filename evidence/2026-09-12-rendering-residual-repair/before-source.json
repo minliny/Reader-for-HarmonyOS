@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-09-11T16:35:41.540376+00:00",
+  "files": {
+    "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets": "6ff7434818fd429043f7ad4133e51e3396fca0f85a1cc5847d52fe88030a53de",
+    "entry/src/main/cpp/bookturn/bookturn_host.cpp": "dfd03eaa8c349f992f48057f06a90dbd539a30e54e6965d67ec0ccf691439135",
+    "entry/src/main/cpp/bookturn/bookturn_host.h": "7969ec794b4e6c1754b4ac880798346cd529351c33deaff0027f7b191fa375a8",
+    "entry/src/main/cpp/bookturn/bookturn_napi.cpp": "dad00d2e79cf4845dabc3623c8afd01a56dfaa27a1e698fa07ab8a24f1b99ef5",
+    "entry/src/main/cpp/tests/bookturn_present_barrier_test.cpp": "cc2a9ab284447fdfb492323504278d276ab6675a83054905d35d214ceab566f3",
+    "tools/test-reader-control-directory-model.mjs": "e9c93bc062ff4051e20aaedbbc33f7ff954ac8479db3cf31581994199dbce603",
+    "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "728996139eaff426ecfca5fcdc85d765f254a72fdeebdb0992603c3a7013b6e4"
+  },
+  "harmony": {
+    "head": "35f2f99a8d635615475fde75120bf8629f944565",
+    "dirtyPaths": 385
+  },
+  "core": {
+    "head": "6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2",
+    "dirtyPaths": 58
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "status": "PASS",
+  "initial": {
+    "title": "第34章 连续翻页验证",
+    "chapter": 34,
+    "bounds": "[131,855][1061,911]"
+  },
+  "deep": {
+    "title": "第55章 连续翻页验证",
+    "chapter": 55,
+    "bounds": "[131,855][1061,904]"
+  },
+  "roundtrips": [
+    {
+      "round": 1,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[152,1849][858,1894]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 2,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[152,1849][858,1894]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 3,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[152,1849][858,1894]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 4,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[151,1849][859,1894]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 5,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[151,1849][859,1894]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 6,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[152,1849][858,1894]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 7,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[152,1849][858,1893]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 8,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[152,1849][858,1893]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 9,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[152,1849][858,1893]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    },
+    {
+      "round": 10,
+      "quickFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[152,1849][858,1893]"
+      },
+      "fullFirst": {
+        "title": "第55章 连续翻页验证",
+        "chapter": 55,
+        "bounds": "[131,855][1061,904]"
+      }
+    }
+  ],
+  "scope": "150 chapter directory, deep scroll then ten automatic full/quick roundtrips; semantic leading row stability, not continuous-pixel/finger-hold proof"
+}

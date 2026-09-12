@@ -165,16 +165,16 @@ assert.match(fullDirectory,
 assert.match(fullDirectoryPanel, /@Prop panelWidthOverride: number = 0/);
 assert.match(fullDirectoryPanel, /return Math\.max\(0, this\.panelWidth\(\) - 26\)/);
 
-assert.match(experience, /layout: this\.controlLayout\(\)/,
+assert.match(experience, /layout: this\.controlLayout\(this\.readerWindowMetricsRevision\)/,
   'the reader owner must provide one resolved geometry snapshot to every control state');
 assert.match(control, /@Prop @Watch\('onLayoutChanged'\) layout: ReaderControlLayoutSnapshot/);
 assert.match(control,
-  /private dockWidth\(\): number \{\s*return this\.layout\.dockWidth;/,
-  'all seven regular reader-control states must clamp their dock');
-assert.equal((control.match(/availableWidth: this\.fullPanelAvailableWidth\(\)/g) ?? []).length, 5,
-  'four fallback full sheets plus the Phone Appearance stage must share measured width');
-assert.equal((control.match(/availableHeight: this\.layout\.fullPanelHeight/g) ?? []).length, 5,
-  'four fallback full sheets plus the Phone Appearance stage must share the live height budget');
+  /readerControlMotionBounds\(this\.layout\.fullPanelWidth,\s*this\.layout\.fullPanelHeight/,
+  'all modules share one owner-resolved live Stage extent');
+assert.match(control, /ReaderControlAppearanceContent\(\{[\s\S]*?availableWidth: this\.contentMotionWidth,[\s\S]*?availableHeight: this\.contentMotionHeight/);
+assert.match(control, /availableWidth: this\.contentMotionWidth, availableHeight: this\.contentMotionHeight/,
+  'the new directory uses the actual visible viewport with explicit top alignment');
+assert.match(control, /ReaderControlDirectoryContent\(\{[\s\S]*?progress: this\.contentMotionProgress/);
 assert.match(appearanceStage,
   /ReaderAppearanceFullPanel\(\{[\s\S]*?availableWidth: this\.availableWidth,[\s\S]*?availableHeight: this\.availableHeight/,
   'the clock-owned Phone Appearance panel must receive the Stage live surface budget');
@@ -203,9 +203,9 @@ assert.match(appearance, /Math\.min\([^\n]+, this\.availableWidth\)/,
 assert.match(appearance,
   /private scrollViewportHeight\(\): number[\s\S]*Math\.min\(this\.viewportHeight\(\), this\.availableHeight - 68\)/,
   'appearance must preserve its authored full-sheet frame while clamping the interactive scroll viewport');
-assert.match(control,
-  /readerAppearanceMotionStageSupported\(\s*this\.appearanceMotionStageWidth\(\),\s*this\.appearanceMotionStageHeight\(\)/,
-  'fixed-coordinate legacy N motion must fall back on viewports narrower than its authored stage');
+assert.match(control, /this\.layout\.fullPanelWidth, this\.layout\.fullPanelHeight, this\.layout\.dockBottomGap/,
+  'the new shared spatial sampler uses measured bounds instead of selecting a second legacy tree');
+assert.doesNotMatch(control, /readerAppearanceMotionStageSupported|usesPhoneAppearanceMotionStage/);
 assert.match(appearance,
   /readerAppearanceMotionViewportWidth\(this\.currentMotionFrame\(\), this\.sheetWidth\(\)\)/,
   'motion surface width must also clamp to the live sheet edge');

@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-09-11T22:16:57+0800",
+  "vm": "Mate 80 Pro",
+  "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+  "targetRef": "6460677a198b",
+  "emulatorPid": 59198,
+  "listener": "COMMAND    PID    USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nEmulator 59198 minliny   23u  IPv4 0xef9dd372c40b624f      0t0  TCP 127.0.0.1:5555 (LISTEN)",
+  "bootCompleted": "true",
+  "guestBootLog": "2026-09-06 23:19:34.938 13261991936 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!",
+  "sceneBoardPidBefore": "2458",
+  "sceneBoardPidAfter": "2458",
+  "recentBootAlarmCount": 0
+}

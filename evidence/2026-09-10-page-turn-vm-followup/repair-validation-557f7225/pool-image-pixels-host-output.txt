@@ -1,0 +1,5 @@
+{"status": "captured", "label": "pool-image-pixels-next-1", "mode": "frames", "log": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-557f7225/pool-image-pixels-next-1-commands.jsonl"}
+{"status": "captured", "label": "pool-image-pixels-next-2", "mode": "frames", "log": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-557f7225/pool-image-pixels-next-2-commands.jsonl"}
+{"status": "captured", "label": "pool-image-pixels-previous-1", "mode": "frames", "log": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-557f7225/pool-image-pixels-previous-1-commands.jsonl"}
+{"status": "captured", "label": "pool-image-pixels-previous-2", "mode": "frames", "log": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-557f7225/pool-image-pixels-previous-2-commands.jsonl"}
+pool-image-pixels canonical PASS

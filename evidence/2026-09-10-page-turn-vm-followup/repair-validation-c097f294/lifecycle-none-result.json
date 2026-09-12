@@ -1,0 +1,75 @@
+{
+  "status": "PASS",
+  "mode": "无动画",
+  "cycles": [
+    {
+      "before": {
+        "slot": "reader-page-slot-a",
+        "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+        "chapter": 37,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章037段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      },
+      "after": {
+        "slot": "reader-page-slot-a",
+        "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+        "chapter": 37,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章037段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      },
+      "pidBefore": "2813",
+      "pidAfter": "2813"
+    },
+    {
+      "before": {
+        "slot": "reader-page-slot-a",
+        "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+        "chapter": 37,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章037段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      },
+      "after": {
+        "slot": "reader-page-slot-a",
+        "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+        "chapter": 37,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章037段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      },
+      "pidBefore": "2813",
+      "pidAfter": "2813"
+    }
+  ],
+  "scope": "normal Home then foreground on same VM; no kill, crash, lost writes or orientation injection"
+}

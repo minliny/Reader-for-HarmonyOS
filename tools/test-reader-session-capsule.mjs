@@ -102,11 +102,11 @@ assert.match(experience,
   'starting auto-page must stop TTS first');
 const toggleAutoPage = experience.slice(
   experience.indexOf('  private toggleAutoPage(): void {'),
-  experience.indexOf('  private startAutoPageSession(): void {'),
+  experience.indexOf('  private startAutoPageSession(presentation: ReaderControlPlaybackPresentation): void {'),
 );
 assert.ok(toggleAutoPage.indexOf("coordinator.stop('user')") >= 0);
 assert.ok(toggleAutoPage.indexOf('.then((): void => {') > toggleAutoPage.indexOf("coordinator.stop('user')"));
-assert.ok(toggleAutoPage.indexOf('this.startAutoPageSession()') > toggleAutoPage.indexOf('.then((): void => {'),
+assert.ok(toggleAutoPage.indexOf('this.startAutoPageSession(presentation)') > toggleAutoPage.indexOf('.then((): void => {'),
   'auto-page may start only after the TTS stop promise resolves');
 assert.match(toggleAutoPage, /\.catch\([\s\S]*?this\.logTtsFailure\('stop before auto-page', error\)/,
   'a failed TTS stop must fail closed instead of overlapping both runtimes');
@@ -117,9 +117,9 @@ assert.match(experience,
 assert.match(experience,
   /private shouldShowSessionCapsule\(\): boolean \{[\s\S]*?sessionMorphPhase === 'capture'[\s\S]*?sessionMorphPhase === 'dotHold'[\s\S]*?return false;/,
   'capture, flight, handoff and dot hold own the capsule anchor before expansion');
-assert.match(experience,
-  /private toggleSessionCapsule\(\): void \{\s*if \(this\.sessionMorphPhase !== 'none'\) \{[\s\S]*?this\.finishSessionCapsuleMorph\(\);/,
-  'an interrupt during the morph jumps straight to the settled capsule');
+assert.doesNotMatch(experience.slice(experience.indexOf('  private toggleSessionCapsule()'),
+  experience.indexOf('  private activeSessionCapsuleWidth()')), /finishSessionCapsuleMorph/,
+  'a playback toggle must not jump the moving capsule straight to its endpoint');
 assert.match(experience,
   /private admitSessionCapsuleMeasurement\([\s\S]*?if \(this\.sessionMorphPhase !== 'none'\) \{\s*return;\s*\}/,
   'transient morph shell widths must not overwrite the settled capsule measurement');
@@ -127,14 +127,14 @@ assert.match(experience,
   /if \(this\.sessionMorphPhase === 'flight' && this\.sessionMorphSourceImage !== undefined\) \{[\s\S]*?Image\(this\.sessionMorphSourceImage\)[\s\S]*?\.blur\(12\)[\s\S]*?\.zIndex\(9\)\s*\.hitTestBehavior\(HitTestMode\.None\);/,
   'the exact captured source and authored blur ghost must be non-interactive above the capsule');
 assert.match(experience,
-  /private beginSessionCapsuleMorph\(\): void \{\s*if \(this\.reduceMotion \|\| this\.sessionMorphPhase !== 'none' \|\|\s*!this\.controlVisible \|\| this\.controlObscured\) \{\s*this\.hideControl\(\);\s*return;/,
+  /private beginSessionCapsuleMorph\(\): void \{[\s\S]*?if \(this\.reduceMotion \|\| this\.sessionMorphPhase !== 'none' \|\|\s*!this\.controlVisible\(\) \|\| this\.controlObscured\) \{\s*this\.hideControl\(\);\s*return;/,
   'Reduce Motion and hidden-control paths settle immediately without a blank proxy');
 assert.match(experience,
-  /getComponentSnapshot\(\)\.get\(source\.actorId,[\s\S]*?motionAnimateParam\('reader\.session\.capsule\.morph\.flight'[\s\S]*?motionAnimateParam\('reader\.session\.capsule\.morph\.dot\.hold'[\s\S]*?motionAnimateParam\('reader\.session\.capsule\.morph\.expand'[\s\S]*?motionAnimateParam\('reader\.session\.capsule\.morph\.reveal'/,
+  /getComponentSnapshot\(\)\.get\(source\.actorId,[\s\S]*?motionSpecGet\('reader\.session\.capsule\.morph\.flight'[\s\S]*?motionSpecGet\('reader\.session\.capsule\.morph\.dot\.hold'[\s\S]*?motionSpecGet\('reader\.session\.capsule\.morph\.expand'[\s\S]*?motionSpecGet\('reader\.session\.capsule\.morph\.reveal'/,
   'the source snapshot and all authored beats must use the registered choreography');
 assert.match(experience,
-  /this\.autoPageState = startReaderAutoPage\(this\.autoPageState\);\s*this\.beginSessionCapsuleMorph\(\);\s*this\.armAutoPageTimer/,
-  'auto-page start leaves the source mounted until snapshot capture owns the hide');
+  /this\.autoPageState = startReaderAutoPage\(this\.autoPageState\);\s*if \(this\.isControlPlaybackPresentationCurrent\(presentation, 'autoPage'\)\) \{\s*this\.beginSessionCapsuleMorph\(\);\s*\}\s*this\.armAutoPageTimer/,
+  'current auto-page presentation stays mounted until capture owns the hide; stale presentation cannot hide a new module');
 assert.match(experience,
   /this\.beginSessionCapsuleMorph\(\);\s*\}\s*\}\)\.catch\(\(error: Error\): void => this\.logTtsFailure\('start', error\)\);/,
   'TTS source also remains mounted until capture succeeds');

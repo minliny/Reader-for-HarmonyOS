@@ -1,0 +1,77 @@
+{
+  "records": [
+    {
+      "index": 0,
+      "triggerMs": 2.025457999999869,
+      "snapshotDoneMs": 103.24083299999964,
+      "file": "reader-control-settings-motion-expand-00.jpeg"
+    },
+    {
+      "index": 1,
+      "triggerMs": 137.48258299999972,
+      "snapshotDoneMs": 249.26424999999998,
+      "file": "reader-control-settings-motion-expand-01.jpeg"
+    },
+    {
+      "index": 2,
+      "triggerMs": 282.8204169999999,
+      "snapshotDoneMs": 399.1417499999996,
+      "file": "reader-control-settings-motion-expand-02.jpeg"
+    },
+    {
+      "index": 3,
+      "triggerMs": 431.31516699999975,
+      "snapshotDoneMs": 533.0050000000002,
+      "file": "reader-control-settings-motion-expand-03.jpeg"
+    },
+    {
+      "index": 4,
+      "triggerMs": 570.2839170000002,
+      "snapshotDoneMs": 661.688292,
+      "file": "reader-control-settings-motion-expand-04.jpeg"
+    },
+    {
+      "index": 5,
+      "triggerMs": 699.3580420000001,
+      "snapshotDoneMs": 786.7177500000003,
+      "file": "reader-control-settings-motion-expand-05.jpeg"
+    },
+    {
+      "index": 6,
+      "triggerMs": 823.7811669999999,
+      "snapshotDoneMs": 910.6390419999997,
+      "file": "reader-control-settings-motion-expand-06.jpeg"
+    },
+    {
+      "index": 7,
+      "triggerMs": 949.919542,
+      "snapshotDoneMs": 1043.7889579999994,
+      "file": "reader-control-settings-motion-expand-07.jpeg"
+    },
+    {
+      "index": 8,
+      "triggerMs": 1080.3729999999998,
+      "snapshotDoneMs": 1171.3274579999995,
+      "file": "reader-control-settings-motion-expand-08.jpeg"
+    },
+    {
+      "index": 9,
+      "triggerMs": 1204.7823749999998,
+      "snapshotDoneMs": 1293.620292,
+      "file": "reader-control-settings-motion-expand-09.jpeg"
+    },
+    {
+      "index": 10,
+      "triggerMs": 1332.2048749999994,
+      "snapshotDoneMs": 1424.5625830000001,
+      "file": "reader-control-settings-motion-expand-10.jpeg"
+    },
+    {
+      "index": 11,
+      "triggerMs": 1466.8441249999996,
+      "snapshotDoneMs": 1557.6339169999994,
+      "file": "reader-control-settings-motion-expand-11.jpeg"
+    }
+  ],
+  "scope": "sequential host-triggered JPEG samples; capture adds load; not VSync or touch-to-photon timings"
+}

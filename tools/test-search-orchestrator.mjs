@@ -17,15 +17,28 @@ const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/Err
   .replace('export function errorMessageOf', 'function errorMessageOf');
 const errorMessageImport =
   /^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];\n/m;
+const sourceCategoryModule = stripTypeScriptTypes(
+  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+).replace(/^export /gm, '');
+const sourceCategoryImport =
+  /^import \{\n(?:  [^\n]+\n)+\} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
+const sourceCategorySingleImport =
+  /^import \{ readerSourceCategoryIsText \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
 const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
+  .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
+    read('entry/src/main/ets/features/common/CachedBookIdentity.ts').replace(/^import type .*;$/m, ''))
   .replace(errorMessageImport, '')
+  .replace(sourceCategoryImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
 const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrchestrator.ets')
   .replace(/^import \{[\s\S]*?from '\.\/SearchGateway';\n/m, '')
   .replace(errorMessageImport, '')
+  .replace(sourceCategorySingleImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '');
-const combined = stripTypeScriptTypes(`${errorMessageModule}\n${gatewaySource}\n${orchestratorSource}`);
+const combined = stripTypeScriptTypes(
+  `${sourceCategoryModule}\n${errorMessageModule}\n${gatewaySource}\n${orchestratorSource}`,
+);
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(combined).toString('base64')}`;
 
 globalThis.hilog = {
@@ -50,12 +63,14 @@ function makeSources(count) {
  * failure. Tracks peak concurrent `book.search` in-flight requests so the test
  * can assert the orchestrator's bound.
  */
-function fakeOwner({ sources, resultsFor, failFor, delayForSource }) {
-  const state = { inFlight: 0, maxInFlight: 0, calls: [], failList: false };
+function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
+  const state = { inFlight: 0, maxInFlight: 0, calls: [], historyWrites: 0, sourceLoads: 0, failList: false, localBooks: [] };
   return {
     state,
     request: async (command, params, options) => {
+      if (command === 'bookshelf.list') return { data: { books: state.localBooks, total: state.localBooks.length } };
       if (command === 'source.list') {
+        state.sourceLoads += 1;
         if (state.failList) {
           throw new Error('source list unavailable');
         }
@@ -65,6 +80,7 @@ function fakeOwner({ sources, resultsFor, failFor, delayForSource }) {
         return { data: { keywords: [], count: 0 } };
       }
       if (command === 'search.history.add') {
+        state.historyWrites += 1;
         return { data: {} };
       }
       if (command !== 'book.search') {
@@ -167,7 +183,7 @@ const last = (presentations) => presentations[presentations.length - 1];
     'every result of one sweep carries the same searchRequestId');
   assert.match(present.results[0].searchRequestId, /^search-/,
     'the sweep id comes from the gateway format');
-  assert.ok(present.results.every((r) => typeof r.sourceRuleVersion === 'number'),
+  assert.ok(present.results.every((r) => typeof r.sourceRuleVersion === 'string'),
     'every result carries its per-source rule version');
   assert.equal(owner.state.calls.length, 8, 'every enabled source was searched');
   const ids = present.results.map((r) => `${r.sourceId}:${r.bookId}`);
@@ -288,53 +304,37 @@ const last = (presentations) => presentations[presentations.length - 1];
     'the settled list only carries one sweep id: late old-sweep results are rejected');
 }
 
-// 6. P0 add-source flow: a fresh entry with zero sources lands on
-// sourceRequired(noSources), not the generic network error.
-{
+// Local import search remains usable without online sources and when source.list fails.
+for (const failList of [false, true]) {
   const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  owner.state.failList = failList;
+  owner.state.localBooks = [
+    { sourceId: 'local', bookId: 'import-one', title: '关键字', author: '作者' },
+    { sourceId: 'remote', bookId: 'remote-shelf', title: '关键字', author: '作者' },
+  ];
   const { orchestrator, presentations } = capture();
   const search = orchestrator(owner);
-  search.open();
-  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
-
-  const present = last(presentations);
-  assert.equal(present.kind, 'sourceRequired', 'zero sources is a configuration gap, not an error');
-  assert.equal(present.reason, 'noSources', 'zero sources reports noSources');
+  search.open(); search.search('关键字');
+  await waitUntil(owner.state, () => last(presentations).kind === 'results');
+  assert.deepEqual(last(presentations).results.map(book => book.bookId), ['import-one']);
+  assert.equal(last(presentations).sourceListFailed, failList);
+  assert.equal(owner.state.calls.length, 0);
 }
-
-// 7. P0 add-source flow: a fresh entry whose sources are all disabled lands on
-// sourceRequired(allDisabled); searching from there re-derives the same state.
 {
-  const sources = makeSources(2).map((source) => ({ ...source, enabled: false }));
-  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  const owner = fakeOwner({ sources: makeSources(2).map(source => ({...source, enabled:false})), resultsFor: () => [] });
   const { orchestrator, presentations } = capture();
-  const search = orchestrator(owner);
-  search.open();
-  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
-  assert.equal(last(presentations).reason, 'allDisabled', 'disabled-only list reports allDisabled');
-
-  search.search('关键字');
-  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
-  assert.equal(last(presentations).reason, 'allDisabled',
-    'a search attempt over a disabled-only list stays on sourceRequired(allDisabled)');
-  assert.equal(owner.state.calls.length, 0, 'no book.search fires without enabled sources');
+  const search = orchestrator(owner); search.open(); search.search('missing');
+  await waitUntil(owner.state, () => last(presentations).kind === 'empty');
+  assert.equal(owner.state.calls.length, 0);
 }
-
-// 8. P0 add-source flow: a failed source.list lands on sourceLoadError and
-// retry() recovers to the Initial surface once the list is available again.
 {
   const owner = fakeOwner({ sources: makeSources(2), resultsFor: () => [] });
   owner.state.failList = true;
   const { orchestrator, presentations } = capture();
-  const search = orchestrator(owner);
-  search.open();
-  await waitUntil(owner.state, () => last(presentations).kind === 'sourceLoadError');
-  assert.equal(last(presentations).kind, 'sourceLoadError', 'list failure is its own surface');
-
-  owner.state.failList = false;
-  search.retry();
-  await waitUntil(owner.state, () => last(presentations).kind === 'initial');
-  assert.equal(last(presentations).kind, 'initial', 'recovered list re-enters the Initial surface');
+  const search = orchestrator(owner); search.open(); search.search('missing');
+  await waitUntil(owner.state, () => last(presentations).kind === 'error');
+  owner.state.failList = false; search.retry();
+  await waitUntil(owner.state, () => last(presentations).kind === 'empty');
 }
 
 // 9. refreshSources preserves a non-config presentation (empty) but refreshes
@@ -366,8 +366,8 @@ const last = (presentations) => presentations[presentations.length - 1];
   const { orchestrator, presentations, sourcesSnapshots } = capture();
   const search = orchestrator(owner);
   search.open();
-  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
-  assert.equal(last(presentations).reason, 'allDisabled');
+  await sleep(10);
+  assert.equal(last(presentations).kind, 'initial');
 
   sources.length = 0;
   sources.push(...makeSources(2));
@@ -442,9 +442,8 @@ const last = (presentations) => presentations[presentations.length - 1];
   assert.equal(last(presentations).searching, false, 'the sweep settles to closed');
 }
 
-// 13. Leaving mid-sweep cancels the sweep and drops its terminal publish;
-// resumeStaleSweep on route restore re-runs the keyword instead of leaving a
-// searching:true spinner residue behind.
+// 13. Leaving mid-sweep retains completed work. Restoring the route wakes the
+// same query without repeating source requests or publishing another loading state.
 {
   const sources = makeSources(2);
   const owner = fakeOwner({
@@ -460,25 +459,25 @@ const last = (presentations) => presentations[presentations.length - 1];
   await waitUntil(owner.state, () => presentations.some((p) => p.kind === 'results'));
 
   routeIsSearch = false; // leave during the sweep
-  await sleep(120); // the cancelled request unwinds; the sweep dies unpublished
+  search.visibilityChanged();
+  await sleep(120);
   const callsBeforeResume = owner.state.calls.length;
   const presentationsBeforeResume = presentations.length;
   routeIsSearch = true;
-  search.resumeStaleSweep();
+  search.resume();
 
-  await waitUntil(owner.state, () => owner.state.calls.length > callsBeforeResume);
-  assert.ok(
-    presentations.slice(presentationsBeforeResume).some((p) => p.kind === 'loading'),
-    'the searching:true residue re-enters as a fresh sweep');
-  await settle(owner.state, callsBeforeResume + 2);
+  await settle(owner.state, 2);
+  assert.equal(owner.state.calls.length, callsBeforeResume, 'completed sources are not requested again');
+  assert.equal(presentations.slice(presentationsBeforeResume).some((p) => p.kind === 'loading'), false,
+    'route restoration preserves the existing query');
   const final = last(presentations);
   assert.equal(final.kind, 'results');
-  assert.equal(final.searching, false, 'the re-run sweep settles to a closed slot');
+  assert.equal(final.searching, false, 'the retained sweep settles to a closed slot');
   assert.equal(final.completedSourceCount, 2);
 }
 
 // 14. A sweep that is still alive when the route returns keeps its course:
-// resumeStaleSweep must not restart it, and it settles on its own.
+// resume must not restart it, and it settles on its own.
 {
   const sources = makeSources(2);
   const owner = fakeOwner({
@@ -497,7 +496,7 @@ const last = (presentations) => presentations[presentations.length - 1];
   await sleep(10);
   routeIsSearch = true;
   const presentationsBeforeResume = presentations.length;
-  search.resumeStaleSweep();
+  search.resume();
   assert.equal(presentations.length, presentationsBeforeResume,
     'a live sweep is not restarted by the restore');
 
@@ -524,7 +523,7 @@ const last = (presentations) => presentations[presentations.length - 1];
 
   const presentationsBefore = presentations.length;
   const callsBefore = owner.state.calls.length;
-  search.resumeStaleSweep();
+  search.resume();
   assert.equal(presentations.length, presentationsBefore, 'a settled surface never re-sweeps');
   assert.equal(owner.state.calls.length, callsBefore, 'a settled surface issues no requests');
 }
@@ -599,9 +598,9 @@ const last = (presentations) => presentations[presentations.length - 1];
 
   // A stopped (searching:false) surface never re-sweeps on route restore.
   const presentationsBefore = presentations.length;
-  search.resumeStaleSweep();
+  search.resume();
   assert.equal(presentations.length, presentationsBefore,
-    'a user-stopped sweep is not resurrected by resumeStaleSweep');
+    'a user-stopped sweep is not resurrected by resume');
 }
 
 // 18. ACQ-02: an explicit scope restricts the sweep to the selected subset.
@@ -688,4 +687,177 @@ const last = (presentations) => presentations[presentations.length - 1];
     'the retry keeps the retained scope instead of widening to all sources');
 }
 
-console.log('search orchestrator bounded concurrency: PASS');
+// 22. P2-9 log hygiene: hilog never carries raw keywords or source URLs —
+// source identities reduce to the host, Core error URLs reduce to [host:…],
+// and stop-log keywords are truncated.
+{
+  const logged = [];
+  const originalHilog = globalThis.hilog;
+  const keyword = '一个特别特别特别长的搜索关键词';
+  globalThis.hilog = {
+    ...originalHilog,
+    warn: (...args) => logged.push({ level: 'warn', args }),
+    info: (...args) => logged.push({ level: 'info', args }),
+    error: originalHilog.error,
+    debug: originalHilog.debug,
+    fatal: originalHilog.fatal,
+  };
+  try {
+    const sources = [{
+      sourceId: 'https://secret-source.example/search.php',
+      name: '保密源',
+      enabled: true,
+    }];
+    // (a) A failing source: sourceId is a URL and the Core error embeds it.
+    const failingOwner = fakeOwner({
+      sources,
+      delayForSource: () => 5,
+      resultsFor: () => [],
+      failFor: () => true,
+    });
+    const captureA = capture();
+    const failingSearch = captureA.orchestrator(failingOwner);
+    failingSearch.open();
+    failingSearch.search(keyword);
+    await settle(failingOwner.state, 1);
+
+    // (b) A user stop while the sweep is loading logs the keyword truncated.
+    const stoppedOwner = fakeOwner({
+      sources,
+      delayForSource: () => 5,
+      resultsFor: () => [],
+    });
+    const captureB = capture();
+    const stoppedSearch = captureB.orchestrator(stoppedOwner);
+    stoppedSearch.open();
+    stoppedSearch.search(keyword);
+    stoppedSearch.stop();
+    await settle(stoppedOwner.state, 0);
+  } finally {
+    globalThis.hilog = originalHilog;
+  }
+
+  const sourceFailure = logged.find((entry) =>
+    entry.args.some((arg) => typeof arg === 'string' && arg.includes('Search source')));
+  assert.ok(sourceFailure, 'a failing source must still be logged');
+  assert.ok(sourceFailure.args.some((arg) => arg === 'secret-source.example'),
+    'the source identity in hilog must be the host only');
+  assert.ok(sourceFailure.args.some((arg) =>
+    typeof arg === 'string' && arg.includes('boom:[host:secret-source.example]')),
+    'Core error text must carry the host instead of the raw source URL');
+  const stopEntry = logged.find((entry) =>
+    entry.args.some((arg) => typeof arg === 'string' && arg.includes('stopped by user')));
+  assert.ok(stopEntry, 'a user stop must still be logged');
+  const loggedKeyword = stopEntry.args.find((arg) => typeof arg === 'string' && arg.includes('…'));
+  assert.ok(loggedKeyword && loggedKeyword !== keyword && !loggedKeyword.includes('关键词'),
+    'the stop-log keyword must be truncated, never raw');
+  assert.ok(!logged.some((entry) => entry.args.some((arg) =>
+    typeof arg === 'string' && arg.includes('secret-source.example/search'))),
+    'no raw source URL may reach hilog');
+}
+
+// Local and online results belong to the same request, including a shared title.
+{
+  const owner = fakeOwner({sources: makeSources(1), delayForSource:()=>30,
+    resultsFor:()=>[{bookId:'/remote',title:'同名',author:'作者'}]});
+  owner.state.localBooks=[{sourceId:'local',bookId:'local-one',title:'同名',author:'作者'}];
+  const {orchestrator,presentations}=capture();const search=orchestrator(owner);
+  search.open();search.search('同名');
+  await waitUntil(owner.state,()=>last(presentations).kind==='results' && last(presentations).searching===false);
+  const result=last(presentations).results;
+  assert.deepEqual(result.map(book=>book.sourceId),['local','source-0']);
+  assert.equal(new Set(result.map(book=>book.searchRequestId)).size,1);
+  assert.ok(presentations.some(p=>p.kind==='results' && p.searching && p.results[0]?.sourceId==='local'));
+}
+
+// Foreground policy: admitted requests finish while hidden; the remaining
+// cursor pauses, then resumes once without recording history or starting over.
+{
+  let visible = true;
+  const owner = fakeOwner({ sources: makeSources(9), delayForSource: () => 60,
+    resultsFor: (sourceId) => [{ bookId: `/book-${sourceId}`, title: sourceId, author: '作者' }] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner, () => visible);
+  search.open(); search.search('原查询');
+  await waitUntil(owner.state, () => owner.state.calls.length === 4);
+  visible = false; search.visibilityChanged();
+  const sourceLoads = owner.state.sourceLoads;
+  await settle(owner.state, 4); await sleep(25);
+  assert.equal(owner.state.calls.length, 4, 'hidden search must leave five sources queued');
+  const hidden = last(presentations);
+  assert.equal(hidden.kind, 'results');
+  assert.equal(hidden.completedSourceCount, 4, 'admitted sources publish while hidden');
+  assert.equal(hidden.searching, true, 'paused sweep remains resumable');
+  const queryId = hidden.results[0].searchRequestId;
+  visible = true; search.resume(); search.resume();
+  await settle(owner.state, 9); await sleep(25);
+  assert.equal(owner.state.calls.length, 9);
+  assert.equal(new Set(owner.state.calls.map(call => call.sourceId)).size, 9);
+  assert.equal(owner.state.historyWrites, 1);
+  assert.equal(owner.state.sourceLoads, sourceLoads, 'return does not restart source loading');
+  assert.equal(last(presentations).completedSourceCount, 9);
+  assert.equal(last(presentations).searching, false);
+  assert.ok(last(presentations).results.every(book => book.searchRequestId === queryId));
+  search.close();
+}
+
+// Hiding before any result does not strand Loading. Closing or stopping while
+// paused releases the workers, and a later foreground event cannot revive them.
+for (const action of ['resume', 'close', 'stop']) {
+  let visible = false;
+  const owner = fakeOwner({ sources: makeSources(6), delayForSource: () => 5,
+    resultsFor: sourceId => [{ bookId: `/book-${sourceId}`, title: sourceId }] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner, () => visible);
+  search.open(); search.search('隐藏前尚无结果');
+  await sleep(30);
+  assert.equal(owner.state.calls.length, 0);
+  assert.equal(last(presentations).kind, 'loading');
+  if (action !== 'resume') search[action]();
+  visible = true; search.resume(); search.visibilityChanged();
+  if (action === 'resume') {
+    await settle(owner.state, 6);
+    assert.equal(owner.state.calls.length, 6);
+    assert.equal(last(presentations).searching, false);
+  } else {
+    await sleep(40);
+    assert.equal(owner.state.calls.length, 0, `${action} must release without dispatch`);
+  }
+  search.close();
+}
+
+// A canonical notification can overlap an older snapshot read. The final
+// update is replayed after that read, even if no source search remains active.
+{
+  const owner = fakeOwner({ sources: [{ ...makeSources(1)[0], sourceVersion: 'v1' }],
+    resultsFor: () => [{ bookId: '/book', title: '搜索书名', author: '作者' }] });
+  const originalRequest = owner.request;
+  let notify = () => {};
+  let release;
+  const firstRead = new Promise(resolve => { release = resolve; });
+  let readCount = 0;
+  let title = '早先详情';
+  owner.bookAcquisitions = () => ({ subscribe: listener => { notify = listener; return () => { notify = () => {}; }; } });
+  owner.request = async (method, ...args) => {
+    if (method !== 'search-book.list') return originalRequest(method, ...args);
+    readCount += 1;
+    const snapshot = title;
+    if (readCount === 1) await firstRead;
+    return { data: { books: [{ origin: 'source-0', bookUrl: '/book', name: snapshot, author: '作者',
+      acquisition: { schemaVersion: 1, sourceVersion: 'v1', detailAt: readCount } }] } };
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); search.search('搜索书名');
+  await waitUntil(owner.state, () => readCount === 1);
+  title = '最后到达的详情'; notify(); notify(); release();
+  await waitUntil(owner.state, () => last(presentations).kind === 'results' &&
+    last(presentations).results[0]?.title === title);
+  assert.ok(readCount >= 2, 'overlapping notification triggers a final canonical read');
+  assert.equal(owner.state.calls.length, 1, 'metadata changes never launch another search');
+  assert.equal(last(presentations).searching, false);
+  assert.equal(last(presentations).results[0].groupKey, '搜索书名\u0000作者');
+  search.close();
+}
+
+console.log('search orchestrator bounded concurrency and retained lifecycle: PASS');

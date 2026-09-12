@@ -1,0 +1,136 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlPanel.ets
++++ current/entry/src/main/ets/features/reading/ReaderControlPanel.ets
+@@ -150,6 +150,10 @@
+   @State private visualHeldPointerId: number = -1;
+   @State private visualTransitionKind: string = '';
+   @State private motionOffsetY: number = 0;
++  // Module arguments observe only their own pose, not shell visibility/offset.
++  @State private contentMotionProgress: number = 0;
++  @State private contentMotionWidth: number = 286;
++  @State private contentMotionHeight: number = 190;
+   private runtime: ReaderControlRuntime | undefined = undefined;
+   private inputClock: ReaderPageInputClock = new ReaderPageInputClock();
+   private inputMoveCount: number = 0;
+@@ -412,7 +416,8 @@
+   private acceptRuntime(update: ReaderControlRuntimeUpdate): void {
+     if (!this.runtimeMounted) return;
+     this.rememberVisibleContentLocation(update.session);
+-    if (!readerControlSessionStateEquals(this.visualSession, update.session)) {
++    const sessionChanged = !readerControlSessionStateEquals(this.visualSession, update.session);
++    if (sessionChanged) {
+       this.visualSession = update.session;
+     }
+     const visual = sampleReaderControlSession(update.session);
+@@ -421,9 +426,12 @@
+     this.visualHeldPointerId = update.session.heldPointerId;
+     this.visualTransitionKind = update.session.transition?.kind ?? '';
+     this.motionOffsetY = update.offsetY;
+-    this.onVisualSessionChange(update.session);
++    if (sessionChanged) this.onVisualSessionChange(update.session);
+     if (update.endpoint !== undefined) this.commitVisualSession(update.endpoint);
+     const f = this.frame();
++    if (this.contentMotionProgress !== f.progress) this.contentMotionProgress = f.progress;
++    if (this.contentMotionWidth !== f.content.width) this.contentMotionWidth = f.content.width;
++    if (this.contentMotionHeight !== f.content.height) this.contentMotionHeight = f.content.height;
+     this.dockRect = { x: this.rootScreenX + this.dockLeft(),
+       y: this.rootScreenY + this.dockTop() + f.shell.y + f.dock.translateY,
+       width: f.shell.width, height: f.shell.height };
+@@ -891,9 +899,9 @@
+           onRetryBookmarkLoad: (): void => this.onRetryBookmarkLoad(),
+           chapterDownloadEnabled: this.chapterDownloadEnabled,
+           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+-          progress: this.frame().progress,
++          progress: this.contentMotionProgress,
+           interactionEnabled: this.secondaryModuleInputEnabled('directory'),
+-          availableWidth: this.frame().content.width, availableHeight: this.frame().content.height,
++          availableWidth: this.contentMotionWidth, availableHeight: this.contentMotionHeight,
+           tab: this.contentLocation().directoryTab,
+           sessionKey: this.listSessionKey(), bookmarkIdentity: this.bookmarkIdentity,
+           onTabChange: (tab: string): void => {
+@@ -930,14 +938,14 @@
+   private appearanceContent() {
+     ReaderControlAppearanceContent({
+       isTablet: this.isExpanded(),
+-      availableWidth: this.frame().content.width,
+-      availableHeight: this.frame().content.height,
++      availableWidth: this.contentMotionWidth,
++      availableHeight: this.contentMotionHeight,
+       fullContentHeight: this.contentEndpointHeight(true),
+       interactionEnabled: this.contentInputEnabled(),
+       dismissTemporaryRevision: this.dismissTemporaryRevision,
+       onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),
+       reduceMotion: this.reduceMotion,
+-      motionProgress: this.frame().progress,
++      motionProgress: this.contentMotionProgress,
+       snapshot: this.appearanceSnapshot,
+       chineseConversionMode: this.chineseConversionMode,
+       pageTurnStyle: readerPageTurnStyle(this.settingsSnapshot),
+@@ -973,9 +981,9 @@
+   private searchModuleContent() {
+     ReaderControlSearchContent({
+       fullContentHeight: this.contentEndpointHeight(true), quickContentHeight: this.contentEndpointHeight(false),
+-      motionProgress: this.frame().progress,
+-      availableWidth: this.frame().content.width,
+-      availableHeight: this.frame().content.height,
++      motionProgress: this.contentMotionProgress,
++      availableWidth: this.contentMotionWidth,
++      availableHeight: this.contentMotionHeight,
+       interactionEnabled: this.secondaryModuleInputEnabled('search'),
+       dismissTemporaryRevision: this.dismissTemporaryRevision,
+       onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),
+@@ -992,9 +1000,9 @@
+   private settingsModuleContent() {
+     ReaderControlSettingsContent({
+       fullViewportHeight: this.contentEndpointHeight(true),
+-      motionProgress: this.frame().progress,
+-      availableWidth: this.frame().content.width,
+-      availableHeight: this.frame().content.height,
++      motionProgress: this.contentMotionProgress,
++      availableWidth: this.contentMotionWidth,
++      availableHeight: this.contentMotionHeight,
+       interactionEnabled: this.secondaryModuleInputEnabled('settings'),
+       snapshot: this.settingsSnapshot,
+       pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
+@@ -1015,12 +1023,14 @@
+   @Builder
+   private ttsModuleContent() {
+     ReaderControlTtsContent({
++      dismissTemporaryRevision: this.dismissTemporaryRevision,
++      onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),
+       fullViewportHeight: this.contentEndpointHeight(true),
+-      motionProgress: this.frame().progress,
++      motionProgress: this.contentMotionProgress,
+       form: this.contentLocation().form,
+       isTablet: this.isExpanded(),
+-      availableWidth: this.frame().content.width,
+-      availableHeight: this.frame().content.height,
++      availableWidth: this.contentMotionWidth,
++      availableHeight: this.contentMotionHeight,
+       interactionEnabled: this.secondaryModuleInputEnabled('tts'),
+       state: this.ttsState,
+       timerMinutes: this.ttsTimerMinutes,
+@@ -1060,10 +1070,10 @@
+   private autoPageModuleContent() {
+         ReaderControlAutoPageContent({
+           fullViewportHeight: this.contentEndpointHeight(true),
+-          isTablet: this.isExpanded(), motionProgress: this.frame().progress,
++          isTablet: this.isExpanded(), motionProgress: this.contentMotionProgress,
+           form: this.contentLocation().form,
+-          availableWidth: this.frame().content.width,
+-          availableHeight: this.frame().content.height,
++          availableWidth: this.contentMotionWidth,
++          availableHeight: this.contentMotionHeight,
+           interactionEnabled: this.secondaryModuleInputEnabled('autoPage'),
+           canPreviousChapter: this.currentChapterIndex > 0,
+           canNextChapter: this.currentChapterIndex >= 0 && this.currentChapterIndex < this.totalChapters - 1,
+@@ -1088,8 +1098,8 @@
+   private replaceModuleContent() {
+         ReaderControlReplaceContent({
+           fullContentHeight: this.contentEndpointHeight(true), quickContentHeight: this.contentEndpointHeight(false),
+-          state: this.controlReplaceState, motionProgress: this.frame().progress,
+-          availableWidth: this.frame().content.width, availableHeight: this.frame().content.height,
++          state: this.controlReplaceState, motionProgress: this.contentMotionProgress,
++          availableWidth: this.contentMotionWidth, availableHeight: this.contentMotionHeight,
+           interactionEnabled: this.secondaryModuleInputEnabled('replace'), dismissTemporaryRevision: this.dismissTemporaryRevision,
+           onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),
+           onBack: (): void => this.requestPage('home'),

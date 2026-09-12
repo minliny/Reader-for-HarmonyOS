@@ -1,0 +1,10 @@
+{
+  "status": "FAIL_BODY_IMAGE_REMAINED_PLACEHOLDER",
+  "firstHarnessIssue": "Continue-reading card pointed to long TXT, so the first reopen was the wrong book and is not a restore-result comparison. Explicit image tile subsequently opened correct EPUB.",
+  "before": "reader-control-image-scroll-restore-1.json",
+  "correctReopen": "reader-control-image-scroll-correct-book-2.json",
+  "lateRead": "reader-control-image-scroll-late-readonly-1.json",
+  "afterScroll": "reader-control-image-scroll-load-probe-1.json",
+  "observation": "First paragraph restored at orig y=-230, height738. Image originally y564 height704; reopened body image still blank with line-height placeholder even after late read and extra scroll. Source key omitted file URI/load state; candidate fix changes only image row render identity.",
+  "scope": "No logs proved a failed image request; cached plain-object branch reuse is code-supported cause pending VM repair proof."
+}

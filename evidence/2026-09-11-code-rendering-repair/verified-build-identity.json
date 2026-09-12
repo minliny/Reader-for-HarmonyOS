@@ -1,0 +1,92 @@
+{
+  "checkedAt": "2026-09-11T14:21:47.405259+00:00",
+  "runId": "20260911T142055Z-35f2f99a-5dc18ed4",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T142055Z-35f2f99a-5dc18ed4/manifest.json",
+  "gates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "0ddcc12c11f442695e761579860bcbf792bee630aa14f89a1e4704ccce3924d4",
+      "fileCount": 227,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "f9f1aa580c47d545de2492c04918db9e3a81ff865852707ba93d06e0f5e2e6aa",
+      "fileCount": 15,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "artifacts": [
+    {
+      "kind": "signed",
+      "path": "entry-default-signed.hap",
+      "bytes": 149189539,
+      "sha256": "14073a3ed774b55ad8b1bd4bcb1495bc10dd928000cbe66eb262450cbf32fe56",
+      "signature": {
+        "status": "signed",
+        "verified": true,
+        "profileType": "debug",
+        "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+        "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+        "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 14182944,
+        "sha256": "e478119704543e1f7f23b43d99109f909349034b352567b2f13e959549d0c9bb"
+      }
+    },
+    {
+      "kind": "unsigned",
+      "path": "entry-default-unsigned.hap",
+      "bytes": 148951106,
+      "sha256": "0521915fe6e0c9b9fcbdebd3a368cbc9ee8a5fe2924f88f21471e1e8cc6a1fa4",
+      "signature": {
+        "status": "unsigned",
+        "verified": false,
+        "profileType": "none"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 14182944,
+        "sha256": "e478119704543e1f7f23b43d99109f909349034b352567b2f13e959549d0c9bb"
+      }
+    }
+  ],
+  "snapshots": {
+    "source": {
+      "fileCount": 518,
+      "changedFiles": [],
+      "fingerprint": "5dc18ed47636fdaa4d651dec60d78b69a853d7c1012aa5684c3bbe2c1fadff39"
+    },
+    "controller": {
+      "fileCount": 227,
+      "changedFiles": [],
+      "fingerprint": "0ddcc12c11f442695e761579860bcbf792bee630aa14f89a1e4704ccce3924d4"
+    },
+    "workspace": {
+      "fileCount": 15,
+      "changedFiles": [],
+      "fingerprint": "f9f1aa580c47d545de2492c04918db9e3a81ff865852707ba93d06e0f5e2e6aa"
+    }
+  }
+}

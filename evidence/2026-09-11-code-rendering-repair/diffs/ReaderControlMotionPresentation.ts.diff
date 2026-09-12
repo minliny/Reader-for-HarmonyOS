@@ -1,0 +1,77 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts
++++ current/entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts
+@@ -52,6 +52,74 @@
+   height: number;
+ }
+ 
++export function readerControlMotionSourceFullyVisible(full: ReaderControlMotionClipRect,
++  viewportHeight: number, scrollOffset: number): boolean {
++  const offset = Math.max(0, scrollOffset);
++  return full.y >= offset && full.y + full.height <= offset + viewportHeight;
++}
++
++interface ReaderControlMotionClipEntry<T> {
++  progress: number; full: ReaderControlMotionClipRect; current: ReaderControlMotionClipRect;
++  quick: ReaderControlMotionClipRect; height: number; offset: number; density: number; shape: T;
++}
++function sameClipRect(a: ReaderControlMotionClipRect, b: ReaderControlMotionClipRect): boolean {
++  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
++}
++function copyClipRect(rect: ReaderControlMotionClipRect): ReaderControlMotionClipRect {
++  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
++}
++
++/** Per mounted content, bounded by actor count; never cache every floating-point pose. */
++export class ReaderControlMotionClipCache<T> {
++  private entries: Map<string, ReaderControlMotionClipEntry<T>> = new Map();
++  private rectangle: T | undefined = undefined;
++  private makePath: (path: string) => T;
++  private makeRectangle: () => T;
++  constructor(makePath: (path: string) => T, makeRectangle: () => T) {
++    this.makePath = makePath; this.makeRectangle = makeRectangle;
++  }
++  full(): T {
++    if (this.rectangle === undefined) this.rectangle = this.makeRectangle();
++    return this.rectangle;
++  }
++  sample(key: string, progress: number, full: ReaderControlMotionClipRect, current: ReaderControlMotionClipRect,
++    quick: ReaderControlMotionClipRect, height: number, offset: number, density: number): T {
++    if (readerControlMotionSourceFullyVisible(full, height, offset)) return this.full();
++    const cached = this.entries.get(key);
++    if (cached !== undefined && cached.progress === progress && cached.height === height && cached.offset === offset &&
++      cached.density === density && sameClipRect(cached.full, full) && sameClipRect(cached.current, current) &&
++      sameClipRect(cached.quick, quick)) return cached.shape;
++    const shape = this.makePath(readerControlMotionClipPath(
++      readerControlMotionClipRects(progress, full, current, quick, height, offset), density));
++    if (!this.entries.has(key) && this.entries.size >= 32) this.entries.clear();
++    this.entries.set(key, { progress, full: copyClipRect(full), current: copyClipRect(current), quick: copyClipRect(quick),
++      height, offset, density, shape });
++    return shape;
++  }
++}
++
++interface ReaderControlMotionPathEntry<T> { inputs: number[]; path: string; shape: T; }
++/** Cache custom unions/exclusions without changing their overflow or winding. */
++export class ReaderControlMotionPathCache<T> {
++  private entries: Map<string, ReaderControlMotionPathEntry<T>> = new Map();
++  private makePath: (path: string) => T;
++  constructor(makePath: (path: string) => T) { this.makePath = makePath; }
++  sample(key: string, inputs: number[], buildPath: () => string): T {
++    const cached = this.entries.get(key);
++    if (cached !== undefined && cached.inputs.length === inputs.length &&
++      inputs.every((value: number, index: number): boolean => value === cached.inputs[index])) return cached.shape;
++    return this.store(key, inputs, buildPath());
++  }
++  fromPath(key: string, path: string): T { return this.store(key, [], path); }
++  private store(key: string, inputs: number[], path: string): T {
++    const cached = this.entries.get(key);
++    const shape = cached !== undefined && cached.path === path ? cached.shape : this.makePath(path);
++    if (!this.entries.has(key) && this.entries.size >= 32) this.entries.clear();
++    this.entries.set(key, { inputs, path, shape });
++    return shape;
++  }
++}
++
+ /** Bound a destination to its real list window; rows outside Quick are not
+  * imaginary destinations and must not paint while passing through the window. */
+ export function readerControlMotionVisibleRect(rect: ReaderControlMotionClipRect,

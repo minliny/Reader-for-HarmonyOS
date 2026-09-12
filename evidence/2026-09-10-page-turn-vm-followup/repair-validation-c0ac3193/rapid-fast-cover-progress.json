@@ -1,0 +1,145 @@
+{
+  "mode": "覆盖",
+  "count": 40,
+  "intervalMs": 30,
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+    "chapter": 36,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章036段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "expected": {
+    "slot": "reader-page-slot-a",
+    "sha256": "a05fdf57eadc91d68f4c7dd55c5c29db978c8369a324be46e6ad56ead3bd9b1f",
+    "chapter": 46,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章046段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "samples": [
+    {
+      "direction": "next",
+      "elapsedSeconds": 6.162635292,
+      "visibleSlots": 2,
+      "current": null
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 7.029126375,
+      "visibleSlots": 2,
+      "current": null
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 7.907115374999999,
+      "visibleSlots": 2,
+      "current": null
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 8.778747708000001,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "2d7131ba09ec7d582d869ebc42dae52ad5ddbd0328c46575cb1d048c047fafed",
+        "chapter": 46,
+        "ordinal": 1,
+        "total": null,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章046段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 页"
+      }
+    },
+    {
+      "direction": "next",
+      "elapsedSeconds": 9.648093583,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "a05fdf57eadc91d68f4c7dd55c5c29db978c8369a324be46e6ad56ead3bd9b1f",
+        "chapter": 46,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章046段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 6.143792832999999,
+      "visibleSlots": 2,
+      "current": null
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 7.0165332079999985,
+      "visibleSlots": 2,
+      "current": null
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 7.878435665999998,
+      "visibleSlots": 2,
+      "current": null
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 8.749132708000001,
+      "visibleSlots": 2,
+      "current": null
+    },
+    {
+      "direction": "previous",
+      "elapsedSeconds": 9.616793583,
+      "visibleSlots": 1,
+      "current": {
+        "slot": "reader-page-slot-a",
+        "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+        "chapter": 36,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章036段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    }
+  ],
+  "next": {
+    "injectionSeconds": 5.471285125,
+    "settledObservationUpperBoundSeconds": 9.648093583,
+    "conservativePagesPerSecond": 4.145896767676492,
+    "status": "PASS canonical net target"
+  }
+}

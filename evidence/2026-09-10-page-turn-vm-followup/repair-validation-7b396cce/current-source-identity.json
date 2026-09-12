@@ -1,0 +1,19 @@
+{
+  "recordedAt": "2026-09-10T18:14:14.192614+00:00",
+  "runId": "20260910T180559Z-35f2f99a-7b396cce",
+  "scope": "compare every snapshotted source and controller file against the current worktree",
+  "source": {
+    "fileCount": 504,
+    "mismatches": [
+      {
+        "path": "entry/src/main/resources/rawfile/reader-oss-pilot/pilot.js",
+        "expected": "d6554924995b440958a6e7cc54f1b5285c0fe16954eb642d97ed4a0b94290eec",
+        "actual": "130f23b84bcf284e36f5287342f58699aa73f2eb417e1e1d5f0e8ca8001bdd07"
+      }
+    ]
+  },
+  "controller": {
+    "fileCount": 221,
+    "mismatches": []
+  }
+}

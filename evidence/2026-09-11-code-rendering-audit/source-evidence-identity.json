@@ -1,0 +1,43 @@
+{
+  "checkedAtUtc": "2026-09-11T13:40:08.235117+00:00",
+  "harmonyHead": "35f2f99a8d635615475fde75120bf8629f944565",
+  "harmonyBranch": "codex/appearance-progress-axis-20260904",
+  "installedCandidateRunId": "20260911T120809Z-35f2f99a-a11ccc84",
+  "scope": "Compare recorded manifest input files with current filesystem; no install or VM access",
+  "source": {
+    "recordedFileCount": 512,
+    "changed": [
+      "entry/src/main/ets/features/common/ReaderSelect.ets",
+      "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+      "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets"
+    ],
+    "missing": [],
+    "originalFingerprint": "a11ccc84e5648e21287c8df2a5a9309d9130ba49b10a813249dceed90e6d0cd5"
+  },
+  "controller": {
+    "recordedFileCount": 223,
+    "changed": [
+      "tools/svg-provenance.config.mjs"
+    ],
+    "missing": [],
+    "originalFingerprint": "6acb820507d3e88780a7fd76fb87c6a9d2b79ed8aceaab193de2a8ceb4d703ba"
+  },
+  "auditedSourceHashes": {
+    "entry/src/main/ets/features/reading/ReadingSurface.ets": "01e6d20621d52d1d0f727833c79fd964869e79a88999ab29b554998d81c8fd32",
+    "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets": "3ac41d608021113ed808685bf404c4560ff41e942cac1f783882f106cfbdaa5c",
+    "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets": "b2a61c962c31fbe7c25c829b9069279468b22982d50cc95adf151dd90ad414a4",
+    "entry/src/main/ets/features/reading/ReaderControlPanel.ets": "3420012c60af200a1bf7370381908aaf10701a5ad5c5b2823853d3df3116bfb8",
+    "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets": "3114a1e29318da308722359e13dcbcee60ded3d455fe4dca98ed8dbc02469ddd",
+    "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets": "7d52a6daa943be88592bcbf7b15b7f21a3e37568a67832728dedb176a757e90a",
+    "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets": "b2c4edfe1ba6ebd5066568d07abbd5149ca6635ba0d6f086ae7ec4caaee0b804",
+    "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets": "a2f33b882a516dc2bfc38381f508954e62eeae5c82d7c2c37242facc80d14d98",
+    "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets": "67f8e1554df250713174d26b6a5672b86e10a142e80bba6d5544174486c50b1e",
+    "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "017056a77deac25abcccaca393db672e224590f13de472c6a797058f1da65d21",
+    "entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts": "450ad98e35b9abc8de604a74aa80c34f671f33712bbb7df99e01e2181990be71",
+    "entry/src/main/ets/features/reading/BookTurnPresentationSession.ets": "2b4a48146d846f655aa8a2367fb4d3aa62627e2da2fa9f33ccabeaa836e308dd",
+    "entry/src/main/cpp/bookturn/bookturn_napi.cpp": "dad00d2e79cf4845dabc3623c8afd01a56dfaa27a1e698fa07ab8a24f1b99ef5",
+    "entry/src/main/cpp/bookturn/bookturn_host.cpp": "fb19b97b0198e95497c94932f3ce50bab406359fd5c46b1c9969d7bf6273638b",
+    "entry/src/main/cpp/bookturn/bookturn_renderer.cpp": "2b33616963dc04a02c06dc4624e79f38bf7d880b06a9b66e57ddb49d0ef4120d"
+  },
+  "auditedSourcesMatchCandidate": false
+}

@@ -1,0 +1,90 @@
+{
+  "scope": "Production method call counts; synthetic inputs; no ArkUI engine or VM",
+  "settings": {
+    "120RepeatedAttributeEvaluationsAtSamePose": {
+      "pathShapes": 720,
+      "pathCommands": 720,
+      "actorSamples": 2160,
+      "geometrySamples": 1,
+      "densityReads": 720,
+      "scrollOffsetReads": 120,
+      "scrollTo": 0
+    },
+    "120ChangingPoses": {
+      "pathShapes": 720,
+      "pathCommands": 720,
+      "actorSamples": 2160,
+      "geometrySamples": 120,
+      "densityReads": 720,
+      "scrollOffsetReads": 120,
+      "scrollTo": 0
+    },
+    "clipFastPath": {
+      "fullViewportHeight": 666,
+      "scrollOffset": 0,
+      "all726ActorsFullyCovered": 726,
+      "partialSourceCasesAcrossOtherViewportsAndOffsets": 2178,
+      "implication": "Source rectangle alone covers entire local actor in the unscrolled 666vp case; partial scrolling cases must retain custom clipping"
+    }
+  },
+  "directory": {
+    "chapters-deepPartialRow": {
+      "corrections": 120,
+      "indexReads": 1,
+      "rectReads": 1
+    },
+    "chapters-atTop": {
+      "corrections": 120,
+      "indexReads": 1,
+      "rectReads": 1
+    },
+    "bookmarks-deepPartialRow": {
+      "corrections": 120,
+      "indexReads": 1,
+      "rectReads": 1
+    },
+    "bookmarks-atTop": {
+      "corrections": 120,
+      "indexReads": 1,
+      "rectReads": 1
+    }
+  },
+  "highlights": {
+    "12FragmentsNoActiveHighlight": {
+      "frameCallbacks": 12,
+      "canvasClears": 12,
+      "providerReads": 12,
+      "liveFragmentVisits": 144,
+      "outputs": 12,
+      "emptyOutputs": 12
+    },
+    "24FragmentsNoActiveHighlight": {
+      "frameCallbacks": 24,
+      "canvasClears": 24,
+      "providerReads": 24,
+      "liveFragmentVisits": 576,
+      "outputs": 24,
+      "emptyOutputs": 24
+    },
+    "48FragmentsNoActiveHighlight": {
+      "frameCallbacks": 48,
+      "canvasClears": 48,
+      "providerReads": 48,
+      "liveFragmentVisits": 2304,
+      "outputs": 48,
+      "emptyOutputs": 48
+    }
+  },
+  "text": {
+    "NoActiveHighlight": {
+      "rangeCalls": 4,
+      "utf16Calls": 0,
+      "scalarScanIterations": 0
+    },
+    "ActiveHighlight500To700Of1000Scalars": {
+      "rangeCalls": 6,
+      "utf16Calls": 12,
+      "scalarScanIterations": 7200
+    }
+  }
+}

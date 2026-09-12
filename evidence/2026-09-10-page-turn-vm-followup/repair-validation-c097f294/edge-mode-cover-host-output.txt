@@ -1,0 +1,1 @@
+{"status": "selected-confirmed", "label": "edge-mode-cover"}

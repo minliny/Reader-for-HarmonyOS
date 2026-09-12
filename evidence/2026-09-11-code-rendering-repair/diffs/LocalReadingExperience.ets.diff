@@ -1,0 +1,56 @@
+--- before/entry/src/main/ets/features/reading/LocalReadingExperience.ets
++++ current/entry/src/main/ets/features/reading/LocalReadingExperience.ets
+@@ -5758,7 +5758,8 @@
+     this.ttsFailurePolicy = preferences.failurePolicy;
+     this.ttsFollowHighlight = preferences.followHighlight;
+     this.ttsCoordinator?.setPauseOnInterruption(preferences.pauseOnInterruption);
+-    this.ttsCoordinator?.setAllowMixing(preferences.allowMixing);
++    void this.ttsCoordinator?.setAllowMixing(preferences.allowMixing)
++      .catch((error: Error): void => this.logTtsFailure('audio-session', error));
+     this.ttsCoordinator?.setFailurePolicy(preferences.failurePolicy);
+     if (repairedVoice) this.persistTtsPreferences();
+   }
+@@ -5942,7 +5943,8 @@
+ 
+   private changeTtsAllowMixing(enabled: boolean): void {
+     this.ttsAllowMixing = enabled;
+-    this.ttsCoordinator?.setAllowMixing(enabled);
++    void this.ttsCoordinator?.setAllowMixing(enabled)
++      .catch((error: Error): void => this.logTtsFailure('audio-session', error));
+     this.persistTtsPreferences();
+   }
+ 
+@@ -5980,10 +5982,12 @@
+   }
+ 
+   private async changeTtsEngine(engine: string): Promise<void> {
+-    if (engine !== 'system' && !/^http-tts:\d+$/.test(engine)) return;
++    if (engine !== 'system' && !this.ttsHttpEngines.some((item: ReaderHttpTtsConfig): boolean =>
++      engine === `http-tts:${item.id}`)) throw new Error('该在线 TTS 配置不存在，请重新选择');
+     const gateway = this.ttsGateway;
+     const coordinator = this.ttsCoordinator;
+-    if (gateway === undefined || coordinator === undefined || engine === this.ttsEngine) return;
++    if (gateway === undefined || coordinator === undefined) throw new Error('朗读服务正在初始化，请稍后重试');
++    if (engine === this.ttsEngine) return;
+     try {
+       await coordinator.stop('user');
+       const prior = this.ttsConfig;
+@@ -6005,7 +6009,7 @@
+ 
+   private async saveHttpTtsEngine(config: ReaderHttpTtsConfig): Promise<void> {
+     const gateway = this.ttsHttpGateway;
+-    if (gateway === undefined) return;
++    if (gateway === undefined) throw new Error('朗读服务正在初始化，请稍后重试');
+     const existing = this.ttsHttpEngines.find(
+       (engine: ReaderHttpTtsConfig): boolean => engine.id === config.id,
+     );
+@@ -6040,7 +6044,8 @@
+     const httpGateway = this.ttsHttpGateway;
+     const configGateway = this.ttsGateway;
+     const coordinator = this.ttsCoordinator;
+-    if (httpGateway === undefined || configGateway === undefined || coordinator === undefined) return;
++    if (httpGateway === undefined || configGateway === undefined || coordinator === undefined)
++      throw new Error('朗读服务正在初始化，请稍后重试');
+     try {
+       await this.deleteHttpTtsEngineCoreFirst(id, httpGateway, configGateway, coordinator);
+     } catch (error) {

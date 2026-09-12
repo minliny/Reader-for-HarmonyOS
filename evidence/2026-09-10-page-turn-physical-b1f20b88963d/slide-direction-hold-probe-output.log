@@ -1,0 +1,12 @@
+{"case":"default preparation order","directions":["next","previous"]}
+{"case":"restored anchor without measured predecessor","next":{"chapterIndex":3,"chapterOffset":200},"previous":null}
+{"case":"shared busy gate blocks both directions even with prepared pages","next":false,"previous":false}
+{"case":"cold rejection does not start presentation after readiness improves while held","presented":0,"pointerRejected":true}
+{"case":"settlement unlock rebases held segment without starting a new page turn","phase":"tracking","offset":0}
+{"case":"admitted horizontal displacement is symmetric","samples":6}
+{"case":"hot admitted MOVE and reverse retreat without UP","direction":"next","offsetTrace":[-40,-120,-80],"phase":"dragging","meaning":"synchronous owner state only, not presented frames"}
+{"case":"same pointer crosses original down point","direction":"next","actualDirection":"next","offset":0,"meaning":"current direction lock, requires explicit behavior decision"}
+{"case":"hot admitted MOVE and reverse retreat without UP","direction":"previous","offsetTrace":[40,120,80],"phase":"dragging","meaning":"synchronous owner state only, not presented frames"}
+{"case":"same pointer crosses original down point","direction":"previous","actualDirection":"previous","offset":0,"meaning":"current direction lock, requires explicit behavior decision"}
+(node:38253) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,0 +1,11 @@
+{
+  "at": "2026-09-11T22:31:05+0800",
+  "targetRef": "6460677a198b",
+  "bootCompleted": "true",
+  "sceneBoardPids": [
+    "2458",
+    "2458"
+  ],
+  "bootLog": "2026-09-06 23:19:34.938 13261991936 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!",
+  "alarms": []
+}

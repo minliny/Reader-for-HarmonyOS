@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "readOnly": true,
+  "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+  "rootNodeId": "1938:4927",
+  "provenance": {
+    "liveReceipt": "evidence/control-bar-development-20260905/SEARCH_RESULTS_CLIP_LIVE_RECEIPT_20260906.json",
+    "liveReceiptSha256": "7c0f8dec0ef2a9935f2d919230ba212991f6cfb0d3c5a7625807b536e27120ad",
+    "requestTool": "figma_use_figma",
+    "requestNodeIds": [
+      "1938:5074",
+      "1938:5085",
+      "1938:5086",
+      "1938:5087",
+      "1938:5088",
+      "1938:5101",
+      "1939:382"
+    ],
+    "archivedDesignAndMotion": "tools/fixtures/reader-control-search-settings-live-20260905.json",
+    "archivedSha256": "265f849cbca5b39436fe1a471046e551371ea7aef0cd31020a898d41a2e5fe69",
+    "note": "Selected live raw node fields, not generated from application geometry. Query and Results have no own animation in the archived recursive motion inventory. Runtime Scroll extent adaptation is not a Figma scrollMax value."
+  },
+  "nodes": [
+    {
+      "id": "1938:5074",
+      "name": "PersistentActor/UnifiedSheetSurface",
+      "parentId": "1938:5001",
+      "x": 13,
+      "y": 89,
+      "width": 364,
+      "height": 736,
+      "clipsContent": true,
+      "overflowDirection": "NONE",
+      "isMask": false,
+      "opacity": 1,
+      "layoutMode": "GRID",
+      "layoutPositioning": "AUTO",
+      "strokeTopWeight": 1,
+      "strokeBottomWeight": 1,
+      "strokeLeftWeight": 1,
+      "strokeRightWeight": 1,
+      "strokeAlign": "INSIDE",
+      "children": [
+        {
+          "id": "1938:5075",
+          "name": "AddedActor/FullHeader"
+        },
+        {
+          "id": "1938:5085",
+          "name": "ContentViewport"
+        },
+        {
+          "id": "1938:5112",
+          "name": "Button - 收起到快捷控制栏"
+        }
+      ]
+    },
+    {
+      "id": "1938:5085",
+      "name": "ContentViewport",
+      "parentId": "1938:5074",
+      "x": 14,
+      "y": 58,
+      "width": 336,
+      "height": 665,
+      "clipsContent": true,
+      "overflowDirection": "NONE",
+      "isMask": false,
+      "opacity": 1,
+      "layoutMode": "GRID",
+      "layoutPositioning": "AUTO",
+      "strokeTopWeight": 1,
+      "strokeBottomWeight": 1,
+      "strokeLeftWeight": 1,
+      "strokeRightWeight": 1,
+      "strokeAlign": "INSIDE",
+      "children": [
+        {
+          "id": "1938:5086",
+          "name": "Section - 完整内容搜索"
+        }
+      ]
+    },
+    {
+      "id": "1938:5086",
+      "name": "Section - 完整内容搜索",
+      "parentId": "1938:5085",
+      "x": 1,
+      "y": 1,
+      "width": 334,
+      "height": 664,
+      "clipsContent": true,
+      "overflowDirection": "NONE",
+      "isMask": false,
+      "opacity": 1,
+      "layoutMode": "GRID",
+      "layoutPositioning": "AUTO",
+      "strokeTopWeight": 1,
+      "strokeBottomWeight": 1,
+      "strokeLeftWeight": 1,
+      "strokeRightWeight": 1,
+      "strokeAlign": "INSIDE",
+      "children": [
+        {
+          "id": "1938:5087",
+          "name": "Container"
+        }
+      ]
+    },
+    {
+      "id": "1938:5087",
+      "name": "Container",
+      "parentId": "1938:5086",
+      "x": 0,
+      "y": 0,
+      "width": 334,
+      "height": 664,
+      "clipsContent": true,
+      "overflowDirection": "NONE",
+      "isMask": false,
+      "opacity": 1,
+      "layoutMode": "GRID",
+      "layoutPositioning": "AUTO",
+      "strokeTopWeight": 1,
+      "strokeBottomWeight": 1,
+      "strokeLeftWeight": 1,
+      "strokeRightWeight": 1,
+      "strokeAlign": "INSIDE",
+      "children": [
+        {
+          "id": "1938:5088",
+          "name": "PersistentModule/Search/Query"
+        },
+        {
+          "id": "1938:5101",
+          "name": "PersistentModule/Search/Results"
+        }
+      ]
+    },
+    {
+      "id": "1938:5088",
+      "name": "PersistentModule/Search/Query",
+      "parentId": "1938:5087",
+      "x": 0,
+      "y": 0,
+      "width": 334,
+      "height": 51,
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "isMask": false,
+      "opacity": 1,
+      "layoutMode": "GRID",
+      "layoutPositioning": "AUTO",
+      "strokeTopWeight": 0,
+      "strokeBottomWeight": 1,
+      "strokeLeftWeight": 0,
+      "strokeRightWeight": 0,
+      "strokeAlign": "INSIDE",
+      "children": [
+        {
+          "id": "1938:5089",
+          "name": "LayoutPlaceholder/SearchField"
+        },
+        {
+          "id": "1938:5096",
+          "name": "LayoutPlaceholder/SearchAction"
+        },
+        {
+          "id": "1939:346",
+          "name": "PersistentActor/SearchField"
+        },
+        {
+          "id": "1939:365",
+          "name": "PersistentActor/SearchAction"
+        }
+      ]
+    },
+    {
+      "id": "1938:5101",
+      "name": "PersistentModule/Search/Results",
+      "parentId": "1938:5087",
+      "x": 0,
+      "y": 51,
+      "width": 334,
+      "height": 612,
+      "clipsContent": true,
+      "overflowDirection": "VERTICAL",
+      "isMask": false,
+      "opacity": 1,
+      "layoutMode": "VERTICAL",
+      "layoutPositioning": "AUTO",
+      "strokeTopWeight": 1,
+      "strokeBottomWeight": 1,
+      "strokeLeftWeight": 1,
+      "strokeRightWeight": 1,
+      "strokeAlign": "INSIDE",
+      "children": [
+        {
+          "id": "1938:5102",
+          "name": "LayoutPlaceholder/SearchResult/1"
+        },
+        {
+          "id": "1938:5107",
+          "name": "LayoutPlaceholder/SearchResult/2"
+        },
+        {
+          "id": "1939:382",
+          "name": "PersistentActor/SearchResult/1"
+        },
+        {
+          "id": "1939:399",
+          "name": "PersistentActor/SearchResult/2"
+        }
+      ]
+    },
+    {
+      "id": "1939:382",
+      "name": "PersistentActor/SearchResult/1",
+      "parentId": "1938:5101",
+      "x": 10,
+      "y": 5,
+      "width": 314,
+      "height": 72,
+      "clipsContent": false,
+      "overflowDirection": "NONE",
+      "isMask": false,
+      "opacity": 1,
+      "layoutMode": "NONE",
+      "layoutPositioning": "ABSOLUTE",
+      "strokeTopWeight": 1,
+      "strokeBottomWeight": 1,
+      "strokeLeftWeight": 1,
+      "strokeRightWeight": 1,
+      "strokeAlign": "INSIDE",
+      "children": [
+        {
+          "id": "1939:383",
+          "name": "Bold Text"
+        },
+        {
+          "id": "1939:385",
+          "name": "Small"
+        }
+      ]
+    }
+  ]
+}

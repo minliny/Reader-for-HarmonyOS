@@ -71,19 +71,21 @@ assert.match(modulePanel,
 assert.match(fullPanel, /@State private projectedBookmarks: ReaderBookmarkRowModel\[\] = \[\]/);
 assert.match(fullPanel, /const nextQuery = this\.searchDraft\.trim\(\);\s*this\.searchQuery = nextQuery;\s*this\.rebuildProjection\(this\.activeTab, this\.ascending, nextQuery\);/,
   'search must forward the freshly trimmed query explicitly');
-assert.match(fullPanel, /projectReaderBookmarkRows\(\s*this\.entries, query, this\.bookmarkIdentity\)/);
+assert.match(fullPanel, /projectReaderBookmarkRows\(\s*sourceEntries, query, this\.bookmarkIdentity\)/);
 assert.match(fullPanel,
   /rowBuilder: \(repeatItem: RepeatItem<LocalReadingTocEntry>\) => \{\s*this\.chapterRow\(repeatItem\);/,
   'full directory rows must use the inline arrow-closure builder');
 assert.doesNotMatch(fullPanel, /private bookmarkRow\(/,
   'full panel must not keep its own bookmark row builder');
-assert.doesNotMatch(fullPanel, /BOOKMARK_ROW_HEIGHT/,
-  'bookmark row geometry is owned by ReaderBookmarkRow');
+assert.doesNotMatch(fullPanel, /(?:const|let|var)\s+BOOKMARK_ROW_HEIGHT\s*=/,
+  'bookmark row geometry must not be redefined in the panel');
+assert.match(fullPanel, /import \{ BOOKMARK_ROW_HEIGHT \} from '\.\/ReaderBookmarkRow'/,
+  'initial list positioning must consume the real row owner height, not a copied constant');
 
 // Directory list frame: lazy creation with the no-reuse policy intact.
 assert.match(directoryList, /List\(\{ space: 0, scroller: this\.scroller \}\)/);
 assert.match(directoryList,
-  /Repeat\(this\.entries\)[\s\S]*\.key\(\(entry: LocalReadingTocEntry\): string => `reader-directory-row-\$\{entry\.index\}`\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.entries\.length, reusable: false \}\)/,
+  /LazyForEach\(this\.dataSource[\s\S]*reader-directory-row-\$\{entry\.index\}/,
   'directory list must keep lazy creation and stable chapter identity');
 assert.match(directoryList, /@BuilderParam rowBuilder: \(repeatItem: RepeatItem<LocalReadingTocEntry>\) => void;/);
 assert.match(directoryList, /onFirstLayout/);

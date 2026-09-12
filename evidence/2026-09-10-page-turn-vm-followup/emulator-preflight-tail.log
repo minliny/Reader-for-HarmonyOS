@@ -1,0 +1,81 @@
+2026-09-06 23:19:06.734 8400658816 [Info] [TraceTool.cpp(InitPipe:27)][TraceTool] trace pipe name is: "/tmp/trace_88943_commandPipe"
+2026-09-06 23:19:06.734 8400658816 [Info] [TraceTool.cpp(InitPipe:36)][TraceTool] connect successed
+2026-09-06 23:19:06.797 8400658816 [Info] [SnUtil.cpp(CheckLogin:176)]The user has logged in.
+2026-09-06 23:19:06.797 8400658816 [Info] [SnUtil.cpp(CheckWhitelist:187)]isUseWhitelist is false. The user is not restricted.
+2026-09-06 23:19:06.797 6103445504 [Info] [HiviewxClient.cpp(GetPortFromConfig:128)]HiviewxClient read port:  16556
+2026-09-06 23:19:06.798 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:88)]Enable Camera.
+2026-09-06 23:19:06.798 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:92)]Enable front and back cameras.
+2026-09-06 23:19:06.798 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:97)]Enable MultiDisplay Kernel Feature.
+2026-09-06 23:19:06.798 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:106)]Enable Express Multi Touch.
+2026-09-06 23:19:06.798 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:111)]Enable Sensor Configuration.
+2026-09-06 23:19:06.798 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:116)]Enable Bgra Configuration.
+2026-09-06 23:19:06.799 8400658816 [Info] [CheckImage.cpp(CheckAllSign:88)]start check image
+2026-09-06 23:19:06.800 8400658816 [Info] [Skin.cpp(InitByDeviceType:620)]Emulator screen  "notCustomize"
+2026-09-06 23:19:06.800 8400658816 [Info] [Skin.cpp(SetDefaultDisplayCutoutPath:1151)]DefaultDisplayCutoutPath =  "M464 38 L816 38 v 84 h -352 Z"
+2026-09-06 23:19:06.800 8400658816 [Info] [Skin.cpp(InitPhone:678)]Init Phone dpi =  560
+2026-09-06 23:19:06.814 6104018944 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "ramdisk.img"  result  0  cost  15
+2026-09-06 23:19:06.896 6104018944 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "Image"  result  0  cost  82
+2026-09-06 23:19:06.913 8400658816 [Info] [WidgetSettings.cpp(InitImageLanguageComboBox:247)]Init imge language to Index  0
+2026-09-06 23:19:06.943 8400658816 [Warning] [(:0)]Cannot open file ':/light/charging-off.svg', because: No such file or directory
+2026-09-06 23:19:06.943 8400658816 [Warning] [(:0)]Cannot open file ':/light/charging-off.svg', because: No such file or directory
+2026-09-06 23:19:06.943 8400658816 [Warning] [(:0)]Cannot open file ':/light/charging-on.svg', because: No such file or directory
+2026-09-06 23:19:06.943 8400658816 [Warning] [(:0)]Cannot open file ':/light/charging-on.svg', because: No such file or directory
+2026-09-06 23:19:07.001 8400658816 [Warning] [LogUtil.cpp(OutputPath:246)]can not find file :  "$USER_HOME$/Library/Application Support/Huawei/DevEcoStudio6.1/emulator/proxy.settings.pwd"
+2026-09-06 23:19:07.004 8400658816 [Info] [PlayerApiToolBar.cpp(UpdateOverflowButtonIcon:109)]":/light/overflow-default"
+2026-09-06 23:19:07.005 8400658816 [Info] [PlayerApiToolBar.cpp(UpdateOverflowButtonIcon:109)]":/light/overflow-hover"
+2026-09-06 23:19:07.013 8400658816 [Info] [ToolBarController.cpp(StackedActionAdder:231)]enable multi display
+2026-09-06 23:19:07.040 6104592384 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "vendor.img"  result  0  cost  241
+2026-09-06 23:19:07.147 8400658816 [Warning] [(:0)]Populating font family aliases took 72 ms. Replace uses of missing font family "HarmonyOS Sans SC Medium" with one that exists to avoid this cost. 
+2026-09-06 23:19:07.153 8400658816 [Info] [EmulatorWindowEvent.cpp(ShowBootAnimation:1306)]ShowBootAnimation.
+2026-09-06 23:19:07.158 8400658816 [Info] [CrashClient.cpp(StartCrashDetect:148)]StartCrash Detect.
+2026-09-06 23:19:07.158 8400658816 [Info] [CrashClient.cpp(StartCrashServer:404)]start crash server.
+2026-09-06 23:19:07.266 6265548800 [Info] [QemuManager.cpp(OnSystemReset:640)]System is reset
+2026-09-06 23:19:07.266 6265548800 [Info] [HdcClient.cpp(HdcDisConnect:555)]dicconnect hdc server
+2026-09-06 23:19:07.360 6104592384 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "userdata.img"  result  0  cost  320
+2026-09-06 23:19:09.580 6104592384 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "sys_prod.img"  result  0  cost  2220
+2026-09-06 23:19:17.344 6104018944 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "system.img"  result  0  cost  10448
+2026-09-06 23:19:34.938 13261991936 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!
+2026-09-06 23:19:34.942 8400658816 [Info] [EmulatorWindowEvent.cpp(StopBootAnimation:1317)]StopBootAnimation.
+2026-09-06 23:19:34.943 8400658816 [Info] [WidgetSettings.cpp(InitImageLanguageComboBox:236)]GuestOS Boot Complete! Enabling ImageLanguageComboBox
+2026-09-06 23:19:35.267 6264975360 [Info] [LambdaRepeatWorker.cpp(run:29)]current interval:  4000
+2026-09-06 23:19:35.289 6105739264 [Warning] [HdcClient.cpp(IsHdcConnected:110)]hdc is not connected, hdc not init
+2026-09-06 23:19:35.557 13262565376 [Info] [QemuManager.cpp(OnClipboardPipeReady:730)]Clipboard Pipe is Ready
+2026-09-06 23:19:35.769 6103445504 [Info] [HiviewxClient.cpp(OnConnected:65)]HiviewxClient linked:  QHostAddress("127.0.0.1") 16556
+2026-09-06 23:19:35.784 6103445504 [Info] [HiviewxClient.cpp(SendCommand:162)]HiviewxStatus turn to on
+2026-09-06 23:19:37.433 6267842560 [Warning] [HdcClient.cpp(IsHdcConnected:110)]hdc is not connected, hdc not init
+2026-09-06 23:20:35.266 6264975360 [Info] [LambdaRepeatWorker.cpp(run:29)]current interval:  1000
+2026-09-07 08:22:18.955 13028372480 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-07 08:22:19.959 6097711104 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-07 08:22:20.015 6108606464 [Warning] [HdcClient.cpp(IsHdcConnected:114)]hdc is not connected, hdc list target not identify
+2026-09-07 08:23:25.021 6108033024 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T08:23:25.021"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 08:23:25.818 6108606464 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T08:23:25.818"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 08:24:02.601 6108033024 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T08:24:02.601"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 08:24:03.051 6108606464 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T08:24:03.051"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 08:24:03.654 6105739264 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T08:24:03.654"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 19:18:47.718 8400658816 [Info] [AppNativeUtil.mm(handleSystemNativeEvent:99)]System will sleep.
+2026-09-07 19:39:35.226 8400658816 [Info] [AppNativeUtil.mm(handleSystemNativeEvent:101)]System is resuming from suspend, SendSyncTimeCommand.
+2026-09-07 22:03:43.324 6108606464 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T22:03:43.323"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 22:03:54.838 6108606464 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T22:03:54.838"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 22:04:35.669 6108606464 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T22:04:35.669"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 22:04:36.567 6108033024 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T22:04:36.567"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 22:04:37.983 6105739264 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T22:04:37.983"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-07 23:57:03.445 6108033024 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-07T23:57:03.445"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-08 13:30:02.385 19632189440 [Warning] [QemuManager.cpp(CheckGuestStatus:483)]Time delta value is large, delta:  4
+2026-09-08 17:54:35.103 19632189440 [Warning] [QemuManager.cpp(CheckGuestStatus:483)]Time delta value is large, delta:  4
+2026-09-08 18:44:53.960 8400658816 [Info] [AppNativeUtil.mm(handleSystemNativeEvent:99)]System will sleep.
+2026-09-08 19:00:18.404 8400658816 [Info] [AppNativeUtil.mm(handleSystemNativeEvent:101)]System is resuming from suspend, SendSyncTimeCommand.
+2026-09-09 08:29:03.563 6108033024 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-09T08:29:03.563"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-09 08:29:04.414 6105739264 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-09T08:29:04.414"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-09 08:29:06.062 6108606464 [Info] [TraceTool.cpp(SendTraceData:52)]{"action":"EMULATOR_TOOL_NAVIGATION","detail":{"API_LEVEL":"23","CPU":"arm64","DEVICE_TYPE":"phone","EMULATOR_VERSION":"6.1.1.350","HOST_OS":"macOS 26.6","OPERATION":"back","OS_VERSION":"6.1.0.115","TIME":"2026-09-09T08:29:06.062"},"devModel":"PHEMU-FD00","sid":"10077"}
+2026-09-10 00:33:37.511 6100004864 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 00:33:44.990 6100004864 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 00:33:45.075 6264975360 [Warning] [CrashClient.cpp(AddHilogToDirectory:388)]excute hilog error
+2026-09-10 00:42:49.656 6273249280 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 00:42:50.831 6273249280 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 00:43:37.016 6270054400 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 01:16:03.430 6292385792 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 01:16:04.736 13069938688 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 01:16:04.796 6264975360 [Warning] [CrashClient.cpp(AddHilogToDirectory:388)]excute hilog error
+2026-09-10 01:16:36.792 13065252864 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 01:16:57.312 13065252864 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-10 02:50:19.401 6101151744 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.

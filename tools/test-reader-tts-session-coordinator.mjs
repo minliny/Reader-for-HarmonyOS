@@ -27,7 +27,7 @@ class FakeGateway {
   async pause() { this.calls.push('pause'); this.queueState = 'paused'; return this.snapshot('paused'); }
   async resume() { this.calls.push('resume'); this.queueState = 'playing'; return this.snapshot('playing'); }
   async stop() { this.calls.push('stop'); this.queueState = 'stopped'; return this.snapshot('stopped'); }
-  async setRate(_chapter, rate) { this.calls.push(`rate:${rate}`); return this.snapshot('playing'); }
+  async setRate(_chapter, rate) { this.calls.push(`rate:${rate}`); return this.snapshot(this.queueState); }
   async previous() { this.calls.push('previous'); this.cursor = Math.max(0, this.cursor - 1); return this.snapshot('playing'); }
   async seek(_chapter, index) { this.calls.push(`seek:${index}`); this.cursor = index; return this.snapshot(this.queueState); }
   async skip() { this.calls.push('skip'); this.cursor += 1; return this.cursor >= 2 ? this.snapshot('completed') : this.snapshot('playing'); }
@@ -330,5 +330,132 @@ assert.doesNotMatch(
 );
 assert.doesNotMatch(coordinatorSource, /task\.catch\(\(\): void => \{\}\)/,
   'the operation tail must never swallow rejections silently');
+assert.match(coordinatorSource, /MAX_RETAINED_COMPLETED_UTTERANCES = 128/,
+  'late callback retention must have a fixed upper bound');
+assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.requestId\)/,
+  'successful audio completion must enter the bounded late-callback window');
+
+// Exercise the production retention helper directly with synthetic
+// correlations.  This keeps the regression deterministic and avoids needing
+// a 129-slice fake speech engine just to prove the memory bound.
+{
+  const bounded = new ReaderTtsSessionCoordinator(new FakeGateway(), new FakeHost());
+  const correlation = {
+    identity: { sessionGeneration: 1, contentVersion: 1, chapterKey: 'source-1\\u0000book-1\\u00000' },
+    chapter,
+    sliceIndex: 0,
+    charEnd: 1,
+    failurePolicy: 'stop',
+  };
+  for (let index = 0; index < 160; index += 1) {
+    const requestId = `retained-${index}`;
+    bounded.utterances.set(requestId, correlation);
+    bounded.retainUtteranceCorrelation(requestId);
+  }
+  assert.equal(bounded.utterances.size, 128,
+    'completed/retired callback correlations must remain bounded');
+  assert.equal(bounded.utterances.has('retained-0'), false,
+    'oldest retained correlation must be evicted first');
+  assert.equal(bounded.utterances.has('retained-159'), true,
+    'newest retained correlation must remain available for late callbacks');
+  bounded.clearUtteranceCorrelations();
+  assert.equal(bounded.utterances.size, 0);
+  assert.equal(bounded.retainedUtteranceIds.size, 0);
+  await bounded.dispose();
+}
+
+// A repeated selection must not orphan the audible utterance; paused rate
+// changes update Core and preferences without starting audio implicitly.
+{
+  const g = new FakeGateway(), h = new FakeHost();
+  const c = new ReaderTtsSessionCoordinator(g, h, async () => {});
+  await c.start({ chapter, content: canonicalRemoteContent, contentVersion: 99, scalarPosition: 0 });
+  const id = h.requests.at(-1).requestId;
+  h.emit({ type: 'start', requestId: id }); await c.whenSettled();
+  const token = c.getTransportState().currentRequestId;
+  const count = h.requests.length;
+  await c.setRate(c.getState().rate);
+  assert.equal(c.getTransportState().currentRequestId, token);
+  assert.equal(h.requests.length, count);
+  h.emit({ type: 'complete', requestId: id, completion: 'audio' }); await c.whenSettled();
+  assert.equal(c.getState().sliceIndex, 1, 'completion still advances after choosing the same rate');
+  await c.pause();
+  const pausedCount = h.requests.length;
+  await c.setRate(1.6);
+  assert.equal(c.getState().status, 'paused');
+  assert.equal(h.requests.length, pausedCount, 'changing paused rate does not speak');
+  assert.ok(g.calls.includes('rate:8'));
+  await c.resume();
+  assert.equal(h.requests.at(-1).rate, 1.6);
+  await c.setAllowMixing(true);
+  assert.equal(h.calls.at(-1), 'activate:true', 'active audio session receives the new mixing policy');
+  await c.stop(); await c.dispose();
+}
+
+// Engine probing is serialized with playback admission.  A delayed probe must
+// not switch the Host router back to its stale engine after a newer session has
+// already selected and started another engine.
+{
+  class DelayedSelectHost extends FakeHost {
+    selectCount = 0;
+    firstSelectEntered;
+    releaseFirstSelect;
+    async selectEngine(engine) {
+      this.calls.push(`engine:${engine ?? 'system'}`);
+      this.selectCount += 1;
+      if (this.selectCount === 1) {
+        this.firstSelectEntered = new Promise(resolve => { this.releaseFirstSelect = resolve; });
+        await this.firstSelectEntered;
+      }
+      return true;
+    }
+  }
+  class ConfigRaceGateway extends FakeGateway {
+    configCount = 0;
+    async getConfig() {
+      this.configCount += 1;
+      return { engine: this.configCount === 1 ? 'http-tts:stale' : 'system', rate: 5, pitch: 0, followSys: false };
+    }
+  }
+  const g = new ConfigRaceGateway();
+  const h = new DelayedSelectHost();
+  const c = new ReaderTtsSessionCoordinator(g, h);
+  const probeTask = c.probeAvailability();
+  while (h.firstSelectEntered === undefined) await new Promise(resolve => setTimeout(resolve, 0));
+  const startTask = c.start({ chapter, content: canonicalRemoteContent, contentVersion: 101, scalarPosition: 0 });
+  // The start is admitted synchronously, but its prepare operation waits for
+  // the probe's in-flight Host selection. Releasing it lets both transactions
+  // settle in their declared order.
+  h.releaseFirstSelect();
+  await Promise.all([probeTask, startTask]);
+  assert.equal(c.getTransportState().engine, 'system',
+    'a stale probe must not overwrite the newer session engine selection');
+  await c.stop(); await c.dispose();
+}
+
+// A stop intent also updates the transport generation synchronously while a
+// platform probe may still be awaiting.  The stale probe must not overwrite
+// the stopping/settled lifecycle state with `unavailable` when it resumes.
+{
+  class DelayedProbeHost extends FakeHost {
+    probeEntered;
+    releaseProbe;
+    async probe() {
+      this.probeEntered = new Promise(resolve => { this.releaseProbe = resolve; });
+      await this.probeEntered;
+      return { available: false, reason: 'synthetic probe failure' };
+    }
+  }
+  const h = new DelayedProbeHost();
+  const c = new ReaderTtsSessionCoordinator(new FakeGateway(), h);
+  const probeTask = c.probeAvailability();
+  while (h.probeEntered === undefined) await new Promise(resolve => setTimeout(resolve, 0));
+  const stopTask = c.stop();
+  h.releaseProbe();
+  await Promise.all([probeTask, stopTask]);
+  assert.equal(c.getState().status, 'idle',
+    'a stale probe must not publish unavailable over a newer stop intent');
+  await c.dispose();
+}
 
 console.log('reader TTS fake-host coordinator: PASS');

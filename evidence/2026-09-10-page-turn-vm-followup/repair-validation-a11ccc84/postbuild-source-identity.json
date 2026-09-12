@@ -1,0 +1,10 @@
+{
+  "source-snapshot.json": {
+    "files": 512,
+    "drift": []
+  },
+  "controller-snapshot.json": {
+    "files": 223,
+    "drift": []
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "emulatorProcess": "59198 Sun Sep  6 23:19:06 2026     /Applications/DevEco-Studio.app/Contents/tools/emulator/Emulator -hvd Mate 80 Pro -path /Users/minliny/.Huawei/Emulator/deployed -t trace_88943_commandPipe -imageRoot /Users/minliny/Library/Huawei/Sdk",
+  "endpointOwner": "COMMAND    PID    USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nEmulator 59198 minliny   12u  IPv4 0x5e02178aaaf94bde      0t0  TCP 127.0.0.1:5555->127.0.0.1:59309 (ESTABLISHED)\nEmulator 59198 minliny   23u  IPv4 0xef9dd372c40b624f      0t0  TCP 127.0.0.1:5555 (LISTEN)",
+  "bootCompleted": "true",
+  "sceneBoard": "2458",
+  "guestTime": "Fri Sep 11 21:48:32 CST 2026",
+  "emulatorBootEvidence": [
+    "2026-09-06 23:19:34.938 13261991936 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!"
+  ],
+  "recentSystemFailures": []
+}

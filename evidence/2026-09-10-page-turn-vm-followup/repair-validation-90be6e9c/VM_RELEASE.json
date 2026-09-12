@@ -1,0 +1,7 @@
+{
+  "releasedAt": "2026-09-11T04:53:45.889Z",
+  "reason": "between repair iterations",
+  "finalState": "shelf with four books; two self-authored fixtures added through normal import",
+  "newCandidate": "78b275dc",
+  "taskComplete": false
+}

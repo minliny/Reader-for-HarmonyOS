@@ -1,0 +1,21 @@
+@font-face {
+  font-family: "Noto Sans SC:Regular";
+  font-style: normal;
+  font-weight: 400;
+  src: url("https://static.figma.com/font/NotoSansSC-VF_2") format("woff2");
+}
+
+@font-face {
+  font-family: "Noto Sans SC:Bold";
+  font-style: normal;
+  font-weight: 700;
+  src: url("https://static.figma.com/font/NotoSansSC-VF_2") format("woff2");
+}
+
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  height: 100%;
+}

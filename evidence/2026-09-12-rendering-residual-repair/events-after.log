@@ -1,0 +1,245 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: /var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:39:8: error: redefinition of 'EventPayload'
+   39 | struct EventPayload {
+      |        ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:31:8: note: previous definition is here
+   31 | struct EventPayload {
+      |        ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:53:56: error: member access into incomplete type 'element_type' (aka 'CallbackBridge')
+   53 |     if (host == nullptr || bridge == nullptr || !bridge->active.load(std::memory_order_acquire) ||
+      |                                                        ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:29:8: note: forward declaration of 'CallbackBridge'
+   29 | struct CallbackBridge;
+      |        ^
+In file included from /var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:5:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/memory:950:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/inout_ptr.h:16:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:30:
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:60:51: error: invalid application of 'alignof' to an incomplete type 'CallbackBridge'
+   60 | inline const size_t __compressed_pair_alignment = _LIBCPP_ALIGNOF(_Tp);
+      |                                                   ^~~~~~~~~~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:168:34: note: expanded from macro '_LIBCPP_ALIGNOF'
+  168 | #    define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
+      |                                  ^~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of variable template specialization 'std::__compressed_pair_alignment<CallbackBridge>' requested here
+  199 |       _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, __value_type, __elem_);
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:104:43: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  104 |         __attribute__((__aligned__(::std::__compressed_pair_alignment<T2>))) T1 Initializer1;                          \
+      |                                           ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data::(anonymous struct at /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7)' requested here
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:102:7: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  102 |       struct {                                                                                                         \
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:202:41: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data' requested here
+  202 |     _ALIGNAS_TYPE(_Data) char __buffer_[sizeof(_Data)];
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:216:12: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage' requested here
+  216 |   _Storage __storage_;
+      |            ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:736:51: note: in instantiation of template class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>' requested here
+  736 |   ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__a, std::forward<_Args>(__args)...);
+      |                                                   ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:744:15: note: in instantiation of function template specialization 'std::allocate_shared<CallbackBridge, std::allocator<CallbackBridge>, 0>' requested here
+  744 |   return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
+      |               ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:73:55: note: in instantiation of function template specialization 'std::make_shared<CallbackBridge, 0>' requested here
+   73 |   auto h=std::make_shared<BookTurnHost>();auto b=std::make_shared<CallbackBridge>();
+      |                                                       ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:29:8: note: forward declaration of 'CallbackBridge'
+   29 | struct CallbackBridge;
+      |        ^
+In file included from /var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:5:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/memory:950:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/inout_ptr.h:16:
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:63: error: field has incomplete type '__value_type' (aka 'CallbackBridge')
+  199 |       _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, __value_type, __elem_);
+      |                                                               ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data::(anonymous struct at /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7)' requested here
+  199 |       _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, __value_type, __elem_);
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:102:7: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  102 |       struct {                                                                                                         \
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:202:41: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data' requested here
+  202 |     _ALIGNAS_TYPE(_Data) char __buffer_[sizeof(_Data)];
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:216:12: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage' requested here
+  216 |   _Storage __storage_;
+      |            ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:736:51: note: in instantiation of template class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>' requested here
+  736 |   ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__a, std::forward<_Args>(__args)...);
+      |                                                   ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:744:15: note: in instantiation of function template specialization 'std::allocate_shared<CallbackBridge, std::allocator<CallbackBridge>, 0>' requested here
+  744 |   return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
+      |               ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:73:55: note: in instantiation of function template specialization 'std::make_shared<CallbackBridge, 0>' requested here
+   73 |   auto h=std::make_shared<BookTurnHost>();auto b=std::make_shared<CallbackBridge>();
+      |                                                       ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:29:8: note: forward declaration of 'CallbackBridge'
+   29 | struct CallbackBridge;
+      |        ^
+In file included from /var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:2:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/atomic:605:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__atomic/aliases.h:12:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__atomic/atomic.h:12:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__atomic/atomic_sync.h:15:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__chrono/duration.h:20:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/limits:524:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/type_traits:489:
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__type_traits/is_empty.h:22:70: error: incomplete type 'CallbackBridge' used in type trait expression
+   22 | struct _LIBCPP_NO_SPECIALIZATIONS is_empty : integral_constant<bool, __is_empty(_Tp)> {};
+      |                                                                      ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:67:6: note: in instantiation of template class 'std::is_empty<CallbackBridge>' requested here
+   67 |     (is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value) || sizeof(_ToPad) == __datasizeof_v<_ToPad>;
+      |      ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:75:39: note: in instantiation of variable template specialization 'std::__is_reference_or_unpadded_object<CallbackBridge>' requested here
+   75 | template <class _ToPad, bool _Empty = __is_reference_or_unpadded_object<_ToPad> >
+      |                                       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of default argument for '__compressed_pair_padding<__value_type>' required here
+  199 |       _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, __value_type, __elem_);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:107:42: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  107 |         _LIBCPP_NO_UNIQUE_ADDRESS ::std::__compressed_pair_padding<T2> _LIBCPP_CONCAT3(__padding2_, __LINE__, _);      \
+      |                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data::(anonymous struct at /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7)' requested here
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:102:7: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  102 |       struct {                                                                                                         \
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:202:41: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data' requested here
+  202 |     _ALIGNAS_TYPE(_Data) char __buffer_[sizeof(_Data)];
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:216:12: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage' requested here
+  216 |   _Storage __storage_;
+      |            ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:736:51: note: in instantiation of template class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>' requested here
+  736 |   ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__a, std::forward<_Args>(__args)...);
+      |                                                   ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:744:15: note: in instantiation of function template specialization 'std::allocate_shared<CallbackBridge, std::allocator<CallbackBridge>, 0>' requested here
+  744 |   return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
+      |               ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:73:55: note: in instantiation of function template specialization 'std::make_shared<CallbackBridge, 0>' requested here
+   73 |   auto h=std::make_shared<BookTurnHost>();auto b=std::make_shared<CallbackBridge>();
+      |                                                       ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:29:8: note: forward declaration of 'CallbackBridge'
+   29 | struct CallbackBridge;
+      |        ^
+In file included from /var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:2:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/atomic:605:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__atomic/aliases.h:12:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__atomic/atomic.h:12:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__atomic/atomic_sync.h:15:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__chrono/duration.h:20:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/limits:524:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/type_traits:532:
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__type_traits/is_final.h:22:52: error: incomplete type 'CallbackBridge' used in type trait expression
+   22 | struct __libcpp_is_final : integral_constant<bool, __is_final(_Tp)> {};
+      |                                                    ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:67:34: note: in instantiation of template class 'std::__libcpp_is_final<CallbackBridge>' requested here
+   67 |     (is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value) || sizeof(_ToPad) == __datasizeof_v<_ToPad>;
+      |                                  ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:75:39: note: in instantiation of variable template specialization 'std::__is_reference_or_unpadded_object<CallbackBridge>' requested here
+   75 | template <class _ToPad, bool _Empty = __is_reference_or_unpadded_object<_ToPad> >
+      |                                       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of default argument for '__compressed_pair_padding<__value_type>' required here
+  199 |       _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, __value_type, __elem_);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:107:42: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  107 |         _LIBCPP_NO_UNIQUE_ADDRESS ::std::__compressed_pair_padding<T2> _LIBCPP_CONCAT3(__padding2_, __LINE__, _);      \
+      |                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data::(anonymous struct at /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7)' requested here
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:102:7: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  102 |       struct {                                                                                                         \
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:202:41: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data' requested here
+  202 |     _ALIGNAS_TYPE(_Data) char __buffer_[sizeof(_Data)];
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:216:12: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage' requested here
+  216 |   _Storage __storage_;
+      |            ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:736:51: note: in instantiation of template class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>' requested here
+  736 |   ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__a, std::forward<_Args>(__args)...);
+      |                                                   ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:744:15: note: in instantiation of function template specialization 'std::allocate_shared<CallbackBridge, std::allocator<CallbackBridge>, 0>' requested here
+  744 |   return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
+      |               ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:73:55: note: in instantiation of function template specialization 'std::make_shared<CallbackBridge, 0>' requested here
+   73 |   auto h=std::make_shared<BookTurnHost>();auto b=std::make_shared<CallbackBridge>();
+      |                                                       ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:29:8: note: forward declaration of 'CallbackBridge'
+   29 | struct CallbackBridge;
+      |        ^
+In file included from /var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:5:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/memory:950:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/inout_ptr.h:16:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:30:
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:67:71: error: invalid application of 'sizeof' to an incomplete type 'CallbackBridge'
+   67 |     (is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value) || sizeof(_ToPad) == __datasizeof_v<_ToPad>;
+      |                                                                       ^~~~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:75:39: note: in instantiation of variable template specialization 'std::__is_reference_or_unpadded_object<CallbackBridge>' requested here
+   75 | template <class _ToPad, bool _Empty = __is_reference_or_unpadded_object<_ToPad> >
+      |                                       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of default argument for '__compressed_pair_padding<__value_type>' required here
+  199 |       _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, __value_type, __elem_);
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:107:42: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  107 |         _LIBCPP_NO_UNIQUE_ADDRESS ::std::__compressed_pair_padding<T2> _LIBCPP_CONCAT3(__padding2_, __LINE__, _);      \
+      |                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data::(anonymous struct at /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:199:7)' requested here
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/compressed_pair.h:102:7: note: expanded from macro '_LIBCPP_COMPRESSED_PAIR'
+  102 |       struct {                                                                                                         \
+      |       ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:202:41: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage::_Data' requested here
+  202 |     _ALIGNAS_TYPE(_Data) char __buffer_[sizeof(_Data)];
+      |                                         ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:216:12: note: in instantiation of member class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>::_Storage' requested here
+  216 |   _Storage __storage_;
+      |            ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:736:51: note: in instantiation of template class 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>' requested here
+  736 |   ::new ((void*)std::addressof(*__guard.__get())) _ControlBlock(__a, std::forward<_Args>(__args)...);
+      |                                                   ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:744:15: note: in instantiation of function template specialization 'std::allocate_shared<CallbackBridge, std::allocator<CallbackBridge>, 0>' requested here
+  744 |   return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
+      |               ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:73:55: note: in instantiation of function template specialization 'std::make_shared<CallbackBridge, 0>' requested here
+   73 |   auto h=std::make_shared<BookTurnHost>();auto b=std::make_shared<CallbackBridge>();
+      |                                                       ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:29:8: note: forward declaration of 'CallbackBridge'
+   29 | struct CallbackBridge;
+      |        ^
+In file included from /var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:5:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/memory:950:
+In file included from /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/inout_ptr.h:16:
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:678:20: error: incompatible pointer types assigning to '__shared_weak_count *' from 'std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>> *'
+  678 |     __r.__cntrl_ = __cntrl;
+      |                    ^~~~~~~
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:738:27: note: in instantiation of function template specialization 'std::shared_ptr<CallbackBridge>::__create_with_control_block<CallbackBridge, std::__shared_ptr_emplace<CallbackBridge, std::allocator<CallbackBridge>>>' requested here
+  738 |   return shared_ptr<_Tp>::__create_with_control_block(
+      |                           ^
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/__memory/shared_ptr.h:744:15: note: in instantiation of function template specialization 'std::allocate_shared<CallbackBridge, std::allocator<CallbackBridge>, 0>' requested here
+  744 |   return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
+      |               ^
+/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ytBZWU/dispatch.cpp:73:55: note: in instantiation of function template specialization 'std::make_shared<CallbackBridge, 0>' requested here
+   73 |   auto h=std::make_shared<BookTurnHost>();auto b=std::make_shared<CallbackBridge>();
+      |                                                       ^
+8 errors generated.
+
+
+1 !== 0
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-book-turn-event-dispatch.mjs:65:10
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

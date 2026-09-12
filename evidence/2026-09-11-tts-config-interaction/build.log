@@ -1,0 +1,156 @@
+Reader HAP build-system docs and skills contract: PASS
+app shell safe geometry: PASS
+(node:22620) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: ArkWeb entry DNS and literal navigation/resource policy; cross-host DNS/engine-wide coverage remains unproven
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+shared book acquisition lifecycle, identities, and scheduling: PASS
+(node:22633) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:22638) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+bookshelf management Core ownership contract: PASS
+(node:22654) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+bookshelf tablet navigation contract: PASS
+bookshelf view and directory footer contracts: PASS
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1951 tested records, 1737 unique identities)
+core build identity startup contract: PASS
+(node:22680) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: cache winner retains one online refresh; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (110 sources swept)
+(node:22688) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:22699) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:22710) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+Legado product behavior contract: PASS
+local book format picker contract: PASS
+local EPUB resource architecture: PASS
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+performance regression contracts: PASS
+physical phone Figma layout regressions: PASS
+portable JSON local/online import boundary: PASS
+PASS Make V9 appearance: real selection handlers, stale menus, scroll/viewport placement, Quick/Full swatches and persisted theme identity. Native pixels remain separate.
+(node:22736) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance Figma N per-actor driver: PASS
+reader appearance Figma N fixture: PASS
+reader appearance measured-screen gesture: PASS
+reader appearance Figma N sampler: PASS
+reader appearance master motion state: PASS
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /motionProgress: this\.frame\(\)\.progress/. Input:
+
+'private appearanceContent() {\n' +
+  '    ReaderControlAppearanceContent({\n' +
+  '      isTablet: this.isExpanded(),\n' +
+  '      availableWidth: this.contentMotionWidth,\n' +
+  '      availableHeight: this.contentMotionHeight,\n' +
+  '      fullContentHeight: this.contentEndpointHeight(true),\n' +
+  '      interactionEnabled: this.contentInputEnabled(),\n' +
+  '      dismissTemporaryRevision: this.dismissTemporaryRevision,\n' +
+  '      onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),\n' +
+  '      reduceMotion: this.reduceMotion,\n' +
+  '      motionProgress: this.contentMotionProgress,\n' +
+  '      snapshot: this.appearanceSnapshot,\n' +
+  '      chineseConversionMode: this.chineseConversionMode,\n' +
+  '      pageTurnStyle: readerPageTurnStyle(this.settingsSnapshot),\n' +
+  '      pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,\n' +
+  '      onCollapse: (): void => this.collapseControl(),\n' +
+  '      onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),\n' +
+  '      onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),\n' +
+  '      onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceNightThemeChange(theme),\n' +
+  '      onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),\n' +
+  '      onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>\n' +
+  '        this.onAppearanceFontOrderChange(fontOrder),\n' +
+  '      onFontReorderActivityChange: (active: boolean): void =>\n' +
+  '        this.setAppearanceFontReorderActivity(active),\n' +
+  '      onCustomFontImport: (): void => this.onAppearanceCustomFontImport(),\n' +
+  '      onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onAppearanceIndentRequest(indent),\n' +
+  '      onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>\n' +
+  '        this.onAppearanceAlignmentRequest(current),\n' +
+  '      onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>\n' +
+  '        this.onAppearanceMetricStep(metric, direction),\n' +
+  '      onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>\n' +
+  '        this.onChineseConversionChange(mode),\n' +
+  '      onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>\n' +
+  '        this.onPageTurnStyleChange(style),\n' +
+  '    });\n' +
+  '  }\n' +
+  '\n' +
+  '  '
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-appearance-motion-tree.mjs:37:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'private appearanceContent() {\n' +
+    '    ReaderControlAppearanceContent({\n' +
+    '      isTablet: this.isExpanded(),\n' +
+    '      availableWidth: this.contentMotionWidth,\n' +
+    '      availableHeight: this.contentMotionHeight,\n' +
+    '      fullContentHeight: this.contentEndpointHeight(true),\n' +
+    '      interactionEnabled: this.contentInputEnabled(),\n' +
+    '      dismissTemporaryRevision: this.dismissTemporaryRevision,\n' +
+    '      onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),\n' +
+    '      reduceMotion: this.reduceMotion,\n' +
+    '      motionProgress: this.contentMotionProgress,\n' +
+    '      snapshot: this.appearanceSnapshot,\n' +
+    '      chineseConversionMode: this.chineseConversionMode,\n' +
+    '      pageTurnStyle: readerPageTurnStyle(this.settingsSnapshot),\n' +
+    '      pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,\n' +
+    '      onCollapse: (): void => this.collapseControl(),\n' +
+    '      onThemeChange: (theme: ReaderAppearanceTheme): void => this.onAppearanceThemeChange(theme),\n' +
+    '      onSetDayTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceDayThemeChange(theme),\n' +
+    '      onSetNightTheme: (theme: ReaderAppearanceTheme): void => this.onAppearanceNightThemeChange(theme),\n' +
+    '      onFontChange: (font: ReaderAppearanceFont): void => this.onAppearanceFontChange(font),\n' +
+    '      onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>\n' +
+    '        this.onAppearanceFontOrderChange(fontOrder),\n' +
+    '      onFontReorderActivityChange: (active: boolean): void =>\n' +
+    '        this.setAppearanceFontReorderActivity(active),\n' +
+    '      onCustomFontImport: (): void => this.onAppearanceCustomFontImport(),\n' +
+    '      onIndentRequest: (indent: ReaderAppearanceIndent): void => this.onAppearanceIndentRequest(indent),\n' +
+    '      onAlignmentRequest: (current: ReaderAppearanceAlignment): void =>\n' +
+    '        this.onAppearanceAlignmentRequest(current),\n' +
+    '      onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>\n' +
+    '        this.onAppearanceMetricStep(metric, direction),\n' +
+    '      onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>\n' +
+    '        this.onChineseConversionChange(mode),\n' +
+    '      onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>\n' +
+    '        this.onPageTurnStyleChange(style),\n' +
+    '    });\n' +
+    '  }\n' +
+    '\n' +
+    '  ',
+  expected: /motionProgress: this\.frame\(\)\.progress/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
+/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/scripts/check-local.sh failed (1): <no output>

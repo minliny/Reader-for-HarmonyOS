@@ -1,0 +1,2 @@
+{"recordedAt":"2026-09-11T05:40:39.526Z","targetRef":"6460677a198b","event":"ready","log":"/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-47fc9bcb/reader-control-probe-1789105239525-7f5f3287-a9de-4852-b4d8-bb39fab4cf01.jsonl","warning":"Lock acquired only; boot readiness/authorization must already be established externally. No retries or service startup."}
+{"recordedAt":"2026-09-11T05:52:17.173Z","targetRef":"6460677a198b","event":"closed","reason":"quit-or-eof"}

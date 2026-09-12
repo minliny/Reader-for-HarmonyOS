@@ -1,0 +1,2218 @@
+[
+  {
+    "file": "image-native-cost-trace.ftrace",
+    "entries": [
+      "entries-in-buffer/entries-written: 71572/71572   #P:4"
+    ],
+    "appPid": 19782,
+    "unmatchedAppEnds": 0,
+    "unmatchedAppStarts": 0,
+    "frames": [
+      {
+        "tid": 19782,
+        "start": 405697.402615,
+        "end": 405697.402903,
+        "wallMs": 0.288,
+        "name": "H:OnVsyncEvent now:405697400313837",
+        "guestScheduledMs": 0.25,
+        "guestOffCpuMs": 0.038,
+        "vsyncCallbackDelayMs": 2.301
+      },
+      {
+        "tid": 19782,
+        "start": 405697.417092,
+        "end": 405697.417284,
+        "wallMs": 0.192,
+        "name": "H:OnVsyncEvent now:405697415930580",
+        "guestScheduledMs": 0.192,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.161
+      },
+      {
+        "tid": 19782,
+        "start": 405697.43166,
+        "end": 405697.431844,
+        "wallMs": 0.184,
+        "name": "H:OnVsyncEvent now:405697431563658",
+        "guestScheduledMs": 0.184,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.096
+      },
+      {
+        "tid": 19782,
+        "start": 405697.44729,
+        "end": 405697.448318,
+        "wallMs": 1.028,
+        "name": "H:OnVsyncEvent now:405697447196639",
+        "guestScheduledMs": 1.028,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.093
+      },
+      {
+        "tid": 19782,
+        "start": 405697.463494,
+        "end": 405697.467099,
+        "wallMs": 3.605,
+        "name": "H:OnVsyncEvent now:405697462822526",
+        "guestScheduledMs": 3.314,
+        "guestOffCpuMs": 0.291,
+        "vsyncCallbackDelayMs": 0.671
+      },
+      {
+        "tid": 19782,
+        "start": 405697.48194,
+        "end": 405697.482702,
+        "wallMs": 0.762,
+        "name": "H:OnVsyncEvent now:405697478402878",
+        "guestScheduledMs": 0.672,
+        "guestOffCpuMs": 0.09,
+        "vsyncCallbackDelayMs": 3.537
+      },
+      {
+        "tid": 19782,
+        "start": 405697.494195,
+        "end": 405697.494632,
+        "wallMs": 0.437,
+        "name": "H:OnVsyncEvent now:405697494036433",
+        "guestScheduledMs": 0.419,
+        "guestOffCpuMs": 0.018,
+        "vsyncCallbackDelayMs": 0.159
+      },
+      {
+        "tid": 19782,
+        "start": 405697.510384,
+        "end": 405697.510834,
+        "wallMs": 0.45,
+        "name": "H:OnVsyncEvent now:405697509662084",
+        "guestScheduledMs": 0.382,
+        "guestOffCpuMs": 0.068,
+        "vsyncCallbackDelayMs": 0.722
+      },
+      {
+        "tid": 19782,
+        "start": 405697.526516,
+        "end": 405697.52708,
+        "wallMs": 0.564,
+        "name": "H:OnVsyncEvent now:405697525280159",
+        "guestScheduledMs": 0.495,
+        "guestOffCpuMs": 0.069,
+        "vsyncCallbackDelayMs": 1.236
+      },
+      {
+        "tid": 19782,
+        "start": 405697.54127,
+        "end": 405697.543946,
+        "wallMs": 2.676,
+        "name": "H:OnVsyncEvent now:405697540912885",
+        "guestScheduledMs": 0.767,
+        "guestOffCpuMs": 1.909,
+        "vsyncCallbackDelayMs": 0.357
+      },
+      {
+        "tid": 19782,
+        "start": 405697.556732,
+        "end": 405697.557115,
+        "wallMs": 0.383,
+        "name": "H:OnVsyncEvent now:405697556546391",
+        "guestScheduledMs": 0.368,
+        "guestOffCpuMs": 0.015,
+        "vsyncCallbackDelayMs": 0.186
+      },
+      {
+        "tid": 19782,
+        "start": 405697.572351,
+        "end": 405697.572759,
+        "wallMs": 0.408,
+        "name": "H:OnVsyncEvent now:405697572179794",
+        "guestScheduledMs": 0.35,
+        "guestOffCpuMs": 0.058,
+        "vsyncCallbackDelayMs": 0.171
+      },
+      {
+        "tid": 19782,
+        "start": 405697.587938,
+        "end": 405697.588306,
+        "wallMs": 0.368,
+        "name": "H:OnVsyncEvent now:405697587813099",
+        "guestScheduledMs": 0.368,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.125
+      },
+      {
+        "tid": 19782,
+        "start": 405697.604614,
+        "end": 405697.605152,
+        "wallMs": 0.538,
+        "name": "H:OnVsyncEvent now:405697603430437",
+        "guestScheduledMs": 0.538,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.184
+      },
+      {
+        "tid": 19782,
+        "start": 405697.619209,
+        "end": 405697.619611,
+        "wallMs": 0.402,
+        "name": "H:OnVsyncEvent now:405697619063672",
+        "guestScheduledMs": 0.402,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.145
+      },
+      {
+        "tid": 19782,
+        "start": 405697.634861,
+        "end": 405697.635284,
+        "wallMs": 0.423,
+        "name": "H:OnVsyncEvent now:405697634696791",
+        "guestScheduledMs": 0.381,
+        "guestOffCpuMs": 0.042,
+        "vsyncCallbackDelayMs": 0.164
+      },
+      {
+        "tid": 19782,
+        "start": 405697.650519,
+        "end": 405697.651055,
+        "wallMs": 0.536,
+        "name": "H:OnVsyncEvent now:405697650329950",
+        "guestScheduledMs": 0.457,
+        "guestOffCpuMs": 0.079,
+        "vsyncCallbackDelayMs": 0.189
+      },
+      {
+        "tid": 19782,
+        "start": 405697.666099,
+        "end": 405697.666506,
+        "wallMs": 0.407,
+        "name": "H:OnVsyncEvent now:405697665963009",
+        "guestScheduledMs": 0.388,
+        "guestOffCpuMs": 0.019,
+        "vsyncCallbackDelayMs": 0.136
+      },
+      {
+        "tid": 19782,
+        "start": 405697.681737,
+        "end": 405697.682186,
+        "wallMs": 0.449,
+        "name": "H:OnVsyncEvent now:405697681595979",
+        "guestScheduledMs": 0.386,
+        "guestOffCpuMs": 0.063,
+        "vsyncCallbackDelayMs": 0.141
+      },
+      {
+        "tid": 19782,
+        "start": 405697.697446,
+        "end": 405697.697806,
+        "wallMs": 0.36,
+        "name": "H:OnVsyncEvent now:405697697228484",
+        "guestScheduledMs": 0.36,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.218
+      },
+      {
+        "tid": 19782,
+        "start": 405697.712998,
+        "end": 405697.713486,
+        "wallMs": 0.488,
+        "name": "H:OnVsyncEvent now:405697712861244",
+        "guestScheduledMs": 0.406,
+        "guestOffCpuMs": 0.082,
+        "vsyncCallbackDelayMs": 0.137
+      },
+      {
+        "tid": 19782,
+        "start": 405697.728621,
+        "end": 405697.728996,
+        "wallMs": 0.375,
+        "name": "H:OnVsyncEvent now:405697728493894",
+        "guestScheduledMs": 0.362,
+        "guestOffCpuMs": 0.013,
+        "vsyncCallbackDelayMs": 0.127
+      },
+      {
+        "tid": 19782,
+        "start": 405697.744312,
+        "end": 405697.744805,
+        "wallMs": 0.493,
+        "name": "H:OnVsyncEvent now:405697744126381",
+        "guestScheduledMs": 0.411,
+        "guestOffCpuMs": 0.082,
+        "vsyncCallbackDelayMs": 0.186
+      },
+      {
+        "tid": 19782,
+        "start": 405697.75989,
+        "end": 405697.760364,
+        "wallMs": 0.474,
+        "name": "H:OnVsyncEvent now:405697759758846",
+        "guestScheduledMs": 0.458,
+        "guestOffCpuMs": 0.016,
+        "vsyncCallbackDelayMs": 0.131
+      },
+      {
+        "tid": 19782,
+        "start": 405697.775544,
+        "end": 405697.776008,
+        "wallMs": 0.464,
+        "name": "H:OnVsyncEvent now:405697775391173",
+        "guestScheduledMs": 0.373,
+        "guestOffCpuMs": 0.091,
+        "vsyncCallbackDelayMs": 0.153
+      },
+      {
+        "tid": 19782,
+        "start": 405697.79115,
+        "end": 405697.791548,
+        "wallMs": 0.398,
+        "name": "H:OnVsyncEvent now:405697791023443",
+        "guestScheduledMs": 0.362,
+        "guestOffCpuMs": 0.036,
+        "vsyncCallbackDelayMs": 0.127
+      },
+      {
+        "tid": 19782,
+        "start": 405697.8069,
+        "end": 405697.807473,
+        "wallMs": 0.573,
+        "name": "H:OnVsyncEvent now:405697806655617",
+        "guestScheduledMs": 0.509,
+        "guestOffCpuMs": 0.064,
+        "vsyncCallbackDelayMs": 0.244
+      },
+      {
+        "tid": 19782,
+        "start": 405697.822516,
+        "end": 405697.822985,
+        "wallMs": 0.469,
+        "name": "H:OnVsyncEvent now:405697822287507",
+        "guestScheduledMs": 0.443,
+        "guestOffCpuMs": 0.026,
+        "vsyncCallbackDelayMs": 0.228
+      },
+      {
+        "tid": 19782,
+        "start": 405697.838126,
+        "end": 405697.838625,
+        "wallMs": 0.499,
+        "name": "H:OnVsyncEvent now:405697837919393",
+        "guestScheduledMs": 0.483,
+        "guestOffCpuMs": 0.016,
+        "vsyncCallbackDelayMs": 0.207
+      },
+      {
+        "tid": 19782,
+        "start": 405697.853697,
+        "end": 405697.854483,
+        "wallMs": 0.786,
+        "name": "H:OnVsyncEvent now:405697853551284",
+        "guestScheduledMs": 0.722,
+        "guestOffCpuMs": 0.064,
+        "vsyncCallbackDelayMs": 0.146
+      },
+      {
+        "tid": 19782,
+        "start": 405697.869321,
+        "end": 405697.869547,
+        "wallMs": 0.226,
+        "name": "H:OnVsyncEvent now:405697869183042",
+        "guestScheduledMs": 0.226,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.138
+      },
+      {
+        "tid": 19782,
+        "start": 405697.885295,
+        "end": 405697.885618,
+        "wallMs": 0.323,
+        "name": "H:OnVsyncEvent now:405697884814510",
+        "guestScheduledMs": 0.268,
+        "guestOffCpuMs": 0.055,
+        "vsyncCallbackDelayMs": 0.48
+      },
+      {
+        "tid": 19782,
+        "start": 405697.900602,
+        "end": 405697.901569,
+        "wallMs": 0.967,
+        "name": "H:OnVsyncEvent now:405697900446093",
+        "guestScheduledMs": 0.307,
+        "guestOffCpuMs": 0.66,
+        "vsyncCallbackDelayMs": 0.156
+      },
+      {
+        "tid": 19782,
+        "start": 405697.918213,
+        "end": 405697.918554,
+        "wallMs": 0.341,
+        "name": "H:OnVsyncEvent now:405697916061883",
+        "guestScheduledMs": 0.341,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 2.151
+      },
+      {
+        "tid": 19782,
+        "start": 405697.93182,
+        "end": 405697.932133,
+        "wallMs": 0.313,
+        "name": "H:OnVsyncEvent now:405697931693454",
+        "guestScheduledMs": 0.313,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.127
+      },
+      {
+        "tid": 19782,
+        "start": 405697.947884,
+        "end": 405697.948144,
+        "wallMs": 0.26,
+        "name": "H:OnVsyncEvent now:405697947319236",
+        "guestScheduledMs": 0.26,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.565
+      },
+      {
+        "tid": 19782,
+        "start": 405697.964252,
+        "end": 405697.964555,
+        "wallMs": 0.303,
+        "name": "H:OnVsyncEvent now:405697962932672",
+        "guestScheduledMs": 0.303,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.319
+      },
+      {
+        "tid": 19782,
+        "start": 405697.979016,
+        "end": 405697.979364,
+        "wallMs": 0.348,
+        "name": "H:OnVsyncEvent now:405697978564436",
+        "guestScheduledMs": 0.344,
+        "guestOffCpuMs": 0.004,
+        "vsyncCallbackDelayMs": 0.452
+      },
+      {
+        "tid": 19782,
+        "start": 405697.994632,
+        "end": 405697.994965,
+        "wallMs": 0.333,
+        "name": "H:OnVsyncEvent now:405697994196028",
+        "guestScheduledMs": 0.33,
+        "guestOffCpuMs": 0.003,
+        "vsyncCallbackDelayMs": 0.436
+      },
+      {
+        "tid": 19782,
+        "start": 405698.010489,
+        "end": 405698.010859,
+        "wallMs": 0.37,
+        "name": "H:OnVsyncEvent now:405698009819637",
+        "guestScheduledMs": 0.358,
+        "guestOffCpuMs": 0.012,
+        "vsyncCallbackDelayMs": 0.669
+      },
+      {
+        "tid": 19782,
+        "start": 405698.025813,
+        "end": 405698.026198,
+        "wallMs": 0.385,
+        "name": "H:OnVsyncEvent now:405698025450920",
+        "guestScheduledMs": 0.382,
+        "guestOffCpuMs": 0.003,
+        "vsyncCallbackDelayMs": 0.362
+      },
+      {
+        "tid": 19782,
+        "start": 405698.041243,
+        "end": 405698.041624,
+        "wallMs": 0.381,
+        "name": "H:OnVsyncEvent now:405698041082478",
+        "guestScheduledMs": 0.381,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.161
+      },
+      {
+        "tid": 19782,
+        "start": 405698.057379,
+        "end": 405698.057779,
+        "wallMs": 0.4,
+        "name": "H:OnVsyncEvent now:405698056705733",
+        "guestScheduledMs": 0.383,
+        "guestOffCpuMs": 0.017,
+        "vsyncCallbackDelayMs": 0.673
+      },
+      {
+        "tid": 19782,
+        "start": 405698.072502,
+        "end": 405698.072972,
+        "wallMs": 0.47,
+        "name": "H:OnVsyncEvent now:405698072337294",
+        "guestScheduledMs": 0.458,
+        "guestOffCpuMs": 0.012,
+        "vsyncCallbackDelayMs": 0.165
+      },
+      {
+        "tid": 19782,
+        "start": 405698.088148,
+        "end": 405698.08871,
+        "wallMs": 0.562,
+        "name": "H:OnVsyncEvent now:405698087968627",
+        "guestScheduledMs": 0.534,
+        "guestOffCpuMs": 0.028,
+        "vsyncCallbackDelayMs": 0.179
+      },
+      {
+        "tid": 19782,
+        "start": 405698.103772,
+        "end": 405698.104488,
+        "wallMs": 0.716,
+        "name": "H:OnVsyncEvent now:405698103600111",
+        "guestScheduledMs": 0.692,
+        "guestOffCpuMs": 0.024,
+        "vsyncCallbackDelayMs": 0.172
+      },
+      {
+        "tid": 19782,
+        "start": 405698.119363,
+        "end": 405698.11984,
+        "wallMs": 0.477,
+        "name": "H:OnVsyncEvent now:405698119231439",
+        "guestScheduledMs": 0.465,
+        "guestOffCpuMs": 0.012,
+        "vsyncCallbackDelayMs": 0.132
+      },
+      {
+        "tid": 19782,
+        "start": 405698.135149,
+        "end": 405698.136439,
+        "wallMs": 1.29,
+        "name": "H:OnVsyncEvent now:405698134861664",
+        "guestScheduledMs": 0.391,
+        "guestOffCpuMs": 0.899,
+        "vsyncCallbackDelayMs": 0.287
+      },
+      {
+        "tid": 19782,
+        "start": 405698.151034,
+        "end": 405698.151447,
+        "wallMs": 0.413,
+        "name": "H:OnVsyncEvent now:405698150491237",
+        "guestScheduledMs": 0.372,
+        "guestOffCpuMs": 0.041,
+        "vsyncCallbackDelayMs": 0.543
+      },
+      {
+        "tid": 19782,
+        "start": 405698.166774,
+        "end": 405698.167398,
+        "wallMs": 0.624,
+        "name": "H:OnVsyncEvent now:405698166114867",
+        "guestScheduledMs": 0.363,
+        "guestOffCpuMs": 0.261,
+        "vsyncCallbackDelayMs": 0.659
+      },
+      {
+        "tid": 19782,
+        "start": 405698.181882,
+        "end": 405698.182228,
+        "wallMs": 0.346,
+        "name": "H:OnVsyncEvent now:405698181746067",
+        "guestScheduledMs": 0.346,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.136
+      },
+      {
+        "tid": 19782,
+        "start": 405698.19895,
+        "end": 405698.199266,
+        "wallMs": 0.316,
+        "name": "H:OnVsyncEvent now:405698197354536",
+        "guestScheduledMs": 0.316,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 1.595
+      },
+      {
+        "tid": 19782,
+        "start": 405698.213114,
+        "end": 405698.213439,
+        "wallMs": 0.325,
+        "name": "H:OnVsyncEvent now:405698212985954",
+        "guestScheduledMs": 0.325,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.128
+      },
+      {
+        "tid": 19782,
+        "start": 405698.231033,
+        "end": 405698.231364,
+        "wallMs": 0.331,
+        "name": "H:OnVsyncEvent now:405698228582445",
+        "guestScheduledMs": 0.331,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 2.451
+      },
+      {
+        "tid": 19782,
+        "start": 405698.247299,
+        "end": 405698.247655,
+        "wallMs": 0.356,
+        "name": "H:OnVsyncEvent now:405698244168464",
+        "guestScheduledMs": 0.356,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 3.131
+      },
+      {
+        "tid": 19782,
+        "start": 405698.262184,
+        "end": 405698.262472,
+        "wallMs": 0.288,
+        "name": "H:OnVsyncEvent now:405698259765991",
+        "guestScheduledMs": 0.288,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 2.418
+      },
+      {
+        "tid": 19782,
+        "start": 405698.275552,
+        "end": 405698.276171,
+        "wallMs": 0.619,
+        "name": "H:OnVsyncEvent now:405698275398871",
+        "guestScheduledMs": 0.513,
+        "guestOffCpuMs": 0.106,
+        "vsyncCallbackDelayMs": 0.153
+      },
+      {
+        "tid": 19782,
+        "start": 405698.291163,
+        "end": 405698.291559,
+        "wallMs": 0.396,
+        "name": "H:OnVsyncEvent now:405698291031663",
+        "guestScheduledMs": 0.377,
+        "guestOffCpuMs": 0.019,
+        "vsyncCallbackDelayMs": 0.131
+      },
+      {
+        "tid": 19782,
+        "start": 405698.306857,
+        "end": 405698.307265,
+        "wallMs": 0.408,
+        "name": "H:OnVsyncEvent now:405698306664320",
+        "guestScheduledMs": 0.397,
+        "guestOffCpuMs": 0.011,
+        "vsyncCallbackDelayMs": 0.193
+      },
+      {
+        "tid": 19782,
+        "start": 405698.322438,
+        "end": 405698.322867,
+        "wallMs": 0.429,
+        "name": "H:OnVsyncEvent now:405698322296964",
+        "guestScheduledMs": 0.429,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.141
+      },
+      {
+        "tid": 19782,
+        "start": 405698.338074,
+        "end": 405698.338578,
+        "wallMs": 0.504,
+        "name": "H:OnVsyncEvent now:405698337929474",
+        "guestScheduledMs": 0.47,
+        "guestOffCpuMs": 0.034,
+        "vsyncCallbackDelayMs": 0.145
+      },
+      {
+        "tid": 19782,
+        "start": 405698.353731,
+        "end": 405698.354206,
+        "wallMs": 0.475,
+        "name": "H:OnVsyncEvent now:405698353561925",
+        "guestScheduledMs": 0.453,
+        "guestOffCpuMs": 0.022,
+        "vsyncCallbackDelayMs": 0.169
+      },
+      {
+        "tid": 19782,
+        "start": 405698.369502,
+        "end": 405698.370602,
+        "wallMs": 1.1,
+        "name": "H:OnVsyncEvent now:405698369193366",
+        "guestScheduledMs": 1.027,
+        "guestOffCpuMs": 0.073,
+        "vsyncCallbackDelayMs": 0.309
+      },
+      {
+        "tid": 19782,
+        "start": 405698.385604,
+        "end": 405698.386464,
+        "wallMs": 0.86,
+        "name": "H:OnVsyncEvent now:405698384815741",
+        "guestScheduledMs": 0.772,
+        "guestOffCpuMs": 0.088,
+        "vsyncCallbackDelayMs": 0.788
+      },
+      {
+        "tid": 19782,
+        "start": 405698.400649,
+        "end": 405698.40072,
+        "wallMs": 0.071,
+        "name": "H:OnVsyncEvent now:405698400447781",
+        "guestScheduledMs": 0.071,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.201
+      },
+      {
+        "tid": 19782,
+        "start": 405698.416213,
+        "end": 405698.416365,
+        "wallMs": 0.152,
+        "name": "H:OnVsyncEvent now:405698416080061",
+        "guestScheduledMs": 0.152,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.133
+      },
+      {
+        "tid": 19782,
+        "start": 405698.431837,
+        "end": 405698.431973,
+        "wallMs": 0.136,
+        "name": "H:OnVsyncEvent now:405698431712261",
+        "guestScheduledMs": 0.136,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.125
+      },
+      {
+        "tid": 19782,
+        "start": 405698.447496,
+        "end": 405698.447642,
+        "wallMs": 0.146,
+        "name": "H:OnVsyncEvent now:405698447344379",
+        "guestScheduledMs": 0.146,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.152
+      },
+      {
+        "tid": 19782,
+        "start": 405698.463107,
+        "end": 405698.463237,
+        "wallMs": 0.13,
+        "name": "H:OnVsyncEvent now:405698462976406",
+        "guestScheduledMs": 0.13,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.131
+      },
+      {
+        "tid": 19782,
+        "start": 405698.494379,
+        "end": 405698.494535,
+        "wallMs": 0.156,
+        "name": "H:OnVsyncEvent now:405698494240188",
+        "guestScheduledMs": 0.156,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.139
+      },
+      {
+        "tid": 19782,
+        "start": 405698.510062,
+        "end": 405698.510206,
+        "wallMs": 0.144,
+        "name": "H:OnVsyncEvent now:405698509871955",
+        "guestScheduledMs": 0.144,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.19
+      },
+      {
+        "tid": 19782,
+        "start": 405698.52571,
+        "end": 405698.52587,
+        "wallMs": 0.16,
+        "name": "H:OnVsyncEvent now:405698525503603",
+        "guestScheduledMs": 0.16,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.206
+      },
+      {
+        "tid": 19782,
+        "start": 405698.541909,
+        "end": 405698.547006,
+        "wallMs": 5.097,
+        "name": "H:OnVsyncEvent now:405698541125421",
+        "guestScheduledMs": 5.097,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.784
+      },
+      {
+        "tid": 19782,
+        "start": 405698.55735,
+        "end": 405698.566835,
+        "wallMs": 9.485,
+        "name": "H:OnVsyncEvent now:405698556750032",
+        "guestScheduledMs": 9.464,
+        "guestOffCpuMs": 0.021,
+        "vsyncCallbackDelayMs": 0.6
+      },
+      {
+        "tid": 19782,
+        "start": 405698.572526,
+        "end": 405698.574367,
+        "wallMs": 1.841,
+        "name": "H:OnVsyncEvent now:405698572381727",
+        "guestScheduledMs": 1.841,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.144
+      },
+      {
+        "tid": 19782,
+        "start": 405698.588197,
+        "end": 405698.595629,
+        "wallMs": 7.432,
+        "name": "H:OnVsyncEvent now:405698588013327",
+        "guestScheduledMs": 7.432,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.184
+      },
+      {
+        "tid": 19782,
+        "start": 405698.603739,
+        "end": 405698.605915,
+        "wallMs": 2.176,
+        "name": "H:OnVsyncEvent now:405698603645570",
+        "guestScheduledMs": 2.176,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.093
+      },
+      {
+        "tid": 19782,
+        "start": 405698.619465,
+        "end": 405698.619523,
+        "wallMs": 0.058,
+        "name": "H:OnVsyncEvent now:405698619276997",
+        "guestScheduledMs": 0.058,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.188
+      },
+      {
+        "tid": 19782,
+        "start": 405698.681985,
+        "end": 405698.682294,
+        "wallMs": 0.309,
+        "name": "H:OnVsyncEvent now:405698681796592",
+        "guestScheduledMs": 0.309,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.188
+      }
+    ],
+    "inputs": [
+      {
+        "tid": 19782,
+        "start": 405697.387491,
+        "end": 405697.388476,
+        "wallMs": 0.985,
+        "name": "H:DispatchTouchEvent id:10000, pointX=1000.000000 pointY=1350.000000 type=0",
+        "guestScheduledMs": 0.985,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.402712,
+        "end": 405697.402856,
+        "wallMs": 0.144,
+        "name": "H:DispatchTouchEvent id:10000, pointX=995.000000 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.144,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.417131,
+        "end": 405697.417253,
+        "wallMs": 0.122,
+        "name": "H:DispatchTouchEvent id:10000, pointX=989.617859 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.122,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.431701,
+        "end": 405697.431814,
+        "wallMs": 0.113,
+        "name": "H:DispatchTouchEvent id:10000, pointX=978.371887 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.113,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.447324,
+        "end": 405697.447652,
+        "wallMs": 0.328,
+        "name": "H:DispatchTouchEvent id:10000, pointX=966.323303 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.328,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.463555,
+        "end": 405697.463717,
+        "wallMs": 0.162,
+        "name": "H:DispatchTouchEvent id:10000, pointX=954.467468 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.162,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.482032,
+        "end": 405697.48221,
+        "wallMs": 0.178,
+        "name": "H:DispatchTouchEvent id:10000, pointX=943.073853 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.178,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.49427,
+        "end": 405697.494528,
+        "wallMs": 0.258,
+        "name": "H:DispatchTouchEvent id:10000, pointX=932.074585 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.258,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.510473,
+        "end": 405697.510679,
+        "wallMs": 0.206,
+        "name": "H:DispatchTouchEvent id:10000, pointX=921.359131 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.206,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.526579,
+        "end": 405697.526831,
+        "wallMs": 0.252,
+        "name": "H:DispatchTouchEvent id:10000, pointX=909.375854 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.252,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.541364,
+        "end": 405697.543735,
+        "wallMs": 2.371,
+        "name": "H:DispatchTouchEvent id:10000, pointX=896.755981 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.472,
+        "guestOffCpuMs": 1.899
+      },
+      {
+        "tid": 19782,
+        "start": 405697.556797,
+        "end": 405697.557069,
+        "wallMs": 0.272,
+        "name": "H:DispatchTouchEvent id:10000, pointX=884.816589 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.257,
+        "guestOffCpuMs": 0.015
+      },
+      {
+        "tid": 19782,
+        "start": 405697.572411,
+        "end": 405697.572619,
+        "wallMs": 0.208,
+        "name": "H:DispatchTouchEvent id:10000, pointX=873.976135 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.208,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.587989,
+        "end": 405697.588197,
+        "wallMs": 0.208,
+        "name": "H:DispatchTouchEvent id:10000, pointX=862.473633 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.208,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.604769,
+        "end": 405697.605047,
+        "wallMs": 0.278,
+        "name": "H:DispatchTouchEvent id:10000, pointX=850.293396 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.278,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.619268,
+        "end": 405697.6195,
+        "wallMs": 0.232,
+        "name": "H:DispatchTouchEvent id:10000, pointX=838.488220 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.232,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.634932,
+        "end": 405697.635148,
+        "wallMs": 0.216,
+        "name": "H:DispatchTouchEvent id:10000, pointX=826.866943 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.216,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.650584,
+        "end": 405697.650837,
+        "wallMs": 0.253,
+        "name": "H:DispatchTouchEvent id:10000, pointX=815.435913 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.253,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.666173,
+        "end": 405697.666401,
+        "wallMs": 0.228,
+        "name": "H:DispatchTouchEvent id:10000, pointX=804.264282 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.228,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.681803,
+        "end": 405697.682044,
+        "wallMs": 0.241,
+        "name": "H:DispatchTouchEvent id:10000, pointX=793.064697 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.236,
+        "guestOffCpuMs": 0.005
+      },
+      {
+        "tid": 19782,
+        "start": 405697.697498,
+        "end": 405697.697703,
+        "wallMs": 0.205,
+        "name": "H:DispatchTouchEvent id:10000, pointX=781.655090 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.205,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.713104,
+        "end": 405697.713345,
+        "wallMs": 0.241,
+        "name": "H:DispatchTouchEvent id:10000, pointX=769.645691 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.229,
+        "guestOffCpuMs": 0.012
+      },
+      {
+        "tid": 19782,
+        "start": 405697.728675,
+        "end": 405697.728895,
+        "wallMs": 0.22,
+        "name": "H:DispatchTouchEvent id:10000, pointX=758.547607 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.207,
+        "guestOffCpuMs": 0.013
+      },
+      {
+        "tid": 19782,
+        "start": 405697.744413,
+        "end": 405697.744658,
+        "wallMs": 0.245,
+        "name": "H:DispatchTouchEvent id:10000, pointX=747.091736 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.233,
+        "guestOffCpuMs": 0.012
+      },
+      {
+        "tid": 19782,
+        "start": 405697.759946,
+        "end": 405697.760266,
+        "wallMs": 0.32,
+        "name": "H:DispatchTouchEvent id:10000, pointX=737.545105 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.304,
+        "guestOffCpuMs": 0.016
+      },
+      {
+        "tid": 19782,
+        "start": 405697.775637,
+        "end": 405697.775876,
+        "wallMs": 0.239,
+        "name": "H:DispatchTouchEvent id:10000, pointX=726.515503 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.214,
+        "guestOffCpuMs": 0.025
+      },
+      {
+        "tid": 19782,
+        "start": 405697.791247,
+        "end": 405697.791451,
+        "wallMs": 0.204,
+        "name": "H:DispatchTouchEvent id:10000, pointX=715.776367 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.204,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.807007,
+        "end": 405697.807341,
+        "wallMs": 0.334,
+        "name": "H:DispatchTouchEvent id:10000, pointX=705.530579 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.334,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.822576,
+        "end": 405697.822878,
+        "wallMs": 0.302,
+        "name": "H:DispatchTouchEvent id:10000, pointX=694.487061 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.284,
+        "guestOffCpuMs": 0.018
+      },
+      {
+        "tid": 19782,
+        "start": 405697.838238,
+        "end": 405697.838512,
+        "wallMs": 0.274,
+        "name": "H:DispatchTouchEvent id:10000, pointX=683.198669 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.274,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.853744,
+        "end": 405697.854338,
+        "wallMs": 0.594,
+        "name": "H:DispatchTouchEvent id:10000, pointX=671.460938 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.53,
+        "guestOffCpuMs": 0.064
+      },
+      {
+        "tid": 19782,
+        "start": 405697.869355,
+        "end": 405697.86948,
+        "wallMs": 0.125,
+        "name": "H:DispatchTouchEvent id:10000, pointX=659.524536 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.125,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.885366,
+        "end": 405697.885514,
+        "wallMs": 0.148,
+        "name": "H:DispatchTouchEvent id:10000, pointX=647.615417 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.148,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.900646,
+        "end": 405697.901476,
+        "wallMs": 0.83,
+        "name": "H:DispatchTouchEvent id:10000, pointX=635.433167 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.177,
+        "guestOffCpuMs": 0.653
+      },
+      {
+        "tid": 19782,
+        "start": 405697.91826,
+        "end": 405697.918458,
+        "wallMs": 0.198,
+        "name": "H:DispatchTouchEvent id:10000, pointX=623.632263 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.198,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.93187,
+        "end": 405697.932042,
+        "wallMs": 0.172,
+        "name": "H:DispatchTouchEvent id:10000, pointX=611.324341 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.172,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.947928,
+        "end": 405697.948104,
+        "wallMs": 0.176,
+        "name": "H:DispatchTouchEvent id:10000, pointX=598.244995 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.176,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.964299,
+        "end": 405697.964466,
+        "wallMs": 0.167,
+        "name": "H:DispatchTouchEvent id:10000, pointX=585.591248 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.167,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.979064,
+        "end": 405697.979271,
+        "wallMs": 0.207,
+        "name": "H:DispatchTouchEvent id:10000, pointX=573.323547 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.203,
+        "guestOffCpuMs": 0.004
+      },
+      {
+        "tid": 19782,
+        "start": 405697.994679,
+        "end": 405697.994877,
+        "wallMs": 0.198,
+        "name": "H:DispatchTouchEvent id:10000, pointX=561.012756 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.195,
+        "guestOffCpuMs": 0.003
+      },
+      {
+        "tid": 19782,
+        "start": 405698.010551,
+        "end": 405698.010764,
+        "wallMs": 0.213,
+        "name": "H:DispatchTouchEvent id:10000, pointX=548.906494 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.201,
+        "guestOffCpuMs": 0.012
+      },
+      {
+        "tid": 19782,
+        "start": 405698.025884,
+        "end": 405698.026108,
+        "wallMs": 0.224,
+        "name": "H:DispatchTouchEvent id:10000, pointX=537.218872 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.221,
+        "guestOffCpuMs": 0.003
+      },
+      {
+        "tid": 19782,
+        "start": 405698.041296,
+        "end": 405698.041522,
+        "wallMs": 0.226,
+        "name": "H:DispatchTouchEvent id:10000, pointX=525.726135 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.226,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.057451,
+        "end": 405698.057681,
+        "wallMs": 0.23,
+        "name": "H:DispatchTouchEvent id:10000, pointX=513.844482 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.215,
+        "guestOffCpuMs": 0.015
+      },
+      {
+        "tid": 19782,
+        "start": 405698.07257,
+        "end": 405698.072836,
+        "wallMs": 0.266,
+        "name": "H:DispatchTouchEvent id:10000, pointX=502.103821 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.254,
+        "guestOffCpuMs": 0.012
+      },
+      {
+        "tid": 19782,
+        "start": 405698.088213,
+        "end": 405698.08859,
+        "wallMs": 0.377,
+        "name": "H:DispatchTouchEvent id:10000, pointX=491.029846 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.349,
+        "guestOffCpuMs": 0.028
+      },
+      {
+        "tid": 19782,
+        "start": 405698.103855,
+        "end": 405698.104337,
+        "wallMs": 0.482,
+        "name": "H:DispatchTouchEvent id:10000, pointX=479.603760 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.458,
+        "guestOffCpuMs": 0.024
+      },
+      {
+        "tid": 19782,
+        "start": 405698.119412,
+        "end": 405698.119634,
+        "wallMs": 0.222,
+        "name": "H:DispatchTouchEvent id:10000, pointX=468.079620 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.21,
+        "guestOffCpuMs": 0.012
+      },
+      {
+        "tid": 19782,
+        "start": 405698.135199,
+        "end": 405698.136342,
+        "wallMs": 1.143,
+        "name": "H:DispatchTouchEvent id:10000, pointX=456.203094 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.244,
+        "guestOffCpuMs": 0.899
+      },
+      {
+        "tid": 19782,
+        "start": 405698.151082,
+        "end": 405698.15133,
+        "wallMs": 0.248,
+        "name": "H:DispatchTouchEvent id:10000, pointX=443.969513 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.248,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.167052,
+        "end": 405698.167273,
+        "wallMs": 0.221,
+        "name": "H:DispatchTouchEvent id:10000, pointX=432.951782 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.221,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.181934,
+        "end": 405698.182124,
+        "wallMs": 0.19,
+        "name": "H:DispatchTouchEvent id:10000, pointX=422.818207 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.19,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.198997,
+        "end": 405698.199174,
+        "wallMs": 0.177,
+        "name": "H:DispatchTouchEvent id:10000, pointX=411.736206 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.177,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.213166,
+        "end": 405698.213347,
+        "wallMs": 0.181,
+        "name": "H:DispatchTouchEvent id:10000, pointX=400.906647 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.181,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.231083,
+        "end": 405698.231268,
+        "wallMs": 0.185,
+        "name": "H:DispatchTouchEvent id:10000, pointX=389.946960 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.185,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.247354,
+        "end": 405698.247547,
+        "wallMs": 0.193,
+        "name": "H:DispatchTouchEvent id:10000, pointX=379.290009 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.193,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.262252,
+        "end": 405698.262433,
+        "wallMs": 0.181,
+        "name": "H:DispatchTouchEvent id:10000, pointX=368.780487 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.181,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.275646,
+        "end": 405698.27595,
+        "wallMs": 0.304,
+        "name": "H:DispatchTouchEvent id:10000, pointX=357.129425 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.304,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.291218,
+        "end": 405698.291461,
+        "wallMs": 0.243,
+        "name": "H:DispatchTouchEvent id:10000, pointX=345.886658 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.224,
+        "guestOffCpuMs": 0.019
+      },
+      {
+        "tid": 19782,
+        "start": 405698.306954,
+        "end": 405698.30716,
+        "wallMs": 0.206,
+        "name": "H:DispatchTouchEvent id:10000, pointX=334.640564 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.206,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.322495,
+        "end": 405698.322761,
+        "wallMs": 0.266,
+        "name": "H:DispatchTouchEvent id:10000, pointX=322.666351 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.266,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.338244,
+        "end": 405698.338461,
+        "wallMs": 0.217,
+        "name": "H:DispatchTouchEvent id:10000, pointX=310.801575 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.217,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.353822,
+        "end": 405698.3541,
+        "wallMs": 0.278,
+        "name": "H:DispatchTouchEvent id:10000, pointX=298.592072 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.278,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.362124,
+        "end": 405698.362349,
+        "wallMs": 0.225,
+        "name": "H:DispatchTouchEvent id:10000, pointX=284.000000 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.187,
+        "guestOffCpuMs": 0.038
+      },
+      {
+        "tid": 19782,
+        "start": 405698.362354,
+        "end": 405698.363177,
+        "wallMs": 0.823,
+        "name": "H:DispatchTouchEvent id:10000, pointX=280.000000 pointY=1350.000000 type=1",
+        "guestScheduledMs": 0.823,
+        "guestOffCpuMs": 0
+      }
+    ],
+    "longestCustomUpdates": [
+      {
+        "tid": 19782,
+        "start": 405698.561201,
+        "end": 405698.563537,
+        "wallMs": 2.336,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:792",
+        "guestScheduledMs": 2.336,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.559055,
+        "end": 405698.5612,
+        "wallMs": 2.145,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:789",
+        "guestScheduledMs": 2.145,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.54358,
+        "end": 405698.544609,
+        "wallMs": 1.029,
+        "name": "H:CustomNodeUpdate name:ReaderControlPanel,id:248",
+        "guestScheduledMs": 1.029,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.542261,
+        "end": 405698.543231,
+        "wallMs": 0.97,
+        "name": "H:CustomNodeUpdate name:ReadingExperience,id:239",
+        "guestScheduledMs": 0.97,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.558328,
+        "end": 405698.559054,
+        "wallMs": 0.726,
+        "name": "H:CustomNodeUpdate name:ReaderControlPanel,id:248",
+        "guestScheduledMs": 0.726,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.557619,
+        "end": 405698.558327,
+        "wallMs": 0.708,
+        "name": "H:CustomNodeUpdate name:ReadingExperience,id:239",
+        "guestScheduledMs": 0.708,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.46412,
+        "end": 405697.464707,
+        "wallMs": 0.587,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:792",
+        "guestScheduledMs": 0.587,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.603759,
+        "end": 405698.604332,
+        "wallMs": 0.573,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:789",
+        "guestScheduledMs": 0.573,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.573343,
+        "end": 405698.573794,
+        "wallMs": 0.451,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:789",
+        "guestScheduledMs": 0.451,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.463728,
+        "end": 405697.464119,
+        "wallMs": 0.391,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:789",
+        "guestScheduledMs": 0.354,
+        "guestOffCpuMs": 0.037
+      },
+      {
+        "tid": 19782,
+        "start": 405698.385651,
+        "end": 405698.386014,
+        "wallMs": 0.363,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:789",
+        "guestScheduledMs": 0.325,
+        "guestOffCpuMs": 0.038
+      },
+      {
+        "tid": 19782,
+        "start": 405698.369793,
+        "end": 405698.370098,
+        "wallMs": 0.305,
+        "name": "H:CustomNodeUpdate name:ReaderPageInteractionLayer,id:249",
+        "guestScheduledMs": 0.302,
+        "guestOffCpuMs": 0.003
+      },
+      {
+        "tid": 19782,
+        "start": 405697.464708,
+        "end": 405697.46499,
+        "wallMs": 0.282,
+        "name": "H:CustomNodeUpdate name:ReaderPageChrome,id:1050",
+        "guestScheduledMs": 0.282,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.543298,
+        "end": 405698.543579,
+        "wallMs": 0.281,
+        "name": "H:CustomNodeUpdate name:ReaderPageTurnStage,id:759",
+        "guestScheduledMs": 0.281,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.369524,
+        "end": 405698.369792,
+        "wallMs": 0.268,
+        "name": "H:CustomNodeUpdate name:ReadingExperience,id:239",
+        "guestScheduledMs": 0.26,
+        "guestOffCpuMs": 0.008
+      },
+      {
+        "tid": 19782,
+        "start": 405698.542003,
+        "end": 405698.542259,
+        "wallMs": 0.256,
+        "name": "H:CustomNodeUpdate name:Index,id:3",
+        "guestScheduledMs": 0.256,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.563886,
+        "end": 405698.564137,
+        "wallMs": 0.251,
+        "name": "H:CustomNodeUpdate name:ReaderPageChrome,id:899",
+        "guestScheduledMs": 0.251,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.447867,
+        "end": 405697.448106,
+        "wallMs": 0.239,
+        "name": "H:CustomNodeUpdate name:ReaderPageTurnStage,id:759",
+        "guestScheduledMs": 0.239,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.544823,
+        "end": 405698.545053,
+        "wallMs": 0.23,
+        "name": "H:CustomNodeUpdate name:ReaderPageTurnSurface,id:784",
+        "guestScheduledMs": 0.23,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.54461,
+        "end": 405698.544822,
+        "wallMs": 0.212,
+        "name": "H:CustomNodeUpdate name:ReadingExperience,id:239",
+        "guestScheduledMs": 0.212,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.447657,
+        "end": 405697.447866,
+        "wallMs": 0.209,
+        "name": "H:CustomNodeUpdate name:ReadingExperience,id:239",
+        "guestScheduledMs": 0.209,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.386127,
+        "end": 405698.386331,
+        "wallMs": 0.204,
+        "name": "H:CustomNodeUpdate name:ReaderPageChrome,id:1050",
+        "guestScheduledMs": 0.204,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.563689,
+        "end": 405698.563886,
+        "wallMs": 0.197,
+        "name": "H:CustomNodeUpdate name:ReaderPageChrome,id:1050",
+        "guestScheduledMs": 0.197,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.682022,
+        "end": 405698.682202,
+        "wallMs": 0.18,
+        "name": "H:CustomNodeUpdate name:ReadingExperience,id:239",
+        "guestScheduledMs": 0.18,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.482307,
+        "end": 405697.482482,
+        "wallMs": 0.175,
+        "name": "H:CustomNodeUpdate name:ReaderBookTurnSurface,id:761",
+        "guestScheduledMs": 0.171,
+        "guestOffCpuMs": 0.004
+      },
+      {
+        "tid": 19782,
+        "start": 405698.573958,
+        "end": 405698.57413,
+        "wallMs": 0.172,
+        "name": "H:CustomNodeUpdate name:ReaderPageChrome,id:899",
+        "guestScheduledMs": 0.172,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.604479,
+        "end": 405698.604649,
+        "wallMs": 0.17,
+        "name": "H:CustomNodeUpdate name:ReaderPageChrome,id:899",
+        "guestScheduledMs": 0.17,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.370099,
+        "end": 405698.370263,
+        "wallMs": 0.164,
+        "name": "H:CustomNodeUpdate name:ReaderPageTurnStage,id:759",
+        "guestScheduledMs": 0.164,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.545056,
+        "end": 405698.545204,
+        "wallMs": 0.148,
+        "name": "H:CustomNodeUpdate name:ReaderPageTurnSurface,id:785",
+        "guestScheduledMs": 0.148,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.573795,
+        "end": 405698.573943,
+        "wallMs": 0.148,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:792",
+        "guestScheduledMs": 0.148,
+        "guestOffCpuMs": 0
+      }
+    ],
+    "nativeUploadSlices": [
+      {
+        "tid": 19782,
+        "start": 405698.667339,
+        "end": 405698.667346,
+        "wallMs": 0.007,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.007,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.667363,
+        "end": 405698.667379,
+        "wallMs": 0.016,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#547823341056, traceid:0x0",
+        "guestScheduledMs": 0.016,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19900,
+        "start": 405698.667402,
+        "end": 405698.672239,
+        "wallMs": 4.837,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.812,
+        "guestOffCpuMs": 0.025
+      },
+      {
+        "tid": 19900,
+        "start": 405698.6674,
+        "end": 405698.672254,
+        "wallMs": 4.854,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#547823341056, traceid:0x0",
+        "guestScheduledMs": 4.817,
+        "guestOffCpuMs": 0.037
+      },
+      {
+        "tid": 22845,
+        "start": 405698.67242,
+        "end": 405698.67455,
+        "wallMs": 2.13,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.124,
+        "guestOffCpuMs": 0.006
+      },
+      {
+        "tid": 19782,
+        "start": 405698.672324,
+        "end": 405698.67647,
+        "wallMs": 4.146,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#547823341056, traceid:0x0",
+        "guestScheduledMs": 4.089,
+        "guestOffCpuMs": 0.057
+      },
+      {
+        "tid": 22845,
+        "start": 405698.672419,
+        "end": 405698.679799,
+        "wallMs": 7.38,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.769,
+        "guestOffCpuMs": 4.611
+      }
+    ],
+    "readingSurfaceLifecycle": [
+      {
+        "tid": 19782,
+        "start": 405698.589205,
+        "end": 405698.591932,
+        "wallMs": 2.727,
+        "name": "H:CustomNode:BuildItem [ReadingSurface][self:5872][parent:5871][frameRound:0][reuseId:-1][parentCustomNode:-1]",
+        "guestScheduledMs": 2.727,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.67253,
+        "end": 405698.673144,
+        "wallMs": 0.614,
+        "name": "H:CustomNodeBase:Destroy [ReadingSurface]",
+        "guestScheduledMs": 0.57,
+        "guestOffCpuMs": 0.044
+      }
+    ],
+    "longestGcNamedAppSlices": [
+      {
+        "tid": 19782,
+        "start": 405698.792777,
+        "end": 405698.794098,
+        "wallMs": 1.321,
+        "name": "H:RunTriggerGCTaskCallback",
+        "guestScheduledMs": 0.79,
+        "guestOffCpuMs": 0.531
+      },
+      {
+        "tid": 19782,
+        "start": 405698.792795,
+        "end": 405698.794025,
+        "wallMs": 1.23,
+        "name": "H:PartialGC::RunPhases0;GCReason2;MarkReason2;Sensitive0;IsInBackground0;Startup3;ConMark2;Young7340032;Old6291456;TotalCommit24641536;NativeBindingSize47061252;NativeLimitSize69117780;ObjSizeBeforeSensitive0",
+        "guestScheduledMs": 0.699,
+        "guestOffCpuMs": 0.531
+      },
+      {
+        "tid": 19782,
+        "start": 405698.792825,
+        "end": 405698.794013,
+        "wallMs": 1.188,
+        "name": "H:PartialGC::Evacuate",
+        "guestScheduledMs": 0.657,
+        "guestOffCpuMs": 0.531
+      },
+      {
+        "tid": 19782,
+        "start": 405698.792849,
+        "end": 405698.793506,
+        "wallMs": 0.657,
+        "name": "H:GC::EvacuateSpace",
+        "guestScheduledMs": 0.162,
+        "guestOffCpuMs": 0.495
+      },
+      {
+        "tid": 19782,
+        "start": 405698.793507,
+        "end": 405698.794008,
+        "wallMs": 0.501,
+        "name": "H:GC::UpdateReference",
+        "guestScheduledMs": 0.465,
+        "guestOffCpuMs": 0.036
+      },
+      {
+        "tid": 19782,
+        "start": 405698.792023,
+        "end": 405698.792454,
+        "wallMs": 0.431,
+        "name": "H:RunTriggerGCTaskCallback",
+        "guestScheduledMs": 0.431,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.792094,
+        "end": 405698.792355,
+        "wallMs": 0.261,
+        "name": "H:GC::MarkOldToNew",
+        "guestScheduledMs": 0.261,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.793534,
+        "end": 405698.793774,
+        "wallMs": 0.24,
+        "name": "H:GC::UpdateRoot",
+        "guestScheduledMs": 0.24,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.793826,
+        "end": 405698.793966,
+        "wallMs": 0.14,
+        "name": "H:GC::ProcessWorkloads",
+        "guestScheduledMs": 0.14,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.792356,
+        "end": 405698.792443,
+        "wallMs": 0.087,
+        "name": "H:GC::MarkRoots",
+        "guestScheduledMs": 0.087,
+        "guestOffCpuMs": 0
+      }
+    ],
+    "contactWindowPeakFrame": {
+      "tid": 19782,
+      "start": 405697.463494,
+      "end": 405697.467099,
+      "wallMs": 3.605,
+      "name": "H:OnVsyncEvent now:405697462822526",
+      "guestScheduledMs": 3.314,
+      "guestOffCpuMs": 0.291,
+      "vsyncCallbackDelayMs": 0.671
+    },
+    "longestAppSlices": [
+      {
+        "tid": 19782,
+        "start": 405698.557332,
+        "end": 405698.567041,
+        "wallMs": 9.709,
+        "name": "H:ReceiveVsync name:WM_19782 dataCount: 24bytes now:405698556750032 expectedEnd: 405698572376462 vsyncId:248141, fd:32",
+        "guestScheduledMs": 9.688,
+        "guestOffCpuMs": 0.021
+      },
+      {
+        "tid": 19782,
+        "start": 405698.55735,
+        "end": 405698.566835,
+        "wallMs": 9.485,
+        "name": "H:OnVsyncEvent now:405698556750032",
+        "guestScheduledMs": 9.464,
+        "guestOffCpuMs": 0.021,
+        "vsyncCallbackDelayMs": 0.6
+      },
+      {
+        "tid": 19782,
+        "start": 405698.557351,
+        "end": 405698.566835,
+        "wallMs": 9.484,
+        "name": "H:UIVsyncTask[timestamp:405698556750032][vsyncID:248141][instanceID:100000]",
+        "guestScheduledMs": 9.463,
+        "guestOffCpuMs": 0.021
+      },
+      {
+        "tid": 19782,
+        "start": 405698.58816,
+        "end": 405698.595649,
+        "wallMs": 7.489,
+        "name": "H:ReceiveVsync name:WM_19782 dataCount: 24bytes now:405698588013327 expectedEnd: 405698603639757 vsyncId:248143, fd:32",
+        "guestScheduledMs": 7.489,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.588197,
+        "end": 405698.595629,
+        "wallMs": 7.432,
+        "name": "H:OnVsyncEvent now:405698588013327",
+        "guestScheduledMs": 7.432,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.184
+      },
+      {
+        "tid": 19782,
+        "start": 405698.588199,
+        "end": 405698.595629,
+        "wallMs": 7.43,
+        "name": "H:UIVsyncTask[timestamp:405698588013327][vsyncID:248143][instanceID:100000]",
+        "guestScheduledMs": 7.43,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 22845,
+        "start": 405698.672419,
+        "end": 405698.679799,
+        "wallMs": 7.38,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.769,
+        "guestOffCpuMs": 4.611
+      },
+      {
+        "tid": 19782,
+        "start": 405698.557615,
+        "end": 405698.564354,
+        "wallMs": 6.739,
+        "name": "H:FlushDirtyNodeUpdate",
+        "guestScheduledMs": 6.739,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.541887,
+        "end": 405698.547084,
+        "wallMs": 5.197,
+        "name": "H:ReceiveVsync name:WM_19782 dataCount: 24bytes now:405698541125421 expectedEnd: 405698556751851 vsyncId:248140, fd:32",
+        "guestScheduledMs": 5.197,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.541909,
+        "end": 405698.547006,
+        "wallMs": 5.097,
+        "name": "H:OnVsyncEvent now:405698541125421",
+        "guestScheduledMs": 5.097,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.784
+      },
+      {
+        "tid": 19782,
+        "start": 405698.54191,
+        "end": 405698.547005,
+        "wallMs": 5.095,
+        "name": "H:UIVsyncTask[timestamp:405698541125421][vsyncID:248140][instanceID:100000]",
+        "guestScheduledMs": 5.095,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19900,
+        "start": 405698.6674,
+        "end": 405698.672254,
+        "wallMs": 4.854,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#547823341056, traceid:0x0",
+        "guestScheduledMs": 4.817,
+        "guestOffCpuMs": 0.037
+      },
+      {
+        "tid": 19900,
+        "start": 405698.667402,
+        "end": 405698.672239,
+        "wallMs": 4.837,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.812,
+        "guestOffCpuMs": 0.025
+      },
+      {
+        "tid": 19782,
+        "start": 405697.384849,
+        "end": 405697.389237,
+        "wallMs": 4.388,
+        "name": "H:eventConsume pointerEventId:219487",
+        "guestScheduledMs": 2.524,
+        "guestOffCpuMs": 1.864
+      },
+      {
+        "tid": 19782,
+        "start": 405698.672324,
+        "end": 405698.67647,
+        "wallMs": 4.146,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#547823341056, traceid:0x0",
+        "guestScheduledMs": 4.089,
+        "guestOffCpuMs": 0.057
+      },
+      {
+        "tid": 19782,
+        "start": 405697.463478,
+        "end": 405697.467119,
+        "wallMs": 3.641,
+        "name": "H:ReceiveVsync name:WM_19782 dataCount: 24bytes now:405697462822526 expectedEnd: 405697478448956 vsyncId:248071, fd:32",
+        "guestScheduledMs": 3.35,
+        "guestOffCpuMs": 0.291
+      },
+      {
+        "tid": 19782,
+        "start": 405697.463494,
+        "end": 405697.467099,
+        "wallMs": 3.605,
+        "name": "H:OnVsyncEvent now:405697462822526",
+        "guestScheduledMs": 3.314,
+        "guestOffCpuMs": 0.291,
+        "vsyncCallbackDelayMs": 0.671
+      },
+      {
+        "tid": 19782,
+        "start": 405697.463496,
+        "end": 405697.467098,
+        "wallMs": 3.602,
+        "name": "H:UIVsyncTask[timestamp:405697462822526][vsyncID:248071][instanceID:100000]",
+        "guestScheduledMs": 3.311,
+        "guestOffCpuMs": 0.291
+      },
+      {
+        "tid": 19782,
+        "start": 405698.541999,
+        "end": 405698.545206,
+        "wallMs": 3.207,
+        "name": "H:FlushDirtyNodeUpdate",
+        "guestScheduledMs": 3.207,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.541243,
+        "end": 405697.544287,
+        "wallMs": 3.044,
+        "name": "H:ReceiveVsync name:WM_19782 dataCount: 24bytes now:405697540912885 expectedEnd: 405697556539315 vsyncId:248076, fd:32",
+        "guestScheduledMs": 0.953,
+        "guestOffCpuMs": 2.091
+      },
+      {
+        "tid": 19782,
+        "start": 405698.589205,
+        "end": 405698.591932,
+        "wallMs": 2.727,
+        "name": "H:CustomNode:BuildItem [ReadingSurface][self:5872][parent:5871][frameRound:0][reuseId:-1][parentCustomNode:-1]",
+        "guestScheduledMs": 2.727,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.54127,
+        "end": 405697.543946,
+        "wallMs": 2.676,
+        "name": "H:OnVsyncEvent now:405697540912885",
+        "guestScheduledMs": 0.767,
+        "guestOffCpuMs": 1.909,
+        "vsyncCallbackDelayMs": 0.357
+      },
+      {
+        "tid": 19782,
+        "start": 405697.541272,
+        "end": 405697.543945,
+        "wallMs": 2.673,
+        "name": "H:UIVsyncTask[timestamp:405697540912885][vsyncID:248076][instanceID:100000]",
+        "guestScheduledMs": 0.764,
+        "guestOffCpuMs": 1.909
+      },
+      {
+        "tid": 19782,
+        "start": 405697.541364,
+        "end": 405697.543735,
+        "wallMs": 2.371,
+        "name": "H:DispatchTouchEvent id:10000, pointX=896.755981 pointY=1350.000000 type=2",
+        "guestScheduledMs": 0.472,
+        "guestOffCpuMs": 1.899
+      },
+      {
+        "tid": 19782,
+        "start": 405698.561201,
+        "end": 405698.563537,
+        "wallMs": 2.336,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:792",
+        "guestScheduledMs": 2.336,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.561203,
+        "end": 405698.563537,
+        "wallMs": 2.334,
+        "name": "H:JSView: ExecuteRerender",
+        "guestScheduledMs": 2.334,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.603722,
+        "end": 405698.605946,
+        "wallMs": 2.224,
+        "name": "H:ReceiveVsync name:WM_19782 dataCount: 24bytes now:405698603645570 expectedEnd: 405698619272000 vsyncId:248144, fd:32",
+        "guestScheduledMs": 2.224,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.603739,
+        "end": 405698.605915,
+        "wallMs": 2.176,
+        "name": "H:OnVsyncEvent now:405698603645570",
+        "guestScheduledMs": 2.176,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.093
+      },
+      {
+        "tid": 19782,
+        "start": 405698.603742,
+        "end": 405698.605914,
+        "wallMs": 2.172,
+        "name": "H:UIVsyncTask[timestamp:405698603645570][vsyncID:248144][instanceID:100000]",
+        "guestScheduledMs": 2.172,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.564355,
+        "end": 405698.566508,
+        "wallMs": 2.153,
+        "name": "H:UITaskScheduler::FlushTask",
+        "guestScheduledMs": 2.132,
+        "guestOffCpuMs": 0.021
+      },
+      {
+        "tid": 19782,
+        "start": 405698.559055,
+        "end": 405698.5612,
+        "wallMs": 2.145,
+        "name": "H:CustomNodeUpdate name:ReadingSurface,id:789",
+        "guestScheduledMs": 2.145,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.559056,
+        "end": 405698.561199,
+        "wallMs": 2.143,
+        "name": "H:JSView: ExecuteRerender",
+        "guestScheduledMs": 2.143,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 22845,
+        "start": 405698.67242,
+        "end": 405698.67455,
+        "wallMs": 2.13,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.124,
+        "guestOffCpuMs": 0.006
+      },
+      {
+        "tid": 19782,
+        "start": 405698.572501,
+        "end": 405698.574391,
+        "wallMs": 1.89,
+        "name": "H:ReceiveVsync name:WM_19782 dataCount: 24bytes now:405698572381727 expectedEnd: 405698588008157 vsyncId:248142, fd:32",
+        "guestScheduledMs": 1.89,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405697.463724,
+        "end": 405697.465606,
+        "wallMs": 1.882,
+        "name": "H:FlushDirtyNodeUpdate",
+        "guestScheduledMs": 1.845,
+        "guestOffCpuMs": 0.037
+      },
+      {
+        "tid": 19782,
+        "start": 405698.572526,
+        "end": 405698.574367,
+        "wallMs": 1.841,
+        "name": "H:OnVsyncEvent now:405698572381727",
+        "guestScheduledMs": 1.841,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.144
+      },
+      {
+        "tid": 19782,
+        "start": 405697.385631,
+        "end": 405697.387468,
+        "wallMs": 1.837,
+        "name": "H:TouchTest",
+        "guestScheduledMs": 0.902,
+        "guestOffCpuMs": 0.935
+      },
+      {
+        "tid": 19782,
+        "start": 405698.572529,
+        "end": 405698.574366,
+        "wallMs": 1.837,
+        "name": "H:UIVsyncTask[timestamp:405698572381727][vsyncID:248142][instanceID:100000]",
+        "guestScheduledMs": 1.837,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 19782,
+        "start": 405698.564356,
+        "end": 405698.565956,
+        "wallMs": 1.6,
+        "name": "H:FlushLayoutTask",
+        "guestScheduledMs": 1.579,
+        "guestOffCpuMs": 0.021
+      },
+      {
+        "tid": 19782,
+        "start": 405698.361822,
+        "end": 405698.363205,
+        "wallMs": 1.383,
+        "name": "H:eventConsume pointerEventId:219647",
+        "guestScheduledMs": 1.165,
+        "guestOffCpuMs": 0.218
+      }
+    ]
+  }
+]

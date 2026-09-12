@@ -1,0 +1,218 @@
+{
+  "status": "PASS",
+  "mode": "滑动",
+  "turnsPerDirection": 5,
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "e169915cacdbb888170c1941a22cdde57cc222d8363e6d7176764ec47c988a5c",
+    "chapter": 1,
+    "ordinal": 1,
+    "total": null,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章001段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 页"
+  },
+  "distinctForwardPages": 5,
+  "chaptersSeen": [
+    1,
+    2
+  ],
+  "results": [
+    {
+      "direction": "next",
+      "turn": 1,
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "2a09ae8ae3d729a732d2a19cedc4213c54c0ae4c41ce37acbb6ff88008ec02b5",
+        "chapter": 1,
+        "ordinal": 2,
+        "total": null,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 页"
+      }
+    },
+    {
+      "direction": "next",
+      "turn": 2,
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "a6e28d192128ed3beb44f7bcc0558c1b0a020e7bf80a2d87cd3de311a24bd10a",
+        "chapter": 1,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章001段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "turn": 3,
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "d2c377ecdd3e718b37cb5cc59152ff159bbe083e57ab5072cdb897df7dc2ad47",
+        "chapter": 1,
+        "ordinal": 4,
+        "total": 4,
+        "start": 801,
+        "end": 1050,
+        "bodyLength": 249,
+        "first": [
+          "暂停后又继续，段落边界和换行都应",
+          "保持原来的顺序。这里的编号是测试"
+        ],
+        "footer": "第 4 / 4 页"
+      }
+    },
+    {
+      "direction": "next",
+      "turn": 4,
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "d6ea3a8f94ff6ab9e97a8f872c3b009b94aa1b94253c5ef7808293b47a072bf3",
+        "chapter": 2,
+        "ordinal": 1,
+        "total": null,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章002段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 页"
+      }
+    },
+    {
+      "direction": "next",
+      "turn": 5,
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "5352aca06eab92a9b1f4570deeff0cc9a4ca78502fb9caf8a372fcd969d9e747",
+        "chapter": 2,
+        "ordinal": 2,
+        "total": null,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "turn": 1,
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "d6ea3a8f94ff6ab9e97a8f872c3b009b94aa1b94253c5ef7808293b47a072bf3",
+        "chapter": 2,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章002段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "turn": 2,
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "d2c377ecdd3e718b37cb5cc59152ff159bbe083e57ab5072cdb897df7dc2ad47",
+        "chapter": 1,
+        "ordinal": 4,
+        "total": 4,
+        "start": 801,
+        "end": 1050,
+        "bodyLength": 249,
+        "first": [
+          "暂停后又继续，段落边界和换行都应",
+          "保持原来的顺序。这里的编号是测试"
+        ],
+        "footer": "第 4 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "turn": 3,
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "a6e28d192128ed3beb44f7bcc0558c1b0a020e7bf80a2d87cd3de311a24bd10a",
+        "chapter": 1,
+        "ordinal": 3,
+        "total": 4,
+        "start": 525,
+        "end": 801,
+        "bodyLength": 276,
+        "first": [
+          "【章001段06】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 3 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "turn": 4,
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "2a09ae8ae3d729a732d2a19cedc4213c54c0ae4c41ce37acbb6ff88008ec02b5",
+        "chapter": 1,
+        "ordinal": 2,
+        "total": 4,
+        "start": 260,
+        "end": 525,
+        "bodyLength": 265,
+        "first": [
+          "到前页和后页时是否仍然连续。阅读",
+          "暂停后又继续，段落边界和换行都应"
+        ],
+        "footer": "第 2 / 4 页"
+      }
+    },
+    {
+      "direction": "previous",
+      "turn": 5,
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "e169915cacdbb888170c1941a22cdde57cc222d8363e6d7176764ec47c988a5c",
+        "chapter": 1,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章001段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      }
+    }
+  ],
+  "scope": "uninterrupted edge-tap next sequence then previous sequence; actual text checked against unique canonical self-authored source, not original physical 绍宋 case"
+}

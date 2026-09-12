@@ -14,15 +14,29 @@ const page = read('entry/src/main/ets/features/source/SourceManagementPage.ets')
 const index = read('entry/src/main/ets/pages/Index.ets');
 
 // Exercise the real gateway decoder/contract logic with an injected owner.
-// The helper module is inlined because data-URL loads cannot resolve
+// The helper modules are inlined because data-URL loads cannot resolve
 // relative specifiers like '../../app/ErrorMessage'.
 const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/ErrorMessage.ts'))
   .replace('export function errorMessageOf', 'function errorMessageOf');
 const errorMessageImport =
   /^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m;
+const sourceCategoryModule = stripTypeScriptTypes(
+  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+).replace(/^export /gm, '');
+const sourceCategoryImport =
+  /^import \{ classifyReaderSource, type ReaderSourceCategory \} from ['"]\.\/ReaderSourceCategory['"];$/m;
+// P1-5: the import-time URL gate lives in the shared HttpTransportPolicy;
+// inline the same production module so the harness exercises the real judge.
+const transportPolicyModule = stripTypeScriptTypes(
+  read('entry/src/main/ets/app/HttpTransportPolicy.ts'),
+).replace(/^export /gm, '');
+const transportPolicyImport =
+  /^import \{ httpUrlHostname, isPrivateNetworkTarget \} from ['"][^'"]*HttpTransportPolicy(\.ts)?['"];$/m;
 const executableGateway = stripTypeScriptTypes(
   gatewaySource
     .replace(errorMessageImport, () => errorMessageModule)
+    .replace(transportPolicyImport, () => transportPolicyModule)
+    .replace(sourceCategoryImport, () => sourceCategoryModule)
     .replace(/^import url from ['"]@ohos\.url['"];$/m, 'const url = { URL };')
     .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, ''),
@@ -85,6 +99,22 @@ assert.equal(calls.length, 2, 'array imports must call Rust source.import once p
 assert.deepEqual(calls[1].params.bookSource.unknownLegadoField, { preserved: true },
   'the gateway must forward the raw Legado object without rewriting unknown fields');
 
+// The exact raw file shipped in every HAP is also a normal user-importable
+// collection. Exercise it through the production decoder without any network
+// requests or live source checks.
+calls.length = 0;
+const collectionDocument = read(
+  'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
+const collection = JSON.parse(collectionDocument);
+const collectionSummary = await gateway.importBookSourceDocument(collectionDocument);
+assert.equal(collectionSummary.importedCount, collection.length);
+assert.equal(collectionSummary.failedCount, 0);
+assert.deepEqual(collectionSummary.sourceIds, collection.map(source => source.bookSourceUrl));
+assert.equal(calls.length, collection.length,
+  'the packaged collection must import every admitted source exactly once');
+assert.equal(calls[0].params.bookSource.ruleFingerprint, collection[0].ruleFingerprint,
+  'collection import must preserve supply metadata and the raw Legado rule object');
+
 await assert.rejects(() => gateway.importBookSourceDocument('{'), /not valid JSON/);
 await assert.rejects(() => gateway.importBookSourceDocument('[]'), /contains no sources/);
 
@@ -139,6 +169,30 @@ assert.deepEqual(
   },
 );
 assert.equal(calls.length, 2, 'an invalid item must not abort the items after it');
+
+// P1-5 import-time url guard: a source whose primary key targets private,
+// loopback, or link-local space (or is not http/https) is a per-item failure
+// and never reaches Core, while public sources keep importing untouched.
+calls.length = 0;
+const urlGuardSummary = await gateway.importBookSourceDocument(JSON.stringify([
+  single,
+  { bookSourceUrl: 'http://127.0.0.1:65432/', bookSourceName: '环回' },
+  { bookSourceUrl: 'http://169.254.169.254/latest/meta-data/', bookSourceName: '链路本地' },
+  { bookSourceUrl: 'http://10.1.2.3/search', bookSourceName: '私网' },
+  { bookSourceUrl: 'file:///etc/passwd', bookSourceName: '非 HTTP' },
+  { bookSourceUrl: 'ftp://source-a.example/', bookSourceName: '非 HTTP 方案' },
+]));
+assert.deepEqual(urlGuardSummary.sourceIds, [single.bookSourceUrl]);
+assert.equal(urlGuardSummary.importedCount, 1);
+assert.equal(urlGuardSummary.failedCount, 5);
+for (const failure of urlGuardSummary.failures) {
+  assert.equal(failure.sourceId, '');
+  assert.match(
+    failure.message,
+    /bookSourceUrl must be an http\(s\) URL on a public host/,
+  );
+}
+assert.equal(calls.length, 1, 'a private-target source never reaches Core');
 
 let item = 0;
 const partialGateway = new SourceGateway({
@@ -204,10 +258,11 @@ assert.deepEqual(await listGateway.loadSources(), [{
   sourceId: single.bookSourceUrl,
   name: single.bookSourceName,
   baseUrl: 'https://source-a.example',
-  enabled: true,
-  enabledExplore: true,
-  group: '小说',
-  loginUrl: 'https://source-a.example/login',
+      enabled: true,
+      enabledExplore: true,
+      group: '小说',
+      category: 'novel',
+      loginUrl: 'https://source-a.example/login',
 }]);
 
 // Product debug consumes the Host evidence captured by the same real

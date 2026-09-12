@@ -42,8 +42,9 @@ assert.match(failureBlock, /isRemoteSourceFailureKind\(kind\)/,
   'read failure must classify book-source vs local failures before any UI');
 assert.match(failureBlock, /value: '重试当前源'/,
   'book-source failures must offer a user-confirmed retry on the current source');
-assert.match(failureBlock, /value: '选择其他书源'[\s\S]*this\.openSourceSwitch\(\)/,
-  'book-source failures must offer a user-confirmed manual source switch');
+assert.match(failureBlock,
+  /value: '选择其他书源'[\s\S]*this\.runReadingFailureActionAfterExit\('switch'\)/,
+  'book-source failures must defer manual source switch until the failed reader has exited');
 assert.doesNotMatch(failureBlock, /startSourceDiscovery/,
   'read failure must never auto-open or auto-pick source discovery');
 assert.doesNotMatch(failureBlock, /automaticSourceRecoveryKey/,
@@ -51,28 +52,25 @@ assert.doesNotMatch(failureBlock, /automaticSourceRecoveryKey/,
 assert.match(index,
   /if \(autoPickFirst\) \{[\s\S]*value\.isCurrent !== true[\s\S]*this\.onPickSource\(candidate\);/,
   'the discovery auto-pick branch stays available only to explicit non-failure callers');
-assert.match(index,
-  /gateway\.loadCachedCandidates\(query, isCurrent\)[\s\S]*cached\.length > 0[\s\S]*gateway\.refreshCandidates/,
-  'opening source switch must admit durable candidates before any remote refresh');
+assert.match(index, /gateway\.loadCachedCandidates\(query, isCurrent\)/,
+  'source picker reads the same durable candidates as search');
+assert.doesNotMatch(index, /cached\.length > 0[\s\S]{0,150}gateway\.refreshCandidates/,
+  'opening an empty picker does not launch another module-local search');
 assert.match(sourceSwitchGateway, /const SOURCE_SWITCH_CACHE_TTL_MS = 24 \* 60 \* 60 \* 1000;/);
-assert.match(sourceSwitchGateway,
-  /'chapter\.content',[\s\S]*const latencyMs = Math\.max\(0, Date\.now\(\) - startedAt\)/,
-  'response time must measure the mapped chapter body probe instead of a source ping');
-assert.match(sourceSwitchGateway,
-  /chapterWordCountText,[\s\S]*respondTime:[\s\S]*'search-book\.put'/,
-  'chapter and response-time projections must be persisted through Core SearchBook storage');
-assert.match(sourceSwitchWindow, /Refresh\(\{ refreshing: this\.isRefreshing\(\)/);
-assert.match(sourceSwitchWindow, /\.onRefreshing\([\s\S]*this\.onRefresh\(\)/,
-  'the candidate list pull gesture must own the explicit full refresh');
-assert.match(sourceSwitchRow, /return this\.currentChapterTitle\.trim\(\)\.length > 0/,
-  'the current-chapter column must render the persisted probe result');
+assert.match(sourceSwitchGateway, /acquisitionState = stale/,
+  'cache expiry is explicit and retains previous source information');
+assert.match(sourceSwitchGateway, /bookAcquisitions\?\.\(\)\.prepare/,
+  'explicit discovery delegates preparation to shared tasks');
+assert.match(sourceSwitchRow, /acquisitionState === 'catalogReady'/);
+assert.match(sourceSwitchRow, /acquisitionState === 'readable'/,
+  'a discovered source must not be labeled readable');
 
 assert.match(remote, /async openCachedCatalogSession\([\s\S]*acquisitionMode: 'online'/,
   'a cached catalog must retain online body fallback semantics');
 assert.match(search, /this\.normalizedBookKey\(book\.title, book\.author\)/,
   'search results must group the same title and author across origins');
-assert.match(search, /right\.sourceCount - left\.sourceCount/,
-  'multi-origin search results must be promoted like Legado');
+assert.match(search, /this\.viewState\.rank\(this\.resultGroupKey\(left\.book\)\)/,
+  'progressive source counts preserve first-seen order and scroll anchor');
 assert.match(search, /Text\('已在书架'\)/,
   'grouped search results must expose current shelf membership');
 // ACQ-02 scope control follows the Figma canonical masters: the chip wall is
@@ -82,8 +80,7 @@ assert.match(search, /groupScopeRow\(\)/,
   'the search surface must present the source-group chip row under the bar');
 assert.match(search, /selectGroup\(/,
   'group chips must switch the scope and re-run the current search');
-assert.match(search, /source\.group === this\.selectedGroupName/,
-  'a selected group must restrict the sweep to that group\'s enabled sources');
+assert.match(search, /return \['本地', '在线'\]/, 'result tabs filter one unified session');
 assert.match(search, /onSearch\(keyword, scope\)/,
   'ACQ-02: submitting must forward the scope subset to the orchestrator');
 assert.match(search, /onStop/,

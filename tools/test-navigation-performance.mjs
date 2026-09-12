@@ -20,7 +20,7 @@ assert.ok(fonts.lastIndexOf('readerFontsRegistered = true') > fonts.lastIndexOf(
 
 const index = read('entry/src/main/ets/pages/Index.ets');
 const localDetail = method(index, 'private openLocalBookDetail(', 'private openRemoteBookDetail(');
-assert.ok(localDetail.indexOf("this.route = 'detail'") < localDetail.indexOf('reading.loadToc(selection.bookId)'),
+assert.ok(localDetail.indexOf('this.route = entryRoute') < localDetail.indexOf('reading.loadToc(selection.bookId)'),
   'local detail must be projected before the serialized TOC request');
 assert.doesNotMatch(localDetail, /loadShelfBook|new ReaderCoreGateway/,
   'a Core-derived shelf card must not be read a second time on local detail admission');
@@ -30,9 +30,9 @@ assert.match(remoteDetail,
   /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
   'only an exact shelf identity may reuse the already admitted remote session');
 assert.match(remoteDetail,
-  /const sessionAdmission: Promise<RemoteDetailAdmission> = reusableRemoteSession !== undefined \?[\s\S]*?Promise\.resolve\(new RemoteDetailAdmission\(reusableRemoteSession\)\) : shelfSnapshot !== undefined \?[\s\S]*?gateway\.openCachedCatalogSession\(seed, isCurrent\)[\s\S]*?gateway\.openSession\(seed, \{ isCurrent \}\)/,
+  /const sessionAdmission: Promise<RemoteDetailAdmission> = new SourceGateway\(owner\).loadSources\(\)[\s\S]*?return reusableRemoteSession !== undefined \?[\s\S]*?Promise\.resolve\(new RemoteDetailAdmission\(reusableRemoteSession\)\) : shelfSnapshot !== undefined \?[\s\S]*?gateway\.openCachedCatalogSession\(seed, isCurrent\)[\s\S]*?gateway\.openSession\(seed, \{ isCurrent \}\)/,
   'shelf re-entry must reuse a live session or admit the durable Core catalog before any network refresh');
-assert.ok(remoteDetail.indexOf("this.route = 'detail'") < remoteDetail.indexOf('gateway.openCachedCatalogSession(seed, isCurrent)'),
+assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('gateway.openCachedCatalogSession(seed, isCurrent)'),
   'remote detail must project its inert shell before network/session admission');
 assert.match(remoteDetail, /let suppliedShelfBook = shelfSnapshot\?\.sourceId === session\.identity\.sourceId/);
 assert.doesNotMatch(remoteDetail, /await bookshelf\.loadShelfBook/,
@@ -40,8 +40,10 @@ assert.doesNotMatch(remoteDetail, /await bookshelf\.loadShelfBook/,
 assert.ok(remoteDetail.indexOf('this.detailToc = session.entries.map') <
   remoteDetail.indexOf('void bookshelf.loadShelfBook'),
   'the admitted session and TOC must publish before shelf membership reconciliation');
-assert.doesNotMatch(remoteDetail, /new SourceGateway\(owner\)\.loadSources/,
-  'optional source-name lookup must not stay on the route-admission critical path');
+assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('new SourceGateway(owner).loadSources'),
+  'mandatory category admission must not delay the inert detail shell');
+assert.ok(remoteDetail.indexOf('this.detailToc = session.entries.map') < remoteDetail.indexOf('void this.resolveRemoteDetailSourceName'),
+  'optional source-name lookup remains after session publication');
 const returnToShelf = method(index, 'private returnToBookshelf(', 'private applyReadingCommit(');
 assert.match(returnToShelf,
   /const retainedRemoteSession = this\.detailBook !== undefined &&[\s\S]*?this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&[\s\S]*?identity\.sourceId === this\.detailBook\.sourceId &&[\s\S]*?identity\.bookId === this\.detailBook\.bookId/,
@@ -64,8 +66,8 @@ assert.match(reading, /return Promise\.resolve\(new InitialReadingToc\(this\.boo
 assert.doesNotMatch(reading, /new InitialReadingToc\(this\.bookId, this\.directoryEntries\.slice\(\)\)/,
   'detail-admitted TOC identity must not be broken by an unnecessary array copy');
 assert.match(reading,
-  /tocEntries: this\.controlVisible \?\s*this\.controlDirectoryEntries\(\) : EMPTY_CONTROL_DIRECTORY_ENTRIES/,
-  'the hidden Reader Control shell must not project the full directory on first-page admission');
+  /tocEntries: readerControlHostVisible\(this\.controlSession\) \|\| this\.controlDirectoryDataRetained\s*\?\s*this\.controlDirectoryEntries\(\) : EMPTY_CONTROL_DIRECTORY_ENTRIES/,
+  'the hidden Reader Control shell must not project the full directory before admission, and must retain it through dismiss');
 const controlDirectory = method(reading, 'private controlDirectoryEntries(', 'private initializeTtsSession(');
 assert.ok(controlDirectory.indexOf('this.tocEntries === this.directoryEntries') <
   controlDirectory.indexOf('new Map<number, LocalReadingTocEntry>()'),
@@ -113,7 +115,8 @@ assert.match(remoteGateway, /private chapterByIndex: Map<number, RemoteReadingTo
 assert.match(remoteGateway, /const selected = this\.chapterEntry\(session, chapterIndex\)/);
 
 const search = read('entry/src/main/ets/features/search/SearchPage.ets');
-assert.match(search, /Repeat\(results\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
+assert.match(search, /LazyForEach\(this\.resultDataSource,/,
+  'Search must lazily materialize explicitly notified result replacements');
 assert.doesNotMatch(search, /countBySource/,
   'raw result cards must not repeat an O(n) source scan for every row');
 const groupResults = method(search, 'private groupResults(', 'private normalizedBookKey(');

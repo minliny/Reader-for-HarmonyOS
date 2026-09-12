@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 4,
-  "contractId": "reader.appearance.phone.master-axis.direct-manipulation",
+  "schemaVersion": 5,
+  "contractId": "reader.appearance.phone.figma-n-1505-18040",
   "scope": {
     "platform": "HarmonyOS",
     "viewport": "Phone",
@@ -35,8 +35,11 @@
       "trajectoryAuthority": false
     }
   },
-  "finalN2": {
-    "status": "unpublished",
+  "supersededFinalN2ProductProposal": {
+    "status": "superseded",
+    "formerStatus": "unpublished",
+    "historicalOnly": true,
+    "mustNotDriveRuntimeOrTests": true,
     "nodeId": null,
     "authorityAvailable": false,
     "visualParityBlocked": true,
@@ -57,9 +60,61 @@
     "figmaEffectiveReviewPercent": [0.1111111111111111, 0.75],
     "directionIndependentSampler": true,
     "globalEasing": false,
-    "shellAndGrabberLinear": true
+    "shellAndGrabberLinear": false,
+    "visualStageEasing": "ease-out"
   },
   "runtimeContract": {
+    "authority": "figma-node-1505-18040",
+    "exactFigmaParityTarget": true,
+    "parityStatus": "source-aligned-awaiting-runtime-frame-verification",
+    "singleMasterProgress": true,
+    "layeredComposition": true,
+    "reverseUsesSameSampler": true,
+    "rootCrossfadeRequired": true,
+    "quickGeometryEndMasterProgress": 0.43478260869565216,
+    "settleFullDistanceMs": 420,
+    "actorCount": 29,
+    "rawTrackCount": 60,
+    "actorGroups": {
+      "fixedScreen": ["BrightnessRail", "ModuleNav"],
+      "stage": ["MorphStage"],
+      "quickTree": [
+        "QuickMorph",
+        "ThemeHeader",
+        "ThemeDay",
+        "ThemeWarm",
+        "ThemeNight",
+        "ThemeWarmNight",
+        "ThemePaper",
+        "ThemeGreen",
+        "ThemePaperNight",
+        "ThemeGreenNight",
+        "QuickDivider",
+        "FontHeader",
+        "Font0",
+        "Font1",
+        "Font2",
+        "Font3",
+        "Font4",
+        "Font5",
+        "Font6",
+        "Font7"
+      ],
+      "fullTree": [
+        "ContentSurface",
+        "AppearanceContent",
+        "ThemeLibrary",
+        "FontLibrary",
+        "Typography",
+        "Header"
+      ]
+    }
+  },
+  "supersededProductRuntimeContract": {
+    "status": "rejected",
+    "historicalOnly": true,
+    "mustNotDriveRuntimeOrTests": true,
+    "reason": "Replaced by the active Figma 1505:18040 layered track contract.",
     "authority": "user-approved-product-direct-manipulation",
     "notFinalFigmaParity": true,
     "singleMasterProgress": true,
@@ -328,7 +383,8 @@
     }
   },
   "geometry": {
-    "authority": "legacy-evidence-only",
+    "authority": "active-figma-motion-and-design-context",
+    "runtimeAdaptation": "MorphStage full height follows available layout height; authored local actor geometry remains fixed.",
     "shell": {
       "quickHeightVp": 330,
       "fullHeightVp": 736,
@@ -349,11 +405,13 @@
       "sizeVp": [62.5, 27]
     }
   },
-  "productDirectManipulationContract": {
-    "status": "approved",
+  "supersededProductDirectManipulationContract": {
+    "status": "rejected",
+    "historicalOnly": true,
+    "mustNotDriveRuntimeOrTests": true,
     "authority": "user-corrected-motion-model",
     "notAuthoredByFigma": true,
-    "reason": "The grabber displacement percentage is the complete motion-axis progress. Every shared component independently samples that same percentage and keeps moving and deforming until Full.",
+    "reason": "Superseded by the user's instruction to use Figma 1505:18040 as the sole motion authority.",
     "spatialDriver": "measuredGrabberDisplacementProgress",
     "sampleExpansionProgress": [0.25, 0.5, 0.75],
     "singlePersistentTree": true,
@@ -553,7 +611,7 @@
   },
   "legacyEvidence": {
     "N": {
-      "authority": "legacy-figma-evidence-only",
+      "authority": "figma-get-motion-context",
       "reviewDurationMs": 1800,
       "reviewLoopMode": "loop",
       "activeReviewWindowMs": [200, 1350],
@@ -922,6 +980,10 @@
     }
   },
   "legacyRejectedProductSupplement": {
+    "status": "rejected",
+    "historicalOnly": true,
+    "mustNotDriveRuntimeOrTests": true,
+    "reason": "Fixed-travel, elastic and direction-selected clocks are not part of the active Figma N runtime contract.",
     "authority": "reader-product-contract",
     "notAuthoredByFigma": true,
     "directManipulation": {

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { stripTypeScriptTypes } from 'node:module';
 import { readFile } from 'node:fs/promises';
 
 import { HarmonyTtsHostRouter } from '../entry/src/main/ets/app/HarmonyTtsHostRouter.ts';
@@ -136,22 +137,48 @@ const httpHostSource = await readFile(
   new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts', import.meta.url),
   'utf8',
 );
-assert.match(httpHostSource, /gateway\.buildRequest\(configId, request\.text\)/);
-assert.match(httpHostSource, /expectDataType: http\.HttpDataType\.ARRAY_BUFFER/);
+assert.match(httpHostSource, /gateway\.buildRequest\(configId, request\.text, ratePercent\)/,
+  'HttpTTS must forward the exact five-point speed percentage to Core');
 assert.match(httpHostSource, /HTTP_TTS_MAX_AUDIO_BYTES/);
-assert.match(httpHostSource, /request\.destroy\(\)/);
-assert.match(httpHostSource, /private activeRequest: http\.HttpRequest \| null = null/);
-assert.match(httpHostSource, /private rejectActiveRequest:/);
+assert.match(httpHostSource, /HttpExecuteHost\.instance\.execute\(/,
+  'HttpTTS must reuse the hardened redirect/DNS transport');
+assert.match(httpHostSource, /followRedirects: true/);
+assert.match(httpHostSource, /maxRedirects: HTTP_TTS_MAX_REDIRECTS/);
+assert.match(httpHostSource, /httpsOnly: true/,
+  'HttpTTS must reject cleartext redirect downgrades');
+assert.match(httpHostSource, /sameOriginRedirectsOnly: descriptor\.playback\?\.credentialRef !== undefined/,
+  'all credential-bearing redirects, including custom headers, must remain on the same effective origin');
+assert.match(httpHostSource, /admittedGeneration !== this\.networkGeneration/,
+  'stop/close must cancel the shared transport through its ownership probe');
+assert.match(httpHostSource, /new util\.Base64Helper\(\)\.decodeSync/);
+assert.match(httpHostSource, /descriptor\.method/);
+assert.match(httpHostSource, /descriptor\.body/);
+assert.match(httpHostSource, /normalizeAudioBytes/);
+assert.match(httpHostSource, /ReaderTtsCredentialStore\.instance\.read/);
+assert.match(httpHostSource, /fetchAudio\(descriptor, configId\)/,
+  'HttpTTS must bind credential resolution to the config selected for this request');
+assert.match(httpHostSource, /isReaderTtsCredentialAliasForConfig\(playback\.credentialRef, configId\)/,
+  'HttpTTS must reject credential aliases belonging to another config');
+assert.match(httpHostSource, /read\(playback\.credentialRef, configId\)/,
+  'credential store reads must carry the selected config id');
+assert.match(httpHostSource, /requestUrl = this\.expandCredentialPlaceholder\(/,
+  'URL credential placeholders must be resolved only in the Host');
+assert.match(httpHostSource, /encodedSecret = encodeURIComponent\(secret\)/,
+  'URL credential placeholders must be component-encoded before transport');
+assert.match(httpHostSource, /expandCredentialPlaceholder\(/,
+  'credential expansion must be bounded before allocating the final URL/header');
+assert.match(httpHostSource, /hasUrlPlaceholder = descriptor\.url\.includes\('\{\{apiKey\}\}'\)/,
+  'URL credential placeholders must satisfy the alias/header admission check');
+assert.doesNotMatch(httpHostSource, /http\.createHttp\(\)|request\.request\(/,
+  'HttpTTS must not keep a second unguarded HTTP implementation');
 assert.match(httpHostSource, /this\.cancelActiveRequest\('Reader HttpTTS audio request stopped'\)/);
-assert.match(httpHostSource, /const response = await Promise\.race\(\[/);
-assert.match(httpHostSource, /if \(this\.activeRequest === request\)/);
 assert.match(httpHostSource, /player\.dataSrc = this\.createDataSource\(bytes\)/);
 assert.match(httpHostSource, /fileSize: bytes\.length/);
 assert.match(httpHostSource, /target\.set\(bytes\.subarray\(start, start \+ count\), 0\)/);
 assert.match(httpHostSource, /generation !== this\.speakGeneration/);
 assert.match(
   httpHostSource,
-  /gateway\.buildRequest\(configId, request\.text\);\s+if \(this\.closed \|\| generation !== this\.speakGeneration\) return;/,
+  /gateway\.buildRequest\(configId, request\.text, ratePercent\);\s+if \(this\.closed \|\| generation !== this\.speakGeneration\) return;/,
   'a stop during descriptor construction must not start a late audio request',
 );
 assert.doesNotMatch(httpHostSource, /createMediaSourceWithUrl/);
@@ -171,5 +198,68 @@ assert.match(backgroundSource, /this\.context\.abilityInfo\.bundleName/);
 assert.match(backgroundSource, /canIUse\('SystemCapability\.ResourceSchedule\.BackgroundTaskManager\.ContinuousTask'\)/);
 assert.doesNotMatch(backgroundSource, /ReaderTtsSessionCoordinator|tts\.queue|ReaderCoreRuntime/,
   'the platform lease must not become another TTS state machine');
+
+// Exercise the Host-only credential expansion without constructing platform
+// audio objects. Private methods remain normal ArkTS methods after erasure;
+// this probe supplies only their explicit credential-store dependencies.
+const executableHost = httpHostSource
+  .replace(/^import[\s\S]*?;\n/gm, '')
+  .replace('export class HarmonyHttpTtsHost', 'class HarmonyHttpTtsHost');
+const hostPrelude = `
+const audio = {}; const media = {}; const hilog = {warn(){}, error(){}, info(){}};
+const errorMessageOf = error => error instanceof Error ? error.message : String(error);
+const ReaderHttpTtsGateway = class {};
+const isReaderTtsCredentialAliasForConfig = (alias, id) => alias === 'reader.tts.' + id + '.fixture-token';
+globalThis.auditCredentialFixture = 'a&b/c?d#e';
+const ReaderTtsCredentialStore = {instance: {read: async () => globalThis.auditCredentialFixture}};
+const HttpExecuteHost = {};
+const isCrossOriginSensitiveHeader = () => false;
+`;
+const hostModule = await import(`data:text/javascript;base64,${Buffer.from(
+  hostPrelude + stripTypeScriptTypes(executableHost) + '\nexport {HarmonyHttpTtsHost};',
+).toString('base64')}`);
+const hostProbe = Object.create(hostModule.HarmonyHttpTtsHost.prototype);
+const resolved = await hostProbe.resolveRequest({
+  url: 'https://tts.example.test/audio?token={{apiKey}}',
+  headers: {},
+  playback: {
+    format: 'mp3', sampleFormat: 's16le', ratePercent: 100, rateApplied: true,
+    credentialRef: 'reader.tts.42.fixture-token', credentialPrefix: '',
+  },
+}, 42);
+assert.equal(resolved.url, 'https://tts.example.test/audio?token=a%26b%2Fc%3Fd%23e');
+assert.deepEqual(resolved.headers, {});
+// Header replacement must treat the secret literally; `$&` has special
+// meaning to String.replace when a replacement string is passed directly.
+globalThis.auditCredentialFixture = 'a$&b';
+const headerResolved = await hostProbe.resolveRequest({
+  url: 'https://tts.example.test/audio',
+  headers: {'X-Token': 'pre-{{apiKey}}-post'},
+  playback: {
+    format: 'mp3', sampleFormat: 's16le', ratePercent: 100, rateApplied: true,
+    credentialRef: 'reader.tts.42.fixture-token', credentialPrefix: '',
+  },
+}, 42);
+assert.equal(headerResolved.headers['X-Token'], 'pre-a$&b-post');
+const oversizedUrl = {
+  url: `https://tts.example.test/audio?token=${'{{apiKey}}'.repeat(300)}`,
+  headers: {},
+  playback: {
+    format: 'mp3', sampleFormat: 's16le', ratePercent: 100, rateApplied: true,
+    credentialRef: 'reader.tts.42.fixture-token', credentialPrefix: '',
+  },
+};
+globalThis.auditCredentialFixture = 's'.repeat(8192);
+await assert.rejects(() => hostProbe.resolveRequest(oversizedUrl, 42), /request URL exceeds/);
+const oversizedHeader = {
+  url: 'https://tts.example.test/audio',
+  headers: {'X-Key': '{{apiKey}}'.repeat(9)},
+  playback: {
+    format: 'mp3', sampleFormat: 's16le', ratePercent: 100, rateApplied: true,
+    credentialRef: 'reader.tts.42.fixture-token', credentialPrefix: '',
+  },
+};
+await assert.rejects(() => hostProbe.resolveRequest(oversizedHeader, 42), /credential header exceeds/);
+console.log('Harmony HttpTTS credential URL encoding and expansion bounds: PASS');
 
 console.log('Harmony TTS Host router and HttpTTS transport contract: PASS');

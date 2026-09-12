@@ -1,0 +1,10 @@
+{
+  "status": "PARTIAL_PASS",
+  "verified": "previous base and next exposed destination have body text in recorded intermediate Native frames; old package paper-only path fixed",
+  "sourceComparison": "7b to 74ac changes offscreen waitUntilRenderFinished false→true, unrelated pilot resource also changed",
+  "frames": [
+    "reader-control-raster-next-2.png",
+    "reader-control-raster-prev-1.png"
+  ],
+  "remaining": "not continuous recording; alpha/display/multitheme/images/dynamic highlights OPEN; minute-boundary sample shows source02:26 and destination02:27, clock consistency at boundary still OPEN"
+}

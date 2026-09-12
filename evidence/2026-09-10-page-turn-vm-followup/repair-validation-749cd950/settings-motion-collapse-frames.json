@@ -1,0 +1,77 @@
+{
+  "records": [
+    {
+      "index": 0,
+      "triggerMs": 2.044875000000168,
+      "snapshotDoneMs": 93.1667909999998,
+      "file": "reader-control-settings-motion-collapse-00.jpeg"
+    },
+    {
+      "index": 1,
+      "triggerMs": 133.51187499999995,
+      "snapshotDoneMs": 239.7196250000002,
+      "file": "reader-control-settings-motion-collapse-01.jpeg"
+    },
+    {
+      "index": 2,
+      "triggerMs": 276.4528750000004,
+      "snapshotDoneMs": 392.29345800000016,
+      "file": "reader-control-settings-motion-collapse-02.jpeg"
+    },
+    {
+      "index": 3,
+      "triggerMs": 424.25987499999974,
+      "snapshotDoneMs": 516.0484160000003,
+      "file": "reader-control-settings-motion-collapse-03.jpeg"
+    },
+    {
+      "index": 4,
+      "triggerMs": 558.4283330000002,
+      "snapshotDoneMs": 648.5726659999998,
+      "file": "reader-control-settings-motion-collapse-04.jpeg"
+    },
+    {
+      "index": 5,
+      "triggerMs": 680.1752500000005,
+      "snapshotDoneMs": 764.5085830000005,
+      "file": "reader-control-settings-motion-collapse-05.jpeg"
+    },
+    {
+      "index": 6,
+      "triggerMs": 836.4330830000002,
+      "snapshotDoneMs": 930.4127080000004,
+      "file": "reader-control-settings-motion-collapse-06.jpeg"
+    },
+    {
+      "index": 7,
+      "triggerMs": 986.5176660000001,
+      "snapshotDoneMs": 1094.8491660000004,
+      "file": "reader-control-settings-motion-collapse-07.jpeg"
+    },
+    {
+      "index": 8,
+      "triggerMs": 1158.4475410000002,
+      "snapshotDoneMs": 1267.531,
+      "file": "reader-control-settings-motion-collapse-08.jpeg"
+    },
+    {
+      "index": 9,
+      "triggerMs": 1318.8912080000002,
+      "snapshotDoneMs": 1411.3806660000002,
+      "file": "reader-control-settings-motion-collapse-09.jpeg"
+    },
+    {
+      "index": 10,
+      "triggerMs": 1477.9790410000003,
+      "snapshotDoneMs": 1571.91525,
+      "file": "reader-control-settings-motion-collapse-10.jpeg"
+    },
+    {
+      "index": 11,
+      "triggerMs": 1651.5095830000002,
+      "snapshotDoneMs": 1750.3174159999996,
+      "file": "reader-control-settings-motion-collapse-11.jpeg"
+    }
+  ],
+  "scope": "sequential host-triggered JPEG samples; capture adds load; not VSync or touch-to-photon timings"
+}

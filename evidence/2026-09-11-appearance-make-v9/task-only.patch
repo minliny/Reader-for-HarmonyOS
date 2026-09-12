@@ -1,0 +1,442 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets
++++ after/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets
+@@ -11,9 +11,15 @@
+   type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
+ import { registerReaderFonts } from '../common/ReaderFonts';
+ import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
++import { ReaderSelect } from '../common/ReaderSelect';
++import { APPEARANCE_SELECT_MENU_WIDTH, APPEARANCE_SELECT_SURFACE, APPEARANCE_SELECT_BORDER,
++  appearanceSelectMenuPosition } from '../common/ReaderSelectAppearanceStyle';
++import { APPEARANCE_LAYOUT_SURFACE, APPEARANCE_LAYOUT_BORDER, APPEARANCE_LAYOUT_CAPTION,
++  READER_CONTROL_APPEARANCE_THEMES, readerControlAppearanceThemeLabel,
++  readerControlAppearanceThemeSwatch } from './ReaderControlAppearanceStyle';
+ import {
+   TOK_BORDER_W, TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
+-  TOK_READ_PRIMARY, TOK_SURFACE_PANEL, TOK_SURFACE_PANEL_SOFT,
++  TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT,
+ } from '../common/ReaderTokens';
+ import {
+   createDefaultReaderAppearanceSnapshot, isReaderAppearanceFont, moveReaderAppearanceFontSlot,
+@@ -53,6 +59,8 @@
+  * Source issue: Import 20807 overlaps System 20799 in the live Full endpoint.
+  * User override approved 2026-09-05: use a distinct ordered slot, default last;
+  * preserve valid custom ordering. Raw source comparison is explicit opt-in.
++ * Make LOYUJr93KwespD5j7N6icw V9 updates swatches and the typography card only;
++ * the shared actor identities, gesture arbitration and progress axis stay intact.
+  */
+ @Component
+ export struct ReaderControlAppearanceContent {
+@@ -446,19 +454,22 @@
+   private layoutLibrary() {
+     Stack({ alignContent: Alignment.TopStart }) {
+       Row() {
+-        Text('排版库').fontFamily('ReaderNotoSansSC').fontSize(12).lineHeight(17).fontWeight(FontWeight.Bold).fontColor(TOK_READ_INK);
++        Text('排版库').fontFamily('ReaderNotoSansSC').fontSize(13).lineHeight(17).fontWeight(FontWeight.Medium).fontColor(TOK_READ_INK);
+         Blank();
+-        Text('即时应用').fontFamily('ReaderNotoSansSC').fontSize(9).lineHeight(13).fontColor(TOK_READ_MUTED);
+-      }.width(Math.max(0, this.frame().sectionWidth - 4)).height(20)
+-        .position({ x: 2, y: 10 });
+-      this.selectField('indent', 54);
+-      this.selectField('language', 106);
+-      this.selectField('pageTurn', 158);
+-      this.selectField('alignment', 210);
+-      this.stepperRow('fontSize', 262);
+-      this.stepperRow('lineHeightMultiplier', 298);
+-      this.stepperRow('paragraphSpacing', 334);
+-      this.stepperRow('letterSpacing', 370);
++        Text('即时应用').fontFamily('ReaderNotoSansSC').fontSize(10).lineHeight(13).fontColor(APPEARANCE_LAYOUT_CAPTION);
++      }.width(Math.max(0, this.frame().sectionWidth - 8)).height(17)
++        .position({ x: 4, y: 10 });
++      Row().width(Math.max(0, this.frame().sectionWidth - 4)).height(338)
++        .backgroundColor(APPEARANCE_LAYOUT_SURFACE).border({ width: 1, color: APPEARANCE_LAYOUT_BORDER })
++        .borderRadius(12).position({ x: 2, y: 37 }).hitTestBehavior(HitTestMode.None);
++      this.selectField('indent', 38);
++      this.selectField('language', 80);
++      this.selectField('pageTurn', 122);
++      this.selectField('alignment', 164);
++      this.stepperRow('fontSize', 206);
++      this.stepperRow('lineHeightMultiplier', 248);
++      this.stepperRow('paragraphSpacing', 290);
++      this.stepperRow('letterSpacing', 332);
+     }.width(this.frame().layout.width).height(406).position(this.actorPosition(this.frame().layout))
+       .opacity(this.frame().layout.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
+       .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
+@@ -468,32 +479,27 @@
+   @Builder
+   private selectField(kind: string, y: number) {
+     Row() {
+-      Text(this.selectLabel(kind)).fontFamily('ReaderNotoSansSC').fontSize(10).lineHeight(14)
+-        .fontWeight(FontWeight.Bold).fontColor(TOK_READ_INK).maxLines(1);
++      Text(this.selectLabel(kind)).fontFamily('ReaderNotoSansSC').fontSize(12).lineHeight(14.5)
++        .fontWeight(FontWeight.Regular).fontColor(TOK_READ_INK).maxLines(1);
+       Blank();
+-      Row() {
+-        Text(this.selectValue(kind)).fontFamily('ReaderNotoSansSC').fontSize(12)
+-          .fontWeight(FontWeight.Bold).fontColor(TOK_READ_INK).maxLines(1)
+-          .textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
+-        Image($r('app.media.reader_chevron_down')).width(8).height(4);
+-      }.width(88).height(32).padding({ left: 12, right: 12 }).borderRadius(10)
+-        .backgroundColor('#FFFDF8').border({ width: TOK_BORDER_W, color: TOK_LINE })
+-        .enabled(this.fullInput()).accessibilityText(`${this.selectLabel(kind)}，当前${this.selectValue(kind)}`)
+-        .onClick((): void => this.toggleSelect(kind, y));
+-    }.width(Math.max(0, this.frame().sectionWidth - 4)).height(44)
+-      .padding({ left: 9, right: 9 }).borderRadius(6).backgroundColor(TOK_SURFACE_PANEL)
+-      .border({ width: 1, color: TOK_LINE }).position({ x: 2, y: y });
++      ReaderSelect({ value: this.selectValue(kind), options: this.selectOptions(kind),
++        isOpen: this.openSelect === kind && !this.selectClosing, variant: 'appearanceLibrary',
++        reduceMotion: this.reduceMotion, onToggle: (): void => this.toggleSelect(kind, y),
++      }).enabled(this.fullInput())
++        .accessibilityText(`${this.selectLabel(kind)}，当前${this.selectValue(kind)}`);
++    }.width(Math.max(0, this.frame().sectionWidth - 6)).height(42)
++      .padding({ left: 13, right: 9 }).border({ width: { bottom: 1 }, color: TOK_LINE })
++      .position({ x: 3, y: y });
+   }
+ 
+   private toggleSelect(kind: string, localY: number): void {
+     if (!this.fullInput()) return;
+     if (this.openSelect === kind) { this.requestSelectClose(); return; }
+-    this.selectAnchorX = this.frame().layout.x + this.frame().sectionWidth - 2 - 9 - 88;
+-    const requestedY = this.frame().layout.y + localY + 6 - this.scrollMotion.nativeScrollOffset;
+-    // Reused menu must stay inside this viewport's hit-test boundary, including
+-    // a short-window Full endpoint. This is input layout, not a motion track.
+-    this.selectAnchorY = Math.max(0, Math.min(requestedY,
+-      this.availableHeight - this.selectOptions(kind).length * 36));
++    const anchor = appearanceSelectMenuPosition(this.frame().layout.x + this.frame().sectionWidth - 12,
++      this.frame().layout.y + localY + 5.5 - this.scrollMotion.nativeScrollOffset,
++      this.selectOptions(kind).length, this.availableWidth, this.availableHeight);
++    this.selectAnchorX = anchor.x;
++    this.selectAnchorY = anchor.y;
+     this.openSelect = kind;
+     this.selectClosing = false;
+     this.selectIdentity = `${kind}:${++this.selectGeneration}`;
+@@ -507,10 +513,10 @@
+         .onClick((): void => this.requestSelectClose());
+       ReaderSelectPanel({
+         value: this.selectValue(this.openSelect), options: this.selectOptions(this.openSelect),
+-        x: this.selectAnchorX, y: this.selectAnchorY, variant: 'appearanceCompact',
++        x: this.selectAnchorX, y: this.selectAnchorY, variant: 'appearanceLibrary',
+         // The menu remains a shared business control. It never contributes a
+         // second time/progress channel to this control-bar morph.
+-        reduceMotion: this.reduceMotion, controlWidth: 88,
++        reduceMotion: this.reduceMotion, controlWidth: APPEARANCE_SELECT_MENU_WIDTH,
+         closing: this.selectClosing, selectionId: this.selectIdentity,
+         onCommit: (value: string, identity: string): void => this.commitSelect(value, identity),
+         onDismiss: (identity: string): void => {
+@@ -523,23 +529,28 @@
+   @Builder
+   private stepperRow(metric: ReaderAppearanceMetric, y: number) {
+     Stack({ alignContent: Alignment.TopStart }) {
+-      Text(this.metricLabel(metric)).height(14).fontFamily('ReaderNotoSansSC').fontSize(10)
+-        .fontWeight(FontWeight.Medium).fontColor(TOK_READ_INK).position({ x: 0, y: 10 });
+-      this.stepButton(metric, -1, Math.max(0, this.frame().sectionWidth - 142));
+-      Text(this.metricValue(metric)).width(48).height(14).fontFamily('ReaderInter').fontSize(10)
+-        .fontWeight(FontWeight.Bold).fontColor(TOK_READ_INK).textAlign(TextAlign.Center)
+-        .position({ x: Math.max(0, this.frame().sectionWidth - 100), y: 10 });
+-      this.stepButton(metric, 1, Math.max(0, this.frame().sectionWidth - 62));
+-    }.width(Math.max(0, this.frame().sectionWidth - 4)).height(34).position({ x: 2, y: y });
++      Text(this.metricLabel(metric)).height(14.5).fontFamily('ReaderNotoSansSC').fontSize(12).lineHeight(14.5)
++        .fontWeight(FontWeight.Regular).fontColor(TOK_READ_INK).position({ x: 13, y: 13.25 });
++      Row().width(98).height(27).backgroundColor(APPEARANCE_SELECT_SURFACE)
++        .border({ width: 1, color: APPEARANCE_SELECT_BORDER }).borderRadius(8)
++        .position({ x: Math.max(0, this.frame().sectionWidth - 113), y: 7 }).hitTestBehavior(HitTestMode.None);
++      this.stepButton(metric, -1, Math.max(0, this.frame().sectionWidth - 121));
++      Text(this.metricValue(metric)).width(44).height(25).fontFamily('ReaderNotoSansSC').fontSize(11)
++        .fontWeight(FontWeight.Medium).fontColor(TOK_READ_INK).textAlign(TextAlign.Center)
++        .border({ width: { left: 1, right: 1 }, color: TOK_LINE })
++        .position({ x: Math.max(0, this.frame().sectionWidth - 86), y: 8 }).hitTestBehavior(HitTestMode.None);
++      this.stepButton(metric, 1, Math.max(0, this.frame().sectionWidth - 51));
++    }.width(Math.max(0, this.frame().sectionWidth - 6)).height(42)
++      .border({ width: { bottom: metric === 'letterSpacing' ? 0 : 1 }, color: TOK_LINE })
++      .position({ x: 3, y: y });
+   }
+ 
+   @Builder
+   private stepButton(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection, x: number) {
+     Stack({ alignContent: Alignment.Center }) {
+-      Text(direction < 0 ? '−' : '+').width(24).height(28).borderRadius(8)
+-        .backgroundColor(TOK_SURFACE_PANEL_SOFT).fontFamily('ReaderInter').fontSize(10)
+-        .fontWeight(FontWeight.Bold).fontColor(TOK_READ_INK).textAlign(TextAlign.Center);
+-    }.width(44).height(44).position({ x: x, y: -5 })
++      Text(direction < 0 ? '−' : '+').width(26).height(25).fontFamily('ReaderNotoSansSC').fontSize(15)
++        .fontWeight(FontWeight.Regular).fontColor(TOK_READ_MUTED).textAlign(TextAlign.Center);
++    }.width(44).height(42).position({ x: x, y: 0 })
+       .opacity(readerAppearanceCanStep(this.snapshot, metric, direction) ? 1 : 0.38)
+       .enabled(this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction))
+       .accessibilityText(`${this.metricLabel(metric)}${direction < 0 ? '减小' : '增大'}`)
+@@ -554,7 +565,7 @@
+       (kind === 'pageTurn' ? '翻页动画' : '文字两端对齐'));
+   }
+   private selectOptions(kind: string): string[] {
+-    if (kind === 'indent') return ['无', '单字', '双字'];
++    if (kind === 'indent') return ['无', '1字符', '2字符'];
+     if (kind === 'language') return ['原文', '繁转简', '简转繁'];
+     if (kind === 'alignment') return ['开启', '关闭'];
+     return this.pageTurnSimulationAvailable ? ['仿真', '覆盖', '平移', '滚动', '无动画'] :
+@@ -562,7 +573,7 @@
+   }
+   private selectValue(kind: string): string {
+     if (kind === 'indent') return this.snapshot.indent === 'none' ? '无' :
+-      (this.snapshot.indent === 'single' ? '单字' : '双字');
++      (this.snapshot.indent === 'single' ? '1字符' : '2字符');
+     if (kind === 'language') return this.chineseConversionMode === 'none' ? '原文' :
+       (this.chineseConversionMode === 't2s' ? '繁转简' : '简转繁');
+     if (kind === 'alignment') return this.snapshot.alignment === 'justify' ? '开启' : '关闭';
+@@ -573,7 +584,7 @@
+   }
+   private applySelect(kind: string, value: string): void {
+     if (kind === 'indent') {
+-      const indent: ReaderAppearanceIndent = value === '无' ? 'none' : (value === '单字' ? 'single' : 'firstLine');
++      const indent: ReaderAppearanceIndent = value === '无' ? 'none' : (value === '1字符' ? 'single' : 'firstLine');
+       if (indent !== this.snapshot.indent) this.onIndentRequest(indent);
+     } else if (kind === 'language') {
+       const mode: ReaderChineseConversionMode = value === '繁转简' ? 't2s' : (value === '简转繁' ? 's2t' : 'none');
+@@ -593,20 +604,18 @@
+       (metric === 'paragraphSpacing' ? '段距' : '字距'));
+   }
+   private metricValue(metric: ReaderAppearanceMetric): string {
+-    if (metric === 'fontSize') return `${this.snapshot.fontSize}`;
++    if (metric === 'fontSize') return `${this.snapshot.fontSize}px`;
+     if (metric === 'lineHeightMultiplier') return this.snapshot.lineHeightMultiplier.toFixed(2);
+-    return metric === 'paragraphSpacing' ? `${this.snapshot.paragraphSpacing}` : `${this.snapshot.letterSpacing}`;
++    return metric === 'paragraphSpacing' ? `${this.snapshot.paragraphSpacing}px` : `${this.snapshot.letterSpacing}px`;
+   }
+   private themeIds(): ReaderAppearanceTheme[] {
+-    return ['day', 'warm', 'night', 'warmNight', 'paper', 'green', 'paperNight', 'greenNight'];
++    return READER_CONTROL_APPEARANCE_THEMES;
+   }
+   private themeLabel(theme: ReaderAppearanceTheme): string {
+-    const labels: string[] = ['日间', '暖白', '夜间', '暖夜', '纸纹', '青叶纹', '夜纹', '林夜纹'];
+-    return labels[this.themeIds().indexOf(theme)];
++    return readerControlAppearanceThemeLabel(theme);
+   }
+   private themeColor(theme: ReaderAppearanceTheme): string {
+-    const colors: string[] = ['#FFFFFF', '#FBF0DF', '#26231F', '#302922', '#F5EAD8', '#E7F0E2', '#34302B', '#263129'];
+-    return colors[this.themeIds().indexOf(theme)];
++    return readerControlAppearanceThemeSwatch(theme);
+   }
+   private themeSummary(): string {
+     return `日间：${this.themeLabel(this.snapshot.dayTheme)} · 夜间：${this.themeLabel(this.snapshot.nightTheme)}`;
+--- before/entry/src/main/ets/features/common/ReaderSelect.ets
++++ after/entry/src/main/ets/features/common/ReaderSelect.ets
+@@ -10,6 +10,7 @@
+   TOK_SURFACE_PANEL_SOFT,
+ } from '../common/ReaderTokens';
+ import { motionAnimateParam } from './MotionSpec';
++import { APPEARANCE_SELECT_FILL, APPEARANCE_SELECT_OPEN_FILL } from './ReaderSelectAppearanceStyle';
+ import {
+   TYPE_SELECT_APPEARANCE_VALUE,
+   TYPE_SELECT_DEFAULT_VALUE,
+@@ -35,6 +36,7 @@
+ export type ReaderSelectVariant =
+   | 'default'
+   | 'appearanceCompact'
++  | 'appearanceLibrary'
+   | 'settingsPhone'
+   | 'settingsTablet'
+   | 'sourceGroup';
+@@ -68,7 +70,9 @@
+ 
+   @Builder
+   private trigger() {
+-    if (this.variant === 'appearanceCompact') {
++    if (this.variant === 'appearanceLibrary') {
++      this.appearanceLibraryTrigger();
++    } else if (this.variant === 'appearanceCompact') {
+       this.appearanceTrigger();
+     } else if (this.variant === 'settingsPhone' || this.variant === 'settingsTablet') {
+       this.settingsTrigger();
+@@ -77,6 +81,20 @@
+     } else {
+       this.defaultTrigger();
+     }
++  }
++
++  @Builder
++  private appearanceLibraryTrigger() {
++    Row({ space: 6 }) {
++      Text(this.value).layoutWeight(1).fontFamily('ReaderNotoSansSC').fontSize(11).lineHeight(15)
++        .fontWeight(FontWeight.Regular).fontColor('#332C25').maxLines(1)
++        .textOverflow({ overflow: TextOverflow.Ellipsis });
++      Image($r('app.media.reader_appearance_make_chevron')).width(12).height(12)
++        .rotate({ angle: this.isOpen ? 90 : 0 }).animation(this.dropdownAnimation());
++    }.width('100%').height(30).padding({ left: 11, right: 9 }).borderRadius(999)
++      .backgroundColor(this.isOpen ? APPEARANCE_SELECT_OPEN_FILL : APPEARANCE_SELECT_FILL)
++      .responseRegion({ x: 0, y: -6, width: '100%', height: 42 })
++      .onClick((): void => this.onToggle());
+   }
+ 
+   @Builder
+@@ -203,6 +221,10 @@
+     }
+     const ctx = this.getUIContext();
+     const utils = ctx.getMeasureUtils();
++    if (this.variant === 'appearanceLibrary') {
++      return Math.ceil(ctx.px2vp(utils.measureText({ textContent: this.value,
++        fontSize: 11, fontFamily: 'ReaderNotoSansSC' }))) + 38;
++    }
+     let maxPx = 0;
+     const texts: string[] = [this.value, ...this.options];
+     for (let i = 0; i < texts.length; i++) {
+@@ -219,6 +241,7 @@
+   }
+ 
+   private triggerHeight(): number {
++    if (this.variant === 'appearanceLibrary') return 30;
+     return this.isSettingsVariant() ? 34 : TRIGGER_H;
+   }
+ 
+--- before/entry/src/main/ets/features/common/ReaderSelectPanel.ets
++++ after/entry/src/main/ets/features/common/ReaderSelectPanel.ets
+@@ -10,6 +10,10 @@
+   TOK_SURFACE_PANEL_SOFT,
+ } from '../common/ReaderTokens';
+ import { motionAnimateParam } from './MotionSpec';
++import {
++  APPEARANCE_SELECT_BORDER, APPEARANCE_SELECT_SELECTED, APPEARANCE_SELECT_SURFACE,
++  APPEARANCE_SELECT_OPTION_HEIGHT, appearanceSelectMenuHeight,
++} from './ReaderSelectAppearanceStyle';
+ import type { ReaderSelectVariant } from './ReaderSelect';
+ import {
+   TYPE_SELECT_APPEARANCE_VALUE,
+@@ -86,23 +90,48 @@
+ 
+   build() {
+     Column({ space: 0 }) {
+-      this.selectedRow();
+-      ForEach(this.renderedOptions().filter((o: string): boolean => o !== this.renderedValue()), (opt: string) => {
+-        this.optionRow(opt);
+-      }, (opt: string): string => `ropt-${opt}`);
++      if (this.variant === 'appearanceLibrary') {
++        ForEach(this.renderedOptions(), (opt: string) => {
++          this.appearanceLibraryOption(opt);
++        }, (opt: string): string => `ropt-${opt}`);
++      } else {
++        this.selectedRow();
++        ForEach(this.renderedOptions().filter((o: string): boolean => o !== this.renderedValue()), (opt: string) => {
++          this.optionRow(opt);
++        }, (opt: string): string => `ropt-${opt}`);
++      }
+     }
+     .position({ x: this.alignRight ? this.x - this.resolvedWidth() : this.x, y: this.y })
+     .width(this.resolvedWidth())
+     .height(this.expandedHeight)
++    .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
+     .zIndex(10)
+     .backgroundColor(this.panelBackgroundColor())
+     .border({
+       width: TOK_BORDER_W,
+       color: this.panelBorderColor(),
+     })
+-    .borderRadius(this.variant === 'sourceGroup' ? 8 : 6)
++    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? 8 : 6))
++    .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
++      color: this.variant === 'appearanceLibrary' ? '#474B3A26' : Color.Transparent, offsetY: 8 })
+     .clip(true)
+     .onAppear((): void => this.expandPanel());
++  }
++
++  @Builder
++  private appearanceLibraryOption(opt: string) {
++    Row({ space: 10 }) {
++      Text(opt).layoutWeight(1).fontFamily('ReaderNotoSansSC').fontSize(11).lineHeight(13)
++        .fontWeight(opt === this.renderedValue() ? FontWeight.Bold : FontWeight.Regular)
++        .fontColor(opt === this.renderedValue() ? '#2F6373' : '#41484C').maxLines(1)
++        .textOverflow({ overflow: TextOverflow.Ellipsis });
++      if (opt === this.renderedValue()) {
++        Image($r('app.media.reader_appearance_make_check')).width(11).height(9);
++      }
++    }.width('100%').height(APPEARANCE_SELECT_OPTION_HEIGHT).padding({ left: 9, right: 9 })
++      .borderRadius(6).backgroundColor(opt === this.renderedValue() ? APPEARANCE_SELECT_SELECTED : Color.Transparent)
++      .accessibilityText(`${opt}${opt === this.renderedValue() ? '，已选择' : ''}`)
++      .onClick((): void => this.selectAndCollapse(opt));
+   }
+ 
+   // 已选行 = 触发条展开态 (panel-soft 高亮 + 上旋 chevron)。点它 = 选中当前值并收起。
+@@ -246,6 +275,7 @@
+   }
+ 
+   private panelBackgroundColor(): ResourceColor {
++    if (this.variant === 'appearanceLibrary') return APPEARANCE_SELECT_SURFACE;
+     if (this.variant === 'appearanceCompact') {
+       return '#D1FFF8EF';
+     }
+@@ -256,6 +286,7 @@
+   }
+ 
+   private panelBorderColor(): ResourceColor {
++    if (this.variant === 'appearanceLibrary') return APPEARANCE_SELECT_BORDER;
+     if (this.variant === 'appearanceCompact') {
+       return '#C1C7CD';
+     }
+@@ -348,6 +379,7 @@
+   }
+ 
+   private fullPanelHeight(): number {
++    if (this.variant === 'appearanceLibrary') return appearanceSelectMenuHeight(this.options.length);
+     let unselectedCount = 0;
+     for (const option of this.options) {
+       if (option !== this.value) {
+--- before/tools/svg-provenance.config.mjs
++++ after/tools/svg-provenance.config.mjs
+@@ -262,6 +262,15 @@
+     'bookshelf more integrated pointer surface', 'bookshelf_more_menu_surface_reference.svg'),
+ ];
+ 
++const appearanceMakeExports = [
++  ['chevron', 'button svg:has(path[d="M4.5 3L7.5 6L4.5 9"])'],
++  ['check', 'button svg:has(path[d="M1.25 4.75L4 7.5L9.75 1.25"])'],
++].map(([name, sourceSelector]) => ({
++  file: `reader_appearance_make_${name}`, semanticRole: `reader appearance ${name}`,
++  originType: 'figma-make-dom-export', figmaFileKey: 'LOYUJr93KwespD5j7N6icw',
++  sourceSelector, sourceVersion: 9, sourceFile: `reader_appearance_make_${name}.svg`,
++}));
++
+ const paperPrimitives = [
+   paper('reading_paper_phone_highlight', '1023:18356', 'phone paper highlight', 388.89, 842.88,
+     'matrix(0 -71.799 -71.799 0 194.44 151.72)', [
+@@ -291,5 +300,5 @@
+     ]),
+ ];
+ 
+-export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...adaptedExports, ...paperPrimitives]
++export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives]
+   .sort((left, right) => left.file.localeCompare(right.file));
+--- before/docs/ui-design/SVG_PROVENANCE.json
++++ after/docs/ui-design/SVG_PROVENANCE.json
+@@ -1146,6 +1146,36 @@
+         "rotationDegrees": 0
+       },
+       "sha256": "920e1ee8bd3e2672107979ccfd199da7e604f598c49568ccb05d1089a5960f24"
++    },
++    {
++      "file": "reader_appearance_make_check.svg",
++      "semanticRole": "reader appearance check",
++      "originType": "figma-make-dom-export",
++      "figmaFileKey": "LOYUJr93KwespD5j7N6icw",
++      "sourceSelector": "button svg:has(path[d=\"M1.25 4.75L4 7.5L9.75 1.25\"])",
++      "sourceVersion": 9,
++      "license": "Reader project design",
++      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_appearance_make_check.svg",
++      "sourceSha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993",
++      "transform": {
++        "pathMutation": "none"
++      },
++      "sha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993"
++    },
++    {
++      "file": "reader_appearance_make_chevron.svg",
++      "semanticRole": "reader appearance chevron",
++      "originType": "figma-make-dom-export",
++      "figmaFileKey": "LOYUJr93KwespD5j7N6icw",
++      "sourceSelector": "button svg:has(path[d=\"M4.5 3L7.5 6L4.5 9\"])",
++      "sourceVersion": 9,
++      "license": "Reader project design",
++      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_appearance_make_chevron.svg",
++      "sourceSha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17",
++      "transform": {
++        "pathMutation": "none"
++      },
++      "sha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17"
+     },
+     {
+       "file": "reader_appearance_nav_active.svg",

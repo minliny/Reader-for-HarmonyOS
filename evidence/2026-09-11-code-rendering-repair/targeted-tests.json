@@ -1,0 +1,74 @@
+[
+  {
+    "file": "test-reader-render-work.mjs",
+    "exitCode": 0,
+    "stdout": "PASS rendering work: empty 24-fragment page 1 clear/0 id scans; active marks 1 frame; duplicate/lifecycle/resize guards; Unicode 700 scan steps; 120 settings poses 0 paths; directory no-op correction 0\n",
+    "stderr": "(node:18630) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "file": "test-reader-dynamic-highlight.mjs",
+    "exitCode": 0,
+    "stdout": "dynamic highlight geometry/color/identity and static snapshot separation: PASS; pixels require runtime verification\n",
+    "stderr": "(node:18645) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "file": "test-reader-control-global-presentation.mjs",
+    "exitCode": 0,
+    "stdout": "PASS global presentation: shared policies, production actor-local clips, retained overflow, actual SDK font content/outline separation and reversal; device evidence separate\n",
+    "stderr": "(node:18661) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "file": "test-reader-control-search-settings-content.mjs",
+    "exitCode": 0,
+    "stdout": "Actual SDK Results parent clip + child origin + native extent: same-instance roundtrip and 5 mutations PASS\nActual SDK Search/Settings mounted Builder observers: live payload/geometry/capability/switch changes PASS\nPASS Search/Settings real actor geometry + production callback methods; not native/visual acceptance\n",
+    "stderr": "(node:18678) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "file": "test-reader-control-motion-presentation.mjs",
+    "exitCode": 0,
+    "stdout": "PASS TTS softened-content trial: nonzero middle fade, reversible content-only blur, Full details retain their original reveal, offscreen outlines, actual mounted SDK paint observers; NOT device visual acceptance\n",
+    "stderr": "(node:18693) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "file": "test-reader-control-runtime.mjs",
+    "exitCode": 1,
+    "stdout": "Production control runtime: seven modules, frame revocation, regrab, close, lifecycle PASS\n",
+    "stderr": "<anonymous_script>:20\n    if (this.contentMotionWidth !== f.content.width) this.contentMotionWidth = f.content.width;\n                                              ^\n\nTypeError: Cannot read properties of undefined (reading 'width')\n    at Probe.acceptRuntime (eval at productionMotionMethods (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:18:10), <anonymous>:20:47)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-control-runtime.mjs:148:11\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v26.0.0\n"
+  },
+  {
+    "file": "test-reader-motion-repair.mjs",
+    "exitCode": 0,
+    "stdout": "PASS production motion repair: first-frame clock, opening navigation/input, menu ownership/exactly-once, reduced motion, capsule lifecycle/timeline, shelf reversal and font sampled retarget. Device pixels remain separate.\n",
+    "stderr": "(node:18714) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "file": "test-reader-control-playback-content.mjs",
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: production member voiceSelectionAvailable\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:29:12\n    at Array.map (<anonymous>)\n    at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:27:25)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-control-playback-content.mjs:213:21\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: undefined,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+  },
+  {
+    "file": "test-reader-selection-copy.mjs",
+    "exitCode": 0,
+    "stdout": "reader copy: native selection maps to original UTF-16 text, synchronous INAPP write and failure recovery PASS\n",
+    "stderr": "(node:18742) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "file": "test-reader-text-selection-lifecycle.mjs",
+    "exitCode": 0,
+    "stdout": "reader text-selection lifecycle contract: PASS\n",
+    "stderr": ""
+  },
+  {
+    "file": "test-reader-paragraph-indent.mjs",
+    "exitCode": 0,
+    "stdout": "reader paragraph indentation projection: PASS\n",
+    "stderr": ""
+  },
+  {
+    "file": "test-reader-page-turn-stage.mjs",
+    "exitCode": 0,
+    "stdout": "reader page-turn stable slot geometry and role transition: PASS\n",
+    "stderr": "(node:18750) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  }
+]

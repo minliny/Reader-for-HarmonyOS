@@ -1,0 +1,4 @@
+reader HttpTTS strict gateway: PASS
+reader HttpTTS profile, secret boundary and nullable playback: PASS
+reader HttpTTS URL credential placeholder boundary: PASS
+reader OnlineTTS profile validator and credential alias binding: PASS

@@ -5,6 +5,8 @@
     "allowedOrigins": [
       "figma-component-derived",
       "figma-node-export",
+      "figma-make-dom-export",
+      "figma-make-source-export",
       "figma-node-adapted",
       "figma-css-primitive"
     ],
@@ -1147,6 +1149,36 @@
       "sha256": "920e1ee8bd3e2672107979ccfd199da7e604f598c49568ccb05d1089a5960f24"
     },
     {
+      "file": "reader_appearance_make_check.svg",
+      "semanticRole": "reader appearance check",
+      "originType": "figma-make-dom-export",
+      "figmaFileKey": "LOYUJr93KwespD5j7N6icw",
+      "sourceSelector": "button svg:has(path[d=\"M1.25 4.75L4 7.5L9.75 1.25\"])",
+      "sourceVersion": 9,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_appearance_make_check.svg",
+      "sourceSha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993"
+    },
+    {
+      "file": "reader_appearance_make_chevron.svg",
+      "semanticRole": "reader appearance chevron",
+      "originType": "figma-make-dom-export",
+      "figmaFileKey": "LOYUJr93KwespD5j7N6icw",
+      "sourceSelector": "button svg:has(path[d=\"M4.5 3L7.5 6L4.5 9\"])",
+      "sourceVersion": 9,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_appearance_make_chevron.svg",
+      "sourceSha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17"
+    },
+    {
       "file": "reader_appearance_nav_active.svg",
       "semanticRole": "reader appearance module active outline",
       "originType": "figma-component-derived",
@@ -1385,6 +1417,104 @@
         "rotationDegrees": 0
       },
       "sha256": "509312c3bd25d8a9fdd64c3c066a842df6eb2f4240a61cfb6547b080db50fbc3"
+    },
+    {
+      "file": "reader_control_replace_add.svg",
+      "semanticRole": "restored in-reader replace add rule",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1938:12021",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_add.svg",
+      "sourceSha256": "e8bb4c21bb42d0099cdfa4d909e6da262d7216e5cc9b6034977494318b4f60ed",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "e8bb4c21bb42d0099cdfa4d909e6da262d7216e5cc9b6034977494318b4f60ed"
+    },
+    {
+      "file": "reader_control_replace_back.svg",
+      "semanticRole": "restored in-reader replace Quick back",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "I1938:12631;411:72",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_back.svg",
+      "sourceSha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5"
+    },
+    {
+      "file": "reader_control_replace_delete.svg",
+      "semanticRole": "restored in-reader replace delete rule",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1939:1261",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_delete.svg",
+      "sourceSha256": "b9ebce1a2d92f814cd27e27c89c002650f48ba89a5922676f3fdfb671ca94c68",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "b9ebce1a2d92f814cd27e27c89c002650f48ba89a5922676f3fdfb671ca94c68"
+    },
+    {
+      "file": "reader_control_replace_edit.svg",
+      "semanticRole": "restored in-reader replace edit rule",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1939:1255",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_edit.svg",
+      "sourceSha256": "6084d4fe541922b718cfca0cbe073397bb25dbd5f4ac8204677258798458fc11",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "6084d4fe541922b718cfca0cbe073397bb25dbd5f4ac8204677258798458fc11"
+    },
+    {
+      "file": "reader_control_replace_export.svg",
+      "semanticRole": "restored in-reader replace export rules",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1938:12037",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_export.svg",
+      "sourceSha256": "00815d9ded70806d2cb5c54a0d01e431211157f31fa5effc53452719dd80b1e8",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "00815d9ded70806d2cb5c54a0d01e431211157f31fa5effc53452719dd80b1e8"
+    },
+    {
+      "file": "reader_control_replace_header.svg",
+      "semanticRole": "restored in-reader replace header",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1938:12008",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_header.svg",
+      "sourceSha256": "bbdbfe2f2a99d8cd84bf4392c790ba8f2383140921e406ca1ebf07a4da2c9ede",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "bbdbfe2f2a99d8cd84bf4392c790ba8f2383140921e406ca1ebf07a4da2c9ede"
+    },
+    {
+      "file": "reader_control_replace_import.svg",
+      "semanticRole": "restored in-reader replace import rules",
+      "originType": "figma-node-export",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1938:12029",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_import.svg",
+      "sourceSha256": "1375f7314210afb837c691caf489244d5dba792e98a5719129cc3a4bb99cf6eb",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "1375f7314210afb837c691caf489244d5dba792e98a5719129cc3a4bb99cf6eb"
     },
     {
       "file": "reader_directory_back.svg",
@@ -1913,6 +2043,171 @@
         "rotationDegrees": 0
       },
       "sha256": "19106eda2d7b4d15e2bac430c1d3352b1ee13dedcec4f47f2d82fe4387301adc"
+    },
+    {
+      "file": "reader_tts_make_close.svg",
+      "semanticRole": "reader TTS close",
+      "originType": "figma-make-source-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG close",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_close.svg",
+      "sourceSha256": "78c28ebe741de77fb83ffa8d43b6543b074fb965989987c962e10d462d3b7eee",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "78c28ebe741de77fb83ffa8d43b6543b074fb965989987c962e10d462d3b7eee"
+    },
+    {
+      "file": "reader_tts_make_engine_check.svg",
+      "semanticRole": "reader TTS engine_check",
+      "originType": "figma-make-source-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG engine_check",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_engine_check.svg",
+      "sourceSha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a"
+    },
+    {
+      "file": "reader_tts_make_minus.svg",
+      "semanticRole": "reader TTS minus",
+      "originType": "figma-make-dom-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "svg:has(path[d=\"M3 7h8\"]):not(:has(path[d=\"M7 3v8\"]))",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_minus.svg",
+      "sourceSha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948"
+    },
+    {
+      "file": "reader_tts_make_next.svg",
+      "semanticRole": "reader TTS next",
+      "originType": "figma-make-dom-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "button[aria-label=\"下一章\"] svg",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_next.svg",
+      "sourceSha256": "1afbdb895ba27e5041b039f64c6ef8d68aecf9c5e982265443ae4188cddc5a80",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "1afbdb895ba27e5041b039f64c6ef8d68aecf9c5e982265443ae4188cddc5a80"
+    },
+    {
+      "file": "reader_tts_make_next_quick.svg",
+      "semanticRole": "reader TTS next_quick",
+      "originType": "figma-make-source-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG next_quick",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_next_quick.svg",
+      "sourceSha256": "a14d5ac3f014a32bbfb956a9519dc665cb8ec4541944ec42addec1037a128064",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "a14d5ac3f014a32bbfb956a9519dc665cb8ec4541944ec42addec1037a128064"
+    },
+    {
+      "file": "reader_tts_make_pause.svg",
+      "semanticRole": "reader TTS pause",
+      "originType": "figma-make-source-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG pause",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_pause.svg",
+      "sourceSha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee"
+    },
+    {
+      "file": "reader_tts_make_play.svg",
+      "semanticRole": "reader TTS play",
+      "originType": "figma-make-source-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG play",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_play.svg",
+      "sourceSha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442"
+    },
+    {
+      "file": "reader_tts_make_plus.svg",
+      "semanticRole": "reader TTS plus",
+      "originType": "figma-make-dom-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "svg:has(path[d=\"M7 3v8\"])",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_plus.svg",
+      "sourceSha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e"
+    },
+    {
+      "file": "reader_tts_make_previous.svg",
+      "semanticRole": "reader TTS previous",
+      "originType": "figma-make-dom-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "button[aria-label=\"上一章\"] svg",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_previous.svg",
+      "sourceSha256": "cfc153424cb6ef1cab550405bae38d554e724aa62db4c444b161021fc5202603",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "cfc153424cb6ef1cab550405bae38d554e724aa62db4c444b161021fc5202603"
+    },
+    {
+      "file": "reader_tts_make_previous_quick.svg",
+      "semanticRole": "reader TTS previous_quick",
+      "originType": "figma-make-source-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG previous_quick",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_previous_quick.svg",
+      "sourceSha256": "8a53cd31a4a4a0c5d5c3d633071e79c32c134250db5b541c6724241c384716ae",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "8a53cd31a4a4a0c5d5c3d633071e79c32c134250db5b541c6724241c384716ae"
+    },
+    {
+      "file": "reader_tts_make_stop.svg",
+      "semanticRole": "reader TTS stop",
+      "originType": "figma-make-dom-export",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "button[aria-label=\"停止\"] svg",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_stop.svg",
+      "sourceSha256": "62c94ccc798bd380600aa628656a7671f3ff88e1b80f3303a3e73128e858bbd7",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "62c94ccc798bd380600aa628656a7671f3ff88e1b80f3303a3e73128e858bbd7"
     },
     {
       "file": "reader_tts_nav_active.svg",

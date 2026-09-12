@@ -1,0 +1,4 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.023866166, "elapsed": 0.032445042, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.056447166, "elapsed": 0.037755041999999996, "code": 0, "output": "2458\n"}
+{"args": ["shell", "uitest", "dumpLayout", "-p", "/data/local/tmp/reader-control-open-boundary-fixture-1.json"], "start": 0.0943995, "elapsed": 0.7432360410000001, "code": 0, "output": "DumpLayout saved to:/data/local/tmp/reader-control-open-boundary-fixture-1.json\n"}
+{"args": ["file", "recv", "/data/local/tmp/reader-control-open-boundary-fixture-1.json", "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-5da12a49/reader-control-open-boundary-fixture-1.json"], "start": 0.838343125, "elapsed": 0.04201700000000008, "code": 0, "output": "FileTransfer finish, Size:129804, File count = 1, time:11ms rate:11800.36kB/s\n"}

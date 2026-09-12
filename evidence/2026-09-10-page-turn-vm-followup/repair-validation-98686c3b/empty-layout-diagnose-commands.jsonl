@@ -1,0 +1,3 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.016075458, "elapsed": 0.028541333000000002, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.044775083, "elapsed": 0.028904292000000005, "code": 0, "output": "2458\n"}
+{"args": ["file", "recv", "/data/local/tmp/reader-control-empty-layout-now.png", "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/reader-control-empty-layout-now.png"], "start": 0.401964375, "elapsed": 0.040143958000000035, "code": 0, "output": "FileTransfer finish, Size:1978038, File count = 1, time:13ms rate:152156.77kB/s\n"}

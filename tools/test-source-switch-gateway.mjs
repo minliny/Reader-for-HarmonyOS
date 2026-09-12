@@ -50,14 +50,21 @@ assert.doesNotMatch(gateway, /rollbackToken|SourceSwitchRollbackToken/,
 const errorMessageModule = stripTypeScriptTypes(
   readFileSync(resolve(repo, 'entry/src/main/ets/app/ErrorMessage.ts'), 'utf8'),
 ).replace('export function errorMessageOf', 'function errorMessageOf');
+const sourceCategoryModule = stripTypeScriptTypes(
+  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/ReaderSourceCategory.ts'), 'utf8'),
+).replace(/^export /gm, '');
 
 const executable = stripTypeScriptTypes(
   gateway
+    .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
+      readFileSync(resolve(repo, 'entry/src/main/ets/features/common/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
     .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
       () => errorMessageModule)
     .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
-    .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, ''),
+    .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, '')
+    .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\/ReaderSourceCategory['"];$/m,
+      () => sourceCategoryModule),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
 const { SourceSwitchGateway, sourceSwitchCandidateKey } = await import(moduleUrl);
@@ -227,7 +234,9 @@ const cachedCandidates = await cacheGateway.loadCachedCandidates({
   currentChapterIndex: 4,
   currentChapterTitle: 'Chapter 5',
 });
-assert.equal(cachedCandidates.length, 1);
+assert.equal(cachedCandidates.length, 2);
+assert.equal(cachedCandidates[1].acquisitionState, 'stale');
+assert.equal(cacheCalls.some(([method]) => method === 'search-book.delete'), false, 'expired candidates retain their last successful information');
 assert.equal(cachedCandidates[0].sourceName, '缓存书源');
 assert.equal(cachedCandidates[0].latencyMs, 88);
 assert.equal(cachedCandidates[0].currentChapterIndex, 4);
@@ -236,90 +245,65 @@ assert.equal(cachedCandidates[0].isCurrent, true);
 assert.equal(cacheCalls.some(([method]) => method === 'change.bookSource'), false,
   'a valid local projection must not start source HTTP discovery');
 
-let persistedProbe;
+// Historical aliases must not multiply normalization across every cached row.
+{
+  const aliases = Array.from({ length: 16 }, (_, i) => ({ name: `Old ${i}`, author: 'Writer' }));
+  const rows = [{ origin: 'cache-source', bookUrl: 'current-book', name: 'Current Book',
+    author: 'Writer', time: cachedAt, acquisition: { aliases } },
+  ...Array.from({ length: 1000 }, (_, i) => ({ origin: 'cache-source', bookUrl: `other-${i}`,
+    name: `Unrelated ${i}`, author: 'Writer', time: cachedAt,
+    acquisition: { aliases: Array.from({ length: 16 }, (_, j) => ({ name: `Other ${j}`, author: 'Writer' })) } })),
+  { origin: 'cache-source', bookUrl: 'renamed', name: 'Old 15', author: 'Writer', time: cachedAt },
+  { origin: 'cache-source', bookUrl: 'wrong-author', name: 'Old 15', author: 'Other', time: cachedAt }];
+  const gateway = new SourceSwitchGateway({ request: async method => ({ data: method === 'source.list' ?
+    { sources: [{ sourceId: 'cache-source', name: '缓存', enabled: true }] } : { books: rows } }) });
+  let ticks = 0, normalizations = 0;
+  const timer = setInterval(() => { ticks += 1; }, 0);
+  const normalize = String.prototype.toLocaleLowerCase;
+  String.prototype.toLocaleLowerCase = function (...args) { normalizations += 1; return normalize.apply(this, args); };
+  try {
+    const result = await gateway.loadCachedCandidates({ sourceId: 'cache-source', bookId: 'current-book',
+      bookName: 'Current Book', author: 'Writer', currentChapterIndex: 0, currentChapterTitle: 'One' });
+    assert.deepEqual(result.map(row => row.bookUrl), ['current-book', 'renamed']);
+    assert.ok(ticks > 0, 'large cache scan must allow the event loop to run');
+    assert.ok(normalizations < 1100, `normalization must be bounded by distinct text, got ${normalizations}`);
+  } finally {
+    clearInterval(timer);
+    String.prototype.toLocaleLowerCase = normalize;
+  }
+}
+
+const refreshRows = [{ bookUrl: 'old-book', origin: 'old-source', name: 'Current Book', author: 'Writer', time: cachedAt }];
+const refreshCalls = [];
+let preparation;
 const refreshRuntime = {
+  bookAcquisitions: () => ({ prepare: (seeds, refresh) => { preparation = { seeds, refresh }; } }),
   async request(method, params) {
-    if (method === 'search-book.list') {
-      return { data: { books: [
-        {
-          bookUrl: 'old-book', origin: 'old-source', name: 'Current Book', author: 'Writer',
-          time: cachedAt,
-        },
-        {
-          bookUrl: 'same-name-other-author', origin: 'other-author-source', name: 'Current Book',
-          author: 'Other Person', time: cachedAt,
-        },
-      ] } };
-    }
-    if (method === 'search-book.delete') {
-      assert.equal(params.bookUrl, 'old-book');
-      return { data: { bookUrl: params.bookUrl, deleted: true } };
-    }
-    if (method === 'source.list') {
-      return { data: { sources: [{ sourceId: 'fresh-source', name: '新书源', enabled: true }] } };
-    }
+    refreshCalls.push(method);
+    if (method === 'search-book.list') return { data: { books: refreshRows } };
+    if (method === 'source.list') return { data: { sources: [
+      { sourceId: 'fresh-source', name: '新书源', enabled: true },
+      { sourceId: 'old-source', name: '已有书源', enabled: true },
+    ] } };
     if (method === 'change.bookSource') {
-      return { data: { candidates: [{
-        sourceId: 'fresh-source', bookUrl: 'fresh-book', bookName: 'Current Book', author: 'Writer',
-      }] } };
+      if (params.sourceIds[0] === 'old-source') throw new Error('old source currently offline');
+      // Core book.search publishes candidates before returning discovery.
+      refreshRows.push({ bookUrl: 'fresh-book', origin: 'fresh-source', name: 'Current Book', author: 'Writer', time: cachedAt });
+      return { data: { candidates: [{ sourceId: 'fresh-source', bookUrl: 'fresh-book', bookName: 'Current Book', author: 'Writer' }] } };
     }
-    if (method === 'book.detail') {
-      return { data: {
-        sourceId: 'fresh-source',
-        book: {
-          bookId: 'fresh-book', title: 'Current Book', author: 'Writer',
-          coverUrl: 'https://img.test/current.jpg', lastChapter: 'Chapter 9',
-        },
-        tocUrl: '/fresh/toc',
-        variables: { token: 'detail-token' },
-      } };
-    }
-    if (method === 'book.toc') {
-      assert.deepEqual(params.variables, { token: 'detail-token' });
-      return { data: {
-        sourceId: 'fresh-source', bookId: 'fresh-book',
-        toc: [
-          { index: 0, title: 'Chapter 1', url: '/fresh/1' },
-          { index: 1, title: 'Chapter 2', url: '/fresh/2', variables: { chapter: 'two' } },
-        ],
-      } };
-    }
-    if (method === 'chapter.content') {
-      assert.equal(params.chapterIndex, 1);
-      assert.equal(params.chapterTitle, 'Chapter 2');
-      assert.deepEqual(params.variables, { token: 'detail-token', chapter: 'two' });
-      return { data: {
-        sourceId: 'fresh-source', bookId: 'fresh-book', chapterTitle: 'Chapter 2',
-        content: '123456789', via: 'rule',
-      } };
-    }
-    if (method === 'search-book.put') {
-      persistedProbe = params;
-      return { data: { book: params } };
-    }
-    throw new Error(`unexpected refresh method: ${method}`);
+    throw new Error(`refresh must not delete successes or block on probing: ${method}`);
   },
 };
-const refreshGateway = new SourceSwitchGateway(refreshRuntime);
-const refreshed = await refreshGateway.refreshCandidates({
-  sourceId: 'old-source',
-  bookId: 'old-book',
-  bookName: 'Current Book',
-  author: 'Writer',
-  currentChapterIndex: 1,
-  currentChapterTitle: 'Chapter 2',
+const refreshed = await new SourceSwitchGateway(refreshRuntime).refreshCandidates({
+  sourceId: 'old-source', bookId: 'old-book', bookName: 'Current Book', author: 'Writer',
+  currentChapterIndex: 0, currentChapterTitle: '', // directory failure must not block browsing
 });
 assert.equal(refreshed.kind, 'sources');
-assert.equal(refreshed.candidates.length, 1);
-assert.equal(refreshed.candidates[0].sourceName, '新书源');
-assert.equal(refreshed.candidates[0].currentChapterTitle, 'Chapter 2');
-assert.equal(refreshed.candidates[0].chapterWordCount, 9);
-assert.equal(persistedProbe.origin, 'fresh-source');
-assert.equal(persistedProbe.originName, '新书源');
-assert.equal(persistedProbe.latestChapterTitle, 'Chapter 9');
-assert.equal(persistedProbe.chapterWordCount, 9);
-assert.match(persistedProbe.chapterWordCountText, /^\[2] Chapter 2\n字数：9$/);
-assert.ok(persistedProbe.respondTime >= 0);
+assert.equal(refreshed.candidates.length, 2, 'partial refresh failure retains the old source');
+assert.deepEqual(new Set(preparation.seeds.map(seed => seed.sourceId)), new Set(['old-source', 'fresh-source']));
+assert.equal(preparation.refresh, true);
+assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', 'book.toc', 'chapter.content'].includes(method)), false,
+  'explicit discovery returns progressive candidates and delegates acquisition to shared tasks');
 
 const runtime = {
   async request(method, params) {

@@ -1,0 +1,15 @@
+{
+  "pid": 81194,
+  "targetRef": "6460677a198b",
+  "startedAt": "2026-09-11T23:09:26+0800",
+  "purpose": "Make style preflight",
+  "vm": "Mate 80 Pro",
+  "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+  "emulator": "59198 Sun Sep  6 23:19:06 2026     /Applications/DevEco-Studio.app/Contents/tools/emulator/Emulator -hvd Mate 80 Pro -path /Users/minliny/.Huawei/Emulator/deployed -t trace_88943_commandPipe -imageRoot /Users/minliny/Library/Huawei/Sdk",
+  "listener": "COMMAND    PID    USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nEmulator 59198 minliny   23u  IPv4 0xef9dd372c40b624f      0t0  TCP 127.0.0.1:5555 (LISTEN)",
+  "bootCompleted": "true",
+  "guestBootLog": "2026-09-06 23:19:34.938 13261991936 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!",
+  "sceneBoardPidBefore": "2458",
+  "sceneBoardPidAfter": "2458",
+  "recentBootAlarmCount": 0
+}

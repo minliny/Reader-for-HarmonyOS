@@ -1,0 +1,80 @@
+{
+  "source": "https://www.figma.com/make/LOYUJr93KwespD5j7N6icw/Redesign-Typography-Library-Module",
+  "version": 9,
+  "observed": "2026-09-11",
+  "method": "Figma get_design_context returned source resource links; source read failed. Geometry, style and SVG paths verified from rendered Make preview DOM, with live menu click.",
+  "themes": [
+    {
+      "id": "day",
+      "label": "日间",
+      "swatch": "#FCF8F0"
+    },
+    {
+      "id": "warm",
+      "label": "暖白",
+      "swatch": "#F4E3BF"
+    },
+    {
+      "id": "night",
+      "label": "夜间",
+      "swatch": "#2B2823"
+    },
+    {
+      "id": "warmNight",
+      "label": "暖夜",
+      "swatch": "#413020"
+    },
+    {
+      "id": "paper",
+      "label": "纸纹",
+      "swatch": "#EBDABB"
+    },
+    {
+      "id": "green",
+      "label": "青叶纹",
+      "swatch": "#D7E8CF"
+    },
+    {
+      "id": "paperNight",
+      "label": "靛夜",
+      "swatch": "#26313F"
+    },
+    {
+      "id": "greenNight",
+      "label": "林夜纹",
+      "swatch": "#24382C"
+    }
+  ],
+  "layout": {
+    "card": [
+      2,
+      37,
+      312,
+      338
+    ],
+    "cardRadius": 12,
+    "rowHeight": 42,
+    "selectorHeight": 30,
+    "selectorTextSize": 11,
+    "menuWidth": 104,
+    "menuRowHeight": 25,
+    "menuPadding": 3,
+    "menuBorder": 1,
+    "menuRadius": 9,
+    "stepperSize": [
+      98,
+      27
+    ],
+    "stepperSegments": [
+      26,
+      44,
+      26
+    ]
+  },
+  "implementationBoundary": [
+    "Reading-page fills remain independent from the eight control swatches, as in the existing reader rendering contract.",
+    "Existing supported page-turn modes remain available; Make demo fade is not a new production capability.",
+    "Current persisted values and custom font ordering are preserved.",
+    "No native visual or device acceptance inferred from DOM, method probes or compilation."
+  ]
+}

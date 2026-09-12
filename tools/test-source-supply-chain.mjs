@@ -79,6 +79,10 @@ const insecure = collectInsecureUrlFindings({
 });
 assert.deepEqual(insecure.map(finding => finding.path).sort(),
   ['jsLib', 'searchUrl'], 'http:// literals must be reported wherever they appear');
+assert.deepEqual(collectInsecureUrlFindings({
+  searchUrl: 'HtTp://insecure.example.org/search',
+}).map(finding => finding.path), ['searchUrl'],
+  'HTTP URL scheme matching must be case-insensitive');
 
 const secrets = collectSecretFindings({
   searchUrl: 'https://x.example.org/api?_token=d2a094ff-b75f-4b60-ba2c-19e1cfe6cf73&key={{key}}',
@@ -88,9 +92,27 @@ const secrets = collectSecretFindings({
 const secretKinds = secrets.map(finding => finding.kind);
 assert.ok(secretKinds.includes('fixed-uuid'), 'fixed UUID tokens must be reported');
 assert.ok(secretKinds.some(kind => kind.startsWith('fixed-param:')), 'fixed credential params must be reported');
+assert.ok(secretKinds.includes('static-header'),
+  'JSON-serialized Cookie/Authorization headers must be reported without exposing their values');
+assert.equal(collectSecretFindings({
+  header: 'User-Agent: Reader\nAuthorization: opaque-value',
+}).filter(finding => finding.kind === 'static-header').length, 1,
+'line-oriented Authorization headers must be reported');
 assert.equal(collectSecretFindings({
   searchUrl: 'https://x.example.org/api?token={{key}}&q={{$.page}}',
 }).length, 0, 'runtime-substituted template values are not secrets');
+assert.ok(collectSecretFindings({
+  header: JSON.stringify({ 'Q-GUID': 'fixed-device-id', 'auth-code': 'fixed-auth-code' }),
+}).some(finding => finding.kind === 'static-header'),
+  'fixed device/auth identifiers in serialized headers must be reported');
+assert.ok(collectSecretFindings({
+  header: JSON.stringify({ token: 'fixed@token.example' }),
+}).some(finding => finding.kind === 'static-header'),
+  'email-shaped fixed token values must not bypass the static-secret gate');
+assert.ok(collectSecretFindings({
+  searchUrl: 'https://x.example.org/api?auth_code=fixed-auth-code&user_id=fixed-user-id',
+}).some(finding => finding.kind.startsWith('fixed-param:')),
+  'fixed auth query parameters must be reported');
 
 const paywall = collectPaywallFindings({
   ruleContent: { content: ".body@text@js:result || '这是 🔒 付费章节 哦！'" },
@@ -101,10 +123,22 @@ assert.equal(collectPaywallFindings({ ruleContent: { content: '.body@text' } }).
 
 // -- bundled metadata validation ------------------------------------------------
 
-const bundled = JSON.parse(read('entry/src/main/resources/rawfile/reader-test-book-sources.json'));
+const bundled = JSON.parse(read(
+  'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'));
 for (const source of bundled) {
   assert.deepEqual(validateBundledMetadata(source), [],
     `${source.bookSourceName} metadata must satisfy the manifest contract`);
+  assert.equal(collectSecretFindings(source).length, 0,
+    `${source.bookSourceName} must not retain fixed credentials after sanitization`);
+}
+const quarantined = bundled.filter(source =>
+  source.provenance?.distributionDecision === 'quarantined-fixed-credential');
+assert.ok(quarantined.length >= 11,
+  'all fixed-credential records must be explicitly quarantined');
+for (const source of quarantined) {
+  assert.equal(source.enabled, false);
+  assert.equal(source.defaultEnabled, false);
+  assert.deepEqual(source.capabilities, ['import']);
 }
 const tampered = { ...bundled[0], ruleFingerprint: '0'.repeat(64) };
 assert.ok(validateBundledMetadata(tampered).length > 0,
@@ -112,9 +146,23 @@ assert.ok(validateBundledMetadata(tampered).length > 0,
 const flippedDefault = { ...bundled[0], defaultEnabled: !bundled[0].defaultEnabled };
 assert.ok(validateBundledMetadata(flippedDefault).length > 0,
   'enabled/defaultEnabled disagreement must fail metadata validation');
-const staleVersion = { ...bundled[0], builtinVersion: 1, readerTestBuiltinVersion: 1 };
+const staleVersion = { ...bundled[0], builtinVersion: 1 };
 assert.ok(validateBundledMetadata(staleVersion).length > 0,
   `bundled versions must be at least ${BUILTIN_VERSION}`);
+assert.ok(validateBundledMetadata({
+  ...bundled[0],
+  searchUrl: 'http://insecure.example.org/search',
+  ruleFingerprint: ruleFingerprint({ ...bundled[0], searchUrl: 'http://insecure.example.org/search' }),
+}).some(error => error.includes('http://')),
+'metadata admission must reject insecure rule URLs');
+const credentialHeaderSource = {
+  ...bundled[0],
+  header: '{"Authorization":"fixed-value"}',
+};
+credentialHeaderSource.ruleFingerprint = ruleFingerprint(credentialHeaderSource);
+assert.ok(validateBundledMetadata(credentialHeaderSource)
+  .some(error => error.includes('fixed credentials')),
+'metadata admission must reject serialized credential headers');
 
 // -- RuntimeOwner wiring ---------------------------------------------------------
 
@@ -123,16 +171,18 @@ assert.match(owner, /sha256Hex\(document\)[\s\S]{0,200}BUNDLED_RAW_FILE_SHA256/,
   'file-level integrity must be verified before any source import');
 assert.match(owner, /sha256Hex\(canonicalRulePayloadJson\(bundled\)\)/,
   'per-source integrity must hash the canonical rule payload');
-assert.match(owner, /admitted\.length === 0[\s\S]{0,120}throw new Error\('Bundled test book-source document admitted no sources'\)/,
-  'a bundle where every source fails integrity must fail startup');
+assert.match(owner,
+  /this\.state = 'ready';[\s\S]*installBundledBookSourceCollection\(runtime\)[\s\S]*failed without blocking Reader/,
+  'bundle verification/import errors must be isolated after Reader becomes usable');
 assert.match(owner, /hasBuiltinMarker\(existing\)/,
   'user-imported copies must be recognized by the missing builtin marker');
 assert.match(owner, /isUserModifiedBuiltinCopy\(existing, storedActualFingerprint\)/,
   'user-modified builtin copies must be detected before any upgrade');
-assert.match(owner, /ledger\.syncCurrentBundle\(admitted\)/,
-  'the withdrawal ledger must track the current bundle');
-const suiteVersionUsages = [...bundled.map(source => source.verificationSuiteVersion)];
-assert.ok(suiteVersionUsages.every(version => version === SUITE_VERSION),
-  `every bundled source must reference suite ${SUITE_VERSION}`);
+assert.match(owner, /ledger\.syncCurrentBundle\(managedCurrent\)/,
+  'the withdrawal ledger must track only successfully managed sources');
+const suiteVersionUsages = new Set(bundled.map(source => source.verificationSuiteVersion));
+assert.deepEqual(suiteVersionUsages,
+  new Set([SUITE_VERSION, 'reader-source-admission/1']),
+  'the collection must retain both the full-corpus and later admission evidence suites');
 
 console.log('source supply chain: PASS');

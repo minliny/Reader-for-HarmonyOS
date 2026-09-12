@@ -1,0 +1,10 @@
+{
+  "verifiedAtUtc": "2026-09-09T16:55:23.576287+00:00",
+  "changedSinceInitialAudit": [
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "initialAuditSha256": "e62d6e22186d191d2e1495bbea233dc55a9b0a68bc095af69e307430c17a4b74",
+      "finalObservedSha256": "6dd7863cc7e54c7f40c8aee12b4aa246707f6f6eaff3f0cf7b7555ff1bc48c60"
+    }
+  ]
+}

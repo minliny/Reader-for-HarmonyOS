@@ -1,0 +1,12 @@
+{
+  "status": "FAIL_NET_TARGET",
+  "requested": 40,
+  "actualSettled": 36,
+  "origin": "chapter27 page3",
+  "expected": "chapter37 page3",
+  "actual": "chapter36 page3",
+  "readOnlyFollowup": "reader-control-rapid-fast-slide-readonly-1.json",
+  "localIssue": "tapOnly Prop may lag owner transaction state across a new DOWN; late Watch could cancel pointer",
+  "repair": "synchronous owner gate on DOWN and mode Watch; local stale-prop true/false cases PASS",
+  "nextCandidate": "building"
+}

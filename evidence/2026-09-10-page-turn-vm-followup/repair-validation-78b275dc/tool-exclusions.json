@@ -1,0 +1,8 @@
+[
+  {
+    "case": "initial scroll batch invocation",
+    "reason": "mistook output log file UUID for probeNonce; preflight lock assertion rejected before any HDC call",
+    "appActionExecuted": false,
+    "countsTowardValidation": false
+  }
+]

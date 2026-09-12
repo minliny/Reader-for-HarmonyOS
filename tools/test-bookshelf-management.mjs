@@ -32,23 +32,23 @@ assert.match(orchestrator, /await this\.gateway\.assignGroup\(book, group\)/);
 assert.match(orchestrator, /groups: source\.data\.groups\.slice\(\)/);
 assert.doesNotMatch(gateway, /preferences|relationalStore|fileIo/);
 assert.match(page, /export struct BookshelfManagementPage/);
-// SHF-02 made this page user-reachable from the shelf more-menu, so the
-// Legado-parity debug banner became user-facing copy describing the workflow.
+// Preserve the future group manager implementation while keeping its route unreachable in L0.
 assert.match(page, /在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
-// SHF-02 turned the Core group manager into a user-facing shelf-management
-// page, and the product decision points the remaining Settings gear at it.
+// The shelf tool now enters the default-only group selector.
 assert.match(shelfPage,
   /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\)\)/,
-  'the shelf gear must open the shelf management page');
+  'the shelf tool must open the shared group selector');
 assert.doesNotMatch(shelfPage, /this\.sectionAction\('bookshelf_search'/,
   'the shelf section must not duplicate the AppTopBar search entry');
 assert.match(index,
   /onBookshelfSettingsRequested: \(\): void => this\.openSettings\(\)/,
   'the more-menu shelf settings entry still enters the settings flow');
 assert.match(index, /'bookshelfManagement'/);
-assert.match(index, /route = 'bookshelfManagement'/);
+assert.doesNotMatch(index, /route = 'bookshelfManagement'/);
+assert.match(index, /title: '选择分组'/);
+assert.match(index, /buttons: \[\{ text: '默认'/);
 assert.match(index, /BookshelfManagementPage\(\{/);
-assert.match(index, /getBookshelfManagementOrchestrator\(\)\.open\(\)/);
+assert.doesNotMatch(index, /getBookshelfManagementOrchestrator\(\)\.open\(\)/);
 
 console.log('bookshelf management Core ownership contract: PASS');

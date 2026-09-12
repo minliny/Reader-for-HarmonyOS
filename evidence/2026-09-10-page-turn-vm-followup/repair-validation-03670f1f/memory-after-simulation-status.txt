@@ -1,0 +1,53 @@
+Name:	eader.harmonyos
+Umask:	0002
+State:	S (sleeping)
+Tgid:	7995
+Ngid:	0
+Pid:	7995
+PPid:	132
+TracerPid:	0
+Uid:	20020073	20020073	20020073	20020073
+Gid:	20020073	20020073	20020073	20020073
+FDSize:	256
+Groups:	1097 3099 
+NStgid:	7995
+NSpid:	7995
+NSpgid:	0
+NSsid:	0
+VmPeak:	39355620 kB
+VmSize:	39344128 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	  591416 kB
+VmRSS:	  561500 kB
+RssAnon:	  233512 kB
+RssFile:	  234012 kB
+RssShmem:	   93976 kB
+VmData:	 3130268 kB
+VmStk:	    8184 kB
+VmExe:	      68 kB
+VmLib:	  432912 kB
+VmPTE:	    4584 kB
+VmSwap:	   56628 kB
+CoreDumping:	0
+THP_enabled:	0
+Threads:	81
+SigQ:	0/15354
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000400001000
+SigIgn:	0000000200001000
+SigCgt:	00000e5c4001c4fb
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+CapBnd:	000001ffffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	0
+Seccomp_filters:	0
+Speculation_Store_Bypass:	vulnerable
+Cpus_allowed:	f
+Cpus_allowed_list:	0-3
+voluntary_ctxt_switches:	210945
+nonvoluntary_ctxt_switches:	112034

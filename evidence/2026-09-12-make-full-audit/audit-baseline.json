@@ -1,0 +1,2619 @@
+{
+  "scope": "Full read-only audit of two Make entry points and corresponding active Harmony surfaces; no production edits or further VM operations after user audit reset.",
+  "capturedAt": "2026-09-12T00:27:50.325595+08:00",
+  "references": {
+    "appearance": {
+      "fileKey": "LOYUJr93KwespD5j7N6icw",
+      "version": 9,
+      "method": "Make Code view Download code",
+      "zipSha256": "23e6046f8be80bab9f6467262a971317f9a1b15b47d54cd11a5521662a6fa72c"
+    },
+    "tts": {
+      "fileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "version": 17,
+      "method": "Make Code view Download code",
+      "zipSha256": "00ac06f661e21e6b4617f514f9f2217d7977b7fb8992cb0e4c4b8382a525a765"
+    }
+  },
+  "liveVersionsRechecked": {
+    "tts": 17,
+    "appearance": 9
+  },
+  "installedManifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T161738Z-35f2f99a-30ab7f96/manifest.json",
+  "deployReceipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T161738Z-35f2f99a-30ab7f96/deploy-vm-6460677a198b-20260911T161847Z.json",
+  "signedSha256": "6129b13d43ef1b008e70e7c53248cef88542a501c7ca6005dcc8157d202cd18d",
+  "sourceHeads": {
+    "harmony": {
+      "commit": "35f2f99a8d635615475fde75120bf8629f944565",
+      "dirty": true,
+      "statusCount": 383
+    },
+    "core": {
+      "commit": "6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2",
+      "dirty": true,
+      "statusCount": 58
+    }
+  },
+  "auditSourceInputs": [
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+      "sha256": "dfd03eaa8c349f992f48057f06a90dbd539a30e54e6965d67ec0ccf691439135",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.h",
+      "sha256": "7969ec794b4e6c1754b4ac880798346cd529351c33deaff0027f7b191fa375a8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.cpp",
+      "sha256": "6a00615a7c2d9db554ee4782441ad01b5cf8accf49996751c945e579c0983a2d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.h",
+      "sha256": "cb84a96be1341d7a9d560580a837db42c033270c2c474ed2156658867e99c306",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_napi.cpp",
+      "sha256": "dad00d2e79cf4845dabc3623c8afd01a56dfaa27a1e698fa07ab8a24f1b99ef5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.cpp",
+      "sha256": "2b33616963dc04a02c06dc4624e79f38bf7d880b06a9b66e57ddb49d0ef4120d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.h",
+      "sha256": "515e004672b206e1cd35327432825156a98316a07bfcae25830ff7b2a5ee3565",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.cpp",
+      "sha256": "39c45c4a82ce08d0e026e8510bb325678cd9982e776143b04ab1d3c5370f5e7a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.h",
+      "sha256": "46e77e148c4f309a74007ce9a21732b763a51f9fbabb33acc80f23c00e82ef3d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_trace.h",
+      "sha256": "42417154e816fdb9e1bcda053168a8359ab21ebc5724ec88eeaf174b699c3ba2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/CMakeLists.txt",
+      "sha256": "3bc5d2ad276fb83e04315ccdc0eb6120bb23c9966f4174db0d58e4164224a720",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_chessboard_replay.cpp",
+      "sha256": "fff6a1858e08e02d381020d70379e7017c98535d980aff0b4c06989563369ad8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_motion_test.cpp",
+      "sha256": "720038751fe39833de7ff3813917e3036b4468f0030c009051aff3dd6e4436b8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_present_barrier_test.cpp",
+      "sha256": "cc2a9ab284447fdfb492323504278d276ab6675a83054905d35d214ceab566f3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_render_state_test.cpp",
+      "sha256": "a21ffd060993f807cf09800128b835552e8c3b39f7daffaa76437bd44817e677",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_solver_test.cpp",
+      "sha256": "11aaef1f8f9f39cecd06cf440a16466d0ae76c9951e48c45f2dc67d2e90e7035",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/EGL/egl.h",
+      "sha256": "eda6fd2439517afb38bec51106e287b0fe07a0078dc2d791ab5dc2751e8005f9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/gl_mock.cpp",
+      "sha256": "aa60a77eb3765a066e754dbd148b2cff20d24d50b749279f582d8501863604e0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/gl_mock.h",
+      "sha256": "368787ee31f4cb396e554f589aa0171e861ddbad60776741e507294009e22574",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/GLES3/gl3.h",
+      "sha256": "a31771d2b23e7b0fb50a7b72a0ab1d9baf90e18320db37b31ac6a3d6f782b480",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/hitrace/trace.h",
+      "sha256": "887155fb99057b49ee22db6fafbe85d97d71156dfd17cb59885a95c538226e0c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/mocksdk/hilog/log.h",
+      "sha256": "b63c2e2691d00d59e22caf543f729a50769bc652e9ec5e7dc4021d65afd97f95",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/mocksdk/native_vsync/native_vsync.h",
+      "sha256": "2c3f910594372413eb9239068306372b0401e944a8ef10a91c55e695020e461d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/mocksdk/ohos_host_mocks.cpp",
+      "sha256": "84268e0c4f5b16de3d1bc354a6766e62686f4428cd07aa10bec041ba9a694b41",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/tests/mocksdk/qos/qos.h",
+      "sha256": "f8e80c480264fe9ef2933b73848b3cec89f2bc09ed1921190d910f97b60f7c7a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/types/libreader_bookturn_napi/Index.d.ts",
+      "sha256": "9da81627d4eeb36dd8d42be2ff49ab7c9167b2ae1d1a664125ec0f566996625b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/types/libreader_bookturn_napi/oh-package.json5",
+      "sha256": "4d1c224aa594d01154552750d45f5ae6e94091b2d5939fbe66f65ffa67383b62",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/.hvigor/outputs/build-logs/build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ArkWebExecutionHost.ets",
+      "sha256": "4ad5aab41a9856a6a86980e804c278bc408216bfd025f9a40cd465b781d1d8e8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ArkWebExecutor.ts",
+      "sha256": "bcff26347f2ff615872b6764cf3e881c0d204abd40b29f4e0b9dcb26f9874b7a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/BookAcquisitionCoordinator.ts",
+      "sha256": "256c33459089d903153c83864125c85737f296796531b3a455cee882bbbc78bc",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/BookRequestScheduler.ts",
+      "sha256": "b801bd5a36d112794a65a3cd594bdea4bd3cfe7bbbd4a66fa9df3d365d7f438a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/BundledBookSourceSupply.ts",
+      "sha256": "1088e50f43be1f4fe1f46d5f80b43190a55e13dbfeb5f17cfd1fb277c917337a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/CookieSessionStore.ts",
+      "sha256": "86453a922320dd2e7e30d4ff9b8e61f53972f8e9eafdb0edff52b9964b8236ce",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ErrorMessage.ts",
+      "sha256": "79ef57340be758703516aee6ca704ff2b2fcb8af0ee52fd13bf2fc4394873331",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/HarmonyHttpTtsHost.ts",
+      "sha256": "e95737043cb52f46ce7f106b2164ab5e908248928d1ae78a3b9a441f9da87968",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/HarmonySystemTtsHost.ts",
+      "sha256": "aa87139c725469db188d437e97b9659f3671f927671482dc8d5ade9e8ef00f5c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/HarmonyTtsBackgroundSession.ts",
+      "sha256": "7e1f0b912bcb8bd30f6f773cf865fc04a5a8da20340244ee73701a5ea464bf41",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/HarmonyTtsHostRouter.ts",
+      "sha256": "13fa694bacf2d3909a22d3635d2e35f0b3d779138f735769ece952135745456b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/HarmonyTtsMediaSession.ts",
+      "sha256": "dce6f8aec1189f70d05b311cc8e50304972ca0063dbd4216c5d7e1b327477d53",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/HttpExecuteHost.ts",
+      "sha256": "e89e44ad1237071610118bd03d4993caae95856f4147cfc6ca264262435025cb",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/HttpTransportPolicy.ts",
+      "sha256": "883e55392de360f3c50108f489609d88a687f9338bc38f552a99c62b792b94d3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/LocalEpubResourceHost.ts",
+      "sha256": "70b31de300034fd2d3c11357e54ccebb9b63844647867624b36b0c3b40ca7dfe",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/LocalImportFailure.ts",
+      "sha256": "39abbebcecbbcd773dcd0b48b944767f411a633ebe531687ba63ef643210d299",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/LogPrivacy.ts",
+      "sha256": "bd1c21a2d9d9e0e3e71ab2b5e1102d4871c929731fd918e3bc0e2962cb1c1d72",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderAppearancePreferences.ts",
+      "sha256": "2ec0b9eb66b17c7a6b787566d37dbcdece58d2dbf280e2480219bfcf203483e3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderClipboardHost.ts",
+      "sha256": "d25cfc2623db4130c7d898ba68e6c33510348451c7c9414d446b80ea94d5730e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderControlVerificationLaunch.ts",
+      "sha256": "b225b95adc64c8b6ac5fecb3956a092afe2947eea097c781197275dafbd58fb4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderCoreGateway.ts",
+      "sha256": "56f8aa263fba9a30f05036a7e62d494efd7431057d6bb333e4a7113a45734dff",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderCustomFontHost.ts",
+      "sha256": "2f059cf9ea8077edb916004442835963ee0090de00ebefc8253fb8db5404e849",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderHostRegistry.ts",
+      "sha256": "ef60783d1ca6d065ef563327df0595dd8d1c3e5330ced553d50ffa03fe7eaf22",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts",
+      "sha256": "6447dc64c8a019643f560c9f9bcec5e4cb5fe67da964813e79595a5a4821807a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderProductScope.ts",
+      "sha256": "041aa7dad7fb57eac37e157da003b2d1a11fbfee9966424ee97626d69c58f85f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderReadingSystemEventHost.ts",
+      "sha256": "b6dec8dc447c69cf313a750ca06fd6ebeaef93b580901f9a2de8528e4329e946",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
+      "sha256": "11964e7daaa7833ac6e5e15cf3186209b91c757405530ae50b89ac400035b38c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+      "sha256": "97d74df4854badd97e39dcb006d877e507705b436876219fed9fee3b3e92bed4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReadingBodyImageHost.ts",
+      "sha256": "f9464c5a6f3e868f973010ba15d00f55e1fafb79af4231672bec3fddb270966e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/app/ReadingImageDiskCache.ts",
+      "sha256": "c53fd5fbbcc443ce264c4f6999c8a6b455fcd53ccae30a7c43404370cfd7eeb7",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/common/ReadingImageIdentity.ts",
+      "sha256": "c82f7d5721bc1a3b99f904fd335601f786e204ce0c2d6c8249f7967b6eae5f3d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/entryability/EntryAbility.ets",
+      "sha256": "8b23e08d47cb7406476ba04ab259aa9dab83b4e152fb82f5c8d6b59e30db4dc4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets",
+      "sha256": "85d423a081a42799ec11f33402b22960cfce1d9b1ccc00d963afa9acdfe2e873",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfEmptyCard.ets",
+      "sha256": "c7b1e3fcc28a0c086c79191ecbda2384dcab8c786d2791fb3dccccdd34b188a1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets",
+      "sha256": "8abf5d0490ec9f880cc57bdc4caee4c0d476d5b9d32aee8dc939257a6d1e2156",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts",
+      "sha256": "7919637fcdf168522cba17c172632c26451d704cde5d6ab680285ee568ccb309",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfManagementGateway.ts",
+      "sha256": "19b0b73c4ddefc269dae6fcdb2a25688d67fc13e46d79b0781666b467abfb463",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfManagementOrchestrator.ets",
+      "sha256": "caf2ed9fa30558838673b6a9fe4291ae2f2b2f160d39994137749793f513e7bb",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+      "sha256": "e41d397e73f00641db77aa9a209fc0e70190752a09f81ee297420109bcb1e7ab",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets",
+      "sha256": "8b1b9da94baf89527f6fc9837025426fee36fc1b9a49801b13c774f604893aed",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets",
+      "sha256": "9a295ccfd40e86beb1a27f56c077c86480acad74588b3569b51673dad7452bf2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+      "sha256": "cd2f04ff7febdcf4e267dcc3c69ff372df22d8cc45a17c77d5151eebdb6abe44",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+      "sha256": "286bb29f89c113b520d1b834fc00c41b901ca675349736dd26c8f8a336c575b3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts",
+      "sha256": "5af863657cac8495fbe29d25c65210b7021cfca4ea8ab7ae382a83063406796f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+      "sha256": "89b999a24ba96ed03ca54873af3c5ae4751984ab5b51cb9cf1b043f6c82354ce",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/NoCoverCover.ets",
+      "sha256": "5929beac04c02feae38fcbf363ef3ec97c39d4f41c2b312f8c4c7618786db57e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/AppTopBar.ets",
+      "sha256": "68497d91219527c6f376a1ee2f3af95b0ed9900ba5e40bab4faeb8b464505a85",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/BookIntroText.ts",
+      "sha256": "446a05155dd9bee22288e82c54385088fed0ac8c144ef62619f3ee6232806ec0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/CachedBookIdentity.ts",
+      "sha256": "3fa89fb9febaf818bfe4a733fd2a0285a4ec1f0131f84b863b00ceaf15ca91bf",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/JsonImportDialog.ets",
+      "sha256": "44d8a91d83631759ac8ab5420fdac46c4c8b24937177a32bf9d985257357ef7c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/MotionPointTrack.ts",
+      "sha256": "762630fe756a28f808d92242f4cf655d4b160e9442711e47f3995b1ce796ce9e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/MotionSpec.ets",
+      "sha256": "5e39d8f7bebd0e48f2798e2c788d4c09183b11dc0cb49ec80cc23373ff9c7531",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/MotionTimeline.ts",
+      "sha256": "9596445cd773c3c0b43f1540b81a1a768a45346b1adc4c2fb15a44e9a23238b0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/PageBackBar.ets",
+      "sha256": "8221e660a2b8345ba0df7eaa1adba386079fb89237b726ddc84f47fc7df72dde",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ProductMotionTiming.ts",
+      "sha256": "1074dac727f6a00f08b0c421bb2d441ebcec955e8f185e02536cef71dc2b94e4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderCard.ets",
+      "sha256": "403f8ccad3192f2e38af584ede95d7570df3f4cddea4fa18282156197f0c8b3c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderFontFamilies.ts",
+      "sha256": "e8f53c690391ef2c6e1a947a353b44aa76de5f6c453eac75bba0f07f5775a899",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderFonts.ets",
+      "sha256": "90a2c69aa06b6e713df640885fd3a768d08062a95a846f6f6dd2e65b8c470f69",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderIconButton.ets",
+      "sha256": "44785dc56c5d2e4793738efc71cb3a960b08e29c9176ba0e5248e9d52522b9ad",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderMotionClock.ets",
+      "sha256": "a427dbcfbcdd377e871b641e4d243d6cb9e36685e8a1dfdb6af6611ffd815480",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSearchField.ets",
+      "sha256": "b70887f6416ecb1ef812f9f5f767d27336eb48d3afa44ae278abd9681121e969",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSectionHeading.ets",
+      "sha256": "e99c62c0b7a1fb7b802c53e0c3bffd01a787cad78e41007e912c6c55ac1ac090",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSegmentedControl.ets",
+      "sha256": "3769bc08f7f157ae9288ad00411bd72782c4dce6f8d3da53b16e563b9171a8a9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSelect.ets",
+      "sha256": "18197085f0149d2d881b9c742ac2aac0f3fa170a9da9d9826c285651ef140ed0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts",
+      "sha256": "d9feb5f8d43de0b03479ad29114a566b4ba183810456a604fec9013bbe35a1ea",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+      "sha256": "65e91e0533696aa5c886e5a4c2bc4e6d31c26045399bafe11c3d98aca52fde90",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderToggle.ets",
+      "sha256": "8837f5245b24ff7e89fcb219fd665475429fe0fcfcc5eb85b4b3c05289c82514",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderTokens.ets",
+      "sha256": "3e2feb9e7b8252c9e94e903f81b77700cfdd37851ede9436903d1d82859dcf84",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderTypography.ets",
+      "sha256": "6f5817af9a2580835d8727e713819f0514c5927fe81ed02a3a59be29d3a818bd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderWindowMetrics.ts",
+      "sha256": "ffef513237446e59dcfe36511a203b0beaa981b2711ae488aa68e38e415b2228",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/StatusBadge.ets",
+      "sha256": "e5d3f4d0674c35f4240cf4f2450be703e8e5506068edf52d71079d9b16bfc6a9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts",
+      "sha256": "a1abae74b2d9064354f77a10c054e2fa192555d2946bb05ae76d54b4609ddeab",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/discover/DiscoverGateway.ts",
+      "sha256": "b508c0cb1268155da62c00f2f10502d5a0145a7741e799b45fecb7dc996ab7fd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/discover/DiscoverOrchestrator.ets",
+      "sha256": "bf9bcb44a67fa0883adb1056752bb9eff5ddc9a8fe3f46375c447bb75d9fbd59",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+      "sha256": "ed18839aaa68f30009fc0e6b62798fbfd3e4b9648a07d2be649f17a66feefe0c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/BookTurnMotionState.ts",
+      "sha256": "3505cb0c447d7e6b0a21672f7c534e03e68fca29153ee6ee84dc307007c4c7a8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/BookTurnPresentationSession.ets",
+      "sha256": "baa2a6f5b0be85d1d798fd48ceb4468ae449127162c2bab448ac57311d0f2911",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/BookTurnTextureBuilder.ets",
+      "sha256": "c081b4ab4ca599be5050e9b467e1cc26ba05f4863d39aebf8fe653a6cab2f6b6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+      "sha256": "eb198fe9d8c7afa197a800024d615958c922274c4613b4759de03cd858bf1ec9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "sha256": "728996139eaff426ecfca5fcdc85d765f254a72fdeebdb0992603c3a7013b6e4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts",
+      "sha256": "3c3152195dc04b46e80e1cbf66a30280568aa5efd00e424cd0293e9af17473ab",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts",
+      "sha256": "c13524d817272aee3a0361ecb3fa20e02541c7d5b4bef9c52c03294991263194",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets",
+      "sha256": "14fa359d54e2541c6b8bf079c3d686a7174209c3b06fb8ea3a23e001a6a92511",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceGateway.ts",
+      "sha256": "af48fee62679baab7dc5e1fb9dd3b6959f8c266db73193146b8e49d189c1a030",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceModulePanel.ets",
+      "sha256": "a9127d2abd8dc47334f85a6c7e573163d01cbccfca1c42bf0c38911590d7769c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts",
+      "sha256": "c9f7ffd7f77fb9c9b1b2c93413a3509a937fb70741fc0a415e4ca223fe60d330",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceMotionStage.ets",
+      "sha256": "eb46894d12c99924a7041a23721025e87a3e58bf3788f729bf8d7a7354e38b43",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceMotionState.ts",
+      "sha256": "70822fabc9bafbc74e516bb6e2429d2205c12b223909952ab9fbfaca8f6c6995",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts",
+      "sha256": "c32222f70876b1fa277a20c560abf3a9eb1bd667272235aa76debe1497e014a9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceSharedActors.ets",
+      "sha256": "42fbe62d618ab866cc73f01d62237f0cd16dad4f93ac544cb50b46c45bcd5f09",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceState.ts",
+      "sha256": "0534e4cf875ff41375ea6bf4f6a657e133c17aec4648cb82e238f9f678ce6de1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceStore.ts",
+      "sha256": "cc9aaeba39aec305352b9987d017b4bce7b20e70f612a8b420113094c2575892",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAutoPageFullPanel.ets",
+      "sha256": "185f1725fe0cd5a9a46b76881d4b09898d8d8d7f88b319bcbf1ee30234fb4863",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAutoPageFullState.ts",
+      "sha256": "f47660154652c5c7363a191ef74a4b6efe9c6d90bc224f3785429b1e2178852c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAutoPageMotionGeometry.ts",
+      "sha256": "d35ac440df08afea48733550d8c6061ec45c2cfb25f788e3580669e371cd4964",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAutoPagePanel.ets",
+      "sha256": "021f5ea6f8cda9adcfda0b0cf4584364958f247bc9ef13dc9225d53e82e79d8f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAutoPageState.ts",
+      "sha256": "07ee1caca6b346cc2a90d13ee1bba8dec7e113545eaf69c369ba862f4bac3a02",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkEmptyState.ets",
+      "sha256": "d03557d783ad6a1667943f4ab49b517a28efb5b4acea58b0ffedd9cb45992eac",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkErrorState.ets",
+      "sha256": "5b6a923425733829c0fca986667419f2fa70c3291964b2c5e9b13e09ab47b78e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkList.ets",
+      "sha256": "bc746d330d87d278f17d82d514c2c8ff4cebc924fd66aad9bafd47c3c2aa4368",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkLoadingState.ets",
+      "sha256": "e7facd29ab3415be84e38cb7d45c07c1af7b957b7267ef5ef23940deac7b3a0e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts",
+      "sha256": "db7f06c1067067a51aeefc02595b2149feca353d93a43fb458fe3eabc33a2e7e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkRow.ets",
+      "sha256": "9f2ce7bab18af027666c1b1a8dfa6c10dc92d84dc867c94968de54d5fc27ce78",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookTurnSurface.ets",
+      "sha256": "b77725e58912a4828e58c8ddfbe3f3bcc2ee9ec9997220feecbc1320bd78fc3c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderChineseConversionGateway.ts",
+      "sha256": "9f801dd76b65c2d15ea3ccaa40aae22a3be078ee5cb9a5e80d40a70e8b3acc7b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+      "sha256": "b2a61c962c31fbe7c25c829b9069279468b22982d50cc95adf151dd90ad414a4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts",
+      "sha256": "29b60e851f7a0a0b13506c582102f2b5d1189e933077be75d33176a1016cd0b5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets",
+      "sha256": "1c49b2f46662989988dac466d7d0df08af01d2de97fc03baef691bca1651b8b1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts",
+      "sha256": "01557dee8f655eff4f9437a1d7f8c383458dc98f6e121743dab9fee9d1966df7",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts",
+      "sha256": "e9311e18854d6e5b55927f6f28cce99e882ca2228434e1a9d36a7c73cf0cc62c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets",
+      "sha256": "8df763b5ad4c21249840baf97f6ffe558ae6d5f517e4db472fdc077af34d613f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlBackdropTouch.ts",
+      "sha256": "505683698b80f0b3ad8ff931e3f01f479f6762de252c9849ae1c7690939bcebc",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts",
+      "sha256": "4aa81f9b3d9a7b4d72bfbfc0bf595b5b452be413c17724d55a091cd6107f0fbd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts",
+      "sha256": "49d0571b2025b5130f2cfd26dae8fa42183293033d13a2fa92c51b585fbcb8ab",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+      "sha256": "6ff7434818fd429043f7ad4133e51e3396fca0f85a1cc5847d52fe88030a53de",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts",
+      "sha256": "428ec2368c79d9596436af530b33d7e20c386b232296d27adcfb800475f10ff8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlGeometry.ts",
+      "sha256": "7b8a339aee6dec6f9eb0b30a5326c1eef0f83236dc4fea17f14caf2c62e26c9c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts",
+      "sha256": "1352127222d3b21306a2b6833faa80ddf8590833a892f10d01f8d6ce07f64960",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlHeaderGeometry.ts",
+      "sha256": "23404befa8b934ca60e2d4101d0e3e5cd529ffa21c94ab64d83d6766c6f85662",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlHostKeyboard.ts",
+      "sha256": "0e5b3fab84e1ef30277a06cd1eb10b80c1c68f37bb6bf7b8cbd767b85172b224",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlHostSession.ts",
+      "sha256": "d221d82db6a5fb0e6c44d37e44e99874fb698be514772ed0d7ccaacc705a3bc6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlLayoutRebase.ts",
+      "sha256": "70d42dd991d0bf9c44520fcff80801f50483ae8e7c115bf650c646f29b35af6e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlListPositioning.ts",
+      "sha256": "0adf48c83edba9d40637aea02ab96cce5d946406db173146868f3eb69590eca6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts",
+      "sha256": "450ad98e35b9abc8de604a74aa80c34f671f33712bbb7df99e01e2181990be71",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts",
+      "sha256": "38e9498674620a6d2cbbad6509a41e15c9761a1b04d7cf4c743fb5c4d121ae4d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionPolicy.ts",
+      "sha256": "cd1d00f844cae7ffb84bd4801cc21e670ec257a6558a08603b8b9dff765c798d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts",
+      "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionStage.ets",
+      "sha256": "9efdf1ae15ba6c417cfc7aa88cc4eae360c6a4cc61cb65029940d0c6963bc2b8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "sha256": "f2288570bff18be385172b85c86951db0342da722b99af45a98b0da229f2c680",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts",
+      "sha256": "76f2670c9a936be92fda12ce0712207ab7b4df5e96c5cd48f2de7277af1c03fe",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+      "sha256": "49e3074195fb0c2cf063278028d5888255e1e5876e1e9b9271da6778ec5ee174",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts",
+      "sha256": "1a4baf7429254391f413d79931660e1278edd648ba986c9c89ad5d4d5c8035ad",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts",
+      "sha256": "a084d836d9e81ec4f2150d996848d98dc4ddf5f6aff1b4a3a79ef3e7a55ab34a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceState.ts",
+      "sha256": "cd598b4dbcecab28d3b4620a076be518ecb4b11146ed9a91a451fd5d3835c29d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlRouting.ts",
+      "sha256": "aca0b4e8861bb9b4ee2f87d3fbff3613bedab6b582bd9893d2e502a3e73b6cfc",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlRuntime.ts",
+      "sha256": "2d9d1d89117f81845f49412b90a69d8b770a1d8a77dd2379af84d3a80541fcf3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSearchContent.ets",
+      "sha256": "cb6a78390a016361e2217af781407c24a4ea7cc19b1d71cff65537db8f9ff597",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts",
+      "sha256": "92cd80ea923657fa5f454825e5d596758d54041911a937b3d4f344706bac2170",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts",
+      "sha256": "8fdeb0f2827ea7d48353ca300a294db1df6df8fb2c10c98164c1cdf2d27f11df",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts",
+      "sha256": "4c8c24eee82145bde1f78e4a29e55bc76002ebb1a706b53ae2ec9750fd904ddb",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSessionState.ts",
+      "sha256": "542ceecb395d014981b255de3f854aea9e308de15078ea52c3240207cdb8c9e8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+      "sha256": "73135778b6196d5590abcb1743267c0e91769d6c796752dcae377da13c085e2e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts",
+      "sha256": "3012f1043d5e1c7e17d22493befbf2fe442471354d78d4c39cb6ba90373d13ae",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSpatialPath.ts",
+      "sha256": "78977ab62247cb3a2d4bf61e22ed62b7aa5c4da5e0447228051fc33cd3d3cd09",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets",
+      "sha256": "e7f8b2f6e3545df7bc6fb647a5b9220e14773734d5a2ae784751b2f9d5c0f167",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlTimerWheel.ets",
+      "sha256": "e6ace1ff2c99eeb77b503d57187bb040f05674a508d761c950778154093bcfb1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets",
+      "sha256": "4d9ef738177b963999715f48fdd01232cbcf31ea7e6f0a1459e05d04a89cb9e5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlTtsStyle.ts",
+      "sha256": "8dec100d7bbae66f007ae0a5e63a82b6f9ee033180ed6ee5eaf1ca0561415e92",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts",
+      "sha256": "011dbd2579ccef95635bfc6dea64d6590c3c72511bb7e601a743cff92c9dd275",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryList.ets",
+      "sha256": "fa708342ba9df1455b8d8a0c0569e9eb70f3b36685ef51051db546f1a58a5c44",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts",
+      "sha256": "81fceb900365ff4c560619a12237c924c947174c124af6b3e0f3dd2109a5c749",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryModulePanel.ets",
+      "sha256": "a570cda2fbf2161cb995edd869c526b7c46c1bb74e88c2d895eabe063933210c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts",
+      "sha256": "cae1ef3ef6ea253d6e43d9e53314e3439a801ecce73657d59096114c2173ea3b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryScrollGeometry.ts",
+      "sha256": "6b524cebdd74b3a7eeed505993836df1019fb57c45e67df51661b6f1f687639c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts",
+      "sha256": "a14972a4534d4c807ab69d1b51bf70588e1833f019edb6f35a6643dc70767948",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+      "sha256": "425eb9b16a717a842b89ac4fbb24e454466faf095c90679a9968901346c9949a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderHttpTtsGateway.ts",
+      "sha256": "52d7f1afcc20a0d43d7bede3cc486debdcda6f085f56a375bbc4e74eba3d7577",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts",
+      "sha256": "1b2db85d9c012d564222a82cf8e83ec81c1b35bd08053c9815b33c3b9a09d904",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageBottomJustify.ts",
+      "sha256": "81c5bc5f16c48a7d737428a60940557f02a9973afc4960738559fc087ad0995b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageChrome.ets",
+      "sha256": "2dae77a981d9bc50fec4126fef861a46789ddfe3c8ebbdf4cce7ac03f7561f7e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts",
+      "sha256": "f2cc34ae991f4c4558f8245513e732a945dc28ecff1afc4bbb3d7d11092111cb",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageChromeModel.ts",
+      "sha256": "52d2eb676a2d76265ef64f8c69643dc9ca4a5b43841e0a58530b56bd22a6bb41",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageGestureState.ts",
+      "sha256": "0bd98963d31ec43027b0b29272b1eb1d1be8546ff0c7bc6f3e47456844e7ea23",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInputClock.ts",
+      "sha256": "57028558015a23278cf1755231b9299514c3631ec2f502f0d1a107101fac6f68",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+      "sha256": "dfe6625b94e6e6317d7e5246fce8b85812aa4fb42be41dea30e2a83bea39ec20",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageSettlementTimeline.ts",
+      "sha256": "996ab26ff46f1fc3f4f3ff5e00a6d6bef45153ab4d6695c364720156a87f80bd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageSystemStatusHost.ts",
+      "sha256": "125139ae61a98a315949761630e253dd9b877c01bdc97ab7a3016b3e0418a506",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "sha256": "3ac41d608021113ed808685bf404c4560ff41e942cac1f783882f106cfbdaa5c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderQuickSearchPanel.ets",
+      "sha256": "70f149f059d1a08fc355ea2151b0abdeffa6fd5fa7c2dc7e03ea8ce651a7a86f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts",
+      "sha256": "488ba22efe7d0482c1b144896fbfde243847dd5945b271795b43d42e0872cbe9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderReplaceQuickGateway.ts",
+      "sha256": "dbabf5e03a268e418be7de4521e6297be955756d5156efce600036d8e8ce7593",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderReplaceQuickPanel.ets",
+      "sha256": "2fb431e1c8d5f6b304f33cee987b07548ee28b789bd16bc6e9271403e2b0ae90",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts",
+      "sha256": "061f9d5b13bf49530da9d5e37c64a0039cbc3c3f4d907abd04165bf2771e3d8c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderScreenAwakeLease.ts",
+      "sha256": "d83393ff95cc3f5790597128ced4fc6ec60aefeff7ceeefff55ed1882a851d08",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSearchFullPanel.ets",
+      "sha256": "3f83208b435066e0d42e271bc363ef52869bc7aaafd34294cd2e5d3c0a54c887",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSearchHighlight.ts",
+      "sha256": "c605d4ef4d0063dc6dc4276bbcbe8b4749be879fa407d4e8522603935a3443a0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSessionCapsule.ets",
+      "sha256": "68ed2d42116b24e2435f448d761954408df1266496c626b1b0f4eaa5b932008f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts",
+      "sha256": "faf55e4c6584c1f3c7f12b9e38bdd5a7e88e361a11ddd451334da070efa47a28",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSessionMorphState.ts",
+      "sha256": "ce4d3bed7a8812b78af408a08f29dbb69cfe6016faa49ae00d0d0ede0dbf7d13",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSessionMorphTimeline.ts",
+      "sha256": "f6719cee2b794a4a2f86e9dbddeed8bc2628d55c05a985a96da7e0263d140986",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSettingsFullPanel.ets",
+      "sha256": "edabd1cb87124b0494c43560827f981bcb5e97a47e42d30c7f111983e8e52003",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSettingsGateway.ts",
+      "sha256": "fe319ff60b7a9802ffbf13e3178bb5eda1797e89e0deff322e054776ded5480f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSettingsModulePanel.ets",
+      "sha256": "7c1ca6d494ba2af35b7808471b0fda86f4b3883bb92484f1f309281982566cc9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSettingsState.ts",
+      "sha256": "9bfbaf2b183ed409494359de5d0e091f36bab33f69b0f775c3ed3e92a09c370d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTextSelectionPolicy.ts",
+      "sha256": "88a1dbd18ef62fae118eabbf17274f25767e129bfbbf88b92eeb996e3b3492e3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTextSelectionProjection.ts",
+      "sha256": "da47591f357b1789361cfe9b7da014dca911490b8a5f91f3c75cbe3930f1cca8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts",
+      "sha256": "030ad5e0ae090b08d50c7db55e444a9b8132403ba02c378071a95eb3cdff155e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+      "sha256": "dd52d6f0dbdabbc1288a79ceec3b594073e9ed53893b2dc38a17635069e8bdec",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets",
+      "sha256": "bd794b2d89c53d5e43e535bc6785a2bfd7766b41d7b848b7dab8a645bd81ccc5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsGateway.ts",
+      "sha256": "1a4f9b3dea130312023d694a7badbc94ec1cc1145fec8918f10d2012b0af67e9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsModulePanel.ets",
+      "sha256": "04dd08c85a14efc3c20fc19d9ffd1013ec74a1c2200b4f73d5b59ded77affa92",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts",
+      "sha256": "7be7f95bb7125c079cbdf0c3de8a493eda3a1ab3f3b0304044098ee23de2f329",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts",
+      "sha256": "9f2e36edeee3b106a4ee418eb348c188d253b85caf9cccb57215d2b6d329b72f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts",
+      "sha256": "fc21eea4ce2615ba5f7a4408531b9b7f21e013152ffbc2215aed5cbe23a36bf9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsState.ts",
+      "sha256": "e5d0e85a34d2020ccabccd75266f48640d8fe553d0ee518ffac3a5d5b5ca10de",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingBookDetail.ts",
+      "sha256": "6266c3f54b0324b56941db9d1199d569b0b2a4dbfe1c00f4bbd22e7d758913c6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingChapterWindow.ts",
+      "sha256": "f6244f8467c99616ef9d35dc7a60049254a6dacb9eabb04c108744bbc50aceae",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingDocumentProjection.ts",
+      "sha256": "e76418d104388453cbb4e57a29b3c9217400e644c179c3c73372cc5249c3db68",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingGatewayRuntime.ts",
+      "sha256": "6502173b452b598ae11ce20c4d4f7077947f153cd7deb839e6f1160b8664a0be",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingOfflineContract.ts",
+      "sha256": "7212a62663dbd962ccce915939bac126da9ffec7da0d55de99819d8c84b76f84",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingOfflineGateway.ts",
+      "sha256": "6832335c440b36444125d70b97d609c313a56fd3d19c32cd99a90572197b963d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingPaginationIndex.ts",
+      "sha256": "cbc11ebb1837d4ba919b2e2304925a62b2ca4d53343989601d69e47f3187d4ee",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingParagraphProjection.ts",
+      "sha256": "74f0aa5830ec7984b30059dcbf1022577a397605b1b0933502f226241a005b51",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingRecordGateway.ts",
+      "sha256": "264422d288430ba8976e25559d468879f56ade71a3ce7af425065c2343e98593",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts",
+      "sha256": "156b412099431336765b2347b2e33850c75628266483b19195cbf172d1e7da52",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+      "sha256": "18f825ad769adb0564cd4bd76bf05651ab23c7262cfc3e652cf9a11d7bc58523",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts",
+      "sha256": "7508be50b4d8c51af7aeb695d0f774d944503214e94f3c271b8c274a1d8e6294",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/RemoteContentAdmission.ts",
+      "sha256": "f6a45e72f02a25e72b4c4ddff8fc8933a9f86e0926b3a73043af399391938e96",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/RemoteReadingContract.ts",
+      "sha256": "3395c311d3c9214fe71cc9d1dab7d8a29b79c103ff78a6edad617bff116460d5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts",
+      "sha256": "12a48d9826f60b05452a9a634c8a20cccec1396676c1a83b07c21dcd47e6875d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/SourceSwitchPanel.ets",
+      "sha256": "c3cfbc384db810032e0329894776c2662e805927d6de04011933647427a01fc6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+      "sha256": "51271c3ac621cf735e191848b3f6d0c196cc6ef290a31ee5539fab3abf3e4520",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssGateway.ts",
+      "sha256": "aded7a16b1c92b409f31ed488f4fff2aab063e37a8a382bdf7473b76988914bc",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssOrchestrator.ets",
+      "sha256": "44db7c8ad467c90a06e286ff0b8d0cdaefb403609e82b90fab3312c8a72d39d6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssPage.ets",
+      "sha256": "4e1e8f83a483fd858824506b7582e410dd70ea48bd929ff3721d4ac73b2f6f2b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+      "sha256": "0ba3ab3fab426ac840705aa3017a5b841d05121f91943aeb8535829de10356d0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssSubscriptionEditorOrchestrator.ets",
+      "sha256": "7aceecd98e28a70c227049c8b425b291431cc18b4d149341b979a85687a6880e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+      "sha256": "ed923bedc4315f9989a45ca0ea335bf64906ec9f5a6cb0cc727acee051e65d44",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+      "sha256": "94303004be3e9456c83bf477b71438758b3dfa4bc7e8385501ea6cda5aebe0b2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchGateway.ts",
+      "sha256": "174c43ef93b7d74d754070d634a8a353e9c22c196e5e6bcba228f1cfc9d2f27c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchOrchestrator.ets",
+      "sha256": "44151316dd086771591bfde4c45f9163ac3e258fe859c731b6b392472e6d9018",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "sha256": "9633b43eb500610f3036df0006baf43b374bc5f805bc1153aa5dcd8f1f9aac32",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchViewState.ts",
+      "sha256": "ca10de818eb04a2c59a36c6bb8a0c1f6e9e289fb6497f1c19cb3a087e6044706",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/CategoryRow.ets",
+      "sha256": "6554bc51fc8364040dc7cb321093cb159137ab461525556f31884a87a9b678d2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/CategorySection.ets",
+      "sha256": "5c1d5317c3d902af2b93fa189145cae4e85eba417baac58062b97aba61d75dc1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/RulesManagementGateway.ts",
+      "sha256": "b071c53f9e8a96ceb71a55012217c69300121b247805d8f10a546129177651af",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/RulesManagementOrchestrator.ets",
+      "sha256": "e7c4e4cb808fc63e2d8932feabbf1155eccd0ae3649037e35cc6e468084d5cdd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+      "sha256": "478ce8079757c10dba95ef3980360a8370d15d4ef3010b8a388cf187020c8c96",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/SettingsGateway.ts",
+      "sha256": "483e5519ad5a49491c5b0e904463454d6f727be537c8df5fb6bf6033ead6c209",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/SettingsOrchestrator.ets",
+      "sha256": "8d7af1a1798c2c25d31bb8491a7060cdf1d1f875289886819991008eb1ea7fe3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "sha256": "f8aaf1229b9b05c926af6ff2a87571868c873b4a308d1fb92b5336fb92678384",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/settings/SettingsSelectOverlay.ets",
+      "sha256": "fbc48d083a4dce46105733d40397477290a03979635754e4b5f46c0dcf97d367",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/MainTabBar.ets",
+      "sha256": "d815f263929b25bdf12999a9edccbda4ec57777e2a715cdc00ae0fa3e5eb4766",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/MainTabShell.ets",
+      "sha256": "fa6396286332beabc08c424818f744e8984742bb5100d0c47163619b1e523424",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/ReaderShell.ets",
+      "sha256": "92e77916c3a0b98ad994c8dbc31d9048844d2ebc33492e7512f70326d697dbe4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/SettingsShell.ets",
+      "sha256": "8c80136ba3d3f230786c6d310061d944b64c2c48b41b17c23fe3672932a550b1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/CandidateRow.ets",
+      "sha256": "1b4979119a20052d4bd932fb3147e4554ccb60a5897cea71b4f615c3a08d834d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/LatencyBar.ets",
+      "sha256": "bf00d86aa5e067834af74a22a639b680e554f2945cb39752d5387fb828f13e43",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/ReaderSourceCategory.ts",
+      "sha256": "2251617a82e001f4ec0dadad382dea760c9f940766c1e1fb7f3ee15f2af8f8f0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceGateway.ts",
+      "sha256": "b66cb3db17196e06ace47b8ec6ec3d22519b338c4ac93b44abf1e090760d8fec",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+      "sha256": "030dc7ce574bb9df8c73ccf9926847a47c0fb9bd515357eefa16e870ada792f2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceOrchestrator.ets",
+      "sha256": "1c87e9f6823eef87b71623c8221dcb3cede4adea851d6cdc4dbace9b9fda238a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceSwitchGateway.ts",
+      "sha256": "3d5085db41a27afb12e97a5e3fa7da5186d94a9920e8de465a64f1a07f763c2a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "sha256": "85e66514aedfca1dc32bbde4da7451698066a85820f57f51ce548ab64259fb7c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+      "sha256": "101b25b54ed558485e54144ce4cee9f729e82c8c13087155fad45e639620cba9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+      "sha256": "dd57ea51a2d0825f64e131efb4660a173054de561639be8def7bb05e038e9a69",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/sync/SyncGateway.ts",
+      "sha256": "d3ec299df132e642d4d480b929c434555610a878c2face22991ccc53953cf179",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/sync/SyncOrchestrator.ets",
+      "sha256": "5ddd8eb0a841b4406c6e728613a842a0a9e273c85b801d4d1b4de467573cae21",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+      "sha256": "26739ae4e6d07ea45c7418b93187bae55d4f079645580aa0abc4ce02bd6270ef",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/sync/WebDavCredentialStore.ts",
+      "sha256": "a6250a8aad35fa90465a811717c3070b6d53686e99356205769f50a522cce68a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "sha256": "0f7e47f4e01466701f25028297800d32974bfa2fe3b209e9c29d3fda4c58963a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/pages/ReaderControlMotionVerification.ets",
+      "sha256": "d467cebae9ac0dfbeedd83cfd658fb7b45ff98f4a3dacac9ed1e4f1c5773a805",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/ets/pages/ReaderRendererPilot.ets",
+      "sha256": "4d8657f9991316ff544e6d49c3114f3c080d74406abd4c597441f845f388f6a7",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/module.json5",
+      "sha256": "d081e8de3e34dad576a6aa354518e86ff9362f0e61cb34244910b3d10d92b96d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/element/color.json",
+      "sha256": "92f969b19d4a0adc70e1ee0e39962890fd008091ec5c33239b37e8f3e932165b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/element/string.json",
+      "sha256": "3d70fa6d367ed3d9e5287ac4e8181db16da55ac8ad44e48afb9342eff9cba683",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/book_detail_back.svg",
+      "sha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/book_detail_directory.svg",
+      "sha256": "3b09f1beff55699da076451ed8a7e641aa2c23c28930ba332ccc9275f4266412",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_compass_active.svg",
+      "sha256": "ea8cf0f5df6ce83609e3a01a8922a67fa8dacc1648d185e574be3eecfc4c19f4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_compass_outline.svg",
+      "sha256": "9e59b9adf2a1872af3051d10af318ba3969bc987e8ab876cd7996e3b0f171a6f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_compass.svg",
+      "sha256": "9e59b9adf2a1872af3051d10af318ba3969bc987e8ab876cd7996e3b0f171a6f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_empty_library.svg",
+      "sha256": "9765a88fdb5eab6ee68a5728482e5a00b1058940dfbf6e10b4eff50f0c2792d9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_filter_active.svg",
+      "sha256": "282874c97032b2c4f844df29077945c179341974aba5c6454a3776d662ef8581",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_filter.svg",
+      "sha256": "7a6aa2f19feea44e685b21a209894622018e9e19045d75e9689af4d939315362",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_grid_outline.svg",
+      "sha256": "cacb654b88613941e104bf28758237b47e5c25f15aa8b84514998d5449441dcc",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_grid.svg",
+      "sha256": "610f694acb03c1fc7633aff02ef51351474d29d71f66fec46e98ffcbd25165c1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_library_active.svg",
+      "sha256": "01bf345c1850c480ae5adaf68c2880c734084025beb40572b291e0fe5262b631",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_library_outline.svg",
+      "sha256": "7b7208a08c5f77a474fac7f713e9db46401ae5a0da8071bc2eadf20dab1203cb",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_library.svg",
+      "sha256": "01bf345c1850c480ae5adaf68c2880c734084025beb40572b291e0fe5262b631",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_list_active.svg",
+      "sha256": "39ef610830c5ffe72f2682a40899841c4f0c7ff7ea7ddb4fd263bc97bec5b8ac",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_list.svg",
+      "sha256": "f02bf267147e6ccc706c8795e6384b43bbb47a24504c6d079cbe7c97df4b7658",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_more_batch.svg",
+      "sha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_more_group.svg",
+      "sha256": "69a9fd1ecdd1129f0546102fe01c70a58275e9c60f8740bab93418cbcd27558c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_more_import.svg",
+      "sha256": "c268570c99df72ac82cd222fe94fd58322d8f4529db4a654fceb4093a69bd02f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_more_menu_surface.svg",
+      "sha256": "11f97ddcedd2e8aea46ffab32e7dfb2689be5ad6303907163982273135d88df4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_more_settings.svg",
+      "sha256": "28a64e0209009f9f83a3f6c454537afb97c8abce6561de5d6922ab1151162bfd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_more.svg",
+      "sha256": "579508df8257c11fe5d458753773f58a0237e39908eef767b8f396de237d6147",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_multiselect_trash.svg",
+      "sha256": "3cfb7c4c5737b07880d0e81364e5407e43f44ec8301c180a04efa94d1368f962",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_rss_active.svg",
+      "sha256": "c235b9fe51a846f3333c5f01fa4dc73b180d68cc5f74121655aa72f99da36fef",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_rss_outline.svg",
+      "sha256": "14e15a15fddff35f31985153812d74ab73b1c9a5901132756f9ff3b1c3bc23e2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_rss.svg",
+      "sha256": "14e15a15fddff35f31985153812d74ab73b1c9a5901132756f9ff3b1c3bc23e2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_search.svg",
+      "sha256": "4f01cd169355eb9e5729efc05f0024671e1a9446e30f330fc9bd9dc6b5be7e72",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_settings_active.svg",
+      "sha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_settings_outline.svg",
+      "sha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_settings.svg",
+      "sha256": "27f938028ce41beac8a6ba5c2f87a3178efba2f6f36a96f44a08a079ef553b38",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_title.png",
+      "sha256": "a3d083891b156fcb9f5812677dca4002bb07511d0ba775cb56c7d07d17996db8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/discover_apply.svg",
+      "sha256": "4c4d7967693212c5286494ee85b789461ecc10de3f1f7ea230c66fac05d927b2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/discover_filter_chevron.svg",
+      "sha256": "5811f25cf017a1012511e49e21cbb947fc28680d39ec55d35a1e27e18a448684",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/discover_filter.svg",
+      "sha256": "16afdc68f29688aa7adadf9dc02a2b6bf1b4addbe7fce9712a3aaff1a130034a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/discover_refresh.svg",
+      "sha256": "95a0d6901bd018d614b05db3f43bbae303b8168481c388b49020e7674a5dfe11",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/discover_source_chevron.svg",
+      "sha256": "9d8fc0d92fa8d6b8c1f2da89227e1ef9bdec3bf0345bff5d97f22abf0e1b94aa",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/discover_source_stack.svg",
+      "sha256": "7c1896acd1002494438690d4b2dda5d797860ad409bbff31a6fa29d558b8a94a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_cancel.svg",
+      "sha256": "e9f0fa1ae5412e4879bc9365dcd11dd62a84a1d600c4f188b3a1f1b3ed05b4f1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_choose_file.svg",
+      "sha256": "6a826e1537064a45daadae1ecfe3c132fd1a4461dddc87746c13ece12ce3f72e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_dialog_title.png",
+      "sha256": "92cd2cc0930faa84d69e442bc6082fd01e8d89ecf48f213c07f1d6958f2d1b1c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_doc.svg",
+      "sha256": "e351c249dea65aebc346eb4138b9b7208800b70c8d5130bbd292d330a4edd16a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_done.svg",
+      "sha256": "52abdd033c182b97790ef47351d825db90d3498db3ddc4f83b00be70673957b1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_failure.svg",
+      "sha256": "88001104354fadaf003937e824df11686aea4e653322dfe2d2595b98c1c759cd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_info.svg",
+      "sha256": "6b92bea8325f585ac113eefc934c29fd27efe9680ed19deecb66d1efc1db8b11",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_refresh.svg",
+      "sha256": "a8a686586b905ec6131260c535ba68d9896f3afda9816e338178164e4877ff5a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_result_title.png",
+      "sha256": "979af59becb8ed1efb3d2a50b8bfe525d1299b5e3cea648f4676493fc67bd40e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_select_system.svg",
+      "sha256": "28bb531728cc73a41c2243517a5b96350f3b3ec09256dfe4d1cf656a862ef98d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_success.svg",
+      "sha256": "954b63570c2f0caa76ae597813072b7c5e72d85494579d3e69e2dadc197052e0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/import_summary.svg",
+      "sha256": "856919a69cb4260c847552203aa5afa718b7e5b6b295e563f4a7df3b2f58c45d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/importing_halo.svg",
+      "sha256": "45102bd170a724090a716a0bebf7d4bd755170a4b5a0662fefa79a06a215158f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/importing_spinner_arc.svg",
+      "sha256": "bd669eb03d29cdb8bc7613cfd5ba7a137c4e5069b172911e9397316594bc7180",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/importing_spinner_track.svg",
+      "sha256": "153c2bc0af08b25871b6bfbd30455daadf0ffc6983da8b8920b357c20e7848e7",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_arrow_left.svg",
+      "sha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_autopage.svg",
+      "sha256": "834c50b29798e1110d2ce210535b458ee4bd10707430561499f14de79e83bdc6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_chevron_left.svg",
+      "sha256": "f96ff27ce760c035013a56d92dbd961f54682fc7078d2c0a379f283e4f506e80",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_chevron_right.svg",
+      "sha256": "1486523612711e092ce951ce6bf4a6b80e459337137b44964218f07cf125b17b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_dots.svg",
+      "sha256": "406c682a44490397f6e6f48b93880cf932b6a6caf735a4449447475e7636555e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_headphones.svg",
+      "sha256": "367d0df83b1d14950995ab6bf3b7bf2c4ef6a4c2a8f2dcb574bc317237cda8ef",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_list.svg",
+      "sha256": "f27bb46d8852b782423d65e6d0071e130126bbb8003d0d072af69b98ce97e79a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_palette.svg",
+      "sha256": "60ef2580e871c25a6374ac2c7e5c3d2ef35a85bcc5dba483f28a6c5bb50c2a15",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_replace.svg",
+      "sha256": "0bda625e1933237ddd74325c14f89261bebdbb5f58c88b334a23644b4282f7f4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_search.svg",
+      "sha256": "67273222c2560cc3259eaef1655153cd73078aa9b77b2525d1c47216fc9f687a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_settings.svg",
+      "sha256": "ca8d6689bca074f735f6291dd64e97c0cc73d04326a9275d68dac3188e16e317",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_sun.svg",
+      "sha256": "d5b33dadda3748f9e47af26a3176c89ae96a3e2528359a2f201e96518fc99e82",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rc_switch_horizontal.svg",
+      "sha256": "32cfebe3d3e8cd7d6a1a1341923f6be8c2d848c43db66cbd405427636166b7c4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_appearance_header.svg",
+      "sha256": "920e1ee8bd3e2672107979ccfd199da7e604f598c49568ccb05d1089a5960f24",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_appearance_make_check.svg",
+      "sha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_appearance_make_chevron.svg",
+      "sha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_appearance_nav_active.svg",
+      "sha256": "952ca94c9b3220fa24d7fdce134552b486153a494581a4f62918e16535ddd8cf",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_auto_full_chevron_left.svg",
+      "sha256": "d12ab61e6425ab88de180785967eb47a3b70572b535eec260e4c89b7c2ccfe89",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_auto_full_chevron_right.svg",
+      "sha256": "df5e60a86066f29ab4ce23fece883053a5e67ee29b46998cd7f4615cdb349eeb",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_auto_full_clock.svg",
+      "sha256": "a72fd4bef969498320c75491607011060792a487da0585cf71851634f5a64d11",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_auto_full_header.svg",
+      "sha256": "834c50b29798e1110d2ce210535b458ee4bd10707430561499f14de79e83bdc6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_auto_full_play.svg",
+      "sha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_auto_full_stop.svg",
+      "sha256": "e4f34ac2ab6662e72aed962c19aaf0e7da59e6974578f8bcbdddec4bbfb23b6a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_auto_play.svg",
+      "sha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_auto_stop.svg",
+      "sha256": "9b1ee03043d6ea269fa87d5a8931b725069b0ee39001a7daebfe71cac56d48b1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_chevron_down_primary.svg",
+      "sha256": "0ca8ac80a299d9307d5c189f0fb23c25f6d0cbee9d7b0e53f157dc0c665ec823",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_chevron_down.svg",
+      "sha256": "64648167da5824e0e5ebf78e44e3861b68625e87cd52b82eaf4d9d56519a512d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_chevron_right.svg",
+      "sha256": "509312c3bd25d8a9fdd64c3c066a842df6eb2f4240a61cfb6547b080db50fbc3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_control_replace_add.svg",
+      "sha256": "e8bb4c21bb42d0099cdfa4d909e6da262d7216e5cc9b6034977494318b4f60ed",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_control_replace_back.svg",
+      "sha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_control_replace_delete.svg",
+      "sha256": "b9ebce1a2d92f814cd27e27c89c002650f48ba89a5922676f3fdfb671ca94c68",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_control_replace_edit.svg",
+      "sha256": "6084d4fe541922b718cfca0cbe073397bb25dbd5f4ac8204677258798458fc11",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_control_replace_export.svg",
+      "sha256": "00815d9ded70806d2cb5c54a0d01e431211157f31fa5effc53452719dd80b1e8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_control_replace_header.svg",
+      "sha256": "bbdbfe2f2a99d8cd84bf4392c790ba8f2383140921e406ca1ebf07a4da2c9ede",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_control_replace_import.svg",
+      "sha256": "1375f7314210afb837c691caf489244d5dba792e98a5719129cc3a4bb99cf6eb",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_back.svg",
+      "sha256": "08253f6ff4975aca842e7c89249a62517543ffee57ffe20c2dd9d5c2874739c0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_bottom.svg",
+      "sha256": "793fba6e5436a6e3ade739d3cc4abd1fe031cb3f80187ea2606e5895efc9223b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_directory.svg",
+      "sha256": "74c8a8378ca5c3b3e80c66520c2f960af1ab019b54c86b7af57a4195cfbb7bc2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_input_search.svg",
+      "sha256": "4bbb855d54bd62298aed75ebc024be9355d7166f17855a09727ea6ecc9232ee4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_list_active.svg",
+      "sha256": "57ba559c7ac65c77ac7d0428966138444e1c4161b75b1be4b8268e6bd35459e1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_marker_bookmark_active.svg",
+      "sha256": "210e7600dc2c1c2d22114d475f9296acd8cc341b4f4ce2ffe2d393c19584d47c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_marker_bookmark.svg",
+      "sha256": "3c0956f29ad63bd0cbaa52aa1d5dcaa7d9eb10adb0da85b0e01438828e9a8e60",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_marker_check.svg",
+      "sha256": "c7237a3d8929b61317599125d315d33298726145d52fcf79d77c280d9354c195",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_marker_download.svg",
+      "sha256": "1a785a5242e34a3a986a9d5705ee3d2ab448385918595feddc17b8fb2775c319",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_more.svg",
+      "sha256": "b0fcba50fa075c94e86b5ce63253865e8ad14890048e6e4f92fe08f206f8bc3f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_search.svg",
+      "sha256": "0172b160bb2bf1b3a3fc409b5934442bd3463030936c1517a29729454b76867c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_sort_ascending.svg",
+      "sha256": "b31726a95ebe96ad31b27c620e893a53338e91058d5cceed6a6900b273701df6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_sort_descending.svg",
+      "sha256": "79408e4d1e3886596400e289ed0debcf989f6d4fa6850fe3762abd9937303f0c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_switch.svg",
+      "sha256": "439a6fb03cc445dab0e589bc75ba4a43718a04ca43a2abdde086003e060e7d12",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_directory_top.svg",
+      "sha256": "0cd06bab20d9a8460a854ad7118f03adc54d0dec7e65ade999ba466c93e9ff63",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_quick_back.svg",
+      "sha256": "53843b3ab4984a780e4443891623c903815cd77f10ea7d04315fdd0fa260c048",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_quick_search.svg",
+      "sha256": "0172b160bb2bf1b3a3fc409b5934442bd3463030936c1517a29729454b76867c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_replace_close.svg",
+      "sha256": "b13d6095dc01e6bb432bf2a9edc3ffb3130687ead81494daba405c5bc1b69a2e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_replace_manage.svg",
+      "sha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_replace_preview.svg",
+      "sha256": "dfe2541a911f781804d6378cbf4b4c1fb3cd273ea81b8a810d775f12f6aee796",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_session_pause.svg",
+      "sha256": "ac720cd8930c97e9f91d0abb7d9dfaeffefeaf3681a502f1545564ad44d4629d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_session_play.svg",
+      "sha256": "431d2f7922802990422cd66c5e332295d8969a2e995f3d2e7f8c13b0a0c6bd5c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_settings_header.svg",
+      "sha256": "65f2b6da46e31a86afac6b84a8add6ff90acbf109d67399e17226b8b877e95cd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_settings_nav_active.svg",
+      "sha256": "a31830d0bb838556a007c0d6a54f7671f36c8de732a17d79c1d68a670bb1bd7d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_clock.svg",
+      "sha256": "f8d187fdb7dcfcdee21acc8ae3f219bfb713fa908ab8b869f6ffe13bdc490727",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_header.svg",
+      "sha256": "acffaa6383824652d309c5d01c1a24f593fc728ca635aabe0ffb306229e7e859",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_headphones.svg",
+      "sha256": "19106eda2d7b4d15e2bac430c1d3352b1ee13dedcec4f47f2d82fe4387301adc",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_close.svg",
+      "sha256": "78c28ebe741de77fb83ffa8d43b6543b074fb965989987c962e10d462d3b7eee",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_engine_check.svg",
+      "sha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_minus.svg",
+      "sha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_next_quick.svg",
+      "sha256": "a14d5ac3f014a32bbfb956a9519dc665cb8ec4541944ec42addec1037a128064",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_next.svg",
+      "sha256": "1afbdb895ba27e5041b039f64c6ef8d68aecf9c5e982265443ae4188cddc5a80",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_pause.svg",
+      "sha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_play.svg",
+      "sha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_plus.svg",
+      "sha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_previous_quick.svg",
+      "sha256": "8a53cd31a4a4a0c5d5c3d633071e79c32c134250db5b541c6724241c384716ae",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_previous.svg",
+      "sha256": "cfc153424cb6ef1cab550405bae38d554e724aa62db4c444b161021fc5202603",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_make_stop.svg",
+      "sha256": "62c94ccc798bd380600aa628656a7671f3ff88e1b80f3303a3e73128e858bbd7",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_nav_active.svg",
+      "sha256": "51cc708b9ca5c242c875d882c91b1f37fe19eef0a251576a101c8c1da6c9314a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_next.svg",
+      "sha256": "9710aa7fb4cc109a3abeffe2a49961dfa78ecd36f71628481ac46571189580b1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_online_engine.svg",
+      "sha256": "ad82520fc2d882921ceac5761c5f01eea90c2a389cc6c39d8e839a66629a9e89",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_play.svg",
+      "sha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_previous.svg",
+      "sha256": "c778e9abd7bf407919fc9d5f6f134ce0c00a759ffd6267bef43a2e888d08488c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_rate.svg",
+      "sha256": "830073a1828d06451edb899a80c3bb5fba716f77d06bbc4d51126b67415b7762",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_speed_thumb.svg",
+      "sha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_stop.svg",
+      "sha256": "f6d89164aee10abc248d2bcb033a80e5c86dd7980990400f8bbb0c4b06600599",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reader_tts_system_engine.svg",
+      "sha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reading_paper_phone_highlight.svg",
+      "sha256": "1e66526af4b5933dfe130c026df2e99e0b9f391a9c48dfaebba2707733c8ace4",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reading_paper_phone_shade.svg",
+      "sha256": "62d26d409d5f58fa1099e649c224822e39678b29074d7a8dc9fe76cad8ff5998",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reading_paper_phone.png",
+      "sha256": "bfa7f242279d457b7707a7de9116047438c6fb2d437ac143125e8b35c7987a7a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reading_paper_tablet_highlight.svg",
+      "sha256": "9a06a0e6329ebad6bc1e325bea08f0f660cbcf600b1eb616ee1cfdb3fb922a14",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reading_paper_tablet_shade.svg",
+      "sha256": "d30d6287b32ff669412ce1e27097cb2019e91221641c2d9e95bad3ff6d3a3e7c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/reading_paper_tablet.png",
+      "sha256": "bfa7f242279d457b7707a7de9116047438c6fb2d437ac143125e8b35c7987a7a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_add.svg",
+      "sha256": "415f4841db4e3c1265bd1b979598a27b256d2bc7c6dce15a79e22cebbd09d5b8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_bookmark_active.svg",
+      "sha256": "ed23e3e0cbde51ce1ae87a3191d440bc36b9236b77ca3501ccceb1480d5138ec",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_bookmark.svg",
+      "sha256": "e789c3c91c79dda52a164b77c03ce5b079913a10166a62191dd60eebcd18ef1b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_edit.svg",
+      "sha256": "6f4c1951fffc601a1d23872cc6e114d19e36822e5f5bbc4b67a9fbacf2501209",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_empty.svg",
+      "sha256": "0fa09ac5b9ce8c01eb40a3a98a8a641ea45cdd4e063680a24e6d0fb975b41fb0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_error.svg",
+      "sha256": "6ea43740a591ed528b6ab52f6601c5e8714753a15607ad1cddb315074f419ea3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_external.svg",
+      "sha256": "656ae890197d151ce4deeb400549575ab61f19370fdfe98b4d79b287684b9d44",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_filter_chevron.svg",
+      "sha256": "b9ea148abf75f6102e0cbd14850cf81650faeadbd976cb16a2e6ac67e987e427",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_filter.svg",
+      "sha256": "942de71963532a397e1165ac66249850bb78a5a0d751febc24cf888b1bd18774",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_item_chevron.svg",
+      "sha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_link.svg",
+      "sha256": "f3c91008c654f63f1ae3849e129fae08ca095e48f5eaceed4e2b43f9ac7cde65",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_manage_delete.svg",
+      "sha256": "3b22f6ea7a31c97f1ce13efabf460e37ea6d37f9625cf52f38eb3f11638adcde",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_manage_edit.svg",
+      "sha256": "d876fd993ea766ade4d49a2fccf020ccdacf290d911ea2a12e42b5909012f24a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_manage_refresh.svg",
+      "sha256": "95a0d6901bd018d614b05db3f43bbae303b8168481c388b49020e7674a5dfe11",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_manage_view_all.svg",
+      "sha256": "a753d00b34a76be019b73b18bbbb732296e5c02fc400cac1b579a84f574bd5b5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_manage.svg",
+      "sha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_refresh.svg",
+      "sha256": "a39034bb92503e4492ed0a03b4ba56bf9b7491cd536dd8aed866929b887da41a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_source.svg",
+      "sha256": "b020b178b761dfef0904746883dd6957c835ecf3fad70045aae9d6ef9eb5b6b1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/rss_view_all.svg",
+      "sha256": "f548f08fd95293d64ae3bb2a6a874042b0a1abddc0e9899c9ca13be2ea41ba24",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/search_back.svg",
+      "sha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/search_clear.svg",
+      "sha256": "6a820bee5e09524cd2cf26c60b06b7e46c8c931137aaeaeae36ce589600f724a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/search_empty.svg",
+      "sha256": "117834cd4fe8d874c4a205c39cbe2ae3397a08d4d99edf170f39e9b5750b7a08",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/search_error.svg",
+      "sha256": "a0ebc62a8abae7a8fe5a78f746936c42f1c7ab88ef93df97fc8a70d9f1ce78b9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/search_mag.svg",
+      "sha256": "530b1f391b5251d3557eb59bd00a510b698259b1a7aab0ecda84ea1e69556c7c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_animation.svg",
+      "sha256": "b33dc6997d3c55f17892602b50a909ccf0bcab0dc4ffa1e63ec3cbac8c40d938",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_battery.svg",
+      "sha256": "28267e1ad2fa1e3b1e71efab92b2af74f3d3f262c586aa25aed45258b650295b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_cache.svg",
+      "sha256": "7733f3319e3ee46c35db29c964ae42525434278b8e28f9328b8422bd041e01bc",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_crash.svg",
+      "sha256": "38b371f5bd2ee43a543ffa88f52a046f037e196a3c93632492a8c207cf033e9c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_file.svg",
+      "sha256": "f57c7879a77c8dcf381fbb6e85788f7a4ef27ee618606c14d71b9455bb6d02a6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_language.svg",
+      "sha256": "e13a7cae55598ae803275ee31bc519e666b9716eb50d5ea0a10502969dcaa2a3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_motion.svg",
+      "sha256": "b33dc6997d3c55f17892602b50a909ccf0bcab0dc4ffa1e63ec3cbac8c40d938",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_notification.svg",
+      "sha256": "05d944b56f5284037955b557dd8c3beb68c488f7a64bf16e3171e4551ceb8b6c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_refresh.svg",
+      "sha256": "01fb14b0643aef6c597fc3977d7f0b68640d86545afa56f4b7eee2a0469fa7b7",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_startup.svg",
+      "sha256": "14e39e3aebfc79c664d7f0aac108129f3a418bd6575e70db46d4aebfc87fe344",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_tap_top.svg",
+      "sha256": "721f0e94afc0b5b90807974f7f47337f37b079a8c52ffe03c59aa9a600416cce",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_theme.svg",
+      "sha256": "a1cbd7810b96cd8fa02741b20df159dd014e71fd0a913169605fa7468a2564d9",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_gen_update.svg",
+      "sha256": "feaac076bcfbbaca88378ae9f904cdf0680084ce3667fecedcf5f88f7da8beaa",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_row_about.svg",
+      "sha256": "9eb0b1b9161cc8ebac2b5f202c0334d382a2db0b121a90271c0e6339dd085651",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_row_general.svg",
+      "sha256": "8fafb40c3b3eab2e072531980a531db0b20d27c6203accd2487ccf0357207cfe",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_row_shelf_search.svg",
+      "sha256": "88c8827257b5bc217cf531c0423039172a606c940c26a1d171b08da163fd33bb",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_row_source.svg",
+      "sha256": "bed7a3d29b0ab887ebc026d957598a873b0ed204dfe28669083e1f4d8d81bd7c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_row_sync.svg",
+      "sha256": "016180f544edbee38d6aa5fb599fd11aeab7906f5217f0b1b73feaacae7b8d57",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/settings_select_check.svg",
+      "sha256": "352a94ca7eb70a63dcd1c0ca1f30491381e64b419824da75b9df118257dc8a68",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/source_add.svg",
+      "sha256": "86094e67c69d6e6a6a496f193ff8ce80d2efb2cb4252af187d6ec48f93a5e715",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/source_group_chevron.svg",
+      "sha256": "ef753d021a7020877ff03827d7d2a33c75ada5e6295c2c067e203edad042b9b1",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/source_group_folder.svg",
+      "sha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/source_switch_close.svg",
+      "sha256": "2257fb57f6c058b9a19617e23d27c6e6e61a857912259ff1d045179a42e7f42f",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/start_icon.png",
+      "sha256": "7d43762003f7e3a480cfaafa7f6250f182d1b28ae5b02f8f11dc32efbe1416e7",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/sync_account.svg",
+      "sha256": "9b21ea26b3f79f36cfeaef65e29c558c3860b8de2246bc4e0162420ac37242c8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/sync_backup_password.svg",
+      "sha256": "8eaae2c25320c2b2aaec2fcadf2269fe3e77f79b62349c62e300bf90b44e4f16",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/sync_folder.svg",
+      "sha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/sync_password.svg",
+      "sha256": "bdab92a0b1c3fde3ac297e0f58d313efca9b66716175c307818af8fbf9c02e89",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/sync_scope_chevron.svg",
+      "sha256": "46a16f17abc7e0d6936c4f752875af79486f6d721c4784b36b10e50091deb724",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/media/sync_server.svg",
+      "sha256": "149378aa5b8bd498f7db41cf06e772e8a5c43467a1e177f0859267b3cff381e3",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/base/profile/main_pages.json",
+      "sha256": "1e273bea662c8b68468cd5bd41012045f9970cc7dcd72addd3f8941584c8073e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/FONT-SOURCES.txt",
+      "sha256": "d3723794f91d69c798d3580de88d0c0890b30e6efacc232c9c349ccdb7898e31",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/Inter-OFL.txt",
+      "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/InterVariable.ttf",
+      "sha256": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/licenses/libmobi-GPL-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/licenses/libmobi-LGPL-3.0.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/licenses/libmobi-NOTICE.txt",
+      "sha256": "05795a09485aa8fcb2d679cd88bae7fa4886afd4f1f6ed0b667d02e6130b5ff8",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/licenses/oss-reuse-NOTICE.txt",
+      "sha256": "0f9465dcbebf987e4d5ede3989344271f9fb6af7202da635359a964ac475bf9d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/LXGWWenKaiGBLite-OFL.txt",
+      "sha256": "f4b480b99e1f6b150f0ed1aa621265ad67e40d4f74fbecc983aad85edfbec5fc",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/LXGWWenKaiGBLite-Regular.ttf",
+      "sha256": "1675c708cce181871d9a8adc987f35a0cabc6ff980685cd99f05d2655ea08c4c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/LXGWWenKaiLite-OFL.txt",
+      "sha256": "94ca862eaded6a1af228b2d4e268b3c0f73d4333098bc0a1c63a34ff9d1b13bf",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/LXGWWenKaiLite-Regular.ttf",
+      "sha256": "140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIBold.otf",
+      "sha256": "995b908ebac24174fae7965b03324f21371dfe57bbfbe2794116d71ddde262cd",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf",
+      "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+      "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-VF.otf",
+      "sha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSerifSC-Bold.ttf",
+      "sha256": "3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/NotoSerifSC-Regular.ttf",
+      "sha256": "9502147ceba7b5bc7fd3415083f6a5d133f22d8f9efb4974d4b85f3a97ea2d3a",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/reader-oss-pilot/foliate-LICENSE",
+      "sha256": "b621ffc351fe263bc9b09dd0bc1c9332fda9c462a3904c1e4f0b4d3236b9c28c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/reader-oss-pilot/index.html",
+      "sha256": "f744def232b6a3a4f4d9a24bad8e67630a3a7957001c0f62b2ee1596b15aed2c",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/reader-oss-pilot/pilot.js",
+      "sha256": "130f23b84bcf284e36f5287342f58699aa73f2eb417e1e1d5f0e8ca8001bdd07",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/reader-oss-pilot/provenance.json",
+      "sha256": "ff48d7c8b92edf6b610bab96cec7e2db71e15162ea2dea7d1fe9d2d645fbcf7e",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/reader-oss-pilot/resource-provenance.json",
+      "sha256": "9783296b5f8b0917652a9c85f32ba6d2112c46e28595a22c0393e379294b2a09",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/reader-oss-pilot/style.css",
+      "sha256": "097e5fcc975c737932d17a7eaa3e18335115b137ca537b144c56dadbf4aa1cae",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/reader-tested-book-source-collection.json",
+      "sha256": "087b58f7c3d60ff2898a9e8da751ef7c851898e6d29a5d1cedd787b0b4c83bb6",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/SarasaGothic-OFL.txt",
+      "sha256": "88d491908756578c2012f85e3fdac01591e6ba53d7a5807576b1b2474efe2224",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/SarasaMonoSC-Regular.ttf",
+      "sha256": "95718854631c2386845e618aa5bc37908e5fb8a919eb56e40f70e1170d80af94",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/ZhuqueFangsong-OFL.txt",
+      "sha256": "1922c38238aebfa4fc91434394287838d592fe043798cd5f38f259ff8b63432b",
+      "matchesInstalledManifestInput": true
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/ZhuqueFangsong-Regular.ttf",
+      "sha256": "558c62730844fe54ba220146ed62f859d4e2880188d92d985f8921c6e3743bc4",
+      "matchesInstalledManifestInput": true
+    }
+  ],
+  "motion": [
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlRuntime.ts",
+      "before": "2d9d1d89117f81845f49412b90a69d8b770a1d8a77dd2379af84d3a80541fcf3",
+      "current": "2d9d1d89117f81845f49412b90a69d8b770a1d8a77dd2379af84d3a80541fcf3",
+      "unchanged": true
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlSessionState.ts",
+      "before": "542ceecb395d014981b255de3f854aea9e308de15078ea52c3240207cdb8c9e8",
+      "current": "542ceecb395d014981b255de3f854aea9e308de15078ea52c3240207cdb8c9e8",
+      "unchanged": true
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts",
+      "before": "450ad98e35b9abc8de604a74aa80c34f671f33712bbb7df99e01e2181990be71",
+      "current": "450ad98e35b9abc8de604a74aa80c34f671f33712bbb7df99e01e2181990be71",
+      "unchanged": true
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts",
+      "before": "2f768bead6b3d0e1e4d40c8f03b601fe24931044f9bdeb7ab4b5799d7fdef340",
+      "current": "76f2670c9a936be92fda12ce0712207ab7b4df5e96c5cd48f2de7277af1c03fe",
+      "unchanged": false
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts",
+      "before": "01557dee8f655eff4f9437a1d7f8c383458dc98f6e121743dab9fee9d1966df7",
+      "current": "01557dee8f655eff4f9437a1d7f8c383458dc98f6e121743dab9fee9d1966df7",
+      "unchanged": true
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts",
+      "before": "38e9498674620a6d2cbbad6509a41e15c9761a1b04d7cf4c743fb5c4d121ae4d",
+      "current": "38e9498674620a6d2cbbad6509a41e15c9761a1b04d7cf4c743fb5c4d121ae4d",
+      "unchanged": true
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts",
+      "before": "1352127222d3b21306a2b6833faa80ddf8590833a892f10d01f8d6ce07f64960",
+      "current": "1352127222d3b21306a2b6833faa80ddf8590833a892f10d01f8d6ce07f64960",
+      "unchanged": true
+    }
+  ],
+  "stoppedVmAt": "Existing book open at quick Home following V11 installation; V11 keyboard/save journey was interrupted by user audit reset and is NOT verified."
+}

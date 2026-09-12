@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "verticalRestoreDeltaPx": 0,
+  "before": "[112,308][1168,4367]",
+  "after": "[112,308][1168,4367]",
+  "scope": "one short scroll and production exit/reopen, not failures/images/cross-chapter",
+  "book": "ReaderIndentCRLF20260910"
+}

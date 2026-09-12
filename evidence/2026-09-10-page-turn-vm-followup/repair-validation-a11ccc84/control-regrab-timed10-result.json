@@ -1,0 +1,136 @@
+{
+  "status": "PASS",
+  "rounds": [
+    {
+      "round": 1,
+      "requestedContactY": 1399,
+      "heldY": [
+        1393,
+        1393
+      ],
+      "heldProgress": [
+        0.1848937844217152,
+        0.1848937844217152
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 2,
+      "requestedContactY": 1399,
+      "heldY": [
+        1443,
+        1443
+      ],
+      "heldProgress": [
+        0.14555468135326516,
+        0.14555468135326516
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 3,
+      "requestedContactY": 1399,
+      "heldY": [
+        1416,
+        1416
+      ],
+      "heldProgress": [
+        0.16679779701022818,
+        0.16679779701022818
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 4,
+      "requestedContactY": 1399,
+      "heldY": [
+        1407,
+        1407
+      ],
+      "heldProgress": [
+        0.17387883556254918,
+        0.17387883556254918
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 5,
+      "requestedContactY": 1399,
+      "heldY": [
+        1411,
+        1411
+      ],
+      "heldProgress": [
+        0.17073170731707318,
+        0.17073170731707318
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 6,
+      "requestedContactY": 1399,
+      "heldY": [
+        1402,
+        1402
+      ],
+      "heldProgress": [
+        0.1778127458693942,
+        0.1778127458693942
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 7,
+      "requestedContactY": 1399,
+      "heldY": [
+        1388,
+        1388
+      ],
+      "heldProgress": [
+        0.1888276947285602,
+        0.1888276947285602
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 8,
+      "requestedContactY": 1399,
+      "heldY": [
+        1383,
+        1383
+      ],
+      "heldProgress": [
+        0.19276160503540518,
+        0.19276160503540518
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 9,
+      "requestedContactY": 1399,
+      "heldY": [
+        1443,
+        1443
+      ],
+      "heldProgress": [
+        0.14555468135326516,
+        0.14555468135326516
+      ],
+      "settledY": 1628
+    },
+    {
+      "round": 10,
+      "requestedContactY": 1399,
+      "heldY": [
+        1434,
+        1434
+      ],
+      "heldProgress": [
+        0.15263571990558616,
+        0.15263571990558616
+      ],
+      "settledY": 1628
+    }
+  ],
+  "scope": "single public uinput command tap starts autoexpand, secondDOWN requested50mslater pauses intermediatepose4s; finalUP35pxdown reverses toQuick; notcontinuousMOVEregrab orprecisephysical latency"
+}

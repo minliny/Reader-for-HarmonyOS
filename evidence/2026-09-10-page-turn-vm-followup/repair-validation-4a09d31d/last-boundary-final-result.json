@@ -1,0 +1,51 @@
+{
+  "status": "PASS",
+  "mode": "仿真",
+  "side": "last",
+  "origin": {
+    "slot": "reader-page-slot-b",
+    "sha256": "196b32b323c4f834c3ad15cbcdc7aa6f990c9bc4a93553939217591e1d2ebc78",
+    "chapter": 150,
+    "ordinal": 4,
+    "total": 4,
+    "start": 801,
+    "end": 1050,
+    "bodyLength": 249,
+    "first": [
+      "暂停后又继续，段落边界和换行都应",
+      "保持原来的顺序。这里的编号是测试"
+    ],
+    "footer": "第 4 / 4 页"
+  },
+  "baseline": {
+    "slot": "reader-page-slot-a",
+    "sha256": "2665518055c625a4a38a095c50baaade05586dc194f588e1d136fa2cf93fdbeb",
+    "chapter": 150,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章150段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "actual": {
+    "slot": "reader-page-slot-a",
+    "sha256": "2665518055c625a4a38a095c50baaade05586dc194f588e1d136fa2cf93fdbeb",
+    "chapter": 150,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章150段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "scope": "four invalid book-boundary taps followed by one valid opposite tap, exact canonical target and restore"
+}

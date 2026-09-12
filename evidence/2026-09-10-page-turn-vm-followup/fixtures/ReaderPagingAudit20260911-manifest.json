@@ -1,0 +1,9 @@
+{
+  "bookTitle": "ReaderPagingAudit20260911",
+  "authorship": "self-authored synthetic QA text",
+  "chapters": 150,
+  "paragraphsPerChapter": 10,
+  "sha256": "2af6c19be1c1963ce90efa73cf1f1df34dcede52959612a0f87203147a1ad134",
+  "bytes": 464890,
+  "purpose": "continuous same-direction turns, chapter boundaries and deep directory; never substitutes original physical 绍宋 chapter34 anchor case"
+}

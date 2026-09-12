@@ -1,0 +1,261 @@
+[
+  {
+    "file": "control-appearance-auto-expand-trace.ftrace",
+    "peakWallMs": 8.959,
+    "guestScheduledMs": 8.369,
+    "guestOffCpuMs": 0.59,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-appearance-close-trace.ftrace",
+    "peakWallMs": 12.263,
+    "guestScheduledMs": 12.122,
+    "guestOffCpuMs": 0.141,
+    "readingSurfaceBuildDestroy": 4
+  },
+  {
+    "file": "control-appearance-collapse-trace.ftrace",
+    "peakWallMs": 9.727,
+    "guestScheduledMs": 9.708,
+    "guestOffCpuMs": 0.019,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-appearance-expand-trace.ftrace",
+    "peakWallMs": 8.946,
+    "guestScheduledMs": 6.743,
+    "guestOffCpuMs": 2.203,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-appearance-open-trace.ftrace",
+    "peakWallMs": 6.852,
+    "guestScheduledMs": 6.687,
+    "guestOffCpuMs": 0.165,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-autopage-auto-expand-trace.ftrace",
+    "peakWallMs": 8.452,
+    "guestScheduledMs": 4.835,
+    "guestOffCpuMs": 3.617,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-autopage-close-trace.ftrace",
+    "peakWallMs": 6.266,
+    "guestScheduledMs": 4.871,
+    "guestOffCpuMs": 1.395,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-autopage-collapse-trace.ftrace",
+    "peakWallMs": 7.662,
+    "guestScheduledMs": 7.662,
+    "guestOffCpuMs": 0,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-autopage-expand-trace.ftrace",
+    "peakWallMs": 8.294,
+    "guestScheduledMs": 8.277,
+    "guestOffCpuMs": 0.017,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-autopage-open-trace.ftrace",
+    "peakWallMs": 12.441,
+    "guestScheduledMs": 12.441,
+    "guestOffCpuMs": 0,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-directory-auto-expand-trace.ftrace",
+    "peakWallMs": 8.023,
+    "guestScheduledMs": 7.672,
+    "guestOffCpuMs": 0.351,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-directory-close-trace.ftrace",
+    "peakWallMs": 9.771,
+    "guestScheduledMs": 9.666,
+    "guestOffCpuMs": 0.105,
+    "readingSurfaceBuildDestroy": 4
+  },
+  {
+    "file": "control-directory-collapse-trace.ftrace",
+    "peakWallMs": 5.951,
+    "guestScheduledMs": 3.757,
+    "guestOffCpuMs": 2.194,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-directory-expand-trace.ftrace",
+    "peakWallMs": 21.452,
+    "guestScheduledMs": 14.744,
+    "guestOffCpuMs": 6.708,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-directory-open-trace.ftrace",
+    "peakWallMs": 13.804,
+    "guestScheduledMs": 13.57,
+    "guestOffCpuMs": 0.234,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-replace-auto-expand-trace.ftrace",
+    "peakWallMs": 4.529,
+    "guestScheduledMs": 4.524,
+    "guestOffCpuMs": 0.005,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-replace-close-trace.ftrace",
+    "peakWallMs": 10.766,
+    "guestScheduledMs": 10.62,
+    "guestOffCpuMs": 0.146,
+    "readingSurfaceBuildDestroy": 4
+  },
+  {
+    "file": "control-replace-collapse-trace.ftrace",
+    "peakWallMs": 5.904,
+    "guestScheduledMs": 3.502,
+    "guestOffCpuMs": 2.402,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-replace-expand-trace.ftrace",
+    "peakWallMs": 12.683,
+    "guestScheduledMs": 11.675,
+    "guestOffCpuMs": 1.008,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-replace-open-trace.ftrace",
+    "peakWallMs": 10.722,
+    "guestScheduledMs": 10.57,
+    "guestOffCpuMs": 0.152,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-search-auto-expand-trace.ftrace",
+    "peakWallMs": 7.155,
+    "guestScheduledMs": 5.261,
+    "guestOffCpuMs": 1.894,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-search-close-trace.ftrace",
+    "peakWallMs": 5.743,
+    "guestScheduledMs": 5.54,
+    "guestOffCpuMs": 0.203,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-search-collapse-trace.ftrace",
+    "peakWallMs": 8.331,
+    "guestScheduledMs": 8.222,
+    "guestOffCpuMs": 0.109,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-search-expand-trace.ftrace",
+    "peakWallMs": 15.072,
+    "guestScheduledMs": 14.801,
+    "guestOffCpuMs": 0.271,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-search-open-trace.ftrace",
+    "peakWallMs": 7.341,
+    "guestScheduledMs": 7.159,
+    "guestOffCpuMs": 0.182,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-settings-auto-expand-trace.ftrace",
+    "peakWallMs": 6.448,
+    "guestScheduledMs": 6.309,
+    "guestOffCpuMs": 0.139,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-settings-close-trace.ftrace",
+    "peakWallMs": 9.916,
+    "guestScheduledMs": 9.596,
+    "guestOffCpuMs": 0.32,
+    "readingSurfaceBuildDestroy": 4
+  },
+  {
+    "file": "control-settings-collapse-trace.ftrace",
+    "peakWallMs": 6.608,
+    "guestScheduledMs": 6.372,
+    "guestOffCpuMs": 0.236,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-settings-expand-trace.ftrace",
+    "peakWallMs": 26.771,
+    "guestScheduledMs": 16.64,
+    "guestOffCpuMs": 10.131,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-settings-open-trace.ftrace",
+    "peakWallMs": 10.458,
+    "guestScheduledMs": 10.437,
+    "guestOffCpuMs": 0.021,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-tts-auto-expand-trace.ftrace",
+    "peakWallMs": 9.494,
+    "guestScheduledMs": 9.271,
+    "guestOffCpuMs": 0.223,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-tts-close-trace.ftrace",
+    "peakWallMs": 3.807,
+    "guestScheduledMs": 3.632,
+    "guestOffCpuMs": 0.175,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-tts-collapse-trace.ftrace",
+    "peakWallMs": 12.494,
+    "guestScheduledMs": 12.435,
+    "guestOffCpuMs": 0.059,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-tts-expand-trace.ftrace",
+    "peakWallMs": 11.926,
+    "guestScheduledMs": 6.342,
+    "guestOffCpuMs": 5.584,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "control-tts-open-trace.ftrace",
+    "peakWallMs": 7.157,
+    "guestScheduledMs": 7.081,
+    "guestOffCpuMs": 0.076,
+    "readingSurfaceBuildDestroy": 0
+  },
+  {
+    "file": "native-next-trace.ftrace",
+    "peakWallMs": 15.914,
+    "guestScheduledMs": 15.221,
+    "guestOffCpuMs": 0.693,
+    "readingSurfaceBuildDestroy": 2
+  },
+  {
+    "file": "native-previous-trace.ftrace",
+    "peakWallMs": 14.414,
+    "guestScheduledMs": 14.361,
+    "guestOffCpuMs": 0.053,
+    "readingSurfaceBuildDestroy": 6
+  }
+]

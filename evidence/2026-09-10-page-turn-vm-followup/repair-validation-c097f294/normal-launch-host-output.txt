@@ -1,0 +1,212 @@
+start ability successfully.
+
+[
+  {
+    "type": "Text",
+    "text": "书架",
+    "id": "",
+    "bounds": "[70,182][839,315]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "暂无封面",
+    "id": "",
+    "bounds": "[155,521][316,562]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "继续阅读",
+    "id": "",
+    "bounds": "[393,424][818,479]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "ReaderPagingAudit20260911",
+    "id": "",
+    "bounds": "[393,500][818,584]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "阅读",
+    "id": "",
+    "bounds": "[965,515][1057,570]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "我的书架",
+    "id": "",
+    "bounds": "[67,787][654,850]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "暂无封面",
+    "id": "",
+    "bounds": "[111,1143][362,1207]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "ReaderPagingAudit20260911",
+    "id": "",
+    "bounds": "[67,1450][405,1514]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "已读 24%",
+    "id": "",
+    "bounds": "[67,1556][405,1598]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "暂无封面",
+    "id": "",
+    "bounds": "[515,1143][766,1207]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "ReaderImageAudit20260911",
+    "id": "",
+    "bounds": "[471,1450][809,1514]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "Reader test",
+    "id": "",
+    "bounds": "[471,1535][809,1587]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "已读 33%",
+    "id": "",
+    "bounds": "[471,1608][809,1650]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "暂无封面",
+    "id": "",
+    "bounds": "[919,1143][1170,1207]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "ReaderIndentCRLF20260910",
+    "id": "",
+    "bounds": "[875,1450][1213,1514]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "已读 52%",
+    "id": "",
+    "bounds": "[875,1556][1213,1598]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "暂无封面",
+    "id": "",
+    "bounds": "[111,1909][362,1973]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "EPUB段落缩进验收",
+    "id": "",
+    "bounds": "[67,2216][405,2280]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "Reader test",
+    "id": "",
+    "bounds": "[67,2301][405,2353]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "书架",
+    "id": "",
+    "bounds": "[323,2640][401,2703]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "设置",
+    "id": "",
+    "bounds": "[880,2640][958,2703]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Flex",
+    "text": "06, :, 23",
+    "id": "ClockStatusView",
+    "bounds": "[53,38][192,122]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "06",
+    "id": "",
+    "bounds": "[53,49][115,111]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": ":",
+    "id": "TimeView_Text_timeText",
+    "bounds": "[115,54][130,107]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "23",
+    "id": "",
+    "bounds": "[130,49][192,111]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  },
+  {
+    "type": "Text",
+    "text": "100",
+    "id": "BatteryComponent-batteryIcon_Text_batterySoc",
+    "bounds": "[1139,58][1209,103]",
+    "enabled": "true",
+    "backgroundColor": "#00000000"
+  }
+]

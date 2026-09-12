@@ -1,0 +1,266 @@
+{
+  "native-next-trace.ftrace": {
+    "maxUIOnVsyncWallMs": 15.914,
+    "nativeSlices": [
+      {
+        "tid": 30874,
+        "start": 391893.888572,
+        "end": 391893.888577,
+        "wallMs": 0.005,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.005,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30874,
+        "start": 391893.888581,
+        "end": 391893.888679,
+        "wallMs": 0.098,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#547824009088, traceid:0x0",
+        "guestScheduledMs": 0.098,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30992,
+        "start": 391893.888706,
+        "end": 391893.892883,
+        "wallMs": 4.177,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 4.177,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30992,
+        "start": 391893.888705,
+        "end": 391893.892885,
+        "wallMs": 4.18,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#547824009088, traceid:0x0",
+        "guestScheduledMs": 4.18,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2868,
+        "start": 391893.89314,
+        "end": 391893.895173,
+        "wallMs": 2.033,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.033,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30874,
+        "start": 391893.892946,
+        "end": 391893.89841,
+        "wallMs": 5.464,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#547824009088, traceid:0x0",
+        "guestScheduledMs": 5.453,
+        "guestOffCpuMs": 0.011
+      },
+      {
+        "tid": 2868,
+        "start": 391893.893139,
+        "end": 391893.903484,
+        "wallMs": 10.345,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.494,
+        "guestOffCpuMs": 7.851
+      }
+    ],
+    "scope": "guest scheduler residency, not GPU completion or touch-to-photon"
+  },
+  "native-previous-trace.ftrace": {
+    "maxUIOnVsyncWallMs": 14.414,
+    "nativeSlices": [
+      {
+        "tid": 30874,
+        "start": 391885.10043,
+        "end": 391885.100447,
+        "wallMs": 0.017,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.017,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30874,
+        "start": 391885.100451,
+        "end": 391885.101697,
+        "wallMs": 1.246,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#547823246848, traceid:0x0",
+        "guestScheduledMs": 0.029,
+        "guestOffCpuMs": 1.217
+      },
+      {
+        "tid": 30991,
+        "start": 391885.100493,
+        "end": 391885.103301,
+        "wallMs": 2.808,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 2.808,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30991,
+        "start": 391885.100492,
+        "end": 391885.103302,
+        "wallMs": 2.81,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#547823246848, traceid:0x0",
+        "guestScheduledMs": 2.81,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30874,
+        "start": 391885.103352,
+        "end": 391885.104441,
+        "wallMs": 1.089,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#547823246848, traceid:0x0",
+        "guestScheduledMs": 1.089,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2868,
+        "start": 391885.103445,
+        "end": 391885.105436,
+        "wallMs": 1.991,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 1.991,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2868,
+        "start": 391885.103441,
+        "end": 391885.120344,
+        "wallMs": 16.903,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.44,
+        "guestOffCpuMs": 14.463
+      },
+      {
+        "tid": 30874,
+        "start": 391885.154464,
+        "end": 391885.154468,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30874,
+        "start": 391885.154471,
+        "end": 391885.154481,
+        "wallMs": 0.01,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#547823250688, traceid:0x0",
+        "guestScheduledMs": 0.01,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30990,
+        "start": 391885.154513,
+        "end": 391885.157705,
+        "wallMs": 3.192,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 3.192,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30990,
+        "start": 391885.154512,
+        "end": 391885.157706,
+        "wallMs": 3.194,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#547823250688, traceid:0x0",
+        "guestScheduledMs": 3.194,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2868,
+        "start": 391885.157842,
+        "end": 391885.159885,
+        "wallMs": 2.043,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.043,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30874,
+        "start": 391885.157777,
+        "end": 391885.161927,
+        "wallMs": 4.15,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#547823250688, traceid:0x0",
+        "guestScheduledMs": 4.15,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2868,
+        "start": 391885.157841,
+        "end": 391885.16478,
+        "wallMs": 6.939,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.456,
+        "guestOffCpuMs": 4.483
+      },
+      {
+        "tid": 30874,
+        "start": 391886.326211,
+        "end": 391886.326215,
+        "wallMs": 0.004,
+        "name": "H:ReaderBookTurn.BindPixelMap",
+        "guestScheduledMs": 0.004,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30874,
+        "start": 391886.32622,
+        "end": 391886.326234,
+        "wallMs": 0.014,
+        "name": "H:Native async work queue, name:ReaderBookTurn.TextureCopy#547824117888, traceid:0x0",
+        "guestScheduledMs": 0.014,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30990,
+        "start": 391886.326264,
+        "end": 391886.338705,
+        "wallMs": 12.441,
+        "name": "H:ReaderBookTurn.CopyPixelMap",
+        "guestScheduledMs": 12.441,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 30990,
+        "start": 391886.326263,
+        "end": 391886.338707,
+        "wallMs": 12.444,
+        "name": "H:Native async work execute callback, name:ReaderBookTurn.TextureCopy#547824117888, traceid:0x0",
+        "guestScheduledMs": 12.444,
+        "guestOffCpuMs": 0
+      },
+      {
+        "tid": 2868,
+        "start": 391886.339124,
+        "end": 391886.341362,
+        "wallMs": 2.238,
+        "name": "H:ReaderBookTurn.ConvertPixels",
+        "guestScheduledMs": 2.189,
+        "guestOffCpuMs": 0.049
+      },
+      {
+        "tid": 30874,
+        "start": 391886.339022,
+        "end": 391886.343953,
+        "wallMs": 4.931,
+        "name": "H:Native async work complete callback, name:ReaderBookTurn.TextureCopy#547824117888, traceid:0x0",
+        "guestScheduledMs": 4.513,
+        "guestOffCpuMs": 0.418
+      },
+      {
+        "tid": 2868,
+        "start": 391886.339122,
+        "end": 391886.347676,
+        "wallMs": 8.554,
+        "name": "H:ReaderBookTurn.Upload",
+        "guestScheduledMs": 2.692,
+        "guestOffCpuMs": 5.862
+      }
+    ],
+    "scope": "guest scheduler residency, not GPU completion or touch-to-photon"
+  }
+}

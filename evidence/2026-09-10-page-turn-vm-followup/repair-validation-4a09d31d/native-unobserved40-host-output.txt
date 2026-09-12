@@ -1,0 +1,3 @@
+next transaction span 7075 ms 5.6537102473498235 pps
+previous transaction span 7053 ms 5.671345526726216 pps
+native-unobserved40 PASS

@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/tmp/reader_vm_open_shelf_book.py", line 5, in <module>
+    click(*center(max(candidates,key=lambda a:center(a)[1])));time.sleep(1);tree=dump();assert not visibleText(tree,'书架');body=''.join(a.get('text','') for a,o,_ in nodes(tree) if o>.99);assert (book in body or ('【章1段' in body if book.startswith('ReaderImage') else '连续翻页验证' in body));print(book,'opened explicitly')
+AssertionError

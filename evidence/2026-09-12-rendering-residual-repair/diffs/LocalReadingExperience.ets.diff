@@ -1,0 +1,88 @@
+--- before/entry/src/main/ets/features/reading/LocalReadingExperience.ets
++++ current/entry/src/main/ets/features/reading/LocalReadingExperience.ets
+@@ -1207,6 +1207,7 @@
+   private bookTurnCapturedNextIdentity: string = '';
+   /** Rare capability state; unlike MOVE geometry it must rebuild settings/stage semantics. */
+   @State private bookTurnRuntimeFailed: boolean = false;
++  private bookTurnSurfaceRecoveryPending: boolean = false;
+   private bookTurnAwaitingSlotCommit: boolean = false;
+   private pageTurnCommitStarted: boolean = false;
+   private pageTurnPerfStartedAtMs: number = 0;
+@@ -1381,6 +1382,7 @@
+     this.controlBackdropGeometryReady = false;
+     this.onControlInputBoundaryChanged();
+     this.bookTurnRuntimeFailed = false;
++    this.bookTurnSurfaceRecoveryPending = false;
+     this.bookTurnAwaitingSlotCommit = false;
+     // Keep the mounted XComponent out of composition until Native has drawn
+     // the first valid frame for a gesture generation. Its front buffer may be
+@@ -2067,9 +2069,12 @@
+     if (!this.mounted) return;
+     if (event.event === BOOK_TURN_EVENT_SURFACE_READY) {
+       if (!this.shouldMountBookTurnSurface()) return;
+-      this.bookTurnRuntimeFailed = false;
+-      this.bookTurnSession.configure(this.viewportWidth, this.viewportHeight);
+-      this.scheduleBookTurnTextureRefresh();
++      this.bookTurnSurfaceRecoveryPending = true;
++      // A replacement EGL surface cannot inherit the previous generation's
++      // input owner or retained slots. An old LOST may already be discarded
++      // at the JS queue boundary; READY must converge the old transaction too.
++      if (this.pageTurnSettlementActive || this.bookTurnMotion !== undefined) this.failBookTurnRuntime(true);
++      this.recoverBookTurnSurfaceIfIdle();
+       return;
+     }
+     if (event.event === BOOK_TURN_EVENT_TEXTURE_READY) {
+@@ -2147,13 +2152,34 @@
+     }
+   }
+ 
+-  private failBookTurnRuntime(): void {
++  private recoverBookTurnSurfaceIfIdle(): void {
++    if (!this.bookTurnSurfaceRecoveryPending || !this.mounted || this.exitRequested ||
++      !this.shouldMountBookTurnSurface() || this.pageTurnSettlementActive || this.bookTurnMotion !== undefined) return;
++    this.bookTurnSurfaceRecoveryPending = false;
++    this.bookTurnRuntimeFailed = false;
++    this.bookTurnAwaitingSlotCommit = false;
++    this.bookTurnSurfaceOpacity = 0;
++    this.pageTurnPresentationPhase = 'idle';
++    this.bookTurnSession.configure(this.viewportWidth, this.viewportHeight);
++    this.scheduleBookTurnTextureRefresh();
++  }
++
++  private failBookTurnRuntime(recoverWhenIdle: boolean = false): void {
++    this.bookTurnSurfaceRecoveryPending = recoverWhenIdle;
+     this.bookTurnRuntimeFailed = true;
++    this.bookTurnSurfaceOpacity = 0;
+     this.clearBookTurnCapturedIdentities();
+     // Once the visual endpoint has been reported, the Core transaction owns
+     // the result. Keep that atomic decision and reveal the static admitted
+     // page when it finishes; before the endpoint no progress write has begun.
+-    if (this.pageTurnAnimationFinished && this.pageTurnCommitStarted) return;
++    if (this.pageTurnAnimationFinished && this.pageTurnCommitStarted) {
++      // Once the authoritative page is promoted, lost Native slots have no
++      // remaining decision to make. Do not retry their old generation forever.
++      if (this.pageTurnCommitFinished && this.pageTurnCommitSucceeded && this.pageTurnSettlingPrepared === undefined) {
++        this.finishSuccessfulPageTurnPresentation(this.pageTurnSettlementGeneration);
++      }
++      return;
++    }
+     this.pageTurnSettlingPrepared = undefined;
+     this.pageTurnStoredProgress = undefined;
+     this.pageTurnCommitStarted = false;
+@@ -9677,6 +9703,7 @@
+     this.bookTurnAwaitingSlotCommit = false;
+     this.bookmarkPageOffsetY = 0;
+     this.bookmarkPreviewChanged = false;
++    this.recoverBookTurnSurfaceIfIdle();
+     this.flushDeferredPageChromeState();
+     this.retryRapidPageTurnTransaction();
+     this.resumeDeferredPageTurnWork();
+@@ -10032,6 +10059,8 @@
+     this.pageTurnPresentationWidth = 0;
+     this.bookTurnMotion = undefined;
+     this.pageTurnInputOwned = false;
++    this.bookTurnAwaitingSlotCommit = false;
++    this.recoverBookTurnSurfaceIfIdle();
+     this.flushDeferredPageChromeState();
+     this.completeRapidPageTurnTransaction();
+     this.resumeDeferredPageTurnWork();

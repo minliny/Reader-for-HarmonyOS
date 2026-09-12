@@ -1,0 +1,8 @@
+{
+  "at": "2026-09-11T05:52:17.173Z",
+  "released": true,
+  "appPid": 28045,
+  "state": "bookshelf; 4 books preserved; long fixture chapter27 page3 saved, slide",
+  "probeExit": "op quit, exit0",
+  "performanceCaveat": "controls trace overlaps host HAP build; not an isolated before/after optimization measurement; raw slow frames retained"
+}

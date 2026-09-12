@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-09T17:30:27.153581+00:00",
+  "sourceFiles": {
+    "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "fd84a108ecb51b8ca060b7358ce52f59943861782b66b7459b024a6a18d04b85",
+    "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets": "27a4b9bc9ca330f2b3a53897f51513a52ee865b0ef1a36606ae747f80a09c92a",
+    "entry/src/main/ets/features/reading/ReaderPageGestureState.ts": "0930d59f21c33ca28fd9f68904497a2b5c1d0a65c9063dbf2e4d80e594aa7649",
+    "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets": "6b56be517323319275e01c3b2c608b81da79dcf3e631287aaf87bb09e143848d",
+    "entry/src/main/ets/features/reading/ReadingSurface.ets": "6f828ec7b29e64c8cccc2db667d40794411b9922758c6c28617658d31b4f4454",
+    "entry/src/main/ets/features/reading/ReadingPaginationIndex.ts": "e5f981c9c70e1134f62b8c8e2467578c0c12b6691284b46997c244eefd14ab36",
+    "entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts": "632c44dbb72d34fe2af6447c6eefce970c83426f2470bc3e10c79041c067b4ef",
+    "entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts": "488ba22efe7d0482c1b144896fbfde243847dd5945b271795b43d42e0872cbe9",
+    "entry/src/main/ets/features/reading/BookTurnMotionState.ts": "3505cb0c447d7e6b0a21672f7c534e03e68fca29153ee6ee84dc307007c4c7a8",
+    "entry/src/main/ets/features/reading/BookTurnPresentationSession.ets": "40d3365a33143cb2f7c4263956135ab6feef343b15effd248158c1c17ffeb0db",
+    "entry/src/main/ets/features/reading/ReaderControlPanel.ets": "4223d363b719d583fd14d25b9bed3514f2f0f78aacbceb7e05445359cea344e6",
+    "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets": "d310c6dc9880ebdb4e4b9bff71e30a04e8943f02693a599c20f8589dbaa40fd8",
+    "entry/src/main/cpp/bookturn/bookturn_host.cpp": "b289e7493a11f40980296f39ceb7bd4b1fb335ddc776cb5ec3ecefb5548dd3d7",
+    "entry/src/main/cpp/bookturn/bookturn_renderer.cpp": "5ba39637a00001ce9fea2fbb790a1ecada223ef944c26733cc3789bb49aaa381",
+    "entry/src/main/cpp/bookturn/bookturn_motion.cpp": "1e1d6775d298d4640155ee3ce9bdf099283b23d415786da1616486de2a4339a4",
+    "entry/src/main/cpp/bookturn/bookturn_motion.h": "d1152e041d98e23de3d515ea77dd1273a7e3136f8b1fcb6605b8b533f4e9ac5c"
+  },
+  "repos": {
+    "harmony": {
+      "head": "35f2f99a8d635615475fde75120bf8629f944565",
+      "dirty": true,
+      "statusLines": 278
+    },
+    "core": {
+      "head": "6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2",
+      "dirty": true,
+      "statusLines": 34
+    }
+  },
+  "expanded-input-render-probe-output.log": {
+    "sha256": "3df7326c408cd4e2bcd6fcd600376f6f86202ca8495794ee1a12e7bd095f65c7",
+    "jsonLines": 11,
+    "assertionError": false
+  },
+  "slide-direction-hold-expanded-recheck.log": {
+    "sha256": "4a19afa15ca90676557a3779fa7e196ccb56faaff38d1876763423da65adc235",
+    "jsonLines": 10,
+    "assertionError": false
+  },
+  "other-modes-expanded-recheck.log": {
+    "sha256": "c6a40b1d06d244281fcf71c84b5086a13aa161dbd72ff25656f75457c30427a2",
+    "jsonLines": 8,
+    "assertionError": false
+  },
+  "compiledBindingProbeMatchesFinalSource": true
+}

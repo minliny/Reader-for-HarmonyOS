@@ -41,7 +41,7 @@ contract('reading owner mounts the two-page stage with live state', () => {
   assert.match(localReading,
     /import \{[\s\S]*ReaderPageTurnRenderPage,[\s\S]*ReaderPageTurnStage,[\s\S]*\} from '\.\/ReaderPageTurnStage';/);
   assert.match(localReading,
-    /ReaderPageTurnStage\(\{[\s\S]*currentPage: this\.currentPageTurnRenderPage\(\),[\s\S]*previousPage: this\.preparedPageTurnRenderPage\('previous'\),[\s\S]*nextPage: this\.preparedPageTurnRenderPage\('next'\),[\s\S]*pageTurnStyle: this\.effectivePageTurnStyle\(\),[\s\S]*turnDirection: this\.pageTurnDirection,[\s\S]*offsetX: this\.pageTurnOffsetX,[\s\S]*viewportWidth: this\.pageTurnStageViewportWidth\(\),/,
+    /ReaderPageTurnStage\(\{[\s\S]*currentPageProvider: \(\): ReaderPageTurnRenderPage => this\.currentPageTurnRenderPage\(\),[\s\S]*previousPageProvider: \(\): ReaderPageTurnRenderPage \| undefined => this\.preparedPageTurnRenderPage\('previous'\),[\s\S]*nextPageProvider: \(\): ReaderPageTurnRenderPage \| undefined => this\.preparedPageTurnRenderPage\('next'\),[\s\S]*pageTurnStyle: this\.effectivePageTurnStyle\(\),[\s\S]*turnDirection: this\.pageTurnDirection,[\s\S]*offsetX: this\.pageTurnOffsetX,[\s\S]*viewportWidth: this\.pageTurnStageViewportWidth\(\),/,
     'LocalReadingExperience must give the stage current, adjacent, style, direction, offset, and live width');
   assert.match(stage, /export struct ReaderPageTurnStage/);
   assert.match(stage, /ReadingSurface\(\{/,
@@ -60,8 +60,8 @@ contract('adjacent preparation stops before the normal Core commit', () => {
   assert.doesNotMatch(prepare,
     /completeFirstPage|activeGateway|runProgressCommitSerial|resolveLocation|updateProgress|resolveAndUpdateProgress|admitCommittedProgress/,
     'preparation may materialize a page but must not write or admit Core progress');
-  assert.match(prepare, /this\.restoreMaterializedChapterContext\(preparation\.origin, false\);/,
-    'preparation must restore the still-visible chapter/page context');
+  assert.match(prepare, /this\.finishAdjacentMeasurementContext\(\);/,
+    'preparation must release its isolated context without changing the visible owner');
   assert.doesNotMatch(prepare, /this\.visiblePage\s*=|this\.visibleFragments\s*=/,
     'preparation must not promote the adjacent page into the visible snapshot');
 });
@@ -75,7 +75,7 @@ contract('prepared slide waits for both animation and durable progress before pr
 
   assert.match(start, /this\.animatePreparedPageTurnSlide\(targetOffset, settlementGeneration\)/,
     'slide settlement must enter the shared viewport animation');
-  assert.match(animate, /animateTo\([\s\S]*this\.pageTurnOffsetX = targetOffset/,
+  assert.match(animate, /this\.startPageTurnSlideTimeline\(targetOffset, settlementGeneration\)/,
     'the shared slide path must animate the live page offset');
   assert.match(start, /this\.beginPreparedPageTurnPersistence\(prepared, lifecycleToken, settlementGeneration\)/,
     'slide settlement must start the durable progress transaction through the shared gate');
@@ -101,10 +101,9 @@ contract('prepared slide waits for both animation and durable progress before pr
   assert.match(promote, /this\.schedulePageTurnPreparation\(\);/,
     'the newly committed visible page must seed its own adjacent-page cache');
 
-  assert.match(motionSpec, /'reader\.page\.slide\.commit'/);
-  assert.match(motionSpec, /'reader\.page\.slide\.rollback'/);
+  assert.doesNotMatch(motionSpec, /'reader\.page\.slide\.(commit|rollback)'/, 'explicit timeline is the only page settlement clock');
   assert.match(motionSpec, /export function motionRemainingDistanceAnimateParam/);
-  assert.match(animate, /this\.pageTurnRemainingDistanceRatio\(targetOffset\)/,
+  assert.match(animate, /this\.startPageTurnSlideTimeline\(targetOffset, settlementGeneration\)/,
     'a released drag must settle only the remaining viewport distance');
 });
 
@@ -113,14 +112,14 @@ contract('failed prepared commit rolls the same stage back', () => {
   const finish = methodSection(localReading, 'finishPreparedPageTurnSettlement');
   const rollback = methodSection(localReading, 'animatePageTurnRollback');
 
-  assert.match(persist, /catch \(error\) \{[\s\S]*return false;/,
-    'a rejected Core transaction must become an explicit failed settlement');
+  assert.match(persist, /catch \(error\) \{[\s\S]*return this\.reconcilePreparedPageTurn\(/,
+    'a failed reply must reconcile durable progress before choosing commit or rollback');
   assert.match(finish,
     /if \(!this\.pageTurnCommitSucceeded[\s\S]*this\.animatePageTurnRollback\(\);\s*return;[\s\S]*this\.promotePreparedPageTurn/,
     'failure must clear the in-flight prepared page and roll back before the success-only promotion');
   assert.match(rollback,
-    /motionRemainingDistanceAnimateParam\([\s\S]*'reader\.page\.slide\.rollback'/);
-  assert.match(rollback, /this\.pageTurnOffsetX = 0;/);
+    /this\.startPageTurnSlideTimeline\(0, generation\)/);
+  assert.match(methodSection(localReading, 'finishPageTurnRollback'), /this\.pageTurnOffsetX = 0;/);
 });
 
 contract('manual, gesture, and auto page turns converge before choosing slide or direct mode', () => {
@@ -206,8 +205,8 @@ contract('cold-cache pans remain actionable and both directions are prepared', (
   const directFinish = methodSection(localReading, 'completeDirectPageTurnGesture');
   const rollbackFinish = methodSection(localReading, 'finishPageTurnRollback');
 
-  assert.match(schedule, /\['next', 'previous'\]/,
-    'each committed page must prepare both adjacent directions when their exact boundaries are known');
+  assert.match(schedule, /\[this\.preferredPageTextureDirection, this\.preferredPageTextureDirection === 'next' \? 'previous' : 'next'\]/,
+    'each committed page prepares both directions with the actual requested direction first; production runtime checks cover both orders');
   assert.doesNotMatch(gesture, /beginPageTurnPreparation/,
     'an active Pan must never synchronously begin hidden measurement');
   const drains = [...gesture.matchAll(/this\.drainPageTurnPreparationQueue\(\)/g)];
@@ -259,7 +258,7 @@ contract('an unknown restored predecessor is discovered without committing the v
     'discovery must not write or promote reading progress');
   assert.match(continueMeasurement,
     /pending\.prepareOnly[\s\S]*beginDiscoveredPreviousPagePreparation/);
-  assert.match(prepare, /restoreMaterializedChapterContext\(origin, false\)/);
+  assert.match(prepare, /finishAdjacentMeasurementContext\(\)/);
   assert.match(prepare, /beginPageTurnPreparation\('previous', target\)/,
     'a discovered same-chapter page must rejoin the one normal preparation transaction');
   assert.match(completeChapter, /new PreparedReaderPageTurn\([\s\S]*'previous'/);
@@ -291,12 +290,28 @@ contract('settings and Appearance share one ReaderSettings page-turn truth', () 
 
   assert.match(controlPanel, /pageTurnStyle: readerPageTurnStyle\(this\.settingsSnapshot\)/,
     'Appearance must display ReaderSettings rather than its legacy appearance.pageTurn field');
-  assert.ok((controlPanel.match(/this\.onPageTurnStyleChange\(style\)/g) ?? []).length >= 3,
-    'full Appearance plus compact/full Settings must forward the same mutation callback');
+  assert.equal((controlPanel.match(/this\.onPageTurnStyleChange\(style\)/g) ?? []).length, 2,
+    'shared Appearance and single Settings adapter must forward the same mutation callback');
+  assert.match(controlPanel, /ReaderControlAppearanceContent\(\{/);
+  assert.match(controlPanel, /ReaderControlSettingsContent\(\{/);
+  assert.doesNotMatch(controlPanel, /ReaderSettingsFullPanel\(\{/);
   assert.match(appearancePanel, /return kind === 'alignment' \|\| kind === 'language' \|\| kind === 'pageTurn';/);
   assert.match(appearancePanel, /return \['仿真', '覆盖', '平移', '滚动', '无动画'\];/);
   assert.match(appearancePanel,
     /const next: ReaderPageTurnStyle = option === '仿真' \? 'simulation'[\s\S]*this\.onPageTurnStyleChange\(next\);/);
+});
+
+contract('page-turn style persistence failure rolls back the live session', () => {
+  const style = methodSection(localReading, 'changeReaderPageTurnStyle');
+  assert.match(style, /const previous = this\.readerSettingsSnapshot;/);
+  assert.match(style, /const previousBookTurnRuntimeFailed = this\.bookTurnRuntimeFailed;/);
+  assert.match(style, /readerSettingsGateway\.update\(snapshot\)\.catch\(\(error: Error\)/);
+  assert.match(style, /mutationGeneration !== this\.readerSettingsMutationGeneration/);
+  assert.match(style, /changeGeneration !== this\.pageStyleChangeGeneration/);
+  assert.match(style, /this\.readerSettingsSnapshot = previous;/);
+  assert.match(style, /this\.bookTurnRuntimeFailed = previousBookTurnRuntimeFailed;/);
+  assert.match(style, /this\.invalidatePageTurnRuntime\(true\)/);
+  assert.match(style, /this\.showReaderSettingsFailure\('阅读设置保存失败，已恢复上次保存值', error\)/);
 });
 
 contract('page-turn generations invalidate stale preparation and settlement owners', () => {

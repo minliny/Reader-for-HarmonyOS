@@ -1,0 +1,15 @@
+{
+  "nativeFoldPresent": true,
+  "clockObserved": [
+    "02:09",
+    "02:10"
+  ],
+  "contentRoundTrips": "PASS (settled only)",
+  "visualAcceptance": "FAIL",
+  "finding": "Previous intermediate samples 0/1/2 show a large paper-only base; next reveal also lacks destination text. Correct settled body does not validate the Native base texture. Newly mounted offscreen capture used waitUntilRenderFinished=false. Render-finished capture change requires new package verification.",
+  "frames": [
+    "reader-control-simulation-native-next-2.png",
+    "reader-control-simulation-native-prev-0.png",
+    "reader-control-simulation-native-prev-2.png"
+  ]
+}

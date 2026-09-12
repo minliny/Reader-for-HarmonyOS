@@ -96,9 +96,9 @@ assert.match(source,
 assert.match(pageTurnStage,
   /struct ReaderPageTurnSurface[\s\S]*showChapterTitle: this\.showChapterTitle/,
   'the primitive page-slot component must forward each physical-page title decision to ReadingSurface');
-for (const page of ['currentPage', 'previousPage', 'nextPage']) {
-  assert.match(pageTurnStage, new RegExp(`showChapterTitle: this\\.${page}\\.showChapterTitle`),
-    `the stage must bind the ${page} title decision directly into its page slot`);
+for (const slot of ['a', 'b']) {
+  assert.match(pageTurnStage, new RegExp(`showChapterTitle: this\\.slotPage\\('${slot}'\\)\\.showChapterTitle`),
+    `physical slot ${slot} must forward its role-selected title decision`);
 }
 assert.match(source, /this\.showChapterTitle = this\.isChapterFirstPageStart\(visiblePage\.startScalar\)/,
   'only the physical page beginning at the chapter head may expose the chapter heading');
@@ -106,10 +106,10 @@ assert.match(source,
   /captureChapterTitleMeasurementAfterLayout\(lifecycleToken\)[\s\S]*allBatchParagraphsHaveLayout\(\)/,
   'the wrapped title must be measured before body lines can be consumed');
 assert.match(source,
-  /Text\(this\.requireChapter\(\)\.chapterTitle, \{ controller: this\.chapterTitleMeasurementController \}\)[\s\S]*?\.fontFamily\(TYPE_READER_CHAPTER_TITLE\.fontFamily\)[\s\S]*?\.fontWeight\(TYPE_READER_CHAPTER_TITLE\.fontWeight\)[\s\S]*?\.fontSize\(TYPE_READER_CHAPTER_TITLE\.fontSizeFp\)[\s\S]*?\.lineHeight\(this\.readingLayout\(\)\.titleLineHeightFp\)[\s\S]*?\.wordBreak\(WordBreak\.BREAK_ALL\)/,
+  /Text\(this\.requireMeasurementChapter\(\)\.chapterTitle, \{ controller: this\.chapterTitleMeasurementController \}\)[\s\S]*?\.fontFamily\(TYPE_READER_CHAPTER_TITLE\.fontFamily\)[\s\S]*?\.fontWeight\(TYPE_READER_CHAPTER_TITLE\.fontWeight\)[\s\S]*?\.fontSize\(TYPE_READER_CHAPTER_TITLE\.fontSizeFp\)[\s\S]*?\.lineHeight\(this\.readingLayout\(\)\.titleLineHeightFp\)[\s\S]*?\.wordBreak\(WordBreak\.BREAK_ALL\)/,
   'the hidden title measurement must use the same typography and wrapping as the visible title');
 assert.match(source,
-  /ForEach\(\[this\.measurementEpoch\], \(_epoch: number\) => \{\s*if \(this\.measurementIncludesChapterTitle\(\)\) \{\s*Text\(this\.requireChapter\(\)\.chapterTitle, \{ controller: this\.chapterTitleMeasurementController \}\)/,
+  /ForEach\(\[this\.measurementEpoch\], \(_epoch: number\) => \{\s*if \(this\.measurementIncludesChapterTitle\(\)\) \{\s*Text\(this\.requireMeasurementChapter\(\)\.chapterTitle, \{ controller: this\.chapterTitleMeasurementController \}\)/,
   'the hidden title Text must be rebuilt per measurement epoch: a plain if branch keeps its first ' +
   'TextController binding across re-begins while beginMeasurement swaps in a new controller, so ' +
   'getLayoutManager() throws until the 6s deadline (regression: restore/directory chapter-head ' +
@@ -127,7 +127,7 @@ assert.match(source,
   /return this\.readingLayout\(\)\.bodyHeightAfterTitle\(this\.measuredChapterTitleHeightVp\)/,
   'chapter-first body pagination must consume only the space left by the measured wrapped title');
 assert.match(source,
-  /if \(!this\.isChapterFirstPageStart\(pageStartScalar\)\) \{\s*return this\.readingLayout\(\)\.bodyHeightAfterTitle\(0\)/,
+  /if \(!this\.isMeasurementChapterFirstPageStart\(pageStartScalar\)\) \{\s*return this\.readingLayout\(\)\.bodyHeightAfterTitle\(0\)/,
   'later physical pages must retain the full body track');
 assert.match(source, /ReaderPageTurnStage\(\{[\s\S]*layout: this\.readingLayout\(\)/,
   'the page-turn stage must consume the same owner-resolved layout as pagination');
@@ -199,7 +199,7 @@ assert.match(predecessorMeasurement[1], /paginationIndex\.findContainingPage\([\
   'a jump into the final page must survive promotion of the prefix into a completed manifest');
 assert.match(predecessorMeasurement[1], /draft\.previousRequestForAnchor\(pending\.originalChapterOffset\)/,
   'the jumped anchor must resolve through continuous layout observations rather than session history');
-assert.match(predecessorMeasurement[1], /paginationIndex\.findLastPage\(this\.currentPaginationKey\(\)\)/,
+assert.match(predecessorMeasurement[1], /paginationIndex\.findLastPage\(this\.measurementPaginationKey\(\)\)/,
   'the cold path must enter the exact indexed final page only after EOF');
 assert.doesNotMatch(predecessorMeasurement[1], /updateProgress|resolveLocation/,
   'intermediate predecessor pages must not produce transient Core progress writes');
@@ -209,7 +209,7 @@ const predecessorBatch = source.match(
 assert.ok(predecessorBatch, 'cold predecessor measurement must batch already-laid-out physical pages');
 assert.match(predecessorBatch[1], /observeMeasuredPhysicalPage\(page\)/,
   'each batched predecessor page must enter the existing exact pagination prefix');
-assert.match(predecessorBatch[1], /measurementRequestedAnchorScalar = page\.endScalar/,
+assert.match(predecessorBatch[1], /setMeasuringRequestedAnchor\(page\.endScalar\)/,
   'the next batched observation must use the preceding real page end as its request anchor');
 assert.doesNotMatch(predecessorBatch[1], /updateProgress|resolveLocation|beginMeasurement/,
   'batching must not add transient persistence or remount the hidden tree per ordinary page');

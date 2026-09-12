@@ -1,0 +1,8 @@
+{
+  "source": [
+    "entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts"
+  ],
+  "controller": [
+    "tools/test-reader-tts-config-interaction.mjs"
+  ]
+}

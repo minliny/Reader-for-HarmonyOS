@@ -1,0 +1,3 @@
+Reader control backdrop publication: stable array/rect identity across motion PASS
+(node:99175) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

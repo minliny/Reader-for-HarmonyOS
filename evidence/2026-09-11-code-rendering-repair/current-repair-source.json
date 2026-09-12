@@ -1,0 +1,80 @@
+[
+  {
+    "path": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+    "currentSha256": "18f825ad769adb0564cd4bd76bf05651ab23c7262cfc3e652cf9a11d7bc58523",
+    "added": 144,
+    "removed": 97
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts",
+    "currentSha256": "a14972a4534d4c807ab69d1b51bf70588e1833f019edb6f35a6643dc70767948",
+    "added": 46,
+    "removed": 0
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/BookTurnPresentationSession.ets",
+    "currentSha256": "baa2a6f5b0be85d1d798fd48ceb4468ae449127162c2bab448ac57311d0f2911",
+    "added": 19,
+    "removed": 2
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+    "currentSha256": "728996139eaff426ecfca5fcdc85d765f254a72fdeebdb0992603c3a7013b6e4",
+    "added": 11,
+    "removed": 6
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+    "currentSha256": "f1ef1254da5205eed05a09cf9dc5049a04024c530b20aa593181ff195a7df0a4",
+    "added": 31,
+    "removed": 21
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+    "currentSha256": "73135778b6196d5590abcb1743267c0e91769d6c796752dcae377da13c085e2e",
+    "added": 28,
+    "removed": 9
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+    "currentSha256": "6ff7434818fd429043f7ad4133e51e3396fca0f85a1cc5847d52fe88030a53de",
+    "added": 33,
+    "removed": 5
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts",
+    "currentSha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477",
+    "added": 68,
+    "removed": 0
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets",
+    "currentSha256": "3f3ea1bec58310d4445bdd7152257c714a2bb25794838b3c6f167561a22c0fac",
+    "added": 147,
+    "removed": 58
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets",
+    "currentSha256": "8df763b5ad4c21249840baf97f6ffe558ae6d5f517e4db472fdc077af34d613f",
+    "added": 19,
+    "removed": 7
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets",
+    "currentSha256": "9fc91a3fb72506f742cb04596d4b2204a20cf9cdcb4ceb12bc53005d4175b3a7",
+    "added": 5,
+    "removed": 2
+  },
+  {
+    "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+    "currentSha256": "dfd03eaa8c349f992f48057f06a90dbd539a30e54e6965d67ec0ccf691439135",
+    "added": 5,
+    "removed": 0
+  },
+  {
+    "path": "entry/src/main/cpp/bookturn/bookturn_host.h",
+    "currentSha256": "7969ec794b4e6c1754b4ac880798346cd529351c33deaff0027f7b191fa375a8",
+    "added": 2,
+    "removed": 0
+  }
+]

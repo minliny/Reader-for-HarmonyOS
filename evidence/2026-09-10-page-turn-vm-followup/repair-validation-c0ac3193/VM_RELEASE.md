@@ -1,0 +1,1 @@
+Probe closed 2026-09-11T06:33:32.631Z after control drag-close and actual bookshelf check. Existing4books preserved; long book chapter36 page3. No VM reset or phone use. Next package1368d485 installed through manifest.

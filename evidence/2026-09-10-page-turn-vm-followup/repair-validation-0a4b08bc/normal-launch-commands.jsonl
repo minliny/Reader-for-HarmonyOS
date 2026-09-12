@@ -1,0 +1,5 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.015176625, "elapsed": 0.033560875000000004, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.04888375, "elapsed": 0.03046466600000001, "code": 0, "output": "2458\n"}
+{"args": ["shell", "aa", "start", "-a", "EntryAbility", "-b", "io.reader.harmonyos", "-m", "entry"], "start": 0.079506041, "elapsed": 0.07163412499999999, "code": 0, "output": "start ability successfully.\n"}
+{"args": ["shell", "uitest", "dumpLayout", "-p", "/data/local/tmp/reader-control-normal-launch-1.json"], "start": 2.162003708, "elapsed": 0.7176000830000002, "code": 0, "output": "DumpLayout saved to:/data/local/tmp/reader-control-normal-launch-1.json\n"}
+{"args": ["file", "recv", "/data/local/tmp/reader-control-normal-launch-1.json", "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-0a4b08bc/reader-control-normal-launch-1.json"], "start": 2.879894083, "elapsed": 0.03526112499999989, "code": 0, "output": "FileTransfer finish, Size:131837, File count = 1, time:9ms rate:14648.56kB/s\n"}

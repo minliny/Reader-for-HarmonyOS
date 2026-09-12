@@ -1,0 +1,520 @@
+app shell safe geometry: PASS
+(node:157) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope
+shared book acquisition lifecycle, identities, and scheduling: PASS
+(node:172) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:183) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+bookshelf management Core ownership contract: PASS
+(node:197) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+bookshelf tablet navigation contract: PASS
+bookshelf view and directory footer contracts: PASS
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1046 tested records, 919 unique identities)
+cookie exact-host and HttpOnly script-isolation policy: PASS
+core build identity startup contract: PASS
+(node:223) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: cache winner retains one online refresh; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+PASS: deterministic import.persist rejection discards staged input without recovery orphan
+PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation
+PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (110 sources swept)
+(node:237) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony HttpTTS credential URL encoding and expansion bounds: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:250) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:254) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+PASS: HTTPS-only requests reject cleartext redirect downgrades
+PASS: same-origin comparison normalizes host case and default HTTPS port
+PASS: credential-bearing URL redirects stay on the same effective origin
+PASS: custom credential-header redirects stay on the same effective origin
+Host staging recovery retry: PASS
+(node:260) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:267) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+Legado product behavior contract: PASS
+local book format picker contract: PASS
+local EPUB resource architecture: PASS
+local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)
+(node:278) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+performance regression contracts: PASS
+physical phone Figma layout regressions: PASS
+portable JSON local/online import boundary: PASS
+PASS Make V9 appearance: real selection handlers, stale menus, scroll/viewport placement, Quick/Full swatches and persisted theme identity. Native pixels remain separate.
+(node:310) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance Figma N per-actor driver: PASS
+reader appearance Figma N fixture: PASS
+reader appearance measured-screen gesture: PASS
+reader appearance Figma N sampler: PASS
+reader appearance master motion state: PASS
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /this\.dockRect = \{ x: this\.rootScreenX \+ this\.dockLeft\(\)/. Input:
+
+"import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';\n" +
+  "import { FrameCallback } from '@kit.ArkUI';\n" +
+  "import { sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';\n" +
+  "import { readerMotionNowMs } from '../common/ReaderMotionClock';\n" +
+  "import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../common/ProductMotionTiming';\n" +
+  "import { registerReaderFonts } from '../common/ReaderFonts';\n" +
+  "import { ReaderControlRuntime, type ReaderControlRuntimeUpdate } from './ReaderControlRuntime';\n" +
+  "import { ReaderPageInputClock } from './ReaderPageInputClock';\n" +
+  "import hilog from '@ohos.hilog';\n" +
+  "import type { ReaderControlGestureConfig } from './ReaderControlGestureDriver';\n" +
+  "import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';\n" +
+  "import type { ReaderBookIdentity } from './ReaderBookmarkProjection';\n" +
+  "import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';\n" +
+  "import { ReaderControlAutoPageContent } from './ReaderControlAutoPageContent';\n" +
+  "import type { ReaderAutoPageStatus } from './ReaderAutoPageState';\n" +
+  "import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';\n" +
+  'import {\n' +
+  '  createDefaultReaderAppearanceSnapshot,\n' +
+  '  type ReaderAppearanceAlignment,\n' +
+  '  type ReaderAppearanceFont,\n' +
+  '  type ReaderAppearanceFontSlot,\n' +
+  '  type ReaderAppearanceIndent,\n' +
+  '  type ReaderAppearanceMetric,\n' +
+  '  type ReaderAppearanceSnapshot,\n' +
+  '  type ReaderAppearanceStepDirection,\n' +
+  '  type ReaderAppearanceTheme,\n' +
+  "} from './ReaderAppearanceState';\n" +
+  "import { ReaderControlSettingsContent } from './ReaderControlSettingsContent';\n" +
+  'import {\n' +
+  '  createDefaultReaderSettingsSnapshot,\n' +
+  '  readerPageTurnStyle,\n' +
+  '  type ReaderPageTurnStyle,\n' +
+  '  type ReaderScreenDirection,\n' +
+  '  type ReaderScreenTimeout,\n' +
+  '  type ReaderSettingsSnapshot,\n' +
+  '  type ReaderSettingsToggleKey,\n' +
+  "} from './ReaderSettingsState';\n" +
+  "import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';\n" +
+  "import { ReaderControlTtsContent } from './ReaderControlTtsContent';\n" +
+  "import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';\n" +
+  'import {\n' +
+  '  ReaderSessionMorphSourceMeasurement,\n' +
+  '  readerSessionMorphActorId,\n' +
+  '  type ReaderSessionMorphSourceKind,\n' +
+  "} from './ReaderSessionMorphState';\n" +
+  "import { createReaderTtsState, type ReaderTtsState, type ReaderTtsTimerMode } from './ReaderTtsState';\n" +
+  "import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';\n" +
+  "import { ReaderControlSearchContent } from './ReaderControlSearchContent';\n" +
+  "import { ReaderControlReplaceContent } from './ReaderControlReplaceContent';\n" +
+  "import { readerControlHeaderFrame } from './ReaderControlHeaderGeometry';\n" +
+  "import type { ReaderControlActorFrame } from './ReaderControlActorGeometry';\n" +
+  "import { sampleReaderControlReplaceHeader, type ReaderControlReplaceHeaderFrame } from './ReaderControlReplaceGeometry';\n" +
+  "import type { ReaderReplacePreview } from './ReaderReplaceQuickGateway';\n" +
+  'import { createReaderControlReplaceState, type ReaderControlReplaceState,\n' +
+  "  type ReaderControlReplaceDraft } from './ReaderControlReplaceState';\n" +
+  'import {\n' +
+  '  createHiddenReaderReplaceQuickState,\n' +
+  '  type ReaderReplaceRule,\n' +
+  '  type ReaderReplaceQuickState,\n' +
+  "} from './ReaderReplaceQuickState';\n" +
+  'import {\n' +
+  '  TOK_ACCENT,\n' +
+  '  TOK_BORDER,\n' +
+  '  TOK_BORDER_W,\n' +
+  '  TOK_LINE_STRONG,\n' +
+  '  TOK_READ_ACTIVE_SOFT,\n' +
+  '  TOK_READ_DISABLED_BG,\n' +
+  '  TOK_READ_ELEVATED,\n' +
+  '  TOK_READ_ICON,\n' +
+  '  TOK_READ_HANDLE,\n' +
+  '  TOK_LINE,\n' +
+  '  TOK_READ_INK,\n' +
+  '  TOK_READ_MUTED,\n' +
+  '  TOK_READ_PRIMARY,\n' +
+  '  TOK_READ_SURFACE,\n' +
+  '  TOK_RADIUS_LG,\n' +
+  '  TOK_SURFACE_PANEL,\n' +
+  '  TOK_SURFACE_SOLID_OPAQUE,\n' +
+  "} from '../common/ReaderTokens';\n" +
+  'import {\n' +
+  '  ReaderControlGeometry,\n' +
+  '  READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH,\n' +
+  '  READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,\n' +
+  '  READER_CONTROL_BRIGHTNESS_CONTROL_GAP,\n' +
+  '  READER_CONTROL_BRIGHTNESS_ICON_SIZE,\n' +
+  '  READER_CONTROL_BRIGHTNESS_ICON_TOP,\n' +
+  '  READER_CONTROL_BRIGHTNESS_MAX,\n' +
+  '  READER_CONTROL_BRIGHTNESS_MIN,\n' +
+  '  READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT,\n' +
+  '  READER_CONTROL_BRIGHTNESS_RAIL_WIDTH,\n' +
+  '  READER_CONTROL_BRIGHTNESS_STEP,\n' +
+  '  READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH,\n' +
+  '  READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT,\n' +
+  '  READER_CONTROL_BRIGHTNESS_TRACK_WIDTH,\n' +
+  '  READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT,\n' +
+  '  READER_CONTROL_HOME_QUICK_ACTION_HEIGHT,\n' +
+  '  READER_CONTROL_HOME_SECTION_GAP,\n' +
+  '  READER_CONTROL_PROGRESS_MAX,\n' +
+  '  READER_CONTROL_PROGRESS_MIN,\n' +
+  '  READER_CONTROL_PROGRESS_STEP,\n' +
+  "} from './ReaderControlGeometry';\n" +
+  'import {\n' +
+  '  ReaderControlLayoutSnapshot,\n' +
+  '  createDefaultReaderControlLayout,\n' +
+  "} from './ReaderLayoutGeometry';\n" +
+  'import {\n' +
+  '  TYPE_READER_CONTROL_BOOK_TITLE,\n' +
+  '  TYPE_READER_CONTROL_CHAPTER_SOURCE,\n' +
+  '  TYPE_READER_CONTROL_SOURCE_ACTION,\n' +
+  "} from '../common/ReaderTypography';\n" +
+  '\n' +
+  "import curves from '@ohos.curves';\n" +
+  "import { DEBUG, BUILD_MODE_NAME } from '../../../../../build/default/generated/profile/default/BuildProfile';\n" +
+  "import { ReaderControlDirectoryContent } from './ReaderControlDirectoryContent';\n" +
+  "import { ReaderControlAppearanceContent } from './ReaderControlAppearanceContent';\n" +
+  "import type { ReaderControlPage } from './ReaderControlRouting';\n" +
+  "import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';\n" +
+  "import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';\n" +
+  'import {\n' +
+  '  copyReaderControlSessionState, createReaderControlSessionState, readerControlContentLocation,\n' +
+  '  readerControlSessionStateEquals,\n' +
+  '  sampleReaderControlSession, setReaderControlDirectoryTab,\n' +
+  '  collapseReaderControlSession, expandReaderControlSession, toggleReaderControlSession, type ReaderControlLocation,\n' +
+  '  type ReaderControlSessionState,\n' +
+  "} from './ReaderControlSessionState';\n" +
+  'import {\n' +
+  '  readerControlMotionAxis, readerControlMotionBounds, readerControlHasFullContentSurface,\n' +
+  '  sampleReaderControlMotionComposition,\n' +
+  '  type ReaderControlMotionFrame,\n' +
+  "} from './ReaderControlMotionGeometry';\n" +
+  '\n' +
+  "export type { ReaderControlPage } from './ReaderControlRouting';\n" +
+  "type ReaderQuickAction = 'search' | 'autoPage' | 'replace';\n" +
+  '\n' +
+  'class ReaderControlFrameCallback extends FrameCallback {\n' +
+  '  private callback: (time: number) => void;\n' +
+  '  constructor(callback: (time: number) => void) { super(); this.callback = callback; }\n' +
+  '  onFrame(time: number): void { this.callback(time); }\n' +
+  '  onIdle(_remaining: number): void {}\n' +
+  '}\n' +
+  '\n' +
+  '@Component\n' +
+  'export struct ReaderControlPanel {\n' +
+  "  @Link @Watch('onControlSessionChanged') controlSession: ReaderControlSessionState;\n" +
+  '  // Keep clock/gesture decisions local. Only the scalars used by an actor\n' +
+  '  // invalidate its observers; a MOVE must not invalidate the module branch.\n' +
+  '  private visualSession: ReaderControlSessionState = createReaderControlSessionState();\n' +
+  '  @State private visualExpansionProgress: number = 0;\n' +
+  '  @State private visualVisibilityProgress: number = 0;\n' +
+  '  @State private visualHeldPointerId: number = -1;\n' +
+  "  @State private visualTransitionKind: string = '';\n" +
+  '  @State private motionOffsetY: number = 0;\n' +
+  '  // Module arguments observe only their own pose, not shell visibility/offset.\n' +
+  '  @State private contentMotionProgress: number = 0;\n' +
+  '  @State private contentMotionWidth: number = 286;\n' +
+  '  @State private contentMotionHeight: number = 190;\n' +
+  '  private runtime: ReaderControlRuntime | undefined = undefined;\n' +
+  '  private inputClock: ReaderPageInputClock = new ReaderPageInputClock();\n' +
+  '  private inputMoveCount: number = 0;\n' +
+  '  private inputResetCount: number = 0;\n' +
+  '  private inputDownTime: number = 0;\n' +
+  '  private inputLastMoveTime: number = 0;\n' +
+  '  private runtimeMounted: boolean = false;\n' +
+  '  private pendingRuntimeFrame: boolean = false;\n' +
+  '  private pendingRuntimeTicket: number = -1;\n' +
+  '  private runtimeLifecycle: number = 0;\n' +
+  '  private rootScreenX: number = 0;\n' +
+  '  private rootScreenY: number = 0;\n' +
+  '  // Keep the last visible content actor mounted after a dismiss reaches the\n' +
+  '  // hidden endpoint. Switching a large module tree to the default hidden\n' +
+  '  // directory in that same frame can force List/TextInput reconstruction while\n' +
+  '  // the dock opacity reaches zero, which is the black-frame seam seen on fast\n' +
+  '  // physical compositors. Update this presentation route only when its four\n' +
+  '  // semantic values change, never for a new motion sample.\n' +
+  '  @State private lastVisibleContentLocation: ReaderControlLocation = {\n' +
+  "    level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick',\n" +
+  '  };\n' +
+  "  @Prop @Watch('onRuntimeEnabledChanged') inputEnabled: boolean = true;\n" +
+  "  @Prop @Watch('onRuntimeEnabledChanged') controlObscured: boolean = false;\n" +
+  '  @Prop controlOpenRevision: number = 0;\n' +
+  '  @Prop dismissTemporaryRevision: number = 0;\n' +
+  '  @Prop temporaryLayerActive: boolean = false;\n' +
+  '  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};\n' +
+  '  /** Non-reactive telemetry path for system-back/close decisions mid-motion. */\n' +
+  '  onVisualSessionChange: (state: ReaderControlSessionState) => void =\n' +
+  '    (_state: ReaderControlSessionState): void => {};\n' +
+  '  onInputActivity: () => void = (): void => {};\n' +
+  '  onBackdropRegionsChange: (regions: ReaderControlBackdropRect[], ready: boolean) => void =\n' +
+  '    (_regions: ReaderControlBackdropRect[], _ready: boolean): void => {};\n' +
+  "  @Prop bookTitle: string = '';\n" +
+  "  @Prop chapterTitle: string = '';\n" +
+  "  @Prop sourceId: string = '';\n" +
+  "  @Prop sourceName: string = '';\n" +
+  '  @Prop progressPercent: number = 0;\n' +
+  '  @Prop totalChapters: number = 0;\n' +
+  "  @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();\n" +
+  '  @Prop tocEntries: LocalReadingTocEntry[] = [];\n' +
+  '  @Prop currentChapterIndex: number = -1;\n' +
+  '  @Prop chapterStartBookmarkCreationEnabled: boolean = false;\n' +
+  '  @Prop chapterDownloadEnabled: boolean = false;\n' +
+  '  @Prop bookmarkLoadFailed: boolean = false;\n' +
+  "  @Prop bookmarkLoadMessage: string = '';\n" +
+  '  onRetryBookmarkLoad: () => void = (): void => {};\n' +
+  "  @Prop searchQuery: string = '';\n" +
+  "  @Prop searchState: ReaderQuickSearchState = { kind: 'idle' };\n" +
+  '  @Prop brightnessPercent: number = 100;\n' +
+  '  @Prop brightnessAutomatic: boolean = true;\n' +
+  "  @Prop autoPageStatus: ReaderAutoPageStatus = 'stopped';\n" +
+  '  @Prop autoPageSpeedSeconds: number = 8;\n' +
+  '  @Prop autoPageTimerMinutes: number = 15;\n' +
+  '  @Prop autoPageTimerSeconds: number = 0;\n' +
+  '  @Prop autoPageTimerSummaryT'... 67287 more characters
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-appearance-motion-tree.mjs:77:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: "import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';\n" +
+    "import { FrameCallback } from '@kit.ArkUI';\n" +
+    "import { sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';\n" +
+    "import { readerMotionNowMs } from '../common/ReaderMotionClock';\n" +
+    "import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../common/ProductMotionTiming';\n" +
+    "import { registerReaderFonts } from '../common/ReaderFonts';\n" +
+    "import { ReaderControlRuntime, type ReaderControlRuntimeUpdate } from './ReaderControlRuntime';\n" +
+    "import { ReaderPageInputClock } from './ReaderPageInputClock';\n" +
+    "import hilog from '@ohos.hilog';\n" +
+    "import type { ReaderControlGestureConfig } from './ReaderControlGestureDriver';\n" +
+    "import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';\n" +
+    "import type { ReaderBookIdentity } from './ReaderBookmarkProjection';\n" +
+    "import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';\n" +
+    "import { ReaderControlAutoPageContent } from './ReaderControlAutoPageContent';\n" +
+    "import type { ReaderAutoPageStatus } from './ReaderAutoPageState';\n" +
+    "import type { ReaderChineseConversionMode } from './ReaderChineseConversionGateway';\n" +
+    'import {\n' +
+    '  createDefaultReaderAppearanceSnapshot,\n' +
+    '  type ReaderAppearanceAlignment,\n' +
+    '  type ReaderAppearanceFont,\n' +
+    '  type ReaderAppearanceFontSlot,\n' +
+    '  type ReaderAppearanceIndent,\n' +
+    '  type ReaderAppearanceMetric,\n' +
+    '  type ReaderAppearanceSnapshot,\n' +
+    '  type ReaderAppearanceStepDirection,\n' +
+    '  type ReaderAppearanceTheme,\n' +
+    "} from './ReaderAppearanceState';\n" +
+    "import { ReaderControlSettingsContent } from './ReaderControlSettingsContent';\n" +
+    'import {\n' +
+    '  createDefaultReaderSettingsSnapshot,\n' +
+    '  readerPageTurnStyle,\n' +
+    '  type ReaderPageTurnStyle,\n' +
+    '  type ReaderScreenDirection,\n' +
+    '  type ReaderScreenTimeout,\n' +
+    '  type ReaderSettingsSnapshot,\n' +
+    '  type ReaderSettingsToggleKey,\n' +
+    "} from './ReaderSettingsState';\n" +
+    "import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';\n" +
+    "import { ReaderControlTtsContent } from './ReaderControlTtsContent';\n" +
+    "import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';\n" +
+    'import {\n' +
+    '  ReaderSessionMorphSourceMeasurement,\n' +
+    '  readerSessionMorphActorId,\n' +
+    '  type ReaderSessionMorphSourceKind,\n' +
+    "} from './ReaderSessionMorphState';\n" +
+    "import { createReaderTtsState, type ReaderTtsState, type ReaderTtsTimerMode } from './ReaderTtsState';\n" +
+    "import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';\n" +
+    "import { ReaderControlSearchContent } from './ReaderControlSearchContent';\n" +
+    "import { ReaderControlReplaceContent } from './ReaderControlReplaceContent';\n" +
+    "import { readerControlHeaderFrame } from './ReaderControlHeaderGeometry';\n" +
+    "import type { ReaderControlActorFrame } from './ReaderControlActorGeometry';\n" +
+    "import { sampleReaderControlReplaceHeader, type ReaderControlReplaceHeaderFrame } from './ReaderControlReplaceGeometry';\n" +
+    "import type { ReaderReplacePreview } from './ReaderReplaceQuickGateway';\n" +
+    'import { createReaderControlReplaceState, type ReaderControlReplaceState,\n' +
+    "  type ReaderControlReplaceDraft } from './ReaderControlReplaceState';\n" +
+    'import {\n' +
+    '  createHiddenReaderReplaceQuickState,\n' +
+    '  type ReaderReplaceRule,\n' +
+    '  type ReaderReplaceQuickState,\n' +
+    "} from './ReaderReplaceQuickState';\n" +
+    'import {\n' +
+    '  TOK_ACCENT,\n' +
+    '  TOK_BORDER,\n' +
+    '  TOK_BORDER_W,\n' +
+    '  TOK_LINE_STRONG,\n' +
+    '  TOK_READ_ACTIVE_SOFT,\n' +
+    '  TOK_READ_DISABLED_BG,\n' +
+    '  TOK_READ_ELEVATED,\n' +
+    '  TOK_READ_ICON,\n' +
+    '  TOK_READ_HANDLE,\n' +
+    '  TOK_LINE,\n' +
+    '  TOK_READ_INK,\n' +
+    '  TOK_READ_MUTED,\n' +
+    '  TOK_READ_PRIMARY,\n' +
+    '  TOK_READ_SURFACE,\n' +
+    '  TOK_RADIUS_LG,\n' +
+    '  TOK_SURFACE_PANEL,\n' +
+    '  TOK_SURFACE_SOLID_OPAQUE,\n' +
+    "} from '../common/ReaderTokens';\n" +
+    'import {\n' +
+    '  ReaderControlGeometry,\n' +
+    '  READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH,\n' +
+    '  READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE,\n' +
+    '  READER_CONTROL_BRIGHTNESS_CONTROL_GAP,\n' +
+    '  READER_CONTROL_BRIGHTNESS_ICON_SIZE,\n' +
+    '  READER_CONTROL_BRIGHTNESS_ICON_TOP,\n' +
+    '  READER_CONTROL_BRIGHTNESS_MAX,\n' +
+    '  READER_CONTROL_BRIGHTNESS_MIN,\n' +
+    '  READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT,\n' +
+    '  READER_CONTROL_BRIGHTNESS_RAIL_WIDTH,\n' +
+    '  READER_CONTROL_BRIGHTNESS_STEP,\n' +
+    '  READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH,\n' +
+    '  READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT,\n' +
+    '  READER_CONTROL_BRIGHTNESS_TRACK_WIDTH,\n' +
+    '  READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT,\n' +
+    '  READER_CONTROL_HOME_QUICK_ACTION_HEIGHT,\n' +
+    '  READER_CONTROL_HOME_SECTION_GAP,\n' +
+    '  READER_CONTROL_PROGRESS_MAX,\n' +
+    '  READER_CONTROL_PROGRESS_MIN,\n' +
+    '  READER_CONTROL_PROGRESS_STEP,\n' +
+    "} from './ReaderControlGeometry';\n" +
+    'import {\n' +
+    '  ReaderControlLayoutSnapshot,\n' +
+    '  createDefaultReaderControlLayout,\n' +
+    "} from './ReaderLayoutGeometry';\n" +
+    'import {\n' +
+    '  TYPE_READER_CONTROL_BOOK_TITLE,\n' +
+    '  TYPE_READER_CONTROL_CHAPTER_SOURCE,\n' +
+    '  TYPE_READER_CONTROL_SOURCE_ACTION,\n' +
+    "} from '../common/ReaderTypography';\n" +
+    '\n' +
+    "import curves from '@ohos.curves';\n" +
+    "import { DEBUG, BUILD_MODE_NAME } from '../../../../../build/default/generated/profile/default/BuildProfile';\n" +
+    "import { ReaderControlDirectoryContent } from './ReaderControlDirectoryContent';\n" +
+    "import { ReaderControlAppearanceContent } from './ReaderControlAppearanceContent';\n" +
+    "import type { ReaderControlPage } from './ReaderControlRouting';\n" +
+    "import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';\n" +
+    "import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';\n" +
+    'import {\n' +
+    '  copyReaderControlSessionState, createReaderControlSessionState, readerControlContentLocation,\n' +
+    '  readerControlSessionStateEquals,\n' +
+    '  sampleReaderControlSession, setReaderControlDirectoryTab,\n' +
+    '  collapseReaderControlSession, expandReaderControlSession, toggleReaderControlSession, type ReaderControlLocation,\n' +
+    '  type ReaderControlSessionState,\n' +
+    "} from './ReaderControlSessionState';\n" +
+    'import {\n' +
+    '  readerControlMotionAxis, readerControlMotionBounds, readerControlHasFullContentSurface,\n' +
+    '  sampleReaderControlMotionComposition,\n' +
+    '  type ReaderControlMotionFrame,\n' +
+    "} from './ReaderControlMotionGeometry';\n" +
+    '\n' +
+    "export type { ReaderControlPage } from './ReaderControlRouting';\n" +
+    "type ReaderQuickAction = 'search' | 'autoPage' | 'replace';\n" +
+    '\n' +
+    'class ReaderControlFrameCallback extends FrameCallback {\n' +
+    '  private callback: (time: number) => void;\n' +
+    '  constructor(callback: (time: number) => void) { super(); this.callback = callback; }\n' +
+    '  onFrame(time: number): void { this.callback(time); }\n' +
+    '  onIdle(_remaining: number): void {}\n' +
+    '}\n' +
+    '\n' +
+    '@Component\n' +
+    'export struct ReaderControlPanel {\n' +
+    "  @Link @Watch('onControlSessionChanged') controlSession: ReaderControlSessionState;\n" +
+    '  // Keep clock/gesture decisions local. Only the scalars used by an actor\n' +
+    '  // invalidate its observers; a MOVE must not invalidate the module branch.\n' +
+    '  private visualSession: ReaderControlSessionState = createReaderControlSessionState();\n' +
+    '  @State private visualExpansionProgress: number = 0;\n' +
+    '  @State private visualVisibilityProgress: number = 0;\n' +
+    '  @State private visualHeldPointerId: number = -1;\n' +
+    "  @State private visualTransitionKind: string = '';\n" +
+    '  @State private motionOffsetY: number = 0;\n' +
+    '  // Module arguments observe only their own pose, not shell visibility/offset.\n' +
+    '  @State private contentMotionProgress: number = 0;\n' +
+    '  @State private contentMotionWidth: number = 286;\n' +
+    '  @State private contentMotionHeight: number = 190;\n' +
+    '  private runtime: ReaderControlRuntime | undefined = undefined;\n' +
+    '  private inputClock: ReaderPageInputClock = new ReaderPageInputClock();\n' +
+    '  private inputMoveCount: number = 0;\n' +
+    '  private inputResetCount: number = 0;\n' +
+    '  private inputDownTime: number = 0;\n' +
+    '  private inputLastMoveTime: number = 0;\n' +
+    '  private runtimeMounted: boolean = false;\n' +
+    '  private pendingRuntimeFrame: boolean = false;\n' +
+    '  private pendingRuntimeTicket: number = -1;\n' +
+    '  private runtimeLifecycle: number = 0;\n' +
+    '  private rootScreenX: number = 0;\n' +
+    '  private rootScreenY: number = 0;\n' +
+    '  // Keep the last visible content actor mounted after a dismiss reaches the\n' +
+    '  // hidden endpoint. Switching a large module tree to the default hidden\n' +
+    '  // directory in that same frame can force List/TextInput reconstruction while\n' +
+    '  // the dock opacity reaches zero, which is the black-frame seam seen on fast\n' +
+    '  // physical compositors. Update this presentation route only when its four\n' +
+    '  // semantic values change, never for a new motion sample.\n' +
+    '  @State private lastVisibleContentLocation: ReaderControlLocation = {\n' +
+    "    level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick',\n" +
+    '  };\n' +
+    "  @Prop @Watch('onRuntimeEnabledChanged') inputEnabled: boolean = true;\n" +
+    "  @Prop @Watch('onRuntimeEnabledChanged') controlObscured: boolean = false;\n" +
+    '  @Prop controlOpenRevision: number = 0;\n' +
+    '  @Prop dismissTemporaryRevision: number = 0;\n' +
+    '  @Prop temporaryLayerActive: boolean = false;\n' +
+    '  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};\n' +
+    '  /** Non-reactive telemetry path for system-back/close decisions mid-motion. */\n' +
+    '  onVisualSessionChange: (state: ReaderControlSessionState) => void =\n' +
+    '    (_state: ReaderControlSessionState): void => {};\n' +
+    '  onInputActivity: () => void = (): void => {};\n' +
+    '  onBackdropRegionsChange: (regions: ReaderControlBackdropRect[], ready: boolean) => void =\n' +
+    '    (_regions: ReaderControlBackdropRect[], _ready: boolean): void => {};\n' +
+    "  @Prop bookTitle: string = '';\n" +
+    "  @Prop chapterTitle: string = '';\n" +
+    "  @Prop sourceId: string = '';\n" +
+    "  @Prop sourceName: string = '';\n" +
+    '  @Prop progressPercent: number = 0;\n' +
+    '  @Prop totalChapters: number = 0;\n' +
+    "  @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();\n" +
+    '  @Prop tocEntries: LocalReadingTocEntry[] = [];\n' +
+    '  @Prop currentChapterIndex: number = -1;\n' +
+    '  @Prop chapterStartBookmarkCreationEnabled: boolean = false;\n' +
+    '  @Prop chapterDownloadEnabled: boolean = false;\n' +
+    '  @Prop bookmarkLoadFailed: boolean = false;\n' +
+    "  @Prop bookmarkLoadMessage: string = '';\n" +
+    '  onRetryBookmarkLoad: () => void = (): void => {};\n' +
+    "  @Prop searchQuery: string = '';\n" +
+    "  @Prop searchState: ReaderQuickSearchState = { kind: 'idle' };\n" +
+    '  @Prop brightnessPercent: number = 100;\n' +
+    '  @Prop brightnessAutomatic: boolean = true;\n' +
+    "  @Prop autoPageStatus: ReaderAutoPageStatus = 'stopped';\n" +
+    '  @Prop autoPageSpeedSeconds: number = 8;\n' +
+    '  @Prop autoPageTimerMinutes: number = 15;\n' +
+    '  @Prop autoPageTimerSeconds: number = 0;\n' +
+    '  @Prop autoPageTimerSummaryT'... 67287 more characters,
+  expected: /this\.dockRect = \{ x: this\.rootScreenX \+ this\.dockLeft\(\)/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

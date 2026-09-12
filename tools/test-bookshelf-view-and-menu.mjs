@@ -37,52 +37,28 @@ assert.match(setViewModeBody[1],
 assert.match(setViewModeBody[1],
   /this\.startViewSwitch\(mode\)/,
   'the animated switch must enter the Figma keyframe coordinator');
-assert.match(shelf, /bookshelfViewCoverMoveAnimation/);
-assert.match(shelf, /bookshelfViewCoverScaleAnimation/);
-assert.equal((shelf.match(/\.keyframeAnimateTo\(/g) ?? []).length, 7,
-  'header, local content, and both cover layers need independent Figma timelines');
-assert.doesNotMatch(shelf, /\.geometryTransition\(/,
-  'the one-curve geometryTransition approximation must not return');
-assert.doesNotMatch(shelf, /titleGeometryId|coverGeometryId/,
-  'text is a local handoff in Figma and covers stay in one persistent actor');
-assert.match(shelf,
-  /LazyForEach\(this\.rowDataSource[\s\S]*?this\.projectionRow\(row, isTablet, rowIndex\)/,
-  'cover and list projections must share one stable row tree');
-assert.doesNotMatch(shelf,
-  /if \(this\.viewMode === 'list'\) \{[\s\S]{0,500}?LazyForEach/,
-  'view switching must not replace the rendered collection subtree');
-assert.match(shelf,
-  /private projectionBookCard[\s\S]*?this\.projectionBookCover\(book, isTablet, index\)[\s\S]*?\.translate\([\s\S]*?\.animation\(bookshelfViewCoverMoveAnimation\(index\)\)/,
-  'the persistent card actor must own the Figma translation track');
-assert.match(shelf,
-  /private projectionBookCover[\s\S]*?\.scale\([\s\S]*?\.translate\([\s\S]*?\.animation\(bookshelfViewCoverScaleAnimation\(index\)\)/,
-  'the persistent cover child must own the separate Figma scale track');
-assert.equal((shelf.match(/this\.projectionBookCover\(book, isTablet, index\)/g) ?? []).length, 1,
-  'each book must render exactly one shared cover actor across both modes');
-assert.match(shelf,
-  /this\.viewSwitchCommitTimer = setTimeout\([\s\S]*?this\.viewMotion\.layoutCommitMs/,
-  'the old layout must hold until the Figma 15% boundary');
-assert.match(shelf,
-  /\.opacity\(this\.viewSwitchHeaderOpacity\)/,
-  'the SectionHeader must use its own outgoing/incoming handoff');
-assert.match(shelf,
-  /\.opacity\(this\.viewSwitchGridContentOpacity\)[\s\S]*?\.opacity\(this\.viewSwitchListContentOpacity\)/,
-  'grid and list local content must cross-fade independently of the shared cover');
-assert.match(shelf,
-  /this\.projectionBookCoverLayer\(book, isTablet, false\)[\s\S]*?this\.projectionBookCoverLayer\(book, isTablet, true\)/,
-  'the destination and shared morph covers must remain separate Figma actors');
-assert.match(shelf,
-  /private runViewSwitchDestinationCoverTimeline[\s\S]*?private runViewSwitchMorphCoverTimeline/,
-  'both Figma cover-opacity tracks must be coordinated explicitly');
-assert.match(shelf,
-  /private runViewSwitchOutgoingContentTimeline[\s\S]*?this\.viewMotion\.layoutCommitMs[\s\S]*?this\.viewMotion\.outgoingDurationMs/,
-  'outgoing local text must stay mounted through the Figma 15% -> 27% fade');
-assert.match(shelf,
-  /private commitViewSwitchTarget[\s\S]*?this\.viewMode = this\.pendingViewMode/,
-  'the layout commit must update the geometry of the already-mounted actors');
-assert.doesNotMatch(shelf,
-  /FrameCallback|postFrameCallback|viewSwitchSettled|movingBookCover/,
-  'the failed inserted-target/frame-hop animation path must not return');
+// One reversible clock samples the same authored local tracks. There must
+// not be residual implicit animations overriding sampled geometry in reduced mode.
+assert.match(shelf, /new ReversibleMotionTimeline\(this\.viewMotion\.totalMs\)/);
+assert.match(shelf, /this\.viewTimeline\.retarget\(mode === this\.viewSwitchDestinationMode/);
+assert.doesNotMatch(shelf, /\.animation\(|\.keyframeAnimateTo\(|\.geometryTransition\(/);
+assert.match(shelf, /LazyForEach\(this\.rowDataSource[\s\S]*?this\.projectionRow\(row, isTablet, rowIndex\)/);
+assert.doesNotMatch(shelf, /if \(this\.viewMode === 'list'\) \{[\s\S]{0,500}?LazyForEach/);
+assert.match(shelf, /projectionBookTranslateX\(columnIndex, isTablet, index\)/);
+assert.match(shelf, /projectionCoverScale\(isTablet, index\)/);
+assert.equal((shelf.match(/this\.projectionBookCover\(book, isTablet, index\)/g) ?? []).length, 1);
+assert.match(shelf, /\.opacity\(this\.viewSwitchHeaderOpacity\)/);
+assert.match(shelf, /\.opacity\(this\.viewSwitchGridContentOpacity\)[\s\S]*?\.opacity\(this\.viewSwitchListContentOpacity\)/);
+assert.match(shelf, /this\.projectionBookCoverLayer\(book, isTablet, false, index\)[\s\S]*?this\.projectionBookCoverLayer\(book, isTablet, true, index\)/);
+const coverActorBody = shelf.match(/private projectionBookCover\([^\n]*\) \{([\s\S]*?)\n  \}/)?.[1];
+assert.ok(coverActorBody, 'the two cover images must have one visual-only wrapper');
+assert.match(coverActorBody, /\.enabled\(false\)\s*\.hitTestBehavior\(HitTestMode\.None\)/,
+  'cover descendants must not intercept the enclosing card click or long press');
+assert.doesNotMatch(coverActorBody, /\.gesture\(|\.onClick\(/,
+  'cover copies must not introduce duplicate business gesture owners');
+assert.match(shelf, /motionSegment\(t, m\.layoutCommitMs, m\.outgoingDurationMs, content\)/);
+assert.match(shelf, /this\.viewMode = t < m\.layoutCommitMs \? this\.viewSwitchSourceMode : this\.viewSwitchDestinationMode/);
+assert.match(shelf, /viewSwitchToken \+= 1/);
 assert.match(motionSpec, /totalMs: 1000/);
 assert.match(motionSpec, /layoutCommitMs: 150/);
 assert.match(motionSpec, /outgoingDurationMs: 120/);
@@ -103,7 +79,7 @@ assert.match(shelf,
   'the cover y endpoint must derive from the card/list height pair; Figma authors the morph dy in screen space, not card-local space');
 assert.doesNotMatch(shelf, /return -21\.727/,
   'the Figma screen-space morph dy must never be hardcoded as card-local compensation (VM-verified 15.36vp list-thumbnail regression)');
-assert.match(shelf, /return 0\.495/,
+assert.match(shelf, /: \.495/,
   'the phone cover scale endpoint must match the Figma shared-cover track');
 assert.match(motionSpec, /cubicBezierCurve\(0\.2, 0, 0, 1\)/,
   'cover translation must preserve the Figma curve');
@@ -309,3 +285,6 @@ assert.match(directory,
   'the current/total counter must keep one intrinsic-width line');
 
 console.log('bookshelf view and directory footer contracts: PASS');
+
+assert.doesNotMatch(actionSheet, /编辑分组|onEditGroup/, 'group editing is deferred and must not be exposed');
+assert.match(actionSheet, /const BOOK_ACTION_SHEET_HEIGHT = 224;/);

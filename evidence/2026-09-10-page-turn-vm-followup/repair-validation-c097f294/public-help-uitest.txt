@@ -1,0 +1,35 @@
+usage: uitest <command> [options]                                                                          
+help                                                                                    print help messages
+screenCap                                                                        capture the current screen
+  -p <savePath>                                                                      specifies the savePath
+  -d <displayId>                                                                       specifies the screen
+dumpLayout                                                               get the current layout information
+  -p <savePath>                                                                      specifies the savePath
+  -i                                                                     not merge windows and filter nodes
+  -a                                                                                include font attributes
+  -b <bundleName>                                             specifies the bundleName of the target window
+  -w <windowId>                                                specifies the window id of the target window
+  -m <true/false>          whether merge windows, true means to merge, set it true when not use this option
+  -d <displayId>                                           specifies the locate screen of the target window
+  -e <attributeName>                                               extend by adding the specified attribute
+start-daemon <token>                                                                 start the test process
+uiRecord                                                                            recording Ui Operations
+  record                                                           Write Ui event information into csv file
+    -W <true/false>                                     whether save widget information, true means to save
+                                                                       set it true when not use this option
+    -l                                             Save the current layout information after each operation
+    -c <true/false>              whether print the Ui event information to the console, true means to print
+                                                                       set it true when not use this option
+  read                                                                    print file content to the console
+uiInput                                                                     inject Ui simulation operations
+  help                                                                                  print uiInput usage
+  dircFling  <direction> [velocity] [stepLength]      direction ranges from 0,1,2,3 (left, right, up, down)
+  click/doubleClick/longClick <x> <y>                                       click on the target coordinates
+  swipe/drag <from_x> <from_y> <to_x> <to_y> [velocity]      velocity ranges from 200 to 40000, default 600
+  fling <from_x> <from_y> <to_x> <to_y> [velocity] [stepLength]   velocity ranges from 200 to 40000, default 600
+  keyEvent <keyID/Back/Home/Power>                                                          inject keyEvent
+  keyEvent <keyID_0> <keyID_1> [keyID_2]                                           keyID_2 default to None 
+  inputText <x> <y> <text>                                         inputText at the target coordinate point
+  text <text>                                           input text at the location where is already focused
+--version                                                                        print current tool version
+

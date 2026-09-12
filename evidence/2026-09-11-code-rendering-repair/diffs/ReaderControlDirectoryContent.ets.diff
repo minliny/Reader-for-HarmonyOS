@@ -1,0 +1,82 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets
++++ current/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets
+@@ -92,14 +92,19 @@
+   private leadingKey: string | undefined = undefined;
+   private leadingFraction: number = 0;
+   private correctionQueued: boolean = false;
++  private cachedPaint: ReaderControlMotionPresentation | undefined = undefined;
++  private paintProgress: number = -1;
+ 
+   aboutToAppear(): void { this.mounted = true; this.lifecycle += 1; this.openList(); }
+-  aboutToDisappear(): void { this.mounted = false; this.lifecycle += 1; this.positionQueued = false; }
++  aboutToDisappear(): void {
++    this.mounted = false; this.lifecycle += 1; this.positionQueued = false; this.correctionQueued = false;
++  }
+ 
+   private openList(): void {
+     if (!this.mounted) return;
+     this.placement.open(`${this.sessionKey}:${this.tab}`);
+     this.leadingRow = undefined;
++    this.leadingKey = undefined;
+     this.previousRowHeight = this.rowHeight();
+     this.refreshData();
+   }
+@@ -115,6 +120,7 @@
+     this.dataSource.replace(next.rows);
+     this.snapshot = next;
+     this.queuePosition();
++    if (this.leadingRow !== undefined) this.queueLeadingCorrection();
+   }
+ 
+   private queuePosition(): void {
+@@ -140,16 +146,34 @@
+     if (nextHeight === this.previousRowHeight) return;
+     if (this.leadingRow === undefined) this.captureLeadingRow();
+     this.previousRowHeight = nextHeight;
++    this.queueLeadingCorrection();
++  }
++
++  private queueLeadingCorrection(): void {
++    // With the first row at zero, changing row height cannot change its anchor.
++    if (!this.mounted || this.leadingRow === undefined || this.leadingRow === 0) return;
+     if (this.correctionQueued) return;
+     this.correctionQueued = true;
+     const lifecycle = this.lifecycle;
+     this.getUIContext().postFrameCallback(new ControlDirectoryFrame((): void => {
++      if (!this.mounted || lifecycle !== this.lifecycle) return;
+       this.correctionQueued = false;
+-      if (!this.mounted || lifecycle !== this.lifecycle || this.leadingRow === undefined) return;
++      if (this.leadingRow === undefined) return;
+       try {
+         const index = Math.floor(this.leadingRow);
+-        this.scroller.scrollToIndex(index, false, ScrollAlign.START,
+-          { extraOffset: LengthMetrics.vp(this.leadingFraction * this.rowHeight()) });
++        const height = this.rowHeight();
++        const offset = this.leadingFraction * height;
++        let needsCorrection = true;
++        try {
++          const rect = this.scroller.getItemRect(index);
++          const tolerance = 0.5 / this.getUIContext().vp2px(1);
++          needsCorrection = !Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0 ||
++            Math.abs(rect.height - height) > tolerance || Math.abs(rect.y + offset) > tolerance;
++        } catch (_error) { /* An unmeasured/offscreen row still needs the original anchor correction. */ }
++        if (needsCorrection) {
++          this.scroller.scrollToIndex(index, false, ScrollAlign.START,
++            { extraOffset: LengthMetrics.vp(offset) });
++        }
+       } catch (_error) { /* The next mounted frame can restore the anchor. */ }
+       if (this.interactionEnabled && (this.progress === 0 || this.progress === 1)) {
+         this.leadingRow = undefined; this.leadingKey = undefined;
+@@ -173,7 +197,11 @@
+   }
+ 
+   private presentation(): ReaderControlMotionPresentation {
+-    return sampleReaderControlMotionPresentation(this.progress);
++    if (this.cachedPaint === undefined || this.paintProgress !== this.progress) {
++      this.paintProgress = this.progress;
++      this.cachedPaint = sampleReaderControlMotionPresentation(this.progress);
++    }
++    return this.cachedPaint;
+   }
+   private onInputChanged(): void {
+     if (!this.mounted || this.snapshot.rows.length === 0) return;

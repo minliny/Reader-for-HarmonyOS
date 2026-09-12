@@ -15,11 +15,11 @@ const readingExperience = read('entry/src/main/ets/features/reading/LocalReading
 const pageSurface = read('entry/src/main/ets/features/reading/ReadingSurface.ets');
 const continuousStage = read('entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets');
 
-assert.match(registry, /stagedPath: string;[\s\S]*assetKind: 'epub' \| 'none';/,
+assert.match(registry, /stagedPath: string;[\s\S]*assetKind: 'source' \| 'epub' \| 'none';/,
   'the picker stage must remain a Host-only input until import commits');
 assert.match(registry, /async commitLocalBookInput\(/);
 assert.match(registry, /reader-import\/books/);
-assert.match(registry, /const finalPath = `\$\{this\.localBookAssetDirectory\(\)\}\/\$\{hash\}\.epub`/,
+assert.match(registry, /const finalPath = `\$\{this\.localBookAssetDirectory\(\)\}\/\$\{hash\}\.source`/,
   'a committed EPUB must retain its original archive outside the Core snapshot');
 assert.match(registry, /async rollbackLocalBookAsset\([\s\S]*commit\.created/,
   'a failed new import must roll back only the Host asset it created');
@@ -46,8 +46,8 @@ assert.match(importGateway, /rollbackLocalBookAsset\(assetCommit\)/);
 assert.match(importGateway, /discardLocalBookInput\(selection\.input\)/);
 
 assert.match(resourceHost, /reader-local-epub:\/\//);
-assert.match(resourceHost, /readLocalEpubEntry\(archivePath, locator\.archivePath, MAX_READING_IMAGE_BYTES\)/,
-  'Rust Core must read only the requested bounded ZIP entry');
+assert.match(resourceHost, /readLocalEpubEntryAsync\([\s\S]*locator\.archivePath[\s\S]*MAX_READING_IMAGE_BYTES/,
+  'Rust Core must asynchronously read only the requested bounded ZIP entry');
 assert.doesNotMatch(resourceHost, /@ohos\.zlib|decompressFile|getOriginalSize|cacheDir/,
   'the Host must not expand a whole EPUB or retain an extracted copy');
 assert.match(resourceHost, /segment === '\.' \|\| segment === '\.\.'/,
@@ -66,7 +66,7 @@ assert.doesNotMatch(imageHost, /dataUri: `data:|encodeToStringSync\(bytes/,
 assert.match(chapterWindow, /fileUri: string/);
 assert.doesNotMatch(chapterWindow, /dataUri/,
   'the bounded chapter window must not retain Base64 image payloads');
-assert.match(runtimeOwner, /sourceId === 'local' && imageUrl\.startsWith\('reader-local-epub:\/\/'\)/);
+assert.match(runtimeOwner, /sourceId === 'local' && \(imageUrl\.startsWith\('reader-local-epub:\/\/'\) \|\| imageUrl\.startsWith\('reader-local-mobi:\/\/'\)\)/);
 assert.match(runtimeOwner, /localEpubResourceHost\.load\(imageUrl, isCurrent\)/,
   'the runtime owner must propagate cancellation into local EPUB resource decoding');
 assert.match(documentProjection, /kind === 'image'[\s\S]*projectedText !== '\\uFFFC'/,

@@ -1,0 +1,26 @@
+--- before/tools/lib/reader-control-builder-probe.mjs
++++ after/tools/lib/reader-control-builder-probe.mjs
+@@ -54,17 +54,20 @@
+   const output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
+   assert.match(output, /observeComponentCreation2/, 'exercise real SDK observer closures');
+   let activeOwner, activeId;
+-  const native = name => new Proxy({ name }, { get(target, property) {
++  const native = name => { const instance = new Proxy({ name }, { get(target, property) {
+     if (property === 'name') return name;
+     return (...args) => {
+       if (property === 'pop' || activeOwner === undefined) return;
+       const record = activeOwner.nodes.get(activeId);
++      activeOwner.attributeCalls.push({ id: activeId, property, args });
++      if (property === 'attributeModifier') { args[0].applyNormalAttribute(instance); return instance; }
+       if (property === 'create') record.type = name;
+       record[property] = args.length === 1 ? args[0] : args;
++      return instance;
+     };
+-  } });
++  } }); return instance; };
+   class ViewPU {
+-    constructor() { this.observers = []; this.nodes = new Map(); this.children = new Map(); this.keys = new Map(); }
++    constructor() { this.observers = []; this.nodes = new Map(); this.children = new Map(); this.keys = new Map(); this.attributeCalls = []; }
+     finalizeConstruction() {}
+     observeComponentCreation2(callback, component) {
+       const id = this.observers.length;

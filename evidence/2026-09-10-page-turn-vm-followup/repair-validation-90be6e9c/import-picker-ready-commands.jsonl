@@ -1,0 +1,4 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.020456833, "elapsed": 0.026347333, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.046933458, "elapsed": 0.037173625, "code": 0, "output": "2458\n"}
+{"args": ["shell", "uitest", "dumpLayout", "-p", "/data/local/tmp/reader-control-import-picker-ready-1.json"], "start": 0.084265916, "elapsed": 0.727143459, "code": 0, "output": "DumpLayout saved to:/data/local/tmp/reader-control-import-picker-ready-1.json\n"}
+{"args": ["file", "recv", "/data/local/tmp/reader-control-import-picker-ready-1.json", "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-90be6e9c/reader-control-import-picker-ready-1.json"], "start": 0.8121765, "elapsed": 0.031649833000000016, "code": 0, "output": "FileTransfer finish, Size:142084, File count = 1, time:8ms rate:17760.50kB/s\n"}

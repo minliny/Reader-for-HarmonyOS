@@ -46,10 +46,25 @@ assert.doesNotMatch(orchestrator, /gateway\.debugSource/,
   'product debug must not replay an empty response map after the real check');
 assert.match(orchestrator, /setSelectedEnabled/);
 assert.match(orchestrator, /checkSelected/);
+assert.match(orchestrator, /SourceBatchCheckProgress/);
+assert.match(orchestrator, /currentSourceName/);
+assert.match(orchestrator, /progress = progress\.startSource/);
+assert.match(orchestrator, /progress = progress\.finish/);
+assert.match(orchestrator, /batchCheck: progress\.snapshot\(\)/);
+assert.match(orchestrator, /stopCheckSelected\(\)/);
+assert.match(orchestrator, /batchCheckCancelRequested/);
+assert.match(orchestrator, /this\.batchCheckCancelRequested[\s\S]*break/);
+assert.match(orchestrator, /catch \(error\)[\s\S]*progress = progress\.finish\(\{[\s\S]*state: 'error'/,
+  'one source execution error must become a distinct item result instead of aborting the batch');
+assert.match(orchestrator, /debugLogs: outcome\.logs/,
+  'batch checking must retain only the latest source detailed evidence');
+assert.doesNotMatch(orchestrator, /logs\.push\(\.\.\.outcome\.logs\)/,
+  'batch checking must not accumulate every raw L1-L5 and Host log');
 assert.match(orchestrator, /deleteSelected/);
 assert.match(orchestrator, /open\(seedSources: BookSource\[\] = \[\]\)/);
 assert.match(orchestrator, /this\.snapshot\.sources = seedSources\.slice\(\)/);
 assert.match(orchestrator, /setSelection\(sourceIds: string\[\]\)/);
+assert.match(orchestrator, /selectionRevision: source\.selectionRevision/);
 assert.match(orchestrator, /selectedSourceIds: source\.selectedSourceIds\.slice\(\)/);
 assert.match(orchestrator, /已选择 \$\{selection\.length\} 个书源/);
 assert.doesNotMatch(orchestrator, /RuleSubscription|rule-sub|putSubscription|deleteSubscription/);
@@ -70,12 +85,37 @@ assert.match(page, /onDeleteSelected/);
 assert.match(page, /onSelectAll/);
 assert.match(page, /onClearSelection/);
 assert.match(page, /onToggleSelection/);
-assert.match(page, /batchCard\(this\.snapshot\)/);
-assert.match(page, /ForEach\(\[this\.snapshot\.statusMessage\]/);
-assert.match(page, /source-tools-cards-\$\{renderKey\}/);
-assert.match(page, /private batchCard\(snapshot: SourceToolsSnapshot\)/);
-assert.match(page, /批量管理（已选 \$\{snapshot\.selectedSourceCount\}\/\$\{snapshot\.sources\.length\}）/);
-assert.match(page, /private sourceCard\(snapshot: SourceToolsSnapshot\)/);
+assert.match(page, /batchCard\(\)/);
+assert.match(page, /ForEach\(\[this\.batchControlsRenderKey\(\)\]/,
+  'V1 builder controls must remount when busy/selection changes so action guards do not stay stale');
+assert.match(page, /ForEach\(\[this\.batchProgressRenderKey\(\)\]/,
+  'V1 batch progress must remount at each source transition so counters remain live');
+assert.doesNotMatch(page, /ForEach\(\[this\.snapshot\.statusMessage\]/,
+  'changing progress text must not remount the complete source list');
+assert.match(page, /class SourceToolListDataSource implements IDataSource/);
+assert.match(page, /class SourceCheckResultDataSource implements IDataSource/);
+assert.match(page, /class SourceDebugLogDataSource implements IDataSource/);
+assert.match(page, /@Prop @Watch\('onSnapshotChanged'\) snapshot/);
+assert.match(page, /LazyForEach\(this\.sourceDataSource/);
+assert.doesNotMatch(page, /source-tools-list-\$\{renderKey\}/,
+  'selection/progress changes must update lazy data instead of remounting the whole source list');
+assert.doesNotMatch(page, /\.virtualScroll\(/,
+  'Repeat virtualScroll is not legal inside this @Component');
+assert.match(page, /private batchCard\(\)/);
+assert.match(page,
+  /批量管理（已选 \$\{this\.snapshot\.selectedSourceCount\}\/\$\{this\.snapshot\.sources\.length\}）/);
+assert.match(page, /private batchCheckCard\(\)/);
+assert.match(page, /检测进度 \$\{this\.snapshot\.batchCheck\.completed\}/);
+assert.match(page, /可用 \$\{this\.snapshot\.batchCheck\.passed\}/);
+assert.match(page, /不可用 \$\{this\.snapshot\.batchCheck\.failed\}/);
+assert.match(page, /检测错误 \$\{this\.snapshot\.batchCheck\.errors\}/);
+assert.match(page, /this\.snapshot\.batchCheck\.total - this\.snapshot\.batchCheck\.completed/);
+assert.match(page, /实时结果（最新在前）/);
+assert.match(page, /LazyForEach\(this\.batchResultDataSource/);
+assert.match(page, /停止检测/);
+assert.match(page, /onStopCheck/);
+assert.match(page, /log\.sourceId[\s\S]*log\.traceId[\s\S]*log\.requestId/);
+assert.match(page, /private sourceCard\(\)/);
 assert.match(page, /private smallButton\(label: string, enabled: boolean/);
 assert.match(page, /if \(enabled\)[\s\S]*action\(\)/);
 assert.doesNotMatch(page, /private takeSelection/);
@@ -90,7 +130,12 @@ assert.match(index, /'sourceTools'/);
 assert.match(index, /SourceToolsPage\(/);
 assert.match(index, /onSelectAll: \(\): void => this\.selectAllSourceTools\(\)/);
 assert.match(index, /onToggleSelection: \(sourceId: string\): void => this\.toggleSourceToolsSelection\(sourceId\)/);
+assert.match(index, /onStopCheck: \(\): void => this\.getSourceToolsOrchestrator\(\)\.stopCheckSelected\(\)/);
 assert.match(index, /private consumeSourceToolsSelection/);
+assert.match(index, /private checkSelectedSources\(sourceIds: string\[\]\): void \{[^}]*checkSelected\(sourceIds\);[^}]*\}/);
+assert.doesNotMatch(index,
+  /private checkSelectedSources\(sourceIds: string\[\]\): void \{[^}]*consumeSourceToolsSelection/,
+  'starting a check must preserve the visible selected-source scope');
 assert.match(index, /getSourceToolsOrchestrator\(\)\.exportAll\(\)/);
 assert.match(index, /requestSourceDelete\(sourceIds\)/);
 assert.match(index, /getSourceToolsOrchestrator\(\)\.open\(this\.sourceSources\)/);

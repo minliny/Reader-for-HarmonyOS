@@ -1,0 +1,28 @@
+{
+  "fonts": [
+    {
+      "family": "Noto Sans SC",
+      "style": "Regular",
+      "fontId": "NotoSansSC-VF_2",
+      "source": "GOOGLE"
+    },
+    {
+      "family": "Noto Sans SC",
+      "style": "Bold",
+      "fontId": "NotoSansSC-VF_2",
+      "source": "GOOGLE"
+    },
+    {
+      "family": "Noto Sans SC",
+      "style": "Medium",
+      "fontId": "NotoSansSC-VF_2",
+      "source": "GOOGLE"
+    },
+    {
+      "family": "Noto Serif SC",
+      "style": "Regular",
+      "fontId": "NotoSerifSC-VF_3",
+      "source": "GOOGLE"
+    }
+  ]
+}

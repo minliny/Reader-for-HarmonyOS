@@ -1,0 +1,49 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets
++++ current/entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets
+@@ -1,5 +1,5 @@
+ import { PathShape } from '@ohos.arkui.shape';
+-import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
++import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionClipRects, readerControlMotionClipPath,
+   type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
+ import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
+   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
+@@ -101,8 +101,14 @@
+   }
+ 
+   private fullInput(): boolean { return this.interactionEnabled && this.p() === 1; }
++  private cachedPaint: ReaderControlMotionPresentation | undefined = undefined;
++  private paintProgress: number = -1;
+   private presentation(): ReaderControlMotionPresentation {
+-    return sampleReaderControlMotionPresentation(this.motionProgress);
++    if (this.cachedPaint === undefined || this.paintProgress !== this.motionProgress) {
++      this.paintProgress = this.motionProgress;
++      this.cachedPaint = sampleReaderControlMotionPresentation(this.motionProgress);
++    }
++    return this.cachedPaint;
+   }
+   private sharedPaintRect(kind: 'control' | 'speed', p: number): ReaderControlMotionClipRect {
+     const f = sampleReaderControlAutoPage(p, this.availableWidth);
+@@ -113,12 +119,18 @@
+       { x: f.content.x + f.details.x + f.speed.x, y: f.content.y + f.details.y + f.speed.y,
+         width: f.speed.width, height: 64 };
+   }
++  private pathCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
++    (path: string): PathShape => new PathShape().commands(path));
+   private sharedClip(kind: 'control' | 'speed'): PathShape {
+-    const rects = readerControlMotionClipRects(this.p(), this.sharedPaintRect(kind, 1),
+-      this.sharedPaintRect(kind, this.p()), this.sharedPaintRect(kind, 0),
+-      this.fullViewportHeight, this.scrollMotion.fullScrollOffset);
+-    if (kind === 'control') for (const rect of rects) rect.y -= 5;
+-    return new PathShape().commands(readerControlMotionClipPath(rects, this.getUIContext().vp2px(1)));
++    const density = this.getUIContext().vp2px(1);
++    return this.pathCache.sample(kind, [this.motionProgress, this.availableWidth, this.fullViewportHeight,
++      this.scrollMotion.fullScrollOffset, density], (): string => {
++      const rects = readerControlMotionClipRects(this.p(), this.sharedPaintRect(kind, 1),
++        this.sharedPaintRect(kind, this.p()), this.sharedPaintRect(kind, 0),
++        this.fullViewportHeight, this.scrollMotion.fullScrollOffset);
++      if (kind === 'control') for (const rect of rects) rect.y -= 5;
++      return readerControlMotionClipPath(rects, density);
++    });
+   }
+   private sharedInput(): boolean { return this.interactionEnabled && (this.p() === 0 || this.p() === 1); }
+   private contentWidth(): number { return this.frame().content.width; }

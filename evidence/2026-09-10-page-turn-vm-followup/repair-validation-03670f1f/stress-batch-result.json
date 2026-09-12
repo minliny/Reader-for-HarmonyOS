@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "turns": 800,
+  "directionsEachPerMode": 100,
+  "modes": 4,
+  "scope": "10-page chapter sweeps with per-page ordinal and text hash; not rapid, not 100 distinct successive pages",
+  "finishedAt": "2026-09-11T04:26:45.079731+00:00"
+}

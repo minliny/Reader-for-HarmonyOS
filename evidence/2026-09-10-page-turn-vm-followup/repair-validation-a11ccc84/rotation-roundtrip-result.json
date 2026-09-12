@@ -1,0 +1,58 @@
+{
+  "status": "PASS",
+  "appPid": 2181,
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "196b32b323c4f834c3ad15cbcdc7aa6f990c9bc4a93553939217591e1d2ebc78",
+    "chapter": 150,
+    "ordinal": 4,
+    "total": 4,
+    "start": 801,
+    "end": 1050,
+    "bodyLength": 249,
+    "first": [
+      "暂停后又继续，段落边界和换行都应",
+      "保持原来的顺序。这里的编号是测试"
+    ],
+    "footer": "第 4 / 4 页"
+  },
+  "landscape": {
+    "slot": "reader-page-slot-a",
+    "sha256": "4be1f8fc9c25849eb372f206b0d7aacdcc8d754fa41b58385047e45631d7c47a",
+    "chapter": 150,
+    "ordinal": 5,
+    "total": 7,
+    "start": 801,
+    "end": 987,
+    "bodyLength": 186,
+    "first": [
+      "暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。",
+      "【章150段09】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进"
+    ],
+    "footer": "第 5 / 7 页"
+  },
+  "restored": {
+    "slot": "reader-page-slot-a",
+    "sha256": "196b32b323c4f834c3ad15cbcdc7aa6f990c9bc4a93553939217591e1d2ebc78",
+    "chapter": 150,
+    "ordinal": 4,
+    "total": 4,
+    "start": 801,
+    "end": 1050,
+    "bodyLength": 249,
+    "first": [
+      "暂停后又继续，段落边界和换行都应",
+      "保持原来的顺序。这里的编号是测试"
+    ],
+    "footer": "第 4 / 4 页"
+  },
+  "landscapeSize": [
+    2832,
+    1280
+  ],
+  "restoredSize": [
+    1280,
+    2832
+  ],
+  "scope": "same-process portrait-followSystem toforcedlandscape andback, canonicaloldpageanchorcontained andexactoriginalbodyrestored; settings restoredfollowSystem; notmidgestureforcedSurfacefailure"
+}

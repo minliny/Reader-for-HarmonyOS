@@ -1,0 +1,5 @@
+production flat settle/regrab continuity and transaction boundary: PASS
+production simulation mode-switch teardown and capability recovery: PASS
+queued tap cue and physical velocity settlement use independent durations: PASS
+(node:96409) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

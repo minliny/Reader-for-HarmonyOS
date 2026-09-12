@@ -1,0 +1,18 @@
+{
+  "node": "/opt/homebrew/bin/node",
+  "cxx": "/usr/bin/c++",
+  "harmony": {
+    "head": "35f2f99a8d635615475fde75120bf8629f944565",
+    "dirtyPaths": 386
+  },
+  "core": {
+    "head": "6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2",
+    "dirtyPaths": 58
+  },
+  "targetInventory": {
+    "status": "TIMEOUT",
+    "seconds": 5,
+    "retry": false,
+    "scope": "read-only enumeration; no app operations"
+  }
+}

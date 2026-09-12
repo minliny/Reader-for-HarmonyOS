@@ -1,0 +1,40 @@
+{
+  "at": "2026-09-09T17:17:31.317997+00:00",
+  "target": "127.0.0.1:5555",
+  "instance": "Mate 80 Pro",
+  "instancePath": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+  "hostPid": 59198,
+  "steps": [
+    {
+      "name": "boot",
+      "code": 0,
+      "bytes": 6
+    },
+    {
+      "name": "processes",
+      "code": 0,
+      "bytes": 7124
+    },
+    {
+      "name": "recentSystemLog",
+      "code": 0,
+      "bytes": 92
+    }
+  ],
+  "correctedSystemLog": {
+    "at": "2026-09-09T17:18:57.579232+00:00",
+    "path": "vm-expanded-system-log-valid.log",
+    "lines": 1,
+    "gateFailures": [],
+    "sceneBoardPid": 2458,
+    "state": "UNRESOLVED"
+  },
+  "systemLogGate": {
+    "at": "2026-09-09T17:19:41.863523+00:00",
+    "path": "vm-expanded-system-log-buffer.log",
+    "code": 0,
+    "lines": 6353,
+    "gateFailures": [],
+    "state": "READY"
+  }
+}

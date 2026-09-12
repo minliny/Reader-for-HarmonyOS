@@ -1,0 +1,6 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.02724125, "elapsed": 0.023972082999999998, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.05135475, "elapsed": 0.026468625000000003, "code": 0, "output": "2458\n"}
+{"args": ["shell", "ls", "/storage/media/100/local/files/Docs/Download"], "start": 0.077961416, "elapsed": 0.025948792, "code": 0, "output": "ReaderIndentCRLF20260910.txt\nReaderIndentParagraph20260910.epub\n"}
+{"args": ["shell", "uitest", "uiInput", "click", "1133", "248"], "start": 0.104049791, "elapsed": 0.187757375, "code": 0, "output": "No Error\n"}
+{"args": ["shell", "uitest", "dumpLayout", "-p", "/data/local/tmp/reader-control-import-stage-1.json"], "start": 0.292142, "elapsed": 0.730552041, "code": 0, "output": "DumpLayout saved to:/data/local/tmp/reader-control-import-stage-1.json\n"}
+{"args": ["file", "recv", "/data/local/tmp/reader-control-import-stage-1.json", "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-90be6e9c/reader-control-import-stage-1.json"], "start": 1.023076625, "elapsed": 0.03582200000000002, "code": 0, "output": "FileTransfer finish, Size:115336, File count = 1, time:8ms rate:14417.00kB/s\n"}

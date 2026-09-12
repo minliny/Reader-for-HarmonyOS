@@ -1,0 +1,11 @@
+{
+  "source-snapshot.json": [
+    "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+    "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets"
+  ],
+  "controller-snapshot.json": [
+    "tools/test-reader-continuous-input-runtime.mjs",
+    "tools/test-reader-page-preparation-runtime.mjs",
+    "tools/test-reader-continuous-reading.mjs"
+  ]
+}

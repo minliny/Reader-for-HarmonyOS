@@ -1,0 +1,50 @@
+09-11 19:09:43.328  9975  9975 I A05244/Reader: PAGETURN_PERF style=none path=prepared dir=next outcome=committed totalMs=21 startedAtMs=415388237 completedAtMs=415388258
+09-11 19:09:44.671  9975  9975 I A05244/Reader: PAGETURN_PERF style=none path=prepared dir=previous outcome=committed totalMs=21 startedAtMs=415389580 completedAtMs=415389601
+09-11 19:09:46.529  9975  9975 I A05244/Reader: PAGETURN_PERF style=none path=prepared dir=next outcome=committed totalMs=12 startedAtMs=415391447 completedAtMs=415391459
+09-11 19:09:49.482  9975  9975 I A05244/Reader: PAGETURN_PERF style=none path=prepared dir=previous outcome=committed totalMs=17 startedAtMs=415394395 completedAtMs=415394412
+09-11 19:09:59.623  9975  9975 I A05244/Reader: PAGETURN_PERF style=slide path=prepared dir=next outcome=committed totalMs=339 startedAtMs=415404215 completedAtMs=415404554
+09-11 19:10:00.983  9975  9975 I A05244/Reader: PAGETURN_PERF style=slide path=prepared dir=previous outcome=committed totalMs=346 startedAtMs=415405567 completedAtMs=415405913
+09-11 19:10:02.827  9975  9975 I A05244/Reader: PAGETURN_PERF style=slide path=prepared dir=next outcome=committed totalMs=340 startedAtMs=415407417 completedAtMs=415407757
+09-11 19:10:05.796  9975  9975 I A05244/Reader: PAGETURN_PERF style=slide path=prepared dir=previous outcome=committed totalMs=346 startedAtMs=415410380 completedAtMs=415410726
+09-11 19:10:15.594  9975  9975 I A05244/Reader: PAGETURN_PERF style=cover path=prepared dir=next outcome=committed totalMs=346 startedAtMs=415420178 completedAtMs=415420524
+09-11 19:10:16.923  9975  9975 I A05244/Reader: PAGETURN_PERF style=cover path=prepared dir=previous outcome=committed totalMs=336 startedAtMs=415421517 completedAtMs=415421853
+09-11 19:10:18.766  9975  9975 I A05244/Reader: PAGETURN_PERF style=cover path=prepared dir=next outcome=committed totalMs=346 startedAtMs=415423350 completedAtMs=415423696
+09-11 19:10:21.719  9975  9975 I A05244/Reader: PAGETURN_PERF style=cover path=prepared dir=previous outcome=committed totalMs=348 startedAtMs=415426301 completedAtMs=415426649
+09-11 19:10:31.515  9975 13092 I A05244/BookTurn: frames=20 dur=336ms gap p50=16.46 p95=33.69 max=37.34 | wake p50=4.23 p95=13.90 max=14.88 | solve max=0.74 | draw p50=16.46 p95=27.98 max=35.21 ms
+09-11 19:10:31.660  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=next outcome=committed totalMs=508 startedAtMs=415436083 completedAtMs=415436591
+09-11 19:10:32.887  9975 13092 I A05244/BookTurn: frames=21 dur=336ms gap p50=16.08 p95=18.53 max=33.19 | wake p50=0.03 p95=6.41 max=7.01 | solve max=0.04 | draw p50=1.25 p95=17.16 max=21.06 ms
+09-11 19:10:32.925  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=previous outcome=committed totalMs=394 startedAtMs=415437462 completedAtMs=415437856
+09-11 19:10:34.743  9975 13092 I A05244/BookTurn: frames=18 dur=348ms gap p50=17.27 p95=32.86 max=32.99 | wake p50=2.82 p95=13.62 max=14.30 | solve max=0.11 | draw p50=17.20 p95=32.85 max=32.88 ms
+09-11 19:10:34.785  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=next outcome=committed totalMs=422 startedAtMs=415439293 completedAtMs=415439715
+09-11 19:10:37.700  9975 13092 I A05244/BookTurn: frames=21 dur=337ms gap p50=16.72 p95=18.09 max=21.44 | wake p50=0.05 p95=6.43 max=7.98 | solve max=0.00 | draw p50=14.65 p95=17.13 max=17.28 ms
+09-11 19:10:37.738  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=previous outcome=committed totalMs=402 startedAtMs=415442266 completedAtMs=415442668
+09-11 19:10:47.543  9975 13092 I A05244/BookTurn: frames=21 dur=336ms gap p50=16.65 p95=21.28 max=22.64 | wake p50=0.03 p95=4.65 max=6.46 | solve max=0.09 | draw p50=13.22 p95=17.08 max=17.09 ms
+09-11 19:10:47.583  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=next outcome=committed totalMs=399 startedAtMs=415452114 completedAtMs=415452513
+09-11 19:10:48.903  9975 13092 I A05244/BookTurn: frames=21 dur=335ms gap p50=16.07 p95=23.72 max=33.05 | wake p50=0.05 p95=5.70 max=7.68 | solve max=0.09 | draw p50=0.28 p95=17.06 max=21.72 ms
+09-11 19:10:48.943  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=next outcome=committed totalMs=403 startedAtMs=415453470 completedAtMs=415453873
+09-11 19:10:50.279  9975 13092 I A05244/BookTurn: frames=21 dur=337ms gap p50=16.33 p95=24.41 max=29.69 | wake p50=0.04 p95=7.78 max=8.42 | solve max=0.14 | draw p50=9.43 p95=17.15 max=17.29 ms
+09-11 19:10:50.317  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=next outcome=committed totalMs=393 startedAtMs=415454854 completedAtMs=415455247
+09-11 19:10:59.817  9975  9975 I A05244/Reader: PAGETURN_PERF style=none path=prepared dir=previous outcome=committed totalMs=25 startedAtMs=415464723 completedAtMs=415464748
+09-11 19:11:01.177  9975  9975 I A05244/Reader: PAGETURN_PERF style=none path=prepared dir=next outcome=committed totalMs=25 startedAtMs=415466082 completedAtMs=415466107
+09-11 19:11:03.006  9975  9975 I A05244/Reader: PAGETURN_PERF style=none path=prepared dir=previous outcome=committed totalMs=18 startedAtMs=415467918 completedAtMs=415467936
+09-11 19:11:05.990  9975  9975 I A05244/Reader: PAGETURN_PERF style=none path=prepared dir=next outcome=committed totalMs=21 startedAtMs=415470899 completedAtMs=415470920
+09-11 19:11:16.116  9975  9975 I A05244/Reader: PAGETURN_PERF style=slide path=prepared dir=previous outcome=committed totalMs=347 startedAtMs=415480699 completedAtMs=415481046
+09-11 19:11:17.474  9975  9975 I A05244/Reader: PAGETURN_PERF style=slide path=prepared dir=next outcome=committed totalMs=345 startedAtMs=415482060 completedAtMs=415482405
+09-11 19:11:19.303  9975  9975 I A05244/Reader: PAGETURN_PERF style=slide path=prepared dir=previous outcome=committed totalMs=347 startedAtMs=415483886 completedAtMs=415484233
+09-11 19:11:22.272  9975  9975 I A05244/Reader: PAGETURN_PERF style=slide path=prepared dir=next outcome=committed totalMs=345 startedAtMs=415486857 completedAtMs=415487202
+09-11 19:11:32.085  9975  9975 I A05244/Reader: PAGETURN_PERF style=cover path=prepared dir=previous outcome=committed totalMs=369 startedAtMs=415496646 completedAtMs=415497015
+09-11 19:11:33.415  9975  9975 I A05244/Reader: PAGETURN_PERF style=cover path=prepared dir=next outcome=committed totalMs=356 startedAtMs=415497989 completedAtMs=415498345
+09-11 19:11:35.273  9975  9975 I A05244/Reader: PAGETURN_PERF style=cover path=prepared dir=previous outcome=committed totalMs=347 startedAtMs=415499856 completedAtMs=415500203
+09-11 19:11:38.244  9975  9975 I A05244/Reader: PAGETURN_PERF style=cover path=prepared dir=next outcome=committed totalMs=343 startedAtMs=415502831 completedAtMs=415503174
+09-11 19:11:48.137  9975 13092 I A05244/BookTurn: frames=21 dur=353ms gap p50=17.11 p95=27.04 max=32.40 | wake p50=5.79 p95=15.50 max=15.94 | solve max=0.00 | draw p50=16.23 p95=20.31 max=32.40 ms
+09-11 19:11:48.183  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=previous outcome=committed totalMs=424 startedAtMs=415512689 completedAtMs=415513113
+09-11 19:11:49.470  9975 13092 I A05244/BookTurn: frames=21 dur=335ms gap p50=16.57 p95=18.78 max=21.84 | wake p50=0.05 p95=3.49 max=5.47 | solve max=0.13 | draw p50=10.42 p95=17.17 max=17.20 ms
+09-11 19:11:49.511  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=next outcome=committed totalMs=398 startedAtMs=415514043 completedAtMs=415514441
+09-11 19:11:51.293  9975 13092 I A05244/BookTurn: frames=19 dur=345ms gap p50=16.69 p95=32.53 max=33.48 | wake p50=3.02 p95=14.28 max=14.93 | solve max=0.00 | draw p50=16.30 p95=32.53 max=33.48 ms
+09-11 19:11:51.344  9975  9975 I A05244/Reader: PAGETURN_PERF style=simulation path=prepared dir=previous outcome=committed totalMs=416 startedAtMs=415515858 completedAtMs=415516274
+09-11 19:14:14.222  9975  9975 E C01707/CONCUR: [Interface] task 10071 apply qos failed, errno = 4
+09-11 19:14:14.223  9975  9975 E C01707/CONCUR: [Interface] task 10072 apply qos failed, errno = 4
+09-11 19:14:14.224  9975  9975 E C01707/CONCUR: [Interface] task 10070 apply qos failed, errno = 4
+09-11 19:14:14.227  9975  9975 E C01707/CONCUR: [Interface] task 10071 apply qos failed, errno = 4
+09-11 19:14:14.228  9975  9975 E C01707/CONCUR: [Interface] task 10072 apply qos failed, errno = 4
+09-11 19:14:14.229  9975  9975 E C01707/CONCUR: [Interface] task 10070 apply qos failed, errno = 4

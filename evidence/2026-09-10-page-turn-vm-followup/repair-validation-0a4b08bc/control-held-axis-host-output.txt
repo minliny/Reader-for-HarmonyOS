@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/tmp/reader_vm_control_held_axis.py", line 17, in <module>
+    assert child.returncode==0 and not fatal.search(s);assert still;assert abs(actualY-endY)<=8,('axis did not follow held finger',direction,fraction,endY,actualY)
+AssertionError: ('axis did not follow held finger', 'expand', 0.8, 611, 895)

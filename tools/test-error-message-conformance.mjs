@@ -88,8 +88,7 @@ assert.ok(bookshelfSource.includes("return '未读';"),
 const detailSource = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
 assert.ok(detailSource.includes("Text(this.displayIntro())"),
   'detail summary renders through the intro cleaner');
-assert.ok(detailSource.includes("replace(/<br"), 'intro cleaner matches <br> variants');
-assert.ok(detailSource.includes(".replace(/^\\n+|\\n+$/g, '')"),
-  'intro cleaner trims leading/trailing breaks');
+assert.ok(detailSource.includes('bookIntroText(this.book.intro)'),
+  'detail uses the same display-only synopsis projection as search');
 
 console.log(`error-message conformance: PASS (${sourceFiles.length} sources swept)`);

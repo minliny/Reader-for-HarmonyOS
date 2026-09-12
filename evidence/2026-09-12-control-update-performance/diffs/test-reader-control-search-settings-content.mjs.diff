@@ -1,0 +1,30 @@
+--- before/tools/test-reader-control-search-settings-content.mjs
++++ after/tools/test-reader-control-search-settings-content.mjs
+@@ -16,6 +16,7 @@
+ import { readerControlLerp, readerControlUnit } from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
+ import { splitReaderSearchSnippet } from '../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts';
+ import { createReaderBuilderProbe, readerBuilderSdkAvailable } from './lib/reader-control-builder-probe.mjs';
++import { productionSettingsOptionModifier } from './lib/reader-control-option-modifier-probe.mjs';
+ import * as searchScroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
+ 
+ const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+@@ -537,16 +538,17 @@
+ 
+   // Settings Builder args are already stable group/key/index identities. Do
+   // not rewrite them: prove their current owner reads remain live in the SDK.
+-  const settingsBuilderMembers = ['p', 'geometry', 'groupWidth', 'label', 'bar', 'choice', 'child', 'segmentRow', 'toggleRow',
++  const settingsBuilderMembers = ['p', 'geometry', 'groupWidth', 'label', 'bar', 'choice', 'optionModifier', 'child', 'segmentRow', 'toggleRow',
+     'presentation', 'sharedRect', 'sharedClip', ...settingsMethods];
+   let geometrySamples = 0, paintSamples = 0;
+   const { owner } = createReaderBuilderProbe(settingsUI, [...new Set(settingsBuilderMembers)], {
++    ReaderControlSettingsOptionModifier: productionSettingsOptionModifier(),
+     ...settingsPolicy, ...settingsConstants, ...motionDeps, readerControlUnit, readerControlSettingsLabel, readerControlSettingsBar,
+     sampleReaderControlSettings: (...args) => { geometrySamples++; return sampleReaderControlSettings(...args); },
+     sampleReaderControlMotionPresentation: (...args) => { paintSamples++; return presentation.sampleReaderControlMotionPresentation(...args); },
+     readerControlSettingsChoice, readerControlSettingsAddedChild });
+   Object.assign(owner, { motionProgress: 0, availableWidth: 286, interactionEnabled: true,
+-    ...motionProps, clipEndpointWidth: -1, clipFullRects: [], clipQuickRects: [],
++    ...motionProps, optionModifiers: [], clipEndpointWidth: -1, clipFullRects: [], clipQuickRects: [],
+     clipCache: new presentation.ReaderControlMotionClipCache(path => new motionDeps.PathShape().commands(path), () => new motionDeps.RectShape().width('100%').height('100%')), snapshot: settingsPolicy.createDefaultReaderSettingsSnapshot(), pageTurnSimulationAvailable: true });
+   owner.segmentRow('pageTurn', 1); owner.toggleRow('隐藏状态栏', 'hideStatusBar', 0);
+   assert.equal(geometrySamples, 1, 'all mounted actor attributes share one pose');

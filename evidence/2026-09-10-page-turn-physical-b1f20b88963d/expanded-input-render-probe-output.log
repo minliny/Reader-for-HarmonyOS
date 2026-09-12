@@ -1,0 +1,13 @@
+{"case":"old queued intent starts while newer pointer is still held","direction":"next","activePointer":7,"newPointerUpReceived":false,"events":[{"kind":"animate","target":-390},{"kind":"persist"}],"meaning":"old intent bypasses active pointer ownership; conditional code reproduction, not attribution of all user delays"}
+{"case":"old queued intent starts while newer pointer is still held","direction":"previous","activePointer":7,"newPointerUpReceived":false,"events":[{"kind":"animate","target":390},{"kind":"persist"}],"meaning":"old intent bypasses active pointer ownership; conditional code reproduction, not attribution of all user delays"}
+{"case":"another input producer can start settlement during live pointer tracking","producer":"autoPage","events":[{"kind":"animate","target":-390},{"kind":"persist"}],"meaning":"requires enabled due Auto Page or an actual volume key; does not prove either occurred in user episode"}
+{"case":"another input producer can start settlement during live pointer tracking","producer":"volumeKey","events":[{"kind":"animate","target":-390},{"kind":"persist"}],"meaning":"requires enabled due Auto Page or an actual volume key; does not prove either occurred in user episode"}
+{"case":"hot MOVE repeats readiness check and watchdog restart","moveCount":120,"readinessCalls":120,"callbacks":120,"watchdogArms":120}
+{"case":"invalid timestamp mixes wall and event clocks and prevents velocity recovery","poisonedClock":1789000000000,"velocity":5.58971492766334e-9,"meaning":"defensive input defect; no evidence real device emitted invalid timestamp"}
+{"case":"page chrome whole-book metric lookup scans to target chapter","chapters":100,"reads":100,"percent":99.5}
+{"case":"page chrome whole-book metric lookup scans to target chapter","chapters":1000,"reads":1000,"percent":99.95}
+{"case":"page chrome whole-book metric lookup scans to target chapter","chapters":10000,"reads":10000,"percent":99.995}
+{"case":"prefix page ordinal projection allocates a full page-start array each call","length":100}
+{"case":"verified compiled Stage update callback recomputes page projections with offset","comparedBindings":17,"updateInvocations":2,"projections":6,"explicitLayouts":2,"meaning":"one dirty callback may coalesce multiple MOVE events; this does not count actual layout or raster passes"}
+(node:66661) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

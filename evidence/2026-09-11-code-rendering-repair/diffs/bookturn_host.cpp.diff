@@ -1,0 +1,14 @@
+--- before/entry/src/main/cpp/bookturn/bookturn_host.cpp
++++ current/entry/src/main/cpp/bookturn/bookturn_host.cpp
+@@ -333,6 +333,11 @@
+ {
+     if (highlights.identity.empty() || highlights.rects.size() > 64 || highlights.rects.size() != highlights.colors.size()) return false;
+     std::lock_guard<std::mutex> lock(mutex_);
++    if (acceptedHighlightSurfaceSerial_ == surfaceRequestSerial_ && acceptedHighlights_.has_value() &&
++        acceptedHighlights_->identity == highlights.identity && acceptedHighlights_->rects == highlights.rects &&
++        acceptedHighlights_->colors == highlights.colors) return true;
++    acceptedHighlights_ = highlights;
++    acceptedHighlightSurfaceSerial_ = surfaceRequestSerial_;
+     pendingHighlights_ = std::move(highlights);
+     condition_.notify_all();
+     return true;

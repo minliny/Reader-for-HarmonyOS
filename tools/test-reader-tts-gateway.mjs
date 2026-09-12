@@ -92,3 +92,15 @@ function snapshot(state, currentSliceIndex) {
 }
 
 console.log('reader TTS strict gateway: PASS');
+
+const precise = new ReaderTtsGateway({async request(method,params){
+  assert.equal(method,'tts.config.put'); return {data:{config:{...params,configId:1}}};
+}});
+for (const ratePercent of [50,75,100,125,195,200]) {
+  const result=await precise.putConfig({rate:Math.round(ratePercent/20),ratePercent,pitch:0,followSys:false});
+  assert.equal(result.ratePercent,ratePercent);
+}
+for (const ratePercent of [49,77,201,NaN]) {
+  await assert.rejects(() => precise.putConfig({rate:5,ratePercent,pitch:0,followSys:false}));
+}
+console.log('reader TTS precise rate round trip: PASS');

@@ -1,0 +1,44 @@
+[
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+    "sha256": "251967e6b742b782f6adfd652dd411883824e0d9a93840426eca211f54d939a9",
+    "added": 8,
+    "removed": 3
+  },
+  {
+    "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+    "sha256": "a37f58a063975e065121582f6aa4eb6bb8cb3e0ac895c9096501b42fb5b75422",
+    "added": 10,
+    "removed": 4
+  },
+  {
+    "path": "entry/src/main/cpp/bookturn/bookturn_host.h",
+    "sha256": "1f909a60f0de368c0f25d5c48599c5b77b4d9c21808bafa982b26ab97a50aec2",
+    "added": 4,
+    "removed": 2
+  },
+  {
+    "path": "entry/src/main/cpp/bookturn/bookturn_napi.cpp",
+    "sha256": "e3487665a58763838412b43be295a4e0537d9ac3597ee5a86245b0b2eec746b2",
+    "added": 17,
+    "removed": 2
+  },
+  {
+    "path": "entry/src/main/cpp/tests/bookturn_present_barrier_test.cpp",
+    "sha256": "a07d797d7c6490cd5e9dece5222d688b11ca69e7abe9136147efff773454f060",
+    "added": 63,
+    "removed": 4
+  },
+  {
+    "path": "tools/test-reader-control-directory-model.mjs",
+    "sha256": "604b6039892c5adc48e6ea2581914537ccf043679d5365a2f6d1323031f102dd",
+    "added": 39,
+    "removed": 3
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+    "sha256": "e7390f684f2f19daaec1398aebee4a324f9f7231497c884ae956aaf045b9c90f",
+    "added": 34,
+    "removed": 5
+  }
+]

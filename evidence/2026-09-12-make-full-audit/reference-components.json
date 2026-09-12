@@ -1,0 +1,2070 @@
+{
+  "method": "TypeScript JSX component reachability from the two actual App entry points; both conditional branches included. SVG path data, CSS and helper state logic audited separately. Unreferenced imported designs are not promoted to current Make pages.",
+  "tts": [
+    {
+      "file": "tts-reference/src/App.tsx",
+      "component": "App",
+      "line": 3,
+      "childComponents": [
+        "PhoneScreen"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "PhoneScreen",
+      "line": 1349,
+      "childComponents": [
+        "PaperLayer",
+        "TopBar",
+        "CollapsedQuickBar",
+        "TtsSheet",
+        "ReaderModuleButton"
+      ],
+      "nativeElements": {
+        "style": 1,
+        "div": 5
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "PaperLayer",
+      "line": 164,
+      "childComponents": [
+        "ReadingContent"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "ReadingContent",
+      "line": 144,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 4,
+        "p": 7
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TopBar",
+      "line": 181,
+      "childComponents": [
+        "TablerArrowLeftOutline",
+        "TablerSwitchHorizontalOutline",
+        "TablerDotsOutline"
+      ],
+      "nativeElements": {
+        "div": 9,
+        "p": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerArrowLeftOutline",
+      "line": 11,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 3,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerSwitchHorizontalOutline",
+      "line": 26,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 4,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerDotsOutline",
+      "line": 42,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 3,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "CollapsedQuickBar",
+      "line": 1272,
+      "childComponents": [
+        "ReaderModuleTtsPhone",
+        "ReadControlCardRestyled"
+      ],
+      "nativeElements": {
+        "div": 1,
+        "button": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ReaderModuleTtsPhone",
+      "line": 910,
+      "childComponents": [
+        "MainContentReadAloud"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "MainContentReadAloud",
+      "line": 899,
+      "childComponents": [
+        "Article",
+        "Section",
+        "Container",
+        "Navigation"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Article",
+      "line": 99,
+      "childComponents": [
+        "Article1"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Article1",
+      "line": 85,
+      "childComponents": [
+        "Heading",
+        "ParagraphMargin",
+        "ParagraphMargin1",
+        "ParagraphMargin2",
+        "ParagraphMargin3",
+        "ParagraphMargin4",
+        "Paragraph"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Heading",
+      "line": 3,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ParagraphMargin",
+      "line": 13,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1,
+        "span": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ParagraphMargin1",
+      "line": 27,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1,
+        "span": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ParagraphMargin2",
+      "line": 41,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1,
+        "span": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ParagraphMargin3",
+      "line": 55,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ParagraphMargin4",
+      "line": 65,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Paragraph",
+      "line": 75,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Section",
+      "line": 230,
+      "childComponents": [
+        "Button",
+        "Text",
+        "Button1",
+        "Button2"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button",
+      "line": 127,
+      "childComponents": [
+        "Icon"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon",
+      "line": 107,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 3,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text",
+      "line": 157,
+      "childComponents": [
+        "BoldText",
+        "Small"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "BoldText",
+      "line": 137,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Small",
+      "line": 147,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button1",
+      "line": 189,
+      "childComponents": [
+        "Icon1"
+      ],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon1",
+      "line": 168,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 4,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button2",
+      "line": 220,
+      "childComponents": [
+        "Icon2"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon2",
+      "line": 200,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 3,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Container",
+      "line": 670,
+      "childComponents": [
+        "Button3",
+        "Section1",
+        "Sidebar"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button3",
+      "line": 242,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Section1",
+      "line": 592,
+      "childComponents": [
+        "Container1"
+      ],
+      "nativeElements": {
+        "div": 5
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Container1",
+      "line": 581,
+      "childComponents": [
+        "Section2",
+        "Container2"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Section2",
+      "line": 408,
+      "childComponents": [
+        "Text1",
+        "Text2"
+      ],
+      "nativeElements": {
+        "div": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text1",
+      "line": 286,
+      "childComponents": [
+        "ItalicText",
+        "BoldText1"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ItalicText",
+      "line": 266,
+      "childComponents": [
+        "Icon3"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon3",
+      "line": 246,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 3,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "BoldText1",
+      "line": 276,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text2",
+      "line": 393,
+      "childComponents": [
+        "Button4",
+        "Text3",
+        "Icon5",
+        "Text4",
+        "Icon6",
+        "Button5"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button4",
+      "line": 315,
+      "childComponents": [
+        "Icon4"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon4",
+      "line": 297,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 1,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text3",
+      "line": 323,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon5",
+      "line": 327,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 1,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text4",
+      "line": 345,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon6",
+      "line": 349,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 1,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button5",
+      "line": 385,
+      "childComponents": [
+        "Icon7"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon7",
+      "line": 367,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 1,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Container2",
+      "line": 570,
+      "childComponents": [
+        "Label",
+        "Label1"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Label",
+      "line": 482,
+      "childComponents": [
+        "Text5",
+        "Dropdown"
+      ],
+      "nativeElements": {
+        "div": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text5",
+      "line": 459,
+      "childComponents": [
+        "ItalicText1",
+        "BoldText2"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ItalicText1",
+      "line": 439,
+      "childComponents": [
+        "Icon8"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon8",
+      "line": 420,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 2,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "BoldText2",
+      "line": 449,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Dropdown",
+      "line": 470,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 4,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Label1",
+      "line": 557,
+      "childComponents": [
+        "Text6",
+        "RangeSlider",
+        "Output"
+      ],
+      "nativeElements": {
+        "div": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text6",
+      "line": 532,
+      "childComponents": [
+        "ItalicText2",
+        "BoldText3"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "ItalicText2",
+      "line": 512,
+      "childComponents": [
+        "Icon9"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon9",
+      "line": 494,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 1,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "BoldText3",
+      "line": 522,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "RangeSlider",
+      "line": 543,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Output",
+      "line": 547,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Sidebar",
+      "line": 659,
+      "childComponents": [
+        "Icon10",
+        "Slider",
+        "Button6"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon10",
+      "line": 605,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 2,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Slider",
+      "line": 628,
+      "childComponents": [
+        "BoldText4"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "BoldText4",
+      "line": 624,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button6",
+      "line": 648,
+      "childComponents": [
+        "Text7"
+      ],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text7",
+      "line": 638,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 4
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Navigation",
+      "line": 887,
+      "childComponents": [
+        "Button7",
+        "Button8",
+        "Button9",
+        "Button10"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button7",
+      "line": 723,
+      "childComponents": [
+        "Text8",
+        "Small1"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text8",
+      "line": 703,
+      "childComponents": [
+        "Icon11"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon11",
+      "line": 680,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 6,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Small1",
+      "line": 713,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button8",
+      "line": 774,
+      "childComponents": [
+        "Text9",
+        "Small2"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text9",
+      "line": 754,
+      "childComponents": [
+        "Icon12"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon12",
+      "line": 734,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 3,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Small2",
+      "line": 764,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button9",
+      "line": 826,
+      "childComponents": [
+        "Text10",
+        "Small3"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text10",
+      "line": 806,
+      "childComponents": [
+        "Icon13"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon13",
+      "line": 785,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 4,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Small3",
+      "line": 816,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Button10",
+      "line": 876,
+      "childComponents": [
+        "Text11",
+        "Small4"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Text11",
+      "line": 856,
+      "childComponents": [
+        "Icon14"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Icon14",
+      "line": 837,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 2,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/imports/ReaderModuleTtsPhone/index.tsx",
+      "component": "Small4",
+      "line": 866,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "ReadControlCardRestyled",
+      "line": 1133,
+      "childComponents": [
+        "HeadphonesTeal",
+        "ReadRowLabel",
+        "TablerChevronRightSm",
+        "SpeedSlider"
+      ],
+      "nativeElements": {
+        "div": 13,
+        "span": 9,
+        "button": 5,
+        "svg": 7,
+        "path": 8,
+        "rect": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "HeadphonesTeal",
+      "line": 1104,
+      "childComponents": [],
+      "nativeElements": {
+        "svg": 1,
+        "path": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "ReadRowLabel",
+      "line": 1115,
+      "childComponents": [],
+      "nativeElements": {
+        "span": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerChevronRightSm",
+      "line": 57,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 1,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "SpeedSlider",
+      "line": 465,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 6,
+        "span": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TtsSheet",
+      "line": 1289,
+      "childComponents": [
+        "Grabber",
+        "ContentViewportTts",
+        "TablerHeadphonesLg"
+      ],
+      "nativeElements": {
+        "motion.div": 2,
+        "div": 7,
+        "p": 1,
+        "button": 1,
+        "span": 1,
+        "svg": 1,
+        "path": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "Grabber",
+      "line": 217,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "ContentViewportTts",
+      "line": 1080,
+      "childComponents": [
+        "PlaybackModule",
+        "SpeedModule",
+        "TimerModule",
+        "EngineModule",
+        "ConfigModule"
+      ],
+      "nativeElements": {
+        "motion.div": 1,
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "PlaybackModule",
+      "line": 363,
+      "childComponents": [
+        "SectionLabel",
+        "Card",
+        "EqualiserBar",
+        "GhostBtn",
+        "TablerHeadphonesLg"
+      ],
+      "nativeElements": {
+        "div": 4,
+        "span": 7,
+        "svg": 5,
+        "path": 5,
+        "button": 2,
+        "rect": 3
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "SectionLabel",
+      "line": 228,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "Card",
+      "line": 239,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 4
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "EqualiserBar",
+      "line": 327,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "GhostBtn",
+      "line": 350,
+      "childComponents": [],
+      "nativeElements": {
+        "button": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerHeadphonesLg",
+      "line": 70,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 3,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "SpeedModule",
+      "line": 510,
+      "childComponents": [
+        "SectionLabel",
+        "Card",
+        "SpeedSlider",
+        "Pill"
+      ],
+      "nativeElements": {
+        "div": 2,
+        "span": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "Pill",
+      "line": 266,
+      "childComponents": [],
+      "nativeElements": {
+        "button": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TimerModule",
+      "line": 558,
+      "childComponents": [
+        "SectionLabel",
+        "TablerClockOutline",
+        "Card",
+        "StepButton"
+      ],
+      "nativeElements": {
+        "div": 4,
+        "span": 10,
+        "button": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerClockOutline",
+      "line": 100,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 2,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "StepButton",
+      "line": 541,
+      "childComponents": [],
+      "nativeElements": {
+        "button": 1,
+        "svg": 1,
+        "path": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "EngineModule",
+      "line": 809,
+      "childComponents": [
+        "SectionLabel",
+        "Card",
+        "EngineOption",
+        "TablerPhoneOutline",
+        "TablerCloudOutline",
+        "SelectRow",
+        "Row",
+        "TablerChevronRightSm",
+        "AnimatePresence",
+        "OnlineTtsModal"
+      ],
+      "nativeElements": {
+        "div": 5,
+        "button": 1,
+        "span": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "EngineOption",
+      "line": 643,
+      "childComponents": [],
+      "nativeElements": {
+        "button": 1,
+        "div": 1,
+        "span": 1,
+        "svg": 1,
+        "circle": 1,
+        "path": 1,
+        "p": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerPhoneOutline",
+      "line": 114,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 1,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerCloudOutline",
+      "line": 127,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 1,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "SelectRow",
+      "line": 300,
+      "childComponents": [
+        "Row",
+        "TablerChevronRightSm"
+      ],
+      "nativeElements": {
+        "button": 1,
+        "span": 1,
+        "div": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "Row",
+      "line": 286,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "span": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "OnlineTtsModal",
+      "line": 717,
+      "childComponents": [
+        "TablerCloudOutline",
+        "Field",
+        "Pill"
+      ],
+      "nativeElements": {
+        "div": 8,
+        "motion.div": 2,
+        "span": 3,
+        "button": 3,
+        "svg": 1,
+        "path": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "Field",
+      "line": 681,
+      "childComponents": [],
+      "nativeElements": {
+        "label": 1,
+        "span": 1,
+        "input": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "ConfigModule",
+      "line": 1054,
+      "childComponents": [
+        "SectionLabel",
+        "Card",
+        "VoiceSelect",
+        "ToggleRow"
+      ],
+      "nativeElements": {
+        "div": 1,
+        "span": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "VoiceSelect",
+      "line": 933,
+      "childComponents": [
+        "VoiceAvatar",
+        "TablerChevronRightSm",
+        "AnimatePresence",
+        "PreviewWave"
+      ],
+      "nativeElements": {
+        "div": 5,
+        "button": 3,
+        "span": 8,
+        "motion.div": 1,
+        "svg": 2,
+        "path": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "VoiceAvatar",
+      "line": 903,
+      "childComponents": [],
+      "nativeElements": {
+        "span": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "PreviewWave",
+      "line": 919,
+      "childComponents": [],
+      "nativeElements": {
+        "span": 2
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "ToggleRow",
+      "line": 317,
+      "childComponents": [
+        "Row",
+        "Toggle"
+      ],
+      "nativeElements": {}
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "Toggle",
+      "line": 249,
+      "childComponents": [],
+      "nativeElements": {
+        "button": 1,
+        "span": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "ReaderModuleButton",
+      "line": 1329,
+      "childComponents": [
+        "TablerHeadphonesFilled"
+      ],
+      "nativeElements": {
+        "div": 3,
+        "p": 1
+      }
+    },
+    {
+      "file": "tts-reference/src/PhoneScreen.tsx",
+      "component": "TablerHeadphonesFilled",
+      "line": 85,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 3,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    }
+  ],
+  "appearance": [
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "Component",
+      "line": 1315,
+      "childComponents": [
+        "ReaderResponsiveReadingSurface",
+        "ReaderResponsiveTopBar",
+        "PersistentActorPanelMotionRootAppearance"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "ReaderResponsiveReadingSurface",
+      "line": 394,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 6,
+        "p": 7
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "ReaderResponsiveTopBar",
+      "line": 175,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 12,
+        "svg": 3,
+        "g": 6,
+        "path": 10,
+        "defs": 3,
+        "clipPath": 3,
+        "rect": 3,
+        "p": 3
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "PersistentActorPanelMotionRootAppearance",
+      "line": 1282,
+      "childComponents": [
+        "Grabber",
+        "ContentViewportAppearance",
+        "AddedActorFullHeader"
+      ],
+      "nativeElements": {
+        "div": 6
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "Grabber",
+      "line": 451,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "ContentViewportAppearance",
+      "line": 1166,
+      "childComponents": [
+        "PersistentModuleAppearanceThemeLibrary",
+        "PersistentModuleAppearanceFontLibrary",
+        "Component1"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "PersistentModuleAppearanceThemeLibrary",
+      "line": 662,
+      "childComponents": [
+        "AddedActorThemeCardShellDay",
+        "AddedActorThemeCardShellWarm",
+        "AddedActorThemeCardShellNight",
+        "AddedActorThemeCardShellWarmNight",
+        "AddedActorThemeCardShellPaper",
+        "AddedActorThemeCardShellGreen",
+        "AddedActorThemeCardShellPaperNight",
+        "AddedActorThemeCardShellGreenNight",
+        "ThemeAction",
+        "ThemeAction1",
+        "SwatchDay",
+        "SwatchWarm",
+        "SwatchNight",
+        "SwatchWarmNight",
+        "SwatchPaper",
+        "SwatchGreen",
+        "SwatchPaperNight",
+        "SwatchGreenNight"
+      ],
+      "nativeElements": {
+        "div": 11,
+        "p": 2
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorThemeCardShellDay",
+      "line": 460,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorThemeCardShellWarm",
+      "line": 473,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorThemeCardShellNight",
+      "line": 486,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorThemeCardShellWarmNight",
+      "line": 499,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorThemeCardShellPaper",
+      "line": 512,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorThemeCardShellGreen",
+      "line": 525,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorThemeCardShellPaperNight",
+      "line": 538,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorThemeCardShellGreenNight",
+      "line": 551,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "ThemeAction",
+      "line": 564,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "ThemeAction1",
+      "line": 577,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SwatchDay",
+      "line": 590,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SwatchWarm",
+      "line": 599,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SwatchNight",
+      "line": 608,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SwatchWarmNight",
+      "line": 617,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SwatchPaper",
+      "line": 626,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SwatchGreen",
+      "line": 635,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SwatchPaperNight",
+      "line": 644,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SwatchGreenNight",
+      "line": 653,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "PersistentModuleAppearanceFontLibrary",
+      "line": 998,
+      "childComponents": [
+        "SectionHeader",
+        "FontGrid",
+        "MotionContentPersistentActorFontCellSystem",
+        "MotionContentPersistentActorFontCellSerif",
+        "MotionContentPersistentActorFontCellSans",
+        "MotionContentPersistentActorFontCellKai",
+        "MotionContentPersistentActorFontCellFangSong",
+        "MotionContentPersistentActorFontCellMono",
+        "MotionContentPersistentActorFontCellSourceHanSerif",
+        "MotionContentPersistentActorFontCellLxgwWenKai"
+      ],
+      "nativeElements": {
+        "div": 32
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SectionHeader",
+      "line": 745,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 2
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "FontGrid",
+      "line": 761,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 5,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "MotionContentPersistentActorFontCellSystem",
+      "line": 810,
+      "childComponents": [
+        "HarmonyOsSansSc"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "HarmonyOsSansSc",
+      "line": 787,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 2
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "MotionContentPersistentActorFontCellSerif",
+      "line": 821,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "MotionContentPersistentActorFontCellSans",
+      "line": 834,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "MotionContentPersistentActorFontCellKai",
+      "line": 870,
+      "childComponents": [
+        "LxgwWenKaiGbLiteRegular"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "LxgwWenKaiGbLiteRegular",
+      "line": 847,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 2
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "MotionContentPersistentActorFontCellFangSong",
+      "line": 904,
+      "childComponents": [
+        "ZhuqueFangsongRegular"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "ZhuqueFangsongRegular",
+      "line": 881,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 2
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "MotionContentPersistentActorFontCellMono",
+      "line": 938,
+      "childComponents": [
+        "SarasaMonoScRegular"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "SarasaMonoScRegular",
+      "line": 915,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 2
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "MotionContentPersistentActorFontCellSourceHanSerif",
+      "line": 949,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "MotionContentPersistentActorFontCellLxgwWenKai",
+      "line": 987,
+      "childComponents": [
+        "LxgwWenKaiLiteRegular"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "LxgwWenKaiLiteRegular",
+      "line": 962,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 1,
+        "path": 4
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "Component1",
+      "line": 1126,
+      "childComponents": [
+        "Header",
+        "TypographySelectRow",
+        "TypographyStepperRow"
+      ],
+      "nativeElements": {
+        "div": 2
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "Header",
+      "line": 1110,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 2
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "TypographySelectRow",
+      "line": 26,
+      "childComponents": [
+        "TypographyChevron"
+      ],
+      "nativeElements": {
+        "div": 4,
+        "p": 1,
+        "button": 2,
+        "span": 3,
+        "svg": 1,
+        "path": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "TypographyChevron",
+      "line": 5,
+      "childComponents": [],
+      "nativeElements": {
+        "svg": 1,
+        "path": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "TypographyStepperRow",
+      "line": 127,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 2,
+        "p": 1,
+        "button": 2,
+        "span": 3
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "AddedActorFullHeader",
+      "line": 1270,
+      "childComponents": [
+        "Leading",
+        "CollapseButton"
+      ],
+      "nativeElements": {
+        "div": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "Leading",
+      "line": 1238,
+      "childComponents": [
+        "TablerPaletteOutline"
+      ],
+      "nativeElements": {
+        "div": 2,
+        "p": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "TablerPaletteOutline",
+      "line": 1179,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "svg": 1,
+        "g": 2,
+        "path": 4,
+        "defs": 1,
+        "clipPath": 1,
+        "rect": 1
+      }
+    },
+    {
+      "file": "appearance-reference/src/App.tsx",
+      "component": "CollapseButton",
+      "line": 1257,
+      "childComponents": [],
+      "nativeElements": {
+        "div": 1,
+        "p": 1
+      }
+    }
+  ]
+}

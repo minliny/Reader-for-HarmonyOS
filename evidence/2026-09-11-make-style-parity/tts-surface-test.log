@@ -1,0 +1,372 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /TextInput\(\{ placeholder: '配置名称'/. Input:
+
+"import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';\n" +
+  '\n' +
+  '\n' +
+  '/** Transient form only. Persisted HttpTTS configuration remains Core-owned. */\n' +
+  '@Component\n' +
+  'export struct ReaderHttpTtsManagerPanel {\n' +
+  '  @Prop engines: ReaderTtsEngineOption[] = [];\n' +
+  "  @Prop selectedEngine: string = 'system';\n" +
+  '  onSelect: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();\n' +
+  '  onPut: (config: ReaderTtsEngineOption) => Promise<void> =\n' +
+  '    (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();\n' +
+  '  onDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();\n' +
+  '  onBusyChange: (busy: boolean) => void = (_busy: boolean): void => {};\n' +
+  '\n' +
+  '  @State private draftId: number = -1;\n' +
+  "  @State private draftName: string = '';\n" +
+  "  @State private draftUrl: string = '';\n" +
+  '  @State private busy: boolean = false;\n' +
+  "  @State private errorText: string = '';\n" +
+  '  private mounted: boolean = false;\n' +
+  '  private generation: number = 0;\n' +
+  '\n' +
+  '  aboutToAppear(): void { this.mounted = true; }\n' +
+  '  aboutToDisappear(): void { this.mounted = false; this.generation += 1; this.onBusyChange(false); }\n' +
+  '\n' +
+  '  private current(generation: number): boolean { return this.mounted && generation === this.generation; }\n' +
+  '  private setBusy(busy: boolean): void { this.busy = busy; this.onBusyChange(busy); }\n' +
+  '\n' +
+  '  build() {\n' +
+  '    Column({ space: 14 }) {\n' +
+  '      if (this.engines.length > 0) {\n' +
+  '        Column({ space: 8 }) {\n' +
+  "          Text(`已配置服务 · ${this.engines.length} 项`).width('100%').fontFamily('ReaderNotoSansSC')\n" +
+  "            .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(11).fontColor('#5B5046');\n" +
+  '          ForEach(this.engines, (engine: ReaderTtsEngineOption) => {\n' +
+  '            Row({ space: 8 }) {\n' +
+  "              Text(engine.name).layoutWeight(1).fontFamily('ReaderNotoSansSC')\n" +
+  "                .fontWeight(FontWeight.Bold, { enableVariableFontWeight: true }).fontSize(12).fontColor('#332C25')\n" +
+  '                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n' +
+  "              Text(this.isSelected(engine) ? '当前' : '选择').width(38).height(28)\n" +
+  "                .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium, { enableVariableFontWeight: true })\n" +
+  "                .fontSize(10).fontColor(this.isSelected(engine) ? '#FFFAF4' : '#2F6373').textAlign(TextAlign.Center)\n" +
+  "                .backgroundColor(this.isSelected(engine) ? '#2F6373' : '#1A2F6373').borderRadius(999)\n" +
+  '                .enabled(!this.busy).onClick((): void => this.selectEngine(`http-tts:${engine.id}`));\n' +
+  "              Text('编辑').width(32).height(28).fontFamily('ReaderNotoSansSC')\n" +
+  '                .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(10)\n' +
+  "                .fontColor('#5B5046').textAlign(TextAlign.Center).enabled(!this.busy)\n" +
+  '                .onClick((): void => this.beginEdit(engine));\n' +
+  "              Text('删除').width(32).height(28).fontFamily('ReaderNotoSansSC')\n" +
+  '                .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(10)\n' +
+  "                .fontColor('#A8543A').textAlign(TextAlign.Center).enabled(!this.busy)\n" +
+  '                .onClick((): void => this.deleteEngine(engine.id));\n' +
+  "            }.width('100%').height(54).padding({ left: 12, right: 10 })\n" +
+  "              .backgroundColor('#99FFF8EF').border({ width: .5, color: '#66B4A697' }).borderRadius(10);\n" +
+  '          }, (engine: ReaderTtsEngineOption): string => `${engine.id}:${engine.lastUpdateTime}`);\n' +
+  "        }.width('100%').alignItems(HorizontalAlign.Start);\n" +
+  '      }\n' +
+  '      Column({ space: 6 }) {\n' +
+  "        Text('服务名称').width('100%').fontFamily('ReaderNotoSansSC')\n" +
+  "          .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(11).fontColor('#5B5046');\n" +
+  "        TextInput({ placeholder: '例如 Azure 语音', text: this.draftName })\n" +
+  "          .enabled(!this.busy).accessibilityText('在线 TTS 配置名称').width('100%').height(42)\n" +
+  "          .fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(13).fontColor('#332C25')\n" +
+  "          .placeholderColor('#B4A697').padding({ left: 12, right: 12 })\n" +
+  "          .backgroundColor('#CCFFF8EF').border({ width: .5, color: '#66B4A697' }).borderRadius(10)\n" +
+  '          .onChange((value: string): void => { this.draftName = value; });\n' +
+  "      }.width('100%');\n" +
+  '      Column({ space: 6 }) {\n' +
+  "        Text('接口地址').width('100%').fontFamily('ReaderNotoSansSC')\n" +
+  "          .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(11).fontColor('#5B5046');\n" +
+  "        TextInput({ placeholder: '请求 URL（使用 {{text}} 占位）', text: this.draftUrl })\n" +
+  "          .enabled(!this.busy).accessibilityText('在线 TTS 请求 URL').width('100%').height(42)\n" +
+  "          .fontFamily('ReaderInter').fontSize(13).fontColor('#332C25').placeholderColor('#B4A697')\n" +
+  "          .padding({ left: 12, right: 12 }).backgroundColor('#CCFFF8EF')\n" +
+  "          .border({ width: .5, color: '#66B4A697' }).borderRadius(10)\n" +
+  '          .onChange((value: string): void => { this.draftUrl = value; });\n' +
+  "      }.width('100%');\n" +
+  '      if (this.errorText.length > 0) {\n' +
+  "        Text(this.errorText).width('100%').fontFamily('ReaderNotoSansSC')\n" +
+  '          .fontWeight(FontWeight.Regular, { enableVariableFontWeight: true }).fontSize(11)\n' +
+  "          .fontColor('#A8543A').maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })\n" +
+  '          .accessibilityText(`在线 TTS 操作失败：${this.errorText}`);\n' +
+  '      }\n' +
+  '      Row({ space: 10 }) {\n' +
+  "        Text('清空').layoutWeight(1).height(44).fontFamily('ReaderNotoSansSC')\n" +
+  '          .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(13)\n' +
+  "          .fontColor('#5B5046').textAlign(TextAlign.Center).backgroundColor('#29B4A697').borderRadius(12)\n" +
+  '          .enabled(!this.busy).onClick((): void => this.clearDraft());\n' +
+  "        Text(this.draftId >= 0 ? '保存修改' : '新增配置').layoutWeight(1).height(44).fontFamily('ReaderNotoSansSC')\n" +
+  '          .fontWeight(FontWeight.Bold, { enableVariableFontWeight: true }).fontSize(13)\n' +
+  "          .fontColor('#FFFAF4').textAlign(TextAlign.Center)\n" +
+  "          .linearGradient({ angle: 155, colors: [['#2F6373', 0], ['#244F5C', 1]] }).borderRadius(12)\n" +
+  "          .shadow({ radius: 12, color: '#4D2F6373', offsetY: 4 })\n" +
+  '          .enabled(this.canSubmit() && !this.busy).opacity(this.canSubmit() && !this.busy ? 1 : 0.42)\n' +
+  '          .onClick((): void => this.submit());\n' +
+  "      }.width('100%').margin({ top: 10 });\n" +
+  "    }.width('100%').padding({ top: 8, bottom: 16, left: 18, right: 18 })\n" +
+  '      .alignItems(HorizontalAlign.Start);\n' +
+  '  }\n' +
+  '\n' +
+  '  private isSelected(engine: ReaderTtsEngineOption): boolean {\n' +
+  '    return this.selectedEngine === `http-tts:${engine.id}`;\n' +
+  '  }\n' +
+  '\n' +
+  '  private beginEdit(engine: ReaderTtsEngineOption): void {\n' +
+  '    if (!this.mounted || this.busy) return;\n' +
+  '    this.draftId = engine.id;\n' +
+  '    this.draftName = engine.name;\n' +
+  '    this.draftUrl = engine.url;\n' +
+  '  }\n' +
+  '\n' +
+  '  private canSubmit(): boolean {\n' +
+  '    return this.draftName.trim().length > 0 && this.draftUrl.trim().length > 0;\n' +
+  '  }\n' +
+  '\n' +
+  '  private submit(): void {\n' +
+  '    if (!this.mounted || !this.canSubmit() || this.busy) return;\n' +
+  '    const now = Date.now();\n' +
+  '    const config: ReaderTtsEngineOption = {\n' +
+  '      id: this.draftId >= 0 ? this.draftId : now,\n' +
+  '      name: this.draftName.trim(),\n' +
+  '      url: this.draftUrl.trim(),\n' +
+  '      lastUpdateTime: now,\n' +
+  '    };\n' +
+  '    const generation = ++this.generation;\n' +
+  '    this.setBusy(true);\n' +
+  "    this.errorText = '';\n" +
+  '    void this.onPut(config)\n' +
+  '      .then((): void => { if (this.current(generation)) this.resetDraft(); })\n' +
+  '      .catch((error: Error): void => {\n' +
+  '        if (this.current(generation)) this.errorText = error.message;\n' +
+  '      })\n' +
+  '      .finally((): void => {\n' +
+  '        if (this.current(generation)) this.setBusy(false);\n' +
+  '      });\n' +
+  '  }\n' +
+  '\n' +
+  '  private selectEngine(engine: string): void {\n' +
+  '    if (!this.mounted || this.busy) return;\n' +
+  '    const generation = ++this.generation;\n' +
+  '    this.setBusy(true);\n' +
+  "    this.errorText = '';\n" +
+  '    void this.onSelect(engine)\n' +
+  '      .catch((error: Error): void => {\n' +
+  '        if (this.current(generation)) this.errorText = error.message;\n' +
+  '      })\n' +
+  '      .finally((): void => {\n' +
+  '        if (this.current(generation)) this.setBusy(false);\n' +
+  '      });\n' +
+  '  }\n' +
+  '\n' +
+  '  private deleteEngine(id: number): void {\n' +
+  '    if (!this.mounted || this.busy) return;\n' +
+  '    const generation = ++this.generation;\n' +
+  '    this.setBusy(true);\n' +
+  "    this.errorText = '';\n" +
+  '    void this.onDelete(id)\n' +
+  '      .then((): void => { if (this.current(generation) && this.draftId === id) this.resetDraft(); })\n' +
+  '      .catch((error: Error): void => {\n' +
+  '        if (this.current(generation)) this.errorText = error.message;\n' +
+  '      })\n' +
+  '      .finally((): void => {\n' +
+  '        if (this.current(generation)) this.setBusy(false);\n' +
+  '      });\n' +
+  '  }\n' +
+  '\n' +
+  '  private clearDraft(): void {\n' +
+  '    if (!this.mounted || this.busy) return;\n' +
+  '    this.resetDraft();\n' +
+  '  }\n' +
+  '\n' +
+  '  private resetDraft(): void {\n' +
+  '    this.draftId = -1;\n' +
+  "    this.draftName = '';\n" +
+  "    this.draftUrl = '';\n" +
+  "    this.errorText = '';\n" +
+  '  }\n' +
+  '}\n'
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-tts-product-surface.mjs:142:8 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: "import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';\n" +
+    '\n' +
+    '\n' +
+    '/** Transient form only. Persisted HttpTTS configuration remains Core-owned. */\n' +
+    '@Component\n' +
+    'export struct ReaderHttpTtsManagerPanel {\n' +
+    '  @Prop engines: ReaderTtsEngineOption[] = [];\n' +
+    "  @Prop selectedEngine: string = 'system';\n" +
+    '  onSelect: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();\n' +
+    '  onPut: (config: ReaderTtsEngineOption) => Promise<void> =\n' +
+    '    (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();\n' +
+    '  onDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();\n' +
+    '  onBusyChange: (busy: boolean) => void = (_busy: boolean): void => {};\n' +
+    '\n' +
+    '  @State private draftId: number = -1;\n' +
+    "  @State private draftName: string = '';\n" +
+    "  @State private draftUrl: string = '';\n" +
+    '  @State private busy: boolean = false;\n' +
+    "  @State private errorText: string = '';\n" +
+    '  private mounted: boolean = false;\n' +
+    '  private generation: number = 0;\n' +
+    '\n' +
+    '  aboutToAppear(): void { this.mounted = true; }\n' +
+    '  aboutToDisappear(): void { this.mounted = false; this.generation += 1; this.onBusyChange(false); }\n' +
+    '\n' +
+    '  private current(generation: number): boolean { return this.mounted && generation === this.generation; }\n' +
+    '  private setBusy(busy: boolean): void { this.busy = busy; this.onBusyChange(busy); }\n' +
+    '\n' +
+    '  build() {\n' +
+    '    Column({ space: 14 }) {\n' +
+    '      if (this.engines.length > 0) {\n' +
+    '        Column({ space: 8 }) {\n' +
+    "          Text(`已配置服务 · ${this.engines.length} 项`).width('100%').fontFamily('ReaderNotoSansSC')\n" +
+    "            .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(11).fontColor('#5B5046');\n" +
+    '          ForEach(this.engines, (engine: ReaderTtsEngineOption) => {\n' +
+    '            Row({ space: 8 }) {\n' +
+    "              Text(engine.name).layoutWeight(1).fontFamily('ReaderNotoSansSC')\n" +
+    "                .fontWeight(FontWeight.Bold, { enableVariableFontWeight: true }).fontSize(12).fontColor('#332C25')\n" +
+    '                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n' +
+    "              Text(this.isSelected(engine) ? '当前' : '选择').width(38).height(28)\n" +
+    "                .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium, { enableVariableFontWeight: true })\n" +
+    "                .fontSize(10).fontColor(this.isSelected(engine) ? '#FFFAF4' : '#2F6373').textAlign(TextAlign.Center)\n" +
+    "                .backgroundColor(this.isSelected(engine) ? '#2F6373' : '#1A2F6373').borderRadius(999)\n" +
+    '                .enabled(!this.busy).onClick((): void => this.selectEngine(`http-tts:${engine.id}`));\n' +
+    "              Text('编辑').width(32).height(28).fontFamily('ReaderNotoSansSC')\n" +
+    '                .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(10)\n' +
+    "                .fontColor('#5B5046').textAlign(TextAlign.Center).enabled(!this.busy)\n" +
+    '                .onClick((): void => this.beginEdit(engine));\n' +
+    "              Text('删除').width(32).height(28).fontFamily('ReaderNotoSansSC')\n" +
+    '                .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(10)\n' +
+    "                .fontColor('#A8543A').textAlign(TextAlign.Center).enabled(!this.busy)\n" +
+    '                .onClick((): void => this.deleteEngine(engine.id));\n' +
+    "            }.width('100%').height(54).padding({ left: 12, right: 10 })\n" +
+    "              .backgroundColor('#99FFF8EF').border({ width: .5, color: '#66B4A697' }).borderRadius(10);\n" +
+    '          }, (engine: ReaderTtsEngineOption): string => `${engine.id}:${engine.lastUpdateTime}`);\n' +
+    "        }.width('100%').alignItems(HorizontalAlign.Start);\n" +
+    '      }\n' +
+    '      Column({ space: 6 }) {\n' +
+    "        Text('服务名称').width('100%').fontFamily('ReaderNotoSansSC')\n" +
+    "          .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(11).fontColor('#5B5046');\n" +
+    "        TextInput({ placeholder: '例如 Azure 语音', text: this.draftName })\n" +
+    "          .enabled(!this.busy).accessibilityText('在线 TTS 配置名称').width('100%').height(42)\n" +
+    "          .fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(13).fontColor('#332C25')\n" +
+    "          .placeholderColor('#B4A697').padding({ left: 12, right: 12 })\n" +
+    "          .backgroundColor('#CCFFF8EF').border({ width: .5, color: '#66B4A697' }).borderRadius(10)\n" +
+    '          .onChange((value: string): void => { this.draftName = value; });\n' +
+    "      }.width('100%');\n" +
+    '      Column({ space: 6 }) {\n' +
+    "        Text('接口地址').width('100%').fontFamily('ReaderNotoSansSC')\n" +
+    "          .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(11).fontColor('#5B5046');\n" +
+    "        TextInput({ placeholder: '请求 URL（使用 {{text}} 占位）', text: this.draftUrl })\n" +
+    "          .enabled(!this.busy).accessibilityText('在线 TTS 请求 URL').width('100%').height(42)\n" +
+    "          .fontFamily('ReaderInter').fontSize(13).fontColor('#332C25').placeholderColor('#B4A697')\n" +
+    "          .padding({ left: 12, right: 12 }).backgroundColor('#CCFFF8EF')\n" +
+    "          .border({ width: .5, color: '#66B4A697' }).borderRadius(10)\n" +
+    '          .onChange((value: string): void => { this.draftUrl = value; });\n' +
+    "      }.width('100%');\n" +
+    '      if (this.errorText.length > 0) {\n' +
+    "        Text(this.errorText).width('100%').fontFamily('ReaderNotoSansSC')\n" +
+    '          .fontWeight(FontWeight.Regular, { enableVariableFontWeight: true }).fontSize(11)\n' +
+    "          .fontColor('#A8543A').maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })\n" +
+    '          .accessibilityText(`在线 TTS 操作失败：${this.errorText}`);\n' +
+    '      }\n' +
+    '      Row({ space: 10 }) {\n' +
+    "        Text('清空').layoutWeight(1).height(44).fontFamily('ReaderNotoSansSC')\n" +
+    '          .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(13)\n' +
+    "          .fontColor('#5B5046').textAlign(TextAlign.Center).backgroundColor('#29B4A697').borderRadius(12)\n" +
+    '          .enabled(!this.busy).onClick((): void => this.clearDraft());\n' +
+    "        Text(this.draftId >= 0 ? '保存修改' : '新增配置').layoutWeight(1).height(44).fontFamily('ReaderNotoSansSC')\n" +
+    '          .fontWeight(FontWeight.Bold, { enableVariableFontWeight: true }).fontSize(13)\n' +
+    "          .fontColor('#FFFAF4').textAlign(TextAlign.Center)\n" +
+    "          .linearGradient({ angle: 155, colors: [['#2F6373', 0], ['#244F5C', 1]] }).borderRadius(12)\n" +
+    "          .shadow({ radius: 12, color: '#4D2F6373', offsetY: 4 })\n" +
+    '          .enabled(this.canSubmit() && !this.busy).opacity(this.canSubmit() && !this.busy ? 1 : 0.42)\n' +
+    '          .onClick((): void => this.submit());\n' +
+    "      }.width('100%').margin({ top: 10 });\n" +
+    "    }.width('100%').padding({ top: 8, bottom: 16, left: 18, right: 18 })\n" +
+    '      .alignItems(HorizontalAlign.Start);\n' +
+    '  }\n' +
+    '\n' +
+    '  private isSelected(engine: ReaderTtsEngineOption): boolean {\n' +
+    '    return this.selectedEngine === `http-tts:${engine.id}`;\n' +
+    '  }\n' +
+    '\n' +
+    '  private beginEdit(engine: ReaderTtsEngineOption): void {\n' +
+    '    if (!this.mounted || this.busy) return;\n' +
+    '    this.draftId = engine.id;\n' +
+    '    this.draftName = engine.name;\n' +
+    '    this.draftUrl = engine.url;\n' +
+    '  }\n' +
+    '\n' +
+    '  private canSubmit(): boolean {\n' +
+    '    return this.draftName.trim().length > 0 && this.draftUrl.trim().length > 0;\n' +
+    '  }\n' +
+    '\n' +
+    '  private submit(): void {\n' +
+    '    if (!this.mounted || !this.canSubmit() || this.busy) return;\n' +
+    '    const now = Date.now();\n' +
+    '    const config: ReaderTtsEngineOption = {\n' +
+    '      id: this.draftId >= 0 ? this.draftId : now,\n' +
+    '      name: this.draftName.trim(),\n' +
+    '      url: this.draftUrl.trim(),\n' +
+    '      lastUpdateTime: now,\n' +
+    '    };\n' +
+    '    const generation = ++this.generation;\n' +
+    '    this.setBusy(true);\n' +
+    "    this.errorText = '';\n" +
+    '    void this.onPut(config)\n' +
+    '      .then((): void => { if (this.current(generation)) this.resetDraft(); })\n' +
+    '      .catch((error: Error): void => {\n' +
+    '        if (this.current(generation)) this.errorText = error.message;\n' +
+    '      })\n' +
+    '      .finally((): void => {\n' +
+    '        if (this.current(generation)) this.setBusy(false);\n' +
+    '      });\n' +
+    '  }\n' +
+    '\n' +
+    '  private selectEngine(engine: string): void {\n' +
+    '    if (!this.mounted || this.busy) return;\n' +
+    '    const generation = ++this.generation;\n' +
+    '    this.setBusy(true);\n' +
+    "    this.errorText = '';\n" +
+    '    void this.onSelect(engine)\n' +
+    '      .catch((error: Error): void => {\n' +
+    '        if (this.current(generation)) this.errorText = error.message;\n' +
+    '      })\n' +
+    '      .finally((): void => {\n' +
+    '        if (this.current(generation)) this.setBusy(false);\n' +
+    '      });\n' +
+    '  }\n' +
+    '\n' +
+    '  private deleteEngine(id: number): void {\n' +
+    '    if (!this.mounted || this.busy) return;\n' +
+    '    const generation = ++this.generation;\n' +
+    '    this.setBusy(true);\n' +
+    "    this.errorText = '';\n" +
+    '    void this.onDelete(id)\n' +
+    '      .then((): void => { if (this.current(generation) && this.draftId === id) this.resetDraft(); })\n' +
+    '      .catch((error: Error): void => {\n' +
+    '        if (this.current(generation)) this.errorText = error.message;\n' +
+    '      })\n' +
+    '      .finally((): void => {\n' +
+    '        if (this.current(generation)) this.setBusy(false);\n' +
+    '      });\n' +
+    '  }\n' +
+    '\n' +
+    '  private clearDraft(): void {\n' +
+    '    if (!this.mounted || this.busy) return;\n' +
+    '    this.resetDraft();\n' +
+    '  }\n' +
+    '\n' +
+    '  private resetDraft(): void {\n' +
+    '    this.draftId = -1;\n' +
+    "    this.draftName = '';\n" +
+    "    this.draftUrl = '';\n" +
+    "    this.errorText = '';\n" +
+    '  }\n' +
+    '}\n',
+  expected: /TextInput\(\{ placeholder: '配置名称'/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

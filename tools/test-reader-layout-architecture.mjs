@@ -141,10 +141,12 @@ assert.match(experience, /ReaderPageTurnStage\(\{[\s\S]*layout: this\.readingLay
   'the reading owner must pass its single layout snapshot into the page-turn stage');
 assert.match(pageTurnStage, /ReadingSurface\(\{[\s\S]*layout: this\.layout/,
   'the page-turn stage must forward that same layout snapshot to every physical page');
-assert.match(experience, /ReaderControlPanel\(\{[\s\S]*layout: this\.controlLayout\(\)/);
+assert.match(experience,
+  /ReaderControlPanel\(\{[\s\S]*layout: this\.controlLayout\(this\.readerWindowMetricsRevision\)/,
+  'control geometry must observe metrics revisions even when IME-only changes leave the reading layout key unchanged');
 assert.match(experience, /@StorageLink\('readerWindowMetricsRevision'\)/);
 assert.match(experience, /reflowAfterWindowGeometryChange\(\)/);
-assert.match(surface, /@Prop layout: ReaderReadingLayoutSnapshot/);
+assert.match(surface, /@Prop @Watch\('onHighlightContentChanged'\) layout: ReaderReadingLayoutSnapshot/);
 assert.match(surface, /\.padding\(this\.contentInsets\(\)\)/);
 assert.match(control, /@Prop @Watch\('onLayoutChanged'\) layout: ReaderControlLayoutSnapshot/);
 assert.doesNotMatch(control, /@Prop availableWidth|@Prop isTablet/,

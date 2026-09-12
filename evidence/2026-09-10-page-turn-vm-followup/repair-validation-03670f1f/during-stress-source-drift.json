@@ -1,0 +1,20 @@
+{
+  "source-snapshot.json": {
+    "checked": 512,
+    "drift": [
+      "entry/src/main/ets/features/reading/ReaderControlPanel.ets"
+    ]
+  },
+  "controller-snapshot.json": {
+    "checked": 223,
+    "drift": [
+      "tools/test-reader-appearance-motion-tree.mjs",
+      "tools/test-reader-control-header-content.mjs",
+      "tools/test-reader-control-p0.mjs",
+      "tools/test-reader-control-runtime.mjs",
+      "tools/test-reader-motion-repair.mjs"
+    ]
+  },
+  "note": "036 remains installed for the complete four-mode stress run; only subsequent Panel observer projection and its tests changed locally. New 90be6e9c has not been installed.",
+  "recordedAt": "2026-09-11T04:07:50.275571+00:00"
+}

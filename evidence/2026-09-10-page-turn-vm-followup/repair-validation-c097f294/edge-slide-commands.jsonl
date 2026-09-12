@@ -1,0 +1,4 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.01811075, "elapsed": 0.024576625, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.04280775, "elapsed": 0.028373875, "code": 0, "output": "2458\n"}
+{"args": ["shell", "uitest", "dumpLayout", "-p", "/data/local/tmp/reader-control-edge-slide-1.json"], "start": 0.075152875, "elapsed": 0.6532680829999999, "code": 0, "output": "DumpLayout saved to:/data/local/tmp/reader-control-edge-slide-1.json\n"}
+{"args": ["file", "recv", "/data/local/tmp/reader-control-edge-slide-1.json", "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-c097f294/reader-control-edge-slide-1.json"], "start": 0.729129, "elapsed": 0.03084191599999997, "code": 0, "output": "FileTransfer finish, Size:108779, File count = 1, time:7ms rate:15539.86kB/s\n"}

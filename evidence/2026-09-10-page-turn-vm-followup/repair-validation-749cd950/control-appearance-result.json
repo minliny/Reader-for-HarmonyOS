@@ -1,0 +1,5 @@
+{
+  "status": "PASS",
+  "module": "外观",
+  "scope": "open, drag expand, automatic collapse, drag close; endpoint geometry only; trace performance separate"
+}

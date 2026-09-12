@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-09-11T17:05:30.376166+00:00",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+      "sha256": "73135778b6196d5590abcb1743267c0e91769d6c796752dcae377da13c085e2e"
+    },
+    {
+      "path": "tools/lib/reader-control-builder-probe.mjs",
+      "sha256": "bd25734dbcf47edeac259a9e2923e59d68586c706e28fcccdba2afe7cefacc21"
+    },
+    {
+      "path": "tools/test-reader-control-search-settings-content.mjs",
+      "sha256": "5a65d2cb6037714a72e9fee4e65a5aa9664a2dc766dac1a62409f0c64760d053"
+    },
+    {
+      "path": "scripts/check-local.sh",
+      "sha256": "4ca391149b02e36610974a1b288cd46541c2e6765b843e17a6c0bde673d09f37"
+    }
+  ],
+  "harmonyHead": "35f2f99a8d635615475fde75120bf8629f944565",
+  "coreHead": "6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2",
+  "dirty": true
+}

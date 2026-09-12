@@ -1,0 +1,5 @@
+{"status": "captured", "label": "image-night-next-1", "mode": "frames", "log": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/image-night-next-1-commands.jsonl"}
+{"status": "captured", "label": "image-night-next-2", "mode": "frames", "log": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/image-night-next-2-commands.jsonl"}
+{"status": "captured", "label": "image-night-previous-1", "mode": "frames", "log": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/image-night-previous-1-commands.jsonl"}
+{"status": "captured", "label": "image-night-previous-2", "mode": "frames", "log": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/image-night-previous-2-commands.jsonl"}
+image-night canonical PASS

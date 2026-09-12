@@ -58,11 +58,12 @@ assert.match(detail, /\.enabled\(this\.sourceSwitchEnabled\)/,
 assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID/);
 assert.match(index, /onSwitchSource: \(\): void => this\.openDetailSourceSwitch\(\)/);
 
-const detailOverlayStart = index.indexOf("if (this.route === 'detail' && this.sourceSwitchVisible");
+const detailOverlayStart = index.indexOf("if ((this.route === 'detail' || this.route === 'bookshelf') &&");
 const detailOverlayEnd = index.indexOf("if (this.route === 'bookshelf'", detailOverlayStart);
 assert.ok(detailOverlayStart >= 0 && detailOverlayEnd > detailOverlayStart,
   'Index must host the existing source-switch panel on remote detail');
 const detailOverlay = index.slice(detailOverlayStart, detailOverlayEnd);
+assert.match(detailOverlay, /!this\.readingSessionActive && this\.sourceSwitchVisible/);
 assert.match(detailOverlay, /SourceSwitchPanel\(\{/);
 assert.match(detailOverlay, /state: this\.sourceSwitchState/);
 assert.match(detailOverlay, /onSelectCandidate: \(candidate: SourceSwitchCandidate\): void => this\.onPickSource\(candidate\)/);
@@ -71,7 +72,7 @@ const detailOpenStart = index.indexOf('private openDetailSourceSwitch(): void');
 const detailOpenEnd = index.indexOf('private retrySourceSwitch(): void', detailOpenStart);
 assert.ok(detailOpenStart >= 0 && detailOpenEnd > detailOpenStart);
 const detailOpen = index.slice(detailOpenStart, detailOpenEnd);
-assert.match(detailOpen, /this\.route !== 'detail'/);
+assert.match(detailOpen, /this\.route !== this\.readingOriginRoute/);
 assert.match(detailOpen, /this\.startSourceDiscovery\(generation\)/);
 assert.doesNotMatch(detailOpen, /this\.route\s*=\s*'reading'/,
   'detail source switch must remain a detail-only overlay');

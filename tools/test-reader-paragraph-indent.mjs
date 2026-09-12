@@ -27,9 +27,38 @@ assert.equal(readerAppearanceParagraphContentScalarOffset(99, 12, true, 'firstLi
 
 assert.equal(readingParagraphBoundaryMode('local', 'TXT'), 'lineSeparated');
 assert.equal(readingParagraphBoundaryMode('local', ' txt '), 'lineSeparated');
+assert.equal(readingParagraphBoundaryMode('local', 'local'), 'lineSeparated');
+assert.equal(readingParagraphBoundaryMode('local', ' LOCAL '), 'lineSeparated');
 assert.equal(readingParagraphBoundaryMode('local', 'EPUB'), 'blankLineSeparated');
 assert.equal(readingParagraphBoundaryMode('remote-source', 'TXT'), 'lineSeparated');
 assert.equal(readingParagraphBoundaryMode('remote-source', undefined), 'lineSeparated');
+
+// CRLF is one logical newline, including when replacement rules introduce it
+// into structured book text. Preserve exact original UTF-16 offsets.
+for (const newline of ['\n', '\r', '\r\n']) {
+  for (const blank of ['', ' ', '\t', ' \t ']) {
+    const body = `甲😀${newline}段内续行${newline}${blank}${newline}乙e\u0301`;
+    const paragraphs = collectReadingParagraphUtf16Ranges(body, 'blankLineSeparated');
+    assert.deepEqual(paragraphs.map(range => body.slice(range.startUtf16, range.endUtf16)),
+      [`甲😀${newline}段内续行`, '乙e\u0301']);
+    assert.equal(paragraphs[1].startUtf16, body.indexOf('乙'));
+    assert.equal(paragraphs[1].endUtf16, body.length);
+    assert.deepEqual(collectReadingParagraphUtf16Ranges(body, 'lineSeparated')
+      .map(range => body.slice(range.startUtf16, range.endUtf16)), ['甲😀', '段内续行', '乙e\u0301']);
+  }
+}
+for (const divider of ['\r\n\n', '\n\r\n', '\r\r', '\n\t\r\n', '\r\n\r\n\r\n']) {
+  const body = `甲${divider}乙`;
+  assert.deepEqual(collectReadingParagraphUtf16Ranges(body, 'blankLineSeparated')
+    .map(range => body.slice(range.startUtf16, range.endUtf16)), ['甲', '乙']);
+}
+for (const mode of ['lineSeparated', 'blankLineSeparated']) {
+  assert.deepEqual(collectReadingParagraphUtf16Ranges('\r\n \t\r\n', mode), []);
+  assert.deepEqual(collectReadingParagraphUtf16Ranges('', mode), []);
+}
+const untrimmed = '甲\r\n\r\n  乙';
+assert.deepEqual(collectReadingParagraphUtf16Ranges(untrimmed, 'blankLineSeparated')
+  .map(range => untrimmed.slice(range.startUtf16, range.endUtf16)), ['甲', '  乙']);
 
 const txtContent = '第一段\n第二段\r\n\r\n第三段';
 const txtRanges = collectReadingParagraphUtf16Ranges(txtContent, 'lineSeparated');
@@ -38,6 +67,27 @@ assert.deepEqual(txtRanges.map((range) => txtContent.substring(range.startUtf16,
   '第二段',
   '第三段',
 ]);
+
+// Core's actual local_book.import path emits kind="local", not the "TXT"
+// label used by the separate ParsedTxt helper. A later physical page can
+// start midway through paragraph one and still contain new paragraphs.
+const importedTxt = '上页开始的长段落。\n张浚感激不尽。\n而吕相公言至此处。';
+const importedTxtRanges = collectReadingParagraphUtf16Ranges(
+  importedTxt, readingParagraphBoundaryMode('local', 'local'));
+assert.deepEqual(importedTxtRanges.map(range => importedTxt.slice(range.startUtf16, range.endUtf16)), [
+  '上页开始的长段落。', '张浚感激不尽。', '而吕相公言至此处。',
+]);
+const pageStart = 5;
+for (const indent of ['none', 'single', 'firstLine']) {
+  const fragments = importedTxtRanges.map(range => {
+    const start = Math.max(pageStart, range.startUtf16);
+    return readerAppearanceParagraphDisplayText(
+      importedTxt.slice(start, range.endUtf16), start === range.startUtf16, indent);
+  });
+  const prefix = readerAppearanceParagraphIndentPrefix(indent);
+  assert.deepEqual(fragments, ['长段落。', `${prefix}张浚感激不尽。`, `${prefix}而吕相公言至此处。`],
+    'each actual paragraph gets its configured indent even when the page starts with a continuation');
+}
 
 const structuredContent = '第一段\n\n第二段\n同一段内换行\n\n第三段';
 const structuredRanges = collectReadingParagraphUtf16Ranges(structuredContent, 'blankLineSeparated');

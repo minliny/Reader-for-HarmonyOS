@@ -21,6 +21,9 @@ function methodSection(source, name) {
   if (start < 0) {
     start = source.indexOf(asyncAnchor);
   }
+  if (start < 0) {
+    start = source.indexOf(`  ${name}(`);
+  }
   assert.notEqual(start, -1, `missing ${name} method`);
   const nextPrivate = source.indexOf('\n  private ', start + 4);
   return nextPrivate < 0 ? source.slice(start) : source.slice(start, nextPrivate);
@@ -32,13 +35,13 @@ contract('a rejected preparation attempt never swaps the context away from the v
     'the outcome must distinguish begun / retry / abandon instead of a boolean');
   assert.match(begin, /visiblePage === undefined \|\| originChapter === undefined \|\| !this\.canTurnPage\(\)/,
     'the lane-busy case must be retry, not a silent drop');
-  assert.match(begin, /this\.restoreMaterializedChapterContext\(targetContext, false\);\s*this\.beginMeasurement/);
+  assert.match(begin, /this\.adjacentMeasurementContext = targetContext;\s*this\.beginMeasurement/);
   const tailRestore = begin.indexOf(
-    'this.restoreMaterializedChapterContext(origin, false);',
-    begin.indexOf('this.restoreMaterializedChapterContext(targetContext, false);'),
+    'this.adjacentMeasurementContext = undefined;',
+    begin.indexOf('this.adjacentMeasurementContext = targetContext;'),
   );
   assert.notEqual(tailRestore, -1,
-    'a tail rejection after the target context was installed must restore the origin context');
+    'a tail rejection after the target context was installed must discard only the speculative context');
   assert.match(begin, /this\.pageTurnPreparation = undefined;\s*return 'retry';/,
     'a tail rejection must also release the preparation slot it armed');
   assert.match(begin, /return 'abandon';/, 'a missing target must be abandon, not retry');
@@ -67,9 +70,10 @@ contract('the dynamic rapid target is re-drained at every completion hook', () =
 
   const preparedComplete = methodSection(localReading, 'completePreparedPageTurn');
   assert.match(preparedComplete,
-    /this\.drainRapidPageTurn\(\);[\s\S]*this\.drainPageTurnPreparationQueue\(\);/,
-    'a finished preparation must re-drain both the dynamic target and the preparation queue');
+    /this\.drainRapidPageTurn\(\);[\s\S]*this\.resumePagePreparationAfterTextureFrame\(\);/,
+    'a finished preparation drains user intent now and resumes other preparation after textures');
 
+  assert.match(methodSection(localReading, 'resumePagePreparationAfterTextureFrame'), /refreshBookTurnTextures[\s\S]*finally[\s\S]*drainPageTurnPreparationQueue/);
   const complete = methodSection(localReading, 'completeFirstPage');
   assert.match(complete,
     /this\.schedulePageTurnPreparation\(\);[\s\S]*this\.completeRapidPageTurnTransaction\(\);[\s\S]*this\.drainRapidPageTurn\(\);/,
@@ -97,6 +101,7 @@ contract('the first-page completion lane has a watchdog with bounded re-measurem
   assert.match(watchdog, /READING_FIRST_PAGE_COMPLETION_TIMEOUT/,
     'exhausted retries must fail closed instead of staying wedged');
 
+  assert.match(methodSection(localReading, 'resumePagePreparationAfterTextureFrame'), /refreshBookTurnTextures[\s\S]*finally[\s\S]*drainPageTurnPreparationQueue/);
   const complete = methodSection(localReading, 'completeFirstPage');
   assert.match(complete, /this\.cancelFirstPageCompletionDeadline\(\);/,
     'normal completion must disarm the watchdog');
@@ -110,9 +115,9 @@ contract('lifecycle teardown and failure disarm both new watchdogs', () => {
   const fail = methodSection(localReading, 'fail');
   assert.match(fail, /cancelFirstPageCompletionDeadline\(\)/);
   assert.match(fail, /cancelPageTurnPreparationRetry\(\)/);
-  const disappear = localReading.indexOf('  aboutToDisappear(): void {');
-  assert.notEqual(disappear, -1, 'missing aboutToDisappear');
-  const teardown = localReading.slice(disappear, disappear + 2500);
+  // Inspect the full lifecycle method, not a character budget that changes
+  // meaning when another legitimate cleanup is added before these timers.
+  const teardown = methodSection(localReading, 'aboutToDisappear');
   assert.match(teardown, /cancelFirstPageCompletionDeadline\(\);[\s\S]*?cancelPageTurnPreparationRetry\(\);/,
     'aboutToDisappear must disarm the completion watchdog and the preparation retry timer');
   assert.match(localReading, /this\.phase = 'loading';\s*this\.cancelMeasurementDeadline\(\);\s*this\.cancelFirstPageReadyDeadline\(\);\s*this\.cancelFirstPageCompletionDeadline\(\);/,

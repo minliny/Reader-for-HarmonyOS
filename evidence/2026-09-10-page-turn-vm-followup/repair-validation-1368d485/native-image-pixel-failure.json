@@ -1,0 +1,10 @@
+{
+  "canonicalBody": "four modes 8 next and 8 previous: exact body adjacency and reverse PASS; slide resumed last3 after strict pixel hash stop",
+  "imageEdges": "observed1px left edge difference on slide, retained; accepted geometry tolerance1px",
+  "nativePixels": "FAIL image omitted from native curled page while static current renders checkerboard",
+  "samples": [
+    "reader-control-image-simulation-origin.png",
+    "reader-control-image-native-next-0.png",
+    "reader-control-image-native-previous-0.png"
+  ]
+}

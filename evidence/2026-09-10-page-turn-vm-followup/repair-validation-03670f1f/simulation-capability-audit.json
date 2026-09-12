@@ -1,0 +1,4068 @@
+{
+  "scope": "Native node presence is lifecycle evidence only. Visible settings immediately after all 200 turns must still admit simulation; retained XComponent alone cannot rule out fallback.",
+  "samples": [
+    {
+      "file": "reader-control-sweep-simulation-1.json",
+      "nativeNodes": 0,
+      "selected": [
+        [
+          "#00000000",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-10.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-100.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-101.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-102.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-103.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-104.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-105.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-106.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-107.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-108.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-109.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-11.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-110.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-111.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-112.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-113.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-114.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-115.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-116.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-117.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-118.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-119.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-12.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-120.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-121.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-122.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-123.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-124.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-125.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-126.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-127.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-128.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-129.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-13.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-130.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-131.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-132.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-133.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-134.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-135.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-136.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-137.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-138.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-139.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-14.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-140.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-141.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-142.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-143.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-144.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-145.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-146.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-147.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-148.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-149.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-15.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-150.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-151.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-152.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-153.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-154.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-155.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-156.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-157.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-158.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-159.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-16.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-160.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-161.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-162.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-163.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-164.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-165.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-166.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-167.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-168.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-169.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-17.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-170.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-171.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-172.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-173.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-174.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-175.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-176.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-177.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-178.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-179.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-18.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-180.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-181.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-182.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-183.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-184.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-185.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-186.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-187.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-188.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-189.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-19.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-190.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-191.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-192.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-193.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-194.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-195.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-196.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-197.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-198.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-199.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-2.json",
+      "nativeNodes": 0,
+      "selected": []
+    },
+    {
+      "file": "reader-control-sweep-simulation-20.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-200.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-201.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-202.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-203.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-204.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-205.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-21.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-22.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-23.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-24.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-25.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-26.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-27.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-28.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-29.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-3.json",
+      "nativeNodes": 0,
+      "selected": [
+        [
+          "#00000000",
+          "true"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-30.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-31.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-32.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-33.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-34.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-35.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-36.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-37.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-38.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-39.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-4.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "true"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-40.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-41.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-42.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-43.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-44.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-45.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-46.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-47.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-48.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-49.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-5.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-50.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-51.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-52.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-53.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-54.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-55.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-56.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-57.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-58.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-59.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-6.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-60.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-61.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-62.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-63.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-64.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-65.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-66.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-67.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-68.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-69.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-7.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-70.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-71.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-72.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-73.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-74.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-75.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-76.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-77.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-78.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-79.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-8.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-80.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-81.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-82.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-83.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-84.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-85.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-86.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-87.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-88.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-89.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-9.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-90.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-91.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-92.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-93.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-94.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-95.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-96.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-97.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-98.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-99.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    }
+  ],
+  "turnSamples": [
+    {
+      "file": "reader-control-sweep-simulation-10.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-100.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-101.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-102.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-103.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-104.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-105.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-106.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-107.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-108.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-109.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-11.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-110.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-111.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-112.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-113.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-114.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-115.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-116.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-117.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-118.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-119.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-12.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-120.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-121.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-122.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-123.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-124.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-125.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-126.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-127.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-128.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-129.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-13.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-130.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-131.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-132.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-133.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-134.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-135.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-136.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-137.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-138.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-139.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-14.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-140.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-141.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-142.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-143.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-144.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-145.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-146.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-147.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-148.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-149.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-15.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-150.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-151.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-152.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-153.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-154.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-155.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-156.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-157.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-158.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-159.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-16.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-160.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-161.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-162.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-163.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-164.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-165.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-166.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-167.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-168.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-169.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-17.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-170.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-171.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-172.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-173.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-174.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-175.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-176.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-177.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-178.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-179.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-18.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-180.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-181.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-182.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-183.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-184.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-185.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-186.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-187.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-188.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-189.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-19.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-190.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-191.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-192.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-193.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-194.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-195.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-196.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-197.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-198.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-199.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-20.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-200.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-201.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-202.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-203.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-204.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-205.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-21.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-22.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-23.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-24.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-25.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-26.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-27.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-28.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-29.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-30.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-31.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-32.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-33.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-34.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-35.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-36.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-37.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-38.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-39.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-40.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-41.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-42.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-43.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-44.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-45.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-46.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-47.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-48.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-49.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-50.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-51.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-52.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-53.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-54.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-55.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-56.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-57.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-58.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-59.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-6.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-60.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-61.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-62.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-63.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-64.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-65.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-66.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-67.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-68.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-69.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-7.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-70.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-71.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-72.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-73.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-74.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-75.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-76.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-77.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-78.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-79.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-8.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-80.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-81.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-82.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-83.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-84.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-85.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-86.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-87.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-88.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-89.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-9.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-90.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-91.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-92.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-93.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-94.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-95.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-96.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-97.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-98.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    },
+    {
+      "file": "reader-control-sweep-simulation-99.json",
+      "nativeNodes": 1,
+      "selected": [
+        [
+          "#BDFFFCF8",
+          "false"
+        ]
+      ]
+    }
+  ],
+  "turnsChecked": 200,
+  "allTurnSamplesRetainNative": true,
+  "preselectionExclusions": [
+    "reader-control-sweep-simulation-1.json",
+    "reader-control-sweep-simulation-2.json",
+    "reader-control-sweep-simulation-3.json"
+  ],
+  "postRunVisibleSettings": [
+    {
+      "file": "reader-control-sweep-none-3.json",
+      "opacity": 0.999974,
+      "enabled": "true",
+      "selectedColor": "#BDFFFCF8"
+    }
+  ],
+  "capabilityStillAvailableAfter200Turns": true
+}

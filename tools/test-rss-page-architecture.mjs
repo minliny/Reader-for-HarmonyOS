@@ -75,7 +75,7 @@ assert.match(rss, /this\.statusTab\('规则订阅', 'rules'\)/);
 assert.match(rss, /onModeRequested: \(mode: RssMode\)/);
 assert.match(index, /activeMode: 'sources'/);
 assert.match(index, /onModeRequested: \(mode: RssMode\)/);
-assert.match(index, /RSS mode %\{public\}s has no admitted data contract/);
+assert.match(index, /RSS mode %\{private\}s has no admitted data contract/);
 assert.doesNotMatch(index, /type ReaderRoute = [^;]*'rssAll'/);
 
 // Management, SourceFeed, and EntryDetail are true RSS child routes. They use
@@ -237,10 +237,10 @@ assert.match(orchestrator, /private mutationChain: Promise<void> = Promise\.reso
 // Aggregate main-page modes, main-page refresh, and URL Host opening
 // remain explicit gaps. Scoped SourceFeed/EntryDetail actions must not regress
 // to the removed generic no-op dispatchers.
-assert.doesNotMatch(index, /RSS SourceFeed action %\{public\}s has no admitted transaction/);
-assert.doesNotMatch(index, /RSS EntryDetail action %\{public\}s has no admitted host transaction/);
+assert.doesNotMatch(index, /RSS SourceFeed action %\{private\}s has no admitted transaction/);
+assert.doesNotMatch(index, /RSS EntryDetail action %\{private\}s has no admitted host transaction/);
 assert.match(index, /RSS refresh is placeholder-only until its admitted flow is supplied/);
-assert.match(index, /RSS mode %\{public\}s has no admitted data contract/);
+assert.match(index, /RSS mode %\{private\}s has no admitted data contract/);
 assert.match(index, /rss\.entries\.query/);
 
 // Filter is an inline disclosure in normal layout flow, not a dropdown/select.

@@ -1,0 +1,78 @@
+[
+  {
+    "name": "test-reader-page-chrome",
+    "code": 0
+  },
+  {
+    "name": "test-reader-page-turn-stage",
+    "code": 0
+  },
+  {
+    "name": "test-reader-page-turn-pipeline",
+    "code": 0
+  },
+  {
+    "name": "test-reader-page-input-runtime",
+    "code": 0
+  },
+  {
+    "name": "test-reader-page-preparation-runtime",
+    "code": 0
+  },
+  {
+    "name": "test-reader-page-progress-runtime",
+    "code": 0
+  },
+  {
+    "name": "test-reader-page-settlement-runtime",
+    "code": 0
+  },
+  {
+    "name": "test-reader-continuous-reading",
+    "code": 0
+  },
+  {
+    "name": "test-reader-continuous-input-runtime",
+    "code": 0
+  },
+  {
+    "name": "test-reader-book-turn-architecture",
+    "code": 0
+  },
+  {
+    "name": "test-reader-motion-repair",
+    "code": 0
+  },
+  {
+    "name": "test-reader-cold-entry-recovery",
+    "code": 0
+  },
+  {
+    "name": "test-reader-first-page-sdk",
+    "code": 0
+  },
+  {
+    "name": "test-reader-control-runtime",
+    "code": 0
+  },
+  {
+    "name": "test-reader-control-stage-lifecycle",
+    "code": 0
+  },
+  {
+    "name": "test-reader-control-motion-policy",
+    "code": 0
+  },
+  {
+    "name": "test-reader-control-gesture-continuation",
+    "code": 0
+  },
+  {
+    "name": "test-reader-control-morph-scroll",
+    "code": 0
+  },
+  {
+    "name": "test-reader-dynamic-highlight",
+    "code": 0
+  }
+]

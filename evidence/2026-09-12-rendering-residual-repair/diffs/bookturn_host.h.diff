@@ -1,0 +1,22 @@
+--- before/entry/src/main/cpp/bookturn/bookturn_host.h
++++ current/entry/src/main/cpp/bookturn/bookturn_host.h
+@@ -46,7 +46,9 @@
+     float height = 0.0F;
+ };
+ 
+-using HostEventCallback = std::function<void(HostEvent, uint64_t, int32_t)>;
++// The last argument is the originating surface epoch, carried through the JS
++// queue so a replacement surface can reject an already-enqueued old event.
++using HostEventCallback = std::function<void(HostEvent, uint64_t, int32_t, uint64_t)>;
+ 
+ /** Sample mailbox plus the single VSync-driven renderer thread. ArkTS only
+  *  records the newest raw gesture sample (contract V2 §5.3); the chased edge
+@@ -99,7 +101,7 @@
+     enum class Settlement : int32_t { NONE = 0, COMMIT = 1, ROLLBACK = 2 };
+ 
+     void Run();
+-    void Notify(HostEvent event, uint64_t generation, int32_t detail);
++    void Notify(HostEvent event, uint64_t generation, int32_t detail, uint64_t surfaceEpoch);
+     bool IsSurfaceLifecycleCurrent(uint64_t serial) const;
+     void NotifySurfaceEvent(uint64_t serial, HostEvent event, uint64_t generation,
+         int32_t detail);

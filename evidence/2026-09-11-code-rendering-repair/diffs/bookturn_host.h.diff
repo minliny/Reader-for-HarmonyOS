@@ -1,0 +1,11 @@
+--- before/entry/src/main/cpp/bookturn/bookturn_host.h
++++ current/entry/src/main/cpp/bookturn/bookturn_host.h
+@@ -122,6 +122,8 @@
+     std::thread renderThread_;
+     bool stop_ = false;
+     std::optional<DynamicHighlights> pendingHighlights_;
++    std::optional<DynamicHighlights> acceptedHighlights_;
++    uint64_t acceptedHighlightSurfaceSerial_ = 0;
+     bool highlightFrameDirty_ = false;
+ 
+     void* pendingWindow_ = nullptr;

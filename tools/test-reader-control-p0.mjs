@@ -2,313 +2,57 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { readerControlExpansionTarget } from
-  '../entry/src/main/ets/features/reading/ReaderControlRouting.ts';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(repo, path), 'utf8');
 
-const motion = read('entry/src/main/ets/features/common/MotionSpec.ets');
-assert.match(motion, /reader\.panel\.expand', durationMs: 420, curve: Curve\.EaseOut/);
-assert.match(motion, /reader\.panel\.collapse', durationMs: 360, curve: Curve\.EaseIn/);
-assert.match(motion, /reader\.control\.handle\.snap', durationMs: 120, curve: Curve\.EaseOut/,
-  'the grabber release settle must own its own 120ms snap token, not borrow the 360ms panel collapse');
-assert.match(motion,
-  /function fadeSlideTransition[\s\S]*?TransitionEffect\.OPACITY\s*\.combine\(TransitionEffect\.translate\(\{ y: fromY \}\)\)/,
-  'MR1 authors control show/hide as opacity + translate; the pure-translate version left the hide beat invisible');
-assert.match(motion,
-  /export function showHideTransition\(showId: string, hideId: string, fromY: number\): TransitionEffect \{\s*return TransitionEffect\.asymmetric\(/,
-  'show and hide must resolve through the asymmetric pair so the exit uses the hide token');
-assert.match(motion,
-  /export function panelActorTransition\(id: string, fromY: number, delayMs: number = 0\): TransitionEffect \{\s*const entry = requireEntry\(id\);\s*const anim: AnimateParam = delayMs > 0 \?/,
-  'the J~Q shell-morph actors resolve through one registry-backed transition factory');
-assert.match(motion,
-  /export function panelActorTransition\([\s\S]*?TransitionEffect\.OPACITY\s*\.combine\(TransitionEffect\.translate\(\{ y: fromY \}\)\)/,
-  'J~Q authors every shell-morph actor as opacity + 18px translate, never translate-only');
-assert.match(motion,
-  /reader\.panel\.shell\.expand', durationMs: 420, curve: curves\.cubicBezierCurve\(0\.2, 0, 0, 1\)/,
-  'the shell board expands on the J/L cubic(0.2,0,0,1) beat at 420ms');
-assert.match(motion,
-  /reader\.panel\.shell\.collapse', durationMs: 360, curve: curves\.cubicBezierCurve\(0\.45, 0, 0\.55, 1\)/,
-  'the shell board collapses on the K/M/O/Q ease-in-out beat at 360ms');
-assert.match(motion,
-  /reader\.panel\.dock\.outgoing', durationMs: 230, curve: Curve\.EaseIn/,
-  'the quick dock leaves on the J~Q ease-out keyframe pair scaled to 420ms');
-assert.match(motion,
-  /reader\.panel\.dock\.incoming', durationMs: 150, curve: Curve\.EaseOut/,
-  'the quick dock returns with the late ease-out beat at 150ms');
-assert.match(motion,
-  /reader\.panel\.full\.incoming', durationMs: 330, curve: Curve\.EaseOut/,
-  'full panel content fades in late (delay 140) on the J~Q ease-out window');
-assert.match(motion,
-  /reader\.panel\.full\.outgoing', durationMs: 150, curve: curves\.cubicBezierCurve\(0\.45, 0, 0\.55, 1\)/,
-  'full panel content leaves first on the collapse ease-in-out beat (delay 10)');
-assert.match(motion,
-  /reader\.session\.capsule\.morph\.flight',\s*\n\s*durationMs: 480, curve: curves\.cubicBezierCurve\(0\.4, 0, 0\.2, 1\)/,
-  'the Review C/D/E/F flight beat is the 2026-09-02 product supplement at 480ms');
-assert.match(motion,
-  /reader\.session\.capsule\.morph\.expand',\s*\n\s*durationMs: 240, curve: curves\.cubicBezierCurve\(0\.2, 0, 0, 1\)/,
-  'the right-edge shell expand is the 2026-09-02 product supplement at 240ms');
-assert.match(motion,
-  /reader\.session\.capsule\.morph\.reveal', durationMs: 160, curve: Curve\.EaseOut/,
-  'the content reveal is the 2026-09-02 product supplement at 160ms');
-assert.match(motion,
-  /reader\.session\.capsule\.morph\.dot\.hold', durationMs: 120, curve: Curve\.Linear/,
-  'the canonical 24vp shell holds before it expands');
-
+// Execution reference v1.1 supersedes the old independent fades, 120ms handle
+// snap and Home->Directory / Replace->external expansion assumptions.
+// These are production wiring guards; executable event/geometry tests remain
+// in test-reader-control-session-state / gesture / motion-geometry suites.
 const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
-const appearanceStage = read('entry/src/main/ets/features/reading/ReaderAppearanceMotionStage.ets');
-const appearanceMotionState = read('entry/src/main/ets/features/reading/ReaderAppearanceMotionState.ts');
-const appearanceQuick = read('entry/src/main/ets/features/reading/ReaderAppearanceModulePanel.ets');
-const appearanceSharedActors = read('entry/src/main/ets/features/reading/ReaderAppearanceSharedActors.ets');
-
-assert.equal((control.match(/panelActorTransition\('reader\.panel\.full\.incoming', 18, 140\)/g) ?? []).length, 3,
-  'Search/Settings/Tts enter with the delayed J~Q fade+slide; Appearance is element-level (N frame)');
-assert.equal((control.match(/panelActorTransition\('reader\.panel\.full\.outgoing', 18, 10\)/g) ?? []).length, 4,
-  'all four full panels leave on the collapse ease-in-out beat while the shell board shrinks');
-assert.match(control,
-  /private fullAppearanceDock\(\)[\s\S]*?TransitionEffect\.asymmetric\(\s*TransitionEffect\.IDENTITY,\s*panelActorTransition\('reader\.panel\.full\.outgoing', 18, 10\)/,
-  'the Appearance dock must hand its entrance to the element-level children (N frame) and keep only the board exit');
-assert.equal((control.match(/panelActorTransition\('reader\.panel\.dock\.incoming', 18, 150\)/g) ?? []).length, 1,
-  'the quick dock returns through the single morph-shell B layer, once');
-assert.equal((control.match(/panelActorTransition\('reader\.panel\.dock\.outgoing', 18\)/g) ?? []).length, 1,
-  'the quick dock leaves through the single morph-shell B layer, once');
-assert.match(control, /private morphShellControlDock\(\)/,
-  'quick and full control pages must share one morph-shell board (J~Q MorphStage)');
-assert.match(control,
-  /private controlDock\(\) \{\s*if \(this\.usesPhoneAppearanceMotionStage\(\)\) \{\s*this\.appearanceMotionDock\(\);/,
-  'Phone Appearance must bypass the generic conditional-mount shell and enter its persistent N/O stage');
-assert.match(control,
-  /return !this\.isExpanded\(\) &&\s*readerAppearanceMotionStageSupported\(\s*this\.appearanceMotionStageWidth\(\),\s*this\.appearanceMotionStageHeight\(\),\s*\) &&\s*\(this\.activePage === 'moduleAppearance' \|\| this\.activePage === 'fullAppearance'\)/,
-  'both Appearance endpoints must preserve one Phone stage where the authored fixed coordinate space fits');
-assert.match(control,
-  /import \{[\s\S]*?readerAppearanceMotionStageSupported,[\s\S]*?\} from '\.\/ReaderAppearanceMotionGeometry'/,
-  'unsupported narrow or zero-travel windows must fall back instead of clipping fixed N evidence');
-assert.match(control,
-  /ReaderAppearanceMotionStage\(\{[\s\S]*?expanded: this\.activePage === 'fullAppearance'[\s\S]*?onEndpointChange:/,
-  'route state may follow only the motion stage stable endpoint callback');
-assert.match(appearanceStage,
-  /ReaderAppearanceFullPanel\(\{[\s\S]*?motionProgress: this\.masterProgress[\s\S]*?motionEnabled: true[\s\S]*?motionFullHeight: this\.stageHeight\(\)/,
-  'the Stage must keep one FullPanel tree sampling primitive p across the whole axis');
-assert.match(appearanceStage,
-  /@State private masterProgress: number[\s\S]*?this\.masterProgress = this\.renderFrame\.masterProgress[\s\S]*?motionProgress: this\.masterProgress/,
-  'the motion tree must link one primitive progress coordinate into its persistent actors');
-assert.doesNotMatch(control, /motionFrame:/,
-  'a complex frame snapshot must not freeze the FullPanel children');
-assert.match(appearanceStage, /showGrabber: false/,
-  'the persistent appearance stage must own the only visible and interactive grabber');
-assert.match(control, /return this\.usesPhoneAppearanceMotionStage\(\) \|\|/,
-  'quick Appearance must use the same top-anchored 736vp stage as full Appearance');
-assert.match(appearanceStage, /class ReaderAppearanceStageFrameCallback extends FrameCallback/);
-assert.match(appearanceStage,
-  /\.onTouch\(\(event: TouchEvent\): void => this\.handleGrabberTouch\(event\)\)/,
-  'appearance grabber must directly sample raw touch for one-to-one follow');
-assert.doesNotMatch(appearanceStage, /PanGesture\s*\(/,
-  'appearance follow must not return to the old release-only PanGesture path');
-assert.doesNotMatch(appearanceStage, /animateTo\s*\(/,
-  'appearance stage must have one interruptible frame clock, not competing animateTo owners');
-assert.match(appearanceStage, /expectedEpoch !== this\.motionState\.epoch/,
-  're-grab must invalidate already posted settlement frames');
-assert.match(appearanceStage,
-  /private contentLayer\(\)[\s\S]*?this\.appearancePanel\(\)[\s\S]*?\.height\(this\.renderFrame\.shellHeight\)[\s\S]*?renderFrame\.shellTranslateY[\s\S]*?\.clip\(true\)/,
-  'one persistent Appearance content tree must be clipped by the clock-owned shell');
-assert.equal((appearanceStage.match(/@BuilderParam/g) ?? []).length, 2,
-  'the Stage may receive only the two static brightness/navigation builders');
-assert.doesNotMatch(appearanceStage, /@BuilderParam[^\n]*(frame|progress)/i,
-  'no sampled frame may cross a Builder slot');
-assert.match(control,
-  /private usesPhoneAppearanceMotionStage\(\)[\s\S]*?activePage === 'fullAppearance'[\s\S]*?return true/,
-  'Appearance Full must never fall back to the legacy static panel');
-assert.match(control,
-  /activePage === 'moduleAppearance'[\s\S]*?appearanceMotionStageMounted \|\| this\.appearanceMotionStageCanMount\(\)/,
-  'Appearance Quick must not wait one render for the mounted latch before choosing its persistent tree');
-assert.match(control,
-  /private appearanceMotionStageWidth\(\): number \{[\s\S]*?availableWidth <= 0[\s\S]*?return READER_APPEARANCE_STAGE_WIDTH/,
-  'zero-width startup props must normalize to the same Stage fallback as zero-height startup props');
-assert.doesNotMatch(appearanceStage,
-  /@BuilderParam quickMorph:|@BuilderParam fullContent:|fullMorphStageLayer|quickDockLayer|quickMorphStageLayer/,
-  'Quick and Full must never return as parallel presentation trees');
-assert.doesNotMatch(appearanceStage, /motionState\.profile|rawExpansion|elastic/,
-  'presentation must be a direction-independent function of master progress');
-assert.doesNotMatch(appearanceQuick, /motionFrame|ReaderAppearanceSharedActors|motionPanel/,
-  'ReaderAppearanceModulePanel is static-only; Phone motion has one FullPanel owner');
-assert.match(appearanceStage,
-  /private brightnessLayer\(\)[\s\S]*?y: this\.stageTravel\(\) \+ 28[\s\S]*?renderFrame\.brightnessRail\.translateY[\s\S]*?renderFrame\.brightnessRail\.opacity[\s\S]*?renderFrame\.brightnessRail\.blurVp/,
-  'BrightnessRail must stay screen-fixed and sample its own track from the common frame');
-assert.match(appearanceStage,
-  /private moduleNavLayer\(\)[\s\S]*?\.height\(this\.stageHeight\(\)\)[\s\S]*?renderFrame\.moduleNav\.translateY[\s\S]*?renderFrame\.moduleNav\.opacity[\s\S]*?renderFrame\.moduleNav\.blurVp/,
-  'ModuleNav must remain bottom-aligned and sample its own common-frame track');
-assert.match(appearanceStage,
-  /@Prop @Watch\('onAvailableHeightChanged'\) availableHeight: number/,
-  'the measured master axis must use the runtime Phone stage height');
-assert.match(appearanceStage,
-  /private stageTravel\(\): number \{\s*return Math\.max\(0,/,
-  'a zero-height axis must stay zero rather than becoming an artificial 1vp full gesture');
-assert.match(appearanceStage,
-  /private directManipulationAvailable\(\): boolean \{\s*return this\.stageTravel\(\) >= READER_APPEARANCE_MIN_INTERACTIVE_TRAVEL_VP;/,
-  'a sub-touch-target travel must use the responsive fallback instead of amplifying touch noise');
-assert.match(appearanceStage,
-  /onAvailableHeightChanged\(\)[\s\S]*refreshMeasuredAxisForLayout\(\)[\s\S]*scheduleNextFrame\(\)/,
-  'a live height change must re-anchor an active gesture or settlement at the same frame');
-assert.match(appearanceStage,
-  /@Prop @Watch\('onMotionTimeScaleChanged'\) motionTimeScale: number = 1/,
-  'whole-timeline time scaling must be live rather than mount-only');
-assert.match(appearanceMotionState, /export function readerAppearanceMotionIsActive/,
-  'the pure state driver must expose its active lifecycle to the Stage');
-assert.match(appearanceMotionState, /export function setReaderAppearanceMotionTimeScale/,
-  'retiming must preserve the current sampled frame while scaling the remaining clock');
-for (const actorAccess of [
-  'this.currentFrame().quickMorph',
-  'this.currentFrame().themeItems[index]',
-  'frame.fontItems',
-]) {
-  assert.ok(appearanceSharedActors.includes(actorAccess),
-    `QuickMorph shared tree omitted sampled actor access ${actorAccess}`);
+const stage = read('entry/src/main/ets/features/reading/ReaderControlMotionStage.ets');
+const appearance = read('entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets');
+assert.match(control, /@Link @Watch\('onControlSessionChanged'\) controlSession: ReaderControlSessionState/);
+// Runtime execution is covered by test-reader-control-runtime. This guard
+// checks that production no longer crosses a non-reactive BuilderParam owner.
+assert.match(control, /@State private visualExpansionProgress:/);
+assert.match(control, /@State private visualVisibilityProgress:/);
+assert.doesNotMatch(control, /@State private visualSession:/);
+assert.match(control, /new ReaderControlRuntime/);
+assert.match(control, /runtime\.command\(this\.controlSession\)/);
+assert.match(control, /update\.endpoint !== undefined.*commitVisualSession/);
+assert.match(control, /this\.topBar\(\)/);
+assert.match(control, /this\.controlContent\(\)/);
+assert.doesNotMatch(control, /ReaderControlMotionStage\(|@BuilderParam|contentSlotActive|secondaryModuleActive/);
+assert.doesNotMatch(control, /renderGroup\(true\)|animateTo\(|setTimeout\(/);
+assert.match(control, /this\.handleControlTouch\(event\)/);
+assert.match(control, /\.width\(72\)\.height\(28\)/);
+for (const component of ['ReaderControlDirectoryContent', 'ReaderControlAppearanceContent',
+  'ReaderControlSearchContent', 'ReaderControlSettingsContent', 'ReaderControlTtsContent',
+  'ReaderControlAutoPageContent', 'ReaderControlReplaceContent']) {
+  assert.equal((control.match(new RegExp(component + '\\(\\{', 'g')) ?? []).length, 1,
+    component + ' must keep one content instance under the common Stage');
 }
-assert.match(control,
-  /\.scale\(\{ y: this\.shellBoardScaleY\(\), centerY: this\.shellBoardHeight\(\) \}\)/,
-  'the shell board must bottom-anchor its scaleY morph (330<->736 with no translate drift)');
-assert.match(control,
-  /if \(!this\.isFullControlPage\(this\.activePage\)\) \{[\s\S]*?this\.controlSheet\(\);[\s\S]*?this\.moduleNav\(\);/,
-  'quick dock content lives outside the scaled shell board so it is never squashed');
-assert.equal((control.match(/showHideTransition\('reader\.control\.show', 'reader\.control\.hide',/g) ?? []).length, 2,
-  'TopBar and Dock must keep the MR1 show/hide pair (now with the authored opacity component)');
-assert.equal((control.match(/\.transition\(this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY :\s*showHideTransition\('reader\.control\.show', 'reader\.control\.hide',/g) ?? []).length, 2,
-  'session morph handoff must suppress both root control-layer exits to prevent double exposure');
-assert.match(control, /fadeSlideTransition\('reader\.quick\.promote', 12\)/,
-  'quick.promote keeps its own 320ms token and carries the MR1/C opacity+12px pair');
-
-const grabberSnap = control.slice(
-  control.indexOf('private resetControlGrabberDrag(): void {'),
-  control.indexOf('private resetControlGrabberDrag(): void {') + 900,
-);
-assert.ok(grabberSnap.includes('motionAnimateParam(\'reader.control.handle.snap\')'),
-  'the grabber rollback must animate with the dedicated handle.snap token');
-assert.ok(!grabberSnap.includes('reader.panel.collapse'),
-  'the grabber settle must not borrow the panel collapse timing');
-assert.match(control,
-  /@Prop shellExitArmed: boolean = false;[\s\S]*private fullSearchDock\(\)[\s\S]*?\.transition\(this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/,
-  'a full-panel child must not run a second exit transition under the control shell');
-assert.match(control,
-  /private homeContent\(\)[\s\S]*?Shell dismissal owns the only exit transition[\s\S]*?\.transition\(this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/,
-  'control content and its bordered shell must leave as one actor');
-assert.match(control, /ReaderDirectoryModulePanel\(\{/);
-assert.match(control, /ReaderQuickSearchPanel\(\{/);
-assert.match(control, /ReaderSearchFullPanel\(\{/);
-assert.match(control, /ReaderAutoPagePanel\(\{/);
-assert.match(control, /ReaderAppearanceModulePanel\(\{/);
-assert.match(control, /ReaderAppearanceFullPanel\(\{/);
-assert.match(control, /ReaderSettingsModulePanel\(\{/);
-assert.match(control, /ReaderSettingsFullPanel\(\{/);
-assert.match(control, /this\.onExpandDirectory\(\)/);
-assert.match(control, /readerControlExpansionTarget\(this\.activePage\)/,
-  'every grabber must resolve through the single audited routing table');
-assert.match(control, /requestExpandSearch\(\)[\s\S]*this\.onPageChange\('fullSearch'\)/,
-  'Quick Search and Full Search must be one explicit control-domain route');
-assert.match(control, /READER_CONTROL_GRABBER_HIT_WIDTH = 72/,
-  'the visual grabber must expose a practical direct hit target');
-assert.match(control, /\.hitTestBehavior\(HitTestMode\.Block\)\s*\.accessibilityText\(this\.controlGrabberAccessibilityText\(\)\)/,
-  'the expanded grabber target must own hits even when the visible child row is tapped');
-assert.match(control, /PanGesture\(\{ direction: PanDirection\.Up, distance: READER_CONTROL_GRABBER_PAN_DISTANCE \}\)[\s\S]{0,220}updateControlGrabberDrag\(event\.offsetY\)[\s\S]{0,220}finishControlGrabberDrag\(event\.offsetY\)/,
-  'the dock must follow the live upward drag before release chooses expand or rollback');
-const expansionRoutes = new Map([
-  ['home', 'directory'],
-  ['moduleDirectory', 'directory'],
-  ['quickSearch', 'fullSearch'],
-  ['quickAutoPage', 'fullAutoPage'],
-  ['quickReplace', 'rulesManagement'],
-  ['moduleTts', 'fullTts'],
-  ['moduleAppearance', 'fullAppearance'],
-  ['moduleSettings', 'fullSettings'],
-]);
-for (const [page, target] of expansionRoutes) {
-  assert.equal(readerControlExpansionTarget(page), target, `${page} expansion target drifted`);
-}
-for (const page of ['fullSearch', 'fullAutoPage', 'fullTts', 'fullAppearance', 'fullSettings']) {
-  assert.equal(readerControlExpansionTarget(page), undefined, `${page} must not recursively expand`);
-}
+assert.match(control, /tab: this\.contentLocation\(\)\.directoryTab/,
+  'Directory keeps the last visible location through the hidden endpoint');
+assert.match(control, /setReaderControlDirectoryTab/);
+assert.match(control, /motionProgress: this\.contentMotionProgress/);
+assert.doesNotMatch(appearance, /animateTo\(|panelActorTransition/);
 assert.match(control, /Slider\(\{\s*value: this\.effectiveProgressPercent\(\)/);
 assert.match(control, /onPreviousChapter\(\)/);
 assert.match(control, /onNextChapter\(\)/);
-assert.match(control, /action === 'autoPage'/);
-assert.match(control, /this\.promoteAutoPage\(\)/);
 assert.match(control, /this\.onOpenReplace\(\)/);
-assert.doesNotMatch(control, /action === 'replace'[\s\S]{0,180}this\.onSourceSwitch\(\)/);
-assert.doesNotMatch(control, /currently exist only as Review frames/);
-for (const page of ['moduleDirectory', 'moduleTts', 'moduleAppearance', 'moduleSettings',
-  'fullSearch', 'fullAppearance', 'fullSettings']) {
-  assert.ok(control.includes(page), `Reader control state machine is missing ${page}`);
-}
-assert.match(control, /module !== 'directory'[\s\S]*module !== 'settings'/);
-assert.match(control, /const destination: ReaderControlPage = this\.isActiveModule\(module\) \? 'home' : page/,
-  'tapping the active main tab must return to the control home page');
-assert.match(control,
-  /if \(this\.reduceMotion \|\| this\.requiresAtomicModuleTreeHandoff\(destination\)\) \{\s*this\.onPageChange\(destination\)/,
-  'crossing the Phone Appearance actor tree boundary must not composite two quick modules');
-assert.match(control,
-  /private requiresAtomicModuleTreeHandoff\(destination: ReaderControlPage\): boolean \{[\s\S]*?this\.activePage === 'moduleAppearance'[\s\S]*?destination === 'moduleAppearance'/,
-  'the special Appearance tree must hand off atomically in both directions');
-assert.match(control, /if \(this\.reduceMotion\) \{\s*this\.onPageChange\('quickSearch'\)/);
-assert.match(control, /this\.reduceMotion \|\| this\.shellExitArmed \? TransitionEffect\.IDENTITY/);
-assert.match(control,
-  /\.height\('100%'\)\s+\.zIndex\(0\)\s+\.hitTestBehavior\(HitTestMode\.Block\)\s+\.onClick\(\(\): void => \{\s*if \(!this\.appearanceInteractionBusy\(\)\) \{\s*this\.onDismiss\(\)/,
-  'the backdrop must not dismiss the panel during a grabber drag or font reorder');
-assert.match(control,
-  /private quickMainContentWidth\(\): number \{\s*return Math\.max\(0, this\.dockWidth\(\) - READER_CONTROL_CONTENT_PADDING_LEFT -\s*READER_CONTROL_CONTENT_PADDING_RIGHT - READER_CONTROL_TOP_COMPONENT_GAP -\s*READER_CONTROL_BRIGHTNESS_RAIL_WIDTH\);/,
-  'every quick module must receive the same deterministic Figma main-column width');
-assert.match(control,
-  /private appearanceInteractionBusy\(\): boolean \{\s*return this\.appearanceMotionActive \|\| this\.appearanceFontReorderActive;/);
-assert.match(control, /@Prop @Watch\('onVisibleChanged'\) visible: boolean = false/,
-  'hiding a persistently mounted control panel must clear transient Appearance activity');
-assert.match(control,
-  /private onVisibleChanged\(\): void \{\s*if \(!this\.visible\) \{\s*this\.clearAppearanceActivity\(\)/);
-assert.match(control,
-  /private clearAppearanceActivity\(\): void \{\s*this\.setAppearanceMotionActivity\(false\);\s*this\.setAppearanceFontReorderActivity\(false\);/,
-  'all disappearance and route-exit paths must release both busy flags');
-assert.equal((control.match(/\.height\('100%'\)\s+\.zIndex\(1\)\s+\.hitTestBehavior\(HitTestMode\.Transparent\)/g) ?? []).length, 2,
-  'both full-screen anchor wrappers must pass empty pixels to the dismiss backdrop');
+assert.match(control, /const destination: ReaderControlPage = this\.isActiveModule\(module\) \? 'home' : page/);
 assert.match(control, /\.accessibilityText\('阅读进度'\)/);
 assert.match(control, /\.accessibilityText\('阅读亮度'\)/);
-assert.doesNotMatch(control, /真面板\(目录\/朗读\/界面\/设置\)后续挂入本层/);
-
-for (const [file, importsLineStrong] of [
-  ['ReaderSearchFullPanel.ets', true],
-  ['ReaderAppearanceFullPanel.ets', true],
-  ['ReaderSettingsFullPanel.ets', false],
-  ['ReaderTtsFullPanel.ets', false],
-]) {
-  const panel = read(`entry/src/main/ets/features/reading/${file}`);
-  assert.doesNotMatch(panel, /TOK_READ_SURFACE/,
-    `${file} must not draw its own surface — the morph-shell board is the single background source`);
-  if (!importsLineStrong) {
-    assert.doesNotMatch(panel, /TOK_LINE_STRONG/,
-      `${file} no longer needs the shell-border token after de-boarding`);
-  }
-  assert.match(panel, /\.clip\(true\)/,
-    `${file} must keep content clipping so the shell board radius bounds its content`);
-}
-
-const appearance = read('entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets');
-for (const [id, delay] of [
-  ['surface.in', 128],
-  ['content.in', 146],
-  ['header.in', 146],
-  ['theme.in', 146],
-  ['font.in', 175],
-  ['typography.in', 256],
-]) {
-  assert.match(appearance,
-    new RegExp(`panelActorTransition\\('reader\\.panel\\.appearance\\.${id}', (?:0|-12), ${delay}\\)`),
-    `N-frame element entrance ${id} must run through the registry factory at delay ${delay}`);
-}
-assert.match(motion,
-  /reader\.panel\.appearance\.typography\.in', durationMs: 164, curve: Curve\.EaseOut/,
-  'the N-frame stagger table is mirrored in the motion registry, not hardcoded at call sites');
+assert.match(control, /onAppearanceFontOrderChange\(fontOrder\)/);
+assert.match(control, /onAppearanceCustomFontImport\(\)/);
 
 const gateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 const sessionGateway = read('entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-assert.match(sessionGateway, /async searchContent\(/);
-assert.match(sessionGateway, /request\('search\.content', \{/);
+assert.match(sessionGateway, /async searchContentPage\(/);
+assert.match(sessionGateway, /request\('search\.content', params/);
 assert.match(sessionGateway, /sourceId: this\.sourceId/);
 assert.doesNotMatch(sessionGateway, /READING_CONTENT_SEARCH_REQUIRES_LOCAL_MATERIALIZATION/);
 assert.doesNotMatch(gateway, /async searchContent\(/,
@@ -318,37 +62,28 @@ assert.match(gateway, /request\('bookmark\.list'/);
 assert.match(gateway, /downloadState: LocalReadingDownloadState/);
 
 const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
-const hideControl = experience.match(/private hideControl\(\): void \{([\s\S]*?)\n  private scheduleControlRouteReset/);
-assert.ok(hideControl, 'control hide lifecycle owner must exist');
-assert.match(hideControl[1], /this\.controlVisible = false/);
-assert.doesNotMatch(hideControl[1], /this\.controlPage = 'home'/,
-  'active control content must remain mounted for the complete shell exit transition');
-assert.match(hideControl[1],
-  /this\.controlShellExitArmed = true;[\s\S]*postFrameCallback[\s\S]*this\.controlVisible = false/,
-  'the host must present nested-transition suppression before removing the unified shell');
-assert.match(hideControl[1], /this\.scheduleControlRouteReset\(exitGeneration\)/,
-  'the hidden shell must schedule canonical route cleanup after its visual exit');
+assert.match(experience, /@State @Watch\('onControlSessionChanged'\) private controlSession/);
+assert.match(experience, /controlSession: \$controlSession/);
+assert.match(experience, /private latestControlVisualSession: ReaderControlSessionState/,
+  'Host keeps the latest visual sample as a plain field');
+assert.match(experience, /onVisualSessionChange: \(state: ReaderControlSessionState\)/,
+  'Panel visual sample callback is wired to the plain Host field');
+assert.match(experience, /private controlMotionSession\(\): ReaderControlSessionState/,
+  'Back/close derives from the latest visual sample');
+assert.doesNotMatch(experience, /this\.controlVisible\s*=(?!=)|this\.controlPage\s*=(?!=)|scheduleControlRouteReset/);
+assert.match(experience, /private hideControl\(\): void \{[\s\S]*?dismissReaderControlSession/);
+assert.match(experience, /readerControlHostCloseCommitted\(this\.controlSession, this\.observedControlCloseRevision\)/);
+assert.match(experience, /private requestExit\(\): void \{[\s\S]*?controlTemporaryLayer[\s\S]*?backReaderControlHostSession[\s\S]*?if \(result\.consumed\)/);
+assert.match(experience, /reduceReaderControlBackdropTouch\(this\.controlBackdropState/);
+assert.match(experience, /invalidationRevision: this\.controlInputRevision/);
+assert.match(experience, /ReaderControlPanel\(\{[\s\S]*?onDismiss: \(\): void => this\.hideControl\(\)/);
 assert.match(experience,
-  /private openReaderControl\(\): void \{[\s\S]*?this\.controlPage = 'home';[\s\S]*?this\.controlVisible = true/,
-  'every presentation must synchronously select the canonical Home route before showing');
+  /this\.activeGateway\(\)\.searchContentPage\(this\.bookId, keyword, READER_CONTENT_SEARCH_PAGE_SIZE, 0, isCurrent\)/);
 assert.match(experience,
-  /private scheduleControlRouteReset[\s\S]*?motionSpecGet\('reader\.control\.hide'\)[\s\S]*?this\.controlPage = 'home';[\s\S]*?this\.controlShellExitArmed = false/,
-  'route cleanup must wait for the registered hide duration before unmounting the outgoing page');
-assert.match(experience,
-  /private requestExit\(\): void \{\s*if \(this\.controlVisible\) \{[\s\S]*?this\.hideControl\(\);\s*return;/,
-  'system back must dismiss the control overlay from every child route');
-assert.doesNotMatch(experience,
-  /private requestExit\(\): void \{[\s\S]{0,500}?controlPage !== 'home'/,
-  'dismissing the overlay must never require a detour through Home');
-assert.match(experience,
-  /ReaderControlPanel\(\{[\s\S]*?onDismiss: \(\): void => this\.hideControl\(\)[\s\S]*?\}\)\s*\/\/ The control overlay,[\s\S]*?\.zIndex\(7\);/,
-  'the outside-tap owner must sit above selectable reading text on every route');
-assert.match(experience, /this\.activeGateway\(\)\.searchContent\(this\.bookId, keyword, 50, isCurrent\)/);
-assert.match(experience,
-  /this\.controlPage === 'quickSearch' \|\| this\.controlPage === 'fullSearch'/,
+  /this\.controlPage\(\) === 'quickSearch' \|\| this\.controlPage\(\) === 'fullSearch'/,
   'a running search must remain live while Quick Search expands into Full Search');
 assert.match(experience, /this\.selectChapterAnchor\(result\.chapterIndex, result\.chapterOffset, false\)/);
-assert.match(experience, /onExpandDirectory: \(\): void => this\.onOpenDirectory\(\)/);
+assert.match(experience, /onExpandDirectory: \(\): void => this\.expandControlDirectory\(\)/);
 assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
 assert.match(experience, /settingsSnapshot: this\.readerSettingsSnapshot/);
 assert.match(experience, /onSettingsToggleChange: \(key: ReaderSettingsToggleKey, value: boolean\)/);
@@ -376,7 +111,7 @@ assert.match(experience, /private onReaderManualInteraction\(\): void \{[\s\S]*s
 assert.doesNotMatch(experience, /\.onClick\(\(\): void => \{\s*this\.pauseAutoPageForInteraction\(\);\s*this\.turn(Previous|Next)Page\(\)/,
   'tap and pan must not retain separate direct page-turn paths');
 assert.doesNotMatch(experience, /reader\.page\.turn\.none.*animateTo/);
-assert.match(experience, /visible: this\.controlVisible && !this\.controlObscured/);
+assert.match(experience, /inputEnabled: this\.isControlInputEnabled\(\)/);
 assert.match(experience, /reduceMotion: this\.reduceMotion/);
 assert.match(experience, /autoPageStatus: this\.autoPageState\.status/);
 assert.match(experience, /private armAutoPageTimer\(resetDeadline: boolean\): void/);
@@ -440,7 +175,7 @@ assert.match(pageInteraction,
   'Harmony back/home edge streams must be rejected before the reader creates gesture state');
 assert.match(pageInteraction, /event\.timestamp[\s\S]*lastSampleTimeMs/,
   'pointer velocity and tap duration must use the platform event clock');
-assert.match(pageInteraction, /event\.timestamp \/ 1_000_000/,
+assert.match(pageInteraction, /this\.inputClock\.sample\(event\.timestamp, readerMotionNowMs\(\)\)/,
   'ArkUI monotonic touch timestamps are nanoseconds and must be normalized before gesture math');
 assert.match(experience,
   /systemGestureLeftInset: this\.readerSystemGestureLeftInset\(\)[\s\S]*systemGestureBottomInset: this\.readerSystemGestureBottomInset\(\)/,
@@ -463,7 +198,7 @@ assert.match(experience,
   /canStartBookmark: \(\): boolean => this\.canStartReaderBookmarkGesture\(\)/,
   'bookmark preview must use the same background-preparation readiness boundary');
 assert.match(pageInteraction,
-  /const bookmarkBlocked = this\.gestureState\.owner === 'bookmark' && !this\.canStartBookmark\(\);[\s\S]*pageOwnerBlocked \|\| bookmarkBlocked/,
+  /const bookmarkBlocked = priorOwner === 'undecided' &&\s*this\.gestureState\.owner === 'bookmark' && !this\.canStartBookmark\(\);[\s\S]*pageOwnerBlocked \|\| bookmarkBlocked/,
   'a blocked speculative bookmark must not mutate the visible page');
 assert.match(pageInteraction, /左侧上一页，中间打开阅读控制，右侧下一页/);
 assert.match(pageInteraction,
@@ -523,7 +258,7 @@ assert.match(fullDirectory, /\.accessibilityText\('收起目录'\)/);
 const fullDirectoryPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
 const directoryList = read('entry/src/main/ets/features/reading/ReaderDirectoryList.ets');
 assert.match(fullDirectoryPanel, /return Math\.max\(117, this\.bodyContentHeight\(\) - 143\)/);
-assert.match(directoryList, /List\(\{ space: 0, scroller: this\.scroller \}\)[\s\S]*Repeat\(this\.entries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.entries\.length, reusable: false \}\)/);
+assert.match(directoryList, /List\(\{ space: 0, scroller: this\.scroller \}\)[\s\S]*LazyForEach\(this\.dataSource/);
 assert.match(fullDirectoryPanel, /this\.listScroller\.scrollEdge\(Edge\.Bottom\)/);
 assert.match(fullDirectoryPanel, /this\.activeTab === 'bookmarks'/);
 assert.match(fullDirectoryPanel, /ReaderSearchField\(\{[\s\S]*variant: 'readerDirectory'/);

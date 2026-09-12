@@ -1,0 +1,108 @@
+Reader HAP build-system docs and skills contract: PASS
+app shell safe geometry: PASS
+(node:52305) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: ArkWeb entry DNS and literal navigation/resource policy; cross-host DNS/engine-wide coverage remains unproven
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+shared book acquisition lifecycle, identities, and scheduling: PASS
+(node:52311) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:52322) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+bookshelf management Core ownership contract: PASS
+(node:52326) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+bookshelf tablet navigation contract: PASS
+bookshelf view and directory footer contracts: PASS
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1951 tested records, 1737 unique identities)
+core build identity startup contract: PASS
+(node:52339) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: cache winner retains one online refresh; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (109 sources swept)
+(node:52343) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:52357) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:52359) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+Legado product behavior contract: PASS
+local book format picker contract: PASS
+local EPUB resource architecture: PASS
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+performance regression contracts: PASS
+physical phone Figma layout regressions: PASS
+portable JSON local/online import boundary: PASS
+reader appearance Figma N per-actor driver: PASS
+reader appearance Figma N fixture: PASS
+reader appearance measured-screen gesture: PASS
+reader appearance Figma N sampler: PASS
+reader appearance master motion state: PASS
+reader appearance unified production tree (structural only): PASS
+(node:52389) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance shared store, page races and persistence recovery: PASS
+appearance Preferences adapter migration and persistence compatibility: PASS
+application appearance background flush and teardown isolation: PASS
+reader appearance pure/static contract: PASS
+reader Full Auto Page pure/static contract: PASS
+reader auto-page pure state: PASS
+production automatic turn and stop durations use monotonic time; calendar access rejected: PASS
+(node:52394) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: simulation keeps an empty reserve slot, without rebuilding a second body
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-book-turn-architecture.mjs:76:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'private slotPage(slot: ReaderPageTurnSlot): ReaderPageTurnRenderPage {\n' +
+    "    let page = slot === 'a' ? this.slotPageA : this.slotPageB;\n" +
+    '    if (slot === this.currentPageSlot) {\n' +
+    '      page = this.currentRenderPage();\n' +
+    '    } else {\n' +
+    '      // Native/none still rotate the same two physical slots. Keep an\n' +
+    '      // already-bound outgoing page hidden instead of clearing all its text\n' +
+    '      // and rebuilding it on the next promotion. Do not prepare a spare page\n' +
+    '      // for these modes; only the current slot can publish an acknowledgement.\n' +
+    '      if (!this.hasLiveTurnWidth()) return page ?? this.emptyPage;\n' +
+    '      // Keep the outgoing physical page after promotion. Replacing it with\n' +
+    '      // speculative NEXT while idle forces a second full rebind on reversal.\n' +
+    "      const adjacent = this.turnDirection === 'previous' ? this.adjacentRenderPage('previous') :\n" +
+    "        (this.turnDirection === 'next' ? this.adjacentRenderPage('next') : undefined);\n" +
+    '      if (adjacent !== undefined) page = adjacent;\n' +
+    "      else if (page === undefined) page = this.adjacentRenderPage('next') ?? this.adjacentRenderPage('previous');\n" +
+    '    }\n' +
+    "    if (slot === 'a') this.slotPageA = page;\n" +
+    '    else this.slotPageB = page;\n' +
+    '    return page ?? this.emptyPage;\n' +
+    '  }',
+  expected: /!this\.hasLiveTurnWidth\(\).*return this\.emptyPage/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
+/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/scripts/check-local.sh failed (1): <no output>

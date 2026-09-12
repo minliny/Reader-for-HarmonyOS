@@ -1,0 +1,24 @@
+{
+  "layer": "actual SDK emitted legacy production observers replayed; not scheduler/native layout",
+  "nodes": 13,
+  "poses": 120,
+  "attributeCalls": 24960,
+  "byProperty": {
+    "opacity": 1560,
+    "blur": 1560,
+    "width": 1560,
+    "height": 1560,
+    "position": 1560,
+    "backgroundColor": 1560,
+    "borderRadius": 1560,
+    "fontFamily": 1560,
+    "fontWeight": 1560,
+    "fontSize": 1560,
+    "fontColor": 1560,
+    "textAlign": 1560,
+    "maxLines": 1560,
+    "enabled": 1560,
+    "accessibilityText": 1560,
+    "onClick": 1560
+  }
+}

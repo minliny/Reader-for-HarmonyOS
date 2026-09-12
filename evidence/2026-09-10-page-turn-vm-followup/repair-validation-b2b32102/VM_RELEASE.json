@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-09-10T19:24:40.137858+00:00",
+  "probeExited": true,
+  "lockAbsent": true,
+  "target": "127.0.0.1:5555",
+  "name": "Mate 80 Pro",
+  "mode": "slide",
+  "book": "ReaderIndentCRLF20260910",
+  "settledPage": {
+    "slot": "reader-page-slot-a",
+    "sha256": "5617cf7c4d114fa68dc29977e478e9fa65fff4a38afcc0f18907ce2368208ee7",
+    "first": [
+      "才缩进。这一长段跨越多个页面，续",
+      "页必须从正文左边界开始，只有段落"
+    ],
+    "footer": [
+      "10%",
+      "第 2 / 10 页"
+    ]
+  },
+  "dataPreserved": true,
+  "physicalUsed": false,
+  "vmRestartedOrReplaced": false
+}

@@ -96,7 +96,7 @@ assert.match(panel,
   /private panelBorderColor[\s\S]*?this\.variant === 'sourceGroup'[\s\S]*?return '#85B4A697'/,
   'the expanded source-group panel must preserve the source-management field border');
 assert.match(panel,
-  /private collapsePanel\(onFinish: \(\) => void\): void[\s\S]*?motionAnimateParam\('dropdown\.menu\.collapse'[\s\S]*?this\.expandedHeight = OPTION_H[\s\S]*?this\.chevronAngle = 0/,
+  /private collapsePanel\(onFinish: \(\) => void, onCommit\?: \(\) => void\): void[\s\S]*?motionAnimateParam\('dropdown\.menu\.collapse'[\s\S]*?this\.expandedHeight = OPTION_H[\s\S]*?this\.chevronAngle = 0/,
   'selection and outside-dismissal must contract the same fixed-top panel before unmounting it');
 assert.match(select,
   /motionAnimateParam\(this\.isOpen \? 'dropdown\.menu\.expand' : 'dropdown\.menu\.collapse'\)/,

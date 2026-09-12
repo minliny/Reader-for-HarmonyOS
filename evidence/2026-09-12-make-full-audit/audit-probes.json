@@ -1,0 +1,53 @@
+{
+  "kind": "read-only audit observations; successful execution does not mean design acceptance",
+  "onlineFormFields": [
+    {
+      "label": "服务名称",
+      "renderedByNative": true
+    },
+    {
+      "label": "接口地址",
+      "renderedByNative": true
+    },
+    {
+      "label": "API 密钥",
+      "renderedByNative": false
+    },
+    {
+      "label": "发音人 / 音色",
+      "renderedByNative": false
+    },
+    {
+      "label": "音频格式",
+      "renderedByNative": false
+    }
+  ],
+  "onlineFormatOptions": [
+    "MP3",
+    "WAV",
+    "PCM"
+  ],
+  "nativeFieldCount": 2,
+  "voiceFailure": {
+    "trigger": "production changeTtsVoice method; setVoice rejects",
+    "originalPerson": 0,
+    "requestedPerson": 1,
+    "projectedPersonAfterFailure": 1,
+    "persistedCalls": 0,
+    "failures": [
+      {
+        "kind": "voice",
+        "message": "audit simulated voice rejection"
+      }
+    ],
+    "conclusion": "UI selection remains optimistic after real owner failure; no rollback in this production method"
+  },
+  "quickNarrowStatus": {
+    "referenceQuickWidth": 286,
+    "observedVmContentWidthVp": 261.7142857142857,
+    "actorWidth": 81.71428571428572,
+    "remainingTextWidth": 29.714285714285722,
+    "visualEvidence": "../2026-09-11-make-style-parity/vm-ui/reader-control-make-54-v10-tts-retry.png",
+    "conclusion": "VM idle status visibly truncates to 未…; fixed icon/dot/gaps consume label width at this viewport."
+  }
+}

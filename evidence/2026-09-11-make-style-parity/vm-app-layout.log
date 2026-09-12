@@ -1,0 +1,8 @@
+09-11 23:25:10.787 31883 31883 I A05244/Reader: Core build identity: {"schemaVersion":1,"buildId":"51968019523ac59b181802eb548dbcdd8405f07b668d316856d75634ff0f8c56","gitCommit":"6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2","gitDirty":true,"cargoLockSha256":"4544168d456b9f99b92cb00fa671ba159a56196f39265b49890d1bf54aee668e","protocolSha256":"a22476eb8dd7cc99d8e126ee3009e77cfb33a74fbb4380a7692574130dc80e39","rustProfile":"release"}
+09-11 23:25:10.798 31883 31883 I A05244/Reader: Core source-switch startup recovery count: 0
+09-11 23:25:15.221 31883 31883 I A05244/Reader: Bundled source collection completed: records=1951 unique=1737 processed=1737 imported=0 failed=0 interrupted=false
+09-11 23:26:22.257 31883 31883 I A05244/Reader: No declared coverUrl for bookId=local:2af6c19be1c1963ce90efa73cf1f1df34dcede52959612a0f87203147a1ad134; using NoCover placeholder
+09-11 23:26:22.557 31883 31883 I A03d00/JSAPP: ReadingExperience UTF-16 probe passed: A😀B = 4 UTF-16 / 3 Unicode scalars
+09-11 23:31:24.102 31883 31883 I A0d004/ReaderControlInput: UP id=0 y=}f lastY=}f moves=464 resets=464 downNs=}f moveNs=}f upNs=}f progress=}f
+09-11 23:35:00.083 31883 31883 I C0392c/AceForEach: [(100000:100000:scope)] ForEachNode skip mark dirty. Id[444], Ids.size[15]
+09-11 23:35:13.136 31883 11878 I C02d07/Config: refresh free size=6033108992

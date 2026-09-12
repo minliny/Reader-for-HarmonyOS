@@ -1,0 +1,14 @@
+Recheck UTC: 2026-09-09T16:55:21.702695+00:00
+Existing mocked local source fixtures; not a device run.
+{"probe":"known book end then reverse","boundaryResult":{"kind":"preparing"},"pendingAtBoundary":1,"reverseResult":{"kind":"busy"},"performCalls":0}
+{"probe":"DOWN right then final UP left without threshold MOVE","reducerDirection":"next","inputLayerIntent":"previous"}
+{"probe":"none return-UP","phase":"settling","target":"rollback","inputOwned":true}
+{"probe":"none system-CANCEL","phase":"settling","target":"rollback","inputOwned":true}
+{"probe":"scroll exit during in-flight save","exited":true,"saveStillInFlight":true,"trailingSaveOnlyFlag":true}
+{"probe":"flat pure vertical previous","gestureOwner":"verticalPrevious","direction":"previous","presentationOffsetX":0}
+{"probe":"flat final UP presentation coordinate","decisionOffsetX":-200,"presentationOffsetX":-80,"direction":"next"}
+{"probe":"scroll second DOWN replaces first origin","firstPointerY":100,"secondPointerY":500,"recordedOriginY":500}
+(node:22084) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+exitCode=0

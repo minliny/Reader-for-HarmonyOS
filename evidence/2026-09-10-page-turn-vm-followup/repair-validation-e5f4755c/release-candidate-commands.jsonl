@@ -1,0 +1,6 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.031094208, "elapsed": 0.027155416999999998, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.058379833, "elapsed": 0.032152667, "code": 0, "output": "2458\n"}
+{"args": ["shell", "pidof", "io.reader.harmonyos"], "start": 0.09068525, "elapsed": 0.029647875000000004, "code": 0, "output": "11802\n"}
+{"args": ["shell", "uitest", "uiInput", "keyEvent", "Back"], "start": 0.120500166, "elapsed": 0.18980029199999998, "code": 0, "output": "No Error\n"}
+{"args": ["shell", "uitest", "dumpLayout", "-p", "/data/local/tmp/reader-control-release-candidate-1.json"], "start": 0.310571791, "elapsed": 0.901328875, "code": 0, "output": "DumpLayout saved to:/data/local/tmp/reader-control-release-candidate-1.json\n"}
+{"args": ["file", "recv", "/data/local/tmp/reader-control-release-candidate-1.json", "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-e5f4755c/reader-control-release-candidate-1.json"], "start": 1.212302583, "elapsed": 0.0297711249999999, "code": 0, "output": "FileTransfer finish, Size:131888, File count = 1, time:8ms rate:16486.00kB/s\n"}

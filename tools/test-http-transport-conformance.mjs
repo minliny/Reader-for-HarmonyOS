@@ -137,6 +137,64 @@ assert.match(hostSource, /retryBackoffMillis\(/);
 assert.match(hostSource,
   /resolveResponseCharset\(response\.headers, requestCharset\)/,
   'production Host must use the Core descriptor charset only for text responses');
+assert.match(hostSource, /MAX_REQUEST_HEADERS/,
+  'HTTP headers must have an explicit count/size guard');
+assert.match(hostSource, /MAX_HEADER_VALUE_LENGTH[\s\S]*assertNoCrLf\(raw, `header \$\{key\}`\)/,
+  'HTTP header values must be bounded and reject control-line injection');
+assert.match(hostSource, /MAX_MULTIPART_FILES[\s\S]*totalDataBytes[\s\S]*MAX_REQUEST_BODY_BYTES - bytes\.length/,
+  'multipart wire arrays must be bounded before Uint8Array construction');
+assert.match(hostSource, /MAX_MULTIPART_METADATA_CHARS[\s\S]*totalMetadataBytes/,
+  'multipart metadata must be bounded before string/chunk construction');
+assert.match(hostSource, /MAX_FORM_FIELDS[\s\S]*MAX_FORM_FIELD_CHARS[\s\S]*encodedBytes/,
+  'form requests must cap field count, individual size, and aggregate encoded bytes');
+assert.match(hostSource, /body\.kind === 'form'[\s\S]*bytes\.length > MAX_REQUEST_BODY_BYTES/,
+  'form payloads must enforce the final wire-size limit before dispatch');
+
+// -- P1-5 private-network SSRF guard -------------------------------------------
+// The shared byte judge: private, loopback, link-local, non-canonical numeric
+// hosts, and IPv6 forms are rejected; public literals and domains pass.
+const privateTargets = [
+  '127.0.0.1', '127.8.8.8', '10.1.2.3', '172.16.0.1', '172.31.255.255',
+  '192.168.1.1', '169.254.169.254', '0.0.0.0', '0.1.2.3',
+  '100.64.0.1', '100.127.255.254', '192.0.0.1', '192.0.2.1',
+  '198.18.0.1', '198.19.255.254', '198.51.100.1', '203.0.113.1',
+  '224.0.0.1', '239.255.255.255', '240.0.0.1', '255.255.255.255',
+  '010.0.0.1', '127.1', '2130706433',
+  '::1', '::', 'fe80::1', 'febf::1', 'fc00::1', 'fd12:3456::1',
+  'fec0::1', 'ff02::1', '2001:db8::1',
+  '::808:808', '64:ff9b::808:808', '64:ff9b:1::808:808',
+  '2002:0808:0808::1', '2001:0:4136:e378:8000:63bf:3fff:fdd2',
+  '::ffff:7f00:1', '::ffff:a00:1', '::ffff:6440:1', '::FFFF:10.9.8.7',
+];
+for (const target of privateTargets) {
+  assert.equal(policy.isPrivateNetworkTarget(target), true, `must reject ${target}`);
+}
+const publicTargets = [
+  '8.8.8.8', '1.1.1.1', '172.32.0.1', '172.15.0.1', '192.169.0.1',
+  '169.255.1.1', 'example.org', 'source-a.example',
+  '::ffff:808:808', '2001:4860:4860::8888',
+];
+for (const target of publicTargets) {
+  assert.equal(policy.isPrivateNetworkTarget(target), false, `must allow ${target}`);
+}
+assert.equal(policy.httpUrlHostname('https://Source-A.example:8443/p?q=1#f'), 'source-a.example');
+assert.equal(policy.httpUrlHostname('http://user:pass@10.0.0.1/x'), '10.0.0.1');
+assert.equal(policy.httpUrlHostname('http://[::1]:8080/x'), '::1');
+assert.equal(policy.httpUrlHostname('ftp://source-a.example/'), undefined);
+assert.equal(policy.httpUrlHostname('http:///no-host'), undefined);
+assert.equal(policy.httpsUrlHostname('https://source-a.example/path'), 'source-a.example');
+assert.equal(policy.httpsUrlHostname('http://source-a.example/path'), undefined);
+assert.equal(policy.redactedHttpUrl('https://user:secret@source-a.example:8443/private?token=x#y'),
+  'https://source-a.example/…');
+assert.equal(policy.redactedHttpUrl('file:///private/path'), '[invalid-url]');
+// Both enforcement points run the same shared judge: the Host execution entry
+// plus every redirect hop, and the source import gate.
+assert.match(hostSource, /rejectPrivateNetworkTarget\(requestUrl\)/,
+  'the request execution entry must run the private-target gate');
+assert.match(hostSource, /await this\.rejectPrivateNetworkTarget\(nextUrl\)/,
+  'every redirect hop target must run the private-target gate');
+assert.match(hostSource, /isPrivateNetworkTarget/,
+  'the Host must judge through the shared HttpTransportPolicy function');
 
 console.log(`http transport conformance: PASS (${fixture.cases.length} vectors, ${vectorSha})`);
 

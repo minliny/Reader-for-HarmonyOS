@@ -1,0 +1,258 @@
+{
+  "source": {
+    "url": "https://www.figma.com/make/DEu3TuYhaJPLMEdSxorhwE",
+    "version": 17,
+    "measuredAt": "2026-09-11",
+    "method": "Live preview DOM bounding boxes; coordinates local to the named persistent parent",
+    "viewport": {
+      "quick": [
+        286,
+        190
+      ],
+      "full": [
+        338,
+        666
+      ]
+    }
+  },
+  "adaptations": [
+    "Sentence controls retain sentence semantics, despite reference chapter labels.",
+    "Timer presets 0/15/30/45/60/90 minutes and minute/second stepper use the existing backend.",
+    "Rate presets 0.8/1.0/1.2/1.5 use the existing 0.1 input step.",
+    "The sample rate thumb comes from the real business value; no fixture audio data.",
+    "System/Online branch heights match Make; mixing remains the actual audio session setting, and failure policy occupies the fourth playback-config row."
+  ],
+  "shared": {
+    "playback": [
+      [
+        11,
+        13,
+        264,
+        66
+      ],
+      [
+        13,
+        16,
+        312,
+        198
+      ]
+    ],
+    "previous": [
+      [
+        125,
+        19,
+        28,
+        28
+      ],
+      [
+        61,
+        93,
+        42,
+        42
+      ]
+    ],
+    "toggle": [
+      [
+        156,
+        15,
+        36,
+        36
+      ],
+      [
+        127,
+        85,
+        58,
+        58
+      ]
+    ],
+    "stop": [
+      [
+        195,
+        19,
+        28,
+        28
+      ],
+      [
+        239,
+        161,
+        57,
+        21
+      ]
+    ],
+    "next": [
+      [
+        226,
+        19,
+        28,
+        28
+      ],
+      [
+        209,
+        93,
+        42,
+        42
+      ]
+    ],
+    "timer": [
+      [
+        11,
+        87,
+        264,
+        42
+      ],
+      [
+        13,
+        401.5,
+        312,
+        194
+      ]
+    ],
+    "speed": [
+      [
+        11,
+        137,
+        264,
+        42
+      ],
+      [
+        13,
+        234,
+        312,
+        147.5
+      ]
+    ],
+    "playbackCard": [
+      [
+        0,
+        0,
+        264,
+        66
+      ],
+      [
+        0,
+        27,
+        312,
+        171
+      ]
+    ],
+    "speedCard": [
+      [
+        0,
+        0,
+        264,
+        42
+      ],
+      [
+        0,
+        26,
+        312,
+        121.5
+      ]
+    ],
+    "speedTrack": [
+      [
+        79,
+        18,
+        130,
+        6
+      ],
+      [
+        16,
+        50,
+        280,
+        6
+      ]
+    ]
+  },
+  "quickOnly": {
+    "quickPlaybackLabel": [
+      13,
+      16,
+      106,
+      34
+    ],
+    "quickTimerLabel": [
+      11,
+      8,
+      120,
+      26
+    ],
+    "quickTimerSelect": [
+      175,
+      6,
+      78,
+      30
+    ],
+    "quickSpeedLabel": [
+      11,
+      8,
+      72,
+      26
+    ],
+    "quickSpeedValue": [
+      219,
+      12,
+      34,
+      18
+    ]
+  },
+  "fullOnly": {
+    "playbackHeader": [
+      0,
+      0,
+      312,
+      18
+    ],
+    "timerHeader": [
+      0,
+      0,
+      312,
+      17
+    ],
+    "speedHeader": [
+      0,
+      0,
+      312,
+      17
+    ],
+    "timerCard": [
+      0,
+      26,
+      312,
+      168
+    ],
+    "waveform": [
+      16,
+      43,
+      280,
+      28
+    ],
+    "voice": [
+      16,
+      161,
+      215,
+      21
+    ],
+    "speedPresets": [
+      16,
+      99.5,
+      280,
+      32
+    ]
+  },
+  "adaptedFull": {
+    "config": [
+      13,
+      615.5,
+      312,
+      238
+    ],
+    "detail": [
+      13,
+      873.5,
+      312,
+      270
+    ]
+  },
+  "fullContentHeight": 1159.5
+}

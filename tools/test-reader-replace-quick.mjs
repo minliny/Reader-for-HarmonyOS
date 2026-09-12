@@ -98,7 +98,7 @@ assert.doesNotMatch(panel, /完整替换页尚未提供/);
 assert.doesNotMatch(panel, /雨容称呼|旧称统一|标点清理|广告过滤/,
   'Figma sample copy must not become business rule data');
 
-const listRequest = gateway.indexOf("request('replace-rule.list', {})");
+const listRequest = gateway.indexOf("request('replace-rule.list', {},");
 const persistRequest = gateway.indexOf("request('replace.persist'");
 const previewRequest = gateway.indexOf("request('replace.preview'");
 assert.ok(listRequest >= 0, 'Quick Replace must list canonical Core rules');
@@ -118,6 +118,20 @@ assert.doesNotMatch(gateway, /ReaderRuntimeOwner|\.current\(\)/,
 assert.match(gateway, /constructor\(runtimeOwner: ReadingGatewayRuntime\)/,
   'Quick Replace runtime injection must remain a required dependency');
 
+// Legacy Quick remains a compatibility projection. The live reader now mounts
+// one full canonical collection with a clipped Quick window, not this old panel.
+const control = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
+assert.equal((control.match(/ReaderControlReplaceContent\(\{/g) ?? []).length, 1);
+assert.doesNotMatch(control, /ReaderReplaceQuickPanel\(\{/);
+assert.match(control, /state: this\.controlReplaceState, motionProgress: this\.contentMotionProgress/);
+assert.match(control, /onExpand:[\s\S]*?expandReaderControlSession\(this\.controlSession/);
+assert.match(control, /onSave:[\s\S]*?this\.onSaveControlReplace\(draft\)/);
+assert.match(control, /onDelete:[\s\S]*?this\.onDeleteControlReplace\(rule\)/);
+assert.match(control, /onToggle:[\s\S]*?this\.onToggleControlReplace\(rule, value\)/);
+assert.match(control, /onPreview:[\s\S]*?this\.onPreviewControlReplace\(\)/);
+assert.match(control, /onImport:[\s\S]*?this\.onImportControlReplace\(\)/);
+assert.match(control, /onExport:[\s\S]*?this\.onExportControlReplace\(\)/);
+
 assert.match(experience, /private replacePanelGeneration: number = 0/,
   'panel continuations need their own generation');
 assert.match(experience, /private replaceMutationGeneration: number = 0/,
@@ -136,7 +150,15 @@ const setControlPage = experience.match(
   /private setControlPage\(page: ReaderControlPage\): void \{([\s\S]*?)\n  private hideControl/,
 );
 assert.ok(setControlPage, 'setControlPage owner path must exist');
-assert.match(setControlPage[1], /replacePanelGeneration \+= 1/);
+assert.match(setControlPage[1], /setReaderControlHostPage\(this\.latestControlVisualSession/);
+const controlCommit = experience.match(
+  /private onControlSessionChanged\(\): void \{([\s\S]*?)\n  private expandControlDirectory/,
+);
+assert.ok(controlCommit, 'the single session observer owns presentation invalidation');
+assert.match(controlCommit[1], /previous === 'quickReplace' && page !== 'quickReplace'[\s\S]*?replacePanelGeneration \+= 1/);
+assert.match(controlCommit[1], /readerControlHostCloseCommitted[\s\S]*?replacePanelGeneration \+= 1/,
+  'dismissal only invalidates temporary presentation after the close commit');
+assert.doesNotMatch(controlCommit[1], /finishReplaceMutation|invalidateReplaceMutationOwner/);
 assert.doesNotMatch(setControlPage[1], /finishReplaceMutation|invalidateReplaceMutationOwner/,
   'closing Quick Replace must invalidate only panel presentation work');
 
@@ -186,7 +208,8 @@ assert.ok(reloadOwner, 'post-persist reload owner path must exist');
 assert.match(reloadOwner[1], /!this\.isSessionActive\(lifecycleToken\) \|\| this\.bookId !== bookId/);
 assert.match(reloadOwner[1], /this\.contentMetrics = undefined/);
 assert.match(reloadOwner[1], /this\.paginationIndex\.invalidateBook\(this\.sourceId, this\.bookId\)/);
-assert.match(reloadOwner[1], /this\.selectChapterAnchor\(chapter\.chapterIndex, page\.startScalar, false\)/);
+assert.match(reloadOwner[1], /this\.selectChapterAnchor\(chapter\.chapterIndex, page\.startScalar, false, true, undefined, -1\)/,
+  'internal rule re-materialization must not claim a control selection and close the panel');
 assert.doesNotMatch(reloadOwner[1], /this\.phase !== 'ready'/,
   'a page turn racing persist success must not skip metric invalidation and reload');
 assert.ok(reloadOwner[1].indexOf('this.contentMetrics = undefined') <

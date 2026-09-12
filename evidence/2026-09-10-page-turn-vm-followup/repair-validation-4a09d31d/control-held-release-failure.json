@@ -1,0 +1,24 @@
+{
+  "observed": "600ms move fromQuick1628px to1374px, hold3000ms, UP returned but visual stayed20percent; subsequent UI script could not find interactive collapse because content remained intermediate",
+  "exactGesture": [
+    "uinput",
+    "-T",
+    "-m",
+    "641",
+    "1628",
+    "641",
+    "1374",
+    "-k",
+    "3000",
+    "600"
+  ],
+  "evidence": [
+    "control-held-axis-commands.jsonl",
+    "reader-control-control-held-axis-6.json",
+    "reader-control-control-held-axis-7.json",
+    "reader-control-control-held-axis-expand-20.png"
+  ],
+  "localReproduction": "production Panel adapter + runtime with UP timestamp reset4990ms below priorMOVE5010ms retains pointer7; fixed using continuous event clock plus velocity rebase; invalid/missing/negative/zero terminal cases and extra-pointer isolation passed",
+  "deviceRawTimestamp": "not instrumented; precise timestamp relation not measured in VM",
+  "newSource": "ReaderControlPanel.ets shared input clock; ReaderControlRuntime.resetInputVelocity; pending build35 and same VM scenario"
+}

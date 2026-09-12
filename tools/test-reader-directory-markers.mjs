@@ -19,7 +19,7 @@ assert.match(modulePanel, /projectReaderBookmarkRows\(this\.entries, '', this\.b
   'module bookmark tab must use the behavior-tested flat bookmark projection');
 assert.match(directoryList, /List\(\{ space: 0, scroller: this\.scroller \}\)/);
 assert.match(directoryList,
-  /Repeat\(this\.entries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.entries\.length, reusable: false \}\)/,
+  /LazyForEach\(this\.dataSource[\s\S]*reader-directory-row-/,
   'module directory must keep lazy creation without the phone runtime row-reuse corruption');
 assert.match(modulePanel, /this\.chapterRow\(repeatItem\)/);
 assert.match(modulePanel, /private chapterRow\(repeatItem: RepeatItem<LocalReadingTocEntry>\)/,
@@ -53,19 +53,18 @@ const ascendingSortIcon = read('entry/src/main/resources/base/media/reader_direc
 const descendingSortIcon = read('entry/src/main/resources/base/media/reader_directory_sort_descending.svg');
 assert.match(fullPanel, /this\.switchTab\('bookmarks'\)/);
 assert.match(fullPanel, /@State private projectedBookmarks: ReaderBookmarkRowModel\[\] = \[\]/);
-assert.match(fullPanel, /@State private projectionMountPrimary: boolean = true/);
-assert.match(fullPanel, /projectReaderBookmarkRows\(\s*this\.entries, query, this\.bookmarkIdentity\)/,
+assert.match(fullPanel, /projectReaderBookmarkRows\(\s*sourceEntries, query, this\.bookmarkIdentity\)/,
   'bookmark tab must use the behavior-tested projection');
-assert.match(fullPanel, /projectReaderDirectoryEntries\(this\.entries, query, ascending\)/,
+assert.match(fullPanel, /projectReaderDirectoryEntries\(sourceEntries, query, ascending\)/,
   'sort and search must use the behavior-tested complete TOC projection');
 assert.match(directoryList, /List\(\{ space: 0, scroller: this\.scroller \}\)/);
 assert.match(directoryList,
-  /Repeat\(this\.entries\)[\s\S]*\.virtualScroll\(\{ totalCount: this\.entries\.length, reusable: false \}\)/,
+  /LazyForEach\(this\.dataSource[\s\S]*reader-directory-row-/,
   'full directory must keep lazy creation while disabling unsafe row-node reuse');
-assert.match(fullPanel,
-  /if \(this\.projectionMountPrimary\) \{\s*this\.chapterList\(\);\s*\} else \{\s*this\.chapterList\(\);\s*\}/,
-  'projection changes must remount the virtual List branch on the physical-device runtime');
-assert.match(fullPanel, /this\.projectionMountPrimary = !this\.projectionMountPrimary/);
+assert.match(fullPanel, /this\.chapterList\(\);/,
+  'the keyed virtual List must retain one native identity through projection changes');
+assert.doesNotMatch(fullPanel, /projectionMountPrimary|this\.projectionMountPrimary/,
+  'projection changes must not remount the native List during a control morph');
 assert.match(fullPanel, /this\.chapterRow\(repeatItem\)/);
 assert.match(fullPanel, /private chapterRow\(repeatItem: RepeatItem<LocalReadingTocEntry>\)/,
   'full directory must forward the complete reactive RepeatItem into its Builder');
@@ -177,8 +176,8 @@ assert.doesNotMatch(index, /book\.sourceId !== LOCAL_SOURCE_ID \|\|\s*!Number\.i
   'bookmark creation must not be local-source gated');
 assert.match(index, /loadRemoteDirectoryProjection\([\s\S]*loadBookmarkProjection/,
   'remote offline and bookmark projections must be merged');
-assert.match(index, /if \(this\.directoryBookmarkMutationActiveKey === key\) \{\s*return -1;/,
-  'repeated taps on the same book must not issue duplicate create/delete mutations');
+assert.match(index, /if \(this\.directoryBookmarkMutationActiveKey === key \|\| this\.controlBookmarkProjectionMessage\(\)\.length > 0\) \{\s*return -1;/,
+  'same-book pending mutations and unverified outcomes must reject duplicate create/delete mutations');
 assert.match(index, /private toggleReaderPageBookmark\(request: ReaderPageBookmarkToggleRequest\): void/);
 assert.match(index, /gateway\.createPositionBookmark\(\{/,
   'the pull-down gesture must mutate the same Core bookmark truth at the physical page anchor');

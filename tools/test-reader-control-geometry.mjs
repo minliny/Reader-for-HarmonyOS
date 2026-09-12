@@ -83,10 +83,10 @@ assert.equal(READER_CONTROL_BRIGHTNESS_MIN, 1);
 assert.equal(READER_CONTROL_BRIGHTNESS_MAX, 100);
 assert.equal(READER_TTS_RATE_MIN, 0.5);
 assert.equal(READER_TTS_RATE_MAX, 2);
-assert.equal(READER_TTS_RATE_STEP, 0.1);
-assert.equal(READER_TTS_RATE_STEP_SCALE, 10);
+assert.equal(READER_TTS_RATE_STEP, 0.05);
+assert.equal(READER_TTS_RATE_STEP_SCALE, 20);
 assert.equal(READER_TTS_TIMER_MIN, 0);
-assert.equal(READER_TTS_TIMER_MAX_MINUTES, 99);
+assert.equal(READER_TTS_TIMER_MAX_MINUTES, 180);
 assert.equal(READER_TTS_TIMER_MAX_SECONDS, 59);
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
@@ -129,13 +129,14 @@ assert.match(directory, /\.height\(READER_DIRECTORY_VIEWPORT_HEIGHT\)[\s\S]*\.hi
 assert.doesNotMatch(directory, /currentIndex \* 29 - 67 \+ 14\.5/);
 
 const controlPanel = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
-assert.match(controlPanel, /private moduleNav\(\)[\s\S]*maxWidth: this\.dockWidth\(\)[\s\S]*left: READER_CONTROL_CONTENT_PADDING_LEFT \+ TOK_BORDER_W[\s\S]*right: READER_CONTROL_CONTENT_PADDING_RIGHT \+ TOK_BORDER_W[\s\S]*private moduleNavBar\(\)/);
+assert.match(controlPanel, /this\.moduleNavBar\(\)/,
+  'navigation shares the production render owner');
 assert.match(controlPanel, /@Prop @Watch\('onLayoutChanged'\) layout: ReaderControlLayoutSnapshot/,
   'all reader-control states must consume one owner-resolved layout snapshot');
-assert.match(controlPanel, /private dockWidth\(\): number \{\s*return this\.layout\.dockWidth;/,
-  'all regular reader-control states must use the one clamped dock width');
-assert.match(controlPanel, /this\.usesTopAnchoredFullPanel\(\) \? this\.layout\.fullPanelTop : 0/);
-assert.match(controlPanel, /this\.layout\.fullPanelRightGap : this\.layout\.dockRightGap/);
+assert.match(controlPanel, /readerControlMotionBounds\(this\.layout\.fullPanelWidth/);
+assert.match(controlPanel,
+  /private dockTop\(\): number\s*\{\s*return this\.layout\.viewportHeight\s*-\s*this\.layout\.dockBottomGap\s*-\s*this\.layout\.fullPanelHeight/);
+assert.match(controlPanel, /this\.layout\.fullPanelRightGap/);
 assert.doesNotMatch(controlPanel, /READER_CONTROL_MODULE_NAV_MAX_WIDTH/);
 
 const search = await readFile(new URL('ReaderQuickSearchPanel.ets', readingDir), 'utf8');

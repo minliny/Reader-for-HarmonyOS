@@ -1,0 +1,8 @@
+{
+  "status": "HARNESS_STOPPED_NOT_APP_FAILURE",
+  "cause": "first observation was during queued settlement with two visible physical slots; settled-only oracle asserted before completion; no retry input issued",
+  "improvement": "read-only sample polling now records transitional slot count and parses canonical body only when one settled slot is exposed",
+  "inputAlreadyIssued": 40,
+  "direction": "next",
+  "followup": "rapid-fast-slide-readonly"
+}

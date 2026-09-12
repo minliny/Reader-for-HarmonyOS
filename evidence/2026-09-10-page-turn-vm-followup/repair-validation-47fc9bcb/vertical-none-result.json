@@ -1,0 +1,50 @@
+{
+  "status": "PASS",
+  "mode": "无动画",
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "1e6a7861a17240fa521ae83d6c1d8f0b455b95a6a99479d1b4fd0dc3b3e07463",
+    "chapter": 25,
+    "ordinal": 1,
+    "total": 4,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章025段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 / 4 页"
+  },
+  "upwardPrevious": {
+    "slot": "reader-page-slot-b",
+    "sha256": "5a549c83393a82e3916655d3f205a04430267d443b37b5d53eba52b631517900",
+    "chapter": 24,
+    "ordinal": 4,
+    "total": 4,
+    "start": 801,
+    "end": 1050,
+    "bodyLength": 249,
+    "first": [
+      "暂停后又继续，段落边界和换行都应",
+      "保持原来的顺序。这里的编号是测试"
+    ],
+    "footer": "第 4 / 4 页"
+  },
+  "restored": {
+    "slot": "reader-page-slot-a",
+    "sha256": "1e6a7861a17240fa521ae83d6c1d8f0b455b95a6a99479d1b4fd0dc3b3e07463",
+    "chapter": 25,
+    "ordinal": 1,
+    "total": 4,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章025段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 / 4 页"
+  },
+  "scope": "public upward vertical previous, horizontal next, canonical source roundtrip; no bookmark gesture"
+}

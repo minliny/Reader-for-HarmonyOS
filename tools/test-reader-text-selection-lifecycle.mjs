@@ -47,7 +47,7 @@ assert.match(surface,
   'losing admission must also remove copy capability so handles cannot remain active');
 assert.match(experience, /private readerTextSelectionEnabled\(\): boolean/);
 assert.match(experience,
-  /controlVisible: this\.controlVisible,[\s\S]*controlObscured: this\.controlObscured,[\s\S]*interactionBlocked: this\.interactionBlocked/,
+  /controlVisible: this\.controlVisible\(\),[\s\S]*controlObscured: this\.controlObscured,[\s\S]*interactionBlocked: this\.interactionBlocked/,
   'control, full-screen overlay, and blocked-route ownership must share one selection policy');
 assert.match(experience,
   /pageTurnActive: this\.pageTurnOwnsReaderInput\(\) \|\|[\s\S]*readerRapidPageTurnHasWork\(this\.rapidPageTurnState\)/,

@@ -1,0 +1,12 @@
+{
+  "runId": "20260910T191155Z-35f2f99a-b2b32102",
+  "recordedAt": "2026-09-10T19:13:48.692840+00:00",
+  "source": {
+    "fileCount": 504,
+    "mismatches": []
+  },
+  "controller": {
+    "fileCount": 221,
+    "mismatches": []
+  }
+}

@@ -1,0 +1,1618 @@
+{
+  "mode": "滑动",
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+    "first": [
+      "段跨越多个页面，续页必须从正文左",
+      "边界开始，只有段落的真正首行才缩"
+    ],
+    "footer": [
+      "9%",
+      "第 1 / 10 页"
+    ]
+  },
+  "results": [
+    {
+      "turn": 1,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 2,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 3,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 4,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 5,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 6,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 7,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 8,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 9,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 10,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 11,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 12,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 13,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 14,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 15,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 16,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 17,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 18,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 19,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 20,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 21,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 22,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 23,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 24,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 25,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 26,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 27,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 28,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 29,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 30,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 31,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 32,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 33,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 34,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 35,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 36,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 37,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 38,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 39,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 40,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 41,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 42,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 43,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 44,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 45,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 46,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 47,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 48,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 49,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 50,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 51,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 52,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 53,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 54,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 55,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 56,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 57,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 58,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 59,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 60,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 61,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 62,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 63,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 64,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 65,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 66,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 67,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 68,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 69,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 70,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 71,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 72,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 73,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 74,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 75,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 76,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 77,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 78,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 79,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 80,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 81,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 82,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 83,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 84,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 85,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 86,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 87,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 88,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 89,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 90,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 91,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 92,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 93,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 94,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 95,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 96,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 97,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 98,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 99,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "7d6d4534d38602cd0a1d1261b89a59358b6660b86f9361a713203934fbf04844",
+        "first": [
+          "面，续页必须从正文左边界开始，只",
+          "有段落的真正首行才缩进。这一长段"
+        ],
+        "footer": [
+          "20%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 100,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "0649a6f0ad900ebcc9913828a1763e9e475a3a5976d2c55fd6ae7622540f7f9e",
+        "first": [
+          "段跨越多个页面，续页必须从正文左",
+          "边界开始，只有段落的真正首行才缩"
+        ],
+        "footer": [
+          "9%",
+          "第 1 / 10 页"
+        ]
+      }
+    }
+  ],
+  "scope": "settled-content roundtrips only; not latency, display frames, quiet hold or rapid throughput"
+}

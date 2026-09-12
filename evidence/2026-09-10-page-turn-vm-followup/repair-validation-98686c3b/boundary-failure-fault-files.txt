@@ -1,0 +1,4 @@
+total 1134592
+-rw-rw-r-- 1 hiview system 418492 2026-09-10 09:30 appfreeze-io.reader.harmonyos-20020073-20260910093029363.log
+-rw-rw-r-- 1 hiview system 150836 2026-09-10 09:13 jscrash-io.reader.harmonyos-20020073-20260910091339588.log
+-rw-rw-r-- 1 hiview system 561116 2026-09-10 08:56 appfreeze-io.reader.harmonyos-20020073-20260910085634552.log

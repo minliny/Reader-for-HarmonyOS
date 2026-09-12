@@ -1,0 +1,30 @@
+{
+  "status": "PASS_NET_TARGET_BY_FOLLOWUP",
+  "next": {
+    "injectionSeconds": 5.476977458,
+    "settledObservationUpperBoundSeconds": 16.633901208,
+    "conservativePagesPerSecond": 2.404727520009688,
+    "status": "PASS canonical net target"
+  },
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "981ff4635e9c5875151745940a492b680b190870ae15046907ad2b6666858f4d",
+    "chapter": 36,
+    "ordinal": 3,
+    "total": 4,
+    "start": 525,
+    "end": 801,
+    "bodyLength": 276,
+    "first": [
+      "【章036段06】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 3 / 4 页"
+  },
+  "forwardEvidence": "rapid-fast-simulation-progress.json",
+  "reverseInputCount": 40,
+  "reverseFinalBody": "reader-control-rapid-native-readonly-1.json",
+  "reverseElapsed": "unavailable; static-only oracle stopped mid animation and readonly followup confirmed original body later",
+  "resumeScriptGuard": "extra reverse helper aborted before input because current was already original chapter36; no duplicate reverse issued",
+  "scope": "80 queued taps reached canonical forward target then original body; not complete performance/visual matrix"
+}

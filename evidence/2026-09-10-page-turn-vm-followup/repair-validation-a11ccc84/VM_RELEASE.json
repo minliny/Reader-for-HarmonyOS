@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-09-11T13:24:19.320Z",
+  "probeClosed": true,
+  "lockAbsent": true,
+  "bookshelfConfirmed": true,
+  "dataPreserved": true,
+  "finalMode": "仿真",
+  "ownBook": "ReaderPagingAudit20260911",
+  "ownChapter": 150,
+  "screenDirection": "followSystem restored afterrotation",
+  "fontSize": "unchanged: attempted test stopped before any metric click",
+  "theme": "paper restored4a09, unchangedsince",
+  "volumeKeys": "OFF verified4a09, unchangedsince",
+  "autoPage": "STOPPED verified4a09, unchangedsince",
+  "phoneUsed": false,
+  "vmReset": false
+}

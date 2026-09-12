@@ -8,7 +8,7 @@ const control = readFileSync(resolve(repo,
   'entry/src/main/ets/features/reading/ReaderControlPanel.ets'), 'utf8');
 const experience = readFileSync(resolve(repo,
   'entry/src/main/ets/features/reading/LocalReadingExperience.ets'), 'utf8');
-const brightness = control.match(/private brightnessRail\(\)[\s\S]*?private moduleNav\(\)/)?.[0] ?? '';
+const brightness = control.match(/private brightnessRail\(\)[\s\S]*?private moduleNavBar\(\)/)?.[0] ?? '';
 
 assert.ok(brightness.length > 0, 'brightness rail builder and mapping helpers must remain present');
 assert.doesNotMatch(brightness, /Slider\(\{/,

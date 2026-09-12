@@ -1,0 +1,10 @@
+{
+  "closedAt": "2026-09-11T10:20:35.116Z",
+  "targetRef": "6460677a198b",
+  "screen": "bookshelf",
+  "volumePageTurn": "OFF restored verified",
+  "autoPage": "STOPPED verified disabled non-clickable action",
+  "testBook": "ReaderPagingAudit20260911",
+  "chapter": 37,
+  "reason": "preserve-data update for newly found multi-finger extra chapter regression"
+}

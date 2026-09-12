@@ -1,0 +1,1 @@
+09-11 15:46:10.027  6712  6712 E A05244/Reader: ReadingExperience book-turn texture failed slot=0: 160001

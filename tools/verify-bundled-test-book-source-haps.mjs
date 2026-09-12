@@ -6,13 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const expected = readFileSync(resolve(repo,
-  'entry/src/main/resources/rawfile/reader-test-book-sources.json'));
+  'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'));
 const hapPaths = process.argv.slice(2).map(path => resolve(repo, path));
 const canonicalHaps = [
   'entry-default-signed.hap',
   'entry-default-unsigned.hap',
 ];
-const minimumBundledSourceCount = 6;
+const expectedCollectionRecords = 1046;
+const expectedUniqueSourceIds = 919;
 
 assert.ok(hapPaths.length >= 1,
   'pass at least one immutable signed or unsigned HAP to the package source verifier');
@@ -25,14 +26,18 @@ for (const hapPath of hapPaths) {
 
 for (const hapPath of hapPaths) {
   const extracted = spawnSync('unzip', [
-    '-p', hapPath, 'resources/rawfile/reader-test-book-sources.json',
-  ], { encoding: null, maxBuffer: 1024 * 1024 });
+    '-p', hapPath, 'resources/rawfile/reader-tested-book-source-collection.json',
+  ], { encoding: null, maxBuffer: 32 * 1024 * 1024 });
   assert.equal(extracted.status, 0,
     `${hapPath} does not expose the bundled source raw file: ${extracted.stderr?.toString('utf8') ?? ''}`);
   assert.deepEqual(extracted.stdout, expected,
     `${hapPath} bundled source bytes differ from the live-checked source document`);
   const sources = JSON.parse(extracted.stdout.toString('utf8'));
-  assert.ok(Array.isArray(sources) && sources.length >= minimumBundledSourceCount,
-    `${hapPath} must contain at least ${minimumBundledSourceCount} test sources`);
-  console.log(`${hapPath}: bundled test sources PASS (${sources.length})`);
+  assert.ok(Array.isArray(sources), `${hapPath} source collection must be a JSON array`);
+  assert.equal(sources.length, expectedCollectionRecords,
+    `${hapPath} must contain every recorded tested source`);
+  assert.equal(new Set(sources.map(source => source.bookSourceUrl)).size, expectedUniqueSourceIds,
+    `${hapPath} must retain the expected stable source identities`);
+  console.log(`${hapPath}: bundled source collection PASS ` +
+    `(${sources.length} tested records, ${expectedUniqueSourceIds} unique identities)`);
 }

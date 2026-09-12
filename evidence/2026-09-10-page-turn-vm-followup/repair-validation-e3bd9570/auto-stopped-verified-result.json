@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "autoPage": "stopped; disabled non-clickable 0.4-opacity action verified",
+  "speed": "8 seconds unchanged",
+  "scope": "prior helper falsely expected disabled action to remain clickable; action had succeeded, no second stop required"
+}

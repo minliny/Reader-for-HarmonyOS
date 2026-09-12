@@ -1,0 +1,11 @@
+{
+  "source": "entry/src/main/resources/rawfile/NotoSansSC-VF.otf",
+  "sourceSha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
+  "axis": {
+    "wght": 400
+  },
+  "tool": "fonttools 4.60.2 instantiateVariableFont",
+  "license": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+  "output": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+  "outputSha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e"
+}

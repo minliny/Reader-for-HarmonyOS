@@ -1,0 +1,3235 @@
+{
+  "status": "PASS",
+  "mode": "滑动",
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+    "first": [
+      "始，只有段落的真正首行才缩进。这",
+      "一长段跨越多个页面，续页必须从正"
+    ],
+    "footer": [
+      "43%",
+      "第 5 / 10 页"
+    ]
+  },
+  "results": [
+    {
+      "turn": 1,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 2,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 3,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 4,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 5,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 6,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 7,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 8,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 9,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 10,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 11,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 12,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 13,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 14,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 15,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 16,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 17,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 18,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 19,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 20,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 21,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 22,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 23,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 24,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 25,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 26,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 27,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 28,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 29,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 30,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 31,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 32,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 33,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 34,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 35,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 36,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 37,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 38,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 39,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 40,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 41,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 42,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 43,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 44,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 45,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 46,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 47,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 48,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 49,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 50,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 51,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 52,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 53,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 54,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 55,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 56,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 57,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 58,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 59,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 60,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 61,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 62,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 63,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 64,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 65,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 66,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 67,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 68,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 69,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 70,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 71,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 72,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 73,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 74,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 75,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 76,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 77,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 78,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 79,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 80,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 81,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 82,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 83,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 84,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 85,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 86,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 87,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 88,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 89,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 90,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 91,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 92,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 93,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 94,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 95,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 96,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 97,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 98,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 99,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 100,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 101,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 102,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 103,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 104,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 105,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 106,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 107,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 108,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 109,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 110,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 111,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 112,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 113,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 114,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 115,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 116,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 117,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 118,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 119,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 120,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 121,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 122,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 123,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 124,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 125,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 126,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 127,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 128,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 129,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 130,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 131,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 132,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 133,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 134,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 135,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 136,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 137,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 138,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 139,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 140,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 141,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 142,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 143,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 144,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 145,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 146,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 147,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 148,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 149,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 150,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 151,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 152,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 153,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 154,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 155,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 156,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 157,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 158,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 159,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 160,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 161,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 162,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 163,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 164,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 165,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 166,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 167,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 168,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 169,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 170,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 171,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 172,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 173,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 174,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 175,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 176,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 177,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 178,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 179,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 180,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 181,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 182,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 183,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 184,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 185,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "78495cf681ca3c50bf7ec738c117a248f306f71331cf21f046e943372bf116c6",
+        "first": [
+          "会改变段落身份。下一段仍按设定缩",
+          "进，换页不会改变段落身份。"
+        ],
+        "footer": [
+          "98%",
+          "第 10 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 186,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "eb708ee75da0b29dc7365323dc983bb56a883f5b5c78c78515ca0c9e40e854aa",
+        "first": [
+          "个页面，续页必须从正文左边界开",
+          "始，只有段落的真正首行才缩进。这"
+        ],
+        "footer": [
+          "87%",
+          "第 9 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 187,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "49b9284b91b1e9260005bd76810d889c41a055ce8b298df8b228b7d9d98fb48d",
+        "first": [
+          "一长段跨越多个页面，续页必须从正",
+          "文左边界开始，只有段落的真正首行"
+        ],
+        "footer": [
+          "76%",
+          "第 8 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 188,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "94f50b4464202430b43131bd53aad7596e76534f200413eff3be87b710de257d",
+        "first": [
+          "才缩进。这一长段跨越多个页面，续",
+          "页必须从正文左边界开始，只有段落"
+        ],
+        "footer": [
+          "65%",
+          "第 7 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 189,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 190,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 191,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 192,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 193,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 194,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "82522f8220f2bdf49e07a7fe2d9c69092a5be51b0b0095294a74e27532f0e83a",
+        "first": [
+          "第一章 段落缩进验收",
+          "甲段首字用于检验首行。这是同一段"
+        ],
+        "footer": [
+          "0%",
+          "第 1 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 195,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "918ff11579576be93c69b6ab5ad52b38c39e2345cbfe030fa717b5c75d195c7e",
+        "first": [
+          "越多个页面，续页必须从正文左边界",
+          "开始，只有段落的真正首行才缩进。"
+        ],
+        "footer": [
+          "9%",
+          "第 2 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 196,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "ae1b95f81d137d1ec6d07d1582047036fcdf9180a94da0e19db8a5d10a5fddf5",
+        "first": [
+          "页必须从正文左边界开始，只有段落",
+          "的真正首行才缩进。这一长段跨越多"
+        ],
+        "footer": [
+          "21%",
+          "第 3 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 197,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "bce2aa0fb47aa487fe77ef09fac323591e8b15c9b904427bd0e8f72f45ee0bd4",
+        "first": [
+          "文左边界开始，只有段落的真正首行",
+          "才缩进。这一长段跨越多个页面，续"
+        ],
+        "footer": [
+          "32%",
+          "第 4 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 198,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 199,
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "turn": 200,
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    }
+  ],
+  "counts": {
+    "next": 100,
+    "previous": 100
+  },
+  "pagesSeen": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "scope": "bounded sweeps across all chapter pages; 100 turns per direction, not uninterrupted 100 distinct pages and not rapid throughput"
+}

@@ -1,0 +1,103 @@
+{
+  "status": "PASS",
+  "mode": "仿真",
+  "results": [
+    {
+      "case": "sparse-up",
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "case": "sparse-up",
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "case": "two-fingers",
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "case": "two-fingers",
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    },
+    {
+      "case": "three-fingers",
+      "direction": "next",
+      "page": {
+        "slot": "reader-page-slot-b",
+        "sha256": "e110a55b91e96f414ee2b77f848e4237dac8c78922297454913b23bb21d6bdda",
+        "first": [
+          "的真正首行才缩进。这一长段跨越多",
+          "个页面，续页必须从正文左边界开"
+        ],
+        "footer": [
+          "54%",
+          "第 6 / 10 页"
+        ]
+      }
+    },
+    {
+      "case": "three-fingers",
+      "direction": "previous",
+      "page": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      }
+    }
+  ],
+  "scope": "public uinput: DOWN then changed-position UP with no MOVE; 2/3 simultaneous pointers with opposing directions; exact no-MOVE moved-hold and CANCEL are separate"
+}

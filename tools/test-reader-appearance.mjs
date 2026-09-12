@@ -351,7 +351,10 @@ assert.doesNotMatch(fullPanel, /enabled\(value !== 'single'\)/,
 
 assert.match(gateway, /ReaderRuntimeOwner/);
 assert.match(gateway, /getUIAbilityContext\(\)/);
-assert.match(gateway, /reader_appearance_v1/);
+assert.match(gateway, /runtimeOwner\.getAppearanceStore\(\)/);
+const appearancePreferences = await readFile(new URL('../../app/ReaderAppearancePreferences.ts', readingDir), 'utf8');
+assert.match(appearancePreferences, /reader_appearance_v1/);
+assert.match(appearancePreferences, /store\.put\('snapshot'/);
 assert.match(gateway, /ReaderCustomFontHost/);
 assert.match(gateway, /registerCustomFont/);
 assert.match(customFontHost, /DocumentViewPicker/);
@@ -367,15 +370,21 @@ assert.match(conversionGateway, /reader\.chinese-conversion\.put/);
 assert.doesNotMatch(conversionGateway, /ReaderAppearanceGateway|reader_appearance_v1/,
   'Chinese conversion must not be persisted as a Harmony-only appearance preference');
 
+// Production binding: one shared Appearance content consumes the Host session.
+// The legacy standalone panel/source checks above are not production parity.
 assert.match(controlPanel, /moduleAppearance/);
-assert.match(controlPanel, /fullAppearance/);
-assert.match(controlPanel, /ReaderAppearanceModulePanel\(\{/);
-assert.match(controlPanel, /ReaderAppearanceFullPanel\(\{/);
-assert.doesNotMatch(controlPanel, /module === 'appearance' && this\.isTablet/,
-  'Phone and Tablet must share one responsive Appearance state machine');
-assert.match(controlPanel, /ReaderAppearanceModulePanel\(\{\s*isTablet: this\.isExpanded\(\)/);
-assert.match(controlPanel, /ReaderAppearanceFullPanel\(\{\s*isTablet: this\.isExpanded\(\)/);
-assert.match(controlPanel, /availableHeight: this\.layout\.fullPanelHeight/);
+assert.equal((controlPanel.match(/ReaderControlAppearanceContent\(\{/g) ?? []).length, 1);
+assert.doesNotMatch(controlPanel, /ReaderAppearance(?:ModulePanel|FullPanel|MotionStage)\(\{/);
+assert.match(controlPanel, /ReaderControlAppearanceContent\(\{\s*isTablet: this\.isExpanded\(\)/);
+assert.match(controlPanel, /motionProgress: this\.contentMotionProgress/);
+assert.match(controlPanel, /availableHeight: this\.contentMotionHeight/);
+for (const callback of ['onAppearanceThemeChange', 'onAppearanceFontChange',
+  'onAppearanceFontOrderChange', 'onAppearanceCustomFontImport', 'onChineseConversionChange',
+  'onAppearanceMetricStep', 'onAppearanceIndentRequest', 'onAppearanceAlignmentRequest']) {
+  assert.match(controlPanel, new RegExp(`this\\.${callback}\\(`),
+    `shared Appearance must retain actual business callback ${callback}`);
+}
+assert.match(controlPanel, /dismissTemporaryRevision: this\.dismissTemporaryRevision/);
 
 assert.match(readingSurface, /@Prop appearance: ReaderAppearanceSnapshot/);
 assert.match(readingSurface, /readerAppearanceSnapshotFontFamily\(this\.appearance\)/,
@@ -387,11 +396,13 @@ assert.match(readingSurface, /\.letterSpacing\(this\.appearance\.letterSpacing\)
 assert.match(experience,
   /const layoutReady = Promise\.all\(\[[\s\S]*?this\.loadAppearanceSnapshot\(lifecycleToken\)[\s\S]*?\]\)[\s\S]*?this\.loadInitialChapter\(lifecycleToken, layoutReady\)[\s\S]*?await layoutReady;[\s\S]*?await this\.openChapter/,
   'layout-affecting appearance must settle at the pagination barrier while TOC and progress load concurrently');
-assert.match(experience, /page === 'moduleAppearance' \|\| page === 'fullAppearance'[\s\S]*?loadChineseConversionMode/,
-  'conversion controls may load only when the user enters Appearance');
+assert.match(experience, /private prepareControlPage\(page: ReaderControlPage\)[\s\S]*?page === 'moduleAppearance' \|\| page === 'fullAppearance'[\s\S]*?loadChineseConversionMode/,
+  'conversion controls load through the derived Appearance business-page entry');
+assert.match(experience, /if \(module !== this\.observedControlModule\) \{\s*this\.controlModuleVisitRevision \+= 1;\s*this\.observedControlModule = module;\s*this\.prepareControlPage\(page\);/,
+  'only a new module visit increments presentation ownership and loads entry data; Quick/Full frames do neither');
 assert.match(experience, /reloadCurrentChapterAfterContentProjectionChange/);
-assert.match(experience, /this\.appearanceGateway\.update\(snapshot\)/);
-assert.match(experience, /setReaderAppearanceFontOrder\(this\.appearanceSnapshot, fontOrder\)/,
+assert.match(experience, /this\.appearanceGateway\.update\(change\)/);
+assert.match(experience, /setReaderAppearanceFontOrder\(current, requestedOrder\)/,
   'dragged font order must enter the existing versioned appearance persistence path');
 assert.match(experience, /this\.appearanceGateway\.registerCustomFont/);
 assert.match(experience, /setReaderAppearanceCustomFont/);

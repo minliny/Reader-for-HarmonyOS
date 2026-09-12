@@ -1,0 +1,20 @@
+{
+  "releasedAt": "2026-09-11T04:29:06.077985+00:00",
+  "lockAbsent": true,
+  "appPid": 7995,
+  "mode": "none",
+  "book": "ReaderIndentCRLF20260910",
+  "page": {
+    "slot": "reader-page-slot-a",
+    "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+    "first": [
+      "始，只有段落的真正首行才缩进。这",
+      "一长段跨越多个页面，续页必须从正"
+    ],
+    "footer": [
+      "43%",
+      "第 5 / 10 页"
+    ]
+  },
+  "scope": "released between installed 036 stress and planned 90be deployment; not final task completion"
+}

@@ -1,0 +1,24 @@
+{
+  "singleUinputTwoMoves": "wrong numberofparameters20, exit0, no validinjection; oldhelper missedcapturingstdout thenfixed",
+  "sequentialSamePosition": "appmeasuredUPtoDOWN93.014ms; movinghandle no longer atoriginalcoordinate; failuredoesnotproveappdroppedcontact",
+  "continuousMoveRegrab": [
+    {
+      "round": 1,
+      "status": "PASS",
+      "heldProgress": 0.08811959087332809,
+      "settled": "Quick"
+    },
+    {
+      "round": 2,
+      "status": "OPEN",
+      "observed": "Full; staticpredictiondidnotestablishhit; notalltenpassed"
+    }
+  ],
+  "singleCommandWrongPrediction": "requested50msgap measured92.512ms atapp; outdatedpositionmissed",
+  "singleCommandCorrected": {
+    "status": "PASS10",
+    "evidence": "control-regrab-timed10-result.json",
+    "scope": "secondDOWNpausesautomaticmotion4s; twoheldsamplesidentical; UP35pxdownreversesQuick; noongoingMOVEregrabclaim"
+  },
+  "allRawFailuresPreserved": true
+}

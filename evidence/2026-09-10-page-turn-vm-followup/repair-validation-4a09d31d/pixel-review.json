@@ -1,0 +1,10 @@
+{
+  "status": "PASS inspected named samples",
+  "samples": {
+    "image-day-next-1-2": "paper texture, correct source/adjacent checker image visible during curl",
+    "image-night-next-1-2": "dark paper source/back/adjacent with checker colors preserved",
+    "image-night-previous-1-2": "dark reverse-face text and checker image visible, destination dark",
+    "theme-paper-restore-reading": "original light paper texture restored"
+  },
+  "notCovered": "all framebuffer alpha values, display fence, full sequence every display frame"
+}

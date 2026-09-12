@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-09-10T11:05:01.777481+00:00",
+  "ledgerUniqueCount": 52,
+  "allOriginalIdsRetained": true,
+  "effectiveTraces": 8,
+  "allSynchronousAppSlicesPaired": true,
+  "traceSha256": {
+    "expand-trace.ftrace": "c1e6d0cf8bacbdb74fe2155606ee1fd3b5b5f835095043b6e7ca13c78ebfd02c",
+    "slide-prev-2-trace.ftrace": "b2e90befd72d69627a34c952cd4d217a0966460840eac923706d66195cd00eab",
+    "expand-repeat-trace.ftrace": "385ad0a76d1058fa67061c6d80dd156b2d51946655ac157e87d1180008f2d77a",
+    "open-trace.ftrace": "c752c52ea940f55d9ea50315da0f0a9f09f0ab23e0a419561132bc4d5f81281a",
+    "collapse-repeat-trace.ftrace": "0b172efcae8a8aa58f32ce98292d19cec3462e3637aa5ab701762ff4d7e0bbd7",
+    "slide-next-1-trace.ftrace": "cf8319cb7e145fbaad7db4b165d72cf05075a48171f3af9cc96041fc2b7fd19a",
+    "slide-next-2-trace.ftrace": "45671b21ded8e9892e7d13113d66c204ad716069d86b4e2d6340d94bfc5021e0",
+    "slide-prev-1-trace.ftrace": "6d5acdf88008857a44b9ea09db75ae8b5df9128305d7b1376411f3c0467ca1ac"
+  },
+  "scope": "Evidence integrity checks, not business repair tests or visual acceptance."
+}

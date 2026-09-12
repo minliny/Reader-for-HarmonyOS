@@ -34,14 +34,14 @@ assert.match(stage,
   /@Prop pageTurnStyle: ReaderPageTurnStyle = readerPageTurnStyle\(createDefaultReaderSettingsSnapshot\(\)\);/,
   'the presentation stage must not introduce a second page-turn default');
 assert.match(experience,
-  /ReaderPageTurnStage\(\{[\s\S]*currentPage: this\.currentPageTurnRenderPage\(\),[\s\S]*previousPage: this\.preparedPageTurnRenderPage\('previous'\),[\s\S]*nextPage: this\.preparedPageTurnRenderPage\('next'\),[\s\S]*pageTurnStyle: this\.effectivePageTurnStyle\(\),[\s\S]*turnDirection: this\.pageTurnDirection,[\s\S]*offsetX: this\.pageTurnOffsetX,[\s\S]*viewportWidth: this\.pageTurnStageViewportWidth\(\),[\s\S]*layout: this\.readingLayout\(\),[\s\S]*appearance: this\.appearanceSnapshot/,
+  /ReaderPageTurnStage\(\{[\s\S]*currentPageProvider: \(\): ReaderPageTurnRenderPage => this\.currentPageTurnRenderPage\(\),[\s\S]*previousPageProvider: \(\): ReaderPageTurnRenderPage \| undefined => this\.preparedPageTurnRenderPage\('previous'\),[\s\S]*nextPageProvider: \(\): ReaderPageTurnRenderPage \| undefined => this\.preparedPageTurnRenderPage\('next'\),[\s\S]*pageTurnStyle: this\.effectivePageTurnStyle\(\),[\s\S]*turnDirection: this\.pageTurnDirection,[\s\S]*offsetX: this\.pageTurnOffsetX,[\s\S]*viewportWidth: this\.pageTurnStageViewportWidth\(\),[\s\S]*layout: this\.readingLayout\(\),[\s\S]*appearance: this\.appearanceSnapshot/,
   'LocalReadingExperience must connect prepared pages and live geometry to the stage');
 assert.match(experience,
   /const origin = this\.pageTurnPreparation\?\.origin;[\s\S]*?const chapterIndex = origin\?\.chapter\.chapterIndex \?\? this\.chapter\?\.chapterIndex \?\? -1;/,
   'current-page identity must stay bound to the visible origin during cross-chapter preparation');
 
 for (const prop of [
-  'currentPage', 'currentPageSnapshotId', 'previousPage', 'nextPage', 'pageTurnStyle', 'turnDirection', 'offsetX',
+  'contentRevision', 'currentPageSnapshotId', 'pageTurnStyle', 'turnDirection', 'offsetX',
   'viewportWidth', 'translateY', 'layout', 'appearance', 'ttsHighlightStart', 'ttsHighlightEnd',
   'longPressSelectText',
 ]) {
@@ -51,73 +51,115 @@ for (const prop of [
 assert.match(stage,
   /return \(this\.pageTurnStyle === 'slide' \|\| this\.pageTurnStyle === 'cover'\) &&\s*Number\.isFinite\(this\.viewportWidth\) && this\.viewportWidth > 0;/,
   'only the retained two-page modes may enter adjacent-page rendering');
-const simulationBranch = stage.match(
-  /if \(this\.pageTurnStyle === 'simulation'\) \{[\s\S]*?\} else if/,
-)?.[0] ?? '';
-assert.match(simulationBranch,
-  /pageIdentity: this\.currentPageSnapshotId\.length > 0 \?[\s\S]*this\.currentPageSnapshotId : this\.currentPage\.identity/,
-  'simulation must keep the live current page mounted under a short snapshot-safe ID');
-assert.doesNotMatch(simulationBranch, /this\.previousPage|this\.nextPage/,
-  'simulation must not keep two covered full Text trees mounted');
-assert.match(experience, /createFromComponent\(/,
-  'prepared material pages must be rasterized by the offscreen snapshot path');
+// Every mode/role lives in the same two physical component call sites.
+const build = stage.slice(stage.indexOf('  build() {', stage.indexOf('export struct ReaderPageTurnStage')), stage.indexOf('  private slotPage('));
+assert.equal((build.match(/ReaderPageTurnSurface\(\{/g) ?? []).length, 2);
+assert.doesNotMatch(build, /\bif\s*\(|\bForEach\s*\(/, 'input/role changes must not select a different component branch');
+assert.match(stage, /\.opacity\(this\.pageVisible \? 1 : 0\)/);
+assert.match(stage, /\.enabled\(this\.pageVisible\)/, 'retained hidden page must not intercept input');
+assert.doesNotMatch(stage, /^\s*@Builder\b/m, 'complex page data must go directly to component props');
 assert.match(textureBuilder, /@Builder\s+export function BookTurnTextureBuilder/);
-assert.match(textureBuilder, /chromeSessionVisible:\s*false/,
-  'the session capsule must stay out of the reusable native texture');
-assert.doesNotMatch(textureBuilder, /ttsHighlight|autoPageHighlight/,
-  'dynamic highlights must stay out of the reusable native texture');
-assert.doesNotMatch(textureBuilder, /longPressSelectText|CopyOptions/,
-  'native text selection must stay out of reusable offscreen textures');
-assert.match(stage,
-  /else \{\s*ReaderPageTurnSurface\(\{[\s\S]*?pageIdentity: this\.currentPage\.identity,[\s\S]*?translateX: 0,/,
-  'stationary and missing-target states must keep a single current page');
-assert.match(stage,
-  /@Component\s+struct ReaderPageTurnSurface[\s\S]*@Prop(?:\s+@\w+\([^)]*\))*\s+pageIdentity: string[\s\S]*@Prop chapterTitle: string[\s\S]*@Prop showChapterTitle: boolean[\s\S]*@Prop pageFragments: ReadingSurfacePageFragment\[\][\s\S]*ReadingSurface\(\{/,
-  'each page slot must be a real component receiving explicit primitive and array props');
-assert.match(stage,
-  /ReaderPageTurnSurface\(\{[\s\S]*?pageIdentity: this\.currentPage\.identity,[\s\S]*?chapterTitle: this\.currentPage\.chapterTitle,[\s\S]*?showChapterTitle: this\.currentPage\.showChapterTitle,[\s\S]*?pageFragments: this\.currentPage\.fragments,[\s\S]*?ttsHighlightStart: this\.ttsHighlightStart,[\s\S]*?ttsHighlightEnd: this\.ttsHighlightEnd/,
-  'the current page must bind directly into the page-slot component');
-assert.match(stage,
-  /chromeBottomStartText: this\.currentPage\.chromeBottomStartText,[\s\S]*?chromeBottomEndText: this\.currentPage\.chromeBottomEndText,[\s\S]*?chromeSessionWidth: this\.currentPage\.chromeSessionWidth/,
-  'the page-owned footer must travel with every explicit page slot');
-assert.doesNotMatch(stage, /^\s*@Builder\b/m,
-  'the stage must not route a page through ArkUI V1 Builder value semantics');
-assert.doesNotMatch(stage, /renderPage\(/,
-  'the original complex-object Builder bridge must stay removed');
+assert.doesNotMatch(textureBuilder, /ttsHighlight|autoPageHighlight/);
+assert.match(stage, /\.renderGroup\(this\.compositorIsolation\)/);
+assert.match(stage, /offsetX: COVER_OCCLUSION_OFFSET_X_VP \* this\.shadowStrength/);
+assert.doesNotMatch(stage, /PanGesture|TapGesture|SwipeGesture|\.gesture\(|animateTo|onTurn|requestPageTurn/);
 
-const previousBranch = stage.match(
-  /else if \(this\.hasLiveTurnWidth\(\) && this\.pageTurnStyle === 'slide' &&\s*this\.turnDirection === 'previous'[\s\S]*?\} else if/,
-)?.[0] ?? '';
-assert.ok(previousBranch.indexOf('pageIdentity: this.previousPage.identity,') >= 0);
-assert.ok(previousBranch.indexOf('pageIdentity: this.previousPage.identity,') <
-  previousBranch.indexOf('pageIdentity: this.currentPage.identity,'),
-  'previous destination must paint below the moving current page');
-const nextBranch = stage.match(
-  /else if \(this\.hasLiveTurnWidth\(\) && this\.pageTurnStyle === 'slide' &&\s*this\.turnDirection === 'next'[\s\S]*?\} else \{/,
-)?.[0] ?? '';
-assert.ok(nextBranch.indexOf('pageIdentity: this.nextPage.identity,') >= 0);
-assert.ok(nextBranch.indexOf('pageIdentity: this.nextPage.identity,') <
-  nextBranch.indexOf('pageIdentity: this.currentPage.identity,'),
-  'next destination must paint below the moving current page');
-assert.match(stage, /return this\.offsetX - this\.viewportWidth;/,
-  'the previous page must sit exactly one live viewport to the left');
-assert.match(stage, /return this\.viewportWidth \+ this\.offsetX;/,
-  'the next page must sit exactly one live viewport to the right');
-assert.match(stage, /\.renderGroup\(this\.compositorIsolation\)/,
-  'moving flat-page surfaces must be isolated as compositor groups');
-assert.match(stage, /offsetX: COVER_OCCLUSION_OFFSET_X_VP \* this\.shadowStrength/,
-  'cover contact occlusion must be cast onto revealed paper to the right of the moving edge');
-assert.match(stage, /return 4 \* progress \* \(1 - progress\);/,
-  'cover occlusion must fade at both clipped endpoints instead of popping at commit');
+// Execute production placement helpers across actual slot-role changes.
+const methods = ['slotPage', 'refreshRenderPages', 'currentRenderPage', 'adjacentRenderPage', 'slotIdentity', 'slotSnapshotId', 'slotPresented', 'hasActiveTurn', 'slotVisible',
+  'slotX', 'slotLayer', 'slotShadow', 'hasLiveTurnWidth', 'previousPageX', 'nextPageX',
+  'turnProgress', 'coverOcclusionStrength'].map(name => {
+  const start = stage.indexOf(`  private ${name}(`);
+  const end = stage.indexOf('\n  private ', start + 10);
+  return stage.slice(start, end < 0 ? stage.lastIndexOf('\n}') : end);
+});
+const { stripTypeScriptTypes } = await import('node:module');
+const Subject = new Function('READER_PAGE_TURN_SLOT_A', 'READER_PAGE_TURN_SLOT_B',
+  stripTypeScriptTypes(`class Subject {${methods.join('\n')}}`, { mode: 'strip' }) + '\nreturn Subject;')('reader-page-slot-a','reader-page-slot-b');
+const origin = { identity: 'origin', renderRevision: 1 }, next = { identity: 'next', renderRevision: 1 }, previous = { identity: 'previous', renderRevision: 1 };
+const x = Object.assign(new Subject(), { currentPage: origin, currentPageSlot: 'a', nextPage: next,
+  previousPage: previous, viewportWidth: 400, offsetX: 0, pageTurnStyle: 'slide', emptyPage: { fragments: [] } });
+Object.assign(x, { contentRevision: 1, currentPageProvider: () => x.currentPage, previousPageProvider: () => x.previousPage, nextPageProvider: () => x.nextPage });
+assert.equal(x.slotVisible('a'), true); assert.equal(x.slotVisible('b'), false);
+for (const currentSlot of ['a', 'b']) {
+  x.currentPageSlot = currentSlot;
+  const adjacentSlot = currentSlot === 'a' ? 'b' : 'a';
+  for (const mode of ['slide', 'cover']) {
+    x.pageTurnStyle = mode;
+    x.turnDirection = 'next'; x.offsetX = -120;
+    assert.equal(x.slotPage(currentSlot), origin);
+    assert.equal(x.slotPage(adjacentSlot), next);
+    assert.equal(x.slotX(currentSlot), -120);
+    assert.equal(x.slotX(adjacentSlot), mode === 'slide' ? 280 : 0);
+    assert.ok(x.slotLayer(currentSlot) > x.slotLayer(adjacentSlot));
+    x.turnDirection = 'previous'; x.offsetX = 120;
+    assert.equal(x.slotX(currentSlot), mode === 'slide' ? 120 : 0);
+    assert.equal(x.slotX(adjacentSlot), -280);
+    assert.equal(x.slotLayer(adjacentSlot) > x.slotLayer(currentSlot), mode === 'cover');
+    assert.equal(x.slotIdentity('a'), 'reader-page-slot-a');
+    assert.equal(x.slotIdentity('b'), 'reader-page-slot-b');
+  }
+}
+x.pageTurnStyle = 'slide'; x.currentPageSlot = 'b'; x.currentPage = next;
+x.turnDirection = undefined; x.previousPage = origin; x.nextPage = undefined; x.contentRevision++;
+// The outgoing page already owns slot a at the promotion boundary.
+x.slotPageA = origin;
+assert.equal(x.slotPage('b'), next); assert.equal(x.slotPage('a'), origin);
+assert.equal(x.slotX('b'), 0); assert.equal(x.slotVisible('a'), false);
+x.pageTurnStyle = 'simulation'; x.currentPageSnapshotId = 'native-current';
+assert.equal(x.slotIdentity('b'), 'reader-page-slot-b', 'snapshot identity belongs to inner static content, never the physical slot');
+assert.equal(x.slotPage('a'), origin, 'simulation keeps already-bound outgoing text hidden instead of clearing and rebuilding it');
+let presented = 0; x.onCurrentPagePresented = () => presented++;
+x.slotPresented('a', 1); x.slotPresented('b', 0); assert.equal(presented, 0);
+x.slotPresented('b', 1); assert.equal(presented, 1);
+assert.doesNotMatch(stage, /@Prop (?:currentPage|previousPage|nextPage):/, 'gesture updates must not deep-copy whole page projections');
+assert.doesNotMatch(build, /pageFragments:/, 'slot content is invalidated by revision, not array copying per MOVE');
+console.log('reader page-turn stable slot geometry and role transition: PASS');
 
-assert.match(stage,
-  /Stack\(\{ alignContent: Alignment\.TopStart \}\)[\s\S]*\.width\('100%'\)\s*\.height\('100%'\)\s*\.translate\(\{ y: this\.translateY \}\)\s*\.clip\(true\);/,
-  'the stage must clip a full-size two-page composition');
-assert.match(stage, /ReadingSurface\(\{/,
-  'the stage must reuse the existing reading presentation component');
-assert.doesNotMatch(stage, /\b390\b|\b760\b/,
-  'page placement must not use phone or tablet reference widths');
-assert.doesNotMatch(stage, /PanGesture|TapGesture|SwipeGesture|\.gesture\(|animateTo|onTurn|requestPageTurn/,
-  'the presentation stage must not own input, animation, or business commands');
+// Idle prefetch completion must not evict the outgoing page from its slot.
+x.pageTurnStyle = 'slide'; x.nextPage = { identity: 'third', renderRevision: 2 }; x.contentRevision++;
+assert.equal(x.slotPage('a'), origin, 'idle reserve retains the outgoing page for immediate reversal');
+let providerReads = 0;
+x.currentPageProvider = () => { providerReads++; return next; };
+x.previousPageProvider = () => { providerReads++; return origin; };
+x.nextPageProvider = () => { providerReads++; return x.nextPage; };
+x.contentRevision++;
+for (let frame = 0; frame < 100; frame++) {
+  x.currentRenderPage(); x.adjacentRenderPage('next'); x.adjacentRenderPage('previous');
+}
+assert.equal(providerReads, 3, 'one projection read per role/revision, independent of geometry expression count');
 
-console.log('reader page-turn presentation stage contract: PASS');
+// Snapshot lookup stays bound to a physical subtree through both promotions.
+x.currentPageSnapshotId = 'native-current';
+for (const role of ['a', 'b', 'a', 'b']) {
+  x.currentPageSlot = role;
+  assert.equal(x.slotSnapshotId('a'), 'native-current-a');
+  assert.equal(x.slotSnapshotId('b'), 'native-current-b');
+  assert.notEqual(x.slotSnapshotId(role), x.slotSnapshotId(role === 'a' ? 'b' : 'a'));
+}
+x.currentPageSnapshotId = '';
+assert.equal(x.slotSnapshotId('a'), ''); assert.equal(x.slotSnapshotId('b'), '');
+
+// Both non-flat modes retain only pages that actually occupied a slot. A cold
+// reserve cannot invoke speculative providers; promotion must publish the new
+// current revision rather than acknowledge the hidden outgoing revision.
+for (const mode of ['simulation', 'none']) {
+  const y = Object.assign(new Subject(), {
+    pageTurnStyle: mode, viewportWidth: 400, currentPageSlot: 'a', emptyPage: {},
+    contentRevision: 1, currentPageProvider: () => origin,
+    previousPageProvider: () => undefined, nextPageProvider: () => next,
+  });
+  assert.equal(y.slotPage('b'), y.emptyPage);
+  assert.equal(y.renderPagesRevision, undefined, 'cold reserve does not request page projections');
+  assert.equal(y.slotPage('a'), origin);
+  y.currentPageSlot = 'b'; y.contentRevision = 2;
+  const promoted = { identity: 'next-revised', renderRevision: 2 };
+  y.currentPageProvider = () => promoted;
+  assert.equal(y.slotPage('b'), promoted);
+  assert.equal(y.slotPage('a'), origin);
+  assert.equal(y.slotVisible('a'), false);
+  assert.equal(y.slotVisible('b'), true);
+  const acknowledgements = [];
+  y.onCurrentPagePresented = revision => acknowledgements.push(revision);
+  y.slotPresented('a', 1); y.slotPresented('b', 1); y.slotPresented('b', 2);
+  assert.deepEqual(acknowledgements, [2]);
+}

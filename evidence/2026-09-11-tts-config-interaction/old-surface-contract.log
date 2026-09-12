@@ -1,0 +1,366 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /this\.requestEngineChange\('system'\)/. Input:
+
+"import { PathShape } from '@ohos.arkui.shape';\n" +
+  'import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,\n' +
+  '  readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,\n' +
+  "  type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';\n" +
+  'import {\n' +
+  '  READER_TTS_RATE_MAX, READER_TTS_RATE_MIN, READER_TTS_RATE_STEP, READER_TTS_RATE_STEP_SCALE,\n' +
+  '  READER_TTS_TIMER_MAX_MINUTES, READER_TTS_TIMER_MAX_SECONDS, READER_TTS_TIMER_MIN,\n' +
+  '  type ReaderTtsState,\n' +
+  "} from './ReaderTtsState';\n" +
+  "import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';\n" +
+  "import { ReaderTtsConfigOverlay } from './ReaderTtsConfigOverlay';\n" +
+  'import { readerTtsConfigChoices, readerTtsVoiceId, readerTtsLanguageLabel,\n' +
+  "  type ReaderTtsConfigChoice, type ReaderTtsConfigField } from './ReaderTtsConfigOptions';\n" +
+  "import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';\n" +
+  "import type { ReaderControlForm } from './ReaderControlSessionState';\n" +
+  "import { readerSessionMorphActorId, type ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';\n" +
+  "import { readerControlUnit, type ReaderControlActorFrame } from './ReaderControlActorGeometry';\n" +
+  'import {\n' +
+  '  sampleReaderControlTts, readerControlPlaybackSourceKind, readerControlPlaybackMeasuredSource,\n' +
+  '  readerControlTtsTimerVisibleRects,\n' +
+  '  type ReaderControlTtsFrame, type ReaderControlTransportKind, type ReaderControlPlaybackMeasuredRect,\n' +
+  "} from './ReaderControlPlaybackGeometry';\n" +
+  "import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';\n" +
+  'import { TOK_TTS_INK, TOK_TTS_MUTED, TOK_TTS_TEAL, TOK_TTS_TEAL_SOFT, TOK_TTS_TEAL_LINE,\n' +
+  '  TOK_TTS_PLAY_START, TOK_TTS_PLAY_END, TOK_TTS_CLAY, TOK_TTS_CLAY_SOFT, TOK_TTS_CLAY_LINE,\n' +
+  '  TOK_TTS_PAPER, TOK_TTS_PAPER_START, TOK_TTS_PAPER_END, TOK_TTS_CARD, TOK_TTS_QUICK_CARD,\n' +
+  "  TOK_TTS_LINE, TOK_TTS_FIELD, TOK_TTS_TRACK } from './ReaderControlTtsStyle';\n" +
+  'import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionOutlineOpacity,\n' +
+  '  readerControlMotionClipRects, readerControlMotionClipPath,\n' +
+  "  type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';\n" +
+  '\n' +
+  "type ReaderControlTtsSection = 'playback' | 'timer' | 'speed';\n" +
+  "type ReaderControlTtsField = 'voice' | 'engine' | 'language' | 'session' | 'failure';\n" +
+  "type ReaderControlTtsToggle = 'followHighlight' | 'pauseOnInterruption' | 'allowMixing';\n" +
+  '\n' +
+  '/** Make v17 redraw on persistent Playback/Timer/Speed actors.\n' +
+  " * All actors consume the production Runtime's one p. Header, grabber, shell and whole visibility are\n" +
+  ' * intentionally absent here. Business commands remain supplied by the owner. */\n' +
+  '@Component\n' +
+  'export struct ReaderControlTtsContent {\n' +
+  "  @Prop @Watch('onMotionChanged') motionProgress: number = 0;\n" +
+  '  @Prop availableWidth: number = 286;\n' +
+  '  @Prop availableHeight: number = 190;\n' +
+  '  @Prop isTablet: boolean = false;\n' +
+  "  @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;\n" +
+  "  @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';\n" +
+  '  @Prop state: ReaderTtsState;\n' +
+  '  @Prop timerMinutes: number = 15;\n' +
+  '  @Prop timerSeconds: number = 0;\n' +
+  '  @Prop followHighlight: boolean = true;\n' +
+  '  @Prop pauseOnInterruption: boolean = true;\n' +
+  '  @Prop allowMixing: boolean = false;\n' +
+  "  @Prop failurePolicy: 'skip' | 'stop' = 'stop';\n" +
+  "  @Prop engine: string = 'system';\n" +
+  '  @Prop httpEngines: ReaderTtsEngineOption[] = [];\n' +
+  '  @Prop voiceOptions: ReaderTtsVoiceOption[] = [];\n' +
+  "  @Prop language: string = 'zh-CN';\n" +
+  '  @Prop person: number = 0;\n' +
+  "  @Prop @Watch('dismissConfiguration') dismissTemporaryRevision: number = 0;\n" +
+  '  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};\n' +
+  '  onCollapse: () => void = (): void => {};\n' +
+  '  onToggle: () => void = (): void => {};\n' +
+  '  onStop: () => void = (): void => {};\n' +
+  '  onPrevious: () => void = (): void => {};\n' +
+  '  onNext: () => void = (): void => {};\n' +
+  '  onSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};\n' +
+  '  onTimerChange: (minutes: number, seconds: number) => void =\n' +
+  '    (_minutes: number, _seconds: number): void => {};\n' +
+  '  onRateChange: (rate: number) => void = (_rate: number): void => {};\n' +
+  '  onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};\n' +
+  '  onPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};\n' +
+  '  onAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};\n' +
+  "  onFailurePolicyChange: (policy: 'skip' | 'stop') => void = (_policy: 'skip' | 'stop'): void => {};\n" +
+  '  onVoiceChange: (language: string, person: number) => void =\n' +
+  '    (_language: string, _person: number): void => {};\n' +
+  '  onEngineChange: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();\n' +
+  '  onHttpEnginePut: (config: ReaderTtsEngineOption) => Promise<void> =\n' +
+  '    (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();\n' +
+  '  onHttpEngineDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();\n' +
+  '\n' +
+  '  onMorphActorMeasured: (kind: ReaderSessionMorphSourceKind, left: number, top: number,\n' +
+  '    width: number, height: number) => void =\n' +
+  '    (_kind: ReaderSessionMorphSourceKind, _left: number, _top: number, _width: number, _height: number): void => {};\n' +
+  '  @State private ratePreview: number = -1;\n' +
+  '  private committedSliderRate: number = -1;\n' +
+  '  private committedSliderSeek: number = -1;\n' +
+  "  @State private configField: ReaderTtsConfigField | 'manage' | '' = '';\n" +
+  "  @State private configIdentity: string = '';\n" +
+  '  private configGeneration: number = 0;\n' +
+  '  @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();\n' +
+  '  @Prop fullViewportHeight: number = 666;\n' +
+  '  private readonly scroller: Scroller = new Scroller();\n' +
+  '  private quickMeasurement: ReaderControlPlaybackMeasuredRect | undefined = undefined;\n' +
+  '  private fullMeasurement: ReaderControlPlaybackMeasuredRect | undefined = undefined;\n' +
+  '  private cachedProgress: number = -1;\n' +
+  '  private cachedWidth: number = -1;\n' +
+  '  private cachedRate: number = -1;\n' +
+  '  private cachedSeek: number = -1;\n' +
+  '  private cachedFrame: ReaderControlTtsFrame = sampleReaderControlTts(0, 286);\n' +
+  '\n' +
+  '  private p(): number { return readerControlUnit(this.motionProgress); }\n' +
+  '  private frame(): ReaderControlTtsFrame {\n' +
+  '    const rate = (this.effectiveRate() - READER_TTS_RATE_MIN) / (READER_TTS_RATE_MAX - READER_TTS_RATE_MIN);\n' +
+  '    const seek = (this.state.totalSlices > 1 ? 32 : 0) + (this.state.errorMessage ? 24 : 0);\n' +
+  '    if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth ||\n' +
+  '      this.cachedRate !== rate || this.cachedSeek !== seek) {\n' +
+  '      this.cachedProgress = this.motionProgress; this.cachedWidth = this.availableWidth;\n' +
+  '      this.cachedRate = rate; this.cachedSeek = seek;\n' +
+  '      this.cachedFrame = sampleReaderControlTts(this.motionProgress, this.availableWidth, rate, seek);\n' +
+  '    }\n' +
+  '    return this.cachedFrame;\n' +
+  '  }\n' +
+  '  private onMotionChanged(): void {\n' +
+  '    this.syncMorphScroll();\n' +
+  '    if (!this.sharedInput()) this.ratePreview = -1;\n' +
+  '    if (!this.fullInput()) this.dismissConfiguration();\n' +
+  '  }\n' +
+  '  aboutToDisappear(): void { this.dismissConfiguration(); }\n' +
+  '\n' +
+  '  private dismissConfiguration(): void {\n' +
+  '    this.configGeneration += 1;\n' +
+  "    this.configField = '';\n" +
+  "    this.configIdentity = '';\n" +
+  '    this.onTemporaryLayerChange(false);\n' +
+  '  }\n' +
+  '\n' +
+  "  private openConfiguration(field: ReaderTtsConfigField | 'manage'): void {\n" +
+  '    if (!this.fullInput()) return;\n' +
+  '    this.configField = field;\n' +
+  '    this.configIdentity = `${field}:${++this.configGeneration}`;\n' +
+  '    this.onTemporaryLayerChange(true);\n' +
+  '  }\n' +
+  '\n' +
+  '  private configurationChoices(): ReaderTtsConfigChoice[] {\n' +
+  "    return readerTtsConfigChoices(this.configField === '' || this.configField === 'manage' ? 'engine' : this.configField,\n" +
+  '      this.engine, this.httpEngines, this.voiceOptions);\n' +
+  '  }\n' +
+  '\n' +
+  '  private configurationSelectedId(): string {\n' +
+  "    if (this.configField === 'engine' || this.configField === 'manage') return this.engine;\n" +
+  "    if (this.configField === 'language') return this.language;\n" +
+  "    if (this.configField === 'voice') return `voice:${this.language}:${this.person}`;\n" +
+  "    if (this.configField === 'session') return this.allowMixing ? 'mix' : 'exclusive';\n" +
+  '    return this.failurePolicy;\n' +
+  '  }\n' +
+  '\n' +
+  '  private configurationMessage(): string {\n' +
+  "    if (this.configField !== 'voice' && this.configField !== 'language') return '';\n" +
+  "    if (this.isHttpEngineSelected()) return '音色和语言由在线服务的配置决定，可在“管理在线 TTS”中编辑。';\n" +
+  "    return this.voiceOptions.length === 0 ? '当前没有可用的系统音色，请先在系统中安装或启用语音服务，也可以配置在线 TTS。' : '';\n" +
+  '  }\n' +
+  '\n' +
+  '  private async commitConfiguration(id: string, identity: string): Promise<void> {\n' +
+  "    if (!this.fullInput() || identity !== this.configIdentity || this.configField === '' ||\n" +
+  '      !this.configurationChoices().some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) return;\n' +
+  '    const field = this.configField;\n' +
+  "    if (field === 'engine' || field === 'manage') {\n" +
+  '      if (id !== this.engine) await this.onEngineChange(id);\n' +
+  "    } else if (field === 'session') {\n" +
+  "      if ((id === 'mix') !== this.allowMixing) this.onAllowMixingChange(id === 'mix');\n" +
+  "    } else if (field === 'failure') {\n" +
+  "      if (id !== this.failurePolicy) this.onFailurePolicyChange(id === 'skip' ? 'skip' : 'stop');\n" +
+  '    } else {\n' +
+  "      const voice = field === 'voice' ? this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => readerTtsVoiceId(item) === id) :\n" +
+  '        this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => item.language === id && item.person === this.person) ??\n' +
+  '        this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => item.language === id);\n' +
+  '      if (voice !== undefined && (voice.language !== this.language || voice.person !== this.person))\n' +
+  '        this.onVoiceChange(voice.language, voice.person);\n' +
+  '    }\n' +
+  '  }\n' +
+  '  private syncMorphScroll(): void {\n' +
+  '    const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,\n' +
+  '      this.interactionEnabled, this.scroller.currentOffset().yOffset);\n' +
+  '    this.scrollMotion = update.state;\n' +
+  '    if (update.targetOffs'... 39550 more characters
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-tts-product-surface.mjs:24:8 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: "import { PathShape } from '@ohos.arkui.shape';\n" +
+    'import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,\n' +
+    '  readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,\n' +
+    "  type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';\n" +
+    'import {\n' +
+    '  READER_TTS_RATE_MAX, READER_TTS_RATE_MIN, READER_TTS_RATE_STEP, READER_TTS_RATE_STEP_SCALE,\n' +
+    '  READER_TTS_TIMER_MAX_MINUTES, READER_TTS_TIMER_MAX_SECONDS, READER_TTS_TIMER_MIN,\n' +
+    '  type ReaderTtsState,\n' +
+    "} from './ReaderTtsState';\n" +
+    "import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';\n" +
+    "import { ReaderTtsConfigOverlay } from './ReaderTtsConfigOverlay';\n" +
+    'import { readerTtsConfigChoices, readerTtsVoiceId, readerTtsLanguageLabel,\n' +
+    "  type ReaderTtsConfigChoice, type ReaderTtsConfigField } from './ReaderTtsConfigOptions';\n" +
+    "import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';\n" +
+    "import type { ReaderControlForm } from './ReaderControlSessionState';\n" +
+    "import { readerSessionMorphActorId, type ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';\n" +
+    "import { readerControlUnit, type ReaderControlActorFrame } from './ReaderControlActorGeometry';\n" +
+    'import {\n' +
+    '  sampleReaderControlTts, readerControlPlaybackSourceKind, readerControlPlaybackMeasuredSource,\n' +
+    '  readerControlTtsTimerVisibleRects,\n' +
+    '  type ReaderControlTtsFrame, type ReaderControlTransportKind, type ReaderControlPlaybackMeasuredRect,\n' +
+    "} from './ReaderControlPlaybackGeometry';\n" +
+    "import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';\n" +
+    'import { TOK_TTS_INK, TOK_TTS_MUTED, TOK_TTS_TEAL, TOK_TTS_TEAL_SOFT, TOK_TTS_TEAL_LINE,\n' +
+    '  TOK_TTS_PLAY_START, TOK_TTS_PLAY_END, TOK_TTS_CLAY, TOK_TTS_CLAY_SOFT, TOK_TTS_CLAY_LINE,\n' +
+    '  TOK_TTS_PAPER, TOK_TTS_PAPER_START, TOK_TTS_PAPER_END, TOK_TTS_CARD, TOK_TTS_QUICK_CARD,\n' +
+    "  TOK_TTS_LINE, TOK_TTS_FIELD, TOK_TTS_TRACK } from './ReaderControlTtsStyle';\n" +
+    'import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionOutlineOpacity,\n' +
+    '  readerControlMotionClipRects, readerControlMotionClipPath,\n' +
+    "  type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';\n" +
+    '\n' +
+    "type ReaderControlTtsSection = 'playback' | 'timer' | 'speed';\n" +
+    "type ReaderControlTtsField = 'voice' | 'engine' | 'language' | 'session' | 'failure';\n" +
+    "type ReaderControlTtsToggle = 'followHighlight' | 'pauseOnInterruption' | 'allowMixing';\n" +
+    '\n' +
+    '/** Make v17 redraw on persistent Playback/Timer/Speed actors.\n' +
+    " * All actors consume the production Runtime's one p. Header, grabber, shell and whole visibility are\n" +
+    ' * intentionally absent here. Business commands remain supplied by the owner. */\n' +
+    '@Component\n' +
+    'export struct ReaderControlTtsContent {\n' +
+    "  @Prop @Watch('onMotionChanged') motionProgress: number = 0;\n" +
+    '  @Prop availableWidth: number = 286;\n' +
+    '  @Prop availableHeight: number = 190;\n' +
+    '  @Prop isTablet: boolean = false;\n' +
+    "  @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;\n" +
+    "  @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';\n" +
+    '  @Prop state: ReaderTtsState;\n' +
+    '  @Prop timerMinutes: number = 15;\n' +
+    '  @Prop timerSeconds: number = 0;\n' +
+    '  @Prop followHighlight: boolean = true;\n' +
+    '  @Prop pauseOnInterruption: boolean = true;\n' +
+    '  @Prop allowMixing: boolean = false;\n' +
+    "  @Prop failurePolicy: 'skip' | 'stop' = 'stop';\n" +
+    "  @Prop engine: string = 'system';\n" +
+    '  @Prop httpEngines: ReaderTtsEngineOption[] = [];\n' +
+    '  @Prop voiceOptions: ReaderTtsVoiceOption[] = [];\n' +
+    "  @Prop language: string = 'zh-CN';\n" +
+    '  @Prop person: number = 0;\n' +
+    "  @Prop @Watch('dismissConfiguration') dismissTemporaryRevision: number = 0;\n" +
+    '  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};\n' +
+    '  onCollapse: () => void = (): void => {};\n' +
+    '  onToggle: () => void = (): void => {};\n' +
+    '  onStop: () => void = (): void => {};\n' +
+    '  onPrevious: () => void = (): void => {};\n' +
+    '  onNext: () => void = (): void => {};\n' +
+    '  onSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};\n' +
+    '  onTimerChange: (minutes: number, seconds: number) => void =\n' +
+    '    (_minutes: number, _seconds: number): void => {};\n' +
+    '  onRateChange: (rate: number) => void = (_rate: number): void => {};\n' +
+    '  onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};\n' +
+    '  onPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};\n' +
+    '  onAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};\n' +
+    "  onFailurePolicyChange: (policy: 'skip' | 'stop') => void = (_policy: 'skip' | 'stop'): void => {};\n" +
+    '  onVoiceChange: (language: string, person: number) => void =\n' +
+    '    (_language: string, _person: number): void => {};\n' +
+    '  onEngineChange: (engine: string) => Promise<void> = (_engine: string): Promise<void> => Promise.resolve();\n' +
+    '  onHttpEnginePut: (config: ReaderTtsEngineOption) => Promise<void> =\n' +
+    '    (_config: ReaderTtsEngineOption): Promise<void> => Promise.resolve();\n' +
+    '  onHttpEngineDelete: (id: number) => Promise<void> = (_id: number): Promise<void> => Promise.resolve();\n' +
+    '\n' +
+    '  onMorphActorMeasured: (kind: ReaderSessionMorphSourceKind, left: number, top: number,\n' +
+    '    width: number, height: number) => void =\n' +
+    '    (_kind: ReaderSessionMorphSourceKind, _left: number, _top: number, _width: number, _height: number): void => {};\n' +
+    '  @State private ratePreview: number = -1;\n' +
+    '  private committedSliderRate: number = -1;\n' +
+    '  private committedSliderSeek: number = -1;\n' +
+    "  @State private configField: ReaderTtsConfigField | 'manage' | '' = '';\n" +
+    "  @State private configIdentity: string = '';\n" +
+    '  private configGeneration: number = 0;\n' +
+    '  @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();\n' +
+    '  @Prop fullViewportHeight: number = 666;\n' +
+    '  private readonly scroller: Scroller = new Scroller();\n' +
+    '  private quickMeasurement: ReaderControlPlaybackMeasuredRect | undefined = undefined;\n' +
+    '  private fullMeasurement: ReaderControlPlaybackMeasuredRect | undefined = undefined;\n' +
+    '  private cachedProgress: number = -1;\n' +
+    '  private cachedWidth: number = -1;\n' +
+    '  private cachedRate: number = -1;\n' +
+    '  private cachedSeek: number = -1;\n' +
+    '  private cachedFrame: ReaderControlTtsFrame = sampleReaderControlTts(0, 286);\n' +
+    '\n' +
+    '  private p(): number { return readerControlUnit(this.motionProgress); }\n' +
+    '  private frame(): ReaderControlTtsFrame {\n' +
+    '    const rate = (this.effectiveRate() - READER_TTS_RATE_MIN) / (READER_TTS_RATE_MAX - READER_TTS_RATE_MIN);\n' +
+    '    const seek = (this.state.totalSlices > 1 ? 32 : 0) + (this.state.errorMessage ? 24 : 0);\n' +
+    '    if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth ||\n' +
+    '      this.cachedRate !== rate || this.cachedSeek !== seek) {\n' +
+    '      this.cachedProgress = this.motionProgress; this.cachedWidth = this.availableWidth;\n' +
+    '      this.cachedRate = rate; this.cachedSeek = seek;\n' +
+    '      this.cachedFrame = sampleReaderControlTts(this.motionProgress, this.availableWidth, rate, seek);\n' +
+    '    }\n' +
+    '    return this.cachedFrame;\n' +
+    '  }\n' +
+    '  private onMotionChanged(): void {\n' +
+    '    this.syncMorphScroll();\n' +
+    '    if (!this.sharedInput()) this.ratePreview = -1;\n' +
+    '    if (!this.fullInput()) this.dismissConfiguration();\n' +
+    '  }\n' +
+    '  aboutToDisappear(): void { this.dismissConfiguration(); }\n' +
+    '\n' +
+    '  private dismissConfiguration(): void {\n' +
+    '    this.configGeneration += 1;\n' +
+    "    this.configField = '';\n" +
+    "    this.configIdentity = '';\n" +
+    '    this.onTemporaryLayerChange(false);\n' +
+    '  }\n' +
+    '\n' +
+    "  private openConfiguration(field: ReaderTtsConfigField | 'manage'): void {\n" +
+    '    if (!this.fullInput()) return;\n' +
+    '    this.configField = field;\n' +
+    '    this.configIdentity = `${field}:${++this.configGeneration}`;\n' +
+    '    this.onTemporaryLayerChange(true);\n' +
+    '  }\n' +
+    '\n' +
+    '  private configurationChoices(): ReaderTtsConfigChoice[] {\n' +
+    "    return readerTtsConfigChoices(this.configField === '' || this.configField === 'manage' ? 'engine' : this.configField,\n" +
+    '      this.engine, this.httpEngines, this.voiceOptions);\n' +
+    '  }\n' +
+    '\n' +
+    '  private configurationSelectedId(): string {\n' +
+    "    if (this.configField === 'engine' || this.configField === 'manage') return this.engine;\n" +
+    "    if (this.configField === 'language') return this.language;\n" +
+    "    if (this.configField === 'voice') return `voice:${this.language}:${this.person}`;\n" +
+    "    if (this.configField === 'session') return this.allowMixing ? 'mix' : 'exclusive';\n" +
+    '    return this.failurePolicy;\n' +
+    '  }\n' +
+    '\n' +
+    '  private configurationMessage(): string {\n' +
+    "    if (this.configField !== 'voice' && this.configField !== 'language') return '';\n" +
+    "    if (this.isHttpEngineSelected()) return '音色和语言由在线服务的配置决定，可在“管理在线 TTS”中编辑。';\n" +
+    "    return this.voiceOptions.length === 0 ? '当前没有可用的系统音色，请先在系统中安装或启用语音服务，也可以配置在线 TTS。' : '';\n" +
+    '  }\n' +
+    '\n' +
+    '  private async commitConfiguration(id: string, identity: string): Promise<void> {\n' +
+    "    if (!this.fullInput() || identity !== this.configIdentity || this.configField === '' ||\n" +
+    '      !this.configurationChoices().some((choice: ReaderTtsConfigChoice): boolean => choice.id === id)) return;\n' +
+    '    const field = this.configField;\n' +
+    "    if (field === 'engine' || field === 'manage') {\n" +
+    '      if (id !== this.engine) await this.onEngineChange(id);\n' +
+    "    } else if (field === 'session') {\n" +
+    "      if ((id === 'mix') !== this.allowMixing) this.onAllowMixingChange(id === 'mix');\n" +
+    "    } else if (field === 'failure') {\n" +
+    "      if (id !== this.failurePolicy) this.onFailurePolicyChange(id === 'skip' ? 'skip' : 'stop');\n" +
+    '    } else {\n' +
+    "      const voice = field === 'voice' ? this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => readerTtsVoiceId(item) === id) :\n" +
+    '        this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => item.language === id && item.person === this.person) ??\n' +
+    '        this.voiceOptions.find((item: ReaderTtsVoiceOption): boolean => item.language === id);\n' +
+    '      if (voice !== undefined && (voice.language !== this.language || voice.person !== this.person))\n' +
+    '        this.onVoiceChange(voice.language, voice.person);\n' +
+    '    }\n' +
+    '  }\n' +
+    '  private syncMorphScroll(): void {\n' +
+    '    const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,\n' +
+    '      this.interactionEnabled, this.scroller.currentOffset().yOffset);\n' +
+    '    this.scrollMotion = update.state;\n' +
+    '    if (update.targetOffs'... 39550 more characters,
+  expected: /this\.requestEngineChange\('system'\)/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

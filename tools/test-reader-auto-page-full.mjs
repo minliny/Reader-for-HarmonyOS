@@ -81,6 +81,7 @@ assert.equal(READER_AUTO_PAGE_COLLAPSED_SURFACE_Y, 406.443);
 const root = new URL('../entry/src/main/', import.meta.url);
 const panel = await readFile(new URL('ets/features/reading/ReaderAutoPageFullPanel.ets', root), 'utf8');
 const quickPanel = await readFile(new URL('ets/features/reading/ReaderAutoPagePanel.ets', root), 'utf8');
+const content = await readFile(new URL('ets/features/reading/ReaderControlAutoPageContent.ets', root), 'utf8');
 
 assert.match(quickPanel,
   /this\.status === 'running' \?\s*'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_play'/,
@@ -135,21 +136,41 @@ assert.match(panel, /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_SPEE
 assert.match(panel, /persistentActorTranslateY\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y\)/);
 
 const control = await readFile(new URL('ets/features/reading/ReaderControlPanel.ets', root), 'utf8');
-assert.match(control, /'fullAutoPage'/);
-assert.match(control, /READER_AUTO_PAGE_ACTOR_HOLD_RATIO/);
-assert.match(control, /READER_AUTO_PAGE_COLLAPSED_SURFACE_WIDTH/);
-assert.match(control, /READER_AUTO_PAGE_COLLAPSED_SURFACE_X/);
-assert.match(control, /READER_AUTO_PAGE_COLLAPSED_SURFACE_Y/);
-assert.match(control, /this\.autoPageStatus !== 'stopped'/,
-  'only the Figma-defined stopped visual may expand');
-assert.match(control, /this\.isExpanded\(\) \|\| this\.activePage !== 'quickAutoPage'/,
-  'Tablet Full remains fail-closed');
-assert.match(control, /availableHeight: this\.autoPageSurfaceHeight\(\)/,
-  'the auto-page full actor must receive the same live height budget as its owner surface');
-assert.match(control, /motionSpecGet\('reader\.panel\.expand'\)|autoPageActorHoldMs\('reader\.panel\.expand'\)/);
-assert.match(control, /autoPageActorAnimateParam\('reader\.panel\.collapse'/);
-assert.match(control, /ReaderAutoPageFullPanel\(\{/);
-assert.match(control, /opacity\(this\.autoPageOutgoingOpacity\(\)\)[\s\S]*translate\(\{ y: this\.autoPageActorExpanded \? 20 : 0 \}\)/);
+// Legacy standalone geometry above remains compatibility coverage. Production
+// now mounts one content-only actor tree; its live-track comparisons execute in
+// test-reader-control-playback-content.mjs, not the old Full-sheet adapter.
+assert.match(control, /this\.contentLocation\(\)\.module === 'autoPage'/,
+  'automatic-page content remains in one semantic route across Quick/Full');
+assert.equal((control.match(/ReaderControlAutoPageContent\(\{/g) ?? []).length, 1);
+assert.equal((control.match(/new ReaderControlRuntime\(/g) ?? []).length, 1);
+assert.doesNotMatch(control, /ReaderAutoPage(?:Full)?Panel\(\{|autoPageActorHold|autoPageActorExpanded|autoPageActorTransitioning/);
+assert.doesNotMatch(control, /autoPageStatus !== 'stopped'/);
+const autoBinding = control.match(/ReaderControlAutoPageContent\(\{([\s\S]*?)\n\s*\}\);/)?.[1];
+assert.ok(autoBinding, 'actual AutoPage content binding must exist');
+assert.match(autoBinding, /motionProgress: this\.contentMotionProgress/);
+assert.match(autoBinding, /form: this\.contentLocation\(\)\.form/);
+assert.match(autoBinding, /availableWidth: this\.contentMotionWidth,/);
+assert.match(autoBinding, /availableHeight: this\.contentMotionHeight,/);
+assert.match(autoBinding, /interactionEnabled: this\.secondaryModuleInputEnabled\('autoPage'\)/);
+assert.match(autoBinding, /canPreviousChapter: this\.currentChapterIndex > 0/);
+assert.match(autoBinding, /canNextChapter: this\.currentChapterIndex >= 0 && this\.currentChapterIndex < this\.totalChapters - 1/);
+assert.match(autoBinding, /onBack: \(\): void => this\.requestPage\('home'\)/);
+assert.match(autoBinding, /this\.reportSessionMorphSource\(kind, left, top, width, height\)/,
+  'the source identity reported by the actual form must not be hard-coded to Full');
+assert.doesNotMatch(autoBinding, /motionExpanded|embeddedInUnifiedSurface|content\.(?:width|height) \+/);
+assert.match(content, /this\.status === 'running' \? '运行中' :[\s\S]*this\.status === 'paused' \? '已暂停' : '未开始'/);
+assert.match(content, /this\.status === 'running' \? 'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/);
+assert.match(content, /this\.status === 'running' \? '暂停自动翻页'[\s\S]*this\.status === 'paused' \? '继续自动翻页' : '开始自动翻页'/);
+assert.match(content, /\.enabled\(this\.fullInput\(\) && this\.status === 'stopped'\)/,
+  'the current FollowHighlight input retains its pre-session-only business gate');
+assert.match(content, /this\.sharedInput\(\) && this\.status !== 'stopped'/,
+  'stopped sessions must not dispatch stop');
+assert.match(content, /if \(!this\.sharedInput\(\)\) \{ this\.speedPreviewSeconds = -1; return; \}/,
+  'late native slider callbacks must not commit after input revocation');
+for (const callback of ['onAutoPageToggle', 'onAutoPageStop', 'onPreviousChapter', 'onNextChapter',
+  'onAutoPageFullTimerChange', 'onAutoPageFullSpeedChange', 'onAutoPageFollowHighlightChange']) {
+  assert.ok(autoBinding.includes(`this.${callback}(`), `business callback lost from actual AutoPage: ${callback}`);
+}
 
 const experience = await readFile(new URL('ets/features/reading/LocalReadingExperience.ets', root), 'utf8');
 assert.match(experience, /autoPageFullConfiguration: ReaderAutoPageFullConfiguration/);

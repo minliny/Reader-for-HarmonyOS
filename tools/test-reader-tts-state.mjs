@@ -15,8 +15,13 @@ import {
   readerTtsUtteranceToken,
   resumeReaderTtsSession,
   scheduleReaderTtsTimer,
+  READER_TTS_TIMER_DEFAULT_MINUTES,
+  READER_TTS_TIMER_MAX_MINUTES,
   setReaderTtsAvailability,
 } from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
+
+assert.equal(READER_TTS_TIMER_DEFAULT_MINUTES, 25);
+assert.equal(READER_TTS_TIMER_MAX_MINUTES, 180);
 
 let state = createReaderTtsState();
 assert.equal(state.status, 'uninitialized');

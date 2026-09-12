@@ -159,6 +159,7 @@ assert.equal(isReaderSettingsToggleAvailable('stopTtsOnScreenOff'), true);
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const quickPanel = await readFile(new URL('ReaderSettingsModulePanel.ets', readingDir), 'utf8');
 const fullPanel = await readFile(new URL('ReaderSettingsFullPanel.ets', readingDir), 'utf8');
+const sharedContent = await readFile(new URL('ReaderControlSettingsContent.ets', readingDir), 'utf8');
 const gateway = await readFile(new URL('ReaderSettingsGateway.ts', readingDir), 'utf8');
 const controlPanel = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
 const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
@@ -215,13 +216,32 @@ assert.doesNotMatch(gateway, /\.request\(/,
   'Reader Settings must not misuse Reader Core or invent a Host command');
 
 assert.match(controlPanel, /moduleSettings/);
-assert.match(controlPanel, /fullSettings/);
-assert.match(controlPanel, /ReaderSettingsModulePanel\(\{/);
-assert.match(controlPanel, /ReaderSettingsFullPanel\(\{/);
-assert.match(controlPanel, /justifyText: this\.appearanceSnapshot\.alignment === 'justify'/,
+assert.match(controlPanel, /this\.contentLocation\(\)\.module === 'settings'/,
+  'settings content remains in one semantic route across Quick/Full');
+assert.doesNotMatch(controlPanel, /ReaderSettings(?:Module|Full)Panel\(\{/);
+assert.equal((controlPanel.match(/ReaderControlSettingsContent\(\{/g) ?? []).length, 1,
+  'one Settings business content instance remains mounted across morph');
+const settingsBinding = controlPanel.match(/ReaderControlSettingsContent\(\{([\s\S]*?)\n\s*\}\);/)?.[1];
+assert.ok(settingsBinding, 'actual persistent Settings binding must exist');
+assert.match(settingsBinding, /motionProgress: this\.contentMotionProgress/);
+assert.match(settingsBinding, /availableWidth: this\.contentMotionWidth,/);
+assert.match(settingsBinding, /availableHeight: this\.contentMotionHeight,/);
+assert.match(settingsBinding, /interactionEnabled: this\.secondaryModuleInputEnabled\('settings'\)/);
+assert.doesNotMatch(settingsBinding, /content\.(?:width|height) \+/);
+assert.match(settingsBinding, /justifyText: this\.appearanceSnapshot\.alignment === 'justify'/,
   'Settings justification must derive from the Appearance single truth');
-assert.match(controlPanel, /onAppearanceAlignmentRequest\(this\.appearanceSnapshot\.alignment\)/,
+assert.match(settingsBinding, /onAppearanceAlignmentRequest\(this\.appearanceSnapshot\.alignment\)/,
   'Settings justification must reuse the existing Appearance mutation path');
+for (const callback of ['onPageTurnStyleChange', 'onScreenDirectionChange', 'onScreenTimeoutChange', 'onSettingsToggleChange']) {
+  assert.ok(settingsBinding.includes(`this.${callback}(`), `actual Settings business callback lost: ${callback}`);
+}
+for (const label of ['隐藏状态栏', '隐藏导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
+  '底部对齐', '音量键翻页', '息屏终止朗读', '长按选择文本']) {
+  assert.ok(sharedContent.includes(label), `active Settings row lost: ${label}`);
+}
+assert.match(sharedContent, /this\.interactionEnabled && this\.p\(\) > 0 && isReaderSettingsToggleAvailable\(key\)/);
+assert.match(sharedContent, /SETTINGS_PAGE_OPTIONS: string\[\] = \['cover', 'slide', 'simulation', 'scroll', 'none'\]/);
+assert.match(sharedContent, /group === 'pageTurn'[\s\S]*?return SETTINGS_PAGE_OPTIONS/);
 assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
 assert.match(experience, /this\.readerSettingsGateway\.update\(snapshot\)/);
 assert.match(experience, /settingsSnapshot: this\.readerSettingsSnapshot/);

@@ -1,0 +1,1678 @@
+{
+  "schemaVersion": 1,
+  "authority": {
+    "kind": "live-figma-read-only",
+    "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+    "capturedDate": "2026-09-06"
+  },
+  "sources": {
+    "surfaces": {
+      "receipt": "FULL_CONTENT_SURFACE_LIVE_RECEIPT_20260906.json",
+      "request": {
+        "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+        "skillNames": "figma-use",
+        "description": "只读核对 FullContentSurface 与 ContentViewport 同层背景，判定原始节点是否被本地遗漏",
+        "code": "const ids=['1689:1690','1689:2121','1691:2174','1691:2781','1691:20760','1691:20761','1692:3148','1692:3441','1841:3387','1841:3389'];const out=[];for(const id of ids){const n=await figma.getNodeByIdAsync(id);out.push({id:n.id,name:n.name,type:n.type,parentId:n.parent.id,parentIndex:n.parent.children.indexOf(n),x:n.x,y:n.y,width:n.width,height:n.height,opacity:n.opacity,clipsContent:n.clipsContent,fills:n.fills,strokes:n.strokes,strokeWeight:n.strokeWeight,cornerRadius:n.cornerRadius});}return out;"
+      },
+      "nodes": [
+        {
+          "id": "1689:1690",
+          "name": "AddedActor/FullContentSurface",
+          "type": "INSTANCE",
+          "parentId": "1973:340",
+          "parentIndex": 1,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.6200000047683716,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 1,
+                "g": 0.9882352948188782,
+                "b": 0.9725490212440491
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:64"
+                }
+              }
+            }
+          ],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.18000000715255737,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.6078431606292725,
+                "g": 0.5176470875740051,
+                "b": 0.4000000059604645
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:68"
+                }
+              }
+            }
+          ],
+          "strokeWeight": 1,
+          "cornerRadius": 12
+        },
+        {
+          "id": "1689:2121",
+          "name": "ContentViewport/Directory",
+          "type": "FRAME",
+          "parentId": "1973:340",
+          "parentIndex": 2,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [],
+          "strokes": [],
+          "strokeWeight": 1,
+          "cornerRadius": 0
+        },
+        {
+          "id": "1691:2174",
+          "name": "AddedActor/FullContentSurface",
+          "type": "INSTANCE",
+          "parentId": "1973:690",
+          "parentIndex": 1,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.6200000047683716,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 1,
+                "g": 0.9882352948188782,
+                "b": 0.9725490212440491
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:64"
+                }
+              }
+            }
+          ],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.18000000715255737,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.6078431606292725,
+                "g": 0.5176470875740051,
+                "b": 0.4000000059604645
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:68"
+                }
+              }
+            }
+          ],
+          "strokeWeight": 1,
+          "cornerRadius": 12
+        },
+        {
+          "id": "1691:2781",
+          "name": "ContentViewport/TTS",
+          "type": "FRAME",
+          "parentId": "1973:690",
+          "parentIndex": 2,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [],
+          "strokes": [],
+          "strokeWeight": 1,
+          "cornerRadius": 0
+        },
+        {
+          "id": "1691:20760",
+          "name": "AddedActor/FullContentSurface",
+          "type": "INSTANCE",
+          "parentId": "1973:940",
+          "parentIndex": 1,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.6200000047683716,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 1,
+                "g": 0.9882352948188782,
+                "b": 0.9725490212440491
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:64"
+                }
+              }
+            }
+          ],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.18000000715255737,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.6078431606292725,
+                "g": 0.5176470875740051,
+                "b": 0.4000000059604645
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:68"
+                }
+              }
+            }
+          ],
+          "strokeWeight": 1,
+          "cornerRadius": 12
+        },
+        {
+          "id": "1691:20761",
+          "name": "ContentViewport/Appearance",
+          "type": "FRAME",
+          "parentId": "1973:940",
+          "parentIndex": 2,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [],
+          "strokes": [],
+          "strokeWeight": 1,
+          "cornerRadius": 0
+        },
+        {
+          "id": "1692:3148",
+          "name": "AddedActor/FullContentSurface",
+          "type": "INSTANCE",
+          "parentId": "1973:1107",
+          "parentIndex": 1,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.6200000047683716,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 1,
+                "g": 0.9882352948188782,
+                "b": 0.9725490212440491
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:64"
+                }
+              }
+            }
+          ],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.18000000715255737,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.6078431606292725,
+                "g": 0.5176470875740051,
+                "b": 0.4000000059604645
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:68"
+                }
+              }
+            }
+          ],
+          "strokeWeight": 1,
+          "cornerRadius": 12
+        },
+        {
+          "id": "1692:3441",
+          "name": "ContentViewport/Settings",
+          "type": "FRAME",
+          "parentId": "1973:1107",
+          "parentIndex": 2,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [],
+          "strokes": [],
+          "strokeWeight": 1,
+          "cornerRadius": 0
+        },
+        {
+          "id": "1841:3387",
+          "name": "AddedActor/FullContentSurface",
+          "type": "INSTANCE",
+          "parentId": "1973:1236",
+          "parentIndex": 1,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.6200000047683716,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 1,
+                "g": 0.9882352948188782,
+                "b": 0.9725490212440491
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:64"
+                }
+              }
+            }
+          ],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 0.18000000715255737,
+              "blendMode": "NORMAL",
+              "color": {
+                "r": 0.6078431606292725,
+                "g": 0.5176470875740051,
+                "b": 0.4000000059604645
+              },
+              "boundVariables": {
+                "color": {
+                  "type": "VARIABLE_ALIAS",
+                  "id": "VariableID:249:68"
+                }
+              }
+            }
+          ],
+          "strokeWeight": 1,
+          "cornerRadius": 12
+        },
+        {
+          "id": "1841:3389",
+          "name": "ContentViewport/Bookmarks",
+          "type": "FRAME",
+          "parentId": "1973:1236",
+          "parentIndex": 2,
+          "x": 26,
+          "y": 146,
+          "width": 338,
+          "height": 666,
+          "opacity": 1,
+          "clipsContent": true,
+          "fills": [],
+          "strokes": [],
+          "strokeWeight": 1,
+          "cornerRadius": 0
+        }
+      ]
+    },
+    "remainingParents": {
+      "receipt": "REMAINING_CONTENT_PARENTS_LIVE_RECEIPT_20260906.json",
+      "request": {
+        "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+        "skillNames": "figma-use",
+        "description": "只读收尾核朗读设置自动翻页替换的明确动画父节点裁切，不修改轨道或设计",
+        "code": "const ids=['1691:3104','1691:3195','1691:3258','1692:3952','1692:3997','1692:4032','1938:7532','1938:7559','1938:8073','1939:800','1939:848','1938:12019','1938:12044','1939:1237','1691:20817'];const out=[];for(const id of ids){const n=await figma.getNodeByIdAsync(id);out.push({id:n.id,name:n.name,parentId:n.parent.id,x:n.x,y:n.y,width:n.width,height:n.height,clipsContent:n.clipsContent,blendMode:n.blendMode,opacity:n.opacity,childIds:'children'in n?n.children.map(c=>c.id):[]});}return out;"
+      },
+      "nodes": [
+        {
+          "id": "1691:3104",
+          "name": "PersistentModule/TTS/Playback",
+          "parentId": "1691:2781",
+          "x": 13,
+          "y": 11,
+          "width": 312,
+          "height": 128,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1691:3105",
+            "1701:12",
+            "1701:37",
+            "1701:62",
+            "1701:87",
+            "1691:3110",
+            "1691:3359"
+          ]
+        },
+        {
+          "id": "1691:3195",
+          "name": "PersistentModule/TTS/Timer",
+          "parentId": "1691:2781",
+          "x": 13,
+          "y": 139,
+          "width": 312,
+          "height": 320,
+          "clipsContent": true,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1691:3196",
+            "1691:3197",
+            "1691:3198",
+            "1691:3387",
+            "1691:3405"
+          ]
+        },
+        {
+          "id": "1691:3258",
+          "name": "PersistentModule/TTS/Speed",
+          "parentId": "1691:2781",
+          "x": 13,
+          "y": 459,
+          "width": 312,
+          "height": 105,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1691:3259",
+            "1691:3260",
+            "1691:3261",
+            "1691:3262",
+            "1691:3263",
+            "1691:3264",
+            "1691:3265",
+            "1691:3425",
+            "1691:3440"
+          ]
+        },
+        {
+          "id": "1692:3952",
+          "name": "AddedModule/Settings/Status",
+          "parentId": "1692:3441",
+          "x": 15,
+          "y": 263,
+          "width": 308,
+          "height": 169,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1692:3953",
+            "1692:3954",
+            "1692:3955",
+            "1692:3956",
+            "1692:3957"
+          ]
+        },
+        {
+          "id": "1692:3997",
+          "name": "AddedModule/Settings/Typography",
+          "parentId": "1692:3441",
+          "x": 15,
+          "y": 432,
+          "width": 308,
+          "height": 131,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1692:3998",
+            "1692:3999",
+            "1692:4000",
+            "1692:4001"
+          ]
+        },
+        {
+          "id": "1692:4032",
+          "name": "AddedModule/Settings/Control",
+          "parentId": "1692:3441",
+          "x": 15,
+          "y": 563,
+          "width": 308,
+          "height": 169,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1692:4033",
+            "1692:4034",
+            "1692:4035",
+            "1692:4036",
+            "1692:4037"
+          ]
+        },
+        {
+          "id": "1938:7532",
+          "name": "AddedActor/ControlHeader",
+          "parentId": "1938:7531",
+          "x": 4,
+          "y": 10,
+          "width": 306,
+          "height": 14.390600204467773,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1938:7533",
+            "1938:7535"
+          ]
+        },
+        {
+          "id": "1938:7559",
+          "name": "AddedModule/AutoPage/Timer",
+          "parentId": "1938:7530",
+          "x": 10,
+          "y": 114.39099884033203,
+          "width": 314,
+          "height": 181.39100646972656,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1938:7560",
+            "1938:7565"
+          ]
+        },
+        {
+          "id": "1938:8073",
+          "name": "AddedActor/SpeedHeader",
+          "parentId": "1938:8072",
+          "x": 4,
+          "y": 11,
+          "width": 306,
+          "height": 14.390600204467773,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1938:8074",
+            "1938:8076"
+          ]
+        },
+        {
+          "id": "1939:800",
+          "name": "PersistentActor/Play",
+          "parentId": "1938:7537",
+          "x": 105.4921875,
+          "y": 5,
+          "width": 95,
+          "height": 52,
+          "clipsContent": true,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1939:801",
+            "1939:803"
+          ]
+        },
+        {
+          "id": "1939:848",
+          "name": "PersistentActor/PageSpeed",
+          "parentId": "1938:8078",
+          "x": 0,
+          "y": 0,
+          "width": 306,
+          "height": 64,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1939:849",
+            "1939:854"
+          ]
+        },
+        {
+          "id": "1938:12019",
+          "name": "AddedModule/Replace/Toolbar",
+          "parentId": "1938:12018",
+          "x": 13,
+          "y": 13,
+          "width": 310,
+          "height": 40,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1938:12020",
+            "1938:12027"
+          ]
+        },
+        {
+          "id": "1938:12044",
+          "name": "PersistentModule/Replace/RuleList",
+          "parentId": "1938:12018",
+          "x": 13,
+          "y": 63,
+          "width": 310,
+          "height": 589,
+          "clipsContent": true,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1938:12045",
+            "1938:12076",
+            "1938:12107",
+            "1938:12138",
+            "1939:1237",
+            "1939:1280",
+            "1939:1323",
+            "1939:1366"
+          ]
+        },
+        {
+          "id": "1939:1237",
+          "name": "PersistentActor/Rule/1",
+          "parentId": "1938:12044",
+          "x": 0,
+          "y": 0,
+          "width": 310,
+          "height": 77,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "1939:1238",
+            "1939:1253"
+          ]
+        },
+        {
+          "id": "1691:20817",
+          "name": "AddedModule/Appearance/LayoutLibrary",
+          "parentId": "1691:20761",
+          "x": 11,
+          "y": 367,
+          "width": 316,
+          "height": 406,
+          "clipsContent": false,
+          "blendMode": "PASS_THROUGH",
+          "opacity": 1,
+          "childIds": [
+            "I1691:20817;1150:10318",
+            "I1691:20817;1150:10322",
+            "I1691:20817;1150:10316"
+          ]
+        }
+      ]
+    },
+    "headers": {
+      "receipt": "COMMON_HEADER_CONTENT_LIVE_RECEIPT_20260906.json",
+      "request": {
+        "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+        "skillNames": "figma-use",
+        "description": "只读精确类型守卫重读七通用Header静态子图标标题控件",
+        "code": "const ids=['1689:1710','1721:22529','1721:22563','1721:22599','1938:5075','1938:7519','1841:3388'];function pick(n,depth){const o={id:n.id,type:n.type,name:n.name,x:n.x,y:n.y,width:n.width,height:n.height};if(n.type==='TEXT'){o.characters=n.characters;o.fontSize=n.fontSize;o.fontName=n.fontName;o.lineHeight=n.lineHeight;}if('children'in n){if(n.type!=='GROUP'){o.itemSpacing=n.itemSpacing;o.paddingLeft=n.paddingLeft;o.paddingRight=n.paddingRight;o.paddingTop=n.paddingTop;o.paddingBottom=n.paddingBottom;}if(depth>0)o.children=n.children.map(c=>pick(c,depth-1));}return o;}return await Promise.all(ids.map(async id=>pick(await figma.getNodeByIdAsync(id),3)));"
+      },
+      "nodes": [
+        {
+          "id": "1689:1710",
+          "type": "INSTANCE",
+          "name": "AddedActor/FullHeader",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30,
+          "itemSpacing": 0,
+          "paddingLeft": 0,
+          "paddingRight": 0,
+          "paddingTop": 0,
+          "paddingBottom": 0,
+          "children": [
+            {
+              "id": "I1689:1710;772:2076",
+              "type": "FRAME",
+              "name": "Leading",
+              "x": 0,
+              "y": 0,
+              "width": 288,
+              "height": 30,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "I1689:1710;772:2077",
+                  "type": "INSTANCE",
+                  "name": "HeaderIcon",
+                  "x": 0,
+                  "y": 7,
+                  "width": 16,
+                  "height": 16,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "I1689:1710;772:2077;408:71",
+                      "type": "FRAME",
+                      "name": "Tabler/list/outline",
+                      "x": 0,
+                      "y": 0,
+                      "width": 16,
+                      "height": 16,
+                      "itemSpacing": 0,
+                      "paddingLeft": 0,
+                      "paddingRight": 0,
+                      "paddingTop": 0,
+                      "paddingBottom": 0
+                    }
+                  ]
+                },
+                {
+                  "id": "I1689:1710;772:2080",
+                  "type": "TEXT",
+                  "name": "Title",
+                  "x": 24,
+                  "y": 5,
+                  "width": 28,
+                  "height": 20,
+                  "characters": "目录",
+                  "fontSize": 14,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20
+                  }
+                }
+              ]
+            },
+            {
+              "id": "I1689:1710;772:2081",
+              "type": "FRAME",
+              "name": "CollapseButton",
+              "x": 298,
+              "y": 2,
+              "width": 40,
+              "height": 26,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "I1689:1710;772:2082",
+                  "type": "TEXT",
+                  "name": "Label",
+                  "x": 10,
+                  "y": 6,
+                  "width": 20,
+                  "height": 14,
+                  "characters": "收起",
+                  "fontSize": 10,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 14
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1721:22529",
+          "type": "FRAME",
+          "name": "AddedActor/FullHeader",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30,
+          "itemSpacing": 0,
+          "paddingLeft": 0,
+          "paddingRight": 0,
+          "paddingTop": 0,
+          "paddingBottom": 0,
+          "children": [
+            {
+              "id": "1721:22530",
+              "type": "FRAME",
+              "name": "Leading",
+              "x": 0,
+              "y": 0,
+              "width": 288,
+              "height": 30,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1721:22531",
+                  "type": "INSTANCE",
+                  "name": "HeaderIcon",
+                  "x": 0,
+                  "y": 7,
+                  "width": 16,
+                  "height": 16,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "I1721:22531;408:79",
+                      "type": "FRAME",
+                      "name": "Tabler/headphones/outline",
+                      "x": 0,
+                      "y": 0,
+                      "width": 16,
+                      "height": 16,
+                      "itemSpacing": 0,
+                      "paddingLeft": 0,
+                      "paddingRight": 0,
+                      "paddingTop": 0,
+                      "paddingBottom": 0
+                    }
+                  ]
+                },
+                {
+                  "id": "1721:22532",
+                  "type": "TEXT",
+                  "name": "Title",
+                  "x": 24,
+                  "y": 5,
+                  "width": 28,
+                  "height": 20,
+                  "characters": "朗读",
+                  "fontSize": 14,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20
+                  }
+                }
+              ]
+            },
+            {
+              "id": "1721:22533",
+              "type": "FRAME",
+              "name": "CollapseButton",
+              "x": 298,
+              "y": 2,
+              "width": 40,
+              "height": 26,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1721:22534",
+                  "type": "TEXT",
+                  "name": "Label",
+                  "x": 10,
+                  "y": 6,
+                  "width": 20,
+                  "height": 14,
+                  "characters": "收起",
+                  "fontSize": 10,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 14
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1721:22563",
+          "type": "FRAME",
+          "name": "AddedActor/FullHeader",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30,
+          "itemSpacing": 0,
+          "paddingLeft": 0,
+          "paddingRight": 0,
+          "paddingTop": 0,
+          "paddingBottom": 0,
+          "children": [
+            {
+              "id": "1721:22564",
+              "type": "FRAME",
+              "name": "Leading",
+              "x": 0,
+              "y": 0,
+              "width": 288,
+              "height": 30,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1721:22565",
+                  "type": "INSTANCE",
+                  "name": "HeaderIcon",
+                  "x": 0,
+                  "y": 7,
+                  "width": 16,
+                  "height": 16,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "I1721:22565;408:84",
+                      "type": "FRAME",
+                      "name": "Tabler/palette/outline",
+                      "x": 0,
+                      "y": 0,
+                      "width": 16,
+                      "height": 16,
+                      "itemSpacing": 0,
+                      "paddingLeft": 0,
+                      "paddingRight": 0,
+                      "paddingTop": 0,
+                      "paddingBottom": 0
+                    }
+                  ]
+                },
+                {
+                  "id": "1721:22566",
+                  "type": "TEXT",
+                  "name": "Title",
+                  "x": 24,
+                  "y": 5,
+                  "width": 28,
+                  "height": 20,
+                  "characters": "界面",
+                  "fontSize": 14,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20
+                  }
+                }
+              ]
+            },
+            {
+              "id": "1721:22567",
+              "type": "FRAME",
+              "name": "CollapseButton",
+              "x": 298,
+              "y": 2,
+              "width": 40,
+              "height": 26,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1721:22568",
+                  "type": "TEXT",
+                  "name": "Label",
+                  "x": 10,
+                  "y": 6,
+                  "width": 20,
+                  "height": 14,
+                  "characters": "收起",
+                  "fontSize": 10,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 14
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1721:22599",
+          "type": "FRAME",
+          "name": "AddedActor/FullHeader",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30,
+          "itemSpacing": 0,
+          "paddingLeft": 0,
+          "paddingRight": 0,
+          "paddingTop": 0,
+          "paddingBottom": 0,
+          "children": [
+            {
+              "id": "1721:22600",
+              "type": "FRAME",
+              "name": "Leading",
+              "x": 0,
+              "y": 0,
+              "width": 288,
+              "height": 30,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1721:22601",
+                  "type": "INSTANCE",
+                  "name": "HeaderIcon",
+                  "x": 0,
+                  "y": 7,
+                  "width": 16,
+                  "height": 16,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "I1721:22601;408:90",
+                      "type": "FRAME",
+                      "name": "Tabler/settings/outline",
+                      "x": 0,
+                      "y": 0,
+                      "width": 16,
+                      "height": 16,
+                      "itemSpacing": 0,
+                      "paddingLeft": 0,
+                      "paddingRight": 0,
+                      "paddingTop": 0,
+                      "paddingBottom": 0
+                    }
+                  ]
+                },
+                {
+                  "id": "1721:22602",
+                  "type": "TEXT",
+                  "name": "Title",
+                  "x": 24,
+                  "y": 5,
+                  "width": 28,
+                  "height": 20,
+                  "characters": "设置",
+                  "fontSize": 14,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20
+                  }
+                }
+              ]
+            },
+            {
+              "id": "1721:22603",
+              "type": "FRAME",
+              "name": "CollapseButton",
+              "x": 298,
+              "y": 2,
+              "width": 40,
+              "height": 26,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1721:22604",
+                  "type": "TEXT",
+                  "name": "Label",
+                  "x": 10,
+                  "y": 6,
+                  "width": 20,
+                  "height": 14,
+                  "characters": "收起",
+                  "fontSize": 10,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 14
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1938:5075",
+          "type": "FRAME",
+          "name": "AddedActor/FullHeader",
+          "x": 14,
+          "y": 20,
+          "width": 336,
+          "height": 30,
+          "itemSpacing": 0,
+          "paddingLeft": 0,
+          "paddingRight": 0,
+          "paddingTop": 0,
+          "paddingBottom": 0,
+          "children": [
+            {
+              "id": "1938:5076",
+              "type": "FRAME",
+              "name": "Text",
+              "x": 0,
+              "y": 6.5,
+              "width": 286,
+              "height": 17,
+              "itemSpacing": 8,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1938:5077",
+                  "type": "FRAME",
+                  "name": "Icon",
+                  "x": 0,
+                  "y": 0.5,
+                  "width": 16,
+                  "height": 16,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "1938:5078",
+                      "type": "VECTOR",
+                      "name": "Vector",
+                      "x": 0,
+                      "y": 0,
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "id": "1938:5079",
+                      "type": "VECTOR",
+                      "name": "Vector",
+                      "x": 1.999999761581421,
+                      "y": 1.999999761581421,
+                      "width": 9.333333969116211,
+                      "height": 9.333333969116211
+                    },
+                    {
+                      "id": "1938:5080",
+                      "type": "VECTOR",
+                      "name": "Vector",
+                      "x": 10,
+                      "y": 10,
+                      "width": 4,
+                      "height": 4
+                    }
+                  ]
+                },
+                {
+                  "id": "1938:5081",
+                  "type": "FRAME",
+                  "name": "Bold Text",
+                  "x": 24,
+                  "y": 0,
+                  "width": 56,
+                  "height": 17,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "1938:5082",
+                      "type": "TEXT",
+                      "name": "内容搜索",
+                      "x": 0,
+                      "y": 0,
+                      "width": 56,
+                      "height": 17,
+                      "characters": "内容搜索",
+                      "fontSize": 14,
+                      "fontName": {
+                        "family": "Inter",
+                        "style": "Bold",
+                        "variationSettings": {
+                          "wght": 700,
+                          "slnt": 0
+                        }
+                      },
+                      "lineHeight": {
+                        "unit": "PIXELS",
+                        "value": 16.799999237060547
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "1938:5083",
+              "type": "FRAME",
+              "name": "Button",
+              "x": 296,
+              "y": 2,
+              "width": 40,
+              "height": 26,
+              "itemSpacing": 0,
+              "paddingLeft": 10,
+              "paddingRight": 10,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1938:5084",
+                  "type": "TEXT",
+                  "name": "收起",
+                  "x": 10,
+                  "y": 7,
+                  "width": 20,
+                  "height": 12,
+                  "characters": "收起",
+                  "fontSize": 10,
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700,
+                      "slnt": 0
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "AUTO"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1938:7519",
+          "type": "FRAME",
+          "name": "AddedActor/FullHeader",
+          "x": 14,
+          "y": 20,
+          "width": 336,
+          "height": 30,
+          "itemSpacing": 0,
+          "paddingLeft": 0,
+          "paddingRight": 0,
+          "paddingTop": 0,
+          "paddingBottom": 0,
+          "children": [
+            {
+              "id": "1938:7520",
+              "type": "FRAME",
+              "name": "Text",
+              "x": 0,
+              "y": 6.5,
+              "width": 286,
+              "height": 17,
+              "itemSpacing": 8,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1938:7521",
+                  "type": "FRAME",
+                  "name": "Icon",
+                  "x": 0,
+                  "y": 0.5,
+                  "width": 16,
+                  "height": 16,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "1938:7522",
+                      "type": "VECTOR",
+                      "name": "Vector",
+                      "x": 0,
+                      "y": 0,
+                      "width": 16,
+                      "height": 16
+                    },
+                    {
+                      "id": "1938:7523",
+                      "type": "VECTOR",
+                      "name": "Vector",
+                      "x": 1.999999761581421,
+                      "y": 3.3333332538604736,
+                      "width": 5.333333492279053,
+                      "height": 9.333333969116211
+                    },
+                    {
+                      "id": "1938:7524",
+                      "type": "VECTOR",
+                      "name": "Vector",
+                      "x": 9.333333015441895,
+                      "y": 3.3333332538604736,
+                      "width": 5.333333492279053,
+                      "height": 9.333333969116211
+                    }
+                  ]
+                },
+                {
+                  "id": "1938:7525",
+                  "type": "FRAME",
+                  "name": "Bold Text",
+                  "x": 24,
+                  "y": 0,
+                  "width": 56,
+                  "height": 17,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "1938:7526",
+                      "type": "TEXT",
+                      "name": "自动翻页",
+                      "x": 0,
+                      "y": 0,
+                      "width": 56,
+                      "height": 17,
+                      "characters": "自动翻页",
+                      "fontSize": 14,
+                      "fontName": {
+                        "family": "Inter",
+                        "style": "Bold",
+                        "variationSettings": {
+                          "wght": 700,
+                          "slnt": 0
+                        }
+                      },
+                      "lineHeight": {
+                        "unit": "PIXELS",
+                        "value": 16.799999237060547
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "1938:7527",
+              "type": "FRAME",
+              "name": "Button",
+              "x": 296,
+              "y": 2,
+              "width": 40,
+              "height": 26,
+              "itemSpacing": 0,
+              "paddingLeft": 10,
+              "paddingRight": 10,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "1938:7528",
+                  "type": "TEXT",
+                  "name": "收起",
+                  "x": 10,
+                  "y": 7,
+                  "width": 20,
+                  "height": 12,
+                  "characters": "收起",
+                  "fontSize": 10,
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700,
+                      "slnt": 0
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "AUTO"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1841:3388",
+          "type": "INSTANCE",
+          "name": "AddedActor/FullHeader/Bookmark",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30,
+          "itemSpacing": 0,
+          "paddingLeft": 0,
+          "paddingRight": 0,
+          "paddingTop": 0,
+          "paddingBottom": 0,
+          "children": [
+            {
+              "id": "I1841:3388;772:2076",
+              "type": "FRAME",
+              "name": "Leading",
+              "x": 0,
+              "y": 0,
+              "width": 288,
+              "height": 30,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "I1841:3388;772:2077",
+                  "type": "INSTANCE",
+                  "name": "HeaderIcon",
+                  "x": 0,
+                  "y": 7,
+                  "width": 16,
+                  "height": 16,
+                  "itemSpacing": 0,
+                  "paddingLeft": 0,
+                  "paddingRight": 0,
+                  "paddingTop": 0,
+                  "paddingBottom": 0,
+                  "children": [
+                    {
+                      "id": "I1841:3388;772:2077;411:789",
+                      "type": "FRAME",
+                      "name": "Tabler/bookmark/outline",
+                      "x": 0,
+                      "y": 0,
+                      "width": 16,
+                      "height": 16,
+                      "itemSpacing": 0,
+                      "paddingLeft": 0,
+                      "paddingRight": 0,
+                      "paddingTop": 0,
+                      "paddingBottom": 0
+                    }
+                  ]
+                },
+                {
+                  "id": "I1841:3388;772:2080",
+                  "type": "TEXT",
+                  "name": "Title",
+                  "x": 24,
+                  "y": 5,
+                  "width": 28,
+                  "height": 20,
+                  "characters": "书签",
+                  "fontSize": 14,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20
+                  }
+                }
+              ]
+            },
+            {
+              "id": "I1841:3388;772:2081",
+              "type": "FRAME",
+              "name": "CollapseButton",
+              "x": 298,
+              "y": 2,
+              "width": 40,
+              "height": 26,
+              "itemSpacing": 0,
+              "paddingLeft": 0,
+              "paddingRight": 0,
+              "paddingTop": 0,
+              "paddingBottom": 0,
+              "children": [
+                {
+                  "id": "I1841:3388;772:2082",
+                  "type": "TEXT",
+                  "name": "Label",
+                  "x": 10,
+                  "y": 6,
+                  "width": 20,
+                  "height": 14,
+                  "characters": "收起",
+                  "fontSize": 10,
+                  "fontName": {
+                    "family": "Noto Sans SC",
+                    "style": "Bold",
+                    "variationSettings": {
+                      "wght": 700
+                    }
+                  },
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 14
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "headerStatic": {
+      "receipt": "CONTROL_HEADER_STATIC_LIVE_RECEIPT_20260906.json",
+      "request": {
+        "fileKey": "klhs2jMM4MncaJFqZMfqEK",
+        "skillNames": "figma-use",
+        "description": "只读全八组FullHeader确切源父坐标，不读或改动画",
+        "code": "const ids=['1689:1710','1721:22529','1721:22563','1721:22599','1938:5075','1938:7519','1938:12008','1938:12016','1939:1223','1841:3388']; const nodes=await Promise.all(ids.map(id=>figma.getNodeByIdAsync(id)));return nodes.map(n=>({id:n.id,parentId:n.parent.id,name:n.name,x:n.x,y:n.y,width:n.width,height:n.height}));"
+      },
+      "nodes": [
+        {
+          "id": "1689:1710",
+          "parentId": "1973:340",
+          "name": "AddedActor/FullHeader",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30
+        },
+        {
+          "id": "1721:22529",
+          "parentId": "1973:690",
+          "name": "AddedActor/FullHeader",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30
+        },
+        {
+          "id": "1721:22563",
+          "parentId": "1973:940",
+          "name": "AddedActor/FullHeader",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30
+        },
+        {
+          "id": "1721:22599",
+          "parentId": "1973:1107",
+          "name": "AddedActor/FullHeader",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30
+        },
+        {
+          "id": "1938:5075",
+          "parentId": "1938:5074",
+          "name": "AddedActor/FullHeader",
+          "x": 14,
+          "y": 20,
+          "width": 336,
+          "height": 30
+        },
+        {
+          "id": "1938:7519",
+          "parentId": "1938:7518",
+          "name": "AddedActor/FullHeader",
+          "x": 14,
+          "y": 20,
+          "width": 336,
+          "height": 30
+        },
+        {
+          "id": "1938:12008",
+          "parentId": "1938:12007",
+          "name": "AddedActor/HeaderIcon",
+          "x": 0,
+          "y": 0.5,
+          "width": 16,
+          "height": 16
+        },
+        {
+          "id": "1938:12016",
+          "parentId": "1938:12006",
+          "name": "AddedActor/HeaderAction",
+          "x": 296,
+          "y": 2,
+          "width": 40,
+          "height": 26
+        },
+        {
+          "id": "1939:1223",
+          "parentId": "1938:12006",
+          "name": "PersistentActor/ReplaceTitle",
+          "x": 24,
+          "y": 6.5,
+          "width": 84,
+          "height": 17
+        },
+        {
+          "id": "1841:3388",
+          "parentId": "1973:1236",
+          "name": "AddedActor/FullHeader/Bookmark",
+          "x": 26,
+          "y": 108,
+          "width": 338,
+          "height": 30
+        }
+      ]
+    }
+  }
+}

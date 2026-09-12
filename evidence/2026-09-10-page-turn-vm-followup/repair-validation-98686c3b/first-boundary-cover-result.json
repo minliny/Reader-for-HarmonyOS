@@ -1,0 +1,51 @@
+{
+  "status": "PASS",
+  "mode": "覆盖",
+  "side": "first",
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "e169915cacdbb888170c1941a22cdde57cc222d8363e6d7176764ec47c988a5c",
+    "chapter": 1,
+    "ordinal": 1,
+    "total": null,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章001段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 页"
+  },
+  "baseline": {
+    "slot": "reader-page-slot-b",
+    "sha256": "2a09ae8ae3d729a732d2a19cedc4213c54c0ae4c41ce37acbb6ff88008ec02b5",
+    "chapter": 1,
+    "ordinal": 2,
+    "total": null,
+    "start": 260,
+    "end": 525,
+    "bodyLength": 265,
+    "first": [
+      "到前页和后页时是否仍然连续。阅读",
+      "暂停后又继续，段落边界和换行都应"
+    ],
+    "footer": "第 2 页"
+  },
+  "actual": {
+    "slot": "reader-page-slot-b",
+    "sha256": "2a09ae8ae3d729a732d2a19cedc4213c54c0ae4c41ce37acbb6ff88008ec02b5",
+    "chapter": 1,
+    "ordinal": 2,
+    "total": null,
+    "start": 260,
+    "end": 525,
+    "bodyLength": 265,
+    "first": [
+      "到前页和后页时是否仍然连续。阅读",
+      "暂停后又继续，段落边界和换行都应"
+    ],
+    "footer": "第 2 页"
+  },
+  "scope": "four invalid book-boundary taps followed by one valid opposite tap, exact canonical target and restore"
+}

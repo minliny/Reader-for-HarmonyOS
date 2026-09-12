@@ -1,0 +1,30 @@
+{
+  "font-roundtrip": {
+    "status": "OPEN",
+    "reason": "font helper stopped at missing visible fontsize label before any metric mutation"
+  },
+  "control-intermediate-pixels": {
+    "status": "OPEN",
+    "reason": "dependent journey not started afterfonthelperstop; scopeclosed onuserstatusrequest"
+  },
+  "go-chapter37-final": {
+    "status": "OPEN",
+    "reason": "dependent journey not started afterfonthelperstop; scopeclosed onuserstatusrequest"
+  },
+  "final-smoke-slide": {
+    "status": "OPEN",
+    "reason": "dependent journey not started afterfonthelperstop; scopeclosed onuserstatusrequest"
+  },
+  "final-smoke-cover": {
+    "status": "OPEN",
+    "reason": "dependent journey not started afterfonthelperstop; scopeclosed onuserstatusrequest"
+  },
+  "final-smoke-none": {
+    "status": "OPEN",
+    "reason": "dependent journey not started afterfonthelperstop; scopeclosed onuserstatusrequest"
+  },
+  "final-smoke-simulation": {
+    "status": "OPEN",
+    "reason": "dependent journey not started afterfonthelperstop; scopeclosed onuserstatusrequest"
+  }
+}

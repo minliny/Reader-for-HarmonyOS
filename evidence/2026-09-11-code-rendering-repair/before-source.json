@@ -1,0 +1,18 @@
+{
+  "createdAt": "2026-09-11T13:50:58.101710+00:00",
+  "files": {
+    "entry/src/main/ets/features/reading/ReadingSurface.ets": "01e6d20621d52d1d0f727833c79fd964869e79a88999ab29b554998d81c8fd32",
+    "entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts": "1f61899aebf179579e6bbd6204754eaa3ee2c3905fea9c35fc68d849ff83b005",
+    "entry/src/main/ets/features/reading/BookTurnPresentationSession.ets": "2b4a48146d846f655aa8a2367fb4d3aa62627e2da2fa9f33ccabeaa836e308dd",
+    "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "017056a77deac25abcccaca393db672e224590f13de472c6a797058f1da65d21",
+    "entry/src/main/ets/features/reading/ReaderControlPanel.ets": "3420012c60af200a1bf7370381908aaf10701a5ad5c5b2823853d3df3116bfb8",
+    "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets": "3114a1e29318da308722359e13dcbcee60ded3d455fe4dca98ed8dbc02469ddd",
+    "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets": "7d52a6daa943be88592bcbf7b15b7f21a3e37568a67832728dedb176a757e90a",
+    "entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts": "f6e843c9e24b2b0e7b71fcf65b747ebefbf3f366f4484d55ba7653f51eb35105",
+    "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets": "a2f33b882a516dc2bfc38381f508954e62eeae5c82d7c2c37242facc80d14d98",
+    "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets": "67f8e1554df250713174d26b6a5672b86e10a142e80bba6d5544174486c50b1e",
+    "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets": "b2c4edfe1ba6ebd5066568d07abbd5149ca6635ba0d6f086ae7ec4caaee0b804",
+    "entry/src/main/cpp/bookturn/bookturn_host.cpp": "fb19b97b0198e95497c94932f3ce50bab406359fd5c46b1c9969d7bf6273638b",
+    "entry/src/main/cpp/bookturn/bookturn_host.h": "85c3092a524cc2ea73776c6940fdcd7696055b68f9062511b0116f87af5c1d13"
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "recordedAt": "2026-09-12T03:14:47.065653+00:00",
+  "harmonyHead": "35f2f99a8d635615475fde75120bf8629f944565",
+  "coreHead": "6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "sha256": "8b15a3be8d275c32011ae8419d4ba8c495ffc79dce6e078189040f66b9c8af97",
+      "size": 77857
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+      "sha256": "2e800e945e9e80fa06e64931e152cca05d662ed78ff15c37e2f24d661a0856f5",
+      "size": 20414
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSettingsOptionModifier.ets",
+      "sha256": "d5dec6a7c74901d36bd7e1e1d8488eccc6c3468b36dfafa3d7a9948c2d9c6780",
+      "size": 1787
+    },
+    {
+      "path": "tools/fixtures/openharmony/LICENSE",
+      "sha256": "0cec06e0e55fbc3dc5cee4fca9b607f66cb8f4e4dbcf3b3c013594dd156732e9",
+      "size": 10173
+    },
+    {
+      "path": "tools/fixtures/openharmony/README.md",
+      "sha256": "42aefafd3c2b6b1926debf099f6d410a76c1a1ae50198bd4042bcf87c4e15d52",
+      "size": 945
+    },
+    {
+      "path": "tools/fixtures/openharmony/arkComponent-5.0.0.js.gz",
+      "sha256": "b7541032613c7e743cf043bfd18d0801d6083dd5add3a9dfea8279ec7b86c1a3",
+      "size": 88473
+    },
+    {
+      "path": "tools/fixtures/openharmony/arkComponent-5.0.0.json",
+      "sha256": "a17c7e14a684526ae41b04499d7df70a9f78f7eb3d9895cf1cfded8f96858896",
+      "size": 472
+    },
+    {
+      "path": "tools/fixtures/openharmony/jsEnumStyle-5.0.0.js.gz",
+      "sha256": "d97642230fbe3fff1b49fafdf19e0dfbec2e6b8580a65e884ce0506e0553fe7d",
+      "size": 22888
+    },
+    {
+      "path": "tools/fixtures/openharmony/jsEnumStyle-5.0.0.json",
+      "sha256": "22b66cea27b458782f18e8651d88f49b802c7c2d3e3906fc1e369b7aed4b95e3",
+      "size": 419
+    },
+    {
+      "path": "tools/lib/reader-control-builder-probe.mjs",
+      "sha256": "93f506208da7f48bb7799f44c359f173e7d958277803bdc07adb38b700e5f893",
+      "size": 6571
+    },
+    {
+      "path": "tools/lib/reader-control-option-modifier-probe.mjs",
+      "sha256": "285992a24b920a3e45e913cb9ed2bbaafbdb4b1541a1f4d3642ffab6f5335206",
+      "size": 798
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-tree.mjs",
+      "sha256": "fce57d7464fabf93c47d68f833552e8c96e6d29a30fe5dda0a8fd336f9a2fa3e",
+      "size": 5671
+    },
+    {
+      "path": "tools/test-reader-control-backdrop-publication.mjs",
+      "sha256": "3d8360edeaed5a366944d3272bbca5a348688921588ea86d044a01f69f95fdfd",
+      "size": 1512
+    },
+    {
+      "path": "tools/test-reader-control-option-update.mjs",
+      "sha256": "d0c7c0ecc9812d95ec6a1965de26ab26c2558c07b7fe92444c462131d072c965",
+      "size": 4673
+    },
+    {
+      "path": "tools/test-reader-control-runtime.mjs",
+      "sha256": "39c12a1fd29503455cac4c4c3ae9046f0a52aa7e6da09216d125605b3f416e3d",
+      "size": 10663
+    },
+    {
+      "path": "tools/test-reader-control-search-settings-content.mjs",
+      "sha256": "7d7aded40dccb0cf4def1294bda6cfed9e2f1c408b9b9c5ee076e4a3bd091230",
+      "size": 41607
+    },
+    {
+      "path": "tools/test-reader-http-tts-gateway.mjs",
+      "sha256": "e692019820fd48f7b1a6806c14559d0cd314c28b50d4ef97ce28227e2bb6e231",
+      "size": 8126
+    },
+    {
+      "path": "tools/test-reader-motion-repair.mjs",
+      "sha256": "b9c4a32a26c64bbaaf8a59212560fea4653105af3608d5f1d812369b19fd95e5",
+      "size": 12716
+    }
+  ],
+  "runningBuildsOwnedByThisTask": 0,
+  "vmLockOwnedByThisTask": false,
+  "codeAndNecessaryLocalRegression": "complete",
+  "publishedCandidate": null,
+  "safeToContinueEditing": true,
+  "localGate": {
+    "script": "scripts/check-local.sh",
+    "result": "PASS",
+    "tests": 196,
+    "exitCode": 0,
+    "evidence": "check-local-final-v4.log"
+  }
+}

@@ -1,0 +1,98 @@
+[
+  {
+    "direction": "expand",
+    "fraction": 0.2,
+    "requestedY": 1374,
+    "samples": [
+      {
+        "requestedAtSec": 1.2,
+        "dumpStartSec": 1.2028487079999999,
+        "dumpEndSec": 1.888875208,
+        "observedY": 1374,
+        "errorPx": 0,
+        "stillHeld": true
+      },
+      {
+        "requestedAtSec": 3,
+        "dumpStartSec": 3.001169375,
+        "dumpEndSec": 3.6892150409999998,
+        "observedY": 1374,
+        "errorPx": 0,
+        "stillHeld": true
+      },
+      {
+        "requestedAtSec": 7,
+        "dumpStartSec": 7.005980708,
+        "dumpEndSec": 7.69247675,
+        "observedY": 1374,
+        "errorPx": 0,
+        "stillHeld": true
+      }
+    ],
+    "settledY": 357
+  },
+  {
+    "direction": "expand",
+    "fraction": 0.5,
+    "requestedY": 992,
+    "samples": [
+      {
+        "requestedAtSec": 1.2,
+        "dumpStartSec": 1.2004985829999981,
+        "dumpEndSec": 1.8761206249999987,
+        "observedY": 992,
+        "errorPx": 0,
+        "stillHeld": true
+      },
+      {
+        "requestedAtSec": 3,
+        "dumpStartSec": 3.000525249999999,
+        "dumpEndSec": 3.775455749999999,
+        "observedY": 992,
+        "errorPx": 0,
+        "stillHeld": true
+      },
+      {
+        "requestedAtSec": 7,
+        "dumpStartSec": 7.000056957999998,
+        "dumpEndSec": 7.680830332999999,
+        "observedY": 992,
+        "errorPx": 0,
+        "stillHeld": true
+      }
+    ],
+    "settledY": 357
+  },
+  {
+    "direction": "expand",
+    "fraction": 0.8,
+    "requestedY": 611,
+    "samples": [
+      {
+        "requestedAtSec": 1.2,
+        "dumpStartSec": 1.2047945839999983,
+        "dumpEndSec": 1.8884305420000018,
+        "observedY": 962,
+        "errorPx": 351,
+        "stillHeld": true
+      },
+      {
+        "requestedAtSec": 3,
+        "dumpStartSec": 3.006750167,
+        "dumpEndSec": 3.6840652919999997,
+        "observedY": 962,
+        "errorPx": 351,
+        "stillHeld": true
+      },
+      {
+        "requestedAtSec": 7,
+        "dumpStartSec": 7.003805499999999,
+        "dumpEndSec": 7.684121124999997,
+        "observedY": 962,
+        "errorPx": 351,
+        "stillHeld": true
+      }
+    ],
+    "settledY": 357
+  }
+]

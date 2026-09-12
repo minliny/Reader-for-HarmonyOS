@@ -1,0 +1,13 @@
+{
+  "closedAt": "2026-09-11T11:20:48.705Z",
+  "probePid": 35919,
+  "targetRef": "6460677a198b",
+  "normalSaveToBookshelf": "verified screenshot reader-control-normal-header-back.png; a11y root still empty",
+  "mode": "simulation",
+  "volumeKeys": "OFF",
+  "autoPage": "STOPPED",
+  "dataPreserved": true,
+  "vmReset": false,
+  "physicalUsed": false,
+  "openException": "repeated empty accessibility root after book-tail simulation test; no app fault record, input and pixels responsive"
+}

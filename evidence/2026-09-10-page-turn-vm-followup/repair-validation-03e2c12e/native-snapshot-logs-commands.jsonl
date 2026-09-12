@@ -1,0 +1,4 @@
+{"args": ["shell", "param", "get", "bootevent.boot.completed"], "start": 0.016302125, "elapsed": 0.026792625, "code": 0, "output": "true \n"}
+{"args": ["shell", "pidof", "com.ohos.sceneboard"], "start": 0.043259208, "elapsed": 0.027973916999999994, "code": 0, "output": "2458\n"}
+{"args": ["shell", "pidof", "io.reader.harmonyos"], "start": 0.07139975, "elapsed": 0.025511666000000002, "code": 0, "output": "6712\n"}
+{"args": ["shell", "hilog", "-x", "-P", "6712", "-e", "Image loading|imageIds|snapshot|Snapshot|texture failed|reading image"], "start": 0.097017791, "elapsed": 0.030351417000000006, "code": 0, "output": "09-11 15:46:10.027  6712  6712 E A05244/Reader: ReadingExperience book-turn texture failed slot=0: 160001\n"}

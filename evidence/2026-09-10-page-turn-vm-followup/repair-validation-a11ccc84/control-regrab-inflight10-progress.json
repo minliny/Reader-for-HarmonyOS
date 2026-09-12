@@ -1,0 +1,18 @@
+[
+  {
+    "round": 1,
+    "firstReleaseFraction": 0.2,
+    "secondRequestedDownFraction": 0.43,
+    "heldAfterRegrabY": 1516,
+    "heldAfterRegrabFraction": 0.08811959087332809,
+    "settledY": 1628
+  },
+  {
+    "round": 2,
+    "firstReleaseFraction": 0.2,
+    "secondRequestedDownFraction": 0.43,
+    "heldAfterRegrabY": 357,
+    "heldAfterRegrabFraction": 1.0,
+    "settledY": 357
+  }
+]

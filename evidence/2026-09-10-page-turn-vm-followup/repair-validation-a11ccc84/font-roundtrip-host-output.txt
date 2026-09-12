@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/tmp/reader_vm_font_roundtrip.py", line 13, in <module>
+    origin=page(dump());t=appearance();value,more,less=metric(t);assert more['enabled']=='true';click(*center(more));time.sleep(.5);t=dump();bigger=metric(t)[0];assert bigger>value;close(t);changed=page(dump());assert changed['chapter']==origin['chapter'] and changed['start']<=origin['start']<changed['end'],('canonicalanchor lost onfontincrease',origin,changed)
+  File "/tmp/reader_vm_font_roundtrip.py", line 5, in appearance
+    click(640,1350);t=dump();v=visibleText(t,'界面');assert v;click(*center(max(v,key=lambda a:center(a)[1])));t=dump();click(*center(grab(t)));t=dump();assert visibleText(t,'字号');return t
+AssertionError

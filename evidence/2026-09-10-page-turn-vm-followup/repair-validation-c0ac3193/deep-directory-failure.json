@@ -1,0 +1,9 @@
+{
+  "status": "FAIL",
+  "fullFirstChapter": 62,
+  "quickFirstChapter": 52,
+  "cause": "LazyList total offset includes offscreen height estimates; dividing by current animated height and scrollTo absolute pixels selects wrong row",
+  "repair": "capture visible item index/key + getItemRect fraction; restore by scrollToIndex START with positive extraOffset; initial centering uses item CENTER too",
+  "local": "real production capture/morph/coalescing/late input/unmeasured item/initial center cases PASS",
+  "vmRepair": "new candidate pending"
+}

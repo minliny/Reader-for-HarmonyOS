@@ -1,0 +1,11 @@
+{
+  "excluded": [
+    "slide-quiet-next",
+    "slide-quiet-prev"
+  ],
+  "reason": "HDC nested sh -c quoting failed before execution; literal script echoed in failure output fooled marker substring test. No actual quiet interval or page turn established; changing to hash-bound script transfer and anchored runtime marker validation.",
+  "blockedQuietHold": {
+    "sample": "slide-quiet-next-valid",
+    "reason": "Guest denied SIGSTOP to uinput child (Permission denied). No privilege escalation or bypass attempted. The normal uinput move/hold/up may have executed; trace/layout must verify release. This is not a quiet hold sample."
+  }
+}

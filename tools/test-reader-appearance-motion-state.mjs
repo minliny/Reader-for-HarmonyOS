@@ -13,6 +13,9 @@ import {
   startReaderAppearanceProgrammatic,
   updateReaderAppearanceTracking,
 } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionState.ts';
+import {
+  readerAppearanceCubicBezierProgress,
+} from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
 
 const axis = { quickGrabberScreenY: 740, fullGrabberScreenY: 340 };
 
@@ -237,7 +240,10 @@ assert.equal(reduced.phase, 'idleFull');
 
 // Runtime full height is supplied at sampling and remains driven by the same p.
 const tallFrame = sampleReaderAppearanceMotionState({ ...reduced, masterProgress: 0.5 }, 900);
-close(tallFrame.shellHeight, 615, 'runtime-height shell midpoint');
-close(tallFrame.shellTranslateY, 285, 'runtime-height shell top');
+const figmaStageHalf = readerAppearanceCubicBezierProgress(0.5, 0, 0, 0.58, 1);
+close(tallFrame.shellHeight, 330 + (900 - 330) * figmaStageHalf,
+  'runtime-height shell midpoint');
+close(tallFrame.shellTranslateY, 900 - tallFrame.shellHeight,
+  'runtime-height shell top');
 
 console.log('reader appearance master motion state: PASS');

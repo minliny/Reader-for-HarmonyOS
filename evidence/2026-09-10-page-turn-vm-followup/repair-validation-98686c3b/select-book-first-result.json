@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "page": {
+    "slot": "reader-page-slot-a",
+    "sha256": "e169915cacdbb888170c1941a22cdde57cc222d8363e6d7176764ec47c988a5c",
+    "chapter": 1,
+    "ordinal": 1,
+    "total": null,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章001段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 页"
+  }
+}

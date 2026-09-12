@@ -1,0 +1,8 @@
+{
+  "authorship": "self-authored text and diagnostic PNGs",
+  "chapters": 3,
+  "imagesPerChapter": 3,
+  "sha256": "9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+  "bytes": 36801,
+  "purpose": "image-bearing page turn and scroll restoration VM fixture"
+}

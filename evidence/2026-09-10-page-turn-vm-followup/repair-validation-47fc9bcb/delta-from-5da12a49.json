@@ -1,0 +1,10 @@
+{
+  "source-snapshot.json": [
+    "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+    "entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts"
+  ],
+  "controller-snapshot.json": [
+    "tools/test-reader-control-search-settings-content.mjs",
+    "tools/test-reader-settings.mjs"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "03e2c12e": "FAIL: checked async offscreen capture prevents blank but disables Native; static image is not curl evidence",
+  "642f26c1": "Sampled curl image front/back/adjacent PASS; synchronous decode only idle snapshot tree; ordinary reading async; capability after images checked separately",
+  "trace": {
+    "appUIFrameMaxMs": 9.485,
+    "inputEvents": 65,
+    "frames": 79,
+    "scope": "one six-second public trace; no broad percentile/photon conclusion"
+  }
+}

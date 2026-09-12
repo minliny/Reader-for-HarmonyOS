@@ -1,0 +1,61 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   'new ready rolls back unwritten old transaction: Expected values to be strictly equal:\n' +
++     '\n' +
++     '0 !== 1\n',
++   'new ready retains an uncertain write and recovers only after authoritative completion: Expected values to be strictly equal:\n' +
++     '\n' +
++     'false !== true\n',
++   'already-promoted transaction finishes without lost Native slots (1): Expected values to be strictly equal:\n' +
++     '\n' +
++     '0 !== 1\n',
++   'already-promoted transaction finishes without lost Native slots (5): Expected values to be strictly equal:\n' +
++     '\n' +
++     '0 !== 1\n',
++   'already-promoted transaction finishes without lost Native slots (6): Expected values to be strictly equal:\n' +
++     '\n' +
++     '0 !== 1\n',
++   'a later render failure cancels a pending capability recovery: Expected values to be strictly equal:\n' +
++     '\n' +
++     '1 !== 0\n'
++ ]
+- []
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-book-turn-surface-recovery.mjs:71:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'new ready rolls back unwritten old transaction: Expected values to be strictly equal:\n' +
+      '\n' +
+      '0 !== 1\n',
+    'new ready retains an uncertain write and recovers only after authoritative completion: Expected values to be strictly equal:\n' +
+      '\n' +
+      'false !== true\n',
+    'already-promoted transaction finishes without lost Native slots (1): Expected values to be strictly equal:\n' +
+      '\n' +
+      '0 !== 1\n',
+    'already-promoted transaction finishes without lost Native slots (5): Expected values to be strictly equal:\n' +
+      '\n' +
+      '0 !== 1\n',
+    'already-promoted transaction finishes without lost Native slots (6): Expected values to be strictly equal:\n' +
+      '\n' +
+      '0 !== 1\n',
+    'a later render failure cancels a pending capability recovery: Expected values to be strictly equal:\n' +
+      '\n' +
+      '1 !== 0\n'
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

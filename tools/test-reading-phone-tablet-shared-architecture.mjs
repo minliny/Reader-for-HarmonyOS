@@ -58,11 +58,11 @@ assert.match(experience, /onAreaChange\([\s\S]*?previousLayoutSignature[\s\S]*?i
 assert.match(experience, /this\.showChapterTitle = this\.isChapterFirstPageStart\(visiblePage\.startScalar\)/,
   'chapter-title visibility must be derived from the measured page start on both device forms');
 assert.match(experience,
-  /isChapterFirstPageStart\(pageStartScalar\)[\s\S]*bodyHeightAfterTitle\(this\.measuredChapterTitleHeightVp\)/,
+  /isMeasurementChapterFirstPageStart\(pageStartScalar\)[\s\S]*bodyHeightAfterTitle\(this\.measuredChapterTitleHeightVp\)/,
   'only the chapter-first page may reserve its measured wrapped title track on either width class');
 assert.match(surface, /if \(this\.showChapterTitle\) \{[\s\S]*?Text\(this\.chapterTitle\)/,
   'the presentation layer must not independently repeat the chapter heading');
-assert.match(surface, /@Prop layout: ReaderReadingLayoutSnapshot/,
+assert.match(surface, /@Prop @Watch\('onHighlightContentChanged'\) layout: ReaderReadingLayoutSnapshot/,
   'the presentation layer must receive owner-resolved geometry instead of selecting its own device form');
 assert.doesNotMatch(surface, /this\.isTablet[\s\S]{0,120}showChapterTitle|showChapterTitle[\s\S]{0,120}this\.isTablet/,
   'chapter-title semantics must not differ between Phone and TabletExpanded');

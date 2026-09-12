@@ -1,0 +1,30 @@
+--- before/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets
++++ current/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets
+@@ -4,7 +4,7 @@
+ import { MotionPointTrack } from '../common/MotionPointTrack';
+ import { readerMotionNowMs } from '../common/ReaderMotionClock';
+ import { motionSpecGet } from '../common/MotionSpec';
+-import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
++import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionClipRects, readerControlMotionClipPath,
+   type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
+ import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
+   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
+@@ -171,6 +171,8 @@
+     return this.cachedPaint;
+ 
+   }
++  private pathCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
++    (path: string): PathShape => new PathShape().commands(path));
+   private sharedClip(kind: 'theme' | 'font', index: number, font: ReaderAppearanceFontSlot = 'system'): PathShape {
+     const full = this.endpointFrame(true);
+     const quick = this.endpointFrame(false);
+@@ -182,7 +184,8 @@
+     const rects: ReaderControlMotionClipRect[] = font === 'import' && kind === 'font' ?
+       [{ x: 0, y: 0, width: b.width, height: b.height }] :
+       readerControlMotionClipRects(this.motionProgress, a, b, c, this.fullContentHeight, this.scrollMotion.fullScrollOffset);
+-    return new PathShape().commands(readerControlMotionClipPath(rects, this.getUIContext().vp2px(1)));
++    return this.pathCache.fromPath(`${kind}:${index}:${font}`,
++      readerControlMotionClipPath(rects, this.getUIContext().vp2px(1)));
+   }
+   private actorPosition(actor: ReaderControlAppearanceActor, shared: boolean = false): ReaderControlAppearancePoint {
+     return { x: actor.x, y: actor.y + (shared ? this.sharedScrollTranslation() : this.fullOnlyScrollTranslation()) };

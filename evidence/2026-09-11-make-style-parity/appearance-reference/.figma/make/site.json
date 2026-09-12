@@ -1,0 +1,10 @@
+{
+  "description": "Enables precise redesign of dropdown styles and typography settings within the layout library module without altering overall page design, enhancing UI consistency.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

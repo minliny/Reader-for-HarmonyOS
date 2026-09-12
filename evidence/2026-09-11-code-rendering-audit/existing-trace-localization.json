@@ -1,0 +1,264 @@
+{
+  "sourceTrace": "final-settings-expand-trace.ftrace",
+  "appPid": 2181,
+  "peakFrame": {
+    "tid": 2181,
+    "start": 423040.253913,
+    "end": 423040.311839,
+    "wallMs": 57.926,
+    "name": "H:OnVsyncEvent now:423040252946974",
+    "guestScheduledMs": 55.903,
+    "guestOffCpuMs": 2.023,
+    "vsyncCallbackDelayMs": 0.966
+  },
+  "withinPeakFrame": {
+    "inputSlices": [
+      {
+        "tid": 2181,
+        "start": 423040.254059,
+        "end": 423040.265504,
+        "wallMs": 11.445,
+        "name": "H:DispatchTouchEvent id:10000, pointX=641.000000 pointY=1343.036621 type=2",
+        "guestScheduledMs": 11.434,
+        "guestOffCpuMs": 0.011
+      }
+    ],
+    "customUpdates": [
+      {
+        "tid": 2181,
+        "start": 423040.27791,
+        "end": 423040.306425,
+        "wallMs": 28.515,
+        "name": "H:CustomNodeUpdate name:ReaderControlSettingsContent,id:4852",
+        "guestScheduledMs": 27.408,
+        "guestOffCpuMs": 1.107
+      },
+      {
+        "tid": 2181,
+        "start": 423040.26557,
+        "end": 423040.277908,
+        "wallMs": 12.338,
+        "name": "H:CustomNodeUpdate name:ReaderControlPanel,id:248",
+        "guestScheduledMs": 12.15,
+        "guestOffCpuMs": 0.188
+      }
+    ],
+    "otherTopSlices": [
+      {
+        "tid": 2181,
+        "start": 423040.253913,
+        "end": 423040.311839,
+        "wallMs": 57.926,
+        "name": "H:OnVsyncEvent now:423040252946974",
+        "guestScheduledMs": 55.903,
+        "guestOffCpuMs": 2.023,
+        "vsyncCallbackDelayMs": 0.966
+      },
+      {
+        "tid": 2181,
+        "start": 423040.253919,
+        "end": 423040.311836,
+        "wallMs": 57.917,
+        "name": "H:UIVsyncTask[timestamp:423040252946974][vsyncID:306639][instanceID:100000]",
+        "guestScheduledMs": 55.894,
+        "guestOffCpuMs": 2.023
+      },
+      {
+        "tid": 2181,
+        "start": 423040.265539,
+        "end": 423040.306465,
+        "wallMs": 40.926,
+        "name": "H:FlushDirtyNodeUpdate",
+        "guestScheduledMs": 39.631,
+        "guestOffCpuMs": 1.295
+      },
+      {
+        "tid": 2181,
+        "start": 423040.27791,
+        "end": 423040.306425,
+        "wallMs": 28.515,
+        "name": "H:CustomNodeUpdate name:ReaderControlSettingsContent,id:4852",
+        "guestScheduledMs": 27.408,
+        "guestOffCpuMs": 1.107
+      },
+      {
+        "tid": 2181,
+        "start": 423040.277911,
+        "end": 423040.30635,
+        "wallMs": 28.439,
+        "name": "H:JSView: ExecuteRerender",
+        "guestScheduledMs": 27.332,
+        "guestOffCpuMs": 1.107
+      },
+      {
+        "tid": 2181,
+        "start": 423040.26557,
+        "end": 423040.277908,
+        "wallMs": 12.338,
+        "name": "H:CustomNodeUpdate name:ReaderControlPanel,id:248",
+        "guestScheduledMs": 12.15,
+        "guestOffCpuMs": 0.188
+      },
+      {
+        "tid": 2181,
+        "start": 423040.265571,
+        "end": 423040.277908,
+        "wallMs": 12.337,
+        "name": "H:JSView: ExecuteRerender",
+        "guestScheduledMs": 12.149,
+        "guestOffCpuMs": 0.188
+      },
+      {
+        "tid": 2181,
+        "start": 423040.254059,
+        "end": 423040.265504,
+        "wallMs": 11.445,
+        "name": "H:DispatchTouchEvent id:10000, pointX=641.000000 pointY=1343.036621 type=2",
+        "guestScheduledMs": 11.434,
+        "guestOffCpuMs": 0.011
+      },
+      {
+        "tid": 2181,
+        "start": 423040.266765,
+        "end": 423040.277412,
+        "wallMs": 10.647,
+        "name": "H:ExecuteJS",
+        "guestScheduledMs": 10.459,
+        "guestOffCpuMs": 0.188
+      }
+    ],
+    "gcNamedSlices": []
+  },
+  "controlTracePeakFrames": [
+    {
+      "file": "final-directory-auto-expand-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423090.23029,
+        "end": 423090.258341,
+        "wallMs": 28.051,
+        "name": "H:OnVsyncEvent now:423090148286605",
+        "guestScheduledMs": 26.136,
+        "guestOffCpuMs": 1.915,
+        "vsyncCallbackDelayMs": 82.003
+      }
+    },
+    {
+      "file": "final-directory-close-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423099.008667,
+        "end": 423099.014017,
+        "wallMs": 5.35,
+        "name": "H:OnVsyncEvent now:423099008495434",
+        "guestScheduledMs": 5.072,
+        "guestOffCpuMs": 0.278,
+        "vsyncCallbackDelayMs": 0.172
+      }
+    },
+    {
+      "file": "final-directory-collapse-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423083.413946,
+        "end": 423083.427881,
+        "wallMs": 13.935,
+        "name": "H:OnVsyncEvent now:423083413434954",
+        "guestScheduledMs": 6.121,
+        "guestOffCpuMs": 7.814,
+        "vsyncCallbackDelayMs": 0.511
+      }
+    },
+    {
+      "file": "final-directory-expand-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423076.772285,
+        "end": 423076.796647,
+        "wallMs": 24.362,
+        "name": "H:OnVsyncEvent now:423076772139561",
+        "guestScheduledMs": 13.157,
+        "guestOffCpuMs": 11.205,
+        "vsyncCallbackDelayMs": 0.145
+      }
+    },
+    {
+      "file": "final-directory-open-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423068.568432,
+        "end": 423068.586318,
+        "wallMs": 17.886,
+        "name": "H:OnVsyncEvent now:423068568267726",
+        "guestScheduledMs": 17.886,
+        "guestOffCpuMs": 0,
+        "vsyncCallbackDelayMs": 0.164
+      }
+    },
+    {
+      "file": "final-settings-auto-expand-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423053.506824,
+        "end": 423053.519901,
+        "wallMs": 13.077,
+        "name": "H:OnVsyncEvent now:423053504331945",
+        "guestScheduledMs": 8.001,
+        "guestOffCpuMs": 5.076,
+        "vsyncCallbackDelayMs": 2.492
+      }
+    },
+    {
+      "file": "final-settings-close-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423061.177141,
+        "end": 423061.200253,
+        "wallMs": 23.112,
+        "name": "H:OnVsyncEvent now:423061176946655",
+        "guestScheduledMs": 22.637,
+        "guestOffCpuMs": 0.475,
+        "vsyncCallbackDelayMs": 0.194
+      }
+    },
+    {
+      "file": "final-settings-collapse-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423046.831982,
+        "end": 423046.846241,
+        "wallMs": 14.259,
+        "name": "H:OnVsyncEvent now:423046831843182",
+        "guestScheduledMs": 14.077,
+        "guestOffCpuMs": 0.182,
+        "vsyncCallbackDelayMs": 0.139
+      }
+    },
+    {
+      "file": "final-settings-expand-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423040.253913,
+        "end": 423040.311839,
+        "wallMs": 57.926,
+        "name": "H:OnVsyncEvent now:423040252946974",
+        "guestScheduledMs": 55.903,
+        "guestOffCpuMs": 2.023,
+        "vsyncCallbackDelayMs": 0.966
+      }
+    },
+    {
+      "file": "final-settings-open-trace.ftrace",
+      "peak": {
+        "tid": 2181,
+        "start": 423031.892816,
+        "end": 423031.919398,
+        "wallMs": 26.582,
+        "name": "H:OnVsyncEvent now:423031892649908",
+        "guestScheduledMs": 25.653,
+        "guestOffCpuMs": 0.929,
+        "vsyncCallbackDelayMs": 0.166
+      }
+    }
+  ]
+}

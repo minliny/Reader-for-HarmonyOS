@@ -1,0 +1,91 @@
+{
+  "status": "PASS",
+  "mode": "无动画",
+  "cycles": [
+    {
+      "before": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      },
+      "after": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      },
+      "pidBefore": "30874",
+      "pidAfter": "30874"
+    },
+    {
+      "before": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      },
+      "after": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      },
+      "pidBefore": "30874",
+      "pidAfter": "30874"
+    },
+    {
+      "before": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      },
+      "after": {
+        "slot": "reader-page-slot-a",
+        "sha256": "1972ce2f993ea95c06883d67281569149038b6b36bee4263d797005e6eeea30f",
+        "first": [
+          "始，只有段落的真正首行才缩进。这",
+          "一长段跨越多个页面，续页必须从正"
+        ],
+        "footer": [
+          "43%",
+          "第 5 / 10 页"
+        ]
+      },
+      "pidBefore": "30874",
+      "pidAfter": "30874"
+    }
+  ],
+  "scope": "normal Home then foreground on same VM; no kill, crash, lost writes or orientation injection"
+}

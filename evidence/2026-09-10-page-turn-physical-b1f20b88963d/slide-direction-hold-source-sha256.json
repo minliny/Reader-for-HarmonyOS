@@ -1,0 +1,41 @@
+{
+  "capturedAtUtc": "2026-09-09T17:10:15.212694+00:00",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "sha256": "fd84a108ecb51b8ca060b7358ce52f59943861782b66b7459b024a6a18d04b85"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+      "sha256": "27a4b9bc9ca330f2b3a53897f51513a52ee865b0ef1a36606ae747f80a09c92a"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageGestureState.ts",
+      "sha256": "0930d59f21c33ca28fd9f68904497a2b5c1d0a65c9063dbf2e4d80e594aa7649"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "sha256": "6b56be517323319275e01c3b2c608b81da79dcf3e631287aaf87bb09e143848d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+      "sha256": "d310c6dc9880ebdb4e4b9bff71e30a04e8943f02693a599c20f8589dbaa40fd8"
+    },
+    {
+      "path": "entry/src/main/ets/features/common/MotionSpec.ets",
+      "sha256": "53bbb13660e051fbb90dc8dceafff769dd1eefc576d53ab04ef82ec2675554d8"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+      "sha256": "b289e7493a11f40980296f39ceb7bd4b1fb335ddc776cb5ec3ecefb5548dd3d7"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.cpp",
+      "sha256": "1e1d6775d298d4640155ee3ce9bdf099283b23d415786da1616486de2a4339a4"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.h",
+      "sha256": "d1152e041d98e23de3d515ea77dd1273a7e3136f8b1fcb6605b8b533f4e9ac5c"
+    }
+  ]
+}

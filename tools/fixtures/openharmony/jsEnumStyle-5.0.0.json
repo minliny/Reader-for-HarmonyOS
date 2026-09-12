@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/openharmony/arkui_ace_engine",
+  "ref": "OpenHarmony-5.0.0-Release",
+  "path": "frameworks/bridge/declarative_frontend/engine/jsEnumStyle.js",
+  "gitBlob": "b4fc0d3fd251539aa0d207dcf53ca5a8d9a8ccf8",
+  "sha256": "3ae1d6234d3202a3c481a09b8b375fac4932caa9db89473218804fbbac550b0a",
+  "license": "Apache-2.0",
+  "scope": "Unmodified upstream test fixture only; not shipped in HAP."
+}

@@ -1,0 +1,3007 @@
+{
+  "recordedAt": "2026-09-11T13:25:08.857088+00:00",
+  "scope": "Full 52-item repair execution; live validation in progress; historical snapshots separately labelled",
+  "runId": "20260911T120809Z-35f2f99a-a11ccc84",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T120809Z-35f2f99a-a11ccc84/manifest.json",
+  "signedSha256": "8c689beb63f4306de2d8a5c8118aa1f6b32fea55ff7d39fa686ee1b78fcb462f",
+  "acceptanceEligible": false,
+  "harmonyContractGroups": 181,
+  "nativeChecks": {
+    "solver": 235,
+    "motion": 538,
+    "renderer": 373,
+    "barrier": 199
+  },
+  "vm": {
+    "install": "PASS",
+    "interaction": "PARTIAL",
+    "target": "127.0.0.1:5555",
+    "name": "Mate 80 Pro",
+    "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+    "dataPreserved": true,
+    "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T120809Z-35f2f99a-a11ccc84/deploy-vm-6460677a198b-20260911T120907Z.json",
+    "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84",
+    "fullAcceptance": "OPEN",
+    "release": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/VM_RELEASE.json",
+    "finalMode": "仿真"
+  },
+  "observedBaselineDeltaNotAllAttributableToThisTask": [
+    {
+      "path": "entry/src/main/ets/features/reading/BookTurnPresentationSession.ets",
+      "before": "40d3365a33143cb2f7c4263956135ab6feef343b15effd248158c1c17ffeb0db",
+      "after": "2b17b186fa36b8c759a70335a0de5e6fa8f9ee10f9d02cd53bf7c930ec3b9824"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingPaginationIndex.ts",
+      "before": "e5f981c9c70e1134f62b8c8e2467578c0c12b6691284b46997c244eefd14ab36",
+      "after": "cbc11ebb1837d4ba919b2e2304925a62b2ca4d53343989601d69e47f3187d4ee"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+      "before": "d310c6dc9880ebdb4e4b9bff71e30a04e8943f02693a599c20f8589dbaa40fd8",
+      "after": "22f5fef7d07504c29b340d8e647ce5c1ac8911fd184710259b55451afbbf994e"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+      "before": "566c4c7315397f48b9426c182f545505717d10c661ec38a4a1a89ffb361f738f",
+      "after": "573b4d8a3a472967503692bae1a3883add0f74068cf3dfb68a35fb1766840b95"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+      "before": "1426a9cbd4a425d27fa16ff207723ff243537f35f68857d11c8ff83e20fa4115",
+      "after": "b2decc47a2276a9838dd6dba00f79589088f388f9bfca3221e50c7ac67a8b151"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts",
+      "before": "ec1af1bea79d6856cefd52ab1ef915f41ed8080e2769467dd2b9ebaa7fc88c66",
+      "after": "428ec2368c79d9596436af530b33d7e20c386b232296d27adcfb800475f10ff8"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "before": "6b56be517323319275e01c3b2c608b81da79dcf3e631287aaf87bb09e143848d",
+      "after": "f28cf81a4d1a5a22f23fc33fa36f92108178a0a38ef6e5e9726e924ed4cbe26d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts",
+      "before": "632c44dbb72d34fe2af6447c6eefce970c83426f2470bc3e10c79041c067b4ef",
+      "after": "c13524d817272aee3a0361ecb3fa20e02541c7d5b4bef9c52c03294991263194"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageGestureState.ts",
+      "before": "0930d59f21c33ca28fd9f68904497a2b5c1d0a65c9063dbf2e4d80e594aa7649",
+      "after": "0bd98963d31ec43027b0b29272b1eb1d1be8546ff0c7bc6f3e47456844e7ea23"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+      "before": "27a4b9bc9ca330f2b3a53897f51513a52ee865b0ef1a36606ae747f80a09c92a",
+      "after": "35bbb9321a9836a7e3f522b38606c92cb754743326b53c630495299600f3274f"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "before": "fd84a108ecb51b8ca060b7358ce52f59943861782b66b7459b024a6a18d04b85",
+      "after": "e3216743a9958f0c8a3607de51b62a829ffacd1421c8f0807153a6507b2749c2"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "before": "4223d363b719d583fd14d25b9bed3514f2f0f78aacbceb7e05445359cea344e6",
+      "after": "08cafd3338fb799f652491c709d4d6fd55e9c3b43c809817212c1fb2ba245c97"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts",
+      "before": "2c230b4f11e3aba829ba34f6beea6c27d054244344db6dbcbc20119e56b27e35",
+      "after": "38e9498674620a6d2cbbad6509a41e15c9761a1b04d7cf4c743fb5c4d121ae4d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSettingsState.ts",
+      "before": "01210a8cdc2710c7dd6573d5f04909cf53642cb434912310925421fe15ea855a",
+      "after": "9bfbaf2b183ed409494359de5d0e091f36bab33f69b0f775c3ed3e92a09c370d"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.h",
+      "before": "d1152e041d98e23de3d515ea77dd1273a7e3136f8b1fcb6605b8b533f4e9ac5c",
+      "after": "94d1fa454225d65b4b375cc8f8506614c5a1cf5cd78c2914276cf637570cb159"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.h",
+      "before": "8781a56f9d70f57499b030c39a6185ddfe9b82266b313350aebc11d2ff908aea",
+      "after": "85c3092a524cc2ea73776c6940fdcd7696055b68f9062511b0116f87af5c1d13"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+      "before": "b289e7493a11f40980296f39ceb7bd4b1fb335ddc776cb5ec3ecefb5548dd3d7",
+      "after": "053cdae351ccade0bf0b79096da67e6c34efe11ea4842840c32e388ca99981d4"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.cpp",
+      "before": "c3a8c05fa929ad2faeb91c84a1165bba178b06e066ed6742a34ec064f2dfaa0d",
+      "after": "39c45c4a82ce08d0e026e8510bb325678cd9982e776143b04ab1d3c5370f5e7a"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.cpp",
+      "before": "1e1d6775d298d4640155ee3ce9bdf099283b23d415786da1616486de2a4339a4",
+      "after": "6a00615a7c2d9db554ee4782441ad01b5cf8accf49996751c945e579c0983a2d"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_napi.cpp",
+      "before": "02dc972024b6db4f875576f23e9f89f00df4068605c19f0025605c1403954155",
+      "after": "16ebe8cc733555627388a3ed23dbe7aa95fc47df73273a68849ff7416d003dab"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.h",
+      "before": "e367692b13b6079267e92f2c9f5b0d102fb16752c7a6b29f611ecc939dbd9eb4",
+      "after": "46e77e148c4f309a74007ce9a21732b763a51f9fbabb33acc80f23c00e82ef3d"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.h",
+      "before": "00c735b143581d28aace16bf820f4328dfb61837869777e76654d4770d481f31",
+      "after": "515e004672b206e1cd35327432825156a98316a07bfcae25830ff7b2a5ee3565"
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.cpp",
+      "before": "5ba39637a00001ce9fea2fbb790a1ecada223ef944c26733cc3789bb49aaa381",
+      "after": "3940ae68fb54ef03f23732ae14d2f7bbadca1b4a2d99096850d53afcfe938dfc"
+    },
+    {
+      "path": "entry/src/main/cpp/types/libreader_bookturn_napi/Index.d.ts",
+      "before": "ff047a7f304ca9a8ae7185b361ead2020a5aac62ccd46c09a35d411a68da4da0",
+      "after": "05cdf9beac89ac6c702604296137ef55e6a35a0ff26338152324a37a774316b8"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_motion_test.cpp",
+      "before": "91e5d4d16577adf03f46324cea4480e69e5f971b520a07b1db5ee59d3fd275a2",
+      "after": "720038751fe39833de7ff3813917e3036b4468f0030c009051aff3dd6e4436b8"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_present_barrier_test.cpp",
+      "before": "7096a9e147fb0ea01bc7108ef9c6e03f8f80843abb91d3e715da35dd2b46d209",
+      "after": "97b8775ecd7a1ba942b159bc8777aec4c5b5c05c33f5ba25ddca7a3059da3bf5"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/bookturn_render_state_test.cpp",
+      "before": "2ca24148c300731eb72a0c85dc2ff711c99e2afc4225db8c37a8c7b7fc5c0964",
+      "after": "a21ffd060993f807cf09800128b835552e8c3b39f7daffaa76437bd44817e677"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/mocksdk/ohos_host_mocks.cpp",
+      "before": "b67cebd8df9dcc58222f3b298392715afb7a0872526a4bafdc3624793b6c257d",
+      "after": "84268e0c4f5b16de3d1bc354a6766e62686f4428cd07aa10bec041ba9a694b41"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/gl_mock.cpp",
+      "before": "c9de568cc4ff3cde7c24efcf8c96aaa53daf2cb4f18e481ea89b0fa460fb1cc2",
+      "after": "ecfe4c315193e3408a1108aae9baeaf16eb8d0bc8ccd5afc2b52e2da846c9848"
+    },
+    {
+      "path": "entry/src/main/cpp/tests/glmock/GLES3/gl3.h",
+      "before": "3c7dbd5b81688a20351254b5f459459a8a3ad87f6ceda02b56688b5fa4ef2022",
+      "after": "a31771d2b23e7b0fb50a7b72a0ab1d9baf90e18320db37b31ac6a3d6f782b480"
+    },
+    {
+      "path": "tools/test-book-metadata-presentation.mjs",
+      "before": "548df0784f4a1dbe612e0fad7aee4e68eb07ed395d0e6296f61e72c6ccd03d58",
+      "after": "b49f6568f63abe23e0caf4c240befbb94da1cf315e688524e3f4405ff7503f4a"
+    },
+    {
+      "path": "tools/test-reader-book-turn-architecture.mjs",
+      "before": "9e6a1d23a0412b2b6cbdb4907b305175810bc193cd6d3690b98348c0be97bbbd",
+      "after": "bf17ae0787ea9a9e98b432db2d8adf6de89fa74228808e5772e201b0b673afb1"
+    },
+    {
+      "path": "tools/test-reader-continuous-reading.mjs",
+      "before": "4673049fde28972257e312ed53b8b3308ce895b2b53622b4c22999dcefde8c1d",
+      "after": "ef6821eb41c798a7cb1d2bf23d54ea1adb44dadc673c5493d81f7e8b5954f72e"
+    },
+    {
+      "path": "tools/test-performance-regressions.mjs",
+      "before": "f9daea8bcb9902c943cf3a1d10536dbe991216b0d80c2fd51669cc68b3549e08",
+      "after": "6a7400c0d1802b2c535c02bfba1260f9d5e314457ae12b529632fceb403556ee"
+    },
+    {
+      "path": "tools/test-reader-control-replace-host.mjs",
+      "before": "e6f00955e176ce01a2c6cf77dc9fa4610293d8a02952faaf625bb1933bd1b17d",
+      "after": "417ee7a2b0767a88aff23d30d982500c6eb478081dd90050a0f36a293e9396ae"
+    },
+    {
+      "path": "tools/test-search-gateway.mjs",
+      "before": "066cb45919a7874c5328e4104624ed695e5c171409b3009260826ba033b1a91f",
+      "after": "a7c0f0119e194b67f9978201a8c037cdbd841848dd8940c02808265ad1d37d8e"
+    },
+    {
+      "path": "tools/test-search-orchestrator.mjs",
+      "before": "638912662b84f493c79fb3335f1a4d23d53c0a084ba27f57ece0498206cd5297",
+      "after": "b03cd843e5cb8d2497e1ec474fd0cfd386c026b6fce944c8aba96bbe8a3f6870"
+    },
+    {
+      "path": "tools/test-reader-control-playback-host-intents.mjs",
+      "before": "c27f068f3a779a7a9943fccfcd18b6b4dc190650e1c2f0d43d47148a77607d9c",
+      "after": "e16dea617c1be532933bc007327ebcf3586078f32063ee5168297a20ba50a72b"
+    },
+    {
+      "path": "tools/test-source-switch-gateway.mjs",
+      "before": "5bdcec17bc2282f9d2dbf3880ca4a7384e3bb67f7942098be27144279dc18417",
+      "after": "66f749f744a5df87037a538320701e4e4769b466d23ed110556fa95c78ef4133"
+    },
+    {
+      "path": "tools/test-reading-whole-book-progress.mjs",
+      "before": "2b632fd500d8e60597292429d5b32b3ef97c2e91f334e3322a027f8a6a851bc4",
+      "after": "515b4cb8d0ccac4eb0860fb0134a575b94603ad4c5bab0a864f0c00092fb2ac5"
+    },
+    {
+      "path": "tools/test-reading-pagination-integration.mjs",
+      "before": "67eefc56a7acef978fb65f5c9ef5b038be587a09e406cae22f1caf92fa75f7a8",
+      "after": "59a630ee844c4ec2a7b634222819bbf4357f55b7f48282d57438376be30559bb"
+    },
+    {
+      "path": "tools/test-reader-cold-entry-recovery.mjs",
+      "before": "e056e635fe2af39ab8047f1f818eb80aa98851698730b5ebbc8be19b35273c1f",
+      "after": "e58ab23a3035fa50fb96b425238e2249d10345df50de0dff72de542f02212b47"
+    },
+    {
+      "path": "tools/test-reading-phone-tablet-shared-architecture.mjs",
+      "before": "e489c3200c4375b1148d8e05ea62cd88f598c50d51ed743aedc64e8fc4d88a14",
+      "after": "4de175c034d9b361ce4bb323bc2ff2d19825b207c9655f3825e7e110ccb8b120"
+    },
+    {
+      "path": "tools/test-reader-control-motion-geometry.mjs",
+      "before": "d8dbe78c26ea32ca81ccf5f4f3727f1df2b6f5aeca68ed44edb8583602c0f6e3",
+      "after": "f963d70a35221261e8d47eebbd5a733742df0ec564a6a852026a08b3cf7c2501"
+    },
+    {
+      "path": "tools/test-responsive-surface-widths.mjs",
+      "before": "d6b8f063be85508cca143e7ae47c93f8bd3bf469ffb4ddf29b0880e54b67ffb5",
+      "after": "587a82f1172faeda90e1ff02e62394ec97a09e8d28f2cb6a3bbdf8c67cf7b1a9"
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-tree.mjs",
+      "before": "29551e3f8cfc3d3d71ad394cd13efbe2a4fdf62d57792efe1f277309f1158d1f",
+      "after": "5eea68e2f86efa829bfe0c390cc227111c68751b21f0aa4c7ac3345933dc27c4"
+    },
+    {
+      "path": "tools/test-reader-control-host-input.mjs",
+      "before": "cf4d5c0def412f8c7dff58a9c7dfe6393114740710962efff9dc18b698af8de9",
+      "after": "a62ddc8a8e4b7c2e204f61a9af140a2cc46e6cb73c1aa0748d71ebf9311e7077"
+    },
+    {
+      "path": "tools/test-reader-page-turn-pipeline.mjs",
+      "before": "31455a34cacfa284cfb39ebe870d440f3f2a772be8c21ae14912ae9c8f9b4a82",
+      "after": "0feac8fb30387f1cfb151aa9332bdb9af166c2c84753383942145dae9e9c11bd"
+    },
+    {
+      "path": "tools/test-reader-control-p0.mjs",
+      "before": "a71eb4e93b6b1177cc5dec14e78da1e7e19afe86c7c8d46e22d754bf7e0a7179",
+      "after": "03f9d85ac712dd76897ea8eb21f8036ba0e9605505828bc96a0e81fbb69ab587"
+    },
+    {
+      "path": "tools/test-reader-page-turn-stage.mjs",
+      "before": "718fbf4088cbfdd10da3080e5dd492b792d0985465bfbe86fc854e45399146ba",
+      "after": "3e3d3eacb3bd9a615f51a51d7b5d31f1a444c385361b47c4b56e53c18fb8376d"
+    },
+    {
+      "path": "tools/lib/reader-motion-method-probe.mjs",
+      "before": "da56b4f4bdfccd7b6a71c3a7143fb6ea6260c0976ab339c6aa6b8b3403cf459f",
+      "after": "0563ec28060c7d6b9d8440f7bc1b94fb141a2e79df4e908a85ecc92ffb0e0fb7"
+    }
+  ],
+  "newTaskFiles": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageSettlementTimeline.ts",
+      "sha256": "188e0fbe43667548fdb6eee6d308bb9962bffddaff12983ac0219ee32d5a619d"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts",
+      "sha256": "1f61899aebf179579e6bbd6204754eaa3ee2c3905fea9c35fc68d849ff83b005"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInputClock.ts",
+      "sha256": "57028558015a23278cf1755231b9299514c3631ec2f502f0d1a107101fac6f68"
+    },
+    {
+      "path": "tools/test-reader-page-settlement-runtime.mjs",
+      "sha256": "c397ce9a45920780eb61a7b459a26a0635d2b934357c295544f6e4f7d5a375ed"
+    },
+    {
+      "path": "tools/test-reader-page-progress-runtime.mjs",
+      "sha256": "beacdcdc405b6e77febbece3be8e223d1232095ffda5ff5a91c8b55bf322942b"
+    },
+    {
+      "path": "tools/test-reader-continuous-input-runtime.mjs",
+      "sha256": "f24b3033d61198147b69f0099f58f8d48de722e3f69dc889a7a6df3db59ba9e2"
+    },
+    {
+      "path": "tools/test-reader-dynamic-highlight.mjs",
+      "sha256": "6130c97e6086867f179770c03efeb77edb7b6c3026f332eb0e33f4b858b89b5a"
+    },
+    {
+      "path": "tools/test-reader-page-preparation-runtime.mjs",
+      "sha256": "50b0d5215c87c461df2e984f3fbe053e67d3fd57afa0dda096a2cfcfcb4a50d7"
+    },
+    {
+      "path": "tools/test-reader-book-turn-host-runtime.mjs",
+      "sha256": "979fbf6f3f2b44aaf3a3471e0eb46781de5f36f3b866d1e1af9752eddca1757c"
+    },
+    {
+      "path": "tools/test-reader-page-input-runtime.mjs",
+      "sha256": "51c3ece8724bdc8664e730eeac6d974383a2aa32d3559b1d6d6ee85615612568"
+    }
+  ],
+  "items": [
+    {
+      "id": "F01",
+      "implementation": "RETAINED",
+      "done": "可见期间不提交透明初始化/清理帧；Native GL 状态与交接回归通过。 4a09日夜图片各2next+2previous规范正文往返通过，具名正面/背面/相邻页卷曲截图已人工查看，原纸色已恢复。",
+      "remaining": "642修复后图文正面/背面/相邻页卷曲像素通过具名样本；文本页曲面中间样本已取得；全主题/图片/实际显示逐帧矩阵仍需独立证据。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "F02",
+      "implementation": "IMPLEMENTED",
+      "done": "隐藏、清理、释放输入分阶段；清理失败不让新事务覆盖，199项 barrier 检查通过。",
+      "remaining": "N08没有实际显示 fence；不能把调度回调计数视作送显确认。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "F03",
+      "implementation": "IMPLEMENTED",
+      "done": "首帧按代次准入；模式切换正常 SurfaceLost 不再禁用仿真；90be四模式各3次前后台同PID正文恢复通过。 c097四模式各2次Home/foreground正文一致。",
+      "remaining": "强制 Surface 销毁/重建及迟到回执的完整 VM 故障矩阵。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "F04",
+      "implementation": "IMPLEMENTED",
+      "done": "事务 source/destination 固定，成功后旋转物理槽；已修空底页与物理截图ID，双向文本中间帧有正文。 4a09日夜图片各2next+2previous规范正文往返通过，具名正面/背面/相邻页卷曲截图已人工查看，原纸色已恢复。",
+      "remaining": "642修复后图文正面/背面/相邻页卷曲像素通过具名样本；图片、回滚、提交各阶段实际像素覆盖仍未齐全。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "F05",
+      "implementation": "IMPLEMENTED",
+      "done": "平移/覆盖固定 a/b 两物理节点；退出视野内容保留，provider 按 revision 缓存；8305平移正文 Build/Destroy=0。",
+      "remaining": "快速交错与全部内容类型下的实例计数；离屏截图组件生命周期不能混算为当前正文重挂载。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "F06",
+      "implementation": "RETAINED",
+      "done": "不透明主题底与统一呈现阶段保留；四分页效果的实选切换和正文往返已验证。 4a09日夜图片各2next+2previous规范正文往返通过，具名正面/背面/相邻页卷曲截图已人工查看，原纸色已恢复。",
+      "remaining": "642修复后图文正面/背面/相邻页卷曲像素通过具名样本；夜间/图片/字体与模式交错的完整像素矩阵。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "F07",
+      "implementation": "IMPLEMENTED",
+      "done": "静态快照排除高亮；ArkUI 字符矩形同步 Native 动态着色。",
+      "remaining": "高亮与卷页、终帧的像素连续性。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "F08",
+      "implementation": "VALIDATION",
+      "done": "五模式基础样本；90be稀疏UP/多指与12次前后台；5da四模式800次不同页跨章往返；1368图文正文通过但Native图片像素失败，642真实图文卷曲像素修复通过；b901滚动/分页暖冷锚点往返通过。 a11横竖屏同PID往返，旧页首锚点被新横屏页面包含，恢复后原文精确一致；方向恢复跟随系统。",
+      "remaining": "失败/未知写结果、旋转、强制Surface丢失和全视觉矩阵仍未齐全，不能宣布全验收。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "F09",
+      "implementation": "RETAINED",
+      "done": "阴影混合保留目标 alpha，GL 状态测试通过。",
+      "remaining": "合成链 alpha 和局部闪烁实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "C01",
+      "implementation": "PARTIAL",
+      "done": "Panel 复杂时钟对象改为普通决策状态；界面只观察进度/可见度/占用标量和稳定路由；90be七模块操作端点通过。",
+      "remaining": "4a09设置展开UI峰18.054ms、目录展开20.471ms，各1次超过16.667ms；其他八段端点通过。a11设置展开峰57.926ms，其中guestScheduled55.903ms、Settings重渲染28.515ms、Panel12.338ms、触摸分发11.445ms，未发现该帧GC；这是尚未解决的UI工作量问题。完整分布见当前trace表。GPU、触控到屏幕及物理120Hz未验。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "C02",
+      "implementation": "IMPLEMENTED",
+      "done": "同帧几何、完整端点、字体顺序缓存；页眉跨离屏实例64项LRU；生产缓存失效用例通过。",
+      "remaining": "47fc进一步复用设置页同帧actor几何/paint及选项数组；尺寸、反向、开关实时状态的SDK闭包回归通过。完整分配峰值与实机p95/p99仍未测。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "C03",
+      "implementation": "PARTIAL",
+      "done": "稳定语义路由避免每帧触发整个模块分支，按标量发布actor变化，保留真实文字重排。",
+      "remaining": "剩余宽高布局/GC预算继续保留；90be七模块最大值分操作列在trace报告。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "C04",
+      "implementation": "IMPLEMENTED",
+      "done": "实际List可见行和行内比例定位；1368深目录10次往返；e3第40章部分行fraction0.642857，10次Full/Quick往返≤4px；139–150章尾部3次往返通过。",
+      "remaining": "排序和筛选往返已验；中途反向/再抓及异步数据交错仍需分别验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "C05",
+      "implementation": "IMPLEMENTED",
+      "done": "稳定行key与逐行差异通知。986实测150章升降序、149章筛选各3次Full/Quick；书签新增/切tab/删除与清空筛选通过。",
+      "remaining": "远程迟到数据/下载状态异步变更、动画中删除组合尚无匹配VM证据。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "C06",
+      "implementation": "IMPLEMENTED",
+      "done": "消除20%–80%清晰度平台，自动展开/收起使用完整smoothstep轴与速度续接。新增异常时间戳终止事件修复；修复浮点误差被当作越界位移、持续吞掉同向MOVE。a11在20%/50%/80%停指10秒，1.2/3/7秒九次采样误差均0px，三次释放正常到Full。 a11十次自动展开中再按下、保持4秒及反向末端UP返回Quick通过；捕获进度14.6%–19.3%，各两次保持采样位置相同。连续MOVE反向接管一轮通过，第二轮因静态起点未命中而未获完整十轮证据。",
+      "remaining": "中间内容像素与自动动画长任务见具名证据；这不是触控到屏幕/120Hz全程流畅验收。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "C07",
+      "implementation": "PARTIAL",
+      "done": "去重复裁剪、交互避让邻页任务；普通与静态离屏页不再创建无用整页Canvas。",
+      "remaining": "余下滤镜、宽高布局及GPU完成耗时没有完整预算；两次GC长帧仍保留。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "C08",
+      "implementation": "SEMANTIC",
+      "done": "保留最近书签原选择规则，未把歧义直接当缺陷修改。",
+      "remaining": "确认产品最近书签是否指当前 scalar 距离。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N01",
+      "implementation": "IMPLEMENTED",
+      "done": "24ms回放已移除，Native VSync取最新有效样本；90be双向UI窗口峰值15.914/14.414ms。",
+      "remaining": "这是guest UI任务短样本，不是输入到屏幕延迟或120Hz验收。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N02",
+      "implementation": "IMPLEMENTED",
+      "done": "内侧/边缘起手与再抓共用相对锚点；双向正常拖动已执行。 986四分页效果双向400ms移动后保持按住6s，1.2/3/5s采样正文像素无漂移，松手规范页目标与反向恢复通过。",
+      "remaining": "公开uinput已确认支持移动后-k保持；此前“无法注入”的判断已纠正。暖页静止窗口已测；冷页首次输入、精确最后MOVE至首像素、反向再抓仍分开验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N03",
+      "implementation": "IMPLEMENTED",
+      "done": "endGesture原子消费最终位置；90be四模式仅UP位置跨阈值双向各1例通过，额外手指不结束首指。",
+      "remaining": "真实乱序/CANCEL仍以生产逻辑用例为主，未覆盖所有系统事件。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N04",
+      "implementation": "IMPLEMENTED",
+      "done": "同事务拖动到收尾保持 Native 可见。",
+      "remaining": "同版本首/终帧及回滚实测。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N05",
+      "implementation": "IMPLEMENTED",
+      "done": "80–320ms 手动收尾、已到端点立即结束；提交前按已提交姿态再抓。",
+      "remaining": "不同时间点反复再抓和位置/倾角连续性。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N06",
+      "implementation": "IMPLEMENTED",
+      "done": "事务纹理及代次保护保留；已补上传中同槽/异槽pending重检与失败纹理失效，199项检查通过。",
+      "remaining": "跨章及失败回滚资源寿命的完整VM统计。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N07",
+      "implementation": "IMPLEMENTED",
+      "done": "请求方向优先；缓存槽不再无条件空等帧；物理当前截图与revision门禁；被淘汰邻章按需读取；仅离屏截图树同步解码并校验图片状态。 4a09日夜图片各2next+2previous规范正文往返通过，具名正面/背面/相邻页卷曲截图已人工查看，原纸色已恢复。",
+      "remaining": "1368空白→03降级失败→642图文卷曲正反/相邻像素通过且仿真选项仍可用。更大图片、冷解码耗时分布与布局/主题交错待补。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N08",
+      "implementation": "PARTIAL",
+      "done": "区分 buffer submit 与 ArkUI 内容准备；保留不透明终帧并校验 revision。",
+      "remaining": "仍使用 postFrame 调度交接，没有显示 fence；固定帧数不构成实际上屏证明。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N09",
+      "implementation": "IMPLEMENTED",
+      "done": "字符矩形、Canvas 正文混色和 Native UV 高亮；64 矩形上限与显式降级，无全页重复上传。",
+      "remaining": "SDK glyph 矩形、中文字体/图片/夜间、GPU shader 及像素实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N10",
+      "implementation": "PARTIAL",
+      "done": "时钟与胶囊几何进入纹理身份，分钟空闲刷新；修复晋升后角色ID错绑导致当前快照空白。cb19557b同类分钟样本10:28一致。 4a09日夜图片各2next+2previous规范正文往返通过，具名正面/背面/相邻页卷曲截图已人工查看，原纸色已恢复。",
+      "remaining": "642修复后图文正面/背面/相邻页卷曲像素通过具名样本；当前候选双向分钟边界/图片/夜间像素矩阵待补；颜色空间/过滤/端点暗带与fallback仍未完整实测。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N11",
+      "implementation": "PARTIAL",
+      "done": "Native worker拷贝、UI发布准入重检、O2、单离屏树更新、最多一张被指针打断的完成位图复用。4a09进一步保留Native/none已绑定的隐藏正文，避免清空后重填；冷reserve仍不预构建。",
+      "remaining": "4a09连续Native48个输入/305个UI帧，UI峰27.118ms、p9512.445/p9915.355ms，1帧超过16.667ms；历史81.562/51.084/21.243/49.966ms保留。不能宣布长任务全消失；GPU完成、分配峰值、物理120Hz未验。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N12",
+      "implementation": "IMPLEMENTED",
+      "done": "普通程序化320ms、物理手势80–320ms；积压已完成点击30ms；Native交接199项通过。4a09无界面读取的40+40各精确40次提交，首事务开始至末完成7.075/7.053s（5.654/5.671pps），规范净目标正确。",
+      "remaining": "不含首事务开始前准备，不是逐显示帧或触控到屏幕速度。986同口径7.564/7.172s；c097反复dumpLayout的10.435/11.456s受观测影响，不能直接归因动画。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N13",
+      "implementation": "PARTIAL",
+      "done": "固定纹理/网格/有界LRU；036同PID800次往返PSS466157→455814KiB，过程无持续PSS上升。",
+      "remaining": "Heap allocated 96298→110428KiB；不得宣布无泄漏。全分配峰值、120Hz、长时温升功耗未测。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N14",
+      "implementation": "IMPLEMENTED",
+      "done": "统一代次、surfaceEpoch和lifecycle；worker迟到拒绝入队并释放资源；90be四模式前后台同PID恢复通过。 a11横竖屏同PID往返，旧页首锚点被新横屏页面包含，恢复后原文精确一致；方向恢复跟随系统。",
+      "remaining": "旋转、强制Surface丢失/重建、进程终止等仍需分别验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "N15",
+      "implementation": "IMPLEMENTED",
+      "done": "SLOTS_COMMITTED 只做逻辑提交，TERMINAL_RELEASED 后恢复后续绘制。 557补齐Auto Page倒计时、控制背景点击与PERF耗时的单调时钟。",
+      "remaining": "A 清理/B 首帧交错、丢回执及 Surface 重建实测。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P01",
+      "implementation": "IMPLEMENTED",
+      "done": "未就绪保留首指与意图，ready 后按当前位置重新锚定，不补播旧位移。 986四分页效果双向400ms移动后保持按住6s，1.2/3/5s采样正文像素无漂移，松手规范页目标与反向恢复通过。",
+      "remaining": "公开uinput已确认支持移动后-k保持；此前“无法注入”的判断已纠正。暖页静止窗口已测；冷页首次输入、精确最后MOVE至首像素、反向再抓仍分开验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P02",
+      "implementation": "IMPLEMENTED",
+      "done": "最终UP先归入手势再判点击/拖动；90be四模式仅UP变更坐标的next/previous共8例通过。 c097同类双向UP稀疏位置回归通过。",
+      "remaining": "极稀疏反向轨迹与真实系统CANCEL组合仍待覆盖。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P03",
+      "implementation": "IMPLEMENTED",
+      "done": "纵向上一页位移映射到正确 X；最终 offset 连续。",
+      "remaining": "47fc四模式均已实测纵向上一页→横向下一页，跨章正文往返通过；动态逐帧触控对齐仍需显示证据。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P04",
+      "implementation": "IMPLEMENTED",
+      "done": "none取消立即复位；四模式切换及none正常正文往返通过。",
+      "remaining": "真实系统CANCEL没有可用公共注入入口；代码取消路径用例通过不等于设备全验收。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P05",
+      "implementation": "IMPLEMENTED",
+      "done": "权威边界入队前判断。986书首四模式、书尾none/slide/cover各4次无效方向+1次有效反向通过。4a09书尾仿真同例精确正文与恢复通过。",
+      "remaining": "986首次书尾仿真uitest持续空根，应用像素/操作正常；新进程恢复读取，根因未证。原异常与后续独立通过均保留。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P06",
+      "implementation": "IMPLEMENTED",
+      "done": "两个固定物理页、promotion保留反向页，固定current-page-a/b截图ID；036四模式800次正文稳定检查通过。 4a09将已绑定隐藏正文的保留扩展到Native/none，当前版本回执与隐藏输入屏蔽保持。",
+      "remaining": "036是十页同章扫动，5da四模式800次不同页长跨章往返已通过；还需异常交错实例统计。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P07",
+      "implementation": "IMPLEMENTED",
+      "done": "未知写结果先串行查询 Core；目标确认提交、原页确认回滚、未知保持并仅重试读取。",
+      "remaining": "本地 lost reply/foreign/unavailable 通过；真实慢存储/故障注入未验。Core get/update 同 latency FIFO，无新造 source-switch transactionId。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P08",
+      "implementation": "PARTIAL",
+      "done": "冻结投影/revision/provider和稳定物理槽已落实；原案例重新核实为真机《绍宋》第34章6/11页44%。",
+      "remaining": "原案缺少当时权威scalar/layout identity，且真机已释放。VM自建书原文oracle不能替代原案关闭。另发现的被淘汰前章卡住已独立修复。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P09",
+      "implementation": "IMPLEMENTED",
+      "done": "无动画复用预准备页并等权威保存；补齐缺失邻章读取，保留原页和待处理方向。",
+      "remaining": "点击到ready、慢保存和跨章的完整时间分布仍待测；各包功能样本分开记录。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P10",
+      "implementation": "IMPLEMENTED",
+      "done": "请求方向优先，前驱前缀续算；补修前章缓存淘汰后prepare直接放弃的缺口，去重读取并拒绝旧代次/旧页/旧生命周期结果。",
+      "remaining": "5da原失败25→24末→25已通过；5da四模式各100 next+100 previous均通过，冷远程章时延尚未全测。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P11",
+      "implementation": "PARTIAL",
+      "done": "冷指针续接及旧请求绕过 lease 的确定性路径已修。 986四分页效果双向400ms移动后保持按住6s，1.2/3/5s采样正文像素无漂移，松手规范页目标与反向恢复通过。",
+      "remaining": "公开uinput已确认支持移动后-k保持；此前“无法注入”的判断已纠正。暖页静止窗口已测；冷页首次输入、精确最后MOVE至首像素、反向再抓仍分开验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P12",
+      "implementation": "IMPLEMENTED",
+      "done": "冻结两页/布局、索引二分、稳定provider；8305平移当前正文重挂载计数0，90be控制观察依赖进一步拆分。",
+      "remaining": "全部内容类型的GC/分配/UI+GPU预算未齐全，不能由单一trace推出全模式跟手。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P13",
+      "implementation": "IMPLEMENTED",
+      "done": "分页/原生List共用首指占用；b9016s静止按住+音量键通过；e312s静止按住跨8s自动翻页到期点通过；c097修复多指后的程序滚动误继承手动章尾标记。 c097两指/三指+音量键到章尾后不再额外跨章，精确基线与反向恢复通过。",
+      "remaining": "两/三指+音量键和静止到期已有具名通过；公开uinput现支持移动后保持，分页四模式已验。真实系统CANCEL、额外指提前UP与所有输入源交错未全覆盖。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P14",
+      "implementation": "IMPLEMENTED",
+      "done": "首次授予完整准入、MOVE轻量检查、每手势一个watchdog；90be普通/稀疏/多指路径及前后台通过。 986四分页效果双向400ms移动后保持按住6s，1.2/3/5s采样正文像素无漂移，松手规范页目标与反向恢复通过。",
+      "remaining": "公开uinput已确认支持移动后-k保持；此前“无法注入”的判断已纠正。暖页静止窗口已测；冷页首次输入、精确最后MOVE至首像素、反向再抓仍分开验证。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "P15",
+      "implementation": "IMPLEMENTED",
+      "done": "统一单调时间，异常时间重建速度样本基线。",
+      "remaining": "设备事件/VSync 时钟关联，不把本地注入当现实异常发生率。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "R01",
+      "implementation": "PARTIAL",
+      "done": "滚动scalar量化/内边距坐标/恢复布局门禁；分页切换按规范页界；c097补齐已测前缀中的空白与头部分隔符，对齐完整页索引。",
+      "remaining": "78b四距离-3/0/0/4px、8次重进0px；03图片短滚重开1px；b901暖/冷模式切换各5页双向往返通过。超长章冷定位耗时、字体及章尾仍待补。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "R02",
+      "implementation": "IMPLEMENTED",
+      "done": "awaitable保存drain及晚回执校验，恢复期间停止回调禁止提前覆写；78b短滚退出及8次重进通过。",
+      "remaining": "真实慢写/失败提示/重试/退出中止仍以生产逻辑用例为主。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "R03",
+      "implementation": "IMPLEMENTED",
+      "done": "图片fragment+fraction补偿与并发手动位移保留；fraction已统一正文内边距坐标。 图片资源到达时更新行内容身份，修复LazyForEach复用Blank。",
+      "remaining": "03图文短滚退出显式重开偏差1/1/1/1px通过。字体变化、章尾、慢解码和多图片同时到达仍待补。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "R04",
+      "implementation": "IMPLEMENTED",
+      "done": "额外手指不结束首指；滚动500ms长按边界；c097在程序化滚动准入时明确结束旧手动标记，避免抵达章尾额外跳章。",
+      "remaining": "两/三指+音量键和静止到期已有具名通过；公开uinput现支持移动后保持，分页四模式已验。真实系统CANCEL、额外指提前UP与所有输入源交错未全覆盖。",
+      "vm": "PARTIAL",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    },
+    {
+      "id": "R05",
+      "implementation": "IMPLEMENTED",
+      "done": "滚动返回上一章直接请求章节尾部，最终保存实际首可见位置。",
+      "remaining": "超长章耗时、尾部实际视口及恢复验证。",
+      "vm": "OPEN",
+      "physical": "NOT_REQUESTED",
+      "evidenceBoundary": "Production checks and named VM samples only; no current physical/user acceptance"
+    }
+  ],
+  "packageVerify": "PASS",
+  "nativeSha256": "b4af2b1b956fa5e317c4e0e9e487ac4b0442430dd25fc219bc3d04c97a8796d5",
+  "postBuildContentDrift": [],
+  "postBuildControllerDrift": [],
+  "candidateHistory": [
+    {
+      "recordedAt": "2026-09-10T13:12:11.151838+00:00",
+      "runId": "20260910T130842Z-35f2f99a-34d42308",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T130842Z-35f2f99a-34d42308/manifest.json",
+      "signedSha256": "977963bee384432428e4d93b0538d41156070293fa88da0ff4e702d93290ef4d",
+      "harmonyContractGroups": 179,
+      "vm": {
+        "install": "OPEN",
+        "interaction": "OPEN",
+        "reason": "read-only HDC preflight automatic approval review timed out twice; sandbox HDC Connect server failed; no VM app operation performed"
+      }
+    },
+    {
+      "recordedAt": "2026-09-10T17:36:31.925423+00:00",
+      "runId": "20260910T170705Z-35f2f99a-9abcb3e8",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T170705Z-35f2f99a-9abcb3e8/manifest.json",
+      "signedSha256": "0bc29bed8ec44e1ce3b6f739be7f3d0f62169097ee33f237f283085027784526",
+      "harmonyContractGroups": 180,
+      "vm": {
+        "install": "PASS",
+        "interaction": "PARTIAL",
+        "target": "127.0.0.1:5555",
+        "name": "Mate 80 Pro",
+        "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+        "dataPreserved": true,
+        "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T180559Z-35f2f99a-7b396cce/deploy-vm-6460677a198b-20260910T180708Z.json",
+        "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-7b396cce",
+        "fullAcceptance": "OPEN"
+      }
+    },
+    {
+      "recordedAt": "2026-09-10T18:14:59.954521+00:00",
+      "runId": "20260910T180559Z-35f2f99a-7b396cce",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T180559Z-35f2f99a-7b396cce/manifest.json",
+      "signedSha256": "4f5da9ae78a46537049357b757c501fabe0222a73a6cd5c92524191c1ff3653d",
+      "harmonyContractGroups": 180,
+      "vm": {
+        "install": "PASS",
+        "interaction": "PARTIAL",
+        "target": "127.0.0.1:5555",
+        "name": "Mate 80 Pro",
+        "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+        "dataPreserved": true,
+        "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T181928Z-35f2f99a-74ac9927/deploy-vm-6460677a198b-20260910T182230Z.json",
+        "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-74ac9927",
+        "fullAcceptance": "OPEN"
+      }
+    },
+    {
+      "recordedAt": "2026-09-10T18:31:53.789184+00:00",
+      "runId": "20260910T181928Z-35f2f99a-74ac9927",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T181928Z-35f2f99a-74ac9927/manifest.json",
+      "signedSha256": "7d6a4068336c560d8e144a656aafc02da5ae4b4e6ef4df8a166426b7e1e11f9d",
+      "harmonyContractGroups": 180,
+      "vm": {
+        "install": "PASS",
+        "interaction": "PARTIAL",
+        "target": "127.0.0.1:5555",
+        "name": "Mate 80 Pro",
+        "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+        "dataPreserved": true,
+        "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T184854Z-35f2f99a-0c63426d/deploy-vm-6460677a198b-20260910T185511Z.json",
+        "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-0c63426d",
+        "fullAcceptance": "OPEN"
+      }
+    },
+    {
+      "recordedAt": "2026-09-10T19:01:32.571879+00:00",
+      "runId": "20260910T184854Z-35f2f99a-0c63426d",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T184854Z-35f2f99a-0c63426d/manifest.json",
+      "signedSha256": "90e27f5fc307d4ca512c06c32fb0eb10a0772120552df3b21d8ec7df06fa9d28",
+      "harmonyContractGroups": 180,
+      "vm": {
+        "install": "PASS",
+        "interaction": "PARTIAL",
+        "target": "127.0.0.1:5555",
+        "name": "Mate 80 Pro",
+        "instance": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+        "dataPreserved": true,
+        "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260910T191155Z-35f2f99a-b2b32102/deploy-vm-6460677a198b-20260910T191350Z.json",
+        "evidence": "../2026-09-10-page-turn-vm-followup/repair-validation-b2b32102",
+        "fullAcceptance": "OPEN"
+      }
+    },
+    {
+      "runId": "20260911T095602Z-35f2f99a-e3bd9570",
+      "signedSha256": "978e8333b933ccd2f8a541d6409fc43dc588b4e0e282e0c77b3b412e45ee1245",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T095602Z-35f2f99a-e3bd9570/manifest.json",
+      "installed": true,
+      "note": "immutable iteration; refer to its own evidence and receipt; never-installed candidates superseded before deployment"
+    },
+    {
+      "runId": "20260911T101259Z-35f2f99a-39bf9380",
+      "signedSha256": "f0a21c47d10588286f162b286667ae0fa90cf371f51ea78ade8908366bbfca80",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T101259Z-35f2f99a-39bf9380/manifest.json",
+      "installed": false,
+      "note": "immutable iteration; refer to its own evidence and receipt; never-installed candidates superseded before deployment"
+    },
+    {
+      "runId": "20260911T101709Z-35f2f99a-34d7faaa",
+      "signedSha256": "80c8355f92eef02b45cdf13a9e3b8302d2d5f2df6c30e49a310b0d4a81c94627",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T101709Z-35f2f99a-34d7faaa/manifest.json",
+      "installed": false,
+      "note": "immutable iteration; refer to its own evidence and receipt; never-installed candidates superseded before deployment"
+    },
+    {
+      "runId": "20260911T102054Z-35f2f99a-c097f294",
+      "signedSha256": "e66e1b18a59e5d5192109266ee63f31dd447af9e39fa613ea401e011e369044c",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T102054Z-35f2f99a-c097f294/manifest.json",
+      "installed": true,
+      "note": "immutable iteration; refer to its own evidence and receipt; never-installed candidates superseded before deployment"
+    },
+    {
+      "runId": "20260911T105306Z-35f2f99a-98686c3b",
+      "signedSha256": "15732ceb85f082964569da08bb7ecd71b6799bdb005b358d73d5db7859740783",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T105306Z-35f2f99a-98686c3b/manifest.json",
+      "installed": true,
+      "note": "build32: existing PERF line gets absolute monotonic start/end timestamps; scheduling comments distinguish actual display fence; no animation behavior change from c097"
+    },
+    {
+      "runId": "20260911T111645Z-35f2f99a-4a09d31d",
+      "signedSha256": "2785f9222b13cdcee06497c6265728d7c6df8bf3003e3fffaf12e729c141605d",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T111645Z-35f2f99a-4a09d31d/manifest.json",
+      "installed": true,
+      "note": "build34: Native/none retain already-bound outgoing body in hidden physical slot; cold reserve does not prebuild; acknowledgement remains current-revision only; build33 stopped on obsolete empty-reserve source assertion, no artifact published"
+    },
+    {
+      "runId": "20260911T114909Z-35f2f99a-0a4b08bc",
+      "signedSha256": "de37c7e0783c3fd355d549a093bbb128a26decffe0b383c08d5da3ee9d9c349a",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T114909Z-35f2f99a-0a4b08bc/manifest.json",
+      "installed": true,
+      "note": "build35 control continuous input clock; 20/50 hold passed,80percent persistent undertravel found"
+    },
+    {
+      "runId": "20260911T120617Z-35f2f99a-91271397",
+      "signedSha256": "ab326dae13ff121bfbeab63471f6a1d03242f89b8a81480a8d4a40b0a73a4a09",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T120617Z-35f2f99a-91271397/manifest.json",
+      "installed": false,
+      "note": "build36 debug aggregate UP telemetry; superseded before install by floating point projection repair"
+    },
+    {
+      "runId": "20260911T120809Z-35f2f99a-a11ccc84",
+      "signedSha256": "8c689beb63f4306de2d8a5c8118aa1f6b32fea55ff7d39fa686ee1b78fcb462f",
+      "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T120809Z-35f2f99a-a11ccc84/manifest.json",
+      "installed": true,
+      "note": "build37 reachable control movement consumes full displacement; floating point error no longer becomes out-of-bounds residue; debug UP aggregate available whenDEBUGenabled"
+    }
+  ],
+  "additionalVmRepairs": [
+    {
+      "id": "P12-chrome-measure",
+      "done": "bounded page chrome text measurement cache; text/font/density/scale invalidation",
+      "local": "PASS"
+    },
+    {
+      "id": "P12-prop-copy",
+      "done": "page providers plus primitive content revision avoid full-page Prop array copying along three hops on MOVE",
+      "local": "PASS",
+      "vm": "9ab: slide/cover settled roundtrips PASS; simulation claim WITHDRAWN (UI remained cover); residual reverse and completion long frames remain"
+    },
+    {
+      "id": "N10-clock-texture",
+      "done": "Native texture identity includes clock and capsule geometry; admitted minute schedules idle-only capture",
+      "local": "PASS",
+      "vm": "PARTIAL: clock updates across minutes; source/destination minute consistency still OPEN, observed both 74ac and b2 samples"
+    },
+    {
+      "id": "F03-expected-surface-loss",
+      "done": "ignore lifecycle-ready/lost/failure callbacks when selected mode no longer requests a Native surface; expected teardown no longer disables simulation",
+      "local": "PASS: production callback mode/reduce-motion/unexpected-failure/recovery checks",
+      "vm": "PASS: simulation→slide→cover→simulation→none actual enabled/selected chips and 4 body turns per mode"
+    },
+    {
+      "id": "N07-offscreen-raster",
+      "done": "new offscreen neighbor snapshots wait for rendering to finish, independently of disabled image-load readiness check",
+      "local": "PASS: 180 groups / ArkTS / Native / package verification",
+      "vm": "PASS bounded text-book intermediate frames in 74ac and final b2: both next revealed destination and previous base contain body text. Image/night/full-frame matrix OPEN."
+    },
+    {
+      "id": "R01-restore-layout-origin",
+      "done": "restore through real frame callbacks; compensate actual START-aligned row y using y + height*progress, matching saved -y/height",
+      "local": "PASS: production regressions, 180 contract groups, ArkTS/Native/signature/package verification",
+      "vm": "PARTIAL/FAIL strict 8px criterion: old observed delta258px; b2 short scroll exit/reopen delta10px, -308→-298px. Different scroll positions; not a statistical A/B. Scalar quantization and exact glyph anchor remain OPEN."
+    },
+    {
+      "id": "N10-current-raster-revision",
+      "done": "mounted current snapshot waits for paint before attaching updated texture identity; reuse existing decoded image tree",
+      "local": "PASS: production regressions, 180 contract groups, ArkTS/Native/signature/package verification",
+      "vm": "PARTIAL: final Native current and bottom contain body text; minute-boundary source03:19/destination03:20 still visible in final-native-next-2. Paint wait alone does not close clock consistency."
+    },
+    {
+      "id": "R01-continuous-projection-admission",
+      "done": "cold-entry render branch and paged input overlay read reactive continuousRenderRevision before consulting plain fragment array",
+      "local": "PASS: production empty/ready revision subscription regressions, 180 groups, ArkTS/Native/sign/package verification",
+      "vm": "PASS: saved continuous cold entry now mounts List; same-session short scroll, exit and reopen run without paged fallback"
+    }
+  ],
+  "stressEvidence": {
+    "slideAlternating100": {
+      "runId": "20260910T180559Z-35f2f99a-7b396cce",
+      "turns": 100,
+      "next": 50,
+      "previous": 50,
+      "status": "PASS",
+      "scope": "settled same-chapter content only, no throughput/quiet-hold/continuous-one-direction claim"
+    }
+  },
+  "sourceIdentityCheck": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/postbuild-source-identity.json",
+  "continuingExecution": {
+    "status": "partial-delivery",
+    "updatedAt": "2026-09-11T13:25:08.857088+00:00",
+    "installedRun": "20260911T120809Z-35f2f99a-a11ccc84",
+    "currentSourceIncludesLaterControlAndCanvasFixes": true,
+    "verifiedThisContinuation": {
+      "nativeChecks": {
+        "solver": 235,
+        "motion": 538,
+        "renderer": 373,
+        "barrier": 177
+      },
+      "scroll48bfEightReopensDeltaPx": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "clock48bf": "FAIL current texture empty after minute boundary",
+      "clockCb19557b": "PASS bounded next after promotion and minute boundary, source/destination 10:28",
+      "nativeCb19557b": {
+        "copyMs": 5.751,
+        "copyThread": "worker 29592, app main 29472",
+        "convertMs": 2.134,
+        "uploadSubmissionMs": 13.288,
+        "mainBindMs": 0.003,
+        "mainPeakFrameWallMs": 49.031,
+        "thatFrameGuestScheduledMs": 6.188,
+        "thatFrameGuestOffCpuMs": 42.843,
+        "disposeCallbackWallMs": 36.127,
+        "disposeCallbackGuestScheduledMs": 21.237
+      },
+      "settingsCb19557b": {
+        "openMs": 14.318,
+        "expandMs": 8.93,
+        "collapseMs": 9.384,
+        "closeMs": 12.385
+      },
+      "control749cd950": "Seven modules real open/drag-expand/auto-expand/auto-collapse/close endpoints PASS; appearance39.079ms, AutoPage28.658ms with GC, settings-close29.760ms motivated 036 caches. Not a fluent pass.",
+      "native749cd950": "Copy on worker 3.049-3.281ms, convert1.986-2.093ms; async completion1.142-3.474ms. Bounded samples, no GPU completion claim.",
+      "stress03670f1f": {
+        "fourModes": [
+          "slide",
+          "cover",
+          "simulation",
+          "none"
+        ],
+        "turns": 800,
+        "nextPerMode": 100,
+        "previousPerMode": 100,
+        "pagesPerChapterSeen": 10,
+        "status": "PASS",
+        "scope": "bounded chapter sweeps; not 100 uninterrupted distinct next pages and not rapid throughput",
+        "appPid": 7995,
+        "pssKiB": [
+          466157,
+          459362,
+          461020,
+          460848,
+          455814
+        ]
+      },
+      "control03670f1f": {
+        "functionalSevenModules": "PASS",
+        "appearanceDragExpandPeakMs": 9.841,
+        "autoPageDragExpandPeakMs": 16.118,
+        "settingsClosePeakMs": 5.795,
+        "remainingPeakTtsOpenMs": 28.439,
+        "remainingPeakTtsCollapseMs": 26.461,
+        "remainingPeakAppearanceOpenMs": 26.828,
+        "nextRepair": "90be6e9c separates scalar motion from module observer dependencies"
+      },
+      "control90be6e9c": {
+        "functionalSevenModules": "PASS",
+        "ttsOpenPeakMs": 7.157,
+        "ttsCollapsePeakMs": 12.494,
+        "remainingDirectoryDragPeakMs": 21.452,
+        "remainingSettingsDragPeakMs": 26.771,
+        "remainingExplanation": "GC and guest off-CPU; not zero long-frame acceptance",
+        "traces": "repair-validation-90be6e9c/trace-analysis.json"
+      },
+      "distinct5da12a49": {
+        "status": "PASS",
+        "totalTurns": 800,
+        "modes": [
+          {
+            "mode": "滑动",
+            "result": "distinct-100-slide-result.json",
+            "status": "PASS",
+            "elapsedSeconds": 310.59026383400004,
+            "extraReadTurns": 0
+          },
+          {
+            "mode": "覆盖",
+            "result": "distinct-100-cover-result.json",
+            "status": "PASS",
+            "elapsedSeconds": 310.44747912500003,
+            "extraReadTurns": 0
+          },
+          {
+            "mode": "仿真",
+            "result": "distinct-100-simulation-result.json",
+            "status": "PASS",
+            "elapsedSeconds": 310.11351824999997,
+            "extraReadTurns": 1
+          },
+          {
+            "mode": "无动画",
+            "result": "distinct-100-none-result.json",
+            "status": "PASS",
+            "elapsedSeconds": 333.21549029100004,
+            "extraReadTurns": 0
+          }
+        ],
+        "scope": "100 uninterrupted distinct next pages then 100 previous for each mode; edge taps; canonical source adjacency and reverse body identity; not rapid throughput"
+      },
+      "directory1368d485": {
+        "status": "PASS",
+        "roundtrips": 10,
+        "sourceFailure": "c0ac3193 deep chapter62 collapsed to52",
+        "result": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-1368d485/deep-directory-result.json"
+      },
+      "image1368d485": {
+        "canonicalBody": "four modes 8 next and 8 previous: exact body adjacency and reverse PASS; slide resumed last3 after strict pixel hash stop",
+        "imageEdges": "observed1px left edge difference on slide, retained; accepted geometry tolerance1px",
+        "nativePixels": "FAIL image omitted from native curled page while static current renders checkerboard",
+        "samples": [
+          "reader-control-image-simulation-origin.png",
+          "reader-control-image-native-next-0.png",
+          "reader-control-image-native-previous-0.png"
+        ]
+      },
+      "controlC0Isolated": {
+        "settingsMaxUiMs": [
+          8.121,
+          7.164,
+          6.611,
+          10.999,
+          7.452
+        ],
+        "directoryMaxUiMs": [
+          11.302,
+          8.617,
+          7.882,
+          10.852,
+          9.009
+        ],
+        "order": [
+          "open",
+          "dragExpand",
+          "autoExpand",
+          "collapse",
+          "close"
+        ],
+        "scope": "10 isolated short UI OnVsync wall samples; not fps/physical/user acceptance"
+      },
+      "rapidC0": {
+        "netTarget": "four modes 40 next and40 previous reached exact original/target",
+        "simulation": "forward observed16.633901s; reverse tool paused on hidden static text, read-only followup proved original page restored; reverse timing unavailable",
+        "scope": "fixed leaked tap intents; >=4.5pps not demonstrated"
+      }
+    },
+    "newChanges": [
+      "Physical static snapshot IDs per slot, never role transfer",
+      "Native PixelMap copy async worker; callback rechecks exact capture ownership before queue; surface epoch still checked",
+      "-O2 Native conversion/solver in signed debug build",
+      "No 20%-80% content-opacity plateau; automatic morph smoothstep across full path, preserves actor geometry and gesture continuation",
+      "No unused Canvas in offscreen static/ordinary inline-highlight ReadingSurface",
+      "Chrome metrics shared 64-entry LRU across offscreen instances",
+      "Appearance cached full/quick endpoint geometry, paint and font order; dimensions/drag/order invalidate",
+      "Panel clock session plain; per-actor scalar observation; stable semantic content route prevents every-frame module branch invalidation",
+      "Padded List content origin for canonical scroll save/restore and image fraction",
+      "Continuous raw DOWN/UP/CANCEL registers shared owner; disable/chapter/disappear releases",
+      "Coalesced generation/page/lifecycle-bound on-demand reading of evicted neighbouring chapters",
+      "Settings actor attributes share one p/width pose and one paint sample; immutable option arrays reused, live business state and clipping preserved",
+      "Regrab is admitted on page-owned MOVE; stationary rapid taps no longer replace prior in-flight release intent",
+      "Synchronous tapOnly transaction gate on DOWN and Watch prevents late declarative state from cancelling newly accepted input",
+      "Deep Directory capture uses actual visible row/rect and scrollToIndex fraction; estimated absolute offset is no longer used as semantic row",
+      "Cached texture slots no longer yield empty frames; queued/programmatic preparation follows net direction while respecting active finger",
+      "Image snapshots check decoder readiness, retain one tree for bounded async retries, reject placeholder publication; current image pages use checked capture too (VM pending)"
+    ],
+    "remaining": "原52项全部保留；当前优先修复1368 Native图文空白。滚动图片恢复、List/音量/Auto Page组合、吞吐、主题/分钟/高亮继续执行。",
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T120809Z-35f2f99a-a11ccc84/manifest.json",
+    "signedSha256": "8c689beb63f4306de2d8a5c8118aa1f6b32fea55ff7d39fa686ee1b78fcb462f",
+    "sourceSnapshotFiles": 512,
+    "controllerSnapshotFiles": 223,
+    "sourceDrift": 0,
+    "controllerDrift": 0,
+    "vmAppPid": 2181,
+    "vmDataPreserved": true,
+    "originalAnchorCase": {
+      "book": "绍宋",
+      "chapter": 34,
+      "page": "6/11",
+      "progress": "44%",
+      "targetKind": "physical",
+      "evidence": "TEST_PLAN.md; analysis-slide.md:47",
+      "warning": "VM 诡秘之主 and ReaderIndent fixture are not the original case; do not mark P08 closed from either."
+    },
+    "latestBuiltRun": "20260911T120809Z-35f2f99a-a11ccc84",
+    "latestBuiltSignedSha256": "8c689beb63f4306de2d8a5c8118aa1f6b32fea55ff7d39fa686ee1b78fcb462f",
+    "newScrollInsetRegression": {
+      "candidate": "90be6e9c",
+      "firstRestoreDeltaPx": 45,
+      "repeatDeltasPx": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cause": "getItemRect List-border coordinates saved against zero while START uses contentTop; a positive row y inside the top inset clamps to zero",
+      "repair": "save and restore relative to layout.contentTop; image fraction uses same origin",
+      "localRegression": "actual production methods: positive, zero-aligned and negative row positions; PASS",
+      "newCandidate": "20260911T044943Z-35f2f99a-78b275dc",
+      "newCandidateInstalled": true,
+      "vm78DeltasPx": [
+        -3,
+        0,
+        0,
+        4
+      ],
+      "vm78RepeatDeltasPx": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "vm90beEdgeInputs": {
+      "modes": [
+        "simulation",
+        "slide",
+        "cover",
+        "none"
+      ],
+      "casesPerMode": 6,
+      "status": "PASS",
+      "scope": "changed-UP coordinates without MOVE, 2 and 3 opposing pointers, next and previous; not moved QuietHold or CANCEL"
+    },
+    "vm90beLifecycle": {
+      "modes": [
+        "simulation",
+        "slide",
+        "cover",
+        "none"
+      ],
+      "homeForegroundCyclesPerMode": 3,
+      "status": "PASS",
+      "scope": "same PID, same settled body; not surface loss or process kill"
+    },
+    "installedRunId": "20260911T120809Z-35f2f99a-a11ccc84",
+    "installedManifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260911T120809Z-35f2f99a-a11ccc84/manifest.json",
+    "installedSignedSha256": "8c689beb63f4306de2d8a5c8118aa1f6b32fea55ff7d39fa686ee1b78fcb462f",
+    "latestCandidateVmTesting": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84",
+    "newContinuousPointerLease": {
+      "status": "IMPLEMENTED_LOCAL_PASS",
+      "issue": "native List did not acquire the shared owner until movement; stationary DOWN left Auto Page/volume unguarded",
+      "fix": "shared acquire/release callbacks on raw DOWN/UP/CANCEL; release on disable/chapter/disappear; extra finger ignored"
+    },
+    "evictedPreviousChapterRegression": {
+      "candidate": "78b275dc",
+      "result": "FAIL",
+      "nextPassed": 100,
+      "previousPassed": 4,
+      "cause": "previous body pruned after forward traversal; no demand reload before prepared turn",
+      "fix": "generation/page/lifecycle-bound coalesced neighbour read; retained current page; explicit retry on failure",
+      "nextBuild": "20260911T051040Z-35f2f99a-5da12a49",
+      "vm5daSameBoundary": "PASS chapter25 -> chapter24 tail -> chapter25; canonical original body restored"
+    },
+    "vm47Vertical": {
+      "status": "PASS",
+      "modes": [
+        "slide",
+        "cover",
+        "simulation",
+        "none"
+      ],
+      "scope": "upward previous across chapter boundary then horizontal next; exact canonical body restored"
+    },
+    "rapidTapRegression": {
+      "candidate": "47fc9bcb",
+      "mode": "slide",
+      "requested": 20,
+      "settled": 10,
+      "status": "FAIL",
+      "cause": "new DOWN regrab replaced in-flight accepted release; every second tap could re-release same page",
+      "repair": "only actual MOVE that claims page drag invokes regrab; tap and sparse-UP remain independent queued requests",
+      "localRegression": "both directions 20 stationary taps, one regrab pose, subsequent displacement, reservation promotion/cancel PASS",
+      "vmRepairStatus": "e5 20/20 each direction PASS; at higher frequency 40 requested settled36; c0 synchronous owner gate added, stale Prop cases PASS; VM repeat running"
+    },
+    "imageDecodeRepair": {
+      "03e2c12e": "FAIL: checked async offscreen capture prevents blank but disables Native; static image is not curl evidence",
+      "642f26c1": "Sampled curl image front/back/adjacent PASS; synchronous decode only idle snapshot tree; ordinary reading async; capability after images checked separately",
+      "trace": {
+        "appUIFrameMaxMs": 9.485,
+        "inputEvents": 65,
+        "frames": 79,
+        "scope": "one six-second public trace; no broad percentile/photon conclusion"
+      }
+    },
+    "continuousImageRestore": {
+      "run": "03e2c12e",
+      "status": "PASS",
+      "topDeltasPx": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "repair": "image content identity invalidates reused Blank branch",
+      "evidence": "repair-validation-03e2c12e/image-scroll-restore-result.json"
+    },
+    "continuousVolumeHold": {
+      "run": "03e2c12e",
+      "held": "PASS no viewport motion before UP",
+      "afterUp": "FAIL extra stationary long-press tap",
+      "repair": "b9011844 VM PASS: unheld volume baseline, 6s stationary hold with queued volume, viewport unchanged while held, exactly one scroll after UP, reverse restores",
+      "originalVolumeEnabled": false,
+      "temporarySettingRestored": true,
+      "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-b9011844/volume-hold-result.json"
+    },
+    "continuousModeAnchor": {
+      "run": "03e2c12e",
+      "status": "b9011844 warm and cold reopen image-book mode switch + 5 next/5 previous PASS canonical body/geometry",
+      "repair": "built b9011844 normalizes to containing canonical page; warm index/prefix reused, cold hidden frame-driven lane stops at containing page; VM pending",
+      "evidence": [
+        "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-b9011844/canonical-image-roundtrip-result.json",
+        "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-b9011844/cold-anchor-roundtrip-result.json"
+      ],
+      "harnessCorrection": "cold reopen first script recognized only chapter1; actual chapter2 opened correctly. Resumed from reading, no repeated open."
+    },
+    "pendingMonotonicDurationRepair": {
+      "implementation": "installed 557f7225; production methods, SDK member gate and full canonical build PASS",
+      "scope": "Auto Page interval and stop deadline; backdrop tap duration; PAGETURN_PERF elapsed use uptime. Calendar display and durable timestamps retained."
+    },
+    "currentSourceVsInstalled": {
+      "checkedAt": "2026-09-11T13:25:08.857088+00:00",
+      "source-snapshot.json": {
+        "files": 512,
+        "drift": []
+      },
+      "controller-snapshot.json": {
+        "files": 223,
+        "drift": []
+      }
+    },
+    "snapshotReuseRepair": {
+      "run": "20260911T091131Z-35f2f99a-557f7225",
+      "implementation": "installed c097; retained single ComponentContent and at most one interrupted completed PixelMap",
+      "runtime": "two next/two previous long-text chapter36/37 and image chapter2 canonical body PASS; actual curl text/image pixels inspected; text simulation capability still enabled",
+      "performance": "40+40 four-mode run in progress",
+      "rapidBudget": "queued rapid cap80ms both ArkUI and Native; normal programmatic cap320ms and hand gesture settle range retained",
+      "vm": "557 text/image curl pixels; e3 rapid trace ReadingSurface Build/Destroy 0, 27 uploads, max UI 21.243ms; c097 regression ongoing"
+    },
+    "b901Rapid40": {
+      "覆盖": {
+        "next": {
+          "injectionSeconds": 5.469229333,
+          "settledObservationUpperBoundSeconds": 9.60592175,
+          "conservativePagesPerSecond": 4.1640980471239,
+          "status": "PASS canonical net target"
+        },
+        "previous": {
+          "injectionSeconds": 5.487103750000001,
+          "settledObservationUpperBoundSeconds": 10.585884333000001,
+          "conservativePagesPerSecond": 3.7786167637696213,
+          "status": "PASS canonical net target"
+        },
+        "status": "PASS"
+      },
+      "滑动": {
+        "next": {
+          "injectionSeconds": 5.423837958999999,
+          "settledObservationUpperBoundSeconds": 9.669198625,
+          "conservativePagesPerSecond": 4.136847483573128,
+          "status": "PASS canonical net target"
+        },
+        "previous": {
+          "injectionSeconds": 5.459735332999998,
+          "settledObservationUpperBoundSeconds": 9.611897290999998,
+          "conservativePagesPerSecond": 4.161509303418545,
+          "status": "PASS canonical net target"
+        },
+        "status": "PASS"
+      },
+      "无动画": {
+        "next": {
+          "injectionSeconds": 5.54330325,
+          "settledObservationUpperBoundSeconds": 6.244449875,
+          "conservativePagesPerSecond": 6.40568837939467,
+          "status": "PASS canonical net target"
+        },
+        "previous": {
+          "injectionSeconds": 5.5418287500000005,
+          "settledObservationUpperBoundSeconds": 6.214096458,
+          "conservativePagesPerSecond": 6.436977647571624,
+          "status": "PASS canonical net target"
+        },
+        "status": "PASS"
+      },
+      "仿真": {
+        "next": {
+          "injectionSeconds": 5.463996416,
+          "settledObservationUpperBoundSeconds": 15.732701958,
+          "conservativePagesPerSecond": 2.5424749103354243,
+          "status": "PASS canonical net target"
+        },
+        "previous": {
+          "injectionSeconds": 5.475972541999997,
+          "settledObservationUpperBoundSeconds": 14.814197792000002,
+          "conservativePagesPerSecond": 2.7001124570917296,
+          "status": "PASS canonical net target"
+        },
+        "status": "PASS"
+      }
+    },
+    "b901NativeProfile": {
+      "turns": 24,
+      "uploads": 28,
+      "maxUIWallMs": 81.562,
+      "guestScheduledMs": 65.889,
+      "guestOffCpuMs": 15.673,
+      "maxReadingSurfaceBuildWallMs": 38.989,
+      "maxReadingSurfaceBuildScheduledMs": 37.543,
+      "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-b9011844/trace-analysis.json"
+    },
+    "e3AdditionalValidation": {
+      "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-e3bd9570",
+      "autoPageHold": "PASS: 12s stationary DOWN crosses 8s deadline, held unchanged, one stable post-release change; stopped and speed unchanged",
+      "directory": "PASS: chapter40 first row fraction 0.642857, 10 Full/Quick cycles within4px; tail139..150 three cycles",
+      "multiVolume": "FAIL: two horizontal pointers plus queued next crossed chapter36 tail into37; fixed producer ownership in c097; old failure retained",
+      "rapid40Seconds": [
+        10.610961125,
+        10.563329833
+      ],
+      "uiPeakMs": 21.243,
+      "guestScheduledPeakMs": 19.475,
+      "physical": "not used"
+    },
+    "newCompletedRepairs": [
+      {
+        "id": "snapshot-retain",
+        "source": "LocalReadingExperience.ets",
+        "detail": "one exact-identity CPU bitmap may survive capture-generation invalidation; publish still requires idle/mounted/current page epoch and Native gates; stale page/exit release once",
+        "tests": "production runtime late pointer/page/exit cases; e3 installed"
+      },
+      {
+        "id": "rapid-duration",
+        "detail": "queued completed taps 30ms cue; ordinary programmatic320ms, finger velocity80..320ms; same barriers retained",
+        "tests": "production timeline and 22 additional Native retain/commit/release checks; 199 barrier checks"
+      },
+      {
+        "id": "canonical-whitespace",
+        "detail": "measured head-prefix whitespace/leading delimiters match complete page-index boundaries instead of jumping to frontier",
+        "tests": "nine real-prefix/complete-index comparisons"
+      },
+      {
+        "id": "continuous-producer",
+        "detail": "queued programmatic scroll clears prior manual flag before scrolling, preventing extra chapter turn on reachEnd/Start",
+        "tests": "production both-direction ownership + manual edge behavior; c097 VM two/three fingers"
+      }
+    ],
+    "c097Rapid40": {
+      "slide": {
+        "status": "PASS",
+        "next": {
+          "injectionSeconds": 5.517514541000001,
+          "settledObservationUpperBoundSeconds": 6.294715958,
+          "conservativePagesPerSecond": 6.354536132669133,
+          "status": "PASS canonical net target"
+        },
+        "previous": {
+          "injectionSeconds": 5.500405333000002,
+          "settledObservationUpperBoundSeconds": 6.242011583,
+          "conservativePagesPerSecond": 6.408190607806502,
+          "status": "PASS canonical net target"
+        },
+        "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+      },
+      "cover": {
+        "status": "PASS",
+        "next": {
+          "injectionSeconds": 5.571466834000001,
+          "settledObservationUpperBoundSeconds": 6.361615584,
+          "conservativePagesPerSecond": 6.287710955154753,
+          "status": "PASS canonical net target"
+        },
+        "previous": {
+          "injectionSeconds": 5.478632292,
+          "settledObservationUpperBoundSeconds": 6.223750000000001,
+          "conservativePagesPerSecond": 6.426993372163084,
+          "status": "PASS canonical net target"
+        },
+        "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+      },
+      "none": {
+        "status": "PASS",
+        "next": {
+          "injectionSeconds": 5.526154957999999,
+          "settledObservationUpperBoundSeconds": 6.199388375,
+          "conservativePagesPerSecond": 6.452249412426916,
+          "status": "PASS canonical net target"
+        },
+        "previous": {
+          "injectionSeconds": 5.558361165999999,
+          "settledObservationUpperBoundSeconds": 6.271251040999999,
+          "conservativePagesPerSecond": 6.378312674534823,
+          "status": "PASS canonical net target"
+        },
+        "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+      },
+      "simulation": {
+        "status": "PASS",
+        "next": {
+          "injectionSeconds": 5.576237208,
+          "settledObservationUpperBoundSeconds": 10.435208375,
+          "conservativePagesPerSecond": 3.833176929732369,
+          "status": "PASS canonical net target"
+        },
+        "previous": {
+          "injectionSeconds": 5.538784542000002,
+          "settledObservationUpperBoundSeconds": 11.456121042,
+          "conservativePagesPerSecond": 3.491583220302361,
+          "status": "PASS canonical net target"
+        },
+        "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+      }
+    },
+    "c097MultiVolume": {
+      "status": "PASS",
+      "fingers": [
+        2,
+        3
+      ],
+      "scope": "2/3 simultaneous horizontally opposing pointers on native List plus volume next during contact; held viewport unchanged, one exact baseline viewport after release and previous restores. Extra-pointer early UP and system CANCEL separate.",
+      "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-c097f294/multi-volume-result.json"
+    },
+    "c097FinalRegression": {
+      "edge": "PASS all4 styles sparseUP/2f/3f both directions,24actions",
+      "lifecycle": "PASS all4 styles2 Home/foreground each,8cycles",
+      "textPixels": "2next2previous canonical, two curl PNGs visually inspected",
+      "falseFailure": "edge helper required middle page; first page valid, assertion corrected; no app defect",
+      "release": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-c097f294/VM_RELEASE.json"
+    },
+    "c097Performance": {
+      "rapid40": {
+        "slide": {
+          "next": {
+            "injectionSeconds": 5.517514541000001,
+            "settledObservationUpperBoundSeconds": 6.294715958,
+            "conservativePagesPerSecond": 6.354536132669133,
+            "status": "PASS canonical net target"
+          },
+          "previous": {
+            "injectionSeconds": 5.500405333000002,
+            "settledObservationUpperBoundSeconds": 6.242011583,
+            "conservativePagesPerSecond": 6.408190607806502,
+            "status": "PASS canonical net target"
+          },
+          "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+        },
+        "cover": {
+          "next": {
+            "injectionSeconds": 5.571466834000001,
+            "settledObservationUpperBoundSeconds": 6.361615584,
+            "conservativePagesPerSecond": 6.287710955154753,
+            "status": "PASS canonical net target"
+          },
+          "previous": {
+            "injectionSeconds": 5.478632292,
+            "settledObservationUpperBoundSeconds": 6.223750000000001,
+            "conservativePagesPerSecond": 6.426993372163084,
+            "status": "PASS canonical net target"
+          },
+          "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+        },
+        "none": {
+          "next": {
+            "injectionSeconds": 5.526154957999999,
+            "settledObservationUpperBoundSeconds": 6.199388375,
+            "conservativePagesPerSecond": 6.452249412426916,
+            "status": "PASS canonical net target"
+          },
+          "previous": {
+            "injectionSeconds": 5.558361165999999,
+            "settledObservationUpperBoundSeconds": 6.271251040999999,
+            "conservativePagesPerSecond": 6.378312674534823,
+            "status": "PASS canonical net target"
+          },
+          "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+        },
+        "simulation": {
+          "next": {
+            "injectionSeconds": 5.576237208,
+            "settledObservationUpperBoundSeconds": 10.435208375,
+            "conservativePagesPerSecond": 3.833176929732369,
+            "status": "PASS canonical net target"
+          },
+          "previous": {
+            "injectionSeconds": 5.538784542000002,
+            "settledObservationUpperBoundSeconds": 11.456121042,
+            "conservativePagesPerSecond": 3.491583220302361,
+            "status": "PASS canonical net target"
+          },
+          "scope": "40 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+        }
+      },
+      "traceMaxUiMs": 49.966,
+      "readingSurfaceCustomMaxMs": 27.386,
+      "scope": "repeated dumpLayout during Native drain affects throughput; guest UI task wall time, not display frames"
+    },
+    "unobservedNative40": {
+      "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/native-unobserved40-result.json",
+      "status": "PASS",
+      "scope": "40 real public DOWN/UP taps each direction; no UI reads during drain; ACTIVE-uptime first transaction start to final presentation-resource-release completion. Excludes preparation before first transaction, does not prove every display frame or touch-to-photon latency.",
+      "directions": {
+        "next": {
+          "transactionSpanMs": 7564,
+          "transactionPagesPerSecond": 5.288207297726071,
+          "sumTransactionMs": 3822,
+          "injectionSeconds": 5.576318292000001
+        },
+        "previous": {
+          "transactionSpanMs": 7172,
+          "transactionPagesPerSecond": 5.577244841048522,
+          "sumTransactionMs": 3686,
+          "injectionSeconds": 5.531455332999997
+        }
+      }
+    },
+    "movedHoldEvidence": {
+      "simulation": {
+        "status": "PASS",
+        "scope": "public uinput move400ms then keep6000ms; screenshots1.2/3/5s compare body while command remains alive; exact canonical release and reverse restoration. Input tool keep behavior follows live help, no claim of first-event touch-to-photon timing.",
+        "directions": [
+          {
+            "direction": "next",
+            "bodyMeanDifferenceHeldFirstLast": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.527561249999999
+          },
+          {
+            "direction": "previous",
+            "bodyMeanDifferenceHeldFirstLast": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.525034874999999
+          }
+        ]
+      },
+      "slide": {
+        "status": "PASS",
+        "scope": "public uinput move400ms then keep6000ms; screenshots1.2/3/5s compare body while command remains alive; exact canonical release and reverse restoration. Input tool keep behavior follows live help, no claim of first-event touch-to-photon timing.",
+        "directions": [
+          {
+            "direction": "next",
+            "bodyMeanDifferenceHeldFirstLast": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.5239013329999995
+          },
+          {
+            "direction": "previous",
+            "bodyMeanDifferenceHeldFirstLast": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.532186416999998
+          }
+        ]
+      },
+      "cover": {
+        "status": "PASS",
+        "scope": "public uinput move400ms then keep6000ms; screenshots1.2/3/5s compare body while command remains alive; exact canonical release and reverse restoration. Input tool keep behavior follows live help, no claim of first-event touch-to-photon timing.",
+        "directions": [
+          {
+            "direction": "next",
+            "bodyMeanDifferenceHeldFirstLast": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.524371
+          },
+          {
+            "direction": "previous",
+            "bodyMeanDifferenceHeldFirstLast": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.528050875000002
+          }
+        ]
+      },
+      "none": {
+        "status": "PASS",
+        "scope": "public uinput move400ms then keep6000ms; screenshots1.2/3/5s compare body while command remains alive; exact canonical release and reverse restoration. Input tool keep behavior follows live help, no claim of first-event touch-to-photon timing.",
+        "directions": [
+          {
+            "direction": "next",
+            "bodyMeanDifferenceHeldFirstLast": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.524461625000001
+          },
+          {
+            "direction": "previous",
+            "bodyMeanDifferenceHeldFirstLast": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.5413274170000015
+          }
+        ]
+      }
+    },
+    "directoryMutations": {
+      "status": "PASS",
+      "results": {
+        "top": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "descending": [
+          150,
+          149,
+          148,
+          147,
+          146,
+          145,
+          144,
+          143,
+          142,
+          141,
+          140,
+          139
+        ],
+        "ascending": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "filtered": [
+          149
+        ],
+        "afterAddFiltered": [
+          149
+        ],
+        "bookmarkTexts": [
+          "保持原来的顺序。这里的编号是测试",
+          "文本的一部分。",
+          "【章037段03】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把",
+          "这一段的位置写进册子，用来核对翻",
+          "ReaderPagingAudit20260911",
+          "19:06",
+          "24%",
+          "第 1 / 4 页",
+          "ReaderPagingAudit20260911",
+          "第37章 连续翻页验证 · 本地书籍",
+          "章节",
+          "书签",
+          "149",
+          "第149章 连续翻页验证",
+          "偏移 0",
+          "01-01 08:00",
+          "书签",
+          "收起",
+          "关闭控制栏并返回阅读"
+        ],
+        "afterDeleteTexts": [
+          "保持原来的顺序。这里的编号是测试",
+          "文本的一部分。",
+          "【章037段03】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把",
+          "这一段的位置写进册子，用来核对翻",
+          "ReaderPagingAudit20260911",
+          "19:06",
+          "24%",
+          "第 1 / 4 页",
+          "ReaderPagingAudit20260911",
+          "第37章 连续翻页验证 · 本地书籍",
+          "章节",
+          "书签",
+          "149",
+          "暂无书签",
+          "在阅读页面点按书签图标即可收藏当前位置",
+          "返回目录",
+          "书签",
+          "收起",
+          "关闭控制栏并返回阅读"
+        ],
+        "clearedFilter": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "scope": "150 self-authored chapters; descending and filtered rows each three Full/Quick cycles; chapter149 bookmark add/tab/delete; ascending and empty query restored; real remote late data is separate"
+    },
+    "hiddenReserveRepair": {
+      "source": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "behavior": "Native/none no longer clear outgoing text on each physical-slot rotation; retained hidden page has no input/a11y ownership, cold spare remains empty, current slot uses fresh revision",
+      "tests": "production cold reserve/provider avoidance/hidden visibility/promoted revision acknowledgement cases, full181 groups andNative235/538/373/199 passed"
+    },
+    "previous986Boundary": {
+      "first": "PASS all4 modes",
+      "last": "PASS none/slide/cover; simulation committed matching150p3 screenshot but canonical dump failed",
+      "exception": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/boundary-accessibility-exception.json",
+      "appPid": 9975,
+      "release": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-98686c3b/VM_RELEASE.json",
+      "newAppLayout": "4a09 normal launch and same book now readable; cause of old empty root remains unproven"
+    },
+    "currentUnobservedNative40": {
+      "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/native-unobserved40-result.json",
+      "status": "PASS",
+      "scope": "40 real public DOWN/UP taps each direction; no UI reads during drain; ACTIVE-uptime first transaction start to final presentation-resource-release completion. Excludes preparation before first transaction, does not prove every display frame or touch-to-photon latency.",
+      "directions": {
+        "next": {
+          "transactionSpanMs": 7075,
+          "transactionPagesPerSecond": 5.6537102473498235,
+          "sumTransactionMs": 3598,
+          "injectionSeconds": 5.468713875
+        },
+        "previous": {
+          "transactionSpanMs": 7053,
+          "transactionPagesPerSecond": 5.671345526726216,
+          "sumTransactionMs": 3620,
+          "injectionSeconds": 5.511826791000001
+        }
+      }
+    },
+    "currentMovedHold": {
+      "simulation": {
+        "status": "PASS",
+        "scope": "public uinput move400ms then keep6000ms; screenshots1.2/3/5s compare body while command remains alive; exact canonical release and reverse restoration. Input tool keep behavior follows live help, no claim of first-event touch-to-photon timing.",
+        "directions": [
+          {
+            "direction": "next",
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.526198542
+          },
+          {
+            "direction": "previous",
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.526411750000001
+          }
+        ]
+      },
+      "none": {
+        "status": "PASS",
+        "scope": "public uinput move400ms then keep6000ms; screenshots1.2/3/5s compare body while command remains alive; exact canonical release and reverse restoration. Input tool keep behavior follows live help, no claim of first-event touch-to-photon timing.",
+        "directions": [
+          {
+            "direction": "next",
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.523829000000001
+          },
+          {
+            "direction": "previous",
+            "bodyChangedPixelsOver8": 0,
+            "inputElapsedSeconds": 6.527118583
+          }
+        ]
+      }
+    },
+    "directoryMutations986": {
+      "status": "PASS",
+      "results": {
+        "top": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "descending": [
+          150,
+          149,
+          148,
+          147,
+          146,
+          145,
+          144,
+          143,
+          142,
+          141,
+          140,
+          139
+        ],
+        "ascending": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "filtered": [
+          149
+        ],
+        "afterAddFiltered": [
+          149
+        ],
+        "bookmarkTexts": [
+          "保持原来的顺序。这里的编号是测试",
+          "文本的一部分。",
+          "【章037段03】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把",
+          "这一段的位置写进册子，用来核对翻",
+          "ReaderPagingAudit20260911",
+          "19:06",
+          "24%",
+          "第 1 / 4 页",
+          "ReaderPagingAudit20260911",
+          "第37章 连续翻页验证 · 本地书籍",
+          "章节",
+          "书签",
+          "149",
+          "第149章 连续翻页验证",
+          "偏移 0",
+          "01-01 08:00",
+          "书签",
+          "收起",
+          "关闭控制栏并返回阅读"
+        ],
+        "afterDeleteTexts": [
+          "保持原来的顺序。这里的编号是测试",
+          "文本的一部分。",
+          "【章037段03】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把",
+          "这一段的位置写进册子，用来核对翻",
+          "ReaderPagingAudit20260911",
+          "19:06",
+          "24%",
+          "第 1 / 4 页",
+          "ReaderPagingAudit20260911",
+          "第37章 连续翻页验证 · 本地书籍",
+          "章节",
+          "书签",
+          "149",
+          "暂无书签",
+          "在阅读页面点按书签图标即可收藏当前位置",
+          "返回目录",
+          "书签",
+          "收起",
+          "关闭控制栏并返回阅读"
+        ],
+        "clearedFilter": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "scope": "150 self-authored chapters; descending and filtered rows each three Full/Quick cycles; chapter149 bookmark add/tab/delete; ascending and empty query restored; real remote late data is separate"
+    },
+    "currentAdditionalVm": {
+      "native-rapid-profile-turns": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/native-rapid-profile-turns-result.json",
+        "result": {
+          "mode": "仿真",
+          "count": 12,
+          "intervalMs": 30,
+          "origin": {
+            "slot": "reader-page-slot-a",
+            "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+            "chapter": 37,
+            "ordinal": 1,
+            "total": 4,
+            "start": 0,
+            "end": 260,
+            "bodyLength": 260,
+            "first": [
+              "【章037段01】晨光从窗边照进阅览",
+              "室，纸上的文字依次展开。记录者把"
+            ],
+            "footer": "第 1 / 4 页"
+          },
+          "expected": {
+            "slot": "reader-page-slot-a",
+            "sha256": "916038f485dce6a07d81dc3160c7b789ae57784519051c9b57f8d9f268947ce7",
+            "chapter": 40,
+            "ordinal": 1,
+            "total": null,
+            "start": 0,
+            "end": 260,
+            "bodyLength": 260,
+            "first": [
+              "【章040段01】晨光从窗边照进阅览",
+              "室，纸上的文字依次展开。记录者把"
+            ],
+            "footer": "第 1 页"
+          },
+          "samples": [
+            {
+              "direction": "next",
+              "elapsedSeconds": 2.411701333,
+              "visibleSlots": 1,
+              "current": {
+                "slot": "reader-page-slot-b",
+                "sha256": "c6d91adba1ef0fe44119974ee55c04127ff29f524b792f0d53707ff84c7f7015",
+                "chapter": 39,
+                "ordinal": 4,
+                "total": 4,
+                "start": 801,
+                "end": 1050,
+                "bodyLength": 249,
+                "first": [
+                  "暂停后又继续，段落边界和换行都应",
+                  "保持原来的顺序。这里的编号是测试"
+                ],
+                "footer": "第 4 / 4 页"
+              }
+            },
+            {
+              "direction": "next",
+              "elapsedSeconds": 3.292429083,
+              "visibleSlots": 1,
+              "current": {
+                "slot": "reader-page-slot-a",
+                "sha256": "916038f485dce6a07d81dc3160c7b789ae57784519051c9b57f8d9f268947ce7",
+                "chapter": 40,
+                "ordinal": 1,
+                "total": null,
+                "start": 0,
+                "end": 260,
+                "bodyLength": 260,
+                "first": [
+                  "【章040段01】晨光从窗边照进阅览",
+                  "室，纸上的文字依次展开。记录者把"
+                ],
+                "footer": "第 1 页"
+              }
+            },
+            {
+              "direction": "previous",
+              "elapsedSeconds": 2.376759625,
+              "visibleSlots": 1,
+              "current": {
+                "slot": "reader-page-slot-b",
+                "sha256": "38d3594f312aacdffacb313be19de78bf3097ec46c84b94b73e6f51d107fff4e",
+                "chapter": 37,
+                "ordinal": 2,
+                "total": 4,
+                "start": 260,
+                "end": 525,
+                "bodyLength": 265,
+                "first": [
+                  "到前页和后页时是否仍然连续。阅读",
+                  "暂停后又继续，段落边界和换行都应"
+                ],
+                "footer": "第 2 / 4 页"
+              }
+            },
+            {
+              "direction": "previous",
+              "elapsedSeconds": 3.2692106669999994,
+              "visibleSlots": 1,
+              "current": {
+                "slot": "reader-page-slot-a",
+                "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+                "chapter": 37,
+                "ordinal": 1,
+                "total": 4,
+                "start": 0,
+                "end": 260,
+                "bodyLength": 260,
+                "first": [
+                  "【章037段01】晨光从窗边照进阅览",
+                  "室，纸上的文字依次展开。记录者把"
+                ],
+                "footer": "第 1 / 4 页"
+              }
+            }
+          ],
+          "next": {
+            "injectionSeconds": 1.722880708,
+            "settledObservationUpperBoundSeconds": 3.292429083,
+            "conservativePagesPerSecond": 3.64472542839581,
+            "status": "PASS canonical net target"
+          },
+          "previous": {
+            "injectionSeconds": 1.7110306669999993,
+            "settledObservationUpperBoundSeconds": 3.2692106669999994,
+            "conservativePagesPerSecond": 3.670610805577676,
+            "status": "PASS canonical net target"
+          },
+          "status": "PASS",
+          "scope": "12 public DOWN/UP edge taps per direction; net canonical target only, intermediate pages and display throughput require separate evidence; elapsed includes host/transport/dump overhead"
+        }
+      },
+      "text-pool": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/text-pool-result.json",
+        "result": {
+          "status": "PASS canonical body",
+          "samples": [
+            {
+              "label": "text-pool-next-1",
+              "source": {
+                "slot": "reader-page-slot-a",
+                "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+                "chapter": 37,
+                "ordinal": 1,
+                "total": 4,
+                "start": 0,
+                "end": 260,
+                "bodyLength": 260,
+                "first": [
+                  "【章037段01】晨光从窗边照进阅览",
+                  "室，纸上的文字依次展开。记录者把"
+                ],
+                "footer": "第 1 / 4 页"
+              },
+              "destination": {
+                "slot": "reader-page-slot-b",
+                "sha256": "38d3594f312aacdffacb313be19de78bf3097ec46c84b94b73e6f51d107fff4e",
+                "chapter": 37,
+                "ordinal": 2,
+                "total": 4,
+                "start": 260,
+                "end": 525,
+                "bodyLength": 265,
+                "first": [
+                  "到前页和后页时是否仍然连续。阅读",
+                  "暂停后又继续，段落边界和换行都应"
+                ],
+                "footer": "第 2 / 4 页"
+              }
+            },
+            {
+              "label": "text-pool-next-2",
+              "source": {
+                "slot": "reader-page-slot-b",
+                "sha256": "38d3594f312aacdffacb313be19de78bf3097ec46c84b94b73e6f51d107fff4e",
+                "chapter": 37,
+                "ordinal": 2,
+                "total": 4,
+                "start": 260,
+                "end": 525,
+                "bodyLength": 265,
+                "first": [
+                  "到前页和后页时是否仍然连续。阅读",
+                  "暂停后又继续，段落边界和换行都应"
+                ],
+                "footer": "第 2 / 4 页"
+              },
+              "destination": {
+                "slot": "reader-page-slot-a",
+                "sha256": "b1fc880585e1aa1dbcd1e18f998d7e9fd31fcf8d74ee62eaf4c4c79537b51e9b",
+                "chapter": 37,
+                "ordinal": 3,
+                "total": 4,
+                "start": 525,
+                "end": 801,
+                "bodyLength": 276,
+                "first": [
+                  "【章037段06】晨光从窗边照进阅览",
+                  "室，纸上的文字依次展开。记录者把"
+                ],
+                "footer": "第 3 / 4 页"
+              }
+            },
+            {
+              "label": "text-pool-previous-1",
+              "source": {
+                "slot": "reader-page-slot-a",
+                "sha256": "b1fc880585e1aa1dbcd1e18f998d7e9fd31fcf8d74ee62eaf4c4c79537b51e9b",
+                "chapter": 37,
+                "ordinal": 3,
+                "total": 4,
+                "start": 525,
+                "end": 801,
+                "bodyLength": 276,
+                "first": [
+                  "【章037段06】晨光从窗边照进阅览",
+                  "室，纸上的文字依次展开。记录者把"
+                ],
+                "footer": "第 3 / 4 页"
+              },
+              "destination": {
+                "slot": "reader-page-slot-b",
+                "sha256": "38d3594f312aacdffacb313be19de78bf3097ec46c84b94b73e6f51d107fff4e",
+                "chapter": 37,
+                "ordinal": 2,
+                "total": 4,
+                "start": 260,
+                "end": 525,
+                "bodyLength": 265,
+                "first": [
+                  "到前页和后页时是否仍然连续。阅读",
+                  "暂停后又继续，段落边界和换行都应"
+                ],
+                "footer": "第 2 / 4 页"
+              }
+            },
+            {
+              "label": "text-pool-previous-2",
+              "source": {
+                "slot": "reader-page-slot-b",
+                "sha256": "38d3594f312aacdffacb313be19de78bf3097ec46c84b94b73e6f51d107fff4e",
+                "chapter": 37,
+                "ordinal": 2,
+                "total": 4,
+                "start": 260,
+                "end": 525,
+                "bodyLength": 265,
+                "first": [
+                  "到前页和后页时是否仍然连续。阅读",
+                  "暂停后又继续，段落边界和换行都应"
+                ],
+                "footer": "第 2 / 4 页"
+              },
+              "destination": {
+                "slot": "reader-page-slot-a",
+                "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+                "chapter": 37,
+                "ordinal": 1,
+                "total": 4,
+                "start": 0,
+                "end": 260,
+                "bodyLength": 260,
+                "first": [
+                  "【章037段01】晨光从窗边照进阅览",
+                  "室，纸上的文字依次展开。记录者把"
+                ],
+                "footer": "第 1 / 4 页"
+              }
+            }
+          ],
+          "scope": "sampled actual curl pixels must be inspected separately for stale offscreen input"
+        }
+      },
+      "image-day": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/image-day-result.json",
+        "result": {
+          "status": "PASS canonical body",
+          "samples": [
+            {
+              "label": "image-day-next-1",
+              "source": {
+                "chapter": 2,
+                "ordinal": 1,
+                "start": 0,
+                "end": 161,
+                "sha256": "8d0f1329fb773159837c08570335319a60cce9d2b9864949dbb63d8d35c39ff7",
+                "body": "【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻",
+                "images": [
+                  "[112,1389][1168,2093]"
+                ],
+                "footer": "第 1 / 5 页"
+              },
+              "destination": {
+                "chapter": 2,
+                "ordinal": 2,
+                "start": 161,
+                "end": 384,
+                "sha256": "e930e48b031110fb88d246daeb65b637769b93dbfc0b68c0169764744fceb655",
+                "body": "页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [],
+                "footer": "第 2 / 5 页"
+              }
+            },
+            {
+              "label": "image-day-next-2",
+              "source": {
+                "chapter": 2,
+                "ordinal": 2,
+                "start": 161,
+                "end": 384,
+                "sha256": "e930e48b031110fb88d246daeb65b637769b93dbfc0b68c0169764744fceb655",
+                "body": "页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [],
+                "footer": "第 2 / 5 页"
+              },
+              "destination": {
+                "chapter": 2,
+                "ordinal": 3,
+                "start": 384,
+                "end": 576,
+                "sha256": "c6b320c3b60e3be9b95e651b6383f373e47170024644f3cce5c6d001e640e3b4",
+                "body": "【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [
+                  "[112,252][1168,956]"
+                ],
+                "footer": "第 3 / 5 页"
+              }
+            },
+            {
+              "label": "image-day-previous-1",
+              "source": {
+                "chapter": 2,
+                "ordinal": 3,
+                "start": 384,
+                "end": 576,
+                "sha256": "c6b320c3b60e3be9b95e651b6383f373e47170024644f3cce5c6d001e640e3b4",
+                "body": "【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [
+                  "[112,252][1168,956]"
+                ],
+                "footer": "第 3 / 5 页"
+              },
+              "destination": {
+                "chapter": 2,
+                "ordinal": 2,
+                "start": 161,
+                "end": 384,
+                "sha256": "e930e48b031110fb88d246daeb65b637769b93dbfc0b68c0169764744fceb655",
+                "body": "页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [],
+                "footer": "第 2 / 5 页"
+              }
+            },
+            {
+              "label": "image-day-previous-2",
+              "source": {
+                "chapter": 2,
+                "ordinal": 2,
+                "start": 161,
+                "end": 384,
+                "sha256": "e930e48b031110fb88d246daeb65b637769b93dbfc0b68c0169764744fceb655",
+                "body": "页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [],
+                "footer": "第 2 / 5 页"
+              },
+              "destination": {
+                "chapter": 2,
+                "ordinal": 1,
+                "start": 0,
+                "end": 161,
+                "sha256": "8d0f1329fb773159837c08570335319a60cce9d2b9864949dbb63d8d35c39ff7",
+                "body": "【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻",
+                "images": [
+                  "[112,1389][1168,2093]"
+                ],
+                "footer": "第 1 / 5 页"
+              }
+            }
+          ],
+          "scope": "sampled actual curl pixels must be inspected separately for stale offscreen input"
+        }
+      },
+      "image-night": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/image-night-result.json",
+        "result": {
+          "status": "PASS canonical body",
+          "samples": [
+            {
+              "label": "image-night-next-1",
+              "source": {
+                "chapter": 2,
+                "ordinal": 1,
+                "start": 0,
+                "end": 161,
+                "sha256": "8d0f1329fb773159837c08570335319a60cce9d2b9864949dbb63d8d35c39ff7",
+                "body": "【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻",
+                "images": [
+                  "[112,1389][1168,2093]"
+                ],
+                "footer": "第 1 / 5 页"
+              },
+              "destination": {
+                "chapter": 2,
+                "ordinal": 2,
+                "start": 161,
+                "end": 384,
+                "sha256": "e930e48b031110fb88d246daeb65b637769b93dbfc0b68c0169764744fceb655",
+                "body": "页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [],
+                "footer": "第 2 / 5 页"
+              }
+            },
+            {
+              "label": "image-night-next-2",
+              "source": {
+                "chapter": 2,
+                "ordinal": 2,
+                "start": 161,
+                "end": 384,
+                "sha256": "e930e48b031110fb88d246daeb65b637769b93dbfc0b68c0169764744fceb655",
+                "body": "页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [],
+                "footer": "第 2 / 5 页"
+              },
+              "destination": {
+                "chapter": 2,
+                "ordinal": 3,
+                "start": 384,
+                "end": 576,
+                "sha256": "c6b320c3b60e3be9b95e651b6383f373e47170024644f3cce5c6d001e640e3b4",
+                "body": "【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [
+                  "[112,252][1168,956]"
+                ],
+                "footer": "第 3 / 5 页"
+              }
+            },
+            {
+              "label": "image-night-previous-1",
+              "source": {
+                "chapter": 2,
+                "ordinal": 3,
+                "start": 384,
+                "end": 576,
+                "sha256": "c6b320c3b60e3be9b95e651b6383f373e47170024644f3cce5c6d001e640e3b4",
+                "body": "【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [
+                  "[112,252][1168,956]"
+                ],
+                "footer": "第 3 / 5 页"
+              },
+              "destination": {
+                "chapter": 2,
+                "ordinal": 2,
+                "start": 161,
+                "end": 384,
+                "sha256": "e930e48b031110fb88d246daeb65b637769b93dbfc0b68c0169764744fceb655",
+                "body": "页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [],
+                "footer": "第 2 / 5 页"
+              }
+            },
+            {
+              "label": "image-night-previous-2",
+              "source": {
+                "chapter": 2,
+                "ordinal": 2,
+                "start": 161,
+                "end": 384,
+                "sha256": "e930e48b031110fb88d246daeb65b637769b93dbfc0b68c0169764744fceb655",
+                "body": "页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+                "images": [],
+                "footer": "第 2 / 5 页"
+              },
+              "destination": {
+                "chapter": 2,
+                "ordinal": 1,
+                "start": 0,
+                "end": 161,
+                "sha256": "8d0f1329fb773159837c08570335319a60cce9d2b9864949dbb63d8d35c39ff7",
+                "body": "【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻",
+                "images": [
+                  "[112,1389][1168,2093]"
+                ],
+                "footer": "第 1 / 5 页"
+              }
+            }
+          ],
+          "scope": "sampled actual curl pixels must be inspected separately for stale offscreen input"
+        }
+      },
+      "theme-paper-restore": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-4a09d31d/theme-paper-restore-result.json",
+        "result": {
+          "status": "selected exact palette swatch and closed controls",
+          "color": "#FFF5EAD8",
+          "scope": "reading screenshot must be checked for applied paper palette; day/night defaults not changed"
+        }
+      }
+    },
+    "controlInputClock35": {
+      "source": "ReaderControlPanel.ets + ReaderControlRuntime.ts",
+      "productionTest": "DOWN5000/MOVE5010/UP4990ms plus missing/negative/zeroUP; extra pointer cannot release active pointer; previousproduction code retained owner7, repairedcode releases andsettles",
+      "boundary": "4a09 original20percentfreeze did not record raw timestamps; clock reset is a proven code defect, not direct measurement of that old event"
+    },
+    "controlSubpixel37": {
+      "source": "ReaderControlSpatialPath.ts",
+      "failureEvidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-0a4b08bc/control-held-failures-summary.json",
+      "cause": "reachable projection reconstructed screenY withULP rounding and returned tiny negative remainingDelta; driver interpreted it as blocked out-of-bounds travel and swallowed subsequent same-directionMOVE",
+      "fix": "reachable projection returns exactly0 residual; unreachable edge residual retained",
+      "tests": "3 densities x4 step counts x5 partial/reversing segments; eachMOVE checks screen coordinate, exactly0 unreachable residue andretainedpointer; existingrealovershoot/reversal cases pass",
+      "reproduction": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/reader-control-float-before-fix.log"
+    },
+    "a11VmResults": {
+      "expand-held-timeline": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/expand-held-timeline-result.json",
+        "result": {
+          "status": "PASS",
+          "quickY": 1628,
+          "fullY": 357,
+          "cases": [
+            {
+              "direction": "expand",
+              "fraction": 0.2,
+              "requestedY": 1374,
+              "samples": [
+                {
+                  "requestedAtSec": 1.2,
+                  "dumpStartSec": 1.2080425000000004,
+                  "dumpEndSec": 1.8807515419999996,
+                  "observedY": 1374,
+                  "errorPx": 0,
+                  "stillHeld": true
+                },
+                {
+                  "requestedAtSec": 3,
+                  "dumpStartSec": 3.0023456669999993,
+                  "dumpEndSec": 3.6904824169999992,
+                  "observedY": 1374,
+                  "errorPx": 0,
+                  "stillHeld": true
+                },
+                {
+                  "requestedAtSec": 7,
+                  "dumpStartSec": 7.000177957999999,
+                  "dumpEndSec": 7.671614333,
+                  "observedY": 1374,
+                  "errorPx": 0,
+                  "stillHeld": true
+                }
+              ],
+              "settledY": 357
+            },
+            {
+              "direction": "expand",
+              "fraction": 0.5,
+              "requestedY": 992,
+              "samples": [
+                {
+                  "requestedAtSec": 1.2,
+                  "dumpStartSec": 1.205790167,
+                  "dumpEndSec": 1.8966460830000003,
+                  "observedY": 992,
+                  "errorPx": 0,
+                  "stillHeld": true
+                },
+                {
+                  "requestedAtSec": 3,
+                  "dumpStartSec": 3.004297458,
+                  "dumpEndSec": 3.6745453329999975,
+                  "observedY": 992,
+                  "errorPx": 0,
+                  "stillHeld": true
+                },
+                {
+                  "requestedAtSec": 7,
+                  "dumpStartSec": 7.001247874999997,
+                  "dumpEndSec": 7.655957999999998,
+                  "observedY": 992,
+                  "errorPx": 0,
+                  "stillHeld": true
+                }
+              ],
+              "settledY": 357
+            },
+            {
+              "direction": "expand",
+              "fraction": 0.8,
+              "requestedY": 611,
+              "samples": [
+                {
+                  "requestedAtSec": 1.2,
+                  "dumpStartSec": 1.2077039159999998,
+                  "dumpEndSec": 1.8989892499999996,
+                  "observedY": 611,
+                  "errorPx": 0,
+                  "stillHeld": true
+                },
+                {
+                  "requestedAtSec": 3,
+                  "dumpStartSec": 3.007222290999998,
+                  "dumpEndSec": 3.6990770000000026,
+                  "observedY": 611,
+                  "errorPx": 0,
+                  "stillHeld": true
+                },
+                {
+                  "requestedAtSec": 7,
+                  "dumpStartSec": 7.0074635,
+                  "dumpEndSec": 7.682544290999999,
+                  "observedY": 611,
+                  "errorPx": 0,
+                  "stillHeld": true
+                }
+              ],
+              "settledY": 357
+            }
+          ]
+        }
+      },
+      "control-regrab-timed10": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/control-regrab-timed10-result.json",
+        "result": {
+          "status": "PASS",
+          "rounds": [
+            {
+              "round": 1,
+              "requestedContactY": 1399,
+              "heldY": [
+                1393,
+                1393
+              ],
+              "heldProgress": [
+                0.1848937844217152,
+                0.1848937844217152
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 2,
+              "requestedContactY": 1399,
+              "heldY": [
+                1443,
+                1443
+              ],
+              "heldProgress": [
+                0.14555468135326516,
+                0.14555468135326516
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 3,
+              "requestedContactY": 1399,
+              "heldY": [
+                1416,
+                1416
+              ],
+              "heldProgress": [
+                0.16679779701022818,
+                0.16679779701022818
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 4,
+              "requestedContactY": 1399,
+              "heldY": [
+                1407,
+                1407
+              ],
+              "heldProgress": [
+                0.17387883556254918,
+                0.17387883556254918
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 5,
+              "requestedContactY": 1399,
+              "heldY": [
+                1411,
+                1411
+              ],
+              "heldProgress": [
+                0.17073170731707318,
+                0.17073170731707318
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 6,
+              "requestedContactY": 1399,
+              "heldY": [
+                1402,
+                1402
+              ],
+              "heldProgress": [
+                0.1778127458693942,
+                0.1778127458693942
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 7,
+              "requestedContactY": 1399,
+              "heldY": [
+                1388,
+                1388
+              ],
+              "heldProgress": [
+                0.1888276947285602,
+                0.1888276947285602
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 8,
+              "requestedContactY": 1399,
+              "heldY": [
+                1383,
+                1383
+              ],
+              "heldProgress": [
+                0.19276160503540518,
+                0.19276160503540518
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 9,
+              "requestedContactY": 1399,
+              "heldY": [
+                1443,
+                1443
+              ],
+              "heldProgress": [
+                0.14555468135326516,
+                0.14555468135326516
+              ],
+              "settledY": 1628
+            },
+            {
+              "round": 10,
+              "requestedContactY": 1399,
+              "heldY": [
+                1434,
+                1434
+              ],
+              "heldProgress": [
+                0.15263571990558616,
+                0.15263571990558616
+              ],
+              "settledY": 1628
+            }
+          ],
+          "scope": "single public uinput command tap starts autoexpand, secondDOWN requested50mslater pauses intermediatepose4s; finalUP35pxdown reverses toQuick; notcontinuousMOVEregrab orprecisephysical latency"
+        }
+      },
+      "final-settings": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/final-settings-result.json",
+        "result": {
+          "status": "PASS",
+          "module": "设置",
+          "scope": "open, drag expand, automatic expand, automatic collapse, drag close; endpoint geometry only; trace performance separate"
+        }
+      },
+      "final-directory": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/final-directory-result.json",
+        "result": {
+          "status": "PASS",
+          "module": "目录",
+          "scope": "open, drag expand, automatic expand, automatic collapse, drag close; endpoint geometry only; trace performance separate"
+        }
+      },
+      "rotation-roundtrip": {
+        "evidence": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/rotation-roundtrip-result.json",
+        "result": {
+          "status": "PASS",
+          "appPid": 2181,
+          "origin": {
+            "slot": "reader-page-slot-a",
+            "sha256": "196b32b323c4f834c3ad15cbcdc7aa6f990c9bc4a93553939217591e1d2ebc78",
+            "chapter": 150,
+            "ordinal": 4,
+            "total": 4,
+            "start": 801,
+            "end": 1050,
+            "bodyLength": 249,
+            "first": [
+              "暂停后又继续，段落边界和换行都应",
+              "保持原来的顺序。这里的编号是测试"
+            ],
+            "footer": "第 4 / 4 页"
+          },
+          "landscape": {
+            "slot": "reader-page-slot-a",
+            "sha256": "4be1f8fc9c25849eb372f206b0d7aacdcc8d754fa41b58385047e45631d7c47a",
+            "chapter": 150,
+            "ordinal": 5,
+            "total": 7,
+            "start": 801,
+            "end": 987,
+            "bodyLength": 186,
+            "first": [
+              "暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。",
+              "【章150段09】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进"
+            ],
+            "footer": "第 5 / 7 页"
+          },
+          "restored": {
+            "slot": "reader-page-slot-a",
+            "sha256": "196b32b323c4f834c3ad15cbcdc7aa6f990c9bc4a93553939217591e1d2ebc78",
+            "chapter": 150,
+            "ordinal": 4,
+            "total": 4,
+            "start": 801,
+            "end": 1050,
+            "bodyLength": 249,
+            "first": [
+              "暂停后又继续，段落边界和换行都应",
+              "保持原来的顺序。这里的编号是测试"
+            ],
+            "footer": "第 4 / 4 页"
+          },
+          "landscapeSize": [
+            2832,
+            1280
+          ],
+          "restoredSize": [
+            1280,
+            2832
+          ],
+          "scope": "same-process portrait-followSystem toforcedlandscape andback, canonicaloldpageanchorcontained andexactoriginalbodyrestored; settings restoredfollowSystem; notmidgestureforcedSurfacefailure"
+        }
+      }
+    },
+    "regrabInjectionBoundary": {
+      "singleUinputTwoMoves": "Rejected before injection with wrong number of parameters20; exit0doesnotmean valid",
+      "sequentialCommands": "app trace measured93.014ms firstUP-to-secondDOWN; previous70percent release left96ms toFull, oldsecondDOWNlocationmissed movinggrabber",
+      "trace": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-10-page-turn-vm-followup/repair-validation-a11ccc84/control-regrab-input-trace-input-lines.txt",
+      "note": "current helper targets movinggrabber; successrequires held intermediatepose andsettledQuick, notcommandexitcode"
+    },
+    "a11TraceSummary": [
+      {
+        "file": "final-directory-auto-expand-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 2,
+        "uiFrames": 21,
+        "maxMs": 28.051,
+        "p95Ms": 18.608,
+        "p99Ms": 28.051,
+        "over16_667": 3,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-directory-close-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 87,
+        "uiFrames": 92,
+        "maxMs": 5.35,
+        "p95Ms": 2.453,
+        "p99Ms": 3.883,
+        "over16_667": 0,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-directory-collapse-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 2,
+        "uiFrames": 24,
+        "maxMs": 13.935,
+        "p95Ms": 7.787,
+        "p99Ms": 13.935,
+        "over16_667": 0,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-directory-expand-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 99,
+        "uiFrames": 100,
+        "maxMs": 24.362,
+        "p95Ms": 7.786,
+        "p99Ms": 15.145,
+        "over16_667": 1,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-directory-open-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 2,
+        "uiFrames": 18,
+        "maxMs": 17.886,
+        "p95Ms": 3.957,
+        "p99Ms": 17.886,
+        "over16_667": 1,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-settings-auto-expand-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 2,
+        "uiFrames": 26,
+        "maxMs": 13.077,
+        "p95Ms": 12.511,
+        "p99Ms": 13.077,
+        "over16_667": 0,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-settings-close-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 89,
+        "uiFrames": 89,
+        "maxMs": 23.112,
+        "p95Ms": 2.609,
+        "p99Ms": 5.139,
+        "over16_667": 1,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-settings-collapse-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 2,
+        "uiFrames": 21,
+        "maxMs": 14.259,
+        "p95Ms": 6.181,
+        "p99Ms": 14.259,
+        "over16_667": 0,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-settings-expand-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 103,
+        "uiFrames": 105,
+        "maxMs": 57.926,
+        "p95Ms": 9.108,
+        "p99Ms": 14.421,
+        "over16_667": 1,
+        "readingSurfaceLifecycle": 0
+      },
+      {
+        "file": "final-settings-open-trace.ftrace",
+        "pid": 2181,
+        "inputCount": 2,
+        "uiFrames": 17,
+        "maxMs": 26.582,
+        "p95Ms": 21.008,
+        "p99Ms": 26.582,
+        "over16_667": 2,
+        "readingSurfaceLifecycle": 0
+      }
+    ]
+  }
+}

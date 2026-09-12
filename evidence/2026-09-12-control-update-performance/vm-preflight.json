@@ -1,0 +1,38 @@
+{
+  "time": "2026-09-11T17:13:25.142789+00:00",
+  "instance": "Mate 80 Pro",
+  "path": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+  "target": "127.0.0.1:5555",
+  "checks": [
+    {
+      "args": [
+        "param",
+        "get",
+        "bootevent.boot.completed"
+      ],
+      "exit": 0,
+      "out": "true \n",
+      "err": ""
+    },
+    {
+      "args": [
+        "pidof",
+        "com.ohos.sceneboard"
+      ],
+      "exit": 0,
+      "out": "2458\n",
+      "err": ""
+    },
+    {
+      "args": [
+        "hilog",
+        "-x",
+        "-t",
+        "150"
+      ],
+      "exit": 0,
+      "out": "Invalid log type, the valid log types include app/core/init/kmsg/only_prerelease [CODE: -3]\n",
+      "err": ""
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+--- before/entry/src/main/ets/features/reading/BookTurnPresentationSession.ets
++++ current/entry/src/main/ets/features/reading/BookTurnPresentationSession.ets
+@@ -2,6 +2,7 @@
+ import bookTurnNative from 'libreader_bookturn_napi.so';
+ import type { BookTurnInput } from './BookTurnMotionState';
+ import type { ReaderPageTurnDirection } from './ReaderPageGestureState';
++import { readerHighlightValuesEqual } from './ReaderDynamicHighlight';
+ 
+ export const BOOK_TURN_TEXTURE_PREVIOUS = 0;
+ export const BOOK_TURN_TEXTURE_CURRENT = 1;
+@@ -42,14 +43,24 @@
+  */
+ export class BookTurnPresentationSession {
+   readonly componentId: string;
++  private highlightIdentity: string = '';
++  private highlightValues: number[] = [];
++  private configuredWidth: number = 0;
++  private configuredHeight: number = 0;
+   private eventListener: (event: BookTurnNativeEvent) => void =
+     (_event: BookTurnNativeEvent): void => {};
+ 
+   constructor(componentId: string) {
+     this.componentId = componentId;
+     bookTurnNative.setEventCallback(componentId, (event: number, generation: number, detail: number): void => {
+-      this.eventListener(new BookTurnNativeEvent(event, generation, detail));
++      this.onNativeEvent(event, generation, detail);
+     });
++  }
++
++  private onNativeEvent(event: number, generation: number, detail: number): void {
++    if (event === BOOK_TURN_EVENT_SURFACE_READY || event === BOOK_TURN_EVENT_SURFACE_LOST ||
++      event === BOOK_TURN_EVENT_RENDER_FAILURE) this.highlightIdentity = '';
++    this.eventListener(new BookTurnNativeEvent(event, generation, detail));
+   }
+ 
+   setEventListener(listener: (event: BookTurnNativeEvent) => void): void {
+@@ -57,10 +68,16 @@
+   }
+ 
+   setDynamicHighlights(identity: string, values: number[]): boolean {
+-    return bookTurnNative.setDynamicHighlights(this.componentId, identity, values);
++    if (identity.length > 0 && identity === this.highlightIdentity && readerHighlightValuesEqual(values, this.highlightValues)) return true;
++    const accepted: boolean = bookTurnNative.setDynamicHighlights(this.componentId, identity, values);
++    if (accepted) { this.highlightIdentity = identity; this.highlightValues = values.slice(); }
++    return accepted;
+   }
+ 
+   configure(widthVp: number, heightVp: number): boolean {
++    if (widthVp !== this.configuredWidth || heightVp !== this.configuredHeight) {
++      this.highlightIdentity = ''; this.configuredWidth = widthVp; this.configuredHeight = heightVp;
++    }
+     return bookTurnNative.configure(this.componentId, widthVp, heightVp);
+   }
+ 

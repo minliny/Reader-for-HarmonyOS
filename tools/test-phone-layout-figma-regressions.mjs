@@ -33,7 +33,7 @@ assert.match(shelf,
   /private projectionBookTranslateX[\s\S]*this\.bookRowSpace\(this\.shelfContentWidth\(isTablet\), isTablet\)/,
   'the persistent three-column projection must consume the reactive measured content width');
 assert.match(shelf,
-  /private projectionBookCard[\s\S]*\.width\(this\.projectionBookWidth\(isTablet\)\)/,
+  /private projectionBookCard[\s\S]*\.width\(this\.projectionBookWidth\(isTablet, index\)\)/,
   'persistent book actors must not retain the 352vp first-layout fallback after a physical Area update');
 assert.match(shelf, /return Math\.min\(30,[\s\S]*Math\.max\(TOK_SPACE_XS,/,
   'the adaptive shelf grid must retain the Figma 30vp gap as its maximum');

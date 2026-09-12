@@ -1,0 +1,293 @@
+{
+  "capturedAtUtc": "2026-09-09T16:46:52.435421+00:00",
+  "harmonyHead": "35f2f99a8d635615475fde75120bf8629f944565",
+  "coreHead": "6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2",
+  "recordedBuildRunId": "20260909T144521Z-35f2f99a-cb6bfc9f",
+  "files": [
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.cpp",
+      "sha256": "b289e7493a11f40980296f39ceb7bd4b1fb335ddc776cb5ec3ecefb5548dd3d7",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_host.h",
+      "sha256": "8781a56f9d70f57499b030c39a6185ddfe9b82266b313350aebc11d2ff908aea",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.cpp",
+      "sha256": "1e1d6775d298d4640155ee3ce9bdf099283b23d415786da1616486de2a4339a4",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_motion.h",
+      "sha256": "d1152e041d98e23de3d515ea77dd1273a7e3136f8b1fcb6605b8b533f4e9ac5c",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_napi.cpp",
+      "sha256": "02dc972024b6db4f875576f23e9f89f00df4068605c19f0025605c1403954155",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.cpp",
+      "sha256": "5ba39637a00001ce9fea2fbb790a1ecada223ef944c26733cc3789bb49aaa381",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_renderer.h",
+      "sha256": "00c735b143581d28aace16bf820f4328dfb61837869777e76654d4770d481f31",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.cpp",
+      "sha256": "c3a8c05fa929ad2faeb91c84a1165bba178b06e066ed6742a34ec064f2dfaa0d",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/cpp/bookturn/bookturn_solver.h",
+      "sha256": "e367692b13b6079267e92f2c9f5b0d102fb16752c7a6b29f611ecc939dbd9eb4",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/BookTurnTextureBuilder.ets",
+      "sha256": "99fe5cbacf3cb44162137e405b8546eeced305f5c957b94cad6c060964deb145",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "sha256": "e62d6e22186d191d2e1495bbea233dc55a9b0a68bc095af69e307430c17a4b74",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+      "sha256": "d310c6dc9880ebdb4e4b9bff71e30a04e8943f02693a599c20f8589dbaa40fd8",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts",
+      "sha256": "29b60e851f7a0a0b13506c582102f2b5d1189e933077be75d33176a1016cd0b5",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets",
+      "sha256": "f0f4541932560208cdb02fc6940710e202145f9bcb9cc8324661a070b7b3bc57",
+      "matchesRecordedBuildInput": false
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts",
+      "sha256": "01557dee8f655eff4f9437a1d7f8c383458dc98f6e121743dab9fee9d1966df7",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets",
+      "sha256": "67f8e1554df250713174d26b6a5672b86e10a142e80bba6d5544174486c50b1e",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlBackdropTouch.ts",
+      "sha256": "505683698b80f0b3ad8ff931e3f01f479f6762de252c9849ae1c7690939bcebc",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts",
+      "sha256": "4aa81f9b3d9a7b4d72bfbfc0bf595b5b452be413c17724d55a091cd6107f0fbd",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts",
+      "sha256": "49d0571b2025b5130f2cfd26dae8fa42183293033d13a2fa92c51b585fbcb8ab",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+      "sha256": "566c4c7315397f48b9426c182f545505717d10c661ec38a4a1a89ffb361f738f",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts",
+      "sha256": "ec1af1bea79d6856cefd52ab1ef915f41ed8080e2769467dd2b9ebaa7fc88c66",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlGeometry.ts",
+      "sha256": "7b8a339aee6dec6f9eb0b30a5326c1eef0f83236dc4fea17f14caf2c62e26c9c",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts",
+      "sha256": "1352127222d3b21306a2b6833faa80ddf8590833a892f10d01f8d6ce07f64960",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlHeaderGeometry.ts",
+      "sha256": "23404befa8b934ca60e2d4101d0e3e5cd529ffa21c94ab64d83d6766c6f85662",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlHostKeyboard.ts",
+      "sha256": "0e5b3fab84e1ef30277a06cd1eb10b80c1c68f37bb6bf7b8cbd767b85172b224",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlHostSession.ts",
+      "sha256": "d221d82db6a5fb0e6c44d37e44e99874fb698be514772ed0d7ccaacc705a3bc6",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlLayoutRebase.ts",
+      "sha256": "70d42dd991d0bf9c44520fcff80801f50483ae8e7c115bf650c646f29b35af6e",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlListPositioning.ts",
+      "sha256": "0adf48c83edba9d40637aea02ab96cce5d946406db173146868f3eb69590eca6",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts",
+      "sha256": "450ad98e35b9abc8de604a74aa80c34f671f33712bbb7df99e01e2181990be71",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts",
+      "sha256": "2c230b4f11e3aba829ba34f6beea6c27d054244344db6dbcbc20119e56b27e35",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionPolicy.ts",
+      "sha256": "e309e42d52b4600e9630a791be45e276d76f955ede8104c99f713871304a680f",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts",
+      "sha256": "61570c1f6175d43531a399aa33bbc7c6474e4df4e712fe1846c235fa6eb5d197",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionStage.ets",
+      "sha256": "9efdf1ae15ba6c417cfc7aa88cc4eae360c6a4cc61cb65029940d0c6963bc2b8",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "sha256": "4223d363b719d583fd14d25b9bed3514f2f0f78aacbceb7e05445359cea344e6",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts",
+      "sha256": "5deb931de0595234c9678ff428239918b1c066ac4775c034ece12370adb39fc2",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+      "sha256": "49e3074195fb0c2cf063278028d5888255e1e5876e1e9b9271da6778ec5ee174",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts",
+      "sha256": "1a4baf7429254391f413d79931660e1278edd648ba986c9c89ad5d4d5c8035ad",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts",
+      "sha256": "a084d836d9e81ec4f2150d996848d98dc4ddf5f6aff1b4a3a79ef3e7a55ab34a",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceState.ts",
+      "sha256": "cd598b4dbcecab28d3b4620a076be518ecb4b11146ed9a91a451fd5d3835c29d",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlRouting.ts",
+      "sha256": "aca0b4e8861bb9b4ee2f87d3fbff3613bedab6b582bd9893d2e502a3e73b6cfc",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlRuntime.ts",
+      "sha256": "e06c8e7e6f21941da70d413de9a9f10f4b531b9ef988077d0e3967c44e76b903",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSearchContent.ets",
+      "sha256": "cb6a78390a016361e2217af781407c24a4ea7cc19b1d71cff65537db8f9ff597",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts",
+      "sha256": "92cd80ea923657fa5f454825e5d596758d54041911a937b3d4f344706bac2170",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts",
+      "sha256": "8fdeb0f2827ea7d48353ca300a294db1df6df8fb2c10c98164c1cdf2d27f11df",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts",
+      "sha256": "4c8c24eee82145bde1f78e4a29e55bc76002ebb1a706b53ae2ec9750fd904ddb",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSessionState.ts",
+      "sha256": "542ceecb395d014981b255de3f854aea9e308de15078ea52c3240207cdb8c9e8",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+      "sha256": "85642ef188d4ceb8ff8bbd6b383917e2479afda1daa88dccb75deeee2b4fce7b",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts",
+      "sha256": "d0e50eeeb59e027d0c978de1334fe83dea98b6f2b03716e7bf5f771626619032",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSpatialPath.ts",
+      "sha256": "6acd6867a731e1f340c71f100b33dbd81adb1f85a1b7b37fba99fb0757614db0",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets",
+      "sha256": "e7f8b2f6e3545df7bc6fb647a5b9220e14773734d5a2ae784751b2f9d5c0f167",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlTimerWheel.ets",
+      "sha256": "e6ace1ff2c99eeb77b503d57187bb040f05674a508d761c950778154093bcfb1",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets",
+      "sha256": "a1f84959f2b059d180c483d471d67c80d58fa69a3b0679a99be3b23064a22be2",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageGestureState.ts",
+      "sha256": "0930d59f21c33ca28fd9f68904497a2b5c1d0a65c9063dbf2e4d80e594aa7649",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+      "sha256": "27a4b9bc9ca330f2b3a53897f51513a52ee865b0ef1a36606ae747f80a09c92a",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "sha256": "6b56be517323319275e01c3b2c608b81da79dcf3e631287aaf87bb09e143848d",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts",
+      "sha256": "488ba22efe7d0482c1b144896fbfde243847dd5945b271795b43d42e0872cbe9",
+      "matchesRecordedBuildInput": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReadingSurface.ets",
+      "sha256": "6f828ec7b29e64c8cccc2db667d40794411b9922758c6c28617658d31b4f4454",
+      "matchesRecordedBuildInput": true
+    }
+  ]
+}

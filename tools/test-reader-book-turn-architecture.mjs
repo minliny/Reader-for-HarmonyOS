@@ -11,6 +11,7 @@ const surface = read('entry/src/main/ets/features/reading/ReaderBookTurnSurface.
 const textureBuilder = read('entry/src/main/ets/features/reading/BookTurnTextureBuilder.ets');
 const interaction = read('entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets');
 const session = read('entry/src/main/ets/features/reading/BookTurnPresentationSession.ets');
+const nativeTypes = read('entry/src/main/cpp/types/libreader_bookturn_napi/Index.d.ts');
 const cmake = read('entry/src/main/cpp/CMakeLists.txt');
 const host = read('entry/src/main/cpp/bookturn/bookturn_host.cpp');
 const hostHeader = read('entry/src/main/cpp/bookturn/bookturn_host.h');
@@ -57,6 +58,11 @@ assert.doesNotMatch(surface, /Canvas|onDraw|DrawingRenderingContext/);
 assert.match(surface,
   /\.zIndex\(0\)[\s\S]*\.hitTestBehavior\(HitTestMode\.None\)/,
   'the native visual surface must remain below and absent from ArkUI hit testing');
+assert.match(surface, /@Prop surfaceOpacity: number = 1;/);
+assert.match(surface, /\.opacity\(this\.surfaceOpacity\)/,
+  'Native visibility must use an immediate opacity gate without rebuilding XComponent');
+assert.match(session, /clearSurface\(generation: number\)/);
+assert.match(nativeTypes, /export const clearSurface:/);
 assert.match(interaction, /\.zIndex\(7\)/,
   'the single raw input owner must have explicit composition priority above XComponent');
 assert.doesNotMatch(napi, /OnNativeTouch/,
@@ -65,14 +71,10 @@ assert.match(napi,
   /OH_NativeXComponent_Callback g_xcomponentCallbacks \{[\s\S]*OnSurfaceDestroyed,[\s\S]*nullptr,/,
   'the XComponent callback table must leave DispatchTouchEvent unregistered');
 
-const simulationStage = stage.slice(
-  stage.indexOf("if (this.pageTurnStyle === 'simulation')"),
-  stage.indexOf("} else if", stage.indexOf("if (this.pageTurnStyle === 'simulation')")),
-);
-assert.equal((simulationStage.match(/ReaderPageTurnSurface\(\{/g) ?? []).length, 1,
-  'simulation idle stage must mount only the live page tree');
-assert.doesNotMatch(simulationStage, /this\.previousPage|this\.nextPage/);
-
+assert.equal((method(stage.slice(stage.indexOf('export struct ReaderPageTurnStage')), 'build() {').match(/ReaderPageTurnSurface\(\{/g) ?? []).length, 2,
+  'two physical slots stay mounted across idle, drag and promotion');
+// Non-flat reserve retention, cold-provider avoidance and acknowledgement
+// ownership are exercised against the production methods in the stage test.
 assert.match(local, /new ComponentContent<BookTurnTextureBuildInput>/);
 assert.match(local, /createFromComponent\(/);
 assert.match(local, /READER_BOOK_TURN_TEXTURE_MAX_PIXELS = 3_000_000/);
@@ -84,16 +86,15 @@ assert.match(local,
 assert.match(local,
   /currentPageSnapshotId: this\.usesBookTurnSimulation\(\)[\s\S]*READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID/);
 assert.match(local,
-  /slot === BOOK_TURN_TEXTURE_CURRENT[\s\S]*snapshot\.get\(READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID,[\s\S]*waitUntilRenderFinished: false/,
-  'the image-ready mounted current page must be captured directly instead of rebuilt offscreen');
+  /slot === BOOK_TURN_TEXTURE_CURRENT[\s\S]*snapshot\.get\(`\$\{READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID\}-\$\{this\.pageTurnCurrentSlot\}`,[\s\S]*waitUntilRenderFinished: true/,
+  'text-only current pages reuse the physical mounted snapshot; image-bearing pages use decoder-checked capture');
 assert.match(stage,
-  /currentPageSnapshotId[\s\S]*this\.currentPageSnapshotId\.length > 0[\s\S]*this\.currentPageSnapshotId/,
-  'the mounted simulation page must expose the same short stable snapshot ID');
-assert.match(local,
-  /createFromComponent\(\s*content,\s*0,\s*false,/,
-  'offscreen image readiness must not block every page texture indefinitely');
-assert.match(local, /waitUntilRenderFinished: false/,
-  'offscreen neighbour snapshots must not wait forever on a newly mounted Image node');
+  /staticSnapshotId: this\.slotSnapshotId\('a'\)[\s\S]*staticSnapshotId: this\.slotSnapshotId\('b'\)/,
+  'the mounted static content, excluding live highlights, exposes a unique stable snapshot ID per physical slot');
+assert.match(local, /captureDecodedBookTurnPage\(content, generation\)/,
+  'offscreen captures share bounded decoder-ready admission, with production cold/failure/stale tests');
+assert.match(local, /createFromComponent\(\s*content, delays\[attempt\], true,[\s\S]*?waitUntilRenderFinished: true/,
+  'image decoding and painting must both complete before a texture may publish');
 assert.match(local,
   /private async captureBookTurnTexture\([\s\S]*generation !== this\.bookTurnTextureCaptureGeneration[\s\S]*this\.pageTurnInputPhase\(\) !== 'idle'[\s\S]*bookTurnCapturedIdentity/,
   'a stale capture must be rejected before ComponentSnapshot allocates or renders a page tree');
@@ -107,6 +108,44 @@ assert.doesNotMatch(local, /ReaderBookTurn diagnostic/,
   'temporary VM tracing must not remain in the frame or input path');
 assert.doesNotMatch(local, /ReaderInput diagnostic/,
   'temporary raw-input tracing must not remain in the frame path');
+assert.match(local,
+  /private shouldMountBookTurnSurface\(\): boolean[\s\S]*pageTransition === 'simulation'/,
+  'a transient native capability failure must not change the selected surface lifecycle');
+assert.match(local, /if \(this\.shouldMountBookTurnSurface\(\)\)/,
+  'the selected simulation XComponent must stay mounted through a transient runtime failure');
+assert.match(local,
+  /surfaceOpacity: this\.usesBookTurnSimulation\(\) \? this\.bookTurnSurfaceOpacity : 0/,
+  'a failed simulation surface must remain mounted but hidden while the static page path is active');
+// Native lifecycle notifications must not use a dead revision counter as an
+// ArkUI invalidation signal.  The counter was never consumed by build(), yet
+// its @State increment rebuilt the entire ReadingExperience (including the
+// XComponent) for every READY/TEXTURE/PRESENTED event and exposed a black
+// compositor frame during unrelated control-bar motion.
+assert.doesNotMatch(local, /@State\s+private\s+bookTurnNativeRevision/,
+  'native event diagnostics must not be an unused root @State');
+assert.doesNotMatch(method(local, 'private onBookTurnNativeEvent('),
+  /bookTurnNativeRevision\s*=/,
+  'native event dispatch must not increment an unused root invalidation counter');
+// Root-local protocol/bookkeeping markers must not become ArkUI invalidation
+// sources. They are read by native/settle callbacks or synchronous error/timer
+// code only; the render tree is driven by the explicit reactive allowlist.
+const localBuild = method(local, 'build() {');
+for (const field of [
+  'pageTurnPresentationPhase',
+  'bookTurnSurfaceGeneration',
+  'bookmarkPreviewChanged',
+  'autoPageSessionRemainingSeconds',
+  'sessionMorphHoldProgress',
+  'failureCode',
+]) {
+  assert.doesNotMatch(local,
+    new RegExp(`@State(?:\\s+@Watch\\([^)]*\\))?\\s+private\\s+${field}\\b`),
+    `${field} is protocol/bookkeeping-only and must remain non-reactive`);
+  assert.match(local, new RegExp(`private\\s+${field}\\s*:`),
+    `${field} must remain explicitly declared as a plain field`);
+  assert.doesNotMatch(localBuild, new RegExp(`\\bthis\\.${field}\\b`),
+    `${field} must not be read by the LocalReadingExperience build tree`);
+}
 assert.match(local,
   /this\.bookTurnMotion !== undefined && this\.bookTurnMotion\.direction !== direction/,
   'a live same-direction drag must remain startable through MOVE and UP settlement');
@@ -158,7 +197,42 @@ assert.equal((draw.match(/DrawBottom\(/g) ?? []).length, 2,
 assert.equal((draw.match(/DrawSheet\(/g) ?? []).length, 1);
 assert.match(rendererHeader, /void SetSheetVisible\(bool visible\);/);
 assert.match(rendererHeader, /void UndoCommitSlots\(\);/);
-assert.match(hostHeader, /bool settlementSwapped_ = false;/);
+assert.match(rendererHeader, /void ShowTerminalPage\(TextureSlot slot\);/);
+assert.doesNotMatch(method(host, 'bool BookTurnHost::ProcessSettlementFrame('), /CommitSlots\(/,
+  'source and destination bindings survive until durable commit');
+assert.match(method(host, 'void BookTurnHost::Run('), /pendingSettlementGeneration_ == sample\.generation/);
+
+// Surface lifecycle is a serialized boundary.  A delayed create callback
+// queued before detach must be dropped with the rest of the mailbox, while a
+// genuinely newer attach is carried until teardown has published SURFACE_LOST.
+assert.match(hostHeader, /surfaceRequestSerial_/);
+assert.match(hostHeader, /surfaceLifecycleSerialAtomic_/);
+assert.match(hostHeader, /pendingAttachSerial_/);
+const attachSurface = method(host, 'void BookTurnHost::AttachSurface(');
+assert.doesNotMatch(attachSurface, /detachRequested_\s*=\s*false/,
+  'attach must not cancel a queued detach');
+const hostRun = method(host, 'void BookTurnHost::Run(');
+assert.match(hostRun, /for \(std::optional<TexturePayload>& pending : pendingTextures_\)[\s\S]*pending\.reset\(\)/,
+  'detach must release unconsumed texture payloads');
+assert.match(hostRun, /pendingSample_\.reset\(\)/,
+  'detach must invalidate the unconsumed sample mailbox');
+assert.match(hostRun, /pendingCommitSlots_\s*=\s*false/,
+  'detach must invalidate an unconsumed slot commit');
+assert.match(hostRun, /pendingAttachSerial_\s*>\s*serial/,
+  'only an attach newer than the detach may survive the boundary');
+assert.match(hostRun, /IsSurfaceLifecycleCurrent\(lifecycleSerial\)/,
+  'unlocked EGL work must be rejected after a lifecycle change');
+assert.match(hostRun, /ProcessChaseFrame\(frameSeconds, timestamp, lifecycleSerial\)/);
+assert.match(hostRun, /ProcessSettlementFrame\(frameSeconds, lifecycleSerial\)/);
+assert.match(host, /NotifySurfaceEvent\(surfaceSerial, HostEvent::FRAME_PRESENTED/,
+  'a stale draw must not publish FRAME_PRESENTED');
+assert.match(host, /NotifySurfaceEvent\(lifecycleSerial, HostEvent::SLOTS_COMMITTED/,
+  'a stale slot operation must not publish SLOTS_COMMITTED');
+const rendererShutdown = method(renderer, 'void BookTurnRenderer::Shutdown(');
+assert.match(rendererShutdown, /ResetPresentationState\(\)/,
+  'renderer shutdown must reset per-surface presentation flags');
+assert.match(renderer, /fallbackPaperEnabled_\s*=\s*false/);
+assert.match(renderer, /sheetVisible_\s*=\s*true/);
 
 // V2 §5.3: ArkTS records only the newest raw sample; the render thread owns
 // chase and frame advance on OH_NativeVSync one-shot callbacks.
@@ -182,7 +256,7 @@ const settlementFrame = method(host, 'bool BookTurnHost::ProcessSettlementFrame(
 assert.match(settlementFrame,
   /SettleThetaAt\(settlementStartTheta_,\s*settlementElapsed_,\s*settlementDuration_\)/,
   'gesture release must preserve the live tilt and phase its decay over the full settlement');
-assert.doesNotMatch(motionHeader + settlementFrame, /kTiltZeroSeconds|0\.080F/,
+assert.doesNotMatch(motionHeader + settlementFrame, /kTiltZeroSeconds/,
   'the former fixed 80ms posture snap must not return');
 assert.match(napi, /kMaximumTexturePixels = 3'000'000ULL/);
 assert.doesNotMatch(method(napi, 'bool ReadPixelMap('), /for \(/,
@@ -199,6 +273,28 @@ assert.match(local,
   'durable progress may start only after the native visual endpoint');
 assert.match(local,
   /BOOK_TURN_EVENT_SLOTS_COMMITTED[\s\S]*finishSuccessfulPageTurnPresentation/);
+assert.match(local, /export type ReaderPagePresentationPhase[\s\S]*'surfaceHidden'[\s\S]*'released'/,
+  'gesture, promotion, hiding and release must share one explicit presentation phase');
+assert.match(local,
+  /this\.bookTurnSurfaceOpacity = 0;[\s\S]*this\.bookTurnSession\.releaseTerminalFrame/,
+  'simulation commit must hide the surface before releasing its native terminal frame');
+assert.match(local,
+  /scheduleBookTurnRollbackSurfaceClear[\s\S]*this\.bookTurnSurfaceOpacity = 0[\s\S]*releaseTerminalFrame[\s\S]*clearSurface/,
+  'rollback must use the same hidden-surface barrier as commit');
+assert.match(stage, /READER_PAGE_TURN_SLOT_A = 'reader-page-slot-a'/);
+assert.match(stage, /READER_PAGE_TURN_SLOT_B = 'reader-page-slot-b'/);
+assert.match(stage, /slotIdentity: string/);
+assert.match(stage, /@Prop @Watch\('onRenderRevisionChanged'\) renderRevision/,
+  'simulation slot must acknowledge the promoted render revision after an ArkUI frame');
+assert.match(local, /onBookTurnArkUIFramePresented\(revision\)/,
+  'Native terminal release must wait for an ArkUI promoted-page acknowledgement');
+assert.match(session, /BOOK_TURN_EVENT_FRAME_PRESENTED = 9/,
+  'Native must expose a one-shot first-frame handshake for each generation');
+assert.match(host, /firstFrameNotifiedGeneration_/,
+  'Native must latch the first successful frame per generation');
+assert.match(local,
+  /BOOK_TURN_EVENT_FRAME_PRESENTED[\s\S]*bookTurnSurfaceOpacity = 1/,
+  'simulation surface must become visible only after Native draws a valid frame');
 assert.match(local,
   /private rapidPageTurnState: ReaderRapidPageTurnState = createReaderRapidPageTurnState\(\)/);
 assert.match(local, /private pendingPointerSegmentReserved: boolean = false/);
@@ -215,8 +311,12 @@ assert.match(local,
   /const noAnimation = this\.usesNoAnimationPageTurnRuntime\(\);[\s\S]*else if \(noAnimation\) \{[\s\S]*beginPreparedPageTurnPersistence/);
 assert.match(local, /pageTurnSimulationAvailable: !this\.bookTurnRuntimeFailed/);
 assert.match(control, /@Prop pageTurnSimulationAvailable: boolean = true/);
-assert.equal((control.match(/pageTurnSimulationAvailable: this\.pageTurnSimulationAvailable/g) ?? []).length, 4,
-  'Phone staged Appearance, Tablet fallback Appearance, and both Settings surfaces must share capability');
+assert.equal((control.match(/pageTurnSimulationAvailable: this\.pageTurnSimulationAvailable/g) ?? []).length, 2,
+  'one shared Appearance and one Settings content adapter must share the Host capability');
+assert.match(control, /ReaderControlAppearanceContent\(\{/);
+assert.match(control, /ReaderControlSettingsContent\(\{/);
+assert.doesNotMatch(control, /ReaderSettingsFullPanel\(\{/);
+assert.doesNotMatch(control, /ReaderAppearanceMotionStage\(\{|ReaderSettingsModulePanel\(\{/);
 assert.match(settingsFull,
   /option === 'simulation' && !this\.pageTurnSimulationAvailable[\s\S]*return false;/);
 assert.match(settingsModule,
@@ -226,3 +326,14 @@ assert.match(appearanceFull,
 assert.match(appearanceFull, /仿真当前宿主能力不可用，本会话使用无动画/);
 
 console.log('reader book-turn architecture contract: PASS');
+
+assert.match(napi, /napi_create_async_work\(env, nullptr, name, ExecuteTextureCopy, CompleteTextureCopy/);
+assert.match(napi, /ReadPixelMap\(request.pixelMap, request.payload\)/);
+assert.match(napi, /napi_call_function[\s\S]*const bool queued = admitted && request->host->QueueTexture/,
+  'async pixel copies recheck JS capture ownership before mailbox publication');
+assert.match(local, /await this\.bookTurnSession\.uploadTexture\(slot, pixelMap, page\.textureIdentity, canPublish\)/);
+
+const snapshotSurface = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets', import.meta.url), 'utf8');
+assert.match(textureBuilder,/snapshotSynchronousImages: true/);
+assert.match(snapshotSurface,/@Prop snapshotSynchronousImages: boolean = false/);
+assert.equal((snapshotSurface.match(/\.syncLoad\(this\.snapshotSynchronousImages\)/g)??[]).length,4,'all offscreen file/resource images participate; regular reading remains asynchronous');

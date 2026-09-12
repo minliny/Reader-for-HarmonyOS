@@ -1,0 +1,13 @@
+{
+  "simulation-smoke": {
+    "requestedMode": "simulation",
+    "observedMode": "cover",
+    "status": "EXCLUDED_FROM_SIMULATION",
+    "reason": "UI chip disabled after expected Native surface teardown. Harness previously checked requested label but not enabled/selected state. Raw content roundtrips remain cover evidence only."
+  },
+  "final-sim-next/previous": {
+    "observedMode": "cover",
+    "status": "EXCLUDED_FROM_NATIVE_AND_CLOCK_VALIDATION",
+    "reason": "Fold samples show flat cover and UI confirms selected cover."
+  }
+}

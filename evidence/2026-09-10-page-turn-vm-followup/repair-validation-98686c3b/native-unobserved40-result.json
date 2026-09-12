@@ -1,0 +1,889 @@
+{
+  "mode": "仿真",
+  "count": 40,
+  "origin": {
+    "slot": "reader-page-slot-a",
+    "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+    "chapter": 37,
+    "ordinal": 1,
+    "total": 4,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章037段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 / 4 页"
+  },
+  "expected": {
+    "slot": "reader-page-slot-a",
+    "sha256": "c0689c28ae9d458f4f949eed1fc9c1343b2b66b5869b0032c28adc17b3738fe0",
+    "chapter": 47,
+    "ordinal": 1,
+    "total": null,
+    "start": 0,
+    "end": 260,
+    "bodyLength": 260,
+    "first": [
+      "【章047段01】晨光从窗边照进阅览",
+      "室，纸上的文字依次展开。记录者把"
+    ],
+    "footer": "第 1 页"
+  },
+  "pid": "9975",
+  "directions": {
+    "next": {
+      "status": "PASS canonical net target and exact committed count",
+      "injectionSeconds": 5.576318292000001,
+      "transactionSpanMs": 7564,
+      "transactionPagesPerSecond": 5.288207297726071,
+      "sumTransactionMs": 3822,
+      "betweenTransactionGapMs": [
+        150,
+        78,
+        193,
+        120,
+        67,
+        225,
+        86,
+        63,
+        61,
+        149,
+        103,
+        66,
+        52,
+        162,
+        104,
+        64,
+        59,
+        178,
+        87,
+        64,
+        67,
+        166,
+        87,
+        55,
+        61,
+        180,
+        87,
+        56,
+        70,
+        113,
+        71,
+        61,
+        66,
+        101,
+        71,
+        67,
+        58,
+        106,
+        68
+      ],
+      "transactions": [
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 411,
+          "startedAtMs": 414677363,
+          "completedAtMs": 414677774
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 85,
+          "startedAtMs": 414677924,
+          "completedAtMs": 414678009
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 114,
+          "startedAtMs": 414678087,
+          "completedAtMs": 414678201
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 174,
+          "startedAtMs": 414678394,
+          "completedAtMs": 414678568
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 99,
+          "startedAtMs": 414678688,
+          "completedAtMs": 414678787
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 136,
+          "startedAtMs": 414678854,
+          "completedAtMs": 414678990
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 103,
+          "startedAtMs": 414679215,
+          "completedAtMs": 414679318
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414679404,
+          "completedAtMs": 414679474
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 78,
+          "startedAtMs": 414679537,
+          "completedAtMs": 414679615
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 79,
+          "startedAtMs": 414679676,
+          "completedAtMs": 414679755
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414679904,
+          "completedAtMs": 414679974
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 68,
+          "startedAtMs": 414680077,
+          "completedAtMs": 414680145
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 77,
+          "startedAtMs": 414680211,
+          "completedAtMs": 414680288
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 75,
+          "startedAtMs": 414680340,
+          "completedAtMs": 414680415
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414680577,
+          "completedAtMs": 414680647
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 67,
+          "startedAtMs": 414680751,
+          "completedAtMs": 414680818
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 77,
+          "startedAtMs": 414680882,
+          "completedAtMs": 414680959
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 66,
+          "startedAtMs": 414681018,
+          "completedAtMs": 414681084
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 72,
+          "startedAtMs": 414681262,
+          "completedAtMs": 414681334
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414681421,
+          "completedAtMs": 414681490
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 76,
+          "startedAtMs": 414681554,
+          "completedAtMs": 414681630
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 74,
+          "startedAtMs": 414681697,
+          "completedAtMs": 414681771
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414681937,
+          "completedAtMs": 414682007
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414682094,
+          "completedAtMs": 414682163
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 73,
+          "startedAtMs": 414682218,
+          "completedAtMs": 414682291
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 75,
+          "startedAtMs": 414682352,
+          "completedAtMs": 414682427
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 73,
+          "startedAtMs": 414682607,
+          "completedAtMs": 414682680
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 67,
+          "startedAtMs": 414682767,
+          "completedAtMs": 414682834
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414682890,
+          "completedAtMs": 414682959
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414683029,
+          "completedAtMs": 414683099
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 76,
+          "startedAtMs": 414683212,
+          "completedAtMs": 414683288
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 83,
+          "startedAtMs": 414683359,
+          "completedAtMs": 414683442
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 66,
+          "startedAtMs": 414683503,
+          "completedAtMs": 414683569
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 77,
+          "startedAtMs": 414683635,
+          "completedAtMs": 414683712
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414683813,
+          "completedAtMs": 414683882
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 68,
+          "startedAtMs": 414683953,
+          "completedAtMs": 414684021
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 76,
+          "startedAtMs": 414684088,
+          "completedAtMs": 414684164
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 65,
+          "startedAtMs": 414684222,
+          "completedAtMs": 414684287
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414684393,
+          "completedAtMs": 414684463
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "next",
+          "outcome": "committed",
+          "totalMs": 396,
+          "startedAtMs": 414684531,
+          "completedAtMs": 414684927
+        }
+      ],
+      "actual": {
+        "slot": "reader-page-slot-a",
+        "sha256": "c0689c28ae9d458f4f949eed1fc9c1343b2b66b5869b0032c28adc17b3738fe0",
+        "chapter": 47,
+        "ordinal": 1,
+        "total": null,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章047段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 页"
+      }
+    },
+    "previous": {
+      "status": "PASS canonical net target and exact committed count",
+      "injectionSeconds": 5.531455332999997,
+      "transactionSpanMs": 7172,
+      "transactionPagesPerSecond": 5.577244841048522,
+      "sumTransactionMs": 3686,
+      "betweenTransactionGapMs": [
+        150,
+        61,
+        61,
+        164,
+        73,
+        57,
+        82,
+        177,
+        67,
+        57,
+        59,
+        159,
+        83,
+        68,
+        69,
+        144,
+        71,
+        72,
+        84,
+        164,
+        71,
+        70,
+        57,
+        196,
+        83,
+        57,
+        56,
+        173,
+        87,
+        56,
+        60,
+        120,
+        57,
+        57,
+        74,
+        118,
+        55,
+        55,
+        62
+      ],
+      "transactions": [
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 405,
+          "startedAtMs": 414696852,
+          "completedAtMs": 414697257
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 83,
+          "startedAtMs": 414697407,
+          "completedAtMs": 414697490
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 65,
+          "startedAtMs": 414697551,
+          "completedAtMs": 414697616
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 97,
+          "startedAtMs": 414697677,
+          "completedAtMs": 414697774
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414697938,
+          "completedAtMs": 414698007
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 84,
+          "startedAtMs": 414698080,
+          "completedAtMs": 414698164
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414698221,
+          "completedAtMs": 414698290
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 76,
+          "startedAtMs": 414698372,
+          "completedAtMs": 414698448
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 74,
+          "startedAtMs": 414698625,
+          "completedAtMs": 414698699
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 86,
+          "startedAtMs": 414698766,
+          "completedAtMs": 414698852
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 82,
+          "startedAtMs": 414698909,
+          "completedAtMs": 414698991
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414699050,
+          "completedAtMs": 414699119
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 76,
+          "startedAtMs": 414699278,
+          "completedAtMs": 414699354
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 72,
+          "startedAtMs": 414699437,
+          "completedAtMs": 414699509
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 87,
+          "startedAtMs": 414699577,
+          "completedAtMs": 414699664
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 91,
+          "startedAtMs": 414699733,
+          "completedAtMs": 414699824
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 86,
+          "startedAtMs": 414699968,
+          "completedAtMs": 414700054
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 71,
+          "startedAtMs": 414700125,
+          "completedAtMs": 414700196
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 67,
+          "startedAtMs": 414700268,
+          "completedAtMs": 414700335
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 92,
+          "startedAtMs": 414700419,
+          "completedAtMs": 414700511
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 67,
+          "startedAtMs": 414700675,
+          "completedAtMs": 414700742
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414700813,
+          "completedAtMs": 414700883
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 86,
+          "startedAtMs": 414700953,
+          "completedAtMs": 414701039
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 68,
+          "startedAtMs": 414701096,
+          "completedAtMs": 414701164
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414701360,
+          "completedAtMs": 414701429
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 74,
+          "startedAtMs": 414701512,
+          "completedAtMs": 414701586
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414701643,
+          "completedAtMs": 414701712
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 71,
+          "startedAtMs": 414701768,
+          "completedAtMs": 414701839
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 75,
+          "startedAtMs": 414702012,
+          "completedAtMs": 414702087
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414702174,
+          "completedAtMs": 414702243
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 84,
+          "startedAtMs": 414702299,
+          "completedAtMs": 414702383
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 81,
+          "startedAtMs": 414702443,
+          "completedAtMs": 414702524
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 67,
+          "startedAtMs": 414702644,
+          "completedAtMs": 414702711
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 85,
+          "startedAtMs": 414702768,
+          "completedAtMs": 414702853
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 65,
+          "startedAtMs": 414702910,
+          "completedAtMs": 414702975
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 69,
+          "startedAtMs": 414703049,
+          "completedAtMs": 414703118
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414703236,
+          "completedAtMs": 414703306
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414703361,
+          "completedAtMs": 414703431
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 70,
+          "startedAtMs": 414703486,
+          "completedAtMs": 414703556
+        },
+        {
+          "style": "simulation",
+          "path": "prepared",
+          "dir": "previous",
+          "outcome": "committed",
+          "totalMs": 406,
+          "startedAtMs": 414703618,
+          "completedAtMs": 414704024
+        }
+      ],
+      "actual": {
+        "slot": "reader-page-slot-a",
+        "sha256": "7fcc8bd579ee785522f6a0a6eda2cb69e9065584ead219d719f3fdd1bb0d15a7",
+        "chapter": 37,
+        "ordinal": 1,
+        "total": 4,
+        "start": 0,
+        "end": 260,
+        "bodyLength": 260,
+        "first": [
+          "【章037段01】晨光从窗边照进阅览",
+          "室，纸上的文字依次展开。记录者把"
+        ],
+        "footer": "第 1 / 4 页"
+      }
+    }
+  },
+  "status": "PASS",
+  "scope": "40 real public DOWN/UP taps each direction; no UI reads during drain; ACTIVE-uptime first transaction start to final presentation-resource-release completion. Excludes preparation before first transaction, does not prove every display frame or touch-to-photon latency."
+}
