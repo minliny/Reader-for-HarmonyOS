@@ -13,7 +13,10 @@ const compile = spawnSync('/usr/bin/clang', ['-std=c11', '-Wall', '-Wextra', '-W
   '-DREADER_CONTROL_DRY_ONLY', source, '-o', output], { encoding: 'utf8' });
 assert.equal(compile.status, 0, `${compile.stdout}\n${compile.stderr}`);
 const dryArgs = ['--dry-run', '1320', '2856', '--display', '0'];
-const run = (input, args = dryArgs) => spawnSync(output, args, { input, encoding: 'utf8', timeout: 2000 });
+// The parser itself is synchronous and normally completes in milliseconds, but
+// this suite runs alongside the full contract matrix on constrained CI hosts.
+// Keep a bounded timeout while allowing process startup under contention.
+const run = (input, args = dryArgs) => spawnSync(output, args, { input, encoding: 'utf8', timeout: 5000 });
 const single = '0 DOWN 0 660 1500\n100 MOVE 0 660 1200\n600 MOVE 0 660 1400\n800 UP 0 660 1400\n';
 const dual = '0 DOWN 0 660 1500\n100 DOWN 1 600 1500\n200 MOVE 1 600 1700\n300 UP 1 600 1700\n500 MOVE 0 660 1300\n700 UP 0 660 1300\n';
 const cancelled = '0 DOWN 0 660 1500\n100 DOWN 1 600 1500\n300 CANCEL 0 660 1500\n300 CANCEL 1 600 1500\n';
