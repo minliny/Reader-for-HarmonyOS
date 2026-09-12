@@ -44,9 +44,9 @@ function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-function fileRecord(path) {
+function fileRecord(path, recordedPath = path) {
   const bytes = readFileSync(path);
-  return { path, bytes: bytes.length, sha256: sha256(bytes) };
+  return { path: recordedPath, bytes: bytes.length, sha256: sha256(bytes) };
 }
 
 function gitRecord(repo) {
@@ -232,7 +232,10 @@ const manifest = {
     sdkVersion: args.get('--sdk-version') ?? '<unspecified>',
   },
   hap: {
-    ...fileRecord(hapPath),
+    // The build directory is atomically renamed after this manifest is
+    // generated. Keep the provenance portable by recording the published
+    // artifact name instead of the ephemeral staging path.
+    ...fileRecord(hapPath, basename(hapPath)),
     embeddedNative,
   },
   generator: {

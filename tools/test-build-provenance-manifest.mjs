@@ -19,5 +19,7 @@ assert.match(generator, /nativePackaging: \{[\s\S]*arguments: \['--strip-all'\],
   'the strip tool, arguments, and derived packaged NAPI identity must be preserved');
 assert.match(generator, /hap: \{[\s\S]*embeddedNative,[\s\S]*\}/,
   'the verified embedded NAPI record must be preserved in the manifest');
+assert.match(generator, /fileRecord\(hapPath, basename\(hapPath\)\)/,
+  'published provenance must not retain the ephemeral staging HAP path');
 
 console.log('build provenance embedded NAPI contract: PASS');
