@@ -1,4 +1,4 @@
-import * as readerCoreNapi from 'libreader_core_napi.so';
+import readerCoreNapi from 'libreader_core_napi.so';
 
 import {
   ReaderCoreRuntime,
@@ -66,6 +66,14 @@ export function readLocalEpubEntry(
   maxBytes: number
 ): Uint8Array {
   return nativeReaderCore.readEpubEntry(archivePath, entryPath, maxBytes);
+}
+
+export async function readLocalEpubEntryAsync(
+  archivePath: string,
+  entryPath: string,
+  maxBytes: number
+): Promise<Uint8Array> {
+  return nativeReaderCore.readEpubEntryAsync(archivePath, entryPath, maxBytes);
 }
 
 /**

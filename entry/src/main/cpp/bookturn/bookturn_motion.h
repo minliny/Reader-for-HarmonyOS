@@ -11,20 +11,12 @@
 
 namespace reader::bookturn {
 
-// V1 §4.1 constants inherited verbatim (chase) plus the frozen V2 timings.
-constexpr float kEdgeOriginBandVp = 12.0F;
-constexpr float kCatchSpeedViewportsPerSecond = 5.0F;
-constexpr float kCatchNearMaxVp = 48.0F;
-constexpr float kCatchNearViewporRatio = 0.12F;
-constexpr float kCatchLockVp = 4.0F;
-// Causal presentation delay for sparse platform MOVE delivery. At 40 Hz this
-// exposes one input segment over three 120 Hz frames; faster input naturally
-// falls back to one-sample latency because only the newest two samples exist.
-// No extrapolation is allowed, so the rendered pointer never runs ahead of
-// the latest physical sample.
-constexpr int64_t kPresentationDelayNs = 24'000'000;
-constexpr float kCompleteSeconds = 0.600F;
-constexpr float kSettleMinSeconds = 0.240F;
+// Input is sampled on the next VSync with no intentional delay or pursuit.
+constexpr float kCompleteSeconds = 0.320F;
+// Queued completed taps use a short cue; finger release still uses the
+// independent 80..320 ms velocity-based settlement below.
+constexpr float kRapidCompleteSeconds = 0.030F;
+constexpr float kSettleMinSeconds = 0.080F;
 
 // Raw gesture sample. No edge fields: the edge is native-owned state.
 struct BookTurnSample {
@@ -44,6 +36,10 @@ struct BookTurnSample {
 // edge across frames and derives finger velocity from consecutive samples.
 struct BookTurnChaseState {
     float edgeX = 0.0F;
+    float originEdgeX = 0.0F;
+    float originEdgeY = 0.0F;
+    float regrabTheta = 0.0F;
+    bool regrabbed = false;
     float previousPointerX = 0.0F;
     float previousPointerY = 0.0F;
     int64_t previousSampleTimeNs = 0;
@@ -65,20 +61,14 @@ void ResetChase(BookTurnChaseState& state, const BookTurnSample& sample);
 // never moves here — advancement happens per VSync frame in ChaseAdvance.
 void RecordChaseSample(BookTurnChaseState& state, const BookTurnSample& sample);
 
-// Present the latest input segment on a bounded delayed timeline. The first
-// sample interpolates from the gesture start; later samples interpolate from
-// the previously consumed mailbox value. The returned point is always inside
-// that segment (never predicted beyond the newest physical sample).
+// Consume the latest sample; a stationary pointer keeps an identical pose.
 BookTurnSample PresentChaseSample(const BookTurnChaseState& state, const BookTurnSample& sample,
     int64_t frameTimeNs);
 
-// x_follow target (V1 §5.3): the gated follow position, not the raw pointer.
+// Map displacement from the acquired origin symmetrically in both directions.
 float ChaseTargetX(const BookTurnSample& sample);
 
-// Advance the chased edge by one VSync frame toward ChaseTargetX. Returns the
-// new edge x. M-CATCH-FAST / M-CATCH-NEAR / M-CATCH-LOCK segments, step
-// clamping, no spring inertia; gestures starting inside the 12vp edge band
-// track x_follow 1:1 once ownership progress locks.
+// Set the edge directly at the frame boundary, without integrating a chase.
 float ChaseAdvance(BookTurnChaseState& state, const BookTurnSample& sample, float frameSeconds);
 
 // Progress-space distance between the chased edge and the current target
@@ -91,7 +81,8 @@ float ChaseGap(const BookTurnChaseState& state, const BookTurnSample& sample);
 // is written for the canonical NEXT rest orientation and is applied
 // symmetrically as T-COMPLETE*remaining.
 float SettleTargetTau(Direction direction, bool commit);
-float SettleDurationSeconds(float tau0, Direction direction, bool commit);
+float SettleDurationSeconds(float tau0, Direction direction, bool commit,
+    float velocityPagesPerSecond = 0.0F);
 // tau(t): linear in tau for release settle / cancel (INV-3 exact time
 // reversal); ease-out tail for the click/auto path.
 float SettleTauAt(float tau0, float targetTau, float elapsedSeconds, float durationSeconds,

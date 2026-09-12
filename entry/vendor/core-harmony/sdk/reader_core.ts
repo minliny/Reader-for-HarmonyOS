@@ -6,6 +6,7 @@ export type NativeReaderCoreModule = {
   abiVersion(): number;
   lastError(): { code: number; message: string };
   readEpubEntry(archivePath: string, entryPath: string, maxBytes: number): Uint8Array;
+  readEpubEntryAsync(archivePath: string, entryPath: string, maxBytes: number): Promise<Uint8Array>;
   encodeText(text: string, charset: string, maxBytes: number): Uint8Array;
   createRuntime(config?: JsonObject | string): NativeRuntimeHandle;
   releaseRuntime(runtime: NativeRuntimeHandle): void;
@@ -211,7 +212,6 @@ export class CapabilityRouter {
 
 type QueuedReaderCoreEvent = {
   event: ReaderCoreEvent;
-  consumed: boolean;
 };
 
 export class ReaderCoreRuntime {
@@ -219,8 +219,10 @@ export class ReaderCoreRuntime {
 
   private readonly native: NativeReaderCoreModule;
   private readonly runtime: NativeRuntimeHandle;
-  private readonly pendingEvents: QueuedReaderCoreEvent[] = [];
-  private readonly pendingEventsByRequest = new Map<number, QueuedReaderCoreEvent[]>();
+  // Both indexes own only unread events. Ordered sets let either reader remove
+  // a payload from both indexes immediately, without scans or retained tombstones.
+  private readonly pendingEvents = new Set<QueuedReaderCoreEvent>();
+  private readonly pendingEventsByRequest = new Map<number, Set<QueuedReaderCoreEvent>>();
   private pendingEventCountValue = 0;
   /** One shared native-event poll lane for all concurrent request waiters. */
   private pollTail: Promise<void> = Promise.resolve();
@@ -261,7 +263,7 @@ export class ReaderCoreRuntime {
       this.capabilityRouter?.cancel(event);
     }
     this.native.releaseRuntime(this.runtime);
-    this.pendingEvents.length = 0;
+    this.pendingEvents.clear();
     this.pendingEventsByRequest.clear();
     this.pendingEventCountValue = 0;
     this.activeHostRequests.clear();
@@ -561,15 +563,8 @@ export class ReaderCoreRuntime {
     if (requestQueue === undefined) {
       return null;
     }
-    while (requestQueue.length > 0) {
-      const queued = requestQueue.shift() as QueuedReaderCoreEvent;
-      if (queued.consumed) {
-        continue;
-      }
+    for (const queued of requestQueue) {
       this.consumePendingEvent(queued);
-      if (requestQueue.length === 0) {
-        this.pendingEventsByRequest.delete(requestId);
-      }
       return queued.event;
     }
     this.pendingEventsByRequest.delete(requestId);
@@ -584,9 +579,6 @@ export class ReaderCoreRuntime {
       }
       let terminalSeen = false;
       for (const queued of requestQueue) {
-        if (queued.consumed) {
-          continue;
-        }
         this.consumePendingEvent(queued);
         terminalSeen = terminalSeen || this.isTerminalEvent(queued.event);
       }
@@ -598,20 +590,16 @@ export class ReaderCoreRuntime {
   }
 
   private enqueuePendingEvent(event: ReaderCoreEvent): void {
-    const queued: QueuedReaderCoreEvent = { event, consumed: false };
-    this.pendingEvents.push(queued);
-    const requestQueue = this.pendingEventsByRequest.get(event.requestId) ?? [];
-    requestQueue.push(queued);
+    const queued: QueuedReaderCoreEvent = { event };
+    this.pendingEvents.add(queued);
+    const requestQueue = this.pendingEventsByRequest.get(event.requestId) ?? new Set<QueuedReaderCoreEvent>();
+    requestQueue.add(queued);
     this.pendingEventsByRequest.set(event.requestId, requestQueue);
     this.pendingEventCountValue += 1;
   }
 
   private takeNextPendingEvent(): ReaderCoreEvent | undefined {
-    while (this.pendingEvents.length > 0) {
-      const queued = this.pendingEvents.shift() as QueuedReaderCoreEvent;
-      if (queued.consumed) {
-        continue;
-      }
+    for (const queued of this.pendingEvents) {
       this.consumePendingEvent(queued);
       return queued.event;
     }
@@ -619,10 +607,15 @@ export class ReaderCoreRuntime {
   }
 
   private consumePendingEvent(queued: QueuedReaderCoreEvent): void {
-    if (queued.consumed) {
+    if (!this.pendingEvents.delete(queued)) {
       return;
     }
-    queued.consumed = true;
+    const requestId = queued.event.requestId;
+    const requestQueue = this.pendingEventsByRequest.get(requestId);
+    requestQueue?.delete(queued);
+    if (requestQueue?.size === 0) {
+      this.pendingEventsByRequest.delete(requestId);
+    }
     this.pendingEventCountValue = Math.max(0, this.pendingEventCountValue - 1);
   }
 

@@ -92,6 +92,8 @@ struct BookTurnInput {
      *  settledPsi and tau advances from the clamped edge position. */
     bool overrideTheta = false;
     float settledTheta = 0.0F;
+    // A submitted pose is already limited; applying the nonlinear limit twice jumps.
+    bool settledThetaIsPresented = false;
     float radiusScale = 1.0F;
 };
 

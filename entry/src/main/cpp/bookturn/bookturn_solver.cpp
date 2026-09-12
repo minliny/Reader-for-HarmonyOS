@@ -336,7 +336,8 @@ BookTurnPose BookTurnSolver::Solve(const BookTurnInput& input, const BookTurnPos
     const float exposureGate = SmoothStep(0.0F, kHalfPi * pose.rollRadius, exposed);
     const float visibleGate = input.overrideTheta ? 1.0F : intentGate * exposureGate;
     const float thetaSource = input.overrideTheta ? input.settledTheta : thetaVector;
-    pose.theta = LimitTheta(thetaSource) * visibleGate;
+    pose.theta = input.overrideTheta && input.settledThetaIsPresented ? Clamp(thetaSource, -DegreesToRadians(kThetaCapDegrees),
+        DegreesToRadians(kThetaCapDegrees)) : LimitTheta(thetaSource) * visibleGate;
 
     // Preserve the current signed branch at the singular zero crossing. This
     // only resolves an exact floating-point tie and never filters a sample.

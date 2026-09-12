@@ -61,6 +61,8 @@ void PumpVsync(long long timestampNs)
         std::lock_guard<std::mutex> lock(g_vsyncMutex);
         callback = g_frameCallback;
         data = g_frameData;
+        g_frameCallback = nullptr;
+        g_frameData = nullptr;
     }
     if (callback != nullptr) callback(timestampNs, data);
 }
@@ -86,7 +88,7 @@ OH_NativeVSync* OH_NativeVSync_Create(const char*, unsigned int)
     return reinterpret_cast<OH_NativeVSync*>(0x1);
 }
 
-void OH_NativeVSync_Destroy(OH_NativeVSync*) {}
+void OH_NativeVSync_Destroy(OH_NativeVSync*) { bookturntest::ResetVsync(); }
 
 int OH_NativeVSync_RequestFrame(OH_NativeVSync*, OH_NativeVSync_FrameCallback callback, void* data)
 {

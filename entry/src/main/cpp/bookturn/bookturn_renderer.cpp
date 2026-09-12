@@ -1,4 +1,5 @@
 #include "bookturn_renderer.h"
+#include "bookturn_trace.h"
 
 #include <algorithm>
 #include <array>
@@ -32,10 +33,24 @@ in vec2 vUv;
 in vec2 vPage;
 layout(location = 0) out vec4 outColor;
 uniform sampler2D uTexture;
+uniform int uDynamicCount;
+uniform vec4 uDynamicRects[64];
+uniform vec4 uDynamicColors[64];
+vec3 applyDynamicHighlights(vec3 color) {
+    for (int i = 0; i < uDynamicCount; ++i) {
+        vec4 r = uDynamicRects[i];
+        if (vUv.x >= r.x && vUv.x <= r.z && vUv.y >= r.y && vUv.y <= r.w) {
+            vec4 mark = uDynamicColors[i];
+            color = mark.a < 0.0 ? color * mix(vec3(1.0), mark.rgb, -mark.a) : mix(color, mark.rgb, mark.a);
+        }
+    }
+    return color;
+}
+
 uniform float uGutterWidth;
 uniform float uGutterAlpha;
 void main() {
-    vec3 base = texture(uTexture, vUv).rgb;
+    vec3 base = applyDynamicHighlights(texture(uTexture, vUv).rgb);
     float gutter = (1.0 - smoothstep(0.0, uGutterWidth, vPage.x)) * uGutterAlpha;
     outColor = vec4(base * (1.0 - gutter), 1.0);
 }
@@ -191,6 +206,20 @@ in float vD;
 in float vRadius;
 layout(location = 0) out vec4 outColor;
 uniform sampler2D uTexture;
+uniform int uDynamicCount;
+uniform vec4 uDynamicRects[64];
+uniform vec4 uDynamicColors[64];
+vec3 applyDynamicHighlights(vec3 color) {
+    for (int i = 0; i < uDynamicCount; ++i) {
+        vec4 r = uDynamicRects[i];
+        if (vUv.x >= r.x && vUv.x <= r.z && vUv.y >= r.y && vUv.y <= r.w) {
+            vec4 mark = uDynamicColors[i];
+            color = mark.a < 0.0 ? color * mix(vec3(1.0), mark.rgb, -mark.a) : mix(color, mark.rgb, mark.a);
+        }
+    }
+    return color;
+}
+
 uniform vec3 uPaperColor;
 uniform float uPaperFallback;
 uniform float uHighlightPhiWidth;
@@ -214,7 +243,7 @@ void main() {
     // zero on both flat ends, so flat ground is lit at exactly 1.0.
     float wrapGate = sin(clamp(vPhi, 0.0, PI));
     float lighting = mix(1.0, 0.94 + 0.06 * diffuse, wrapGate);
-    vec3 frontColor = texture(uTexture, vUv).rgb;
+    vec3 frontColor = applyDynamicHighlights(texture(uTexture, vUv).rgb);
     // Paper fallback (contract 8.6): while enabled the backface paper derives
     // from the theme background color instead of the front texture; the front
     // keeps the texture. The derivation is the same 96%/10% rule, no fixed
@@ -280,6 +309,7 @@ uint32_t SourceBytesPerPixel(TextureSourceFormat format)
 
 bool CompactRgb8(TexturePayload& payload)
 {
+    const BookTurnTrace trace("ReaderBookTurn.ConvertPixels");
     const uint32_t sourceBytes = SourceBytesPerPixel(payload.sourceFormat);
     const size_t sourceSize = static_cast<size_t>(payload.rowStride) * payload.height;
     const size_t compactSize = static_cast<size_t>(payload.width) * payload.height * 3U;
@@ -350,7 +380,15 @@ bool BookTurnRenderer::Initialize(void* nativeWindow, uint64_t width, uint64_t h
         return false;
     }
     glViewport(0, 0, static_cast<GLsizei>(surfaceWidth_), static_cast<GLsizei>(surfaceHeight_));
-    return Clear();
+    // Do not present the initialization clear.  The XComponent is mounted
+    // before its first texture frame is ready, so swapping the transparent
+    // (or black) clear here creates a one-frame flash over the ArkUI page.
+    // Leave the cleared back buffer queued; the first visible swap must be a
+    // complete opaque Draw() frame after CURRENT/adjacent textures are ready.
+    glDisable(GL_DEPTH_TEST);
+    glClearColor(0.0F, 0.0F, 0.0F, 1.0F);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    return glGetError() == GL_NO_ERROR;
 }
 
 void BookTurnRenderer::Resize(uint64_t width, uint64_t height)
@@ -364,6 +402,7 @@ void BookTurnRenderer::Resize(uint64_t width, uint64_t height)
 
 void BookTurnRenderer::Shutdown()
 {
+    dynamicHighlights_ = {};
     if (display_ != EGL_NO_DISPLAY && context_ != EGL_NO_CONTEXT) {
         eglMakeCurrent(display_, surface_, surface_, context_);
         DestroyGl();
@@ -382,10 +421,30 @@ void BookTurnRenderer::Shutdown()
     surface_ = EGL_NO_SURFACE;
     context_ = EGL_NO_CONTEXT;
     config_ = nullptr;
+    ResetPresentationState();
+}
+
+void BookTurnRenderer::ResetPresentationState()
+{
+    // Presentation flags are per-EGL-surface, not per renderer lifetime.  A
+    // tau-swap or theme fallback left over from a destroyed XComponent would
+    // make the first frame of the next attach draw the base-only path (or a
+    // stale paper color), which appears as a black/bright flash during a
+    // control-bar animation that happens to remount the surface.
+    surfaceWidth_ = 0;
+    surfaceHeight_ = 0;
+    fallbackPaper_[0] = 1.0F;
+    fallbackPaper_[1] = 1.0F;
+    fallbackPaper_[2] = 1.0F;
+    fallbackPaperEnabled_ = false;
+    sheetVisible_ = true;
+    terminalSlot_ = TextureSlot::CURRENT;
+    lastRefusal_ = DrawRefusal::NONE;
 }
 
 bool BookTurnRenderer::Upload(TexturePayload&& payload)
 {
+    const BookTurnTrace trace("ReaderBookTurn.Upload");
     if (context_ == EGL_NO_CONTEXT || !CompactRgb8(payload)) {
         return false;
     }
@@ -439,7 +498,7 @@ bool BookTurnRenderer::Draw(const BookTurnPose& pose)
         return false;
     }
     if (!sheetVisible_) {
-        if (!Slot(TextureSlot::CURRENT).ready) {
+        if (!Slot(terminalSlot_).ready) {
             lastRefusal_ = DrawRefusal::CURRENT_MISSING;
             return false;
         }
@@ -454,12 +513,13 @@ bool BookTurnRenderer::Draw(const BookTurnPose& pose)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     if (!sheetVisible_) {
-        // §7.3 early swap: the rotated CURRENT slot already holds the
-        // admitted page, so only the static base frame is emitted (no sheet,
-        // no shadow band, zero blend switches).
+        // The transaction's destination stays bound without rotating or
+        // invalidating any source texture until the business commit succeeds.
         glDisable(GL_BLEND);
         glDepthMask(GL_TRUE);
-        DrawBottom(pose, TextureSlot::CURRENT);
+        // The promoted ArkUI ReadingSurface has no Native-only gutter pass.
+        // Keep the terminal base visually identical at the handoff edge.
+        DrawBottom(pose, terminalSlot_, 0.0F);
         if (eglSwapBuffers(display_, surface_) != EGL_TRUE) {
             lastRefusal_ = DrawRefusal::SWAP_FAILED;
             return false;
@@ -473,7 +533,10 @@ bool BookTurnRenderer::Draw(const BookTurnPose& pose)
     // switches per frame (enter draw 2, enter draw 3).
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
-    DrawBottom(pose, bottom);
+    // The static ArkUI page has no extra gutter. Fade this existing band
+    // continuously at both flat endpoints, including a reversed settlement.
+    const float gutterGate = std::sin(3.14159265358979323846F * std::clamp(pose.tau, 0.0F, 1.0F));
+    DrawBottom(pose, bottom, kGutterAlphaDefault * gutterGate);
     glEnable(GL_BLEND);
     // Alpha channels of all three passes write 1.0, but plain GL_SRC_ALPHA
     // blending also scales the destination ALPHA, so the shadow pass dropped
@@ -496,12 +559,21 @@ bool BookTurnRenderer::Draw(const BookTurnPose& pose)
 
 bool BookTurnRenderer::Clear()
 {
+    return ClearSurface();
+}
+
+bool BookTurnRenderer::ClearSurface()
+{
     sheetVisible_ = true;
+    terminalSlot_ = TextureSlot::CURRENT;
     if (context_ == EGL_NO_CONTEXT) return false;
     glDisable(GL_DEPTH_TEST);
     glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    return eglSwapBuffers(display_, surface_) == EGL_TRUE;
+    // Clearing the back buffer must never submit a visible transparent frame.
+    // The owner has already hidden the XComponent; the next Draw() overwrites
+    // this buffer before its first post-settlement swap.
+    return glGetError() == GL_NO_ERROR;
 }
 
 void BookTurnRenderer::SetSheetVisible(bool visible)
@@ -509,10 +581,28 @@ void BookTurnRenderer::SetSheetVisible(bool visible)
     sheetVisible_ = visible;
 }
 
+void BookTurnRenderer::ShowTerminalPage(TextureSlot slot)
+{
+    terminalSlot_ = slot;
+    sheetVisible_ = false;
+}
+
 void BookTurnRenderer::UndoCommitSlots()
 {
-    std::swap(Slot(TextureSlot::NEXT), Slot(TextureSlot::CURRENT));
-    std::swap(Slot(TextureSlot::CURRENT), Slot(TextureSlot::PREVIOUS));
+    UndoCommitSlots(Direction::NEXT);
+}
+
+void BookTurnRenderer::UndoCommitSlots(Direction direction)
+{
+    // CommitSlots applies two swaps. Reverse that order to obtain its true
+    // inverse; PREVIOUS needs the opposite order from NEXT.
+    if (direction == Direction::NEXT) {
+        std::swap(Slot(TextureSlot::CURRENT), Slot(TextureSlot::NEXT));
+        std::swap(Slot(TextureSlot::PREVIOUS), Slot(TextureSlot::CURRENT));
+    } else {
+        std::swap(Slot(TextureSlot::CURRENT), Slot(TextureSlot::PREVIOUS));
+        std::swap(Slot(TextureSlot::NEXT), Slot(TextureSlot::CURRENT));
+    }
 }
 
 void BookTurnRenderer::CommitSlots(Direction direction)
@@ -578,6 +668,9 @@ bool BookTurnRenderer::InitializePrograms()
 
     bottomUniforms_.pageSize = glGetUniformLocation(bottomProgram_, "uPageSize");
     bottomUniforms_.texture = glGetUniformLocation(bottomProgram_, "uTexture");
+    bottomUniforms_.highlights.count = glGetUniformLocation(bottomProgram_, "uDynamicCount");
+    bottomUniforms_.highlights.rects = glGetUniformLocation(bottomProgram_, "uDynamicRects[0]");
+    bottomUniforms_.highlights.colors = glGetUniformLocation(bottomProgram_, "uDynamicColors[0]");
     bottomUniforms_.gutterWidth = glGetUniformLocation(bottomProgram_, "uGutterWidth");
     bottomUniforms_.gutterAlpha = glGetUniformLocation(bottomProgram_, "uGutterAlpha");
 
@@ -600,6 +693,9 @@ bool BookTurnRenderer::InitializePrograms()
     sheetUniforms_.sigmaGrip = glGetUniformLocation(sheetProgram_, "uSigmaGrip");
     sheetUniforms_.cameraDist = glGetUniformLocation(sheetProgram_, "uCameraDist");
     sheetUniforms_.texture = glGetUniformLocation(sheetProgram_, "uTexture");
+    sheetUniforms_.highlights.count = glGetUniformLocation(sheetProgram_, "uDynamicCount");
+    sheetUniforms_.highlights.rects = glGetUniformLocation(sheetProgram_, "uDynamicRects[0]");
+    sheetUniforms_.highlights.colors = glGetUniformLocation(sheetProgram_, "uDynamicColors[0]");
     sheetUniforms_.highlightPhiWidth = glGetUniformLocation(sheetProgram_, "uHighlightPhiWidth");
     sheetUniforms_.frontStripWidth = glGetUniformLocation(sheetProgram_, "uFrontStripWidth");
     sheetUniforms_.valleyGate = glGetUniformLocation(sheetProgram_, "uValleyGate");
@@ -718,15 +814,16 @@ GLuint BookTurnRenderer::LinkProgram(GLuint vertex, GLuint fragment)
     return program;
 }
 
-void BookTurnRenderer::DrawBottom(const BookTurnPose& pose, TextureSlot slot)
+void BookTurnRenderer::DrawBottom(const BookTurnPose& pose, TextureSlot slot, float gutterAlpha)
 {
     glUseProgram(bottomProgram_);
     glUniform2f(bottomUniforms_.pageSize, pose.width, pose.height);
     glUniform1f(bottomUniforms_.gutterWidth, kGutterWidthRatio * pose.width);
-    glUniform1f(bottomUniforms_.gutterAlpha, kGutterAlphaDefault);
+    glUniform1f(bottomUniforms_.gutterAlpha, gutterAlpha);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Slot(slot).handle);
     glUniform1i(bottomUniforms_.texture, 0);
+    BindDynamicHighlights(bottomUniforms_.highlights, slot);
     glBindVertexArray(bottomVao_);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -791,8 +888,23 @@ void BookTurnRenderer::DrawSheet(const BookTurnPose& pose, TextureSlot slot)
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Slot(slot).handle);
     glUniform1i(sheetUniforms_.texture, 0);
+    BindDynamicHighlights(sheetUniforms_.highlights, slot);
     glBindVertexArray(sheetVao_);
     glDrawElements(GL_TRIANGLES, sheetIndexCount_, GL_UNSIGNED_SHORT, nullptr);
+}
+
+void BookTurnRenderer::SetDynamicHighlights(DynamicHighlights&& highlights)
+{
+    dynamicHighlights_ = std::move(highlights);
+}
+
+void BookTurnRenderer::BindDynamicHighlights(const HighlightUniforms& uniforms, TextureSlot slot)
+{
+    const size_t count = Slot(slot).identity == dynamicHighlights_.identity ? dynamicHighlights_.rects.size() : 0;
+    glUniform1i(uniforms.count, static_cast<GLint>(count));
+    if (count == 0) return;
+    glUniform4fv(uniforms.rects, static_cast<GLsizei>(count), dynamicHighlights_.rects[0].data());
+    glUniform4fv(uniforms.colors, static_cast<GLsizei>(count), dynamicHighlights_.colors[0].data());
 }
 
 void BookTurnRenderer::SetThemePaper(float red, float green, float blue)

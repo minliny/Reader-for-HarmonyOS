@@ -21,6 +21,7 @@ find_library(ACE_NDK_LIB ace_ndk.z REQUIRED)
 find_library(EGL_LIB EGL REQUIRED)
 find_library(GLES_V3_LIB GLESv3 REQUIRED)
 find_library(HILOG_LIB hilog_ndk.z REQUIRED)
+find_library(HITRACE_LIB hitrace_ndk.z REQUIRED)
 find_library(NATIVE_VSYNC_LIB native_vsync REQUIRED)
 find_library(NATIVE_WINDOW_LIB native_window REQUIRED)
 find_library(PIXELMAP_LIB pixelmap REQUIRED)
@@ -32,12 +33,16 @@ target_link_libraries(reader_bookturn_napi PRIVATE
   ${EGL_LIB}
   ${GLES_V3_LIB}
   ${HILOG_LIB}
+  ${HITRACE_LIB}
   ${NATIVE_VSYNC_LIB}
   ${NATIVE_WINDOW_LIB}
   ${PIXELMAP_LIB}
   ${QOS_LIB})
 
+# Keep the frame solver and full-page pixel conversion optimized in signed
+# debug iterations too. Debug symbols remain available; no fast-math changes.
 target_compile_options(reader_bookturn_napi PRIVATE
+  -O2
   -Wall
   -Wextra
   -Werror

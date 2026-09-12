@@ -5,6 +5,7 @@
 #define READER_TEST_GLMOCK_MOCK_H
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 namespace glmock {
@@ -16,6 +17,7 @@ struct Entry {
 };
 
 void Reset();
+void SetTextureUploadHook(std::function<void()> hook);
 std::vector<Entry> Log();
 void Record(const char* name, int64_t a, int64_t b);
 

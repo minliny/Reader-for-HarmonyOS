@@ -78,6 +78,7 @@ void glBlendFuncSeparate(GLenum sourceRGB, GLenum destinationRGB, GLenum sourceA
     GLenum destinationAlpha);
 void glActiveTexture(GLenum unit);
 void glBindTexture(GLenum target, GLuint texture);
+void glUniform4fv(GLint location, GLsizei count, const GLfloat* values);
 void glUniform1i(GLint location, GLint value);
 void glUniform1f(GLint location, GLfloat value);
 void glUniform2f(GLint location, GLfloat x, GLfloat y);

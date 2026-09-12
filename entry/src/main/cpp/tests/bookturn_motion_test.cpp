@@ -44,10 +44,6 @@ constexpr float kW = 390.0F;
 constexpr float kH = 780.0F;
 constexpr float kMidY = 0.5F * kH;
 constexpr float kFrame = 1.0F / 60.0F;
-constexpr float kNear = std::min(reader::bookturn::kCatchNearMaxVp,
-    reader::bookturn::kCatchNearViewporRatio * kW);
-constexpr float kFastStep = reader::bookturn::kCatchSpeedViewportsPerSecond * kW * kFrame;
-
 int g_checks = 0;
 int g_fails = 0;
 
@@ -111,166 +107,28 @@ BookTurnPose SettlementPose(const BookTurnInput& base, float tau)
     return BookTurnSolver::Solve(input);
 }
 
-void TestFollowXGating()
+void TestDirectDisplacement()
 {
-    // NEXT rest: no progress -> follow sits on the source edge.
-    const BookTurnSample rest = Sample(Direction::NEXT, kW, kW);
-    CheckNear("follow/next-rest-at-source", ChaseTargetX(rest), kW, 1e-4);
-
-    // NEXT edge-origin start with locked progress: follow == pointer 1:1.
-    const BookTurnSample edgePull = Sample(Direction::NEXT, kW, kW - 100.0F);
-    CheckNear("follow/next-edge-origin-1to1", ChaseTargetX(edgePull), kW - 100.0F, 1e-4);
-
-    // NEXT edge-origin start below the horizontal threshold: gate still closed.
-    const BookTurnSample edgeMicro = Sample(Direction::NEXT, kW, kW - 4.0F);
-    CheckTrue(ChaseTargetX(edgeMicro) < kW - 1.0F, "follow/next-micro-gate-partial",
-        "gate must open smoothly below 8vp, not jump to source");
-    CheckTrue(ChaseTargetX(edgeMicro) > kW - 4.0F - 0.5F, "follow/next-micro-gate-bounded",
-        "partial gate must keep the follow near the pointer side");
-
-    // NEXT interior start: same gated formula from the source edge.
-    const BookTurnSample interior = Sample(Direction::NEXT, kW - 200.0F, kW - 260.0F);
-    CheckNear("follow/next-interior-1to1", ChaseTargetX(interior), kW - 260.0F, 1e-4);
-
-    // Pointer clamped to the viewport.
-    const BookTurnSample overshoot = Sample(Direction::NEXT, kW, kW + 500.0F);
-    CheckNear("follow/next-clamp", ChaseTargetX(overshoot), kW, 1e-4);
-
-    // PREVIOUS mirrors from the left edge.
-    const BookTurnSample prevPull = Sample(Direction::PREVIOUS, 0.0F, 100.0F);
-    CheckNear("follow/previous-1to1", ChaseTargetX(prevPull), 100.0F, 1e-4);
-
-    // verticalPrevious: follow = smoothstep gate * pointerX.
-    const float halfGate = 0.5F * 0.5F * (3.0F - 2.0F * 0.5F);
-    const BookTurnSample verticalHalf = Sample(Direction::PREVIOUS, 200.0F, 200.0F, kMidY - 12.0F,
-        true);
-    CheckNear("follow/vertical-half-gate", ChaseTargetX(verticalHalf), halfGate * 200.0F, 1e-3);
-    const BookTurnSample verticalDown = Sample(Direction::PREVIOUS, 200.0F, 200.0F, kMidY + 30.0F,
-        true);
-    CheckNear("follow/vertical-downward-zero", ChaseTargetX(verticalDown), 0.0F, 1e-4);
-    const BookTurnSample verticalFull = Sample(Direction::PREVIOUS, 200.0F, 200.0F, kMidY - 30.0F,
-        true);
-    CheckNear("follow/vertical-full-gate", ChaseTargetX(verticalFull), 200.0F, 1e-3);
-}
-
-void TestChaseSegments()
-{
-    // All chase-dynamics cases use interior starts: an edge-origin start with
-    // locked progress takes the 1:1 ownership branch instead.
-
-    // M-CATCH-FAST: gap above the NEAR band advances at 5 viewport/s.
-    BookTurnChaseState state;
-    const BookTurnSample fast = Sample(Direction::NEXT, kW - 200.0F, kW - 300.0F);
-    ResetChase(state, fast);
-    RecordChaseSample(state, fast);
-    const float advanced = ChaseAdvance(state, fast, kFrame);
-    CheckNear("chase/fast-step", kW - advanced, kFastStep, 1e-3);
-
-    // M-CATCH-NEAR: inside the band the velocity blends finger velocity
-    // toward fast with k = gap/near (stationary finger -> k*fast).
-    const BookTurnSample near = Sample(Direction::NEXT, kW - 200.0F, kW - 235.0F);
-    ResetChase(state, near);
-    RecordChaseSample(state, near);
-    state.edgeX = kW - 230.0F;  // gap = 5
-    const float before = state.edgeX;
-    const float stepped = ChaseAdvance(state, near, kFrame);
-    const float k = 5.0F / kNear;
-    CheckNear("chase/near-step", before - stepped, k * reader::bookturn::kCatchSpeedViewportsPerSecond *
-        kW * kFrame, 1e-3);
-
-    // M-CATCH-LOCK: gap within the lock band snaps to the follow target.
-    const BookTurnSample lock = Sample(Direction::NEXT, kW - 100.0F, kW - 140.0F);
-    ResetChase(state, lock);
-    RecordChaseSample(state, lock);
-    state.edgeX = kW - 137.0F;  // gap = 3 <= 4
-    const float snapped = ChaseAdvance(state, lock, kFrame);
-    CheckNear("chase/lock-snap", snapped, kW - 140.0F, 1e-4);
-    CheckNear("chase/lock-state", state.edgeX, kW - 140.0F, 1e-4);
-
-    // Overshoot: step >= gap snaps exactly, never passes the target.
-    const BookTurnSample overshoot = Sample(Direction::NEXT, kW - 100.0F, kW - 115.0F);
-    ResetChase(state, overshoot);
-    RecordChaseSample(state, overshoot);
-    state.edgeX = kW - 110.0F;  // gap = 5, same sign as the big inward step
-    state.fingerVelocityX = -20000.0F;  // fast inward finger, NEAR blend saturates high
-    const float overshot = ChaseAdvance(state, overshoot, kFrame);
-    CheckNear("chase/overshoot-snap", overshot, kW - 115.0F, 1e-3);
-
-    // Reversing finger: negative edge velocity must not create new lag.
-    const BookTurnSample reversing = Sample(Direction::NEXT, kW - 100.0F, kW - 120.0F);
-    ResetChase(state, reversing);
-    RecordChaseSample(state, reversing);
-    state.edgeX = kW - 110.0F;  // gap = 10
-    state.fingerVelocityX = 20000.0F;  // finger moving outward (+x)
-    const float beforeReverse = state.edgeX;
-    const float held = ChaseAdvance(state, reversing, kFrame);
-    CheckNear("chase/reversing-guard", held, beforeReverse, 1e-4);
-
-    // dt <= 0: edge unchanged.
-    const BookTurnSample frozen = Sample(Direction::NEXT, kW - 100.0F, kW - 150.0F);
-    ResetChase(state, frozen);
-    RecordChaseSample(state, frozen);
-    state.edgeX = kW - 11.0F;
-    CheckNear("chase/dt-zero", ChaseAdvance(state, frozen, 0.0F), kW - 11.0F, 1e-6);
-    CheckNear("chase/dt-negative", ChaseAdvance(state, frozen, -kFrame), kW - 11.0F, 1e-6);
-
-    // PREVIOUS fast segment mirrors the direction sign.
-    const BookTurnSample prevFast = Sample(Direction::PREVIOUS, 100.0F, 200.0F);
-    ResetChase(state, prevFast);
-    RecordChaseSample(state, prevFast);
-    const float prevAdvanced = ChaseAdvance(state, prevFast, kFrame);
-    CheckNear("chase/previous-fast-step", prevAdvanced, kFastStep, 1e-3);
-}
-
-void TestChaseGap()
-{
-    const BookTurnSample next = Sample(Direction::NEXT, kW, kW - 100.0F);
-    BookTurnChaseState state;
-    ResetChase(state, next);
-    CheckNear("gap/next-rest", ChaseGap(state, next), 100.0F, 1e-3);
-    const BookTurnSample prev = Sample(Direction::PREVIOUS, 0.0F, 100.0F);
-    ResetChase(state, prev);
-    CheckNear("gap/previous-rest", ChaseGap(state, prev), 100.0F, 1e-3);
-}
-
-void TestEdgeOriginOwnership()
-{
-    // Edge-origin gestures with locked progress track x_follow 1:1: no chase
-    // dynamics, exact snap in one frame regardless of dt.
-    BookTurnChaseState state;
-    const BookTurnSample owned = Sample(Direction::NEXT, kW, kW - 100.0F);
-    ResetChase(state, owned);
-    const float tracked = ChaseAdvance(state, owned, kFrame);
-    CheckNear("ownership/next-1to1", tracked, kW - 100.0F, 1e-4);
-
-    // Interior starts run the catch dynamics: the edge leaves the source and
-    // needs multiple frames to reach the follow target.
-    const BookTurnSample interior = Sample(Direction::NEXT, kW - 100.0F, kW - 110.0F);
-    ResetChase(state, interior);
-    RecordChaseSample(state, interior);
-    const float first = ChaseAdvance(state, interior, kFrame);
-    CheckTrue(first > (kW - 110.0F) + 1.0F, "ownership/interior-chases",
-        "interior start must not teleport to the follow target in one frame");
-
-    // verticalPrevious ownership gates on 24vp upward travel AND an
-    // edge-origin start (same horizontal band as the other directions).
-    BookTurnChaseState verticalState;
-    const BookTurnSample verticalOwned = Sample(Direction::PREVIOUS, 8.0F, 200.0F, kMidY - 30.0F,
-        true);
-    ResetChase(verticalState, verticalOwned);
-    RecordChaseSample(verticalState, verticalOwned);
-    CheckNear("ownership/vertical-1to1", ChaseAdvance(verticalState, verticalOwned, kFrame), 200.0F,
-        1e-3);
-
-    // Same vertical travel from a mid-screen start: chase dynamics instead.
-    const BookTurnSample verticalInterior = Sample(Direction::PREVIOUS, 200.0F, 200.0F,
-        kMidY - 30.0F, true);
-    ResetChase(verticalState, verticalInterior);
-    RecordChaseSample(verticalState, verticalInterior);
-    const float verticalFirst = ChaseAdvance(verticalState, verticalInterior, kFrame);
-    CheckTrue(verticalFirst > 1.0F && verticalFirst < 200.0F - kFastStep - 1.0F,
-        "ownership/vertical-interior-chases",
-        "mid-screen vertical start must chase from the left edge, not teleport");
+    for (const auto direction : { Direction::NEXT, Direction::PREVIOUS }) {
+        const float sign = direction == Direction::NEXT ? -1.0F : 1.0F;
+        const float source = direction == Direction::NEXT ? kW : 0.0F;
+        for (const float origin : { 10.0F, 150.0F, 300.0F, 380.0F }) {
+            BookTurnChaseState state;
+            auto sample = Sample(direction, origin, origin);
+            ResetChase(state, sample);
+            for (const float distance : { 0.0F, 4.0F, 60.0F, 180.0F, 90.0F, 0.0F }) {
+                sample.pointerX = origin + sign * distance;
+                CheckNear("input/origin-independent-displacement", ChaseTargetX(sample), source + sign * distance, 1e-4);
+                CheckNear("input/no-pursuit-on-first-frame", ChaseAdvance(state, sample, kFrame), source + sign * distance, 1e-4);
+                CheckNear("input/stationary-no-drift", ChaseAdvance(state, sample, kFrame), state.edgeX, 1e-4);
+                CheckNear("input/no-residual-gap", ChaseGap(state, sample), 0, 1e-4);
+            }
+        }
+    }
+    CheckNear("vertical/upward-displacement", ChaseTargetX(Sample(Direction::PREVIOUS, 200, 200,
+        kMidY - 90, true)), 90, 1e-4);
+    CheckNear("vertical/downward-rest", ChaseTargetX(Sample(Direction::PREVIOUS, 200, 200,
+        kMidY + 30, true)), 0, 1e-4);
 }
 
 void TestSampleVelocity()
@@ -295,64 +153,19 @@ void TestSampleVelocity()
 
 void TestSparseSamplePresentation()
 {
-    constexpr int64_t kBaseNs = 1'000'000'000;
-    constexpr int64_t kSparseStepNs = 25'000'000;
-    constexpr int64_t kVsyncStepNs = 8'000'000;
     BookTurnChaseState state;
-
-    // The first owned sample unfolds from the gesture start over the bounded
-    // presentation delay instead of appearing as one large MOVE-time jump.
-    const BookTurnSample first = Sample(Direction::NEXT, kW, kW - 40.0F, kMidY - 24.0F,
-        false, kMidY, kBaseNs);
-    ResetChase(state, first);
-    RecordChaseSample(state, first);
-    const BookTurnSample firstStart = PresentChaseSample(state, first, kBaseNs);
-    const BookTurnSample firstMid = PresentChaseSample(state, first,
-        kBaseNs + reader::bookturn::kPresentationDelayNs / 2);
-    const BookTurnSample firstEnd = PresentChaseSample(state, first,
-        kBaseNs + reader::bookturn::kPresentationDelayNs);
-    CheckNear("present/first-start-x", firstStart.pointerX, kW, 1e-3);
-    CheckNear("present/first-mid-x", firstMid.pointerX, kW - 20.0F, 1e-3);
-    CheckNear("present/first-end-x", firstEnd.pointerX, kW - 40.0F, 1e-3);
-    CheckNear("present/first-mid-y", firstMid.pointerY, kMidY - 12.0F, 1e-3);
-
-    // A 40 Hz input segment must expose motion on every intervening 120 Hz
-    // frame. The presented point stays within the physical segment and lands
-    // exactly on the newest sample after the 24 ms delay.
-    const BookTurnSample second = Sample(Direction::NEXT, kW, kW - 80.0F, kMidY - 48.0F,
-        false, kMidY, kBaseNs + kSparseStepNs);
-    RecordChaseSample(state, second);
-    float previousX = first.pointerX;
-    for (int frame = 1; frame <= 3; ++frame) {
-        const BookTurnSample presented = PresentChaseSample(state, second,
-            second.eventTimeNs + frame * kVsyncStepNs);
-        CheckTrue(presented.pointerX < previousX - 1.0F,
-            ("present/sparse-moves-frame-" + std::to_string(frame)).c_str(),
-            "each VSync between 25ms MOVE samples must advance the sheet");
-        CheckTrue(presented.pointerX >= second.pointerX - 1e-3F,
-            ("present/sparse-no-overshoot-frame-" + std::to_string(frame)).c_str(),
-            "causal interpolation must never pass the newest physical sample");
-        previousX = presented.pointerX;
+    auto sample = Sample(Direction::NEXT, 200, 120, kMidY - 20, false, kMidY, 1'000'000'000);
+    ResetChase(state, sample);
+    RecordChaseSample(state, sample);
+    for (int frame = 0; frame < 60; ++frame) {
+        const auto point = PresentChaseSample(state, sample, sample.eventTimeNs + frame * 8'000'000);
+        CheckNear("present/latest-immediate-and-quiet-hold-x", point.pointerX, sample.pointerX, 1e-4);
+        CheckNear("present/latest-immediate-and-quiet-hold-y", point.pointerY, sample.pointerY, 1e-4);
     }
-    const BookTurnSample held = PresentChaseSample(state, second,
-        second.eventTimeNs + 100'000'000);
-    CheckNear("present/stationary-holds-x", held.pointerX, second.pointerX, 1e-3);
-    CheckNear("present/stationary-holds-y", held.pointerY, second.pointerY, 1e-3);
-
-    // Reversal is also segment-bounded: interpolation returns toward the new
-    // point without carrying any extrapolated inward momentum.
-    const BookTurnSample reversed = Sample(Direction::NEXT, kW, kW - 60.0F, kMidY - 36.0F,
-        false, kMidY, second.eventTimeNs + kSparseStepNs);
-    RecordChaseSample(state, reversed);
-    const BookTurnSample reverseMid = PresentChaseSample(state, reversed,
-        reversed.eventTimeNs + reader::bookturn::kPresentationDelayNs / 2);
-    const float reversePhase = static_cast<float>(kSparseStepNs -
-        reader::bookturn::kPresentationDelayNs + reader::bookturn::kPresentationDelayNs / 2) /
-        static_cast<float>(kSparseStepNs);
-    CheckNear("present/reverse-mid-x", reverseMid.pointerX,
-        second.pointerX + reversePhase * (reversed.pointerX - second.pointerX), 1e-3);
-    CheckNear("present/reverse-mid-y", reverseMid.pointerY,
-        second.pointerY + reversePhase * (reversed.pointerY - second.pointerY), 1e-3);
+    sample.pointerX = 180;
+    RecordChaseSample(state, sample);
+    CheckNear("present/reversal-without-inertia", PresentChaseSample(state, sample, sample.eventTimeNs).pointerX,
+        180, 1e-4);
 }
 
 void TestSettleTargetsAndDurations()
@@ -362,33 +175,14 @@ void TestSettleTargetsAndDurations()
     CheckNear("target/previous-commit", SettleTargetTau(Direction::PREVIOUS, true), 0.0F, 1e-6);
     CheckNear("target/previous-rollback", SettleTargetTau(Direction::PREVIOUS, false), 1.0F, 1e-6);
 
-    // NEXT commit: T-COMPLETE * remaining, floored at T-SETTLE-MIN.
-    CheckNear("duration/next-commit-half", SettleDurationSeconds(0.5F, Direction::NEXT, true),
-        0.300F, 1e-6);
-    CheckNear("duration/next-commit-rest", SettleDurationSeconds(0.0F, Direction::NEXT, true),
-        0.600F, 1e-6);
-    CheckNear("duration/next-commit-floor", SettleDurationSeconds(0.9F, Direction::NEXT, true),
-        0.240F, 1e-6);
-
-    // NEXT rollback: remaining = tau0 (back to rest tau 0).
-    CheckNear("duration/next-rollback-70", SettleDurationSeconds(0.7F, Direction::NEXT, false),
-        0.420F, 1e-6);
-    CheckNear("duration/next-rollback-floor", SettleDurationSeconds(0.3F, Direction::NEXT, false),
-        0.240F, 1e-6);
-
-    // PREVIOUS is the same geometry: commit runs tau -> 0 (remaining = tau0),
-    // rollback runs tau -> 1 (remaining = 1 - tau0).
-    CheckNear("duration/previous-commit-70", SettleDurationSeconds(0.7F, Direction::PREVIOUS, true),
-        0.420F, 1e-6);
-    CheckNear("duration/previous-commit-floor", SettleDurationSeconds(0.3F, Direction::PREVIOUS,
-        true), 0.240F, 1e-6);
-    CheckNear("duration/previous-rollback-half", SettleDurationSeconds(0.5F, Direction::PREVIOUS,
-        false), 0.300F, 1e-6);
-
-    // INV-3 symmetry: a NEXT rollback from tau0 and a PREVIOUS commit from the
-    // mirrored rest share the same duration.
-    CheckNear("duration/inv3-symmetry", SettleDurationSeconds(0.7F, Direction::NEXT, false),
-        SettleDurationSeconds(0.7F, Direction::PREVIOUS, true), 1e-6);
+    CheckNear("duration/half", SettleDurationSeconds(.5F, Direction::NEXT, true), .2F, 1e-6);
+    CheckNear("duration/full-capped", SettleDurationSeconds(0, Direction::NEXT, true), .32F, 1e-6);
+    CheckNear("duration/near-end", SettleDurationSeconds(.95F, Direction::NEXT, true), .08F, 1e-6);
+    CheckNear("duration/at-end-zero", SettleDurationSeconds(1, Direction::NEXT, true), 0, 1e-6);
+    CheckNear("duration/release-speed", SettleDurationSeconds(.5F, Direction::NEXT, true, 5), .1F, 1e-6);
+    CheckNear("duration/opposing-speed", SettleDurationSeconds(.5F, Direction::NEXT, true, -5), .2F, 1e-6);
+    CheckNear("duration/direction-symmetry", SettleDurationSeconds(.7F, Direction::NEXT, false),
+        SettleDurationSeconds(.7F, Direction::PREVIOUS, true), 1e-6);
 }
 
 void TestSettleTauAt()
@@ -546,10 +340,7 @@ void TestSwapCoverageGate()
 
 int main()
 {
-    TestFollowXGating();
-    TestChaseSegments();
-    TestChaseGap();
-    TestEdgeOriginOwnership();
+    TestDirectDisplacement();
     TestSampleVelocity();
     TestSparseSamplePresentation();
     TestSettleTargetsAndDurations();

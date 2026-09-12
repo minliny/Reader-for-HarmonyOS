@@ -17,6 +17,20 @@ std::vector<Entry> g_log;
 int g_nextHandle = 1;
 bool g_blendEnabled = false;
 bool g_depthMaskOn = true;
+std::function<void()> g_textureUploadHook;
+
+void SetTextureUploadHook(std::function<void()> hook)
+{
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_textureUploadHook = std::move(hook);
+}
+
+void RunTextureUploadHook()
+{
+    std::function<void()> hook;
+    { std::lock_guard<std::mutex> lock(g_mutex); hook = g_textureUploadHook; }
+    if (hook) hook();
+}
 
 void Reset()
 {
@@ -168,6 +182,12 @@ void glBindTexture(GLenum target, GLuint texture)
     Record("glBindTexture", target, texture);
 }
 
+void glUniform4fv(GLint location, GLsizei count, const GLfloat* values)
+{
+    (void)values;
+    Record("glUniform4fv", location, count);
+}
+
 void glUniform1i(GLint location, GLint value)
 {
     Record("glUniform1i", location, value);
@@ -283,6 +303,7 @@ void glPixelStorei(GLenum, GLint) {}
 
 void glTexImage2D(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, const void*)
 {
+    RunTextureUploadHook();
     Record("glTexImage2D", 0, 0);
 }
 

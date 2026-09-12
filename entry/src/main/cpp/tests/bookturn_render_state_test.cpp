@@ -89,6 +89,50 @@ void AssertFrameState(const char* context)
     Check((prefix + " no MSAA enable").c_str(), !HasPair("glEnable", GL_MULTISAMPLE, 0));
 }
 
+void AssertRendererLifecycleReset()
+{
+    // Presentation state belongs to one EGL surface.  Seed the transient
+    // flags on the first surface, tear it down, and verify that a new surface
+    // starts in the normal full-sheet path with no stale draw refusal.
+    BookTurnRenderer renderer;
+    Check("lifecycle seed initialize", renderer.Initialize((void*)0x3, 390, 780));
+    renderer.SetThemePaper(0.70F, 0.72F, 0.74F);
+    renderer.SetSheetVisible(false);
+    BookTurnInput blocked;
+    blocked.generation = 901;
+    blocked.direction = Direction::NEXT;
+    blocked.width = 390.0F;
+    blocked.height = 780.0F;
+    blocked.edge = { 195.0F, 390.0F };
+    Check("lifecycle seed refusal", !renderer.Draw(BookTurnSolver::Solve(blocked)));
+    Check("lifecycle refusal recorded",
+        renderer.LastDrawRefusal() != BookTurnRenderer::DrawRefusal::NONE);
+
+    renderer.Shutdown();
+    Check("lifecycle clean initialize", renderer.Initialize((void*)0x4, 390, 780));
+    Check("lifecycle refusal reset",
+        renderer.LastDrawRefusal() == BookTurnRenderer::DrawRefusal::NONE);
+    Check("lifecycle current upload",
+        renderer.Upload(MakePayload(TextureSlot::CURRENT, "lifecycle-current")));
+    Check("lifecycle next upload",
+        renderer.Upload(MakePayload(TextureSlot::NEXT, "lifecycle-next")));
+
+    BookTurnInput input;
+    input.generation = 902;
+    input.direction = Direction::NEXT;
+    input.width = 390.0F;
+    input.height = 780.0F;
+    input.start = { 390.0F, 390.0F };
+    input.pointer = { 195.0F, 390.0F };
+    input.edge = { 195.0F, 390.0F };
+    input.eventTimeNs = 1;
+    const BookTurnPose pose = BookTurnSolver::Solve(input);
+    glmock::Reset();
+    Check("lifecycle full frame after reinitialize", renderer.Draw(pose));
+    Check("lifecycle sheet visibility reset",
+        CountName("glDrawArrays") == 2 && CountName("glDrawElements") == 1);
+}
+
 }  // namespace
 
 int main()
@@ -285,6 +329,32 @@ int main()
         Check("draw full frame after clear", renderer.Draw(pose));
         AssertFrameState("after-clear");
     }
+
+    // Updating a highlight changes uniforms only; no snapshot/texture upload,
+    // extra geometry, or draw is introduced. Identity follows slot rotation.
+    {
+        BookTurnInput input;
+        input.generation = generation++;
+        input.direction = Direction::NEXT; input.width = kWidth; input.height = kHeight;
+        input.edge = { 0.5F * kWidth, 0.5F * kHeight };
+        const auto pose = BookTurnSolver::Solve(input);
+        DynamicHighlights marks;
+        marks.identity = "page-current-refreshed";
+        marks.rects.push_back({0.1F, 0.2F, 0.8F, 0.25F});
+        marks.colors.push_back({0.3F, 0.2F, 0.1F, -0.2F});
+        renderer.SetDynamicHighlights(std::move(marks));
+        glmock::Reset(); Check("dynamic source highlight draws", renderer.Draw(pose));
+        Check("dynamic marks bind two arrays to one matching page", CountName("glUniform4fv") == 2);
+        Check("highlight update never reuploads text", CountName("glTexImage2D") == 0 && CountName("glTexSubImage2D") == 0);
+        AssertFrameState("dynamic-highlight");
+        DynamicHighlights stale; stale.identity = "other-content-revision";
+        stale.rects.push_back({0.1F, 0.2F, 0.8F, 0.25F}); stale.colors.push_back({0, 0, 0, 1});
+        renderer.SetDynamicHighlights(std::move(stale));
+        glmock::Reset(); Check("stale highlight leaves frame drawable", renderer.Draw(pose));
+        Check("stale identity binds no highlight", CountName("glUniform4fv") == 0);
+    }
+
+    AssertRendererLifecycleReset();
 
     std::printf("%d checks, %d failures\n", g_checks, g_failures);
     return g_failures == 0 ? 0 : 1;

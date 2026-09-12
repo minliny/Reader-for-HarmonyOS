@@ -28,6 +28,7 @@ enum class TextureSourceFormat : int32_t {
 };
 
 struct TexturePayload {
+    uint64_t surfaceEpoch = 0;
     TextureSlot slot = TextureSlot::STAGING;
     uint32_t width = 0;
     uint32_t height = 0;
@@ -36,6 +37,13 @@ struct TexturePayload {
     std::string identity;
     /** Raw snapshot rows. RGB8 compaction happens on the render thread. */
     std::vector<uint8_t> pixels;
+};
+
+struct DynamicHighlights {
+    std::string identity;
+    // Normalized page rectangles followed by RGBA; negative alpha selects multiply.
+    std::vector<std::array<float, 4>> rects;
+    std::vector<std::array<float, 4>> colors;
 };
 
 /** GLES3 renderer; every GL object and EGL context is owned by one render thread. */
@@ -66,19 +74,25 @@ public:
     bool HasRequiredTextures(Direction direction) const;
     uint32_t ReadyMask() const;
     bool Draw(const BookTurnPose& pose);
+    /** Clear the EGL surface after its XComponent owner is hidden. This is
+     *  intentionally separate from the retained-frame release barrier. */
+    bool ClearSurface();
+    /** Explicit visible clear for legacy callers. Initialization deliberately
+     *  clears its back buffer without swapping; settlement paths must use
+     *  ClearSurface() only after ArkUI has hidden the surface. */
     bool Clear();
     void CommitSlots(Direction direction);
     /** §7.3 tau_swap: hide the moving sheet after the early swap; Draw then
      *  emits the static base frame from the rotated CURRENT slot alone. */
     void SetSheetVisible(bool visible);
-    /** Inverse of the NEXT CommitSlots rotation for the §7.3 rollback replay:
-     *  restores C = pre-swap current and N = pre-swap next. Valid only right
-     *  after an early-swapped NEXT commit rotation (P is left unset, exactly
-     *  as it was before the swap invalidated it). */
+    void ShowTerminalPage(TextureSlot slot);
+    /** Inverse of a CommitSlots rotation for the §7.3 rollback replay. */
     void UndoCommitSlots();
+    void UndoCommitSlots(Direction direction);
     /** Theme-derived backface paper source (contract 8.6): consumed only while
      *  fallback mode is on; passing a negative blue disables the fallback. */
     void SetThemePaper(float red, float green, float blue);
+    void SetDynamicHighlights(DynamicHighlights&& highlights);
 
     DrawRefusal LastDrawRefusal() const { return lastRefusal_; }
 
@@ -96,7 +110,10 @@ private:
         bool ready = false;
     };
 
+    struct HighlightUniforms { GLint count = -1; GLint rects = -1; GLint colors = -1; };
+
     struct BottomUniforms {
+        HighlightUniforms highlights;
         GLint pageSize = -1;
         GLint texture = -1;
         GLint gutterWidth = -1;
@@ -117,6 +134,7 @@ private:
     };
 
     struct SheetUniforms {
+        HighlightUniforms highlights;
         GLint pageSize = -1;
         GLint axis = -1;
         GLint radius = -1;
@@ -132,16 +150,19 @@ private:
         GLint paperFallback = -1;
     };
 
+    DynamicHighlights dynamicHighlights_;
+    void BindDynamicHighlights(const HighlightUniforms& uniforms, TextureSlot slot);
     bool InitializeEgl(void* nativeWindow);
     bool InitializePrograms();
     bool InitializeGeometry();
     bool InitializeTextures();
     GLuint CompileShader(GLenum type, const char* source);
     GLuint LinkProgram(GLuint vertex, GLuint fragment);
-    void DrawBottom(const BookTurnPose& pose, TextureSlot slot);
+    void DrawBottom(const BookTurnPose& pose, TextureSlot slot, float gutterAlpha);
     void DrawShadowBand(const BookTurnPose& pose);
     void DrawSheet(const BookTurnPose& pose, TextureSlot slot);
     void DestroyGl();
+    void ResetPresentationState();
     TextureState& Slot(TextureSlot slot);
     const TextureState& Slot(TextureSlot slot) const;
 
@@ -168,6 +189,7 @@ private:
     float fallbackPaper_[3] = { 1.0F, 1.0F, 1.0F };
     bool fallbackPaperEnabled_ = false;
     bool sheetVisible_ = true;
+    TextureSlot terminalSlot_ = TextureSlot::CURRENT;
     DrawRefusal lastRefusal_ = DrawRefusal::NONE;
 };
 
