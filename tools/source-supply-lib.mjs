@@ -7,8 +7,8 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
-export const SUITE_VERSION = 'reader-source-admission/1';
-export const BUILTIN_VERSION = 3;
+export const SUITE_VERSION = 'reader-tested-corpus/1';
+export const BUILTIN_VERSION = 6;
 
 // Fields whose content defines what the verification suite certified. Metadata
 // (builtin*, verifiedAt, suite version, provenance, defaultEnabled) and user
@@ -37,17 +37,21 @@ export const RULE_PAYLOAD_FIELDS = [
 export const REQUIRED_CAPABILITIES = ['search', 'detail', 'toc', 'content'];
 
 // Metadata fields embedded per bundled source (distribution identity only,
-// never part of the rule fingerprint).
+// never part of the rule fingerprint). The readerTest* fields are legacy
+// upgrade markers from collection versions 1-3 and are not emitted anymore.
 export const BUNDLED_METADATA_FIELDS = [
   'builtinId',
   'builtinVersion',
   'readerTestBuiltinVersion',
+  'readerBuiltinWithdrawn',
+  'readerTestBuiltinWithdrawn',
   'ruleFingerprint',
   'verifiedAt',
   'verificationSuiteVersion',
   'capabilities',
   'provenance',
   'defaultEnabled',
+  'readerHistoricalTest',
 ];
 
 export function sha256Hex(text) {
@@ -85,13 +89,15 @@ export function ruleFingerprint(source) {
 // -- static admission checks -------------------------------------------------
 
 // Walks every string in the source outside distribution metadata and reports
-// paths where an insecure http:// URL literal appears.
+// paths where an insecure HTTP URL literal appears.  The URI scheme is
+// case-insensitive (RFC 3986), so the admission gate must not only match the
+// lowercase spelling used by most bundled rules.
 export function collectInsecureUrlFindings(source) {
   const findings = [];
   const skip = new Set(BUNDLED_METADATA_FIELDS);
   const walk = (value, path) => {
     if (typeof value === 'string') {
-      if (value.includes('http://')) {
+      if (/http:\/\//i.test(value)) {
         findings.push({ path, excerpt: value.slice(0, 160) });
       }
       return;
@@ -114,25 +120,69 @@ export function collectInsecureUrlFindings(source) {
 }
 
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const JWT_PATTERN = /(?:^|[^A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(?:$|[^A-Za-z0-9_-])/;
+// Header fields are frequently serialized as a JSON string by Legado. Treat
+// authentication material and stable device/user identifiers as credentials;
+// a fixed value in a portable bundle is either a secret or a privacy leak.
+const SERIALIZED_CREDENTIAL_KEY_PATTERN = /^(?:cookie|authorization|proxy-authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|apikey|auth[_-]?code|secret|password|passwd|session|sid|uid|user[-_]?id|device[-_]?uuid|device[-_]?id|imei|imsi|q[-_]?guid|guid|uuid|signature|sign)$/i;
 // Query parameters that carry credentials when their value is a fixed literal
 // (templates like {{key}} or $.bookId are runtime-substituted, not secrets).
 const SECRET_PARAM_PATTERN =
-  /[?&](_?token|nid|access_?token|api_?key|apikey|secret|password|passwd|session|sid|uid|account)=([^&"'{}\s]+)/gi;
+  /[?&](_?token|nid|access_?token|refresh_?token|api_?key|apikey|auth_?code|secret|password|passwd|session|sid|uid|user_?id|device_?(?:uuid|id)|imei|imsi|q[-_]?guid|guid|uuid|signature|sign)=([^&"'{}\s]+)/gi;
+
+function isRuntimeTemplate(value) {
+  return /\{\{[^{}]+\}\}/.test(value) ||
+    /(?:^|\s)@(?:get|js|css|put|xpath)\s*:/i.test(value) ||
+    /(?:^|\s)\$\.?[A-Za-z_]/.test(value);
+}
+
+function collectSerializedHeaderSecrets(value, path, findings) {
+  if (typeof value !== 'string' || !/(^|\.)header$/i.test(path) || value.trim().length === 0) {
+    return;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      for (const [key, headerValue] of Object.entries(parsed)) {
+        const text = String(headerValue ?? '').trim();
+        // Header strings are frequently used as a mini JSON document by
+        // Legado sources. Treat fixed token-like fields as credentials too;
+        // only runtime templates are safe to retain in a bundled rule.
+        if (SERIALIZED_CREDENTIAL_KEY_PATTERN.test(key) && text.length > 0 &&
+          !isRuntimeTemplate(text)) {
+          findings.push({ path: `${path}.${key}`, kind: 'static-header', excerpt: key });
+        }
+      }
+      return;
+    }
+  } catch (_) {
+    // Some Legado sources use a line-oriented header string instead of JSON.
+  }
+  const pattern = /(?:^|[\r\n,;{])\s*["']?(cookie|authorization|proxy-authorization|token|access[_-]?token|refresh[_-]?token|api[_-]?key|apikey|auth[_-]?code|secret|password|passwd|session|sid|uid|user[-_]?id|device[-_]?uuid|device[-_]?id|imei|imsi|q[-_]?guid|guid|uuid|signature|sign)["']?\s*[:=]/gi;
+  let match;
+  while ((match = pattern.exec(value)) !== null) {
+    findings.push({ path, kind: 'static-header', excerpt: match[1] });
+  }
+}
 
 export function collectSecretFindings(source) {
   const findings = [];
   const skip = new Set(BUNDLED_METADATA_FIELDS);
   const walk = (value, path) => {
     if (typeof value === 'string') {
+      collectSerializedHeaderSecrets(value, path, findings);
       if (UUID_PATTERN.test(value)) {
         findings.push({ path, kind: 'fixed-uuid', excerpt: value.slice(0, 160) });
+      }
+      if (JWT_PATTERN.test(value)) {
+        findings.push({ path, kind: 'fixed-jwt', excerpt: 'jwt' });
       }
       SECRET_PARAM_PATTERN.reset?.();
       let match;
       const pattern = new RegExp(SECRET_PARAM_PATTERN.source, 'gi');
       while ((match = pattern.exec(value)) !== null) {
         const candidate = match[2];
-        if (candidate.length >= 6 && !candidate.includes('{{') && !candidate.includes('$')) {
+        if (candidate.length >= 6 && !isRuntimeTemplate(candidate)) {
           findings.push({ path, kind: `fixed-param:${match[1]}`, excerpt: match[0] });
         }
       }
@@ -148,8 +198,8 @@ export function collectSecretFindings(source) {
           continue;
         }
         // Credential-bearing request headers are a static-secret vector.
-        if (/^(cookie|authorization)$/i.test(key) && typeof value[key] === 'string' &&
-          value[key].trim().length > 0) {
+        if (SERIALIZED_CREDENTIAL_KEY_PATTERN.test(key) && typeof value[key] === 'string' &&
+          value[key].trim().length > 0 && !isRuntimeTemplate(value[key])) {
           findings.push({ path: path === '' ? key : `${path}.${key}`, kind: 'static-header', excerpt: key });
         }
         walk(value[key], path === '' ? key : `${path}.${key}`);
@@ -184,7 +234,7 @@ export function collectPaywallFindings(source) {
   return findings;
 }
 
-export function validateBundledMetadata(source, expectedSuiteVersion = SUITE_VERSION) {
+export function validateBundledMetadata(source, expectedSuiteVersion) {
   const errors = [];
   const label = String(source.bookSourceName ?? source.bookSourceUrl ?? '?');
   if (typeof source.builtinId !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(source.builtinId)) {
@@ -192,9 +242,6 @@ export function validateBundledMetadata(source, expectedSuiteVersion = SUITE_VER
   }
   if (!Number.isSafeInteger(source.builtinVersion) || source.builtinVersion < BUILTIN_VERSION) {
     errors.push(`${label}: builtinVersion must be an integer >= ${BUILTIN_VERSION}`);
-  }
-  if (source.readerTestBuiltinVersion !== source.builtinVersion) {
-    errors.push(`${label}: readerTestBuiltinVersion must equal builtinVersion`);
   }
   if (typeof source.ruleFingerprint !== 'string' || !/^[0-9a-f]{64}$/.test(source.ruleFingerprint)) {
     errors.push(`${label}: ruleFingerprint must be 64 lowercase hex chars`);
@@ -204,7 +251,11 @@ export function validateBundledMetadata(source, expectedSuiteVersion = SUITE_VER
   if (typeof source.verifiedAt !== 'string' || Number.isNaN(Date.parse(source.verifiedAt))) {
     errors.push(`${label}: verifiedAt must be an ISO timestamp`);
   }
-  if (source.verificationSuiteVersion !== expectedSuiteVersion) {
+  if (typeof source.verificationSuiteVersion !== 'string' ||
+    source.verificationSuiteVersion.trim().length === 0) {
+    errors.push(`${label}: verificationSuiteVersion must be non-empty`);
+  } else if (expectedSuiteVersion !== undefined &&
+    source.verificationSuiteVersion !== expectedSuiteVersion) {
     errors.push(`${label}: verificationSuiteVersion must be ${expectedSuiteVersion}`);
   }
   if (!Array.isArray(source.capabilities) || source.capabilities.length === 0) {
@@ -222,6 +273,15 @@ export function validateBundledMetadata(source, expectedSuiteVersion = SUITE_VER
   }
   if (typeof source.enabled !== 'boolean' || source.enabled !== source.defaultEnabled) {
     errors.push(`${label}: enabled must equal defaultEnabled in the bundled document`);
+  }
+  if (collectInsecureUrlFindings(source).length > 0) {
+    errors.push(`${label}: bundled rules must not contain http:// URLs`);
+  }
+  if (collectSecretFindings(source).length > 0) {
+    errors.push(`${label}: bundled rules must not contain fixed credentials`);
+  }
+  if (collectPaywallFindings(source).length > 0) {
+    errors.push(`${label}: bundled rules must not synthesize paywall placeholder content`);
   }
   return errors;
 }

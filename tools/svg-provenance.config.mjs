@@ -209,6 +209,13 @@ const icons = [
 ];
 
 const exactExports = [
+  exact('reader_control_replace_header', '1938:12008', 'restored in-reader replace header'),
+  exact('reader_control_replace_add', '1938:12021', 'restored in-reader replace add rule'),
+  exact('reader_control_replace_import', '1938:12029', 'restored in-reader replace import rules'),
+  exact('reader_control_replace_export', '1938:12037', 'restored in-reader replace export rules'),
+  exact('reader_control_replace_edit', '1939:1255', 'restored in-reader replace edit rule'),
+  exact('reader_control_replace_delete', '1939:1261', 'restored in-reader replace delete rule'),
+  exact('reader_control_replace_back', 'I1938:12631;411:72', 'restored in-reader replace Quick back'),
   exact('bookshelf_more', '4578:583', 'bookshelf more vertical override'),
   exact('bookshelf_more_batch', '4575:5', 'bookshelf more batch action'),
   exact('bookshelf_more_import', '4575:14', 'bookshelf more local import action'),
@@ -236,10 +243,41 @@ const exactExports = [
   exact('reader_tts_system_engine', '930:936', 'reader system TTS service'),
 ];
 
+// Exact inline SVG paths read from the user-supplied Make preview, version 17.
+// DOM selectors identify these assets because Make does not expose design nodes.
+const makeExports = [
+  ['previous', 'button[aria-label="上一章"] svg'],
+  ['next', 'button[aria-label="下一章"] svg'],
+  ['stop', 'button[aria-label="停止"] svg'],
+  ['minus', 'svg:has(path[d="M3 7h8"]):not(:has(path[d="M7 3v8"]))'],
+  ['plus', 'svg:has(path[d="M7 3v8"])'],
+].map(([name, sourceSelector]) => ({
+  file: `reader_tts_make_${name}`, semanticRole: `reader TTS ${name}`,
+  originType: 'figma-make-dom-export', figmaFileKey: 'DEu3TuYhaJPLMEdSxorhwE',
+  sourceSelector, sourceVersion: 17, sourceFile: `reader_tts_make_${name}.svg`,
+}));
+
+// Exact SVG element bytes from the official Make v17 downloaded PhoneScreen.tsx.
+const makeSourceExports = ['close', 'pause', 'play', 'engine_check', 'previous_quick', 'next_quick'].map(name => ({
+  file: `reader_tts_make_${name}`, semanticRole: `reader TTS ${name}`,
+  originType: 'figma-make-source-export', figmaFileKey: 'DEu3TuYhaJPLMEdSxorhwE',
+  sourceSelector: `src/PhoneScreen.tsx SVG ${name}`, sourceVersion: 17,
+  sourceFile: `reader_tts_make_${name}.svg`,
+}));
+
 const adaptedExports = [
   adaptedPopover('bookshelf_more_menu_surface', '4582:2',
     'bookshelf more integrated pointer surface', 'bookshelf_more_menu_surface_reference.svg'),
 ];
+
+const appearanceMakeExports = [
+  ['chevron', 'button svg:has(path[d="M4.5 3L7.5 6L4.5 9"])'],
+  ['check', 'button svg:has(path[d="M1.25 4.75L4 7.5L9.75 1.25"])'],
+].map(([name, sourceSelector]) => ({
+  file: `reader_appearance_make_${name}`, semanticRole: `reader appearance ${name}`,
+  originType: 'figma-make-dom-export', figmaFileKey: 'LOYUJr93KwespD5j7N6icw',
+  sourceSelector, sourceVersion: 9, sourceFile: `reader_appearance_make_${name}.svg`,
+}));
 
 const paperPrimitives = [
   paper('reading_paper_phone_highlight', '1023:18356', 'phone paper highlight', 388.89, 842.88,
@@ -270,5 +308,5 @@ const paperPrimitives = [
     ]),
 ];
 
-export const svgAssetRecipes = [...icons, ...exactExports, ...adaptedExports, ...paperPrimitives]
+export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives]
   .sort((left, right) => left.file.localeCompare(right.file));

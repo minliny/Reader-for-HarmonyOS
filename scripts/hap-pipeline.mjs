@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID, X509Certificate } from 'node:crypto';
+import { createRequire } from 'node:module';
 import {
   chmodSync,
   copyFileSync,
@@ -47,6 +48,7 @@ const BUILD_INPUTS = [
   'build-profile.json5',
   'entry/build-profile.json5',
   'hvigor-config.json5',
+  'hvigor',
   'hvigorfile.ts',
   'oh-package.json5',
   'oh-package-lock.json5',
@@ -234,6 +236,52 @@ function copySourceSandbox(source, destination) {
   run('rsync', args);
 }
 
+// BMS appId uses i2d_PublicKey bytes, not SubjectPublicKeyInfo DER.
+// See security_appverify GetPublickeyBase64 and BMS SetProvisionId.
+export function profileIdentity(profile) {
+  const info = profile['bundle-info'];
+  if (info?.['bundle-name'] !== BUNDLE_NAME) fail('verified Profile bundle identity mismatch');
+  const certificate = info['distribution-certificate'] || info['development-certificate'];
+  if (typeof certificate !== 'string' || !certificate) fail('verified Profile has no application certificate');
+  const cert = new X509Certificate(certificate);
+  const key = cert.publicKey;
+  let publicBytes;
+  if (key.asymmetricKeyType === 'ec') {
+    const jwk = key.export({ format: 'jwk' });
+    publicBytes = Buffer.concat([Buffer.from([4]), Buffer.from(jwk.x, 'base64url'), Buffer.from(jwk.y, 'base64url')]);
+  } else if (key.asymmetricKeyType === 'rsa') {
+    publicBytes = key.export({ type: 'pkcs1', format: 'der' });
+  } else {
+    fail('unsupported application certificate public key type');
+  }
+  const appIdentifier = info['app-identifier'];
+  return {
+    appIdSha256: sha256Bytes(`${BUNDLE_NAME}_${publicBytes.toString('base64')}`),
+    appIdentifierSha256: typeof appIdentifier === 'string' && appIdentifier ? sha256Bytes(appIdentifier) : '',
+    certificateSha256: sha256Bytes(cert.raw),
+  };
+}
+
+function verifiedProfileIdentity(profilePath) {
+  const bytes = readFileSync(profilePath);
+  let decoded;
+  if (bytes.toString('utf8').trimStart().startsWith('{')) {
+    decoded = bytes.toString('utf8');
+  } else {
+    // The HAP verifier has already authenticated the embedded Profile. Decode
+    // its CMS content without logging the certificate or other material.
+    const result = run('/usr/bin/openssl', ['cms', '-verify', '-noverify', '-inform', 'DER', '-in', profilePath],
+      { allowFailure: true });
+    if (result.status !== 0) fail('verified Profile identity could not be decoded');
+    decoded = result.stdout;
+  }
+  try {
+    return profileIdentity(JSON.parse(decoded));
+  } catch {
+    fail('verified Profile application identity is invalid');
+  }
+}
+
 function verifySignature(hapPath) {
   const java = process.env.JAVA || '/usr/bin/java';
   const signTool = process.env.HAP_SIGN_TOOL || DEFAULT_SIGN_TOOL;
@@ -250,7 +298,8 @@ function verifySignature(hapPath) {
     if (result.status === 0 && output.includes('verify-app success') &&
         output.includes('verify codesign success') && output.includes('Digest verify result: true')) {
       const profile = output.match(/profile type is:\s*([^\s]+)/i)?.[1]?.toLowerCase() ?? 'unknown';
-      return { status: 'signed', verified: true, profileType: profile };
+      return { status: 'signed', verified: true, profileType: profile,
+        ...verifiedProfileIdentity(resolve(verifyRoot, 'profile.p7b')) };
     }
     if (/signature not found|No Hap Signing Block/i.test(output)) {
       return { status: 'unsigned', verified: false, profileType: 'none' };
@@ -349,6 +398,122 @@ function validateLocalSigningProfile(path) {
   }
 }
 
+function parseBuildProfile(path) {
+  // Use the JSON5 parser bundled with the official build tools, including
+  // DevEco's comments/trailing commas; never echo parser excerpts of secrets.
+  const plugin = '/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/package.json';
+  try { return createRequire(plugin)('json5').parse(readFileSync(path, 'utf8')); }
+  catch { fail('signing build profile could not be parsed; no secret content was logged'); }
+}
+
+export function composeSigningProfile(baseline, local) {
+  const products = local?.app?.products;
+  const defaults = Array.isArray(products) ? products.filter(item => item.name === 'default') : [];
+  const name = defaults.length === 1 ? defaults[0].signingConfig : undefined;
+  const configs = local?.app?.signingConfigs;
+  const matches = Array.isArray(configs) ? configs.filter(item => item.name === name) : [];
+  if (typeof name !== 'string' || !name || matches.length !== 1) {
+    fail('default product must explicitly reference exactly one local signing configuration');
+  }
+  const material = matches[0].material;
+  for (const field of ['certpath', 'profile', 'storeFile', 'keyAlias', 'keyPassword', 'storePassword']) {
+    if (typeof material?.[field] !== 'string' || !material[field]) fail('local signing material is incomplete');
+  }
+  const result = structuredClone(baseline);
+  const target = result?.app?.products?.filter(item => item.name === 'default');
+  if (!target || target.length !== 1) fail('baseline must contain exactly one default product');
+  // Local credentials must not silently replace current SDK, ABI or build options.
+  result.app.signingConfigs = [structuredClone(matches[0])];
+  target[0].signingConfig = name;
+  return result;
+}
+
+export function resolveSigningMode(requested, profileExists) {
+  if (requested === 'unsigned') return 'unsigned';
+  if (!profileExists) fail('local signing profile is missing; automatic builds never fall back to unsigned');
+  return 'local';
+}
+
+function passwordMaterialTree(directory, destination) {
+  const records = [];
+  function visit(path, output, label) {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) throw new Error('linked password material');
+    if (stat.isDirectory()) {
+      if (output) mkdirSync(output, { recursive: true, mode: 0o700 });
+      for (const name of readdirSync(path).filter(name => name !== '.DS_Store').sort()) {
+        visit(resolve(path, name), output ? resolve(output, name) : undefined, `${label}/${name}`);
+      }
+    } else if (stat.isFile()) {
+      const bytes = readFileSync(path);
+      records.push({ label, bytes: bytes.length, sha256: sha256Bytes(bytes) });
+      if (output) writeFileSync(output, bytes, { mode: 0o600, flag: 'wx' });
+    } else throw new Error('invalid password material');
+  }
+  visit(directory, destination, '');
+  if (!records.length) throw new Error('empty password material');
+  return { fileCount: records.length, bytes: records.reduce((sum, item) => sum + item.bytes, 0),
+    sha256: sha256Bytes(JSON.stringify(records)) };
+}
+
+function signingMaterialSnapshot(profile) {
+  const material = profile.app.signingConfigs[0].material;
+  const records = {};
+  for (const field of ['certpath', 'profile', 'storeFile']) {
+    try {
+      if (!lstatSync(material[field]).isFile()) fail('invalid material');
+      records[field] = fileRecord(material[field], field);
+    } catch { fail('signing material must reference readable regular files; paths were not logged'); }
+  }
+  try { records.passwordMaterial = passwordMaterialTree(resolve(dirname(material.storeFile), 'material')); }
+  catch { fail('encrypted signing passwords require the matching private material directory beside the keystore'); }
+  return records;
+}
+
+export function freezeSigningMaterial(profile, directory) {
+  const result = structuredClone(profile);
+  const material = result.app.signingConfigs[0].material;
+  const before = signingMaterialSnapshot(result);
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const frozen = mkdtempSync(join(directory, 'material-'));
+  try {
+    passwordMaterialTree(resolve(dirname(material.storeFile), 'material'), resolve(frozen, 'material'));
+    for (const field of ['certpath', 'profile', 'storeFile']) {
+      const destination = resolve(frozen, { certpath: 'certificate.cer', profile: 'profile.p7b', storeFile: 'keystore.p12' }[field]);
+      copyFileSync(material[field], destination);
+      chmodSync(destination, 0o600);
+      if (fileRecord(destination, field).sha256 !== before[field].sha256) fail('signing material changed while being copied');
+      material[field] = destination;
+    }
+    if (JSON.stringify(signingMaterialSnapshot(result)) !== JSON.stringify(before)) fail('signing material changed while being copied');
+    return result;
+  } catch {
+    rmSync(frozen, { recursive: true, force: true });
+    fail('could not freeze signing material; the active local profile was not changed');
+  }
+}
+
+function syncSigning(options) {
+  const source = resolve(option(options, '--profile', process.env.READER_HARMONY_SIGNING_PROFILE || DEFAULT_SIGNING_PROFILE));
+  const destination = resolve(process.env.READER_HARMONY_SIGNING_PROFILE || DEFAULT_SIGNING_PROFILE);
+  validateLocalSigningProfile(source);
+  if (existsSync(destination)) validateLocalSigningProfile(destination);
+  const before = fileRecord(source, 'signing-config').sha256;
+  const composed = composeSigningProfile(parseBuildProfile(resolve(REPO_ROOT, 'build-profile.json5')), parseBuildProfile(source));
+  // Keep an independent copy, so a later DevEco auto-generation cannot replace
+  // the keystore underneath this configuration's matching password fields.
+  const frozen = freezeSigningMaterial(composed, resolve(dirname(destination), 'materials'));
+  if (before !== fileRecord(source, 'signing-config').sha256) fail('signing configuration changed during synchronization');
+  const staged = `${destination}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(staged, JSON.stringify(frozen, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
+    renameSync(staged, destination);
+  } finally { if (existsSync(staged)) rmSync(staged); }
+  console.log(JSON.stringify({ status: 'PASS', action: 'local-signing-material-frozen',
+    configurationSha256: fileRecord(destination, 'signing-config').sha256,
+    material: signingMaterialSnapshot(frozen), privateKeyChanged: false, buildVerification: 'REQUIRED' }));
+}
+
 function findBuiltHaps(outputDir, signingMode) {
   const names = readdirSync(outputDir).filter((name) => name.endsWith('.hap')).sort();
   const allowed = ['entry-default-signed.hap', 'entry-default-unsigned.hap'];
@@ -410,12 +575,19 @@ function build(options) {
     fail('--signing must be auto, local, or unsigned', 2);
   }
   const localProfile = resolve(process.env.READER_HARMONY_SIGNING_PROFILE || DEFAULT_SIGNING_PROFILE);
-  const signingMode = requestedSigning === 'auto' ? (existsSync(localProfile) ? 'local' : 'unsigned') :
-    requestedSigning;
+  const signingMode = resolveSigningMode(requestedSigning, existsSync(localProfile));
   if (signingMode === 'local' && !existsSync(localProfile)) {
     fail(`local signing profile is missing: ${localProfile}`);
   }
-  if (signingMode === 'local') validateLocalSigningProfile(localProfile);
+  let signingProfile;
+  let signingBefore;
+  if (signingMode === 'local') {
+    validateLocalSigningProfile(localProfile);
+    signingProfile = composeSigningProfile(parseBuildProfile(resolve(REPO_ROOT, 'build-profile.json5')),
+      parseBuildProfile(localProfile));
+    signingBefore = { configuration: fileRecord(localProfile, 'local-signing-config'),
+      material: signingMaterialSnapshot(signingProfile) };
+  }
 
   const harmonyGit = gitRecord(REPO_ROOT);
   const coreGit = gitRecord(CORE_ROOT);
@@ -455,10 +627,14 @@ function build(options) {
     const sandboxRepo = resolve(sandboxRoot, 'Reader-for-HarmonyOS');
     copySourceSandbox(REPO_ROOT, sandboxRepo);
     if (signingMode === 'local') {
-      copyFileSync(localProfile, resolve(sandboxRepo, 'build-profile.json5'));
+      writeFileSync(resolve(sandboxRepo, 'build-profile.json5'), JSON.stringify(signingProfile, null, 2) + '\n');
       chmodSync(resolve(sandboxRepo, 'build-profile.json5'), 0o600);
     }
     const effectiveProfile = fileRecord(resolve(sandboxRepo, 'build-profile.json5'), 'build-profile.json5');
+    const pipelineToken = randomUUID();
+    writeFileSync(resolve(sandboxRepo, '.reader-pipeline-session.json'), JSON.stringify({
+      token: pipelineToken, profileSha256: effectiveProfile.sha256,
+    }), { mode: 0o600 });
     const sandboxBefore = sourceSnapshot(sandboxRepo);
 
     const hvigorw = process.env.HVIGORW || DEFAULT_HVIGORW;
@@ -484,6 +660,8 @@ function build(options) {
       ...process.env,
       HVIGOR_USER_HOME: hvigorUserHome,
       npm_config_cache: resolve(sandboxRoot, 'npm-cache'),
+      READER_HAP_PIPELINE_ROOT: sandboxRepo,
+      READER_HAP_PIPELINE_TOKEN: pipelineToken,
     };
     run(hvigorw, buildArgs, {
       cwd: sandboxRepo,
@@ -491,6 +669,13 @@ function build(options) {
       env: buildEnvironment,
     });
     const finishedAt = new Date().toISOString();
+    if (signingMode === 'local') {
+      const signingAfter = { configuration: fileRecord(localProfile, 'local-signing-config'),
+        material: signingMaterialSnapshot(signingProfile) };
+      if (JSON.stringify(signingBefore) !== JSON.stringify(signingAfter)) {
+        fail('signing configuration or material changed during build; sync the local profile before rebuilding');
+      }
+    }
 
     const sandboxAfter = sourceSnapshot(sandboxRepo);
     assertSnapshotUnchanged(sandboxBefore, sandboxAfter, 'isolated build inputs');
@@ -599,6 +784,12 @@ function build(options) {
           snapshot: 'workspace-contract-snapshot.json',
         },
         liveBookSources: options.get('--live-sources') === true ? 'PASS' : 'NOT_RUN',
+        liveBookSourceEvidence: {
+          transport: 'reader-cli/ureq',
+          scope: 'Core CLI L1-L5 diagnostic',
+          harmonyHostEquivalent: false,
+          harmonyHostJourney: 'OPEN',
+        },
         arktsTypeCheck: 'PASS',
         nonIncrementalBuild: 'PASS',
         bundledSourceBytes: 'PASS',
@@ -712,21 +903,44 @@ function verifyManifest(path) {
   return { ...loaded, artifacts: verified };
 }
 
-function parseBundleMetadata(output) {
-  const bundlePresent = output.includes(`"bundleName": "${BUNDLE_NAME}"`);
-  const value = (name) => output.match(new RegExp(`"${name}":\\s*"([^"]*)"`))?.[1] ?? '';
-  const numeric = (name) => Number.parseInt(
-    output.match(new RegExp(`"${name}":\\s*([0-9]+)`))?.[1] ?? '0',
-    10,
-  );
+const BUNDLE_LOOKUP_UNAVAILABLE = 'error: failed to get information and the parameters may be wrong.';
+
+function bundleListConfirmsAbsence(output) {
+  const lines = output.trim().split(/\r?\n/).map(line => line.trim());
+  if (!/^ID: [0-9]+:$/.test(lines[0] ?? '')) return false;
+  const bundles = lines.filter(line => !/^ID: [0-9]+:$/.test(line));
+  return bundles.length > 0 &&
+    bundles.every(line => /^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+$/.test(line)) &&
+    !bundles.includes(BUNDLE_NAME);
+}
+
+export function parseBundleMetadata(output, bundleListOutput = '') {
+  if (/^error: bundle \[io\.reader\.harmonyos\] not found\.?$/i.test(output.trim()) ||
+      (output.trim() === BUNDLE_LOOKUP_UNAVAILABLE && bundleListConfirmsAbsence(bundleListOutput))) {
+    return { bundlePresent: false, bundleName: '' };
+  }
+  let data;
+  try {
+    data = JSON.parse(output.slice(output.indexOf('{')));
+  } catch {
+    fail('installed bundle metadata is unavailable; absence is not established');
+  }
+  const app = data.applicationInfo;
+  if (data.name !== BUNDLE_NAME && data.bundleName !== BUNDLE_NAME && app?.bundleName !== BUNDLE_NAME) {
+    fail('installed bundle metadata has an unexpected identity');
+  }
+  if (!app || typeof app.appProvisionType !== 'string') fail('installed bundle signing metadata is incomplete');
+  const identityHash = value => typeof value === 'string' && value ? sha256Bytes(value) : '';
   return {
-    bundlePresent,
-    bundleName: bundlePresent ? BUNDLE_NAME : '',
-    versionName: value('versionName'),
-    versionCode: numeric('versionCode'),
-    appSignType: value('appSignType'),
-    appProvisionType: value('appProvisionType').toLowerCase(),
-    cpuAbi: value('cpuAbi'),
+    bundlePresent: true,
+    bundleName: BUNDLE_NAME,
+    versionName: data.versionName,
+    versionCode: data.versionCode,
+    appSignType: app.appSignType,
+    appProvisionType: app.appProvisionType.toLowerCase(),
+    cpuAbi: app.cpuAbi,
+    appIdSha256: identityHash(data.appId),
+    appIdentifierSha256: identityHash(data.appIdentifier),
   };
 }
 
@@ -736,7 +950,7 @@ export function deploymentRoute({ targetKind, installed, artifact }) {
     return { allowed: false, reason: 'physical-device-requires-signed-hap' };
   }
   if (!installed.bundlePresent) {
-    if (targetKind === 'vm' || artifact.signature.status === 'signed') {
+    if (artifact.signature.status === 'signed' && artifact.signature.verified === true) {
       return { allowed: true, reason: 'bundle-absent-install-candidate', preservesData: true };
     }
     return { allowed: false, reason: 'artifact-not-admitted' };
@@ -744,11 +958,16 @@ export function deploymentRoute({ targetKind, installed, artifact }) {
   if (artifact.signature.status !== 'signed') {
     return { allowed: false, reason: 'installed-bundle-rejects-unsigned-preserve-data-route' };
   }
+  if (artifact.signature.verified !== true) return { allowed: false, reason: 'signature-not-verified' };
   if (!installed.appProvisionType || artifact.signature.profileType === 'unknown' ||
       installed.appProvisionType !== artifact.signature.profileType) {
     return { allowed: false, reason: 'provision-lineage-unresolved' };
   }
-  return { allowed: true, reason: 'matching-provision-signed-update-candidate', preservesData: true };
+  const matches = name => Boolean(installed[name]) && installed[name] === artifact.signature[name];
+  if (!matches('appIdSha256') && !matches('appIdentifierSha256')) {
+    return { allowed: false, reason: 'application-signing-identity-unresolved-or-mismatched' };
+  }
+  return { allowed: true, reason: 'matching-identity-signed-update-candidate', preservesData: true };
 }
 
 function hdcBinary() {
@@ -769,7 +988,16 @@ function assertTargetConnected(hdc, target) {
 
 function installedMetadata(hdc, target) {
   const result = run(hdc, ['-t', target, 'shell', `bm dump -n ${BUNDLE_NAME}`], { allowFailure: true });
-  return parseBundleMetadata(`${result.stdout ?? ''}\n${result.stderr ?? ''}`);
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+  // Harmony's generic lookup error also covers missing bundles. Require a
+  // successful, structurally valid inventory before admitting a new install.
+  if (result.status === 0 && output.trim() === BUNDLE_LOOKUP_UNAVAILABLE) {
+    const listing = run(hdc, ['-t', target, 'shell', 'bm dump -a'], { allowFailure: true });
+    if (listing.status === 0 && !listing.stderr?.trim()) {
+      return parseBundleMetadata(output, listing.stdout ?? '');
+    }
+  }
+  return parseBundleMetadata(output);
 }
 
 function resolveDeployment(options) {
@@ -841,6 +1069,12 @@ function installDeployment(options) {
       if (installOutput.includes('9568320')) fail('9568320 no signature file; data was preserved', 3);
       fail(`HAP install failed while preserving data: ${installOutput.trim()}`, 3);
     }
+    const postInstall = installedMetadata(resolved.hdc, resolved.target);
+    const installedRoute = deploymentRoute({ targetKind: resolved.targetKind,
+      installed: postInstall, artifact: resolved.artifact });
+    if (!postInstall.bundlePresent || !installedRoute.allowed) {
+      fail('HAP was installed but its reported signing identity does not match; stopped before launch without uninstalling', 3);
+    }
     let launch = 'NOT_RUN';
     if (options.get('--no-launch') !== true) {
       const start = run(resolved.hdc, [
@@ -853,7 +1087,6 @@ function installDeployment(options) {
       }
       launch = 'PASS';
     }
-    const postInstall = installedMetadata(resolved.hdc, resolved.target);
     const receipt = {
       schemaVersion: 1,
       name: 'reader-harmonyos-deployment-receipt',
@@ -872,7 +1105,7 @@ function installDeployment(options) {
       postInstall,
       completedAt: new Date().toISOString(),
       evidenceBoundary: {
-        installAndLaunch: 'PASS',
+        installAndLaunch: launch === 'PASS' ? 'PASS' : 'OPEN',
         featureInteraction: 'OPEN',
         userAcceptance: 'OPEN',
       },
@@ -891,6 +1124,7 @@ function installDeployment(options) {
 function usage() {
   console.error(`Usage:
   node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--signing auto|local|unsigned] [--live-sources]
+  node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
   node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical
   node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--no-launch]`);
@@ -904,6 +1138,7 @@ function main() {
   }
   const options = parseOptions(process.argv.slice(3));
   if (command === 'build') build(options);
+  else if (command === 'sync-signing') syncSigning(options);
   else if (command === 'verify') {
     const verified = verifyManifest(requiredOption(options, '--manifest'));
     console.log(JSON.stringify({

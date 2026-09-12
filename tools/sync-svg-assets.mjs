@@ -79,7 +79,7 @@ async function renderRecipe(recipe) {
       },
     };
   }
-  if (recipe.originType === 'figma-node-export') {
+  if (recipe.originType === 'figma-node-export' || (recipe.originType === 'figma-make-dom-export' || recipe.originType === 'figma-make-source-export')) {
     const sourcePath = path.join(PAGE_SOURCE_DIR, recipe.sourceFile);
     const source = await readFile(sourcePath, 'utf8');
     return {
@@ -88,8 +88,10 @@ async function renderRecipe(recipe) {
         file: `${recipe.file}.svg`,
         semanticRole: recipe.semanticRole,
         originType: recipe.originType,
-        figmaFileKey: SVG_FIGMA_FILE_KEY,
-        figmaNodeId: recipe.sourceNodeId,
+        figmaFileKey: recipe.figmaFileKey ?? SVG_FIGMA_FILE_KEY,
+        ...(recipe.originType.startsWith('figma-make-') ? {
+          sourceSelector: recipe.sourceSelector, sourceVersion: recipe.sourceVersion,
+        } : { figmaNodeId: recipe.sourceNodeId }),
         license: 'Reader project design',
         sourceFile: path.relative(ROOT, sourcePath),
         sourceSha256: sha256(source),
@@ -227,7 +229,7 @@ export async function syncSvgAssets({ check = false } = {}) {
     schemaVersion: SVG_PROVENANCE_SCHEMA_VERSION,
     generatedBy: 'tools/sync-svg-assets.mjs',
     policy: {
-      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-node-adapted', 'figma-css-primitive'],
+      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive'],
       unknownAllowed: false,
       manualPathMutationAllowed: false,
     },
