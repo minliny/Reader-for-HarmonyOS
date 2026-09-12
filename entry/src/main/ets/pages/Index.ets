@@ -368,7 +368,7 @@ struct Index {
     webdavPath: '/ReaderBackup/ReaderHarmony',
     saveLocation: 'WebDAV',
     backupFrequency: '手动',
-    backupScope: '完整 Core 数据（AES 加密）',
+    backupScope: '配置数据（不含离线书籍和正文，AES 加密）',
     history: [],
     statusMessage: '',
   };

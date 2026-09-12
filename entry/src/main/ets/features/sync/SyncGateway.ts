@@ -79,7 +79,7 @@ export const DEFAULT_SYNC_SNAPSHOT: SyncSnapshot = {
   webdavPath: DEFAULT_WEBDAV_DIRECTORY,
   saveLocation: 'WebDAV',
   backupFrequency: '手动',
-  backupScope: '完整 Core 数据（AES 加密）',
+  backupScope: '配置数据（不含离线书籍和正文，AES 加密）',
   history: [],
   statusMessage: '',
 };
@@ -87,7 +87,7 @@ export const DEFAULT_SYNC_SNAPSHOT: SyncSnapshot = {
 /**
  * Foreground WebDAV product gateway.
  *
- * Core owns every transaction phase: AES package creation, backup naming,
+ * Core owns every transaction phase: configuration-only AES package creation, backup naming,
  * retention, restore selection, conflict and resolution. The Host owns only
  * AssetStore, real HTTP execution and forwarding Core's opaque storage-apply
  * descriptor through the standard runtime command.

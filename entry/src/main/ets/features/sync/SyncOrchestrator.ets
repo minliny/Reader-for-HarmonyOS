@@ -78,7 +78,7 @@ export class SyncOrchestrator {
     if (!this.beginOperation()) {
       return;
     }
-    this.emit(this.withStatus('正在创建完整 Core 备份…'));
+    this.emit(this.withStatus('正在创建配置备份（不含离线书籍和正文）…'));
     this.gateway.triggerBackup()
       .then((outcome: SyncBackupResult): void => {
         this.operationInFlight = false;
