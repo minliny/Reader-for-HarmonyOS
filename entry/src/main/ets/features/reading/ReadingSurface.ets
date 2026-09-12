@@ -1,4 +1,10 @@
+import { readerHighlightCanvasColor, readerDynamicHighlightRectsEqual, ReaderHighlightTextCache,
+  type ReaderHighlightTextSlice, type ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
+import { FrameCallback } from '@kit.ArkUI';
+import { text as graphicsText } from '@kit.ArkGraphics2D';
 import type { image } from '@kit.ImageKit';
+import { copyReaderSelection } from '../../app/ReaderClipboardHost';
+import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { TYPE_READER_CHAPTER_TITLE } from '../common/ReaderTypography';
 import {
@@ -18,6 +24,15 @@ import {
   createDefaultReaderReadingLayout,
 } from './ReaderLayoutGeometry';
 import { ReaderPageChrome } from './ReaderPageChrome';
+
+export type { ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
+
+class ReaderHighlightFrame extends FrameCallback {
+  private action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_time: number): void {}
+}
 
 /**
  * Figma-backed static reading body for `15 · Reader 2`:
@@ -71,32 +86,37 @@ export class ReadingSurfacePageFragment {
   }
 }
 
-class ReadingSurfaceHighlightRange {
-  startUtf16: number;
-  endUtf16: number;
-
-  constructor(startUtf16: number, endUtf16: number) {
-    this.startUtf16 = startUtf16;
-    this.endUtf16 = endUtf16;
-  }
-}
-
 /** Shared scalar-aware text primitive for paged and continuous reading. */
 @Component
 export struct ReaderReadingTextFragment {
-  @Prop text: string = '';
+  @Prop @Watch('scheduleHighlightGeometry') text: string = '';
   @Prop isParagraphStart: boolean = false;
-  @Prop startScalar: number = 0;
-  @Prop endScalar: number = 0;
-  @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
-  @Prop ttsHighlightStart: number | undefined = undefined;
-  @Prop ttsHighlightEnd: number | undefined = undefined;
-  @Prop autoPageHighlightStart: number | undefined = undefined;
-  @Prop autoPageHighlightEnd: number | undefined = undefined;
+  @Prop @Watch('scheduleHighlightGeometry') startScalar: number = 0;
+  @Prop @Watch('scheduleHighlightGeometry') endScalar: number = 0;
+  @Prop @Watch('scheduleHighlightGeometry') appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop @Watch('scheduleHighlightGeometry') ttsHighlightStart: number | undefined = undefined;
+  @Prop @Watch('scheduleHighlightGeometry') ttsHighlightEnd: number | undefined = undefined;
+  @Prop @Watch('scheduleHighlightGeometry') autoPageHighlightStart: number | undefined = undefined;
+  @Prop @Watch('scheduleHighlightGeometry') autoPageHighlightEnd: number | undefined = undefined;
   @Prop @Watch('onTextSelectionEnabledChanged') longPressSelectText: boolean = false;
+  @Prop @Watch('scheduleHighlightGeometry') separateHighlight: boolean = false;
+  onHighlightGeometry: (key: number, rects: ReaderDynamicHighlightRect[]) => void =
+    (_key: number, _rects: ReaderDynamicHighlightRect[]): void => {};
+  queueHighlightMeasurement: ((action: () => void) => void) | undefined = undefined;
+  private highlightTextCache: ReaderHighlightTextCache = new ReaderHighlightTextCache();
+  private highlightHadGeometry: boolean = false;
+  private highlightLifecycle: number = 0;
+  private highlightMounted: boolean = false;
+  private highlightQueued: boolean = false;
+  private highlightGlobalX: number = 0;
+  private highlightGlobalY: number = 0;
+  aboutToAppear(): void { this.highlightMounted = true; this.highlightLifecycle += 1; this.scheduleHighlightGeometry(); }
   private readonly textController: TextController = new TextController();
 
   aboutToDisappear(): void {
+    this.highlightMounted = false; this.highlightLifecycle += 1; this.highlightQueued = false;
+    this.highlightHadGeometry = false;
+    if (this.separateHighlight) this.onHighlightGeometry(this.startScalar, []);
     this.textController.closeSelectionMenu();
   }
 
@@ -109,7 +129,9 @@ export struct ReaderReadingTextFragment {
         Span(this.highlightPrefix());
       }
       if (this.highlightBody().length > 0) {
-        if (this.usesTtsHighlight()) {
+        if (this.separateHighlight) {
+          Span(this.highlightBody());
+        } else if (this.usesTtsHighlight()) {
           Span(this.highlightBody())
             .decoration({ type: TextDecorationType.Underline, color: this.themeStyle().ink });
         } else {
@@ -129,8 +151,58 @@ export struct ReaderReadingTextFragment {
       .letterSpacing(this.appearance.letterSpacing)
       .fontColor(this.themeStyle().ink)
       .copyOption(this.longPressSelectText ? CopyOptions.InApp : CopyOptions.None)
+      .editMenuOptions({
+        onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> => items,
+        onMenuItemClick: (item: TextMenuItem, range: TextRange): boolean => this.onTextMenuItemClick(item, range),
+      })
       .selectedBackgroundColor('#33594632')
-      .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start);
+      .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start)
+      .onAreaChange((_old: Area, area: Area): void => {
+        this.highlightGlobalX = Number.parseFloat(`${area.globalPosition.x}`);
+        this.highlightGlobalY = Number.parseFloat(`${area.globalPosition.y}`);
+        this.scheduleHighlightGeometry();
+      });
+  }
+
+  private scheduleHighlightGeometry(): void {
+    if (!this.highlightMounted || !this.separateHighlight || this.highlightQueued) return;
+    const range = this.highlightRange();
+    if (range.endUtf16 <= range.startUtf16 && !this.highlightHadGeometry) return;
+    this.highlightQueued = true;
+    const lifecycle = this.highlightLifecycle;
+    const action = (): void => {
+      if (!this.highlightMounted || lifecycle !== this.highlightLifecycle) return;
+      this.highlightQueued = false;
+      if (this.separateHighlight) this.measureHighlightGeometry();
+    };
+    // All fragments measure and paint in their page owner's single frame.
+    if (this.queueHighlightMeasurement !== undefined) this.queueHighlightMeasurement(action);
+    else this.getUIContext().postFrameCallback(new ReaderHighlightFrame(action));
+  }
+
+  private measureHighlightGeometry(): void {
+    const range = this.highlightRange();
+    const rects: ReaderDynamicHighlightRect[] = [];
+    if (range.endUtf16 > range.startUtf16) {
+      try {
+        const inset = this.indentPrefix().length;
+        const boxes = this.textController.getLayoutManager().getRectsForRange(
+          { start: range.startUtf16 + inset, end: range.endUtf16 + inset },
+          graphicsText.RectWidthStyle.TIGHT, graphicsText.RectHeightStyle.TIGHT);
+        const context = this.getUIContext();
+        const underline = this.usesTtsHighlight();
+        for (const box of boxes) {
+          const rect = box.rect;
+          const bottom = this.highlightGlobalY + context.px2vp(rect.bottom);
+          rects.push({ left: this.highlightGlobalX + context.px2vp(rect.left),
+            top: underline ? bottom - 1.5 : this.highlightGlobalY + context.px2vp(rect.top),
+            right: this.highlightGlobalX + context.px2vp(rect.right), bottom,
+            color: underline ? this.themeStyle().ink : '#33594632', multiply: !underline });
+        }
+      } catch (_error) { /* The next layout callback supplies exact glyph bounds. */ }
+    }
+    this.highlightHadGeometry = rects.length > 0;
+    this.onHighlightGeometry(this.startScalar, rects);
   }
 
   private onTextSelectionEnabledChanged(): void {
@@ -139,24 +211,29 @@ export struct ReaderReadingTextFragment {
     }
   }
 
+  private onTextMenuItemClick(item: TextMenuItem, range: TextRange): boolean {
+    if (!item.id.equals(TextMenuItemId.COPY)) return false;
+    // Consume stale copy actions too, so a dismissed selection cannot copy
+    // a newly rendered fragment or fall through to the synthetic display text.
+    if (!this.longPressSelectText) return true;
+    const selected = readerSelectedOriginalText(this.text, this.indentPrefix().length, range.start, range.end);
+    if (selected === undefined || selected.length === 0) return true;
+    try {
+      copyReaderSelection(selected);
+      this.textController.closeSelectionMenu();
+    } catch (_) {
+      this.getUIContext().getPromptAction().showToast({ message: '复制失败，请重试' });
+    }
+    return true;
+  }
+
   private indentPrefix(): string {
     return this.isParagraphStart ? readerAppearanceParagraphIndentPrefix(this.appearance.indent) : '';
   }
 
-  private highlightPrefix(): string {
-    const range = this.highlightRange();
-    return this.text.substring(0, range.startUtf16);
-  }
-
-  private highlightBody(): string {
-    const range = this.highlightRange();
-    return this.text.substring(range.startUtf16, range.endUtf16);
-  }
-
-  private highlightSuffix(): string {
-    const range = this.highlightRange();
-    return this.text.substring(range.endUtf16);
-  }
+  private highlightPrefix(): string { return this.highlightRange().prefix; }
+  private highlightBody(): string { return this.highlightRange().body; }
+  private highlightSuffix(): string { return this.highlightRange().suffix; }
 
   private usesTtsHighlight(): boolean {
     const start = this.ttsHighlightStart;
@@ -165,36 +242,10 @@ export struct ReaderReadingTextFragment {
       Number.isFinite(end) && end > start;
   }
 
-  private highlightRange(): ReadingSurfaceHighlightRange {
-    let highlightStart = this.autoPageHighlightStart;
-    let highlightEnd = this.autoPageHighlightEnd;
-    if (this.usesTtsHighlight()) {
-      highlightStart = this.ttsHighlightStart;
-      highlightEnd = this.ttsHighlightEnd;
-    }
-    if (highlightStart === undefined || highlightEnd === undefined ||
-      !Number.isFinite(highlightStart) || !Number.isFinite(highlightEnd) ||
-      highlightEnd <= highlightStart || highlightEnd <= this.startScalar ||
-      highlightStart >= this.endScalar) {
-      return new ReadingSurfaceHighlightRange(0, 0);
-    }
-    const startScalar = Math.max(this.startScalar, highlightStart) - this.startScalar;
-    const endScalar = Math.min(this.endScalar, highlightEnd) - this.startScalar;
-    return new ReadingSurfaceHighlightRange(
-      this.utf16ForScalar(startScalar),
-      this.utf16ForScalar(endScalar),
-    );
-  }
-
-  private utf16ForScalar(scalarOffset: number): number {
-    let scalar = 0;
-    let utf16 = 0;
-    while (utf16 < this.text.length && scalar < scalarOffset) {
-      const codePoint = this.text.codePointAt(utf16);
-      utf16 += codePoint !== undefined && codePoint > 0xFFFF ? 2 : 1;
-      scalar += 1;
-    }
-    return utf16;
+  private highlightRange(): ReaderHighlightTextSlice {
+    return this.highlightTextCache.sample(this.text, this.startScalar, this.endScalar,
+      this.usesTtsHighlight() ? this.ttsHighlightStart : this.autoPageHighlightStart,
+      this.usesTtsHighlight() ? this.ttsHighlightEnd : this.autoPageHighlightEnd);
   }
 
   private themeStyle(): ReaderAppearanceThemeStyle {
@@ -204,6 +255,8 @@ export struct ReaderReadingTextFragment {
 
 @Component
 export struct ReadingSurface {
+  // Only the idle offscreen snapshot lane opts in; ordinary reading remains asynchronous.
+  @Prop snapshotSynchronousImages: boolean = false;
   /** Core-materialized title for the current pagination-manifest page. */
   @Prop chapterTitle: string;
   /** The semantic chapter heading belongs only to the first physical page. */
@@ -218,9 +271,35 @@ export struct ReadingSurface {
    * Preferred physical-page input. It is produced by the feature-local
    * measurement pass, rather than by this presentation component.
    */
-  @Prop pageFragments: ReadingSurfacePageFragment[] = [];
+  @Prop @Watch('onHighlightContentChanged') pageFragments: ReadingSurfacePageFragment[] = [];
+  @Prop @Watch('onHighlightContentChanged') contentRevision: number = 0;
+  @Prop @Watch('onHighlightContentChanged') staticSnapshotId: string = '';
+  @Prop @Watch('onHighlightContentChanged') highlightTextureIdentity: string = '';
+  onDynamicHighlights: (identity: string, rects: ReaderDynamicHighlightRect[]) => void =
+    (_identity: string, _rects: ReaderDynamicHighlightRect[]): void => {};
+  private highlightRects: Map<string, ReaderDynamicHighlightRect[]> = new Map();
+  private readonly highlightCanvas: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
+  private highlightCanvasReady: boolean = false;
+  private highlightMounted: boolean = false;
+  private highlightLifecycle: number = 0;
+  private highlightDrawQueued: boolean = false;
+  private highlightDraining: boolean = false;
+  private highlightMeasurements: Array<() => void> = [];
+  private highlightLiveRevision: number = -1;
+  private highlightLiveFragments: ReadingSurfacePageFragment[] | undefined = undefined;
+  private highlightLiveIds: Set<string> = new Set();
+  private highlightPainted: ReaderDynamicHighlightRect[] = [];
+  private highlightPaintWidth: number = -1;
+  private highlightPaintHeight: number = -1;
+  private highlightPublishedIdentity: string = '';
+  private highlightPublished: ReaderDynamicHighlightRect[] = [];
+  private highlightPublishWidth: number = -1;
+  private highlightPublishHeight: number = -1;
+  private highlightRootX: number = 0;
+  private highlightRootY: number = 0;
+  fragmentsProvider: (() => ReadingSurfacePageFragment[]) | undefined = undefined;
   /** One owner-computed viewport/safe-area contract shared with pagination. */
-  @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
+  @Prop @Watch('onHighlightContentChanged') layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   /** UI-owned persisted appearance snapshot; no business/content state lives here. */
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop ttsHighlightStart: number | undefined = undefined;
@@ -239,11 +318,21 @@ export struct ReadingSurface {
   @Prop chromeSessionHeight: number = 0;
 
   aboutToAppear(): void {
+    this.highlightMounted = true; this.highlightLifecycle += 1;
     registerReaderFonts(this.getUIContext().getFont());
+  }
+
+  aboutToDisappear(): void {
+    this.highlightMounted = false; this.highlightLifecycle += 1;
+    this.highlightDrawQueued = false; this.highlightCanvasReady = false;
+    this.highlightMeasurements = []; this.highlightRects.clear();
+    this.highlightLiveFragments = undefined; this.highlightLiveIds.clear();
+    this.highlightPublishedIdentity = ''; this.highlightPaintWidth = -1;
   }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
       // The Figma background-image list is painted front-to-back: texture,
       // gradient, highlight, shade. Stack children paint back-to-front, so
@@ -251,12 +340,14 @@ export struct ReadingSurface {
       // texture with the gradient and accidentally covering it with lighting.
       if (this.themeStyle().sourcePaperLighting) {
         Image(this.paperShade())
+          .syncLoad(this.snapshotSynchronousImages)
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Fill)
           .interpolation(ImageInterpolation.High);
 
         Image(this.paperHighlight())
+          .syncLoad(this.snapshotSynchronousImages)
           .width('100%')
           .height('100%')
           .objectFit(ImageFit.Fill)
@@ -296,8 +387,8 @@ export struct ReadingSurface {
         }
 
         Column() {
-          if (this.pageFragments.length > 0) {
-            ForEach(this.pageFragments, (fragment: ReadingSurfacePageFragment, index: number) => {
+          if (this.renderFragments().length > 0) {
+            ForEach(this.renderFragments(), (fragment: ReadingSurfacePageFragment, index: number) => {
               if (index > 0 && this.bottomJustifyGap > 0) {
                 Blank().height(this.bottomJustifyGap);
               }
@@ -308,12 +399,14 @@ export struct ReadingSurface {
               }
               if (fragment.fileUri !== undefined && fragment.fileUri.length > 0) {
                 Image(fragment.fileUri)
+          .syncLoad(this.snapshotSynchronousImages)
                   .width('100%')
                   .height(fragment.imageHeight)
                   .objectFit(ImageFit.Contain)
                   .interpolation(ImageInterpolation.High);
               } else if (fragment.imageSource !== undefined) {
                 Image(fragment.imageSource)
+          .syncLoad(this.snapshotSynchronousImages)
                   .width('100%')
                   .height(fragment.imageHeight)
                   .objectFit(ImageFit.Contain)
@@ -334,6 +427,11 @@ export struct ReadingSurface {
                   autoPageHighlightStart: this.autoPageHighlightStart,
                   autoPageHighlightEnd: this.autoPageHighlightEnd,
                   longPressSelectText: this.longPressSelectText,
+                  separateHighlight: this.staticSnapshotId.length > 0,
+                  queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
+                  onHighlightGeometry: (key: number, rects: ReaderDynamicHighlightRect[]): void => {
+                    this.acceptHighlightGeometry(fragment.id, rects);
+                  },
                 });
               }
             }, (fragment: ReadingSurfacePageFragment): string => fragment.id);
@@ -381,10 +479,130 @@ export struct ReadingSurface {
         layout: this.layout,
         appearance: this.appearance,
       });
+      }
+      .width('100%').height('100%')
+      .backgroundColor(this.themeStyle().paperStart)
+      .id(this.staticSnapshotId.length > 0 ? this.staticSnapshotId : undefined);
+      // Offscreen static rasters and ordinary inline-highlight pages do not
+      // need a full-viewport Canvas. Hidden Canvas nodes still carry native
+      // backing resources and add GC/disposal work after texture capture.
+      if (this.staticSnapshotId.length > 0) {
+      Canvas(this.highlightCanvas)
+        .blendMode(this.dynamicHighlightBlend(), BlendApplyType.FAST)
+        .width('100%').height('100%').enabled(false).hitTestBehavior(HitTestMode.None)
+        .onReady((): void => {
+          this.highlightCanvasReady = true; this.highlightPaintWidth = -1; this.scheduleDynamicHighlights();
+        });
+      }
     }
     .width('100%')
     .height('100%')
+    .onAreaChange((_old: Area, area: Area): void => {
+      this.highlightRootX = Number.parseFloat(`${area.globalPosition.x}`);
+      this.highlightRootY = Number.parseFloat(`${area.globalPosition.y}`);
+      this.scheduleDynamicHighlights();
+    })
+    // Keep the reading surface opaque while text/images are being reconciled.
+    // This theme-owned paper base prevents a transient empty child tree from
+    // revealing the Index/root background during page promotion.
+    .backgroundColor(this.themeStyle().paperStart)
     .clip(true);
+  }
+
+  private onHighlightContentChanged(): void {
+    if (this.staticSnapshotId.length === 0) this.highlightCanvasReady = false;
+    this.scheduleDynamicHighlights();
+  }
+
+  private enqueueHighlightMeasurement(action: () => void): void {
+    if (!this.highlightMounted) return;
+    this.highlightMeasurements.push(action);
+    this.scheduleDynamicHighlights();
+  }
+
+  private acceptHighlightGeometry(key: string, rects: ReaderDynamicHighlightRect[]): void {
+    const previous = this.highlightRects.get(key);
+    if (rects.length === 0 && previous === undefined) return;
+    if (previous !== undefined && readerDynamicHighlightRectsEqual(previous, rects)) return;
+    if (rects.length === 0) this.highlightRects.delete(key);
+    else this.highlightRects.set(key, rects);
+    if (!this.highlightDraining) this.scheduleDynamicHighlights();
+  }
+
+  private scheduleDynamicHighlights(): void {
+    if (!this.highlightMounted || !this.highlightCanvasReady || this.staticSnapshotId.length === 0 ||
+      this.highlightDrawQueued || this.highlightDraining) return;
+    this.highlightDrawQueued = true;
+    const lifecycle = this.highlightLifecycle;
+    this.getUIContext().postFrameCallback(new ReaderHighlightFrame((): void => {
+      if (!this.highlightMounted || lifecycle !== this.highlightLifecycle) return;
+      this.highlightDrawQueued = false;
+      const pending = this.highlightMeasurements;
+      this.highlightMeasurements = [];
+      this.highlightDraining = true;
+      try {
+        for (const action of pending) action();
+        this.drawDynamicHighlights();
+      } finally { this.highlightDraining = false; }
+    }));
+  }
+
+  private dynamicHighlightBlend(): BlendMode {
+    const start = this.ttsHighlightStart;
+    const end = this.ttsHighlightEnd;
+    return start !== undefined && end !== undefined && Number.isFinite(start) &&
+      Number.isFinite(end) && end > start ? BlendMode.SRC_OVER : BlendMode.MULTIPLY;
+  }
+
+  private drawDynamicHighlights(): void {
+    if (!this.highlightCanvasReady || this.staticSnapshotId.length === 0) return;
+    const canvas = this.highlightCanvas;
+    const result: ReaderDynamicHighlightRect[] = [];
+    if (this.highlightRects.size > 0) {
+      const fragments = this.renderFragments();
+      if (this.highlightLiveRevision !== this.contentRevision || this.highlightLiveFragments !== fragments) {
+        this.highlightLiveRevision = this.contentRevision; this.highlightLiveFragments = fragments;
+        this.highlightLiveIds = new Set<string>(fragments.map((fragment: ReadingSurfacePageFragment): string => fragment.id));
+      }
+      const live = this.highlightLiveIds;
+      this.highlightRects.forEach((rects: ReaderDynamicHighlightRect[], key: string): void => {
+        if (!live.has(key)) { this.highlightRects.delete(key); return; }
+        for (const source of rects) {
+          const rect: ReaderDynamicHighlightRect = {
+            left: Math.max(0, source.left - this.highlightRootX), top: Math.max(0, source.top - this.highlightRootY),
+            right: Math.min(this.layout.viewportWidth, source.right - this.highlightRootX),
+            bottom: Math.min(this.layout.viewportHeight, source.bottom - this.highlightRootY),
+            color: source.color, multiply: source.multiply };
+          if (rect.right <= rect.left || rect.bottom <= rect.top) continue;
+          result.push(rect);
+        }
+      });
+    }
+    const width = this.layout.viewportWidth;
+    const height = this.layout.viewportHeight;
+    if (this.highlightPaintWidth !== width || this.highlightPaintHeight !== height ||
+      !readerDynamicHighlightRectsEqual(this.highlightPainted, result)) {
+      canvas.clearRect(0, 0, width, height);
+      for (const rect of result) {
+        canvas.globalCompositeOperation = 'source-over';
+        canvas.fillStyle = readerHighlightCanvasColor(rect.color);
+        canvas.fillRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+      }
+      this.highlightPainted = result; this.highlightPaintWidth = width; this.highlightPaintHeight = height;
+    }
+    if (this.highlightPublishedIdentity !== this.highlightTextureIdentity || this.highlightPublishWidth !== width ||
+      this.highlightPublishHeight !== height || !readerDynamicHighlightRectsEqual(this.highlightPublished, result)) {
+      this.highlightPublishedIdentity = this.highlightTextureIdentity; this.highlightPublished = result;
+      this.highlightPublishWidth = width; this.highlightPublishHeight = height;
+      this.onDynamicHighlights(this.highlightTextureIdentity, result);
+    }
+  }
+
+  private renderFragments(): ReadingSurfacePageFragment[] {
+    // Primitive revision invalidates the slot; the provider reads its current
+    // owner rather than a complex array copied when the slot first mounted.
+    return this.contentRevision >= 0 && this.fragmentsProvider !== undefined ?
+      this.fragmentsProvider() : this.pageFragments;
   }
 
   private contentInsets(): Padding {

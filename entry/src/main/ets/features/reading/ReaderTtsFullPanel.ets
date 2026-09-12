@@ -6,7 +6,9 @@ import {
   READER_TTS_TIMER_MAX_MINUTES,
   READER_TTS_TIMER_MAX_SECONDS,
   READER_TTS_TIMER_MIN,
+  READER_TTS_TIMER_DEFAULT_MINUTES,
   type ReaderTtsState,
+  type ReaderTtsTimerMode,
 } from './ReaderTtsState';
 import {
   TOK_BORDER,
@@ -29,6 +31,7 @@ import {
   READER_FULL_PANEL_MAX_WIDTH_TABLET,
 } from './ReaderLayoutGeometry';
 import type { ReaderTtsVoiceOption } from './ReaderTtsPreferencesState';
+import type { ReaderTtsAudioFormat } from './ReaderOnlineTtsProfile';
 
 const TTS_FULL_GRABBER_WIDTH = 42;
 const TTS_FULL_GRABBER_HEIGHT = 4;
@@ -45,6 +48,14 @@ const TTS_FULL_SCROLL_PADDING_X_TABLET = 12;
 const TTS_FULL_SCROLL_PADDING_BOTTOM = 24;
 
 export interface ReaderTtsEngineOption {
+  readerProfile?: string;
+  /** Ephemeral password field; never spread into a Core request. */
+  apiKey?: string;
+  /** Ephemeral form fields; LocalReadingExperience serializes them into the
+   * versioned readerProfile while keeping credentials out of Core. */
+  voice?: string;
+  format?: ReaderTtsAudioFormat;
+  clearApiKey?: boolean;
   id: number;
   name: string;
   url: string;
@@ -59,7 +70,8 @@ export struct ReaderTtsFullPanel {
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop state: ReaderTtsState;
-  @Prop timerMinutes: number = 15;
+  @Prop timerMode: ReaderTtsTimerMode = 'duration';
+  @Prop timerMinutes: number = READER_TTS_TIMER_DEFAULT_MINUTES;
   @Prop timerSeconds: number = 0;
   @Prop followHighlight: boolean = true;
   @Prop pauseOnInterruption: boolean = true;
@@ -76,8 +88,8 @@ export struct ReaderTtsFullPanel {
   onPrevious: () => void = (): void => {};
   onNext: () => void = (): void => {};
   onSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};
-  onTimerChange: (minutes: number, seconds: number) => void =
-    (_minutes: number, _seconds: number): void => {};
+  onTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode) => void =
+    (_minutes: number, _seconds: number, _mode?: ReaderTtsTimerMode): void => {};
   onRateChange: (rate: number) => void = (_rate: number): void => {};
   onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
@@ -296,7 +308,7 @@ export struct ReaderTtsFullPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .fontColor(TOK_READ_INK);
-        Text(this.timerSummary())
+        Text(this.timerCaption())
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Medium)
           .fontSize(10)
@@ -351,7 +363,7 @@ export struct ReaderTtsFullPanel {
           .fontFamily('ReaderInter')
           .fontSize(10)
           .fontColor(TOK_READ_MUTED);
-        Text(this.timerSummary())
+        Text(this.timerCaption())
           .fontFamily('ReaderInter')
           .fontWeight(800)
           .fontSize(20)
@@ -387,7 +399,7 @@ export struct ReaderTtsFullPanel {
   @Builder
   private timerWheel(minutes: boolean) {
     Column() {
-      Text(this.wheelValue(minutes, -1))
+      Text(this.wheelValue(minutes, minutes ? -5 : -1))
         .width(this.timerWheelWidth())
         .height(43)
         .fontFamily('ReaderInter')
@@ -396,7 +408,7 @@ export struct ReaderTtsFullPanel {
         .fontColor(TOK_READ_MUTED)
         .opacity(0.56)
         .textAlign(TextAlign.Center)
-        .onClick((): void => this.stepTimer(minutes, -1));
+        .onClick((): void => this.stepTimer(minutes, minutes ? -5 : -1));
       Text(this.wheelValue(minutes, 0))
         .width(this.timerWheelWidth())
         .height(43)
@@ -406,7 +418,7 @@ export struct ReaderTtsFullPanel {
         .fontColor(TOK_READ_INK)
         .textAlign(TextAlign.Center)
         .border({ width: { top: TOK_BORDER_W, bottom: TOK_BORDER_W }, color: TOK_READ_PRIMARY });
-      Text(this.wheelValue(minutes, 1))
+      Text(this.wheelValue(minutes, minutes ? 5 : 1))
         .width(this.timerWheelWidth())
         .height(43)
         .fontFamily('ReaderInter')
@@ -415,7 +427,7 @@ export struct ReaderTtsFullPanel {
         .fontColor(TOK_READ_MUTED)
         .opacity(0.56)
         .textAlign(TextAlign.Center)
-        .onClick((): void => this.stepTimer(minutes, 1));
+        .onClick((): void => this.stepTimer(minutes, minutes ? 5 : 1));
       Text(minutes ? '分' : '秒')
         .width(this.timerWheelWidth())
         .fontFamily('ReaderInter')
@@ -441,7 +453,7 @@ export struct ReaderTtsFullPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .fontColor(TOK_READ_INK);
-        Text(`${this.effectiveRate().toFixed(1)}x`)
+        Text(`${this.effectiveRate().toFixed(2)}x`)
           .fontFamily('ReaderInter')
           .fontSize(10)
           .fontColor(TOK_READ_MUTED);
@@ -470,9 +482,9 @@ export struct ReaderTtsFullPanel {
           }
         });
       Row() {
-        Text(`${READER_TTS_RATE_MIN.toFixed(1)}x`)
+        Text(`${READER_TTS_RATE_MIN.toFixed(2)}x`)
           .layoutWeight(1).fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED);
-        Text(`${READER_TTS_RATE_MAX.toFixed(1)}x`)
+        Text(`${READER_TTS_RATE_MAX.toFixed(2)}x`)
           .fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED);
       }
       .width('100%');
@@ -761,6 +773,12 @@ export struct ReaderTtsFullPanel {
     return `${this.twoDigits(this.timerMinutes)}:${this.twoDigits(this.timerSeconds)}`;
   }
 
+  private timerCaption(): string {
+    if (this.timerMode === 'chapterEnd') return '本章结束';
+    if (this.timerMode === 'off' || (this.timerMinutes === 0 && this.timerSeconds === 0)) return '不开启';
+    return this.timerSeconds === 0 ? `${this.timerMinutes} 分钟` : this.timerSummary();
+  }
+
   private wheelValue(minutes: boolean, delta: number): string {
     const maximum = minutes ? READER_TTS_TIMER_MAX_MINUTES : READER_TTS_TIMER_MAX_SECONDS;
     const current = minutes ? this.timerMinutes : this.timerSeconds;
@@ -768,11 +786,19 @@ export struct ReaderTtsFullPanel {
   }
 
   private stepTimer(minutes: boolean, delta: number): void {
-    const nextMinutes = minutes ? Math.max(READER_TTS_TIMER_MIN,
-      Math.min(READER_TTS_TIMER_MAX_MINUTES, this.timerMinutes + delta)) : this.timerMinutes;
-    const nextSeconds = minutes ? this.timerSeconds : Math.max(READER_TTS_TIMER_MIN,
+    if (minutes) {
+      const base = this.timerMode === 'duration' ? this.timerMinutes : 0;
+      const nextMinutes = this.timerMode !== 'duration' ?
+        (delta > 0 ? READER_TTS_TIMER_DEFAULT_MINUTES : READER_TTS_TIMER_MIN) :
+        Math.max(delta < 0 ? READER_TTS_TIMER_MIN : 1,
+          Math.min(READER_TTS_TIMER_MAX_MINUTES, base + delta));
+      this.onTimerChange(nextMinutes, this.timerMode === 'duration' ? this.timerSeconds : 0, 'duration');
+      return;
+    }
+    const nextSeconds = Math.max(READER_TTS_TIMER_MIN,
       Math.min(READER_TTS_TIMER_MAX_SECONDS, this.timerSeconds + delta));
-    this.onTimerChange(nextMinutes, nextSeconds);
+    this.onTimerChange(this.timerMode === 'duration' ? this.timerMinutes : READER_TTS_TIMER_DEFAULT_MINUTES,
+      nextSeconds, 'duration');
   }
 
   private twoDigits(value: number): string {

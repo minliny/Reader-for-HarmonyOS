@@ -23,6 +23,10 @@ import {
   type ReaderPageChromeLayoutSnapshot,
 } from './ReaderPageChromeLayout';
 
+// Font metrics are shared by mounted pages and short-lived offscreen rasters.
+// The key includes typography, density and system scale; retain only 64 labels.
+const readerPageChromeTextMeasurements: Map<string, Size> = new Map<string, Size>();
+
 /**
  * Figma `Reader/ImmersiveInfo` + the page-owned part of
  * `Reader/ImmersiveFooterStatus`.
@@ -43,6 +47,11 @@ export struct ReaderPageChrome {
   @Prop sessionHeight: number = 0;
   @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  // Geometry expressions request the same four labels repeatedly in one update.
+  // Share bounded metrics across slot promotion and offscreen raster creation.
+  private textMeasureCache: Map<string, Size> = readerPageChromeTextMeasurements;
+  private chromeLayoutCacheKey: string = '';
+  private chromeLayoutCache: ReaderPageChromeLayoutSnapshot | undefined = undefined;
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -107,11 +116,21 @@ export struct ReaderPageChrome {
   }
 
   private chromeLayout(): ReaderPageChromeLayoutSnapshot {
+    const layout = this.layout;
+    const context = this.getUIContext();
+    const key = JSON.stringify([this.topStartText, this.topEndText, this.bottomStartText,
+      this.bottomEndText, this.sessionVisible, this.sessionWidth, this.sessionHeight,
+      layout.viewportWidth, layout.viewportHeight, layout.systemFontScale,
+      layout.pageChromeVisualSafeLeft, layout.pageChromeVisualSafeRight,
+      layout.pageChromeVisualSafeTop, layout.pageChromeVisualSafeBottom,
+      layout.pageChromeInteractiveSafeRight, layout.pageChromeInteractiveSafeBottom,
+      context.px2vp(1), context.fp2px(1)]);
+    if (key === this.chromeLayoutCacheKey && this.chromeLayoutCache !== undefined) return this.chromeLayoutCache;
     const topStart = this.textMeasure(this.topStartText, TYPE_READER_IMMERSIVE_TIME);
     const topEnd = this.textMeasure(this.topEndText, TYPE_READER_IMMERSIVE_TIME);
     const bottomStart = this.textMeasure(this.bottomStartText, TYPE_READER_IMMERSIVE_PROGRESS);
     const bottomEnd = this.textMeasure(this.bottomEndText, TYPE_READER_IMMERSIVE_PAGE_ORDINAL);
-    return resolveReaderPageChromeLayout(this.layout, new ReaderPageChromeMeasurements(
+    const result = resolveReaderPageChromeLayout(layout, new ReaderPageChromeMeasurements(
       topStart.width,
       topStart.height,
       topEnd.width,
@@ -124,6 +143,9 @@ export struct ReaderPageChrome {
       this.sessionWidth,
       this.sessionHeight,
     ));
+    this.chromeLayoutCacheKey = key;
+    this.chromeLayoutCache = result;
+    return result;
   }
 
   private textMeasure(text: string, style: ReaderTextStyle): Size {
@@ -131,6 +153,15 @@ export struct ReaderPageChrome {
       return { width: 0, height: 0 };
     }
     const context = this.getUIContext();
+    const key = JSON.stringify([text, style.fontSizeFp, style.fontFamily,
+      style.fontWeight, style.lineHeightFp, this.layout.systemFontScale,
+      context.px2vp(1), context.fp2px(1)]);
+    const cached = this.textMeasureCache.get(key);
+    if (cached !== undefined) {
+      this.textMeasureCache.delete(key);
+      this.textMeasureCache.set(key, cached);
+      return cached;
+    }
     const widthPx = context.getMeasureUtils().measureText({
       textContent: text,
       fontSize: style.fontSizeFp,
@@ -138,10 +169,18 @@ export struct ReaderPageChrome {
       fontWeight: style.fontWeight,
     });
     const lineHeight = style.lineHeightFp ?? style.fontSizeFp;
-    return {
+    const measured: Size = {
       width: Math.max(0, context.px2vp(widthPx)),
       height: lineHeight * Math.max(1, this.layout.systemFontScale),
     };
+    if (this.textMeasureCache.size >= 64) {
+      for (const oldest of this.textMeasureCache.keys()) {
+        this.textMeasureCache.delete(oldest);
+        break;
+      }
+    }
+    this.textMeasureCache.set(key, measured);
+    return measured;
   }
 
   private metaColor(): string {

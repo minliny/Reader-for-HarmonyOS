@@ -33,6 +33,12 @@ export function registerReaderFonts(font: Font): void {
     familySrc: $rawfile('NotoSerifSC-Regular.ttf'),
   });
   font.registerFont({
+    familyName: 'ReaderNotoSansSCUIRegular',
+    familySrc: $rawfile('NotoSansSC-UIRegular.otf'),
+  });
+  font.registerFont({ familyName: 'ReaderNotoSansSCUIMedium', familySrc: $rawfile('NotoSansSC-UIMedium.otf') });
+  font.registerFont({ familyName: 'ReaderNotoSansSCUIBold', familySrc: $rawfile('NotoSansSC-UIBold.otf') });
+  font.registerFont({
     familyName: READER_FONT_NOTO_SANS_SC,
     familySrc: $rawfile('NotoSansSC-VF.otf'),
   });

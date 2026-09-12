@@ -56,6 +56,7 @@ export type ReaderTtsConfig = {
   configId?: number;
   engine?: string;
   rate: number;
+  ratePercent?: number;
   pitch: number;
   followSys: boolean;
 };
@@ -63,6 +64,7 @@ export type ReaderTtsConfig = {
 export type ReaderTtsConfigUpdate = {
   engine?: string;
   rate: number;
+  ratePercent?: number;
   pitch: number;
   followSys: boolean;
 };
@@ -100,6 +102,7 @@ export class ReaderTtsGateway {
       pitch: update.pitch,
       followSys: update.followSys,
     };
+    if (update.ratePercent !== undefined) params['ratePercent'] = update.ratePercent;
     if (update.engine !== undefined) {
       params['engine'] = update.engine;
     }
@@ -416,12 +419,16 @@ export class ReaderTtsGateway {
 
   private decodeConfig(value: unknown, command: string): ReaderTtsConfig {
     const config = this.requireObject(value, `${command} config`);
-    this.assertAllowedKeys(config, ['configId', 'engine', 'rate', 'pitch', 'followSys'], `${command} config`);
+    this.assertAllowedKeys(config, ['configId', 'engine', 'rate', 'ratePercent', 'pitch', 'followSys'], `${command} config`);
     const decoded: ReaderTtsConfig = {
       rate: this.requireSafeInteger(config, 'rate', `${command} config`),
       pitch: this.requireSafeInteger(config, 'pitch', `${command} config`),
       followSys: this.requireBoolean(config, 'followSys', `${command} config`),
     };
+    if (config['ratePercent'] !== undefined && config['ratePercent'] !== null) {
+      decoded.ratePercent = this.requireSafeInteger(config, 'ratePercent', `${command} config`);
+      this.assertRatePercent(decoded.ratePercent);
+    }
     if (config['configId'] !== undefined && config['configId'] !== null) {
       decoded.configId = this.requireSafeInteger(config, 'configId', `${command} config`);
     }
@@ -430,7 +437,13 @@ export class ReaderTtsGateway {
     return decoded;
   }
 
+  private assertRatePercent(value: number): void {
+    if (!Number.isSafeInteger(value) || value < 50 || value > 200 || value % 5 !== 0)
+      throw new Error('朗读语速必须在0.5–2.0倍之间，步长0.05');
+  }
+
   private assertConfigUpdate(update: ReaderTtsConfigUpdate): void {
+    if (update.ratePercent !== undefined) this.assertRatePercent(update.ratePercent);
     if (!Number.isSafeInteger(update.rate) || !Number.isSafeInteger(update.pitch) ||
       typeof update.followSys !== 'boolean') {
       throw new Error('tts.config.put requires integer rate/pitch and boolean followSys');

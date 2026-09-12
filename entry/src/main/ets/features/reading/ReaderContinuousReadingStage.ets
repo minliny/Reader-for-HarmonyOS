@@ -1,3 +1,7 @@
+import { FrameCallback } from '@kit.ArkUI';
+import { readerMotionNowMs } from '../common/ReaderMotionClock';
+import { ReaderPageInputClock } from './ReaderPageInputClock';
+import { READER_PAGE_GESTURE_LONG_PRESS_MS } from './ReaderPageGestureState';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { TYPE_READER_CHAPTER_TITLE } from '../common/ReaderTypography';
 import {
@@ -18,6 +22,22 @@ import {
   type ReaderPageTurnDirection,
   type ReaderPageTurnOutcome,
 } from './ReaderPageGestureState';
+
+class ContinuousLayoutFrame extends FrameCallback {
+  private action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
+}
+
+interface ContinuousImageAnchor {
+  id: string;
+  y: number;
+  height: number;
+  fraction: number;
+  manualScroll: number;
+  generation: number;
+}
 
 const CONTINUOUS_TAP_SLOP = 12;
 
@@ -75,7 +95,7 @@ export struct ReaderContinuousReadingStage {
   @Prop autoPageHighlightStart: number | undefined = undefined;
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop longPressSelectText: boolean = false;
-  @Prop interactionEnabled: boolean = true;
+  @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
 
   onVisibleRangeChanged: (startFragment: number, endFragment: number, startProgress: number) => void =
     (_startFragment: number, _endFragment: number, _startProgress: number): void => {};
@@ -88,16 +108,26 @@ export struct ReaderContinuousReadingStage {
     (_direction: ReaderPageTurnDirection): ReaderPageTurnOutcome => ({ kind: 'busy' });
   onOpenControl: () => void = (): void => {};
   onManualInteraction: () => void = (): void => {};
+  onPointerStart: (pointerId: number) => boolean = (_pointerId: number): boolean => true;
+  onPointerEnd: (pointerId: number) => void = (_pointerId: number): void => {};
   onScrollerReady: (scroller: Scroller | undefined) => void =
     (_scroller: Scroller | undefined): void => {};
 
+  onAnchorSamplerReady: (sample: (() => void) | undefined) => void =
+    (_sample: (() => void) | undefined): void => {};
   private readonly listScroller: Scroller = new Scroller();
   private readonly fragmentDataSource: ContinuousFragmentDataSource = new ContinuousFragmentDataSource();
   private initialScrollPending: boolean = true;
   private touchActive: boolean = false;
+  private touchPointerId: number = -1;
+  private mounted: boolean = false;
+  private imageAnchorGeneration: number = 0;
+  private pendingImageAnchor: ContinuousImageAnchor | undefined = undefined;
   private touchMoved: boolean = false;
   private touchStartX: number = 0;
   private touchStartY: number = 0;
+  private touchStartTimeMs: number = 0;
+  private inputClock: ReaderPageInputClock = new ReaderPageInputClock();
   private completedStationaryTouch: boolean = false;
   private manualInteractionReported: boolean = false;
   private visibleFragmentStart: number = 0;
@@ -105,6 +135,8 @@ export struct ReaderContinuousReadingStage {
   private initialScrollGeneration: number = 0;
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.onAnchorSamplerReady((): void => this.reportCurrentVisibleRange());
     registerReaderFonts(this.getUIContext().getFont());
     this.reloadFragments();
     this.onScrollerReady(this.listScroller);
@@ -112,6 +144,12 @@ export struct ReaderContinuousReadingStage {
   }
 
   aboutToDisappear(): void {
+    this.mounted = false;
+    this.initialScrollGeneration += 1;
+    this.imageAnchorGeneration += 1;
+    this.pendingImageAnchor = undefined;
+    this.onAnchorSamplerReady(undefined);
+    this.resetTouch();
     this.onScrollerReady(undefined);
   }
 
@@ -187,8 +225,7 @@ export struct ReaderContinuousReadingStage {
             .alignItems(HorizontalAlign.Start);
           }
           .width('100%');
-        }, (fragment: ReadingSurfacePageFragment): string =>
-          `${this.chapterIdentity}:${fragment.id}`);
+        }, (fragment: ReadingSurfacePageFragment): string => this.fragmentRenderKey(fragment));
       }
       .width('100%')
       .height('100%')
@@ -204,7 +241,8 @@ export struct ReaderContinuousReadingStage {
       .enabled(this.interactionEnabled)
       .onScrollIndex((start: number, end: number, _center: number): void =>
         this.reportVisibleRange(start, end))
-      .onScrollStop((): void => this.onScrollStopped())
+      .onDidScroll((offset: number, state: ScrollState): void => this.onContentScrolled(offset, state))
+      .onScrollStop((): void => this.onContentScrollStopped())
       .onReachStart((): void => this.onReachStart())
       .onReachEnd((): void => this.onReachEnd())
       // List may synthesize ClickEvent/TapGesture after an edge drag on a
@@ -225,6 +263,15 @@ export struct ReaderContinuousReadingStage {
     .clip(true);
   }
 
+  private fragmentRenderKey(fragment: ReadingSurfacePageFragment): string {
+    // LazyForEach retains the built branch for an unchanged key, even when
+    // onDataReloaded replaces a plain fragment object. A decoded image must
+    // replace its former Blank branch; untouched text/image rows keep keys.
+    const imageRevision = fragment.text.length === 0 ?
+      `:${fragment.fileUri ?? ''}:${fragment.imageHeight}` : '';
+    return `${this.chapterIdentity}:${fragment.id}${imageRevision}`;
+  }
+
   private hasTitleItem(): boolean {
     return this.chapterTitle.length > 0;
   }
@@ -234,23 +281,37 @@ export struct ReaderContinuousReadingStage {
       this.resetTouch();
       return;
     }
-    const touch = event.changedTouches.length > 0 ? event.changedTouches[0] : event.touches[0];
+    if (event.type === TouchType.Cancel) {
+      this.completedStationaryTouch = false; this.resetTouch(); return;
+    }
+    const touch = event.type === TouchType.Down ?
+      (event.changedTouches.length > 0 ? event.changedTouches[0] : event.touches[0]) :
+      (event.type === TouchType.Up ? event.changedTouches : event.touches.concat(event.changedTouches))
+        .find((pointer: TouchObject): boolean => pointer.id === this.touchPointerId);
     if (event.type === TouchType.Down) {
+      if (this.touchActive) return;
       this.completedStationaryTouch = false;
       this.manualInteractionReported = false;
       if (touch === undefined) {
         this.resetTouch();
         return;
       }
+      // Register DOWN even before the native List has recognized movement.
+      // Auto Page, volume keys and queued work share this physical owner.
+      if (!this.onPointerStart(touch.id)) return;
+      this.touchPointerId = touch.id;
       this.touchActive = true;
       this.touchMoved = false;
       this.touchStartX = touch.x;
       this.touchStartY = touch.y;
+      this.inputClock = new ReaderPageInputClock();
+      this.touchStartTimeMs = this.inputClock.sample(event.timestamp, readerMotionNowMs());
       return;
     }
     if (!this.touchActive || touch === undefined) {
       return;
     }
+    const eventTimeMs = this.inputClock.sample(event.timestamp, readerMotionNowMs());
     const moved = Math.abs(touch.x - this.touchStartX) > CONTINUOUS_TAP_SLOP ||
       Math.abs(touch.y - this.touchStartY) > CONTINUOUS_TAP_SLOP;
     this.touchMoved = this.touchMoved || moved;
@@ -262,7 +323,10 @@ export struct ReaderContinuousReadingStage {
     }
     const deltaX = touch.x - this.touchStartX;
     const deltaY = touch.y - this.touchStartY;
-    this.completedStationaryTouch = event.type === TouchType.Up && !this.touchMoved;
+    // List can recognize a stationary six-second press as a TapGesture.
+    // Use the same input clock and long-press boundary as paged reading.
+    this.completedStationaryTouch = event.type === TouchType.Up && !this.touchMoved &&
+      eventTimeMs - this.touchStartTimeMs < READER_PAGE_GESTURE_LONG_PRESS_MS;
     const boundaryDirection = event.type === TouchType.Up && Math.abs(deltaY) > CONTINUOUS_TAP_SLOP &&
       Math.abs(deltaY) > Math.abs(deltaX) ? (deltaY < 0 ? 'next' : 'previous') : undefined;
     this.resetTouch();
@@ -310,9 +374,24 @@ export struct ReaderContinuousReadingStage {
     this.onManualInteraction();
   }
 
+  private onInteractionEnabledChanged(): void {
+    if (this.interactionEnabled) return;
+    this.completedStationaryTouch = false;
+    this.resetTouch();
+  }
+
   private resetTouch(): void {
+    const pointerId = this.touchPointerId;
     this.touchActive = false;
+    this.touchPointerId = -1;
     this.touchMoved = false;
+    if (pointerId >= 0) this.onPointerEnd(pointerId);
+  }
+
+  private reportCurrentVisibleRange(): void {
+    if (!this.mounted || this.initialScrollPending) return;
+    const title = this.hasTitleItem() ? 1 : 0;
+    this.reportVisibleRange(this.visibleFragmentStart + title, this.visibleFragmentEnd + title);
   }
 
   private reportVisibleRange(start: number, end: number): void {
@@ -333,13 +412,13 @@ export struct ReaderContinuousReadingStage {
     try {
       if (start >= titleOffset) {
         const rect = this.listScroller.getItemRect(start);
-        if (rect.height > 0) {
-          startProgress = Math.max(0, Math.min(1, -rect.y / rect.height));
-        }
+        if (rect.height <= 0) return;
+        startProgress = Math.max(0, Math.min(1, (this.layout.contentTop - rect.y) / rect.height));
       }
     } catch (_) {
-      // The visible callback can race a List remount. The fragment start is a
-      // safe canonical fallback and the next callback refines the anchor.
+      // Missing geometry is not a new reading position. Keep the last
+      // canonical anchor until a real layout callback can refine it.
+      return;
     }
     this.onVisibleRangeChanged(startFragment, endFragment, startProgress);
   }
@@ -349,17 +428,63 @@ export struct ReaderContinuousReadingStage {
   }
 
   private onChapterIdentityChanged(): void {
+    this.completedStationaryTouch = false;
+    this.resetTouch();
+    this.imageAnchorGeneration += 1;
+    this.pendingImageAnchor = undefined;
     this.reloadFragments();
     this.scheduleInitialScroll();
   }
 
+  private onContentScrollStopped(): void {
+    if (!this.mounted || this.initialScrollPending) return;
+    this.reportCurrentVisibleRange();
+    this.onScrollStopped();
+  }
+
+  private onContentScrolled(offset: number, state: ScrollState): void {
+    if (this.pendingImageAnchor !== undefined && state !== ScrollState.Idle) {
+      this.pendingImageAnchor.manualScroll += offset;
+    }
+    this.reportCurrentVisibleRange();
+  }
+
   private onContentRevisionChanged(): void {
     const fragments = this.fragmentsProvider();
-    if (this.changedFragmentIndex >= 0 && this.changedFragmentIndex < fragments.length) {
-      this.fragmentDataSource.update(this.changedFragmentIndex, fragments[this.changedFragmentIndex]);
-      return;
+    const changed = this.changedFragmentIndex;
+    if (this.pendingImageAnchor === undefined && !this.initialScrollPending &&
+      (changed < 0 || changed <= this.visibleFragmentStart)) {
+      const fragment = this.fragmentDataSource.getData(this.visibleFragmentStart);
+      if (fragment !== undefined) {
+        try {
+          const rect = this.listScroller.getItemRect(this.visibleFragmentStart + (this.hasTitleItem() ? 1 : 0));
+          this.pendingImageAnchor = { id: fragment.id, y: rect.y, height: rect.height,
+            fraction: rect.height > 0 ? Math.max(0, Math.min(1, (this.layout.contentTop - rect.y) / rect.height)) : 0,
+            manualScroll: 0, generation: this.imageAnchorGeneration };
+          const anchor = this.pendingImageAnchor;
+          this.getUIContext().postFrameCallback(new ContinuousLayoutFrame((): void => {
+            this.restoreImageAnchor(anchor);
+          }));
+        } catch (_error) { /* A recycled row will report its next actual anchor. */ }
+      }
     }
-    this.fragmentDataSource.replace(fragments);
+    if (changed >= 0 && changed < fragments.length) this.fragmentDataSource.update(changed, fragments[changed]);
+    else this.fragmentDataSource.replace(fragments);
+  }
+
+  private restoreImageAnchor(anchor: ContinuousImageAnchor): void {
+    if (!this.mounted || anchor !== this.pendingImageAnchor || anchor.generation !== this.imageAnchorGeneration) return;
+    this.pendingImageAnchor = undefined;
+    const index = this.fragmentsProvider().findIndex((fragment: ReadingSurfacePageFragment): boolean => fragment.id === anchor.id);
+    if (index < 0) return;
+    try {
+      const rect = this.listScroller.getItemRect(index + (this.hasTitleItem() ? 1 : 0));
+      // Correct only layout displacement. Preserve scrolling performed while
+      // this coalesced image batch was waiting for layout, including inertia.
+      const delta = rect.y - anchor.y + anchor.manualScroll + anchor.fraction * (rect.height - anchor.height);
+      if (Math.abs(delta) > 0.5) this.listScroller.scrollBy(0, delta);
+      this.reportCurrentVisibleRange();
+    } catch (_error) { /* A newer chapter/row owns the viewport. */ }
   }
 
   private reloadFragments(): void {
@@ -374,7 +499,7 @@ export struct ReaderContinuousReadingStage {
     const initial = Math.max(0, Math.min(Math.max(0, fragments.length - 1), this.initialFragmentIndex));
     this.visibleFragmentStart = initial;
     this.visibleFragmentEnd = initial;
-    setTimeout((): void => {
+    this.getUIContext().postFrameCallback(new ContinuousLayoutFrame((): void => {
       if (generation !== this.initialScrollGeneration) {
         return;
       }
@@ -395,7 +520,7 @@ export struct ReaderContinuousReadingStage {
       // scrollToIndex makes the target row visible first. Defer one layout so
       // getItemRect observes its real wrapped height, then restore the scalar's
       // intra-fragment fraction instead of snapping to the row boundary.
-      setTimeout((): void => {
+      this.getUIContext().postFrameCallback(new ContinuousLayoutFrame((): void => {
         if (generation !== this.initialScrollGeneration) {
           return;
         }
@@ -403,17 +528,25 @@ export struct ReaderContinuousReadingStage {
           const progress = Math.max(0, Math.min(1, this.initialFragmentProgress));
           const rect = this.listScroller.getItemRect(listIndex);
           if (progress > 0 && rect.height > 0) {
-            this.listScroller.scrollBy(0, rect.height * progress);
+            // getItemRect is relative to the List border, while START
+            // aligns to its padded content edge. Save and restore relative
+            // to that same edge, including a row partly inside the top inset.
+            this.listScroller.scrollBy(0, rect.y - this.layout.contentTop + rect.height * progress);
           }
         } catch (_) {
           // The canonical fragment start remains a bounded fallback if ArkUI
           // releases the row between the two layout turns.
         } finally {
-          this.visibleFragmentStart = clamped;
-          this.visibleFragmentEnd = clamped;
-          this.initialScrollPending = false;
+          // scrollBy has only requested the second layout. Sampling now can
+          // save the START-aligned row (progress zero) over the restored scalar.
+          // Keep both onDidScroll/onScrollStop fenced until that layout passes.
+          this.getUIContext().postFrameCallback(new ContinuousLayoutFrame((): void => {
+            if (!this.mounted || generation !== this.initialScrollGeneration) return;
+            this.initialScrollPending = false;
+            this.onContentScrollStopped();
+          }));
         }
-      }, 0);
-    }, 0);
+      }));
+    }));
   }
 }

@@ -1,3 +1,4 @@
+import { diagnosticCodeOf } from '../../app/LogPrivacy.ts';
 import { errorMessageOf } from '../../app/ErrorMessage.ts';
 import {
   createReaderTtsState,
@@ -20,6 +21,11 @@ import {
 const TTS_RATE_MIN = 0.5;
 const TTS_RATE_MAX = 2;
 const DEFAULT_START_CALLBACK_TIMEOUT_MS = 15000;
+// Host engines may deliver a duplicate completion after the coordinator has
+// already advanced the Core queue.  Keep a small, bounded correlation window
+// for those late callbacks; retaining every completed slice would make a
+// long-running book a process-lifetime memory leak.
+const MAX_RETAINED_COMPLETED_UTTERANCES = 128;
 
 let READER_TTS_COORDINATOR_SEQ = 0;
 
@@ -189,6 +195,8 @@ export class ReaderTtsSessionCoordinator {
   private timerHandle: number = -1;
   private timerGeneration: number = 0;
   private readonly utterances: Map<string, CorrelatedUtterance> = new Map();
+  private readonly retainedUtteranceOrder: string[] = [];
+  private readonly retainedUtteranceIds: Set<string> = new Set();
   private readonly ownerToken: string;
   private readonly startCallbackTimeoutMs: number;
   private readonly startWaiters: StartWaiter[] = [];
@@ -258,21 +266,62 @@ export class ReaderTtsSessionCoordinator {
     return this.probedConfig;
   }
 
+  /**
+   * Engine probing is a transport mutation (selectEngine can replace the
+   * active Host implementation), so it must share the same serial tail as
+   * playback intents.  Without this boundary a delayed probe can switch the
+   * router after a newer session has already started speaking.
+   */
   async probeAvailability(): Promise<boolean> {
-    if (this.active === undefined) {
+    let available = false;
+    await this.enqueue(async (): Promise<void> => {
+      available = await this.probeAvailabilityInternal();
+    });
+    return available;
+  }
+
+  private async probeAvailabilityInternal(): Promise<boolean> {
+    // Public stop/start intents update transport state synchronously before
+    // entering the operation tail.  Capture the generation here so a probe
+    // that is already awaiting a platform call cannot publish idle/unavailable
+    // state over that newer intent when its callback resumes.
+    const probeGeneration = this.transport.sessionGeneration;
+    const isProbeCurrent = (): boolean => !this.disposed &&
+      this.transport.sessionGeneration === probeGeneration;
+    const hadActiveSession = this.active !== undefined;
+    if (!hadActiveSession && isProbeCurrent()) {
       this.setState({ ...this.state, status: 'probing' });
     }
     try {
       const config = await this.gateway.getConfig();
+      if (!isProbeCurrent()) return false;
+      // A session may have been admitted while getConfig awaited. Do not
+      // select another engine in that case: the session's prepare transaction
+      // owns the router, and probing the already-selected Host is sufficient.
+      if (this.active !== undefined) {
+        const probe = await this.host.probe();
+        if (!isProbeCurrent()) return false;
+        return probe.available;
+      }
       this.probedConfig = config;
       await this.host.selectEngine(config?.engine);
+      if (!isProbeCurrent()) return false;
+      // start() can be called while selectEngine is awaiting a platform
+      // response. Its prepare transaction will select the correct engine;
+      // avoid publishing the stale probe's engine classification.
+      if (this.active !== undefined) {
+        const probe = await this.host.probe();
+        if (!isProbeCurrent()) return false;
+        return probe.available;
+      }
       this.transport = {
         ...this.transport,
         engine: config?.engine?.startsWith('http-tts:') ? 'http' : 'system',
       };
       const probe = await this.host.probe();
+      if (!isProbeCurrent()) return false;
       if (!probe.available) {
-        if (this.active === undefined) {
+        if (this.active === undefined && isProbeCurrent()) {
           this.setState({
             ...this.state,
             status: 'unavailable',
@@ -282,7 +331,7 @@ export class ReaderTtsSessionCoordinator {
         }
         return false;
       }
-      if (this.active === undefined) {
+      if (this.active === undefined && isProbeCurrent()) {
         const wasEngineUnavailable = this.state.stopReason === 'engineUnavailable';
         this.setState({
           ...this.state,
@@ -295,7 +344,7 @@ export class ReaderTtsSessionCoordinator {
     } catch (error) {
       const detail = errorMessageOf(error);
       this.logTtsEvent('probe', detail);
-      if (this.active === undefined) {
+      if (this.active === undefined && isProbeCurrent()) {
         this.setState({
           ...this.state,
           status: 'unavailable',
@@ -311,7 +360,7 @@ export class ReaderTtsSessionCoordinator {
     this.assertStartInput(input);
     const chapterKey = this.chapterKey(input.chapter);
     const rate = input.rate ?? 1;
-    this.utterances.clear();
+    this.clearUtteranceCorrelations();
     this.resolveStartWaiters(false);
     this.transport = {
       ...this.transport,
@@ -442,23 +491,61 @@ export class ReaderTtsSessionCoordinator {
     if (!Number.isFinite(rate) || rate < TTS_RATE_MIN || rate > TTS_RATE_MAX) {
       return Promise.reject(new Error('Reader TTS rate must be between 0.5 and 2.0'));
     }
-    this.invalidateUtterance();
-    this.setState({ ...this.state, rate, requestId: undefined });
-    if (active === undefined || active.plan === undefined || this.state.sliceIndex === undefined || priorRate === rate) {
+    // Re-selecting the current rate must retain the in-flight utterance token.
+    if (priorRate === rate) return Promise.resolve();
+    if (active === undefined || active.plan === undefined || this.state.sliceIndex === undefined) {
+      if (active !== undefined) active.input = { ...active.input, rate };
+      this.setState({ ...this.state, rate });
       return Promise.resolve();
     }
-    active.input = { ...active.input, rate };
+    const priorInput = { ...active.input };
+    const priorState = { ...this.state };
     const identity = active.identity;
     const index = this.state.sliceIndex;
+    this.invalidateUtterance();
+    this.setState({ ...this.state, status: 'preparing', rate: priorRate, requestId: undefined,
+      errorMessage: undefined });
     const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
-      const hostStopError = await hostStopTask;
-      if (hostStopError !== undefined) throw hostStopError;
-      if (!this.isSessionCurrent(identity)) return;
-      const snapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(rate));
-      if (!this.isSessionCurrent(identity)) return;
-      this.applyCoreSnapshot(snapshot);
-      await this.speakSlice(active, index, 'preparing');
+      try {
+        const hostStopError = await hostStopTask;
+        if (hostStopError !== undefined) throw hostStopError;
+        if (!this.isSessionCurrent(identity)) return;
+        const snapshot = await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(rate));
+        if (!this.isSessionCurrent(identity)) return;
+        const paused = priorState.status === 'paused' || priorState.status === 'interrupted';
+        // Commit the candidate only after Core accepted the precise rate.
+        active.input = { ...active.input, rate };
+        this.setState({ ...this.state, rate });
+        this.applyCoreSnapshot(snapshot);
+        if (paused || snapshot.state === 'paused') return;
+        await this.speakSlice(active, index, 'preparing');
+      } catch (error) {
+        if (!this.isSessionCurrent(identity)) throw error;
+        active.input = priorInput;
+        let restored = true;
+        // Core may have accepted the mutation before the transport reported
+        // an error. Restore the old value before exposing the failure.
+        try {
+          await this.gateway.setRate(active.input.chapter, this.coreRateForMultiplier(priorRate));
+        } catch (_) {
+          restored = false;
+        }
+        if (!restored) {
+          await this.terminateToError(`语速切换失败：${errorMessageOf(error)}`, 'utteranceFailed');
+        } else if (priorState.status === 'playing' || priorState.status === 'preparing' ||
+          priorState.status === 'resuming') {
+          this.setState({ ...priorState, errorMessage: `语速切换失败：${errorMessageOf(error)}` });
+          try {
+            await this.speakSlice(active, index, 'preparing');
+          } catch (recoveryError) {
+            await this.terminateToError(`语速切换失败：${errorMessageOf(recoveryError)}`, 'utteranceFailed');
+          }
+        } else {
+          this.setState({ ...priorState, errorMessage: `语速切换失败：${errorMessageOf(error)}` });
+        }
+        throw error;
+      }
     });
   }
 
@@ -466,8 +553,22 @@ export class ReaderTtsSessionCoordinator {
     this.configureTimer(durationMs);
   }
 
-  setAllowMixing(allowMixing: boolean): void {
-    if (this.active !== undefined) this.active.input = { ...this.active.input, allowMixing };
+  setAllowMixing(allowMixing: boolean): Promise<void> {
+    const active = this.active;
+    if (active === undefined) return Promise.resolve();
+    const priorInput = { ...active.input };
+    const identity = active.identity;
+    const candidate = { ...active.input, allowMixing };
+    return this.enqueue(async (): Promise<void> => {
+      if (!this.isSessionCurrent(identity)) return;
+      if (this.transport.audioSession === 'active') {
+        await this.host.activateAudioSession(candidate.allowMixing ?? false);
+      }
+      if (this.isSessionCurrent(identity)) active.input = candidate;
+    }).catch((error: Error): never => {
+      if (this.isSessionCurrent(identity)) active.input = priorInput;
+      throw error;
+    });
   }
 
   setFailurePolicy(failurePolicy: 'skip' | 'stop'): void {
@@ -485,18 +586,43 @@ export class ReaderTtsSessionCoordinator {
     }
     const active = this.active;
     if (active === undefined) return Promise.resolve();
-    active.input = { ...active.input, language: normalizedLanguage, person };
+    const priorInput = { ...active.input };
+    const priorState = { ...this.state };
+    const candidate = { ...active.input, language: normalizedLanguage, person };
     if (active.plan === undefined || this.state.sliceIndex === undefined ||
-      this.state.status === 'paused' || this.state.status === 'interrupted') return Promise.resolve();
+      this.state.status === 'paused' || this.state.status === 'interrupted') {
+      return this.enqueue(async (): Promise<void> => {
+        if (this.isSessionCurrent(active.identity)) active.input = candidate;
+      });
+    }
     const identity = active.identity;
     const index = this.state.sliceIndex;
     this.invalidateUtterance();
+    this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined });
     const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
-      const hostStopError = await hostStopTask;
-      if (hostStopError !== undefined) throw hostStopError;
-      if (!this.isSessionCurrent(identity)) return;
-      await this.speakSlice(active, index, 'preparing');
+      try {
+        const hostStopError = await hostStopTask;
+        if (hostStopError !== undefined) throw hostStopError;
+        if (!this.isSessionCurrent(identity)) return;
+        // The new voice becomes visible only when the replacement utterance
+        // has been admitted to the same session transaction.
+        active.input = candidate;
+        await this.speakSlice(active, index, 'preparing');
+      } catch (error) {
+        if (!this.isSessionCurrent(identity)) throw error;
+        active.input = priorInput;
+        this.setState({ ...priorState, errorMessage: `音色切换失败：${errorMessageOf(error)}` });
+        try {
+          if (priorState.status === 'playing' || priorState.status === 'preparing' ||
+            priorState.status === 'resuming') {
+            await this.speakSlice(active, index, 'preparing');
+          }
+        } catch (recoveryError) {
+          await this.terminateToError(`音色切换失败：${errorMessageOf(recoveryError)}`, 'utteranceFailed');
+        }
+        throw error;
+      }
     });
   }
 
@@ -524,7 +650,7 @@ export class ReaderTtsSessionCoordinator {
       stopReason: reason,
     });
     this.active = undefined;
-    this.utterances.clear();
+    this.clearUtteranceCorrelations();
     const hostStopTask = this.stopHostTransportImmediately();
     this.host.publishPlaybackState('stopped');
     return this.enqueue(async (): Promise<void> => {
@@ -645,7 +771,7 @@ export class ReaderTtsSessionCoordinator {
     this.awaitingStartToken = undefined;
     const active = this.active;
     this.active = undefined;
-    this.utterances.clear();
+    this.clearUtteranceCorrelations();
     this.startConfirmedRequestId = undefined;
     this.transport = {
       ...this.transport,
@@ -701,7 +827,7 @@ export class ReaderTtsSessionCoordinator {
     this.clearStartWatchdog();
     this.awaitingStartToken = undefined;
     this.active = undefined;
-    this.utterances.clear();
+    this.clearUtteranceCorrelations();
     this.startConfirmedRequestId = undefined;
     this.transport = {
       ...this.transport,
@@ -835,7 +961,7 @@ export class ReaderTtsSessionCoordinator {
     this.awaitingStartToken = undefined;
     const correlated = this.utterances.get(token.requestId);
     if (correlated !== undefined) {
-      this.utterances.delete(token.requestId);
+      this.removeUtteranceCorrelation(token.requestId);
       try {
         await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
       } catch (error) {
@@ -879,6 +1005,10 @@ export class ReaderTtsSessionCoordinator {
         const result = await this.reportCorrelatedCallback(correlated, event.requestId, 'done', 'done');
         if (active === undefined || result.callbackDisposition !== 'applied' ||
           !this.isCorrelatedSessionCurrent(correlated)) return;
+        // Keep only a bounded late-callback window.  The first completion is
+        // still present while its progress/next-slice work runs, so a
+        // duplicate event queued by the Host can reach Core exactly as before.
+        this.retainUtteranceCorrelation(event.requestId);
         this.applyCoreSnapshot(result.snapshot);
         await this.progressCommit({ chapter: correlated.chapter, charEnd: correlated.charEnd });
         if (!this.isCorrelatedSessionCurrent(correlated)) return;
@@ -949,7 +1079,7 @@ export class ReaderTtsSessionCoordinator {
     const correlated = this.utterances.get(token.requestId);
     if (correlated === undefined) return;
     const result = await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
-    if (result.callbackDisposition === 'applied') this.utterances.delete(token.requestId);
+    if (result.callbackDisposition === 'applied') this.removeUtteranceCorrelation(token.requestId);
     if (result.callbackDisposition !== 'applied' || !this.isCorrelatedSessionCurrent(correlated)) return;
     this.applyCoreSnapshot(result.snapshot, message);
     if (result.failureAction === 'stop' || result.snapshot.state === 'stopped') {
@@ -1100,6 +1230,40 @@ export class ReaderTtsSessionCoordinator {
     return snapshot.currentSliceIndex;
   }
 
+  /** Drop all callback correlation state when a session/lifecycle ends. */
+  private clearUtteranceCorrelations(): void {
+    this.utterances.clear();
+    this.retainedUtteranceIds.clear();
+    this.retainedUtteranceOrder.splice(0, this.retainedUtteranceOrder.length);
+  }
+
+  /**
+   * Retain one retired request long enough for a late/duplicate Host event to
+   * be reported to Core, while bounding the process-lifetime footprint for
+   * long books.  The oldest retired IDs are evicted first; the current active
+   * request is not retired until an intent invalidates it.
+   */
+  private retainUtteranceCorrelation(requestId: string): void {
+    if (!this.utterances.has(requestId)) return;
+    if (this.retainedUtteranceIds.has(requestId)) return;
+    this.retainedUtteranceIds.add(requestId);
+    this.retainedUtteranceOrder.push(requestId);
+    while (this.retainedUtteranceOrder.length > MAX_RETAINED_COMPLETED_UTTERANCES) {
+      const evicted = this.retainedUtteranceOrder.shift();
+      if (evicted === undefined) return;
+      this.retainedUtteranceIds.delete(evicted);
+      this.utterances.delete(evicted);
+    }
+  }
+
+  /** Remove one correlation and its recency marker, if present. */
+  private removeUtteranceCorrelation(requestId: string): void {
+    this.utterances.delete(requestId);
+    if (!this.retainedUtteranceIds.delete(requestId)) return;
+    const index = this.retainedUtteranceOrder.indexOf(requestId);
+    if (index >= 0) this.retainedUtteranceOrder.splice(index, 1);
+  }
+
   private reportCorrelatedCallback(
     correlated: CorrelatedUtterance,
     requestId: string,
@@ -1181,7 +1345,14 @@ export class ReaderTtsSessionCoordinator {
   private invalidateUtterance(
     interruption?: 'systemInterruption' | 'routeBackground' | 'deviceChange',
   ): void {
-    if (this.transport.currentRequestId === undefined && interruption === undefined) return;
+    const currentRequestId = this.transport.currentRequestId;
+    if (currentRequestId !== undefined) {
+      // A stop/seek/rate/voice intent retires the current request even when
+      // its Host callback never arrives.  Keep it in the same bounded late
+      // callback window so repeated interruptions cannot grow the map.
+      this.retainUtteranceCorrelation(currentRequestId);
+    }
+    if (currentRequestId === undefined && interruption === undefined) return;
     this.clearStartWatchdog();
     this.awaitingStartToken = undefined;
     this.transport = {
@@ -1294,7 +1465,7 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private logTtsEvent(stage: string, detail: string): void {
-    console.error(`[ReaderTTS] stage=${stage} detail=${detail.length > 0 ? detail : '(none)'}`);
+    console.error(`[ReaderTTS] stage=${stage} code=${diagnosticCodeOf(detail)}`);
   }
 
   private resolveStartWaiters(started: boolean): void {

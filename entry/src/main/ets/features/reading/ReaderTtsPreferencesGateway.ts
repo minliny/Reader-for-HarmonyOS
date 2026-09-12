@@ -40,7 +40,8 @@ export class ReaderTtsPreferencesGateway {
     this.updateTail = new Promise<void>((resolve: () => void): void => {
       releaseUpdate = resolve;
     });
-    await previousUpdate;
+    // Keep retries independent after a transient preferences/flush failure.
+    await previousUpdate.catch((): void => {});
     try {
       const store = await this.ensureStore();
       await store.put(READER_TTS_SNAPSHOT_KEY, JSON.stringify(requested));

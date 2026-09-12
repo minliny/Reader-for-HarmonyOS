@@ -1,3 +1,4 @@
+import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import type { LocalReadingDownloadState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import {
@@ -202,7 +203,7 @@ export class ReadingOfflineGateway {
       if (failure.code === 'cancelled') {
         throw failure;
       }
-      console.warn(`ReadingOfflineGateway image materialization incomplete: ${failure.message}`);
+      console.warn(`ReadingOfflineGateway image materialization incomplete: ${diagnosticCodeOf(failure.message)}`);
       return;
     }
     await this.reportMaterialization(session, materialization, 'completed');

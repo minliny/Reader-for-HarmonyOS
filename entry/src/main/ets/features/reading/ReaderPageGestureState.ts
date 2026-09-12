@@ -190,6 +190,18 @@ export function readerPageTapIntent(localX: number, viewportWidth: number): Read
   return 'control';
 }
 
+/** A re-grab keeps the currently published page displacement at the new
+ * physical touch point. Ownership is already known, including near-rest poses. */
+export function resumeReaderPagePan(direction: ReaderPageTurnDirection, offsetX: number,
+  width: number, height: number, localX: number, localY: number, eventTimeMs: number): ReaderPageGestureState {
+  const state = startReaderPagePan(width, localX - offsetX, localY, eventTimeMs, height);
+  updateReaderPagePanInPlace(state, offsetX, 0, 0, localX, localY, 0, eventTimeMs);
+  state.phase = 'dragging'; state.owner = 'horizontalPage'; state.axis = 'horizontal';
+  state.direction = direction; state.currentDirection = direction; state.active = true;
+  state.consumed = false;
+  return state;
+}
+
 export function readerPageGestureCanTap(state: ReaderPageGestureState, eventTimeMs: number): boolean {
   return state.owner === 'undecided' && state.maxDistance2D < READER_PAGE_GESTURE_TOUCH_SLOP &&
     eventTimeMs - state.startEventTimeMs < READER_PAGE_GESTURE_LONG_PRESS_MS;

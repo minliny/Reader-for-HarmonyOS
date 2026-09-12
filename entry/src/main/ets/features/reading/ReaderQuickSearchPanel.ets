@@ -34,6 +34,13 @@ export interface ReaderQuickSearchResultsState {
   kind: 'results';
   keyword: string;
   results: ReadingContentSearchResult[];
+  /** Number of matches consumed from Core's stable result stream. */
+  offset?: number;
+  /** Core observed another match beyond this bounded page. */
+  hasMore?: boolean;
+  /** A subsequent page is being fetched while existing rows remain visible. */
+  loadingMore?: boolean;
+  loadMoreError?: string;
 }
 
 export interface ReaderQuickSearchEmptyState {

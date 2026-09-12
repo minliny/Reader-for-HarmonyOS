@@ -155,6 +155,10 @@ export class ReadingPaginationPrefix {
     return sameKey(this.key, key);
   }
 
+  nextRequestScalar(): number {
+    return this.observations[this.observations.length - 1].endScalarExclusive;
+  }
+
   startsAtRequest(requestScalar: number): boolean {
     validateAnchor(requestScalar);
     return this.observations[0].requestScalar === requestScalar;
@@ -185,23 +189,16 @@ export class ReadingPaginationPrefix {
   /** Exact request anchor that originally produced the page before `start`. */
   previousRequestForPageStart(startScalar: number): number | undefined {
     validateAnchor(startScalar);
-    for (let index = 1; index < this.observations.length; index += 1) {
-      if (this.observations[index].startScalar === startScalar) {
-        return this.observations[index - 1].requestScalar;
-      }
-    }
-    return undefined;
+    const index = this.pageIndexAtOrBefore(startScalar);
+    return index > 0 && this.observations[index].startScalar === startScalar ?
+      this.observations[index - 1].requestScalar : undefined;
   }
 
   /** Whether this continuous measured prefix already contains `anchor`. */
   containsAnchor(anchorScalar: number): boolean {
     validateAnchor(anchorScalar);
-    for (const observation of this.observations) {
-      if (anchorScalar >= observation.startScalar && anchorScalar < observation.endScalarExclusive) {
-        return true;
-      }
-    }
-    return false;
+    const index = this.pageIndexAtOrBefore(anchorScalar);
+    return index >= 0 && anchorScalar < this.observations[index].endScalarExclusive;
   }
 
   /**
@@ -211,13 +208,22 @@ export class ReadingPaginationPrefix {
    */
   previousRequestForAnchor(anchorScalar: number): number | undefined {
     validateAnchor(anchorScalar);
-    for (let index = 0; index < this.observations.length; index += 1) {
-      const observation = this.observations[index];
-      if (anchorScalar >= observation.startScalar && anchorScalar < observation.endScalarExclusive) {
-        return index > 0 ? this.observations[index - 1].requestScalar : undefined;
-      }
+    const index = this.pageIndexAtOrBefore(anchorScalar);
+    return index > 0 && anchorScalar < this.observations[index].endScalarExclusive ?
+      this.observations[index - 1].requestScalar : undefined;
+  }
+
+  /** Allocation-free ordinal lookup over the already ordered observations. */
+  pageIndexAtOrBefore(anchorScalar: number): number {
+    validateAnchor(anchorScalar);
+    let low = 0;
+    let high = this.observations.length;
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (this.observations[mid].startScalar <= anchorScalar) low = mid + 1;
+      else high = mid;
     }
-    return undefined;
+    return low - 1;
   }
 
   pageStartScalars(): number[] {

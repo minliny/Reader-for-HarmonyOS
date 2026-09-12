@@ -222,12 +222,7 @@ export struct ReaderAppearanceMotionStage {
   @Builder
   private contentLayer() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        this.appearancePanel();
-      }
-      .width(this.stageWidth())
-      .height(this.stageHeight())
-      .position({ x: 0, y: -this.renderFrame.shellTranslateY });
+      this.appearancePanel();
     }
     .width(this.stageWidth())
     .height(this.renderFrame.shellHeight)

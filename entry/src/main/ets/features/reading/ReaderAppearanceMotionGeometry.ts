@@ -6,18 +6,20 @@
  * sample every actor/property track. Expand and collapse are therefore the
  * same function traversed in opposite directions.
  *
- * The published Figma N export (`1505:18040`) supplies actor endpoints and
- * independent reveal/fade tracks. Product direct-manipulation extends every
- * shared actor's spatial interpolation across p=0 -> 1: the components keep
- * separating, moving and resizing until the grabber reaches Full. This timing
- * correction is explicit product authority, not a claim that final N2 motion
- * has been published in Figma.
+ * Figma N (`1505:18040`) is the authority for actor identity, hierarchy,
+ * property values, local timing and easing. The measured grabber still owns
+ * the master p=0..1 input, but no production-only motion is inserted between
+ * the authored keyframes.
  */
 
 export type ReaderAppearanceMotionActorId =
   'BrightnessRail' |
   'ModuleNav' |
   'MorphStage' |
+  'ContentSurface' |
+  'AppearanceContent' |
+  'ThemeLibrary' |
+  'FontLibrary' |
   'QuickMorph' |
   'ThemeHeader' |
   'ThemeDay' |
@@ -39,17 +41,11 @@ export type ReaderAppearanceMotionActorId =
   'Font6' |
   'Font7' |
   'Header' |
-  'ThemeActions' |
-  'FontImport' |
   'Typography';
 
 export type ReaderAppearanceTrackEasing = 'linear' | 'ease-out' | 'ease-in-out';
 export type ReaderAppearanceTrackAuthority =
-  'interaction-axis' |
-  'legacy-figma-n' |
-  'legacy-static-endpoint' |
-  'product-direct-manipulation' |
-  'product-mapping-alias';
+  'figma-n';
 
 export interface ReaderAppearanceMeasuredAxis {
   /** Resting grabber center in the compact control bar, in screen coordinates. */
@@ -82,13 +78,17 @@ export interface ReaderAppearanceMotionActorSample {
 export interface ReaderAppearanceMotionFrame {
   /** The sole clamped Quick=0 -> Full=1 spatial coordinate. */
   masterProgress: number;
-  /** Corresponding position on the legacy N review timeline, for provenance. */
+  /** Corresponding position on the active Figma N review timeline. */
   figmaFramePercent: number;
   shellHeight: number;
   shellTranslateY: number;
   brightnessRail: ReaderAppearanceMotionActorFrame;
   moduleNav: ReaderAppearanceMotionActorFrame;
   morphStage: ReaderAppearanceMotionActorFrame;
+  contentSurface: ReaderAppearanceMotionActorFrame;
+  appearanceContent: ReaderAppearanceMotionActorFrame;
+  themeLibrary: ReaderAppearanceMotionActorFrame;
+  fontLibrary: ReaderAppearanceMotionActorFrame;
   quickMorph: ReaderAppearanceMotionActorFrame;
   themeHeader: ReaderAppearanceMotionActorFrame;
   themeItems: ReaderAppearanceMotionActorFrame[];
@@ -96,8 +96,6 @@ export interface ReaderAppearanceMotionFrame {
   fontHeader: ReaderAppearanceMotionActorFrame;
   fontItems: ReaderAppearanceMotionActorFrame[];
   header: ReaderAppearanceMotionActorFrame;
-  themeActions: ReaderAppearanceMotionActorFrame;
-  fontImport: ReaderAppearanceMotionActorFrame;
   typography: ReaderAppearanceMotionActorFrame;
   actorSamples: ReaderAppearanceMotionActorSample[];
 }
@@ -135,9 +133,10 @@ export const READER_APPEARANCE_DESIGN_TRAVEL_VP =
 
 export const READER_APPEARANCE_FIGMA_N_REVIEW_START_PERCENT = 1 / 9;
 export const READER_APPEARANCE_FIGMA_N_REVIEW_END_PERCENT = 3 / 4;
-export const READER_APPEARANCE_FINAL_N2_PUBLISHED = false;
-/** User-approved runtime timing correction while final N2 remains unpublished. */
-export const READER_APPEARANCE_SHARED_GEOMETRY_END_PROGRESS = 1;
+/** The source timeline is available; this is not a runtime visual-acceptance flag. */
+export const READER_APPEARANCE_FIGMA_N_SOURCE_EVIDENCE_AVAILABLE = true;
+/** Figma 200ms -> 700ms inside the effective 200ms -> 1350ms master window. */
+export const READER_APPEARANCE_SHARED_GEOMETRY_END_PROGRESS = 10 / 23;
 
 export const READER_APPEARANCE_SHARED_ACTOR_IDS: ReaderAppearanceMotionActorId[] = [
   'MorphStage',
@@ -164,10 +163,12 @@ export const READER_APPEARANCE_SHARED_ACTOR_IDS: ReaderAppearanceMotionActorId[]
 ];
 
 export const READER_APPEARANCE_FULL_ONLY_ACTOR_IDS: ReaderAppearanceMotionActorId[] = [
-  'Header',
-  'ThemeActions',
-  'FontImport',
+  'ContentSurface',
+  'AppearanceContent',
+  'ThemeLibrary',
+  'FontLibrary',
   'Typography',
+  'Header',
 ];
 
 export const READER_APPEARANCE_FIXED_SCREEN_ACTOR_IDS: ReaderAppearanceMotionActorId[] = [
@@ -186,7 +187,7 @@ function finiteOr(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
-/** Product guard while legacy N remains a fixed 364vp coordinate space. */
+/** Runtime guard while Figma N remains a fixed 364vp coordinate space. */
 export function readerAppearanceMotionStageSupported(
   availableWidth: number,
   availableHeight: number,
@@ -220,8 +221,7 @@ export function readerAppearanceMotionViewportHeight(
   frame: ReaderAppearanceMotionFrame,
 ): number {
   const surfaceTop = frame.quickMorph.y + frame.quickMorph.translateY;
-  const shellBottom = frame.shellTranslateY + frame.shellHeight;
-  const available = Math.max(0, shellBottom - surfaceTop);
+  const available = Math.max(0, frame.shellHeight - surfaceTop);
   return Math.max(0, Math.min(frame.quickMorph.height, available));
 }
 
@@ -382,12 +382,13 @@ function effectTracks(
   opacity: ReaderAppearanceNumberTrack,
   translateY: ReaderAppearanceNumberTrack = constantTrack(0),
   blurVp: ReaderAppearanceNumberTrack = constantTrack(0),
+  rect: ReaderAppearanceMotionRect = { x: 0, y: 0, width: 0, height: 0 },
 ): ReaderAppearanceActorTracks {
   return actorTracks(
     id,
-    'legacy-figma-n',
-    { x: 0, y: 0, width: 0, height: 0 },
-    { x: 0, y: 0, width: 0, height: 0 },
+    'figma-n',
+    rect,
+    rect,
     0,
     1,
     'linear',
@@ -398,57 +399,45 @@ function effectTracks(
   );
 }
 
-function productMappedEffectTracks(
-  id: ReaderAppearanceMotionActorId,
-  opacity: ReaderAppearanceNumberTrack,
-): ReaderAppearanceActorTracks {
-  return actorTracks(
-    id,
-    'product-mapping-alias',
-    { x: 0, y: 0, width: 0, height: 0 },
-    { x: 0, y: 0, width: 0, height: 0 },
-    0,
-    1,
-    'linear',
-    opacity,
-  );
-}
+const FIGMA_GEOMETRY_START = 0;
+const FIGMA_GEOMETRY_END = READER_APPEARANCE_SHARED_GEOMETRY_END_PROGRESS;
+const FIGMA_FIXED_CHROME_START = 10 / 23;
+const FIGMA_CONTENT_SURFACE_START = 7 / 23;
+const FIGMA_APPEARANCE_START = 8 / 23;
+const FIGMA_CONTENT_END = 14 / 23;
+const FIGMA_THEME_LIBRARY_END = 15 / 23;
+const FIGMA_FONT_LIBRARY_START = 48 / 115;
+const FIGMA_HEADER_FONT_END = 17 / 23;
+const FIGMA_QUICK_FADE_END = 18 / 23;
 
-const SHARED_GEOMETRY_START = 0;
-const SHARED_GEOMETRY_END = READER_APPEARANCE_SHARED_GEOMETRY_END_PROGRESS;
-const LEGACY_FIXED_CHROME_START = 10 / 23;
-const LEGACY_APPEARANCE_START = 8 / 23;
-const LEGACY_CONTENT_END = 14 / 23;
-const LEGACY_THEME_LIBRARY_END = 15 / 23;
-const LEGACY_FONT_LIBRARY_START = 48 / 115;
-const LEGACY_HEADER_FONT_END = 17 / 23;
+const QUICK_MORPH_BASE_X = 13;
+const QUICK_MORPH_BASE_Y = 57;
+const THEME_LOCAL_X: number[] = [12, 91.5, 171, 250.5];
+const THEME_LOCAL_Y: number[] = [42.39, 107.19];
+const THEME_TRANSLATE_X: number[] = [-1, -14, -27, -40];
+const THEME_TRANSLATE_Y: number[] = [-8.492, -45.292];
+const FONT_LOCAL_X: number[] = [37, 103.5, 170, 236.5];
+const FONT_LOCAL_Y: number[] = [253.38, 284.38];
 
-const THEME_SOURCE_X: number[] = [23.104, 89.604, 156.104, 222.604];
-const THEME_SOURCE_Y: number[] = [468.891, 496.891];
-const THEME_TARGET_X: number[] = [25, 104.5, 184, 263.5];
-const THEME_TARGET_Y: number[] = [99.39, 164.19];
-const FONT_SOURCE_X: number[] = [23.104, 89.604, 156.104, 222.604];
-const FONT_SOURCE_Y: number[] = [549.891, 580.891];
-const FONT_TARGET_X: number[] = [24, 105, 186, 267];
-const FONT_TARGET_Y: number[] = [307.98, 345.98];
-
-function themeRect(index: number, target: boolean): ReaderAppearanceMotionRect {
+function themeRect(index: number, expandedSize: boolean): ReaderAppearanceMotionRect {
   const column = index % 4;
   const row = Math.floor(index / 4);
-  return target ? {
-    x: THEME_TARGET_X[column], y: THEME_TARGET_Y[row], width: 73.5, height: 58.8,
-  } : {
-    x: THEME_SOURCE_X[column], y: THEME_SOURCE_Y[row], width: 62.5, height: 24,
+  return {
+    x: QUICK_MORPH_BASE_X + THEME_LOCAL_X[column],
+    y: QUICK_MORPH_BASE_Y + THEME_LOCAL_Y[row],
+    width: expandedSize ? 73.5 : 62.5,
+    height: expandedSize ? 58.8 : 24,
   };
 }
 
-function fontRect(index: number, target: boolean): ReaderAppearanceMotionRect {
+function fontRect(index: number): ReaderAppearanceMotionRect {
   const column = index % 4;
   const row = Math.floor(index / 4);
-  return target ? {
-    x: FONT_TARGET_X[column], y: FONT_TARGET_Y[row], width: 73, height: 30,
-  } : {
-    x: FONT_SOURCE_X[column], y: FONT_SOURCE_Y[row], width: 62.5, height: 27,
+  return {
+    x: QUICK_MORPH_BASE_X + FONT_LOCAL_X[column],
+    y: QUICK_MORPH_BASE_Y + FONT_LOCAL_Y[row],
+    width: 62.5,
+    height: 27,
   };
 }
 
@@ -463,98 +452,149 @@ const fontIds: ReaderAppearanceMotionActorId[] = [
 const appearanceTracks: ReaderAppearanceActorTracks[] = [
   effectTracks(
     'BrightnessRail',
-    track(1, 0, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
-    track(0, 15, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
-    track(0, 12, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
+    track(1, 0, FIGMA_FIXED_CHROME_START, 1, 'ease-out'),
+    track(0, 15, FIGMA_FIXED_CHROME_START, 1, 'ease-out'),
+    track(0, 12, FIGMA_FIXED_CHROME_START, 1, 'ease-out'),
   ),
   effectTracks(
     'ModuleNav',
-    track(1, 0, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
-    track(0, 20, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
-    track(0, 12, LEGACY_FIXED_CHROME_START, 1, 'ease-out'),
+    track(1, 0, FIGMA_FIXED_CHROME_START, 1, 'ease-out'),
+    track(0, 20, FIGMA_FIXED_CHROME_START, 1, 'ease-out'),
+    track(0, 12, FIGMA_FIXED_CHROME_START, 1, 'ease-out'),
   ),
   actorTracks(
     'MorphStage',
-    'interaction-axis',
+    'figma-n',
     { x: 0, y: READER_APPEARANCE_DESIGN_TRAVEL_VP, width: READER_APPEARANCE_STAGE_WIDTH,
       height: READER_APPEARANCE_QUICK_HEIGHT },
     { x: 0, y: 0, width: READER_APPEARANCE_STAGE_WIDTH,
       height: READER_APPEARANCE_FULL_HEIGHT },
     0,
     1,
-    'linear',
-  ),
-  actorTracks(
-    'QuickMorph',
-    'product-direct-manipulation',
-    { x: 12.104, y: 434.993, width: 286, height: 190 },
-    { x: 13, y: 57, width: 338, height: 666 },
-    SHARED_GEOMETRY_START,
-    SHARED_GEOMETRY_END,
-    'ease-out',
-  ),
-  actorTracks(
-    'ThemeHeader',
-    'product-direct-manipulation',
-    { x: 23.104, y: 449.993, width: 262, height: 15.898 },
-    { x: 25, y: 77, width: 312, height: 20 },
-    SHARED_GEOMETRY_START,
-    SHARED_GEOMETRY_END,
-    'ease-out',
-  ),
-  actorTracks(
-    'QuickDivider',
-    'product-direct-manipulation',
-    { x: 23.104, y: 532.891, width: 262, height: 1 },
-    { x: 23, y: 276.98, width: 316, height: 1 },
-    SHARED_GEOMETRY_START,
-    SHARED_GEOMETRY_END,
-    'ease-out',
-  ),
-  actorTracks(
-    'FontHeader',
-    'product-direct-manipulation',
-    { x: 23.104, y: 536.891, width: 262, height: 10 },
-    { x: 25, y: 287.98, width: 312, height: 20 },
-    SHARED_GEOMETRY_START,
-    SHARED_GEOMETRY_END,
     'ease-out',
   ),
   effectTracks(
-    'Header',
-    track(0, 1, LEGACY_APPEARANCE_START, LEGACY_HEADER_FONT_END, 'ease-out'),
-    track(-12, 0, LEGACY_APPEARANCE_START, LEGACY_HEADER_FONT_END, 'ease-out'),
-    track(8, 0, LEGACY_APPEARANCE_START, LEGACY_HEADER_FONT_END, 'ease-out'),
+    'ContentSurface',
+    track(0, 1, FIGMA_CONTENT_SURFACE_START, FIGMA_CONTENT_END, 'ease-out'),
+    constantTrack(0),
+    constantTrack(0),
+    { x: 13, y: 57, width: 338, height: 666 },
   ),
-  productMappedEffectTracks('ThemeActions',
-    track(0, 1, LEGACY_APPEARANCE_START, LEGACY_THEME_LIBRARY_END, 'ease-out')),
-  productMappedEffectTracks('FontImport',
-    track(0, 1, LEGACY_FONT_LIBRARY_START, LEGACY_HEADER_FONT_END, 'ease-out')),
-  effectTracks('Typography',
-    track(0, 1, LEGACY_CONTENT_END, 1, 'ease-out')),
+  effectTracks(
+    'AppearanceContent',
+    track(0, 1, FIGMA_APPEARANCE_START, FIGMA_CONTENT_END, 'ease-out'),
+    constantTrack(0),
+    constantTrack(0),
+    { x: 13, y: 57, width: 338, height: 989 },
+  ),
+  effectTracks(
+    'ThemeLibrary',
+    track(0, 1, FIGMA_APPEARANCE_START, FIGMA_THEME_LIBRARY_END, 'ease-out'),
+    constantTrack(0),
+    constantTrack(0),
+    { x: 24, y: 68, width: 316, height: 210 },
+  ),
+  effectTracks(
+    'FontLibrary',
+    track(0, 1, FIGMA_FONT_LIBRARY_START, FIGMA_HEADER_FONT_END, 'ease-out'),
+    constantTrack(0),
+    constantTrack(0),
+    { x: 24, y: 277.98, width: 316, height: 136 },
+  ),
+  actorTracks(
+    'QuickMorph',
+    'figma-n',
+    { x: QUICK_MORPH_BASE_X, y: QUICK_MORPH_BASE_Y, width: 286, height: 190 },
+    { x: QUICK_MORPH_BASE_X, y: QUICK_MORPH_BASE_Y, width: 338, height: 666 },
+    FIGMA_GEOMETRY_START,
+    FIGMA_GEOMETRY_END,
+    'ease-out',
+    track(1, 0, FIGMA_APPEARANCE_START, FIGMA_QUICK_FADE_END, 'ease-out'),
+    track(-0.896, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+    track(-28.007, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+  ),
+  actorTracks(
+    'ThemeHeader',
+    'figma-n',
+    { x: 25, y: 77, width: 262, height: 15.898 },
+    { x: 25, y: 77, width: 312, height: 20 },
+    FIGMA_GEOMETRY_START,
+    FIGMA_GEOMETRY_END,
+    'ease-out',
+    constantTrack(1),
+    track(-1, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+    track(-5, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+  ),
+  actorTracks(
+    'QuickDivider',
+    'figma-n',
+    { x: 23, y: 276.98, width: 262, height: 1 },
+    { x: 23, y: 276.98, width: 316, height: 1 },
+    FIGMA_GEOMETRY_START,
+    FIGMA_GEOMETRY_END,
+    'ease-out',
+    constantTrack(1),
+    track(1, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+    track(-122.082, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+  ),
+  actorTracks(
+    'FontHeader',
+    'figma-n',
+    { x: 25, y: 287.98, width: 262, height: 10 },
+    { x: 25, y: 287.98, width: 312, height: 20 },
+    FIGMA_GEOMETRY_START,
+    FIGMA_GEOMETRY_END,
+    'ease-out',
+    constantTrack(1),
+    track(-1, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+    track(-129.082, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+  ),
+  effectTracks(
+    'Header',
+    track(0, 1, FIGMA_APPEARANCE_START, FIGMA_HEADER_FONT_END, 'ease-out'),
+    track(-12, 0, FIGMA_APPEARANCE_START, FIGMA_HEADER_FONT_END, 'ease-out'),
+    track(8, 0, FIGMA_APPEARANCE_START, FIGMA_HEADER_FONT_END, 'ease-out'),
+    { x: 13, y: 19, width: 338, height: 30 },
+  ),
+  effectTracks(
+    'Typography',
+    track(0, 1, FIGMA_CONTENT_END, 1, 'ease-out'),
+    constantTrack(0),
+    constantTrack(0),
+    { x: 24, y: 423.98, width: 316, height: 406 },
+  ),
 ];
 
 for (let index = 0; index < themeIds.length; index += 1) {
+  const column = index % 4;
+  const row = Math.floor(index / 4);
   appearanceTracks.push(actorTracks(
     themeIds[index],
-    'product-direct-manipulation',
+    'figma-n',
     themeRect(index, false),
     themeRect(index, true),
-    SHARED_GEOMETRY_START,
-    SHARED_GEOMETRY_END,
+    FIGMA_GEOMETRY_START,
+    FIGMA_GEOMETRY_END,
     'ease-out',
+    constantTrack(1),
+    track(THEME_TRANSLATE_X[column], 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+    track(THEME_TRANSLATE_Y[row], 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
   ));
 }
 
 for (let index = 0; index < fontIds.length; index += 1) {
+  const rect = fontRect(index);
   appearanceTracks.push(actorTracks(
     fontIds[index],
-    'product-direct-manipulation',
-    fontRect(index, false),
-    fontRect(index, true),
-    SHARED_GEOMETRY_START,
-    SHARED_GEOMETRY_END,
+    'figma-n',
+    rect,
+    rect,
+    FIGMA_GEOMETRY_START,
+    FIGMA_GEOMETRY_END,
     'ease-out',
+    constantTrack(1),
+    track(-26, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
+    track(-138.482, 0, FIGMA_GEOMETRY_START, FIGMA_GEOMETRY_END, 'ease-out'),
   ));
 }
 
@@ -569,18 +609,6 @@ function tracksFor(id: ReaderAppearanceMotionActorId): ReaderAppearanceActorTrac
     }
   }
   throw new Error(`Missing appearance actor tracks: ${id}`);
-}
-
-function isBottomAnchoredSharedActor(id: ReaderAppearanceMotionActorId): boolean {
-  if (id === 'MorphStage') {
-    return false;
-  }
-  for (let index = 0; index < READER_APPEARANCE_SHARED_ACTOR_IDS.length; index += 1) {
-    if (READER_APPEARANCE_SHARED_ACTOR_IDS[index] === id) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function sampleActor(
@@ -605,10 +633,11 @@ function sampleActor(
     READER_APPEARANCE_FULL_HEIGHT,
   ));
   if (id === 'MorphStage') {
+    const stageProgress = readerAppearanceTrackProgress(masterProgress, actor.height);
     const shellHeight = READER_APPEARANCE_QUICK_HEIGHT +
-      (safeFullHeight - READER_APPEARANCE_QUICK_HEIGHT) * clamp01(masterProgress);
+      (safeFullHeight - READER_APPEARANCE_QUICK_HEIGHT) * stageProgress;
     return {
-      trackProgress: clamp01(masterProgress),
+      trackProgress: stageProgress,
       x: 0,
       y: safeFullHeight - shellHeight,
       width: READER_APPEARANCE_STAGE_WIDTH,
@@ -619,15 +648,10 @@ function sampleActor(
       blurVp: 0,
     };
   }
-  const sourceYOffset = isBottomAnchoredSharedActor(id) ?
-    safeFullHeight - READER_APPEARANCE_FULL_HEIGHT : 0;
-  const yProgress = readerAppearanceTrackProgress(masterProgress, actor.y);
-  const sampledY = actor.y.from + sourceYOffset +
-    (actor.y.to - actor.y.from - sourceYOffset) * yProgress;
   return {
     trackProgress: readerAppearanceTrackProgress(masterProgress, primaryTrack),
     x: finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.x), 0),
-    y: finiteOr(sampledY, 0),
+    y: finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.y), 0),
     width: Math.max(0, finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.width), 0)),
     height: Math.max(0, finiteOr(sampleReaderAppearanceNumberTrack(masterProgress, actor.height), 0)),
     opacity: clamp01(sampleReaderAppearanceNumberTrack(masterProgress, actor.opacity)),
@@ -638,7 +662,7 @@ function sampleActor(
 }
 
 /**
- * Sample the one persistent visual tree. Calling this with the same p always
+ * Sample the one persistent layered actor graph. Calling this with the same p always
  * returns the same frame, regardless of direction, gesture history or clock.
  */
 export function sampleReaderAppearanceMasterProgress(
@@ -653,13 +677,15 @@ export function sampleReaderAppearanceMasterProgress(
   const brightnessRail = sampleActor('BrightnessRail', master, safeFullHeight);
   const moduleNav = sampleActor('ModuleNav', master, safeFullHeight);
   const morphStage = sampleActor('MorphStage', master, safeFullHeight);
+  const contentSurface = sampleActor('ContentSurface', master, safeFullHeight);
+  const appearanceContent = sampleActor('AppearanceContent', master, safeFullHeight);
+  const themeLibrary = sampleActor('ThemeLibrary', master, safeFullHeight);
+  const fontLibrary = sampleActor('FontLibrary', master, safeFullHeight);
   const quickMorph = sampleActor('QuickMorph', master, safeFullHeight);
   const themeHeader = sampleActor('ThemeHeader', master, safeFullHeight);
   const quickDivider = sampleActor('QuickDivider', master, safeFullHeight);
   const fontHeader = sampleActor('FontHeader', master, safeFullHeight);
   const header = sampleActor('Header', master, safeFullHeight);
-  const themeActions = sampleActor('ThemeActions', master, safeFullHeight);
-  const fontImport = sampleActor('FontImport', master, safeFullHeight);
   const typography = sampleActor('Typography', master, safeFullHeight);
   const themeItems: ReaderAppearanceMotionActorFrame[] = [];
   const fontItems: ReaderAppearanceMotionActorFrame[] = [];
@@ -671,6 +697,10 @@ export function sampleReaderAppearanceMasterProgress(
   add('BrightnessRail', brightnessRail);
   add('ModuleNav', moduleNav);
   add('MorphStage', morphStage);
+  add('ContentSurface', contentSurface);
+  add('AppearanceContent', appearanceContent);
+  add('ThemeLibrary', themeLibrary);
+  add('FontLibrary', fontLibrary);
   add('QuickMorph', quickMorph);
   add('ThemeHeader', themeHeader);
   for (let index = 0; index < themeIds.length; index += 1) {
@@ -686,8 +716,6 @@ export function sampleReaderAppearanceMasterProgress(
     add(fontIds[index], frame);
   }
   add('Header', header);
-  add('ThemeActions', themeActions);
-  add('FontImport', fontImport);
   add('Typography', typography);
 
   return {
@@ -698,6 +726,10 @@ export function sampleReaderAppearanceMasterProgress(
     brightnessRail,
     moduleNav,
     morphStage,
+    contentSurface,
+    appearanceContent,
+    themeLibrary,
+    fontLibrary,
     quickMorph,
     themeHeader,
     themeItems,
@@ -705,8 +737,6 @@ export function sampleReaderAppearanceMasterProgress(
     fontHeader,
     fontItems,
     header,
-    themeActions,
-    fontImport,
     typography,
     actorSamples: samples,
   };

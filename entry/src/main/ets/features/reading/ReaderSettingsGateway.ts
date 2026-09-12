@@ -43,7 +43,10 @@ export class ReaderSettingsGateway {
     this.updateTail = new Promise<void>((resolve: () => void): void => {
       releaseUpdate = resolve;
     });
-    await previousUpdate;
+    // A failed flush must not poison every later retry in this process. Each
+    // caller receives its own I/O error, while the serialized tail continues
+    // from a settled point.
+    await previousUpdate.catch((): void => {});
 
     try {
       const store = await this.ensureStore();

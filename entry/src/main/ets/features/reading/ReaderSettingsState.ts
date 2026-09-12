@@ -177,7 +177,7 @@ export function readerPageTurnStyle(snapshot: ReaderSettingsSnapshot): ReaderPag
 }
 
 export function readerPageTransitionUsesPreparedPages(snapshot: ReaderSettingsSnapshot): boolean {
-  return snapshot.navigationMode === 'paged' && snapshot.pageTransition !== 'none';
+  return snapshot.navigationMode === 'paged';
 }
 
 export function setReaderScreenDirection(

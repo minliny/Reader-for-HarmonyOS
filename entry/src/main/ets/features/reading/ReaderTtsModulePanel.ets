@@ -278,7 +278,7 @@ export struct ReaderTtsModulePanel {
 
       this.rateSlider();
 
-      Text(`${this.effectiveRate().toFixed(1)}x`)
+      Text(`${this.effectiveRate().toFixed(2)}x`)
         .width(this.rateValueWidth())
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)

@@ -1,0 +1,9 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #f7f4ed; color: #293930; font: 14px system-ui; }
+body { display: flex; flex-direction: column; }
+header, nav, footer { display: flex; gap: 8px; padding: 10px 16px; align-items: center; flex-wrap: wrap; }
+header { justify-content: space-between; border-bottom: 1px solid #d8ddd4; }
+header span, footer { font-size: 12px; color: #647367; }
+button, select { padding: 7px 10px; border: 1px solid #c6d0c6; border-radius: 6px; background: #fffdf8; color: inherit; }
+#reader { display: block; flex: 1; min-height: 0; }
+footer { border-top: 1px solid #d8ddd4; }

@@ -10,6 +10,10 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 import { motionAnimateParam } from './MotionSpec';
+import {
+  APPEARANCE_SELECT_BORDER, APPEARANCE_SELECT_SELECTED, APPEARANCE_SELECT_SURFACE,
+  APPEARANCE_SELECT_OPTION_HEIGHT, appearanceSelectMenuHeight,
+} from './ReaderSelectAppearanceStyle';
 import type { ReaderSelectVariant } from './ReaderSelect';
 import {
   TYPE_SELECT_APPEARANCE_VALUE,
@@ -49,39 +53,85 @@ export struct ReaderSelectPanel {
   @Prop variant: ReaderSelectVariant = 'default';
   @Prop reduceMotion: boolean = false;
   @Prop @Watch('onClosingChanged') closing: boolean = false;
+  @Prop @Watch('onIdentityChanged') selectionId: string = '';
   // 与 ReaderSelect.controlWidth 成对使用；0 保持按内容测量。
   @Prop controlWidth: number = 0;
   // true = x 为面板右缘 (宿主触发条整行右对齐场景, 如 RSS 筛选)。
   @Prop alignRight: boolean = false;
   onSelect: (option: string) => void = (_option: string): void => {};
-  onDismiss: () => void = (): void => {};
+  // Production callers commit the immutable choice now; finish only unmounts.
+  // onSelect remains a guarded compatibility callback for the legacy preview.
+  onCommit: ((option: string, identity: string) => void) | undefined = undefined;
+  onDismiss: (identity: string) => void = (_identity: string): void => {};
   @State private expandedHeight: number = OPTION_H;
   @State private chevronAngle: number = 0;
   @State private closeInFlight: boolean = false;
+  private mounted: boolean = false;
+  private generation: number = 0;
+  private closingValue: string = '';
+  private closingOptions: string[] = [];
+
+  private renderedValue(): string { return this.closeInFlight ? this.closingValue : this.value; }
+  private renderedOptions(): string[] { return this.closeInFlight ? this.closingOptions : this.options; }
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.generation += 1;
     registerReaderFonts(this.getUIContext().getFont());
+  }
+
+  aboutToDisappear(): void { this.mounted = false; this.generation += 1; }
+
+  private onIdentityChanged(): void {
+    this.generation += 1;
+    this.closeInFlight = false;
+    if (this.mounted) this.expandPanel();
   }
 
   build() {
     Column({ space: 0 }) {
-      this.selectedRow();
-      ForEach(this.options.filter((o: string): boolean => o !== this.value), (opt: string) => {
-        this.optionRow(opt);
-      }, (opt: string): string => `ropt-${opt}`);
+      if (this.variant === 'appearanceLibrary') {
+        ForEach(this.renderedOptions(), (opt: string) => {
+          this.appearanceLibraryOption(opt);
+        }, (opt: string): string => `ropt-${opt}`);
+      } else {
+        this.selectedRow();
+        ForEach(this.renderedOptions().filter((o: string): boolean => o !== this.renderedValue()), (opt: string) => {
+          this.optionRow(opt);
+        }, (opt: string): string => `ropt-${opt}`);
+      }
     }
     .position({ x: this.alignRight ? this.x - this.resolvedWidth() : this.x, y: this.y })
     .width(this.resolvedWidth())
     .height(this.expandedHeight)
+    .padding(this.variant === 'appearanceLibrary' ? 3 : 0)
     .zIndex(10)
     .backgroundColor(this.panelBackgroundColor())
     .border({
       width: TOK_BORDER_W,
       color: this.panelBorderColor(),
     })
-    .borderRadius(this.variant === 'sourceGroup' ? 8 : 6)
+    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? 8 : 6))
+    .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
+      color: this.variant === 'appearanceLibrary' ? '#474B3A26' : Color.Transparent, offsetY: 8 })
     .clip(true)
     .onAppear((): void => this.expandPanel());
+  }
+
+  @Builder
+  private appearanceLibraryOption(opt: string) {
+    Row({ space: 10 }) {
+      Text(opt).layoutWeight(1).fontFamily(opt === this.renderedValue() ? 'ReaderNotoSansSCUIBold' : 'ReaderNotoSansSCUIRegular').fontSize(11).lineHeight(13)
+        .fontWeight(opt === this.renderedValue() ? FontWeight.Bold : FontWeight.Regular, { enableVariableFontWeight: true })
+        .fontColor(opt === this.renderedValue() ? '#2F6373' : '#41484C').maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      if (opt === this.renderedValue()) {
+        Image($r('app.media.reader_appearance_make_check')).width(11).height(9);
+      }
+    }.width('100%').height(APPEARANCE_SELECT_OPTION_HEIGHT).padding({ left: 9, right: 9 })
+      .borderRadius(6).backgroundColor(opt === this.renderedValue() ? APPEARANCE_SELECT_SELECTED : Color.Transparent)
+      .accessibilityText(`${opt}${opt === this.renderedValue() ? '，已选择' : ''}`)
+      .onClick((): void => this.selectAndCollapse(opt));
   }
 
   // 已选行 = 触发条展开态 (panel-soft 高亮 + 上旋 chevron)。点它 = 选中当前值并收起。
@@ -99,7 +149,7 @@ export struct ReaderSelectPanel {
   @Builder
   private sourceGroupSelectedRow() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text(this.value)
+      Text(this.renderedValue())
         .width(Math.max(0, this.resolvedWidth() - 42))
         .height(15)
         .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
@@ -119,13 +169,13 @@ export struct ReaderSelectPanel {
     .width('100%')
     .height(OPTION_H)
     .backgroundColor('#FFFCF8')
-    .onClick((): void => this.selectAndCollapse(this.value));
+    .onClick((): void => this.selectAndCollapse(this.renderedValue()));
   }
 
   @Builder
   private appearanceSelectedRow() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text(this.value)
+      Text(this.renderedValue())
         .width(Math.max(0, this.resolvedWidth() - 28))
         .height(14)
         .fontFamily(TYPE_SELECT_APPEARANCE_VALUE.fontFamily)
@@ -145,13 +195,13 @@ export struct ReaderSelectPanel {
     .width('100%')
     .height(OPTION_H)
     .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-    .onClick((): void => this.selectAndCollapse(this.value));
+    .onClick((): void => this.selectAndCollapse(this.renderedValue()));
   }
 
   @Builder
   private defaultSelectedRow() {
     Row({ space: CHEVRON_GAP }) {
-      Text(this.value)
+      Text(this.renderedValue())
         .layoutWeight(1)
         .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily)
         .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
@@ -168,7 +218,7 @@ export struct ReaderSelectPanel {
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
     .backgroundColor(TOK_SURFACE_PANEL_SOFT)
     .alignItems(VerticalAlign.Center)
-    .onClick((): void => this.selectAndCollapse(this.value));
+    .onClick((): void => this.selectAndCollapse(this.renderedValue()));
   }
 
   @Builder
@@ -203,7 +253,7 @@ export struct ReaderSelectPanel {
     const ctx = this.getUIContext();
     const utils = ctx.getMeasureUtils();
     let maxPx = 0;
-    const texts: string[] = [this.value, ...this.options];
+    const texts: string[] = [this.renderedValue(), ...this.renderedOptions()];
     for (let i = 0; i < texts.length; i++) {
       const w = utils.measureText({
         textContent: texts[i],
@@ -225,6 +275,7 @@ export struct ReaderSelectPanel {
   }
 
   private panelBackgroundColor(): ResourceColor {
+    if (this.variant === 'appearanceLibrary') return APPEARANCE_SELECT_SURFACE;
     if (this.variant === 'appearanceCompact') {
       return '#D1FFF8EF';
     }
@@ -235,6 +286,7 @@ export struct ReaderSelectPanel {
   }
 
   private panelBorderColor(): ResourceColor {
+    if (this.variant === 'appearanceLibrary') return APPEARANCE_SELECT_BORDER;
     if (this.variant === 'appearanceCompact') {
       return '#C1C7CD';
     }
@@ -262,6 +314,8 @@ export struct ReaderSelectPanel {
   }
 
   private expandPanel(): void {
+    if (!this.mounted || this.closeInFlight) return;
+    if (this.closing) { this.onClosingChanged(); return; }
     const targetHeight = this.fullPanelHeight();
     if (this.reduceMotion) {
       this.expandedHeight = targetHeight;
@@ -278,28 +332,43 @@ export struct ReaderSelectPanel {
     if (!this.closing) {
       return;
     }
-    this.collapsePanel((): void => this.onDismiss());
+    const identity = this.selectionId;
+    const dismiss = this.onDismiss;
+    this.collapsePanel((): void => dismiss(identity));
   }
 
   private selectAndCollapse(option: string): void {
-    this.collapsePanel((): void => this.onSelect(option));
+    if (!this.mounted || this.closeInFlight) return;
+    const identity = this.selectionId;
+    const commit = this.onCommit;
+    const selection = this.onSelect;
+    const dismiss = this.onDismiss;
+    if (commit === undefined) {
+      this.collapsePanel((): void => selection(option));
+    } else {
+      this.collapsePanel((): void => dismiss(identity), (): void => commit(option, identity));
+    }
   }
 
-  private collapsePanel(onFinish: () => void): void {
-    if (this.closeInFlight) {
+  private collapsePanel(onFinish: () => void, onCommit?: () => void): void {
+    if (!this.mounted || this.closeInFlight) {
       return;
     }
+    this.closingValue = this.value;
+    this.closingOptions = this.options.slice();
     this.closeInFlight = true;
+    const generation = ++this.generation;
+    if (onCommit !== undefined) onCommit();
+    if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
       this.expandedHeight = OPTION_H;
       this.chevronAngle = 0;
-      this.closeInFlight = false;
       onFinish();
       return;
     }
     this.getUIContext().animateTo(
       motionAnimateParam('dropdown.menu.collapse', (): void => {
-        this.closeInFlight = false;
+        if (!this.mounted || generation !== this.generation) return;
         onFinish();
       }),
       (): void => {
@@ -310,6 +379,7 @@ export struct ReaderSelectPanel {
   }
 
   private fullPanelHeight(): number {
+    if (this.variant === 'appearanceLibrary') return appearanceSelectMenuHeight(this.options.length);
     let unselectedCount = 0;
     for (const option of this.options) {
       if (option !== this.value) {

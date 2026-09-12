@@ -4,11 +4,17 @@ export type ReaderTtsSessionStatus =
 
 export const READER_TTS_RATE_MIN = 0.5;
 export const READER_TTS_RATE_MAX = 2;
-export const READER_TTS_RATE_STEP = 0.1;
+/** Product speed precision: integer percentages 50..200 in five-point steps. */
+export const READER_TTS_RATE_STEP = 0.05;
 export const READER_TTS_RATE_STEP_SCALE = 1 / READER_TTS_RATE_STEP;
 export const READER_TTS_TIMER_MIN = 0;
-export const READER_TTS_TIMER_MAX_MINUTES = 99;
+/** Product timer range for an explicit duration (the UI uses five-minute steps). */
+export const READER_TTS_TIMER_MAX_MINUTES = 180;
 export const READER_TTS_TIMER_MAX_SECONDS = 59;
+export const READER_TTS_TIMER_DEFAULT_MINUTES = 25;
+
+/** A timer is either disabled, an absolute duration, or a one-shot chapter boundary. */
+export type ReaderTtsTimerMode = 'off' | 'duration' | 'chapterEnd';
 
 export type ReaderTtsPauseReason = 'user' | 'systemInterruption' | 'routeBackground' | 'deviceChange';
 
@@ -64,6 +70,16 @@ export function createReaderTtsState(available: boolean = false): ReaderTtsState
     rate: 1,
     consecutiveFailures: 0,
   };
+}
+
+export function normalizeReaderTtsRate(rate: number): number {
+  if (!Number.isFinite(rate)) return READER_TTS_RATE_MIN;
+  const clamped = Math.max(READER_TTS_RATE_MIN, Math.min(READER_TTS_RATE_MAX, rate));
+  return Math.round(clamped * READER_TTS_RATE_STEP_SCALE) / READER_TTS_RATE_STEP_SCALE;
+}
+
+export function readerTtsRateLabel(rate: number): string {
+  return `${normalizeReaderTtsRate(rate).toFixed(2)}x`;
 }
 
 export function setReaderTtsAvailability(state: ReaderTtsState, available: boolean): ReaderTtsState {
@@ -414,7 +430,8 @@ function assertScalarRange(start: number, end: number): void {
 }
 
 function assertSpeechRate(rate: number): void {
-  if (!Number.isFinite(rate) || rate < READER_TTS_RATE_MIN || rate > READER_TTS_RATE_MAX) {
+  if (!Number.isFinite(rate) || rate < READER_TTS_RATE_MIN || rate > READER_TTS_RATE_MAX ||
+    Math.abs(rate * READER_TTS_RATE_STEP_SCALE - Math.round(rate * READER_TTS_RATE_STEP_SCALE)) > 1e-9) {
     throw new Error('Reader TTS rate must be between 0.5 and 2.0');
   }
 }

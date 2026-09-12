@@ -2,12 +2,11 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER_W,
   TOK_LINE,
-  TOK_PRIMARY_SOFT,
   TOK_READ_ACTIVE_SOFT,
-  TOK_READ_DISABLED_BG,
   TOK_READ_INK,
   TOK_READ_MUTED,
   TOK_READ_PRIMARY,
+  TOK_SURFACE_PANEL,
 } from '../common/ReaderTokens';
 import { motionAnimateParam } from '../common/MotionSpec';
 import {
@@ -31,11 +30,6 @@ import {
 } from './ReaderAppearanceMotionGeometry';
 
 const READER_APPEARANCE_FONT_REORDER_HOLD_MS = 160;
-const READER_APPEARANCE_FONT_IMPORT_STAGE_X = 24;
-const READER_APPEARANCE_FONT_IMPORT_STAGE_Y = 383.98;
-const READER_APPEARANCE_FONT_FULL_WIDTH = 73;
-const READER_APPEARANCE_FONT_FULL_HEIGHT = 30;
-const READER_APPEARANCE_CONTENT_HEIGHT = 989;
 
 interface ReaderAppearanceActorPosition {
   x: number;
@@ -43,13 +37,12 @@ interface ReaderAppearanceActorPosition {
 }
 
 /**
- * The persistent Quick -> Full shared-actor group for Phone Appearance.
+ * Figma N's QuickMorph subtree for Phone Appearance.
  *
- * Every child owns a stable semantic key and reads its global bounding box
- * from the same sampled motion frame. ReaderAppearanceFullPanel owns the only
- * surface and Scroll; this component renders directly inside that Scroll and
- * subtracts the sampled surface origin solely to convert Stage-space bboxes to
- * local coordinates. No mirrored scroll offset or second Full copy exists.
+ * Every child owns a stable semantic key and reads its local bounding box
+ * from the same sampled motion frame. The compact component internals remain
+ * static while their instance roots resize/translate; a separate Full tree is
+ * revealed underneath by the authored opacity tracks.
  */
 @Component
 export struct ReaderAppearanceSharedActors {
@@ -64,7 +57,6 @@ export struct ReaderAppearanceSharedActors {
   onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]) => void =
     (_fontOrder: ReaderAppearanceFontSlot[]): void => {};
   onFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
-  onCustomFontImport: () => void = (): void => {};
 
   @State private draggedFontId: string = '';
   @State private draggedFontIndex: number = -1;
@@ -106,38 +98,38 @@ export struct ReaderAppearanceSharedActors {
       ForEach(this.sharedFontIds(), (fontId: ReaderAppearanceFontSlot) => {
         this.sharedFontCell(fontId);
       }, (fontId: ReaderAppearanceFontSlot): string => `reader-appearance-shared-font-${fontId}`);
-      this.fullOnlyFontImport();
     }
     .width(this.currentFrame().quickMorph.width)
-    .height(READER_APPEARANCE_CONTENT_HEIGHT)
+    .height(this.currentFrame().quickMorph.height)
     .hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
   private sharedThemeHeader() {
-    Row() {
+    Stack({ alignContent: Alignment.TopStart }) {
       Text('主题库')
-        .layoutWeight(1)
-        .height(this.currentFrame().themeHeader.height)
+        .width(168.492)
+        .height(9.9)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
-        .fontSize(this.lerp(9, 12, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
-        .lineHeight(this.lerp(9.9, 17, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
-        .fontColor(TOK_READ_INK);
+        .fontSize(9)
+        .lineHeight(9.9)
+        .fontColor(TOK_READ_INK)
+        .position({ x: 0, y: 0 });
       Text(this.themeSummary())
-        .width(this.lerp(88, 122, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
-        .height(this.currentFrame().themeHeader.height)
+        .width(88)
+        .height(8)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
-        .fontSize(this.lerp(7.5, 10, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
-        .lineHeight(this.lerp(8, 13, this.actorProgress(this.currentFrame().themeHeader.trackProgress)))
+        .fontSize(7.5)
+        .lineHeight(8)
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
-        .maxLines(1);
+        .maxLines(1)
+        .position({ x: 174, y: 3.95 });
     }
     .width(this.currentFrame().themeHeader.width)
     .height(this.currentFrame().themeHeader.height)
-    .alignItems(VerticalAlign.Top)
     .position(this.localPosition(this.currentFrame().themeHeader))
     .translate({
       x: this.currentFrame().themeHeader.translateX,
@@ -150,56 +142,22 @@ export struct ReaderAppearanceSharedActors {
   @Builder
   private sharedThemeCard(theme: ReaderAppearanceTheme, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.snapshot.activeTheme !== theme && !this.isNightTheme(theme)) {
-        // The Quick day cards are transparent while the Full component uses
-        // its disabled surface. Interpolate those known endpoint styles with
-        // this card's own track; this is an endpoint bridge, not an N2 claim.
-        Row()
-          .width('100%')
-          .height('100%')
-          .backgroundColor(TOK_READ_DISABLED_BG)
-          .opacity(this.themeActorProgress(index))
-          .hitTestBehavior(HitTestMode.None);
-      }
       Row()
-        .width(this.lerp(46, 63.5, this.themeActorProgress(index)))
-        .height(this.lerp(18, 24, this.themeActorProgress(index)))
+        .width(46)
+        .height(18)
         .backgroundColor(this.themeColor(theme))
-        .border({ width: TOK_BORDER_W, color: '#1F5B5046' })
+        .border({
+          width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
+          color: this.snapshot.activeTheme === theme ? TOK_READ_PRIMARY : '#1F5B5046',
+        })
         .borderRadius(6)
-        .position({
-          x: (this.currentFrame().themeItems[index].width -
-            this.lerp(46, 63.5, this.themeActorProgress(index))) / 2,
-          y: this.lerp(3, 10, this.themeActorProgress(index)),
-        });
-      Text(this.themeLabel(theme))
-        .width(Math.max(0, this.currentFrame().themeItems[index].width - 10))
-        .height(11)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(11)
-        .fontColor(TOK_READ_MUTED)
-        .textAlign(TextAlign.Center)
-        .maxLines(1)
-        .position({ x: 5, y: 42.9 });
+        .position({ x: 8.25, y: 2 });
     }
     .width(this.currentFrame().themeItems[index].width)
     .height(this.currentFrame().themeItems[index].height)
-    .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT :
-      (this.isNightTheme(theme) ? TOK_READ_DISABLED_BG : Color.Transparent))
-    .border({
-      width: {
-        top: this.snapshot.activeTheme === theme ?
-          TOK_BORDER_W * (1 - this.themeActorProgress(index)) : 0,
-      },
-      color: TOK_READ_PRIMARY,
-    })
-    .borderRadius(this.lerp(0, 8, this.themeActorProgress(index)))
+    .borderRadius(8)
     .clip(true)
-    // 0.8 is the stable inactive style; multiply it by this actor's own track.
-    .opacity((this.snapshot.activeTheme === theme ? 1 : 0.8) *
-      this.currentFrame().themeItems[index].opacity)
+    .opacity(this.currentFrame().themeItems[index].opacity)
     .position(this.localPosition(this.currentFrame().themeItems[index]))
     .translate({
       x: this.currentFrame().themeItems[index].translateX,
@@ -229,13 +187,12 @@ export struct ReaderAppearanceSharedActors {
   @Builder
   private sharedFontHeader() {
     Text('字体库')
-      .width(this.currentFrame().fontHeader.width)
-      .height(this.currentFrame().fontHeader.height)
+      .width(256)
+      .height(9.9)
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
-      .fontSize(this.lerp(9, 12, this.actorProgress(this.currentFrame().fontHeader.trackProgress)))
-      .lineHeight(this.lerp(9.9, 14.4,
-        this.actorProgress(this.currentFrame().fontHeader.trackProgress)))
+      .fontSize(9)
+      .lineHeight(9.9)
       .fontColor(TOK_READ_INK)
       .position(this.localPosition(this.currentFrame().fontHeader))
       .translate({
@@ -248,29 +205,29 @@ export struct ReaderAppearanceSharedActors {
 
   @Builder
   private sharedFontCell(fontId: ReaderAppearanceFontSlot) {
-    Text(readerAppearanceFontSlotLabel(this.snapshot, fontId))
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row()
+        .width(55)
+        .height(22)
+        .backgroundColor(this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_SURFACE_PANEL)
+        .border({ width: TOK_BORDER_W, color: TOK_LINE })
+        .borderRadius(11)
+        .position({ x: 4, y: 3 });
+      Text(readerAppearanceFontSlotLabel(this.snapshot, fontId))
+        .width(54.5)
+        .height(10)
+        .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
+        .fontWeight(FontWeight.Regular)
+        .fontSize(8)
+        .lineHeight(10)
+        .fontColor(this.isActiveFont(fontId) ? '#FFFAF4' : TOK_READ_INK)
+        .textAlign(TextAlign.Center)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .position({ x: 4, y: 8.5 });
+    }
       .width(this.fontActorFrame(fontId).width)
       .height(this.fontActorFrame(fontId).height)
-      .padding({ left: 4, right: 4 })
-      .backgroundColor(this.isActiveFont(fontId) ? TOK_PRIMARY_SOFT : Color.Transparent)
-      .border({
-        width: {
-          top: TOK_BORDER_W,
-          right: this.lerp(0, TOK_BORDER_W, this.fontActorProgress(fontId)),
-          bottom: this.lerp(0, TOK_BORDER_W, this.fontActorProgress(fontId)),
-          left: this.lerp(0, TOK_BORDER_W, this.fontActorProgress(fontId)),
-        },
-        color: this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_LINE,
-      })
-      .borderRadius(this.lerp(0, 6, this.fontActorProgress(fontId)))
-      .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
-      .fontWeight(FontWeight.Regular)
-      .fontSize(this.lerp(8, 10, this.fontActorProgress(fontId)))
-      .lineHeight(this.lerp(10, 14, this.fontActorProgress(fontId)))
-      .fontColor(TOK_READ_INK)
-      .textAlign(TextAlign.Center)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
       .position(this.localPosition(this.fontActorFrame(fontId)))
       .translate({
         x: this.fontActorFrame(fontId).translateX + this.fontDragTranslateX(fontId),
@@ -326,62 +283,12 @@ export struct ReaderAppearanceSharedActors {
       .zIndex(0);
   }
 
-  @Builder
-  private fullOnlyFontImport() {
-    Text(readerAppearanceFontSlotLabel(this.snapshot, 'import'))
-      .width(READER_APPEARANCE_FONT_FULL_WIDTH)
-      .height(READER_APPEARANCE_FONT_FULL_HEIGHT)
-      .padding({ left: 4, right: 4 })
-      .backgroundColor(this.snapshot.font === 'custom' ? TOK_PRIMARY_SOFT : Color.Transparent)
-      .border({
-        width: TOK_BORDER_W,
-        color: this.snapshot.font === 'custom' ? TOK_READ_PRIMARY : TOK_LINE,
-        style: BorderStyle.Dashed,
-      })
-      .borderRadius(6)
-      .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, 'import'))
-      .fontWeight(FontWeight.Regular)
-      .fontSize(10)
-      .lineHeight(14)
-      .fontColor(TOK_READ_INK)
-      .textAlign(TextAlign.Center)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .position({
-        x: READER_APPEARANCE_FONT_IMPORT_STAGE_X - this.currentFrame().quickMorph.x,
-        y: READER_APPEARANCE_FONT_IMPORT_STAGE_Y - this.currentFrame().quickMorph.y,
-      })
-      .opacity(this.currentFrame().fontImport.opacity)
-      .translate({
-        x: this.currentFrame().fontImport.translateX,
-        y: this.currentFrame().fontImport.translateY,
-      })
-      .blur(this.currentFrame().fontImport.blurVp)
-      .enabled(this.interactionEnabled && this.atFullEndpoint())
-      .accessibilityText('导入自定义字体')
-      .onClick((): void => this.onCustomFontImport());
-  }
-
   private currentFrame(): ReaderAppearanceMotionFrame {
     return sampleReaderAppearanceMasterProgress(this.motionProgress, this.fullHeight);
   }
 
   private masterProgress(): number {
     return Math.max(0, Math.min(1, this.motionProgress));
-  }
-
-  private actorProgress(trackProgress: number): number {
-    return Math.max(0, Math.min(1, trackProgress));
-  }
-
-  private themeActorProgress(index: number): number {
-    const frame = this.currentFrame();
-    const safeIndex = Math.max(0, Math.min(frame.themeItems.length - 1, index));
-    return this.actorProgress(frame.themeItems[safeIndex].trackProgress);
-  }
-
-  private fontActorProgress(fontId: ReaderAppearanceFontSlot): number {
-    return this.actorProgress(this.fontActorFrame(fontId).trackProgress);
   }
 
   private atFullEndpoint(): boolean {
@@ -663,11 +570,6 @@ export struct ReaderAppearanceSharedActors {
     return frame.fontItems.length > 0 ? frame.fontItems[0].height : 0;
   }
 
-  private lerp(start: number, end: number, progress: number): number {
-    const safeProgress = Math.max(0, Math.min(1, progress));
-    return start + (end - start) * safeProgress;
-  }
-
   private themeIds(): ReaderAppearanceTheme[] {
     return ['day', 'warm', 'night', 'warmNight', 'paper', 'green', 'paperNight', 'greenNight'];
   }
@@ -678,10 +580,6 @@ export struct ReaderAppearanceSharedActors {
 
   private isSelectableFont(fontId: string): boolean {
     return isReaderAppearanceFont(fontId);
-  }
-
-  private isNightTheme(theme: ReaderAppearanceTheme): boolean {
-    return theme === 'night' || theme === 'warmNight' || theme === 'paperNight' || theme === 'greenNight';
   }
 
   private themeSummary(): string {

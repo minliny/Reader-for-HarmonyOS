@@ -74,14 +74,38 @@ export function wholeBookAnchorForPercent(
   const normalized = Math.max(0, Math.min(1, percent / 100));
   const absoluteScalar = normalized >= 1 ? metrics.totalScalarLength - 1 :
     Math.floor(normalized * metrics.totalScalarLength);
-  for (const metric of metrics.chapters) {
-    if (metric.scalarLength > 0 && absoluteScalar >= metric.cumulativeStart &&
-      absoluteScalar < metric.cumulativeEnd) {
-      return {
-        chapterIndex: metric.chapterIndex,
-        chapterOffset: absoluteScalar - metric.cumulativeStart,
-      };
-    }
+  let low = 0;
+  let high = metrics.chapters.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (metrics.chapters[middle].cumulativeEnd <= absoluteScalar) low = middle + 1;
+    else high = middle;
+  }
+  const metric = metrics.chapters[low];
+  if (metric !== undefined && metric.scalarLength > 0 && absoluteScalar >= metric.cumulativeStart) {
+    return { chapterIndex: metric.chapterIndex, chapterOffset: absoluteScalar - metric.cumulativeStart };
   }
   return undefined;
+}
+
+/** The Host admits a new Core metrics snapshot atomically. Its chapter array
+ * is immutable until replacement; this bounded index belongs to that owner. */
+export class LocalReadingContentMetricIndex {
+  private source: LocalReadingContentMetrics | undefined = undefined;
+  private byChapter: Map<number, LocalReadingChapterContentMetric> = new Map();
+  forChapter(metrics: LocalReadingContentMetrics, chapterIndex: number): LocalReadingChapterContentMetric | undefined {
+    if (metrics !== this.source) {
+      this.byChapter.clear();
+      for (const metric of metrics.chapters) this.byChapter.set(metric.chapterIndex, metric);
+      this.source = metrics;
+    }
+    return this.byChapter.get(chapterIndex);
+  }
+  percent(metrics: LocalReadingContentMetrics, chapterIndex: number, chapterOffset: number): number {
+    const metric = this.forChapter(metrics, chapterIndex);
+    if (metric === undefined || metrics.totalScalarLength <= 0) return 0;
+    const safeOffset = Number.isSafeInteger(chapterOffset) ? chapterOffset : 0;
+    const bounded = Math.max(0, Math.min(metric.scalarLength, safeOffset));
+    return Math.max(0, Math.min(100, (metric.cumulativeStart + bounded) / metrics.totalScalarLength * 100));
+  }
 }

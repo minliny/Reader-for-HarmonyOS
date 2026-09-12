@@ -28,6 +28,7 @@ import type {
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 
 export type RemoteReadingBookSeed = {
+  sourceVersion?: string;
   sourceId: string;
   bookId: string;
   /** Exact detail URL/path produced by the source search result. */
@@ -59,6 +60,7 @@ export type RemoteReadingTocEntry = {
 };
 
 export type RemoteReadingSession = {
+  sourceVersion?: string;
   acquisitionMode: 'online' | 'offline';
   identity: RemoteReadingIdentity;
   detailUrl: string;
@@ -129,6 +131,7 @@ export type RemoteReadingAtomicResolution = {
 };
 
 export type RemoteReadingOpenOptions = {
+  forceRefresh?: boolean;
   isCurrent?: () => boolean;
   /** Requirements known from source metadata; blocked Host semantics stop before I/O. */
   hostRequirements?: RemoteReadingHostCapabilityId[];
@@ -156,6 +159,8 @@ export class RemoteReadingFlowGateway {
     seed: RemoteReadingBookSeed,
     options: RemoteReadingOpenOptions = {},
   ): Promise<RemoteReadingSession> {
+    const coordinator = this.runtimeOwner.bookAcquisitions?.();
+    if (coordinator !== undefined) return coordinator.acquireBook(seed, options);
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
     assertRemoteReadingNonBlankString(seed.detailUrl, 'detailUrl');
     assertRemoteReadingNonBlankString(seed.title, 'title');
@@ -217,6 +222,7 @@ export class RemoteReadingFlowGateway {
     }
     return {
       acquisitionMode: 'online',
+      sourceVersion: typeof detailResult.data['sourceVersion'] === 'string' ? detailResult.data['sourceVersion'] as string : seed.sourceVersion,
       identity,
       detailUrl: seed.detailUrl,
       tocUrl,
@@ -293,6 +299,7 @@ export class RemoteReadingFlowGateway {
     }
     return {
       acquisitionMode: 'offline',
+      sourceVersion: seed.sourceVersion,
       identity,
       detailUrl: seed.detailUrl,
       tocUrl: '',
@@ -325,6 +332,7 @@ export class RemoteReadingFlowGateway {
     const cached = await this.openCachedSession(seed, isCurrent);
     return {
       acquisitionMode: 'online',
+      sourceVersion: cached.sourceVersion,
       identity: cached.identity,
       detailUrl: cached.detailUrl,
       tocUrl: cached.tocUrl,
@@ -383,6 +391,8 @@ export class RemoteReadingFlowGateway {
     chapterIndex: number,
     isCurrent?: () => boolean,
   ): Promise<ReadingSessionChapter> {
+    const coordinator = this.runtimeOwner.bookAcquisitions?.();
+    const attemptAt = coordinator?.beginAttempt() ?? Date.now();
     const identity = createRemoteReadingIdentity(session.identity.sourceId, session.identity.bookId);
     this.assertChapterIndex(chapterIndex, 'chapterIndex');
     assertRemoteReadingHostRequirements(session.hostRequirements);
@@ -439,11 +449,17 @@ export class RemoteReadingFlowGateway {
       imageBodyVerdict : classifyChapterBody(document.content);
     if (bodyVerdict.kind !== 'readable') {
       const rejected: ChapterBodyRejectedVerdict = bodyVerdict;
+      if (coordinator !== undefined) {
+        void coordinator.reportVerdict(session, selected.url, rejected.reason, attemptAt).catch((): void => {});
+      }
       throw new RemoteReadingSourceError(
         rejected.kind,
         `chapter ${chapterIndex} body was rejected: ${rejected.reason}`,
         'chapter.content',
       );
+    }
+    if (coordinator !== undefined) {
+      void coordinator.reportVerdict(session, selected.url, undefined, attemptAt).catch((): void => {});
     }
     return {
       sourceId: identity.sourceId,

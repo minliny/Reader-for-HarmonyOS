@@ -1,5 +1,6 @@
 import { TOK_LINE, TOK_READ_INK, TOK_READ_MUTED } from '../common/ReaderTokens';
 import type { ReaderBookmarkRowModel } from './ReaderBookmarkProjection';
+import { sampleReaderControlBookmark, type ReaderControlBookmarkFrame } from './ReaderControlBookmarkGeometry';
 
 export const BOOKMARK_ROW_HEIGHT = 74;
 const BOOKMARK_EXCERPT_ACCENT = '#8C9B8466';
@@ -12,6 +13,9 @@ const BOOKMARK_PENDING_LABEL = '待确认';
  */
 @Component
 export struct ReaderBookmarkRow {
+  @Prop embeddedInControl: boolean = false;
+  @Prop motionProgress: number = 1;
+  @Prop availableWidth: number = 316;
   @Prop row: ReaderBookmarkRowModel = {
     bookmarkId: '',
     identityStatus: 'confirmed',
@@ -26,6 +30,52 @@ export struct ReaderBookmarkRow {
     (_bookmarkId: string, _chapterIndex: number, _chapterOffset: number): void => {};
 
   build() {
+    if (this.embeddedInControl) {
+      this.motionBody();
+    } else {
+      this.legacyBody();
+    }
+  }
+
+  private frame(): ReaderControlBookmarkFrame {
+    return sampleReaderControlBookmark(this.motionProgress, this.availableWidth);
+  }
+
+  @Builder
+  private motionBody() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row({ space: 4 }) {
+        Text(this.row.chapterTitle).layoutWeight(1).constraintSize({ minWidth: 0 })
+          .fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).lineHeight(14)
+          .fontColor(TOK_READ_INK).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        if (this.row.identityStatus === 'pendingConfirmation') {
+          Text(BOOKMARK_PENDING_LABEL).fontSize(8).fontColor(TOK_READ_MUTED).flexShrink(0);
+        }
+        Text(this.row.positionLabel).fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED)
+          .maxLines(1).constraintSize({ maxWidth: 50 }).textOverflow({ overflow: TextOverflow.Ellipsis });
+        Text(this.row.timeLabel).fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED)
+          .maxLines(1).constraintSize({ maxWidth: 64 }).textOverflow({ overflow: TextOverflow.Ellipsis });
+      }.width(this.frame().title.width).height(this.frame().title.height)
+        .position({ x: this.frame().title.x, y: this.frame().title.y });
+      Text('').width(this.frame().accent.width).height(this.frame().accent.height)
+        .backgroundColor(BOOKMARK_EXCERPT_ACCENT).borderRadius(1)
+        .position({ x: this.frame().accent.x, y: this.frame().accent.y });
+      Text(this.row.excerpt).width(this.frame().excerpt.width).height(this.frame().excerpt.height)
+        .fontFamily('ReaderNotoSerifSCRegular').fontWeight(FontWeight.Regular)
+        .fontSize(9).lineHeight(14).fontColor(TOK_READ_MUTED).maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .position({ x: this.frame().excerpt.x, y: this.frame().excerpt.y });
+      Text('').width(this.frame().divider.width).height(this.frame().divider.height)
+        .backgroundColor(TOK_LINE)
+        .position({ x: this.frame().divider.x, y: this.frame().divider.y });
+    }.width(this.frame().card.width).height(this.frame().card.height).clip(true)
+      .accessibilityText(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel} ${this.row.timeLabel}` +
+        (this.row.identityStatus === 'pendingConfirmation' ? ` ${BOOKMARK_PENDING_LABEL}` : ''))
+      .onClick((): void => this.onSelectBookmark(this.row.bookmarkId, this.row.chapterIndex, this.row.chapterOffset));
+  }
+
+  @Builder
+  private legacyBody() {
     Column({ space: 0 }) {
       Row({ space: 6 }) {
         Image($r('app.media.reader_directory_marker_bookmark_active'))

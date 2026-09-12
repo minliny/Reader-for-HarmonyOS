@@ -1,10 +1,12 @@
 import curves from '@ohos.curves';
+import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAPSE_MS,
+  READER_CONTROL_DISMISS_MS } from './ProductMotionTiming';
 
 // ----------------------------------------------------------------------------
 // MotionSpec — 动效注册表
-// 唯一权威源 = Figma "25 · Motion Reference" 画布 (1246:26829) 的 MR1 Production
-// Motion Contract。全仓动效代码禁止写死 duration/easing, 一律经本注册表取值。
-// 同步链: Figma 画布 -> MOTION_SPEC.md (Reader-Core-Native/docs) -> 本文件镜像。
+// 当前产品时序来自 ProductMotionTiming 与各动效族条目；空间轨迹仍由 Figma 派生几何负责。
+// 旧 shell / appearance 分轨仅供历史验证，不是当前 ReaderControlPanel 的播放策略。
+// 生产入口、历史注册项和旧组件测试必须区分，不以旧参数推断当前画面。
 // ----------------------------------------------------------------------------
 // 注意: reader.control.show 一个 contract id 对应两个位移 target (TopBar y-8,
 // ControlDock y+18), 故注册表条目只存 duration/curve 权威参数, fromY 由
@@ -69,9 +71,9 @@ const BOOKSHELF_VIEW_MOTION: BookshelfViewMotionContract = {
 
 const ENTRIES: MotionSpecEntry[] = [
   // Figma: 25 · Motion Reference MR1 · reader.control.show (TopBar y-8→0, Dock y+18→0)
-  { id: 'reader.control.show', durationMs: 420, curve: Curve.EaseOut },
+  { id: 'reader.control.show', durationMs: READER_CONTROL_OPEN_MS, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   // Figma: 25 · Motion Reference MR1 · reader.control.hide (反向回到原位)
-  { id: 'reader.control.hide', durationMs: 360, curve: Curve.EaseIn },
+  { id: 'reader.control.hide', durationMs: READER_CONTROL_DISMISS_MS, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   // Reader-UI handleSnap token: the grabber release settle is a snap, not a
   // panel collapse. Figma MR1 authors no curve for it; EaseOut keeps the
   // rollback/settle family consistent.
@@ -86,9 +88,9 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.font.reorder.shift', durationMs: 120, curve: Curve.EaseOut },
   { id: 'reader.font.reorder.settle', durationMs: 160, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference · Quick -> Full, Phone production contract.
-  { id: 'reader.panel.expand', durationMs: 420, curve: Curve.EaseOut },
+  { id: 'reader.panel.expand', durationMs: READER_CONTROL_EXPAND_MS, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   // Figma: 25 · Motion Reference · Full -> Quick, Phone production contract.
-  { id: 'reader.panel.collapse', durationMs: 360, curve: Curve.EaseIn },
+  { id: 'reader.panel.collapse', durationMs: READER_CONTROL_COLLAPSE_MS, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   // Figma Review J~Q (1505:16662..18899) quick<->full shell morph, measured
   // from the live frames (expand loop J/L 0.7s, collapse loop K/M/O/Q 4s).
   // Three actors on one timeline, percentages rescaled to product ms:
@@ -147,10 +149,8 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.session.capsule.morph.expand',
     durationMs: 240, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   { id: 'reader.session.capsule.morph.reveal', durationMs: 160, curve: Curve.EaseOut },
-  // Reader runtime page slide approved for the native Host implementation.
-  // The owner scales this base duration by the remaining live-width distance.
-  { id: 'reader.page.slide.commit', durationMs: 240, curve: Curve.EaseOut },
-  { id: 'reader.page.slide.rollback', durationMs: 180, curve: Curve.EaseOut },
+  // Page turns use ReaderPageSettlementTimeline / Native motion directly.
+  // Their distance/velocity clock must not acquire an implicit second animation.
   // Frozen simulated-page contract: a released bookmark pull returns the
   // translated page to its origin in one 160 ms compositor animation.
   { id: 'reader.bookmark.rollback', durationMs: 160, curve: Curve.EaseOut },
@@ -165,6 +165,11 @@ const ENTRIES: MotionSpecEntry[] = [
   // fades only the authored local layers, never the whole page.
   { id: 'bookshelf.view.switch', durationMs: 1000, curve: Curve.EaseOut },
 ];
+
+/** Product layer beats, relative to the single capsule flight clock. */
+export const SESSION_MORPH_GHOST_START_MS = 80;
+export const SESSION_MORPH_FADE_START_MS = 200;
+export const SESSION_MORPH_HANDOFF_START_MS = 320;
 
 export function motionSpecGet(id: string): MotionSpecEntry | undefined {
   return ENTRIES.find((entry: MotionSpecEntry): boolean => entry.id === id);
@@ -240,7 +245,8 @@ export function bookshelfViewCoverDelayMs(index: number): number {
   return ((rowBand * 3) + column) * BOOKSHELF_VIEW_MOTION.coverStaggerMs;
 }
 
-export function bookshelfViewCoverMoveAnimation(index: number): AnimateParam {
+export function bookshelfViewCoverMoveAnimation(index: number, reduceMotion: boolean = false): AnimateParam | undefined {
+  if (reduceMotion) return undefined;
   return {
     duration: BOOKSHELF_VIEW_MOTION.coverMoveDurationMs,
     delay: bookshelfViewCoverDelayMs(index),
@@ -248,7 +254,8 @@ export function bookshelfViewCoverMoveAnimation(index: number): AnimateParam {
   };
 }
 
-export function bookshelfViewCoverScaleAnimation(index: number): AnimateParam {
+export function bookshelfViewCoverScaleAnimation(index: number, reduceMotion: boolean = false): AnimateParam | undefined {
+  if (reduceMotion) return undefined;
   return {
     duration: BOOKSHELF_VIEW_MOTION.coverScaleDurationMs,
     delay: bookshelfViewCoverDelayMs(index),

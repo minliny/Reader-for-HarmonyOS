@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src data:; frame-src blob: data:; connect-src 'self'; object-src 'none'; base-uri 'none'">
+<title>Reader 正文引擎试点</title><link rel="stylesheet" href="style.css"></head>
+<body><header><strong>正文引擎试点</strong><span>Core 原创正文 · foliate-js</span></header>
+<nav><button id="previous">上一页</button><button id="next">下一页</button><select id="chapter" aria-label="章节"></select>
+<button id="larger">增大字号</button><button id="flow">切换滚动</button><button id="bookmark">记录位置</button><button id="restore">恢复位置</button></nav>
+<reader-core-paginator id="reader" flow="paginated" margin="20" gap="5" max-column-count="1"></reader-core-paginator>
+<footer><output id="status">载入中</output><span id="ready"></span></footer>
+<script src="pilot.js"></script></body></html>

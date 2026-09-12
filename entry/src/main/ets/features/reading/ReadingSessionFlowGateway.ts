@@ -1,3 +1,4 @@
+import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import {
@@ -44,6 +45,14 @@ export type ReadingContentSearchResult = {
   snippetStart: number;
   chapterTitle: string;
   snippet: string;
+};
+
+/** One bounded page of source-scoped cached-content matches. */
+export type ReadingContentSearchPage = {
+  results: ReadingContentSearchResult[];
+  offset: number;
+  limit: number;
+  hasMore: boolean;
 };
 
 /**
@@ -233,7 +242,7 @@ export class ReadingSessionFlowGateway {
       if (isCurrent !== undefined && !isCurrent()) {
         throw error;
       }
-      console.error(`reading image resolve failed: ${errorMessageOf(error)}`);
+      console.error(`reading image resolve failed: ${diagnosticCodeOf(errorMessageOf(error))}`);
       return this.failedReadingImage(image);
     }
   }
@@ -335,15 +344,32 @@ export class ReadingSessionFlowGateway {
     limit: number,
     isCurrent?: () => boolean,
   ): Promise<ReadingContentSearchResult[]> {
+    const page = await this.searchContentPage(bookId, keyword, limit, 0, isCurrent);
+    return page.results;
+  }
+
+  async searchContentPage(
+    bookId: string,
+    keyword: string,
+    limit: number,
+    offset: number = 0,
+    isCurrent?: () => boolean,
+  ): Promise<ReadingContentSearchPage> {
     this.assertBook(bookId);
     requireNonBlank(keyword, 'keyword');
     requireNonNegativeInteger(limit, 'limit');
-    const result = await this.runtimeOwner.request('search.content', {
+    requireNonNegativeInteger(offset, 'offset');
+    const params: JsonObject = {
       keyword: keyword.trim(),
       sourceId: this.sourceId,
       bookId: this.bookId,
       maxResults: limit,
-    }, isCurrent === undefined ? {} : { shouldCancel: (): boolean => !isCurrent() });
+    };
+    // Keep the legacy first-page wire shape byte-for-byte compatible while
+    // making subsequent pages explicit and independently cancellable.
+    if (offset > 0) params['offset'] = offset;
+    const result = await this.runtimeOwner.request('search.content', params,
+      isCurrent === undefined ? {} : { shouldCancel: (): boolean => !isCurrent() });
     const rawResults = result.data['results'];
     if (!Array.isArray(rawResults)) {
       throw new Error('search.content returned invalid results');
@@ -366,7 +392,11 @@ export class ReadingSessionFlowGateway {
         snippet: requireString(match, 'snippet', 'search.content result'),
       });
     }
-    return matches;
+    const rawHasMore = result.data['hasMore'];
+    if (rawHasMore !== undefined && typeof rawHasMore !== 'boolean') {
+      throw new Error('search.content returned invalid hasMore');
+    }
+    return { results: matches, offset, limit, hasMore: rawHasMore === true };
   }
 
   async runProgressCommitSerial(operation: () => Promise<void>): Promise<void> {

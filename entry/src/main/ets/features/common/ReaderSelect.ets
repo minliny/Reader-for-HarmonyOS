@@ -10,6 +10,7 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 import { motionAnimateParam } from './MotionSpec';
+import { APPEARANCE_SELECT_FILL, APPEARANCE_SELECT_OPEN_FILL } from './ReaderSelectAppearanceStyle';
 import {
   TYPE_SELECT_APPEARANCE_VALUE,
   TYPE_SELECT_DEFAULT_VALUE,
@@ -35,6 +36,7 @@ const SELECT_CHROME = SELECT_PAD * 2 + CHEVRON_GAP + CHEVRON_W; // 40
 export type ReaderSelectVariant =
   | 'default'
   | 'appearanceCompact'
+  | 'appearanceLibrary'
   | 'settingsPhone'
   | 'settingsTablet'
   | 'sourceGroup';
@@ -68,7 +70,9 @@ export struct ReaderSelect {
 
   @Builder
   private trigger() {
-    if (this.variant === 'appearanceCompact') {
+    if (this.variant === 'appearanceLibrary') {
+      this.appearanceLibraryTrigger();
+    } else if (this.variant === 'appearanceCompact') {
       this.appearanceTrigger();
     } else if (this.variant === 'settingsPhone' || this.variant === 'settingsTablet') {
       this.settingsTrigger();
@@ -77,6 +81,20 @@ export struct ReaderSelect {
     } else {
       this.defaultTrigger();
     }
+  }
+
+  @Builder
+  private appearanceLibraryTrigger() {
+    Row({ space: 6 }) {
+      Text(this.value).layoutWeight(1).fontFamily('ReaderNotoSansSCUIRegular').fontSize(11).lineHeight(15)
+        .fontWeight(FontWeight.Regular).fontColor('#332C25').maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Image($r('app.media.reader_appearance_make_chevron')).width(12).height(12)
+        .rotate({ angle: this.isOpen ? 90 : 0 }).animation(this.dropdownAnimation());
+    }.width('100%').height(30).padding({ left: 11, right: 9 }).borderRadius(999)
+      .backgroundColor(this.isOpen ? APPEARANCE_SELECT_OPEN_FILL : APPEARANCE_SELECT_FILL)
+      .responseRegion({ x: 0, y: -6, width: '100%', height: 42 })
+      .onClick((): void => this.onToggle());
   }
 
   @Builder
@@ -203,6 +221,10 @@ export struct ReaderSelect {
     }
     const ctx = this.getUIContext();
     const utils = ctx.getMeasureUtils();
+    if (this.variant === 'appearanceLibrary') {
+      return Math.ceil(ctx.px2vp(utils.measureText({ textContent: this.value,
+        fontSize: 11, fontFamily: 'ReaderNotoSansSCUIRegular' }))) + 38;
+    }
     let maxPx = 0;
     const texts: string[] = [this.value, ...this.options];
     for (let i = 0; i < texts.length; i++) {
@@ -219,6 +241,7 @@ export struct ReaderSelect {
   }
 
   private triggerHeight(): number {
+    if (this.variant === 'appearanceLibrary') return 30;
     return this.isSettingsVariant() ? 34 : TRIGGER_H;
   }
 

@@ -1,3 +1,4 @@
+import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordinator';
 import type { image } from '@kit.ImageKit';
 import type {
   JsonObject,
@@ -31,6 +32,7 @@ export type ReadingGatewayImageChapterIdentity = {
 
 /** The only Core request surface feature gateways may consume. */
 export interface ReadingGatewayRuntime {
+  bookAcquisitions?(): BookAcquisitionCoordinator;
   request(
     method: string,
     params?: JsonObject,

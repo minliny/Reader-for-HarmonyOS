@@ -7,7 +7,7 @@ import {
   type ReaderReadingLayoutSnapshot,
 } from './ReaderLayoutGeometry';
 import { ReaderPageTurnRenderPage } from './ReaderPageTurnStage';
-import { ReadingSurface } from './ReadingSurface';
+import { ReadingSurface, type ReadingSurfacePageFragment } from './ReadingSurface';
 
 /**
  * Immutable input for one offscreen page raster.
@@ -22,6 +22,7 @@ export class BookTurnTextureBuildInput {
   viewportHeight: number;
   layout: ReaderReadingLayoutSnapshot;
   appearance: ReaderAppearanceSnapshot;
+  fragmentsProvider: (() => ReadingSurfacePageFragment[]) | undefined;
 
   constructor(
     page: ReaderPageTurnRenderPage,
@@ -29,23 +30,28 @@ export class BookTurnTextureBuildInput {
     viewportHeight: number,
     layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout(),
     appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot(),
+    fragmentsProvider: (() => ReadingSurfacePageFragment[]) | undefined = undefined,
   ) {
     this.page = page;
     this.viewportWidth = viewportWidth;
     this.viewportHeight = viewportHeight;
     this.layout = layout;
     this.appearance = appearance;
+    this.fragmentsProvider = fragmentsProvider;
   }
 }
 
-/** A one-shot offscreen tree consumed only by ComponentSnapshot. */
+/** A bounded offscreen tree updated only in the serialized idle snapshot lane. */
 @Builder
 export function BookTurnTextureBuilder(input: BookTurnTextureBuildInput) {
   Stack({ alignContent: Alignment.TopStart }) {
     ReadingSurface({
+      snapshotSynchronousImages: true,
       chapterTitle: input.page.chapterTitle,
       showChapterTitle: input.page.showChapterTitle,
       pageFragments: input.page.fragments,
+      contentRevision: input.page.renderRevision,
+      fragmentsProvider: input.fragmentsProvider,
       layout: input.layout,
       appearance: input.appearance,
       bottomJustifyGap: input.page.bottomJustifyGap,

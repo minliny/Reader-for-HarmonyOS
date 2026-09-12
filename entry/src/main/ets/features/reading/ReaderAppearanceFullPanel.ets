@@ -114,7 +114,6 @@ export struct ReaderAppearanceFullPanel {
   @State private draggedFontOffsetY: number = 0;
   @State private previewFontOrder: ReaderAppearanceFontSlot[] = [];
   @State private fontDragSettling: boolean = false;
-  @State private motionFontReorderActive: boolean = false;
   @State private motionScrollOffsetY: number = 0;
   private readonly contentScroller: Scroller = new Scroller();
   private fontDragGeneration: number = 0;
@@ -136,7 +135,6 @@ export struct ReaderAppearanceFullPanel {
     this.selectClosing = false;
     this.fontDragGeneration += 1;
     this.clearFontDragState();
-    this.motionFontReorderActive = false;
   }
 
   build() {
@@ -156,8 +154,8 @@ export struct ReaderAppearanceFullPanel {
         this.staticContentSurface();
         this.staticAppearanceContent();
       } else {
-        // Phone motion has one surface owner and one Scroll. Shared and
-        // Full-only actors are siblings inside that persistent scrolling tree.
+        // Figma 1505:18040 owns two visual trees: QuickMorph finishes its
+        // geometry first and fades over the independently revealed Full tree.
         this.motionAppearanceContent();
       }
 
@@ -218,68 +216,90 @@ export struct ReaderAppearanceFullPanel {
   @Builder
   private motionAppearanceContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Scroll(this.contentScroller) {
-        Stack({ alignContent: Alignment.TopStart }) {
-          ReaderAppearanceSharedActors({
-            motionProgress: this.motionProgress,
-            fullHeight: this.motionFullHeight,
-            interactionEnabled: this.interactionEnabled,
-            reduceMotion: this.reduceMotion,
-            snapshot: this.snapshot,
-            onThemeChange: (theme: ReaderAppearanceTheme): void => this.onThemeChange(theme),
-            onFontChange: (font: ReaderAppearanceFont): void => this.onFontChange(font),
-            onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
-              this.onFontOrderChange(fontOrder),
-            onFontReorderActivityChange: (active: boolean): void =>
-              this.onMotionFontReorderActivityChange(active),
-            onCustomFontImport: (): void => this.onCustomFontImport(),
-          });
-          this.motionFullOnlyActors();
-        }
-        .width(this.motionViewportWidth())
-        .height(this.contentHeight())
-        // A full panel may already be scrolled when the user grabs the bar to
-        // collapse it. Cancel that retained offset continuously as p approaches
-        // Quick, while preserving the exact Full offset at p=1.
-        .translate({ y: this.motionScrollCompensationY() });
-      }
-      .width(this.motionViewportWidth())
-      .height(this.motionViewportHeight())
-      .scrollBar(BarState.Off)
-      .enableScrollInteraction(this.fullEndpointInteractionEnabled() && !this.motionFontReorderActive)
-      .hitTestBehavior(HitTestMode.Transparent)
-      .onScrollStart((): void => this.onAppearanceScrollStart())
-      // ScrollOnScrollCallback reports this frame's delta, not the accumulated
-      // position. Read the Scroller snapshot so collapse compensation uses the
-      // actual retained offset after any number of scroll frames.
-      .onDidScroll((_xOffset: number, _yOffset: number, _state: ScrollState): void =>
-        this.captureMotionScrollOffset())
-      .onScrollStop((): void => this.captureMotionScrollOffset());
+      this.motionContentSurface();
+      this.motionFullAppearanceContent();
+      this.motionQuickAppearanceContent();
+    }
+    .width(this.sheetWidth())
+    .height(this.sheetHeight())
+    .hitTestBehavior(HitTestMode.Transparent)
+    .position({ x: 0, y: 0 });
+  }
 
-      // Endpoint border styles come from the two already-authored components.
-      // Cross-fading only these border layers keeps both endpoints exact without
-      // claiming that the unpublished N2 supplies a colour trajectory.
-      Row()
-        .width(this.motionViewportWidth())
-        .height(this.motionViewportHeight())
-        .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
-        .borderRadius(this.motionSurfaceRadius())
-        .opacity(1 - this.motionSurfaceStyleProgress())
-        .hitTestBehavior(HitTestMode.None);
-      Row()
-        .width(this.motionViewportWidth())
-        .height(this.motionViewportHeight())
-        .border({ width: TOK_BORDER_W, color: TOK_LINE })
-        .borderRadius(this.motionSurfaceRadius())
-        .opacity(this.motionSurfaceStyleProgress())
-        .hitTestBehavior(HitTestMode.None);
+  @Builder
+  private motionContentSurface() {
+    Row()
+      .width(this.motionFullViewportWidth())
+      .height(this.motionFullViewportHeight())
+      .backgroundColor(TOK_SURFACE_PANEL)
+      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .borderRadius(12)
+      .position({
+        x: this.currentMotionFrame().contentSurface.x,
+        y: this.currentMotionFrame().contentSurface.y,
+      })
+      .opacity(this.currentMotionFrame().contentSurface.opacity)
+      .hitTestBehavior(HitTestMode.None);
+  }
+
+  @Builder
+  private motionFullAppearanceContent() {
+    Scroll(this.contentScroller) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        this.themeLibrary();
+        this.fontLibrary();
+        this.typographyLibrary();
+      }
+      .width(this.currentMotionFrame().appearanceContent.width)
+      .height(this.contentHeight())
+      // Preserve the Full endpoint's retained scroll while cancelling it as
+      // the same master progress returns toward Quick.
+      .translate({ y: this.motionScrollCompensationY() });
+    }
+    .width(this.motionFullViewportWidth())
+    .height(this.motionFullViewportHeight())
+    .borderRadius(12)
+    .clip(true)
+    .scrollBar(BarState.Off)
+    .enableScrollInteraction(this.fullEndpointInteractionEnabled() &&
+      this.draggedFontId === '' && !this.fontDragSettling)
+    .enabled(this.fullEndpointInteractionEnabled())
+    .hitTestBehavior(this.fullEndpointInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
+    .onScrollStart((): void => this.onAppearanceScrollStart())
+    .onDidScroll((_xOffset: number, _yOffset: number, _state: ScrollState): void =>
+      this.captureMotionScrollOffset())
+    .onScrollStop((): void => this.captureMotionScrollOffset())
+    .position({
+      x: this.currentMotionFrame().appearanceContent.x,
+      y: this.currentMotionFrame().appearanceContent.y,
+    })
+    .opacity(this.currentMotionFrame().appearanceContent.opacity);
+  }
+
+  @Builder
+  private motionQuickAppearanceContent() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      ReaderAppearanceSharedActors({
+        motionProgress: this.motionProgress,
+        fullHeight: this.motionFullHeight,
+        interactionEnabled: this.quickEndpointInteractionEnabled(),
+        reduceMotion: this.reduceMotion,
+        snapshot: this.snapshot,
+        onThemeChange: (theme: ReaderAppearanceTheme): void => this.onThemeChange(theme),
+        onFontChange: (font: ReaderAppearanceFont): void => this.onFontChange(font),
+        onFontOrderChange: (fontOrder: ReaderAppearanceFontSlot[]): void =>
+          this.onFontOrderChange(fontOrder),
+        onFontReorderActivityChange: (_active: boolean): void => {},
+      });
     }
     .width(this.motionViewportWidth())
     .height(this.motionViewportHeight())
     .backgroundColor(TOK_SURFACE_PANEL)
-    .borderRadius(this.motionSurfaceRadius())
+    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .borderRadius(8)
     .clip(true)
-    .hitTestBehavior(HitTestMode.Transparent)
+    .enabled(this.quickEndpointInteractionEnabled())
+    .hitTestBehavior(this.quickEndpointInteractionEnabled() ? HitTestMode.Default : HitTestMode.None)
     .position({
       x: this.currentMotionFrame().quickMorph.x,
       y: this.currentMotionFrame().quickMorph.y,
@@ -290,32 +310,6 @@ export struct ReaderAppearanceFullPanel {
     })
     .opacity(this.currentMotionFrame().quickMorph.opacity)
     .blur(this.currentMotionFrame().quickMorph.blurVp);
-  }
-
-  @Builder
-  private motionFullOnlyActors() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        this.themeAction(true);
-        this.themeAction(false);
-      }
-      .width(this.sectionWidth())
-      .height(210)
-      .position({ x: 10, y: 11 })
-      .opacity(this.motionFrameOrUndefined()?.themeActions.opacity ?? 0)
-      .translate({
-        x: this.motionFrameOrUndefined()?.themeActions.translateX ?? 0,
-        y: this.motionFrameOrUndefined()?.themeActions.translateY ?? 0,
-      })
-      .blur(this.motionFrameOrUndefined()?.themeActions.blurVp ?? 0);
-
-      this.motionFontReorderHint();
-      this.typographyLibrary();
-    }
-    .width(this.motionViewportWidth())
-    .height(this.contentHeight())
-    .enabled(this.fullEndpointInteractionEnabled())
-    .hitTestBehavior(this.fullEndpointInteractionEnabled() ? HitTestMode.Transparent : HitTestMode.None);
   }
 
   private onAppearanceScrollStart(): void {
@@ -329,25 +323,6 @@ export struct ReaderAppearanceFullPanel {
   private captureMotionScrollOffset(): void {
     const offset = this.contentScroller.currentOffset();
     this.motionScrollOffsetY = Math.max(0, offset.yOffset);
-  }
-
-  @Builder
-  private motionFontReorderHint() {
-    Text('可拖动调整位置')
-      .width(70)
-      .height(14)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Medium)
-      .fontSize(10)
-      .fontColor(TOK_READ_MUTED)
-      .textAlign(TextAlign.End)
-      .position({ x: 11 + this.sectionWidth() - 72, y: 230.98 })
-      .opacity(this.motionFrameOrUndefined()?.fontImport.opacity ?? 0)
-      .translate({
-        x: this.motionFrameOrUndefined()?.fontImport.translateX ?? 0,
-        y: this.motionFrameOrUndefined()?.fontImport.translateY ?? 0,
-      })
-      .blur(this.motionFrameOrUndefined()?.fontImport.blurVp ?? 0);
   }
 
   @Builder
@@ -410,7 +385,7 @@ export struct ReaderAppearanceFullPanel {
         .fontSize(12)
         .lineHeight(17)
         .fontColor(TOK_READ_INK)
-        .position({ x: 2, y: 9 });
+        .position({ x: 2, y: 10 });
       Text(this.themeSummary())
         .width(122)
         .height(20)
@@ -421,7 +396,7 @@ export struct ReaderAppearanceFullPanel {
         .fontColor(TOK_READ_MUTED)
         .textAlign(TextAlign.End)
         .maxLines(1)
-        .position({ x: this.sectionInnerWidth() - 120, y: 9 });
+        .position({ x: this.sectionInnerWidth() - 120, y: 10 });
 
       ForEach(this.themeIds(), (theme: ReaderAppearanceTheme, index: number) => {
         this.fullThemeCard(theme, index);
@@ -434,11 +409,12 @@ export struct ReaderAppearanceFullPanel {
         .width(this.sectionWidth())
         .height(1)
         .backgroundColor(TOK_LINE)
-        .position({ x: 0, y: 208.98 });
+        .position({ x: 0, y: 209 });
     }
     .width(this.sectionWidth())
     .height(210)
-    .position({ x: 10, y: 11 })
+    .position({ x: 11, y: 11 })
+    .opacity(this.motionFrameOrUndefined()?.themeLibrary.opacity ?? 1)
     .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
         panelActorTransition('reader.panel.appearance.theme.in', 0, 146),
@@ -475,7 +451,7 @@ export struct ReaderAppearanceFullPanel {
     .borderRadius(8)
     .position({
       x: 2 + (index % 4) * this.fullCardStride(),
-      y: 31.39 + Math.floor(index / 4) * 64.8,
+      y: 32.39 + Math.floor(index / 4) * 64.8,
     })
     .accessibilityText(`切换到${this.themeLabel(theme)}主题`)
     .onClick((): void => this.onThemeChange(theme));
@@ -540,9 +516,10 @@ export struct ReaderAppearanceFullPanel {
       .position({ x: 0, y: 30 });
     }
     .width(this.sectionWidth())
-    .height(146)
+    .height(136)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
     .position({ x: 11, y: 220.98 })
+    .opacity(this.motionFrameOrUndefined()?.fontLibrary.opacity ?? 1)
     .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
       TransitionEffect.asymmetric(
         panelActorTransition('reader.panel.appearance.font.in', 0, 175),
@@ -673,7 +650,7 @@ export struct ReaderAppearanceFullPanel {
       .position({ x: 2, y: 228 });
     }
     .width(this.sectionWidth())
-    .height(380)
+    .height(406)
     .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
     .position({ x: 11, y: 366.98 })
     .opacity(this.motionFrameOrUndefined()?.typography.opacity ?? 1)
@@ -967,13 +944,16 @@ export struct ReaderAppearanceFullPanel {
     return readerAppearanceMotionViewportHeight(this.currentMotionFrame());
   }
 
-  private motionSurfaceRadius(): number {
-    const progress = this.motionSurfaceStyleProgress();
-    return 8 + 4 * progress;
+  private motionFullViewportWidth(): number {
+    const frame = this.currentMotionFrame();
+    const available = Math.max(0, this.sheetWidth() - frame.contentSurface.x);
+    return Math.max(0, Math.min(frame.contentSurface.width, available));
   }
 
-  private motionSurfaceStyleProgress(): number {
-    return Math.max(0, Math.min(1, this.currentMotionFrame().quickMorph.trackProgress));
+  private motionFullViewportHeight(): number {
+    const frame = this.currentMotionFrame();
+    const available = Math.max(0, frame.shellHeight - frame.contentSurface.y);
+    return Math.max(0, Math.min(frame.contentSurface.height, available));
   }
 
   private motionScrollCompensationY(): number {
@@ -987,9 +967,8 @@ export struct ReaderAppearanceFullPanel {
     return this.interactionEnabled && this.currentMotionFrame().masterProgress >= 0.999;
   }
 
-  private onMotionFontReorderActivityChange(active: boolean): void {
-    this.motionFontReorderActive = active;
-    this.onFontReorderActivityChange(active);
+  private quickEndpointInteractionEnabled(): boolean {
+    return this.interactionEnabled && this.currentMotionFrame().masterProgress <= 0.001;
   }
 
   private viewportHeight(): number {

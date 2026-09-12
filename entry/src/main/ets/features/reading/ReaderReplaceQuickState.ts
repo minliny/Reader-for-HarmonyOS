@@ -12,6 +12,8 @@ export type ReaderReplaceRule = {
   replacement: string;
   scope?: string;
   scopeTitle: boolean;
+  /** Optional for legacy snapshots; current Core also supports source-import rules. */
+  scopeSource?: boolean;
   scopeContent: boolean;
   excludeScope?: string;
   isEnabled: boolean;
@@ -111,6 +113,9 @@ export function copyReaderReplaceRule(rule: ReaderReplaceRule): ReaderReplaceRul
   };
   if (rule.group !== undefined) {
     copy.group = rule.group;
+  }
+  if (rule.scopeSource !== undefined) {
+    copy.scopeSource = rule.scopeSource;
   }
   if (rule.scope !== undefined) {
     copy.scope = rule.scope;

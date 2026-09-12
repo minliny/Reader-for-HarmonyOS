@@ -79,22 +79,26 @@ export class ReaderReplaceQuickGateway {
   /** No Figma empty/loading/error state exists, so any non-ready result hides. */
   async load(): Promise<ReaderReplaceQuickState> {
     try {
-      const result = await this.runtimeOwner.request('replace-rule.list', {});
-      const rawRules = result.data['rules'];
-      if (!Array.isArray(rawRules)) {
-        return createHiddenReaderReplaceQuickState('invalidResponse');
-      }
-      const rules: ReaderReplaceRule[] = [];
-      for (const rawRule of rawRules) {
-        rules.push(this.decodeRule(rawRule, 'replace-rule.list'));
-      }
-      return createReaderReplaceQuickState(rules);
+      return createReaderReplaceQuickState(await this.loadAll());
     } catch (error) {
       if (error instanceof ReaderReplaceQuickGatewayError) {
         return createHiddenReaderReplaceQuickState('invalidResponse');
       }
       return createHiddenReaderReplaceQuickState('loadFailed');
     }
+  }
+
+  /** Shared canonical source. Only the legacy load() facade applies the three-row projection. */
+  async loadAll(isCurrent: () => boolean = (): boolean => true): Promise<ReaderReplaceRule[]> {
+    const result = await this.runtimeOwner.request('replace-rule.list', {},
+      { shouldCancel: (): boolean => !isCurrent() });
+    const rawRules = result.data['rules'];
+    if (!Array.isArray(rawRules)) {
+      throw new ReaderReplaceQuickGatewayError('invalidResponse', 'replace-rule.list returned invalid rules');
+    }
+    const rules: ReaderReplaceRule[] = [];
+    for (const rawRule of rawRules) rules.push(this.decodeRule(rawRule, 'replace-rule.list'));
+    return rules;
   }
 
   /**
@@ -189,7 +193,8 @@ export class ReaderReplaceQuickGateway {
     }
   }
 
-  private decodeRule(value: unknown, context: string): ReaderReplaceRule {
+  /** One decoder shared by Quick compatibility and in-reader Full CRUD. */
+  decodeRule(value: unknown, context: string): ReaderReplaceRule {
     const raw = this.requireObject(value, `${context} rule`);
     const rule: ReaderReplaceRule = {
       id: this.requireSafeInteger(raw, 'id', context),
@@ -206,6 +211,9 @@ export class ReaderReplaceQuickGateway {
     const group = this.optionalString(raw, 'group', context);
     const scope = this.optionalString(raw, 'scope', context);
     const excludeScope = this.optionalString(raw, 'excludeScope', context);
+    if (raw['scopeSource'] !== undefined) {
+      rule.scopeSource = this.requireBoolean(raw, 'scopeSource', context);
+    }
     if (group !== undefined) {
       rule.group = group;
     }

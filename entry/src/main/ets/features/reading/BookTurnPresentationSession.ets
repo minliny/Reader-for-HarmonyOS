@@ -2,6 +2,7 @@ import { image } from '@kit.ImageKit';
 import bookTurnNative from 'libreader_bookturn_napi.so';
 import type { BookTurnInput } from './BookTurnMotionState';
 import type { ReaderPageTurnDirection } from './ReaderPageGestureState';
+import { readerHighlightValuesEqual } from './ReaderDynamicHighlight';
 
 export const BOOK_TURN_TEXTURE_PREVIOUS = 0;
 export const BOOK_TURN_TEXTURE_CURRENT = 1;
@@ -17,6 +18,10 @@ export const BOOK_TURN_EVENT_SLOTS_COMMITTED = 7;
 /** The retained terminal frame was cleared after the generation-matched
  *  ArkUI presented confirmation (barrier closed). */
 export const BOOK_TURN_EVENT_TERMINAL_RELEASED = 8;
+/** Native surface has drawn the first frame for a new generation. */
+export const BOOK_TURN_EVENT_FRAME_PRESENTED = 9;
+
+export interface BookTurnRegrabFrame { generation: number; edgeX: number; edgeY: number; theta: number; }
 
 export type BookTurnTextureSlot = 0 | 1 | 2;
 
@@ -38,21 +43,41 @@ export class BookTurnNativeEvent {
  */
 export class BookTurnPresentationSession {
   readonly componentId: string;
+  private highlightIdentity: string = '';
+  private highlightValues: number[] = [];
+  private configuredWidth: number = 0;
+  private configuredHeight: number = 0;
   private eventListener: (event: BookTurnNativeEvent) => void =
     (_event: BookTurnNativeEvent): void => {};
 
   constructor(componentId: string) {
     this.componentId = componentId;
     bookTurnNative.setEventCallback(componentId, (event: number, generation: number, detail: number): void => {
-      this.eventListener(new BookTurnNativeEvent(event, generation, detail));
+      this.onNativeEvent(event, generation, detail);
     });
+  }
+
+  private onNativeEvent(event: number, generation: number, detail: number): void {
+    if (event === BOOK_TURN_EVENT_SURFACE_READY || event === BOOK_TURN_EVENT_SURFACE_LOST ||
+      event === BOOK_TURN_EVENT_RENDER_FAILURE) this.highlightIdentity = '';
+    this.eventListener(new BookTurnNativeEvent(event, generation, detail));
   }
 
   setEventListener(listener: (event: BookTurnNativeEvent) => void): void {
     this.eventListener = listener;
   }
 
+  setDynamicHighlights(identity: string, values: number[]): boolean {
+    if (identity.length > 0 && identity === this.highlightIdentity && readerHighlightValuesEqual(values, this.highlightValues)) return true;
+    const accepted: boolean = bookTurnNative.setDynamicHighlights(this.componentId, identity, values);
+    if (accepted) { this.highlightIdentity = identity; this.highlightValues = values.slice(); }
+    return accepted;
+  }
+
   configure(widthVp: number, heightVp: number): boolean {
+    if (widthVp !== this.configuredWidth || heightVp !== this.configuredHeight) {
+      this.highlightIdentity = ''; this.configuredWidth = widthVp; this.configuredHeight = heightVp;
+    }
     return bookTurnNative.configure(this.componentId, widthVp, heightVp);
   }
 
@@ -68,8 +93,9 @@ export class BookTurnPresentationSession {
     return bookTurnNative.canStart(this.componentId, nativeDirection(direction));
   }
 
-  uploadTexture(slot: BookTurnTextureSlot, pixelMap: image.PixelMap, identity: string): boolean {
-    return bookTurnNative.uploadTexture(this.componentId, slot, pixelMap, identity);
+  uploadTexture(slot: BookTurnTextureSlot, pixelMap: image.PixelMap, identity: string,
+    canPublish: () => boolean): Promise<boolean> {
+    return bookTurnNative.uploadTexture(this.componentId, slot, pixelMap, identity, canPublish);
   }
 
   updateInput(input: BookTurnInput): boolean {
@@ -88,12 +114,46 @@ export class BookTurnPresentationSession {
     );
   }
 
+  endGesture(input: BookTurnInput, commit: boolean): boolean {
+    return bookTurnNative.endGesture(
+      this.componentId,
+      input.generation,
+      nativeDirection(input.direction),
+      input.verticalPrevious,
+      input.viewportWidth,
+      input.viewportHeight,
+      input.startX,
+      input.startY,
+      input.pointerX,
+      input.pointerY,
+      input.eventTimeMs,
+      commit,
+    );
+  }
+
+  regrab(input: BookTurnInput, previousGeneration: number): BookTurnRegrabFrame | undefined {
+    return bookTurnNative.regrab(
+      this.componentId,
+      input.generation,
+      nativeDirection(input.direction),
+      input.verticalPrevious,
+      input.viewportWidth,
+      input.viewportHeight,
+      input.startX,
+      input.startY,
+      input.pointerX,
+      input.pointerY,
+      input.eventTimeMs,
+      previousGeneration,
+    );
+  }
+
   settle(generation: number, commit: boolean): boolean {
     return bookTurnNative.settle(this.componentId, generation, commit);
   }
 
-  startProgrammatic(generation: number, direction: ReaderPageTurnDirection): boolean {
-    return bookTurnNative.startProgrammatic(this.componentId, generation, nativeDirection(direction));
+  startProgrammatic(generation: number, direction: ReaderPageTurnDirection, rapid: boolean = false): boolean {
+    return bookTurnNative.startProgrammatic(this.componentId, generation, nativeDirection(direction), rapid);
   }
 
   commitSlots(generation: number, direction: ReaderPageTurnDirection): boolean {
@@ -106,13 +166,29 @@ export class BookTurnPresentationSession {
     return bookTurnNative.retainTerminalFrame(this.componentId, generation);
   }
 
-  /** Confirm the promoted content was composited; the native side then clears
-   *  the terminal frame (never before). Returns false for stale generations. */
+  /** Confirm the promoted content was composited; this only closes the native
+   *  retain barrier. The ArkUI owner must hide the XComponent and then call
+   *  clearSurface. Returns false for stale generations. */
   releaseTerminalFrame(generation: number): boolean {
     return bookTurnNative.releaseTerminalFrame(this.componentId, generation);
   }
 
+  /** Clear the Native surface after ArkUI has hidden the XComponent and
+   *  waited a frame. This is deliberately separate from release, which only
+   *  closes the generation barrier. */
+  clearSurface(generation: number): boolean {
+    return bookTurnNative.clearSurface(this.componentId, generation);
+  }
+
   /** Currently retained terminal generation (0 = none); diagnostics only. */
+  committedSlotsGeneration(): number {
+    return bookTurnNative.committedSlotsGeneration(this.componentId);
+  }
+
+  completedTerminalGeneration(): number {
+    return bookTurnNative.completedTerminalGeneration(this.componentId);
+  }
+
   retainedTerminalGeneration(): number {
     return bookTurnNative.retainedTerminalGeneration(this.componentId);
   }
