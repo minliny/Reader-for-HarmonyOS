@@ -57,7 +57,7 @@ export class SettingsOrchestrator {
         if (!this.isCurrentSession(session, expectedWrite)) {
           return;
         }
-        hilog.error(DOMAIN, 'Reader', 'Settings load failed: %{public}s', error.message);
+        hilog.error(DOMAIN, 'Reader', 'Settings load failed: %{private}s', error.message);
       });
   }
 
@@ -80,7 +80,7 @@ export class SettingsOrchestrator {
         if (writeGeneration !== this.writeGeneration || !this.isCurrent()) {
           return;
         }
-        hilog.error(DOMAIN, 'Reader', 'Settings update failed: %{public}s', error.message);
+        hilog.error(DOMAIN, 'Reader', 'Settings update failed: %{private}s', error.message);
         // No Figma failure affordance exists for this row. Restore the actual
         // Host-owned values rather than leaving the optimistic switch in a
         // state that did not persist.
@@ -91,7 +91,7 @@ export class SettingsOrchestrator {
             }
           })
           .catch((reloadError: Error): void => {
-            hilog.error(DOMAIN, 'Reader', 'Settings recovery load failed: %{public}s', reloadError.message);
+            hilog.error(DOMAIN, 'Reader', 'Settings recovery load failed: %{private}s', reloadError.message);
           });
       });
   }

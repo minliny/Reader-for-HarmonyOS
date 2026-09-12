@@ -1,5 +1,5 @@
 import { CandidateRow } from './CandidateRow';
-import { sourceSwitchCandidateKey } from './SourceSwitchGateway';
+import { sourceSwitchCandidateKey, sourceSwitchSourceCount } from './SourceSwitchGateway';
 import type { SourceSwitchCandidate } from './SourceSwitchGateway';
 import {
   TOK_BORDER,
@@ -392,6 +392,8 @@ export struct SourceSwitchWindow {
               sourceId: repeatItem.item.sourceId,
               sourceName: repeatItem.item.sourceName ?? repeatItem.item.sourceId,
               bookName: repeatItem.item.bookName,
+              acquisitionState: repeatItem.item.acquisitionState,
+              acquisitionMessage: repeatItem.item.acquisitionMessage,
               currentChapterTitle: repeatItem.item.currentChapterTitle ??
                 repeatItem.item.latestChapterTitle ?? '',
               latencyMs: repeatItem.item.latencyMs,
@@ -448,9 +450,10 @@ export struct SourceSwitchWindow {
     if (this.state.refreshError !== undefined && this.state.refreshError.length > 0) {
       return `刷新失败 · 已保留 ${this.state.candidates.length} 个本地记录`;
     }
+    const sourceCount = sourceSwitchSourceCount(this.state.candidates);
     return this.state.refreshing === true
-      ? `正在刷新 · 已有 ${this.state.candidates.length} 个书源`
-      : `共 ${this.state.candidates.length} 个书源`;
+      ? `正在刷新 · 已有 ${sourceCount} 个书源`
+      : `共 ${sourceCount} 个书源`;
   }
 
   private horizontalFrame(): SurfaceHorizontalFrame {

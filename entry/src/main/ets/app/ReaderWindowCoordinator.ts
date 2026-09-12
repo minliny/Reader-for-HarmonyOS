@@ -80,18 +80,47 @@ export class ReaderWindowCoordinator {
   private static desiredWindowPolicyOwner: 'app' | 'reader' = 'app';
   private static desiredReaderWindowPolicy: ReaderWindowPolicy = new ReaderWindowPolicy();
   private static appliedPolicyRevision: number = -1;
+  /**
+   * Install/detach race guard. detach() and every install() bump this epoch;
+   * each await inside install() re-checks it, so an async install that has been
+   * superseded (window destroyed, new window installed, or detach) aborts
+   * before registering stale listeners on a dead window or clobbering the new
+   * coordinator state.
+   */
+  private static installEpoch: number = 0;
 
-  static async install(win: window.Window): Promise<void> {
+  static async install(win: window.Window): Promise<boolean> {
     ReaderWindowCoordinator.detach();
+    ReaderWindowCoordinator.installEpoch += 1;
+    const epoch = ReaderWindowCoordinator.installEpoch;
     ReaderWindowCoordinator.mainWindow = win;
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
     ReaderWindowCoordinator.appOrientation = win.getPreferredOrientation();
     ReaderWindowCoordinator.appKeepScreenOn = win.getWindowProperties().isKeepScreenOn;
     await win.setWindowLayoutFullScreen(true);
+    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {
+      return false;
+    }
     await win.setWindowSystemBarEnable(['status', 'navigation']);
+    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {
+      return false;
+    }
     ReaderWindowCoordinator.registerWindowListeners(win);
+    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {
+      return false;
+    }
     ReaderWindowCoordinator.refreshMetrics();
     ReaderWindowCoordinator.requestAppChrome();
+    return true;
+  }
+
+  /**
+   * True when `win` is still the installed main window and no newer install
+   * or detach claimed the coordinator during an await boundary.
+   */
+  private static installStillCurrent(epoch: number, win: window.Window): boolean {
+    return epoch === ReaderWindowCoordinator.installEpoch &&
+      win === ReaderWindowCoordinator.mainWindow;
   }
 
   static detach(): void {
@@ -109,6 +138,7 @@ export class ReaderWindowCoordinator {
         // must be cleared so the next stage never reuses stale callbacks.
       }
     }
+    ReaderWindowCoordinator.installEpoch += 1;
     ReaderWindowCoordinator.mainWindow = undefined;
     ReaderWindowCoordinator.windowPolicyRevision += 1;
     ReaderWindowCoordinator.windowSizeListener = undefined;

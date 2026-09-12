@@ -1,4 +1,8 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import { FrameCallback } from '@kit.ArkUI';
+import curves from '@ohos.curves';
+import { readerMotionNowMs } from '../common/ReaderMotionClock';
+import { motionSegment, ReversibleMotionTimeline } from '../common/MotionTimeline';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -12,6 +16,7 @@ import {
   TOK_PRIMARY_DARK,
   TOK_PRIMARY_GRADIENT_START,
   TOK_PRIMARY_SOFT,
+  TOK_RADIUS_MD,
   TOK_SCREEN_INSET,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
@@ -40,8 +45,7 @@ import {
 import { isReaderProductSurfaceEnabled } from '../../app/ReaderProductScope';
 import {
   BookshelfViewMotionContract,
-  bookshelfViewCoverMoveAnimation,
-  bookshelfViewCoverScaleAnimation,
+  bookshelfViewCoverDelayMs,
   bookshelfViewMotionContract,
 } from '../common/MotionSpec';
 
@@ -60,6 +64,16 @@ const TABLET_RAIL_CONTENT_GAP = 20;
 const TABLET_CONTENT_RIGHT_GAP = 21;
 
 type BookshelfViewMode = 'cover' | 'list';
+
+class BookshelfMotionFrameCallback extends FrameCallback {
+  private readonly callback: () => void;
+  constructor(callback: () => void) {
+    super();
+    this.callback = callback;
+  }
+  onFrame(_time: number): void { this.callback(); }
+  onIdle(_remaining: number): void {}
+}
 
 class BookshelfRowDataSource implements IDataSource {
   private items: ShelfBook[][] = [];
@@ -92,7 +106,7 @@ export struct BookshelfPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop continueReading: ShelfBook | undefined;
-  @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   onImportRequested: () => void = (): void => {};
   onSearchRequested: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
@@ -133,7 +147,14 @@ export struct BookshelfPage {
   private readonly viewMotion: BookshelfViewMotionContract = bookshelfViewMotionContract();
   private pendingViewMode: BookshelfViewMode = 'cover';
   private viewSwitchToken: number = 0;
-  private viewSwitchCommitTimer: number = -1;
+  @State private viewSwitchTimeMs: number = 0;
+  private viewSwitchSourceMode: BookshelfViewMode = 'cover';
+  private viewSwitchDestinationMode: BookshelfViewMode = 'list';
+  private viewTimeline: ReversibleMotionTimeline = new ReversibleMotionTimeline(this.viewMotion.totalMs);
+  private readonly viewFadeCurve = curves.cubicBezierCurve(0, 0, .58, 1);
+  private readonly viewContentCurve = curves.cubicBezierCurve(.4, 0, .2, 1);
+  private readonly viewMoveCurve = curves.cubicBezierCurve(.2, 0, 0, 1);
+  private readonly viewScaleCurve = curves.cubicBezierCurve(.25, .1, 0, 1);
   private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource();
 
   aboutToAppear(): void {
@@ -426,25 +447,32 @@ export struct BookshelfPage {
 
   /**
    * SHF-02/03 shelf tools row, raised by the previously dead filter action:
-   * group filter chips plus the shelf-wide manual update entry. The row is an
+   * group filters and a separate shelf-wide manual update action. The row is an
    * approved product extension (no Figma frame). The resting surface follows
    * the current four-action product decision: Cover/List/Filter/Management;
    * search remains solely in the AppTopBar.
    */
   @Builder
   private filterRow() {
-    Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-      this.filterChip('全部', this.selectedGroup === '', (): void => {
-        this.selectedGroup = '';
-        this.rebuildShelfProjection();
-      });
-      ForEach(this.projectedGroups, (group: string) => {
-        this.filterChip(group, this.selectedGroup === group, (): void => {
-          this.selectedGroup = this.selectedGroup === group ? '' : group;
+    Column() {
+      Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
+        this.filterChip('全部', this.selectedGroup === '', (): void => {
+          this.selectedGroup = '';
           this.rebuildShelfProjection();
         });
-      }, (group: string): string => `shelf-group-${group}`);
-      this.checkUpdatesChip();
+        ForEach(this.projectedGroups, (group: string) => {
+          this.filterChip(group, this.selectedGroup === group, (): void => {
+            this.selectedGroup = group;
+            this.rebuildShelfProjection();
+          });
+        }, (group: string): string => `shelf-group-${group}`);
+      }
+      .width('100%');
+      Row() {
+        Blank();
+        this.checkUpdatesAction();
+      }
+      .width('100%');
     }
     .width('100%');
   }
@@ -470,19 +498,20 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private checkUpdatesChip() {
-    Text(this.updateActionLabel())
+  private checkUpdatesAction() {
+    Button(this.updateActionLabel(), { type: ButtonType.Normal })
       .fontFamily('ReaderInter')
       .fontWeight(FontWeight.Bold)
       .fontSize(12)
-      .lineHeight(18)
       .fontColor(this.updateRunning ? TOK_MUTED : TOK_GREEN)
       .padding({ left: 12, right: 12, top: 5, bottom: 5 })
       .backgroundColor(TOK_CARD_BG)
       .border({ width: TOK_BORDER_W, color: this.updateRunning ? TOK_BORDER : TOK_GREEN })
-      .borderRadius(999)
+      .borderRadius(TOK_RADIUS_MD)
+      .constraintSize({ minHeight: 44 })
+      .enabled(!this.updateRunning)
       .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-      .maxLines(1)
+      .labelStyle({ maxLines: 1, overflow: TextOverflow.Ellipsis })
       .onClick((): void => {
         if (!this.updateRunning) {
           this.onCheckUpdatesRequested();
@@ -550,8 +579,7 @@ export struct BookshelfPage {
       }, (book: ShelfBook): string => `${book.sourceId}:${book.bookId}`);
     }
     .width(this.shelfContentWidth(isTablet))
-    .height(this.projectionRowHeight(row, isTablet))
-    .animation(bookshelfViewCoverMoveAnimation(rowIndex * 3));
+    .height(this.projectionRowHeight(row, isTablet, rowIndex * 3));
   }
 
   /**
@@ -572,13 +600,12 @@ export struct BookshelfPage {
       this.projectionGridDetails(book, isTablet);
       this.projectionListDetails(book, isTablet);
     }
-    .width(this.projectionBookWidth(isTablet))
-    .height(this.projectionBookHeight(book, isTablet))
+    .width(this.projectionBookWidth(isTablet, index))
+    .height(this.projectionBookHeight(book, isTablet, index))
     .translate({
-      x: this.projectionBookTranslateX(columnIndex, isTablet),
-      y: this.projectionBookTranslateY(columnIndex, isTablet),
+      x: this.projectionBookTranslateX(columnIndex, isTablet, index),
+      y: this.projectionBookTranslateY(columnIndex, isTablet, index),
     })
-    .animation(bookshelfViewCoverMoveAnimation(index))
     .onClick((): void => this.onBookSelected(book))
     .gesture(
       LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
@@ -589,26 +616,28 @@ export struct BookshelfPage {
   @Builder
   private projectionBookCover(book: ShelfBook, isTablet: boolean, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
-      this.projectionBookCoverLayer(book, isTablet, false);
-      this.projectionBookCoverLayer(book, isTablet, true);
+      this.projectionBookCoverLayer(book, isTablet, false, index);
+      this.projectionBookCoverLayer(book, isTablet, true, index);
     }
     .width(this.shelfBookCardWidth(isTablet))
     .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
-    .borderRadius(this.projectionCoverRadius(isTablet))
+    .borderRadius(this.projectionCoverRadius(isTablet, index))
     .clip(true)
     .scale({
-      x: this.projectionCoverScale(isTablet),
-      y: this.projectionCoverScale(isTablet),
+      x: this.projectionCoverScale(isTablet, index),
+      y: this.projectionCoverScale(isTablet, index),
       centerX: '50%',
       centerY: '50%',
     })
     .translate({
-      x: this.projectionCoverCompensationX(isTablet),
-      y: this.projectionCoverCompensationY(isTablet),
+      x: this.projectionCoverCompensationX(isTablet, index),
+      y: this.projectionCoverCompensationY(isTablet, index),
     })
-    .animation(bookshelfViewCoverScaleAnimation(index))
     .zIndex(4)
-    .hitTestBehavior(HitTestMode.Transparent);
+    // Both cover layers are visual actors. The enclosing card alone owns
+    // click/long press; None alone would still hit the Image descendants.
+    .enabled(false)
+    .hitTestBehavior(HitTestMode.None);
   }
 
   /**
@@ -617,14 +646,14 @@ export struct BookshelfPage {
    * be both the moving layer and the final static layer at the same instant.
    */
   @Builder
-  private projectionBookCoverLayer(book: ShelfBook, isTablet: boolean, morphLayer: boolean) {
+  private projectionBookCoverLayer(book: ShelfBook, isTablet: boolean, morphLayer: boolean, index: number) {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.hasCover(book)) {
         Image(book.coverUrl as string)
           .width(this.shelfBookCardWidth(isTablet))
           .height(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet))
           .objectFit(ImageFit.Cover)
-          .borderRadius(this.projectionCoverRadius(isTablet))
+          .borderRadius(this.projectionCoverRadius(isTablet, index))
           .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 });
       } else {
         NoCoverCover({
@@ -652,7 +681,7 @@ export struct BookshelfPage {
       angle: 141.7,
       colors: [[TOK_PRIMARY_GRADIENT_START, 0.077], [TOK_PRIMARY_DARK, 0.923]],
     })
-    .borderRadius(this.projectionCoverRadius(isTablet))
+    .borderRadius(this.projectionCoverRadius(isTablet, index))
     .clip(true)
     .opacity(this.projectionCoverLayerOpacity(morphLayer))
     .hitTestBehavior(HitTestMode.Transparent);
@@ -1037,8 +1066,8 @@ export struct BookshelfPage {
     const groups: string[] = [];
     const seenGroups: Set<string> = new Set<string>();
     for (const book of this.books) {
-      if (this.selectedGroup === '' || book.group === this.selectedGroup) visible.push(book);
-      const group = book.group?.trim() ?? '';
+      if (this.selectedGroup === '' || this.selectedGroup === '默认') visible.push(book);
+      const group = '默认';
       if (group.length > 0 && !seenGroups.has(group)) {
         seenGroups.add(group);
         groups.push(group);
@@ -1074,300 +1103,83 @@ export struct BookshelfPage {
   }
 
   private setViewMode(mode: BookshelfViewMode): void {
-    if (this.viewMode === mode || this.viewSwitchRunning) {
-      return;
-    }
     if (this.reduceMotion) {
       this.resetViewSwitchMotion();
       this.viewMode = mode;
       this.setRestingProjectionOpacity(mode);
       return;
     }
-    this.startViewSwitch(mode);
+    if (this.viewSwitchRunning) {
+      if (mode === this.pendingViewMode) return;
+      this.pendingViewMode = mode;
+      this.viewTimeline.retarget(mode === this.viewSwitchDestinationMode, readerMotionNowMs());
+      return;
+    }
+    if (this.viewMode !== mode) this.startViewSwitch(mode);
+  }
+
+  private onReduceMotionChanged(): void {
+    if (!this.reduceMotion || !this.viewSwitchRunning) return;
+    const target = this.pendingViewMode;
+    this.resetViewSwitchMotion();
+    this.viewMode = target;
+    this.setRestingProjectionOpacity(target);
   }
 
   private startViewSwitch(mode: BookshelfViewMode): void {
-    this.cancelViewSwitchTimers();
-    const token = this.viewSwitchToken + 1;
-    this.viewSwitchToken = token;
+    const token = ++this.viewSwitchToken;
     this.pendingViewMode = mode;
+    this.viewSwitchSourceMode = this.viewMode;
+    this.viewSwitchDestinationMode = mode;
+    this.viewSwitchTimeMs = 0;
+    this.viewTimeline = new ReversibleMotionTimeline(this.viewMotion.totalMs);
+    this.viewTimeline.retarget(true, readerMotionNowMs());
     this.viewSwitchRunning = true;
-    this.viewSwitchHeaderOpacity = 1;
-    this.setRestingProjectionOpacity(this.viewMode);
-
-    this.runViewSwitchHeaderTimeline(token);
-    this.runViewSwitchOutgoingContentTimeline(token, this.viewMode);
-    this.runViewSwitchIncomingContentTimeline(token, mode);
-    this.prepareViewSwitchCoverLayers(mode);
-    this.runViewSwitchDestinationCoverTimeline(token, mode);
-    this.runViewSwitchMorphCoverTimeline(token, mode);
-    this.viewSwitchCommitTimer = setTimeout((): void => {
-      this.commitViewSwitchTarget(token);
-    }, this.viewMotion.layoutCommitMs);
+    this.sampleViewSwitch();
+    this.scheduleViewSwitchFrame(token);
   }
 
-  private commitViewSwitchTarget(token: number): void {
-    if (token !== this.viewSwitchToken || !this.viewSwitchRunning) {
-      return;
-    }
-    // `projectionRow` and every `projectionBookCard` remain mounted. Updating
-    // only the projection state lets their per-property animation modifiers
-    // interpolate from the geometry already on screen.
-    this.viewMode = this.pendingViewMode;
+  private scheduleViewSwitchFrame(token: number): void {
+    this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
+      if (token !== this.viewSwitchToken || !this.viewSwitchRunning) return;
+      const now = readerMotionNowMs();
+      this.viewSwitchTimeMs = this.viewTimeline.sample(now);
+      this.sampleViewSwitch();
+      if (!this.viewTimeline.running(now)) {
+        this.viewMode = this.pendingViewMode;
+        this.resetViewSwitchMotion();
+      } else this.scheduleViewSwitchFrame(token);
+    }));
   }
 
-  private runViewSwitchHeaderTimeline(token: number): void {
-    const gapBeforeIncoming = this.viewMotion.headerIncomingStartMs -
-      this.viewMotion.layoutCommitMs - this.viewMotion.outgoingDurationMs;
-    const tail = this.viewMotion.totalMs - this.viewMotion.headerIncomingStartMs -
-      this.viewMotion.headerIncomingDurationMs;
-    this.getUIContext().keyframeAnimateTo({
-      onFinish: (): void => this.finishViewSwitch(token),
-    }, [
-      {
-        duration: this.viewMotion.layoutCommitMs,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setViewSwitchHeaderOpacity(token, 1),
-      },
-      {
-        duration: this.viewMotion.outgoingDurationMs,
-        curve: this.viewMotion.contentCurve,
-        event: (): void => this.setViewSwitchHeaderOpacity(token, 0),
-      },
-      {
-        duration: gapBeforeIncoming,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setViewSwitchHeaderOpacity(token, 0),
-      },
-      {
-        duration: this.viewMotion.headerIncomingDurationMs,
-        curve: this.viewMotion.contentCurve,
-        event: (): void => this.setViewSwitchHeaderOpacity(token, 1),
-      },
-      {
-        duration: tail,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setViewSwitchHeaderOpacity(token, 1),
-      },
-    ]);
-  }
-
-  private runViewSwitchOutgoingContentTimeline(token: number, source: BookshelfViewMode): void {
-    const tail = this.viewMotion.totalMs - this.viewMotion.layoutCommitMs -
-      this.viewMotion.outgoingDurationMs;
-    this.getUIContext().keyframeAnimateTo({}, [
-      {
-        duration: this.viewMotion.layoutCommitMs,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setProjectionContentOpacity(token, source, 1),
-      },
-      {
-        duration: this.viewMotion.outgoingDurationMs,
-        curve: this.viewMotion.contentCurve,
-        event: (): void => this.setProjectionContentOpacity(token, source, 0),
-      },
-      {
-        duration: tail,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setProjectionContentOpacity(token, source, 0),
-      },
-    ]);
-  }
-
-  private runViewSwitchIncomingContentTimeline(token: number, target: BookshelfViewMode): void {
-    const tail = this.viewMotion.totalMs - this.viewMotion.contentIncomingStartMs -
-      this.viewMotion.contentIncomingDurationMs;
-    this.getUIContext().keyframeAnimateTo({}, [
-      {
-        duration: this.viewMotion.contentIncomingStartMs,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setProjectionContentOpacity(token, target, 0),
-      },
-      {
-        duration: this.viewMotion.contentIncomingDurationMs,
-        curve: this.viewMotion.contentCurve,
-        event: (): void => this.setProjectionContentOpacity(token, target, 1),
-      },
-      {
-        duration: tail,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setProjectionContentOpacity(token, target, 1),
-      },
-    ]);
-  }
-
-  private prepareViewSwitchCoverLayers(target: BookshelfViewMode): void {
-    if (target === 'list') {
-      // Cover -> List: the source cover is already the morph actor.
-      this.viewSwitchDestinationCoverOpacity = 0;
-      this.viewSwitchMorphCoverOpacity = 1;
-      return;
-    }
-    // List -> Cover: preserve the list cover until the morph actor enters at
-    // the authored 15% -> 18% handoff.
-    this.viewSwitchDestinationCoverOpacity = 1;
-    this.viewSwitchMorphCoverOpacity = 0;
-  }
-
-  private runViewSwitchDestinationCoverTimeline(token: number, target: BookshelfViewMode): void {
-    if (target === 'list') {
-      const tail = this.viewMotion.totalMs - this.viewMotion.contentIncomingStartMs -
-        this.viewMotion.contentIncomingDurationMs;
-      this.getUIContext().keyframeAnimateTo({}, [
-        {
-          duration: this.viewMotion.contentIncomingStartMs,
-          curve: this.viewMotion.holdCurve,
-          event: (): void => this.setDestinationCoverOpacity(token, 0),
-        },
-        {
-          duration: this.viewMotion.contentIncomingDurationMs,
-          curve: this.viewMotion.contentCurve,
-          event: (): void => this.setDestinationCoverOpacity(token, 1),
-        },
-        {
-          duration: tail,
-          curve: this.viewMotion.holdCurve,
-          event: (): void => this.setDestinationCoverOpacity(token, 1),
-        },
-      ]);
-      return;
-    }
-
-    const sourceFadeEndMs = this.viewMotion.morphCoverIncomingStartMs +
-      this.viewMotion.morphCoverIncomingDurationMs;
-    const holdBeforeTargetMs = this.viewMotion.contentIncomingStartMs - sourceFadeEndMs;
-    const tail = this.viewMotion.totalMs - this.viewMotion.contentIncomingStartMs -
-      this.viewMotion.contentIncomingDurationMs;
-    this.getUIContext().keyframeAnimateTo({}, [
-      {
-        duration: this.viewMotion.morphCoverIncomingStartMs,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setDestinationCoverOpacity(token, 1),
-      },
-      {
-        duration: this.viewMotion.morphCoverIncomingDurationMs,
-        curve: this.viewMotion.coverFadeCurve,
-        event: (): void => this.setDestinationCoverOpacity(token, 0),
-      },
-      {
-        duration: holdBeforeTargetMs,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setDestinationCoverOpacity(token, 0),
-      },
-      {
-        duration: this.viewMotion.contentIncomingDurationMs,
-        curve: this.viewMotion.contentCurve,
-        event: (): void => this.setDestinationCoverOpacity(token, 1),
-      },
-      {
-        duration: tail,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setDestinationCoverOpacity(token, 1),
-      },
-    ]);
-  }
-
-  private runViewSwitchMorphCoverTimeline(token: number, target: BookshelfViewMode): void {
-    if (target === 'cover') {
-      const tail = this.viewMotion.totalMs - this.viewMotion.morphCoverIncomingStartMs -
-        this.viewMotion.morphCoverIncomingDurationMs;
-      this.getUIContext().keyframeAnimateTo({}, [
-        {
-          duration: this.viewMotion.morphCoverIncomingStartMs,
-          curve: this.viewMotion.holdCurve,
-          event: (): void => this.setMorphCoverOpacity(token, 0),
-        },
-        {
-          duration: this.viewMotion.morphCoverIncomingDurationMs,
-          curve: this.viewMotion.coverFadeCurve,
-          event: (): void => this.setMorphCoverOpacity(token, 1),
-        },
-        {
-          duration: tail,
-          curve: this.viewMotion.holdCurve,
-          event: (): void => this.setMorphCoverOpacity(token, 1),
-        },
-      ]);
-      return;
-    }
-
-    const tail = this.viewMotion.totalMs - this.viewMotion.movingCoverFadeStartMs -
-      this.viewMotion.movingCoverFadeDurationMs;
-    this.getUIContext().keyframeAnimateTo({}, [
-      {
-        duration: this.viewMotion.movingCoverFadeStartMs,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setMorphCoverOpacity(token, 1),
-      },
-      {
-        duration: this.viewMotion.movingCoverFadeDurationMs,
-        curve: this.viewMotion.coverFadeCurve,
-        event: (): void => this.setMorphCoverOpacity(token, 0),
-      },
-      {
-        duration: tail,
-        curve: this.viewMotion.holdCurve,
-        event: (): void => this.setMorphCoverOpacity(token, 0),
-      },
-    ]);
-  }
-
-  private setDestinationCoverOpacity(token: number, opacity: number): void {
-    if (token === this.viewSwitchToken && this.viewSwitchRunning) {
-      this.viewSwitchDestinationCoverOpacity = opacity;
-    }
-  }
-
-  private setMorphCoverOpacity(token: number, opacity: number): void {
-    if (token === this.viewSwitchToken && this.viewSwitchRunning) {
-      this.viewSwitchMorphCoverOpacity = opacity;
-    }
-  }
-
-  private setViewSwitchHeaderOpacity(token: number, opacity: number): void {
-    if (token === this.viewSwitchToken && this.viewSwitchRunning) {
-      this.viewSwitchHeaderOpacity = opacity;
-    }
-  }
-
-  private setProjectionContentOpacity(
-    token: number,
-    mode: BookshelfViewMode,
-    opacity: number,
-  ): void {
-    if (token !== this.viewSwitchToken || !this.viewSwitchRunning) {
-      return;
-    }
-    if (mode === 'cover') {
-      this.viewSwitchGridContentOpacity = opacity;
+  private sampleViewSwitch(): void {
+    const t = this.viewSwitchTimeMs;
+    const m = this.viewMotion;
+    const content = (p: number): number => this.viewContentCurve.interpolate(p);
+    const fade = (p: number): number => this.viewFadeCurve.interpolate(p);
+    const outgoing = 1 - motionSegment(t, m.layoutCommitMs, m.outgoingDurationMs, content);
+    const incoming = motionSegment(t, m.contentIncomingStartMs, m.contentIncomingDurationMs, content);
+    this.viewSwitchHeaderOpacity = outgoing +
+      motionSegment(t, m.headerIncomingStartMs, m.headerIncomingDurationMs, content);
+    this.viewSwitchGridContentOpacity = this.viewSwitchSourceMode === 'cover' ? outgoing : incoming;
+    this.viewSwitchListContentOpacity = this.viewSwitchSourceMode === 'list' ? outgoing : incoming;
+    if (this.viewSwitchDestinationMode === 'list') {
+      this.viewSwitchDestinationCoverOpacity = incoming;
+      this.viewSwitchMorphCoverOpacity = 1 - motionSegment(t,
+        m.movingCoverFadeStartMs, m.movingCoverFadeDurationMs, fade);
     } else {
-      this.viewSwitchListContentOpacity = opacity;
+      const handoff = motionSegment(t, m.morphCoverIncomingStartMs, m.morphCoverIncomingDurationMs, fade);
+      this.viewSwitchDestinationCoverOpacity = 1 - handoff + incoming;
+      this.viewSwitchMorphCoverOpacity = handoff;
     }
-  }
-
-  private finishViewSwitch(token: number): void {
-    if (token !== this.viewSwitchToken) {
-      return;
-    }
-    this.cancelViewSwitchTimers();
-    this.viewSwitchRunning = false;
-    this.viewSwitchHeaderOpacity = 1;
-    this.setRestingProjectionOpacity(this.viewMode);
+    this.viewMode = t < m.layoutCommitMs ? this.viewSwitchSourceMode : this.viewSwitchDestinationMode;
   }
 
   private resetViewSwitchMotion(): void {
     this.viewSwitchToken += 1;
-    this.cancelViewSwitchTimers();
     this.viewSwitchRunning = false;
     this.viewSwitchHeaderOpacity = 1;
     this.setRestingProjectionOpacity(this.viewMode);
-  }
-
-  private cancelViewSwitchTimers(): void {
-    if (this.viewSwitchCommitTimer >= 0) {
-      clearTimeout(this.viewSwitchCommitTimer);
-      this.viewSwitchCommitTimer = -1;
-    }
   }
 
   private setRestingProjectionOpacity(mode: BookshelfViewMode): void {
@@ -1377,84 +1189,60 @@ export struct BookshelfPage {
     this.viewSwitchMorphCoverOpacity = 0;
   }
 
-  private projectionRowHeight(row: ShelfBook[], isTablet: boolean): number {
-    if (this.viewMode === 'list') {
-      return (row.length * this.listCoverHeight(isTablet)) +
-        (Math.max(0, row.length - 1) * TOK_SPACE_CONTROL_INLINE);
-    }
-    let height = 0;
-    for (const book of row) {
-      height = Math.max(height, this.gridBookCardHeight(book, isTablet));
-    }
-    return height;
+  private projectionListProgress(index: number, scale: boolean = false): number {
+    if (!this.viewSwitchRunning || this.reduceMotion) return this.viewMode === 'list' ? 1 : 0;
+    const progress = motionSegment(this.viewSwitchTimeMs,
+      this.viewMotion.layoutCommitMs + bookshelfViewCoverDelayMs(index),
+      scale ? this.viewMotion.coverScaleDurationMs : this.viewMotion.coverMoveDurationMs,
+      (p: number): number => scale ? this.viewScaleCurve.interpolate(p) : this.viewMoveCurve.interpolate(p));
+    return this.viewSwitchDestinationMode === 'list' ? progress : 1 - progress;
   }
 
-  private projectionBookWidth(isTablet: boolean): number {
-    return this.viewMode === 'list'
-      ? this.shelfContentWidth(isTablet)
-      : this.shelfBookCardWidth(isTablet);
+  private projectionRowHeight(row: ShelfBook[], isTablet: boolean, index: number): number {
+    let grid = 0;
+    for (const book of row) grid = Math.max(grid, this.gridBookCardHeight(book, isTablet));
+    const list = row.length * this.listCoverHeight(isTablet) +
+      Math.max(0, row.length - 1) * TOK_SPACE_CONTROL_INLINE;
+    return grid + (list - grid) * this.projectionListProgress(index);
   }
 
-  private projectionBookHeight(book: ShelfBook, isTablet: boolean): number {
-    return this.viewMode === 'list'
-      ? this.listCoverHeight(isTablet)
-      : this.gridBookCardHeight(book, isTablet);
+  private projectionBookWidth(isTablet: boolean, index: number): number {
+    const grid = this.shelfBookCardWidth(isTablet);
+    return grid + (this.shelfContentWidth(isTablet) - grid) * this.projectionListProgress(index);
   }
 
-  private projectionBookTranslateX(columnIndex: number, isTablet: boolean): number {
-    if (this.viewMode === 'list') {
-      return 0;
-    }
-    return columnIndex * (
-      this.shelfBookCardWidth(isTablet) +
-      this.bookRowSpace(this.shelfContentWidth(isTablet), isTablet)
-    );
+  private projectionBookHeight(book: ShelfBook, isTablet: boolean, index: number): number {
+    const grid = this.gridBookCardHeight(book, isTablet);
+    return grid + (this.listCoverHeight(isTablet) - grid) * this.projectionListProgress(index);
   }
 
-  private projectionBookTranslateY(columnIndex: number, isTablet: boolean): number {
-    if (this.viewMode === 'cover') {
-      return 0;
-    }
-    return columnIndex * (this.listCoverHeight(isTablet) + TOK_SPACE_CONTROL_INLINE);
+  private projectionBookTranslateX(columnIndex: number, isTablet: boolean, index: number): number {
+    return columnIndex * (this.shelfBookCardWidth(isTablet) +
+      this.bookRowSpace(this.shelfContentWidth(isTablet), isTablet)) * (1 - this.projectionListProgress(index));
   }
 
-  private projectionCoverScale(isTablet: boolean): number {
-    if (this.viewMode === 'cover') {
-      return 1;
-    }
-    if (!isTablet) {
-      return 0.495;
-    }
-    const listScale = this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet);
-    return listScale;
+  private projectionBookTranslateY(columnIndex: number, isTablet: boolean, index: number): number {
+    return columnIndex * (this.listCoverHeight(isTablet) + TOK_SPACE_CONTROL_INLINE) * this.projectionListProgress(index);
   }
 
-  private projectionCoverRadius(isTablet: boolean): number {
-    if (this.viewMode === 'cover') {
-      return 8;
-    }
-    const listScale = this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet);
-    return 6 / listScale;
+  private projectionCoverScale(isTablet: boolean, index: number): number {
+    const list = isTablet ? this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet) : .495;
+    return 1 + (list - 1) * this.projectionListProgress(index, true);
   }
 
-  private projectionCoverCompensationX(isTablet: boolean): number {
-    if (this.viewMode === 'cover') {
-      return 0;
-    }
-    return -(this.shelfBookCardWidth(isTablet) - this.listCoverWidth(isTablet)) / 2;
+  private projectionCoverRadius(isTablet: boolean, index: number): number {
+    const list = 6 / (this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet));
+    return 8 + (list - 8) * this.projectionListProgress(index, true);
   }
 
-  private projectionCoverCompensationY(isTablet: boolean): number {
-    if (this.viewMode === 'cover') {
-      return 0;
-    }
-    // Figma authors the morph dy (−21.727) in screen space; this slot needs the
-    // card-local centering compensation. Hardcoding −21.727 here rendered list
-    // thumbnails ~15vp low (VM-verified 2026-09-02).
-    return -(
-      this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet) -
-      this.listCoverHeight(isTablet)
-    ) / 2;
+  private projectionCoverCompensationX(isTablet: boolean, index: number): number {
+    return -(this.shelfBookCardWidth(isTablet) - this.listCoverWidth(isTablet)) / 2 *
+      this.projectionListProgress(index, true);
+  }
+
+  private projectionCoverCompensationY(isTablet: boolean, index: number): number {
+    return -(this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet) -
+      this.listCoverHeight(isTablet)) / 2 * this.projectionListProgress(index, true);
   }
 
   private projectionListDetailsWidth(isTablet: boolean): number {

@@ -51,7 +51,7 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
         admitted = true;
       } catch (error) {
         this.active = false;
-        hilog.error(LOG_DOMAIN, 'Reader', 'TTS background playback lease failed: %{public}s',
+        hilog.error(LOG_DOMAIN, 'Reader', 'TTS background playback lease failed: %{private}s',
           (error as Error).message);
       }
     });
@@ -88,7 +88,7 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
     try {
       await backgroundTaskManager.stopBackgroundRunning(this.context);
     } catch (error) {
-      hilog.error(LOG_DOMAIN, 'Reader', 'TTS background playback release failed: %{public}s',
+      hilog.error(LOG_DOMAIN, 'Reader', 'TTS background playback release failed: %{private}s',
         (error as Error).message);
     } finally {
       this.active = false;

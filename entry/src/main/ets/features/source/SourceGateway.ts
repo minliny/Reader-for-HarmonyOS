@@ -1,6 +1,8 @@
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
+import { httpUrlHostname, isPrivateNetworkTarget } from '../../app/HttpTransportPolicy';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { classifyReaderSource, type ReaderSourceCategory } from './ReaderSourceCategory';
 
 export type BookSource = {
   sourceId: string;
@@ -9,6 +11,8 @@ export type BookSource = {
   enabled: boolean;
   enabledExplore: boolean;
   group?: string;
+  /** Stable media category; novel is the only category admitted by the text reader. */
+  category: ReaderSourceCategory;
   loginUrl?: string;
   checkState?: 'unchecked' | 'checking' | 'passed' | 'failed';
   checkLevels?: string[];
@@ -110,6 +114,7 @@ export class SourceGateway {
       const rawBookSource = source['bookSource'];
       let loginUrl: string | undefined = undefined;
       let group: string | undefined = undefined;
+      let bookSourceType: unknown = undefined;
       if (rawBookSource !== null && typeof rawBookSource === 'object' && !Array.isArray(rawBookSource)) {
         const bookSource = rawBookSource as JsonObject;
         loginUrl = this.optionalString(bookSource, 'loginUrl');
@@ -117,6 +122,7 @@ export class SourceGateway {
         if (sourceGroup !== undefined && sourceGroup.trim().length > 0) {
           group = sourceGroup.trim();
         }
+        bookSourceType = bookSource['bookSourceType'];
       }
       if (sourceId === undefined || name === undefined) {
         continue;
@@ -128,6 +134,7 @@ export class SourceGateway {
         enabled: source['enabled'] === true,
         enabledExplore: source['enabledExplore'] === true,
         group,
+        category: classifyReaderSource({ bookSourceType, name, group, sourceId, baseUrl }),
         loginUrl,
       });
     }
@@ -523,6 +530,27 @@ export class SourceGateway {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       throw new Error(`Book-source document item ${index + 1} must be a JSON object`);
     }
+    const source = value as JsonObject;
+    for (const field of ['bookSourceName', 'searchUrl', 'bookSourceGroup']) {
+      if (source[field] !== undefined && source[field] !== null && typeof source[field] !== 'string') {
+        throw new Error(`第 ${index + 1} 项的 ${field} 应为文字`);
+      }
+    }
+    for (const field of ['ruleSearch', 'ruleBookInfo', 'ruleToc', 'ruleContent']) {
+      let rule: unknown = source[field];
+      // Legacy exports encode a rule object as JSON text, or use [] for an
+      // absent rule. Validate that envelope without rewriting the source.
+      if (typeof rule === 'string') {
+        try { rule = JSON.parse(rule) as unknown; } catch (_) {
+          throw new Error(`第 ${index + 1} 项的 ${field} 包含无效 JSON`);
+        }
+      }
+      if (Array.isArray(rule) && rule.length === 0) continue;
+      if (rule !== undefined && rule !== null &&
+        (typeof rule !== 'object' || Array.isArray(rule))) {
+        throw new Error(`第 ${index + 1} 项的 ${field} 应为规则对象`);
+      }
+    }
     return value as JsonObject;
   }
 
@@ -531,6 +559,18 @@ export class SourceGateway {
     if (typeof value !== 'string' || value.trim().length === 0) {
       throw new Error(
         `Book-source document item ${index + 1} requires a non-empty bookSourceUrl`,
+      );
+    }
+    // Import-time SSRF gate (P1-5): a source primary key must be an http(s)
+    // URL on a public host, judged by the shared HttpTransportPolicy byte
+    // rules. IP literals (private/loopback/link-local, and non-canonical
+    // numeric forms) are rejected here; domains are only shape-checked — the
+    // authoritative per-request gate lives in HttpExecuteHost, which resolves
+    // DNS before every fetch.
+    const hostname = httpUrlHostname(value);
+    if (hostname === undefined || isPrivateNetworkTarget(hostname)) {
+      throw new Error(
+        `Book-source document item ${index + 1} bookSourceUrl must be an http(s) URL on a public host`,
       );
     }
     return value;

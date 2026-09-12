@@ -10,9 +10,9 @@ const LOG_DOMAIN = 0x5244;
 const LEDGER_FILE_NAME = 'reader-builtin-source-ledger.json';
 const LEDGER_SCHEMA_VERSION = 1;
 
-// Source identities shipped in readerTestBuiltinVersion 1. They seed the
-// withdrawal ledger on devices upgrading from v1, where no ledger exists yet,
-// so sources dropped from v2+ bundles are still detected and retired.
+// Source identities shipped in legacy collection version 1. They seed the
+// withdrawal ledger on devices upgrading from the pre-productized bundle,
+// where no ledger exists yet, so later removals are still detected and retired.
 const KNOWN_V1_SOURCE_IDS: string[] = [
   'https://m.idejian.com',
   'https://dushu.baidu.com/',
@@ -188,7 +188,7 @@ export class BundledSourceLedger {
       return new BundledSourceLedger(entries);
     } catch (error) {
       hilog.error(LOG_DOMAIN, 'Reader',
-        'Bundled source ledger unreadable, resetting to v1 seed: %{public}s', errorMessageOf(error));
+        'Bundled source ledger unreadable, resetting to v1 seed: %{private}s', errorMessageOf(error));
       return BundledSourceLedger.seedV1();
     }
   }

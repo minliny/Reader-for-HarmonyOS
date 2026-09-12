@@ -1,5 +1,7 @@
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
+import statvfs from '@ohos.file.statvfs';
+import { localImportFailure, type LocalImportFailure } from './LocalImportFailure';
 import picker from '@ohos.file.picker';
 import fileUri from '@ohos.file.fileuri';
 import cryptoFramework from '@ohos.security.cryptoFramework';
@@ -31,19 +33,19 @@ export type LocalBookInput = {
   fileName: string;
   bookId: string;
   stagedPath: string;
-  assetKind: 'epub' | 'none';
+  assetKind: 'source' | 'epub' | 'none';
 };
 
 export type LocalBookAssetCommit = {
   bookId: string;
-  assetKind: 'epub' | 'none';
+  assetKind: 'source' | 'epub' | 'none';
   path: string;
   created: boolean;
 };
 
 export type LocalBookPreparation =
   | { state: 'ready'; input: LocalBookInput }
-  | { state: 'failed'; fileName: string };
+  | { state: 'failed'; fileName: string; failure?: LocalImportFailure };
 
 export type BookSourceJsonSelection = {
   fileName: string;
@@ -52,6 +54,17 @@ export type BookSourceJsonSelection = {
 
 /** Shared local/online transport envelope for portable JSON imports. */
 export type JsonImportDocument = BookSourceJsonSelection;
+
+/**
+ * One opaque local-book compensation token which was durably committed by
+ * Core but whose `import.finalize` acknowledgement did not reach the Host.
+ * The token never enters page state or diagnostics; it stays inside the
+ * app-private recovery queue until Core accepts it exactly once.
+ */
+export type PendingLocalImportFinalize = {
+  transactionId: string;
+  rollbackToken: JsonObject;
+};
 
 /**
  * The only Host capability registry in this application slice.
@@ -66,16 +79,60 @@ export class ReaderHostRegistry {
   private static readonly SnapshotFormatVersion = 1;
 
   private static readonly LocalBookSelectionLimit = 50;
+  private static readonly LocalBookLimitBytes = 64 * 1024 * 1024;
+  private static readonly StageSpaceReserveBytes = 16 * 1024 * 1024;
+  private static readonly stageRecoveries = new Map<string, Promise<void>>();
+  // Stage paths are allocated by short-lived Host instances as UIAbility
+  // windows are recreated. Share the sequence per directory so two such
+  // instances in one process cannot truncate each other's `.book` file.
+  private static readonly stageSequences = new Map<string, number>();
+  private static readonly stagingReservations = new Map<string, number>();
+  // Recovery is normally a single-flight startup task. Keep the reference
+  // mutable so a transient filesystem/permission failure can be retried by a
+  // later picker invocation in the same UIAbility instead of poisoning that
+  // instance with one permanently rejected Promise.
+  private stageRecovery: Promise<void>;
   private static readonly JsonDocumentLimitBytes = 16 * 1024 * 1024;
   private static readonly JsonDocumentReadChunkBytes = 64 * 1024;
   private static readonly HashChunkBytes = 1024 * 1024;
   private static readonly LocalBookStagingConcurrency = 2;
+  /** Keep deferred cleanup bounded even if a caller repeatedly loses replies. */
+  private static readonly PendingLocalImportFinalizeFormatVersion = 1;
+  private static readonly PendingLocalImportFinalizeMaxEntries = 8;
+  // Local-book journals larger than 64 KiB are Core references. The inline
+  // form is therefore comfortably below this bound; this also fences a
+  // corrupt/malicious queue from consuming app-private storage at startup.
+  private static readonly PendingLocalImportFinalizeMaxTokenBytes = 256 * 1024;
+  private static readonly PendingLocalImportFinalizeMaxFileBytes = 2 * 1024 * 1024;
   private readonly context: common.UIAbilityContext;
   private writeTail: Promise<void> = Promise.resolve();
-  private stageSequence: number = 0;
+  /** Serializes read/modify/write operations on the finalize queue. */
+  private pendingFinalizeWriteTail: Promise<void> = Promise.resolve();
 
   constructor(context: common.UIAbilityContext) {
     this.context = context;
+    const directory = this.localBookStageDirectory();
+    this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
+      directory,
+      (): Promise<void> => this.recoverAbandonedStages(),
+    );
+    void this.stageRecovery.catch((): void => {});
+  }
+
+  private static stageRecoveryFor(directory: string, recover: () => Promise<void>): Promise<void> {
+    const existing = ReaderHostRegistry.stageRecoveries.get(directory);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const pending = recover();
+    const retryable = pending.catch((error: Error): Promise<never> => {
+      if (ReaderHostRegistry.stageRecoveries.get(directory) === retryable) {
+        ReaderHostRegistry.stageRecoveries.delete(directory);
+      }
+      return Promise.reject(error);
+    });
+    ReaderHostRegistry.stageRecoveries.set(directory, retryable);
+    return retryable;
   }
 
   getContext(): common.UIAbilityContext {
@@ -172,6 +229,7 @@ export class ReaderHostRegistry {
    * UIAbilityContext. ArkUI pages only ask their gateway to begin an import.
    */
   async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
+    await this.ensureStageRecovery();
     const options = new picker.DocumentSelectOptions();
     options.fileSuffixFilters = [
       READER_LOCAL_BOOK_PICKER_FILTER,
@@ -179,33 +237,66 @@ export class ReaderHostRegistry {
     options.maxSelectNumber = ReaderHostRegistry.LocalBookSelectionLimit;
 
     const uris = await new picker.DocumentViewPicker(this.context).select(options);
-    const prepared: LocalBookPreparation[] = new Array<LocalBookPreparation>(uris.length);
+    // Picker implementations normally honor maxSelectNumber, but a provider
+    // can still return an oversized/malformed result.  Bound the work before
+    // allocating the preparation array or starting staging workers.  The
+    // picker UI remains the source of the user-visible limit; this is a
+    // defensive Host boundary, not a second parser.
+    const selectedUris = uris.slice(0, ReaderHostRegistry.LocalBookSelectionLimit);
+    if (uris.length > selectedUris.length) {
+      hilog.warn(LOG_DOMAIN, 'Reader',
+        'Local picker returned %{public}d entries; truncating to %{public}d',
+        uris.length, selectedUris.length);
+    }
+    const prepared: LocalBookPreparation[] = new Array<LocalBookPreparation>(selectedUris.length);
     let nextIndex = 0;
     const workers: Promise<void>[] = [];
-    const workerCount = Math.min(ReaderHostRegistry.LocalBookStagingConcurrency, uris.length);
+    const workerCount = Math.min(ReaderHostRegistry.LocalBookStagingConcurrency, selectedUris.length);
     for (let worker = 0; worker < workerCount; worker += 1) {
       workers.push((async (): Promise<void> => {
-        while (nextIndex < uris.length) {
+        while (nextIndex < selectedUris.length) {
           const index = nextIndex;
           nextIndex += 1;
-          const uri = uris[index];
-          const fileName = this.requireSelectedFileName(uri);
+          const uri = selectedUris[index];
+          // Filename parsing is part of the per-item boundary.  A malformed
+          // provider URI must become one failed row, not reject Promise.all
+          // and discard the outcomes of other selected files.
+          let fileName = '未命名文件';
           try {
+            fileName = this.requireSelectedFileName(uri);
             prepared[index] = {
               state: 'ready',
               input: await this.stageLocalBook(uri, fileName),
             };
           } catch (error) {
             const message = errorMessageOf(error);
-            hilog.error(LOG_DOMAIN, 'Reader', 'Local file staging failed for %{public}s: %{public}s',
+            hilog.error(LOG_DOMAIN, 'Reader', 'Local file staging failed for %{private}s: %{private}s',
               fileName, message);
-            prepared[index] = { state: 'failed', fileName };
+            prepared[index] = { state: 'failed', fileName, failure: localImportFailure(message) };
           }
         }
       })());
     }
     await Promise.all(workers);
     return prepared;
+  }
+
+  private async ensureStageRecovery(): Promise<void> {
+    try {
+      await this.stageRecovery;
+      return;
+    } catch (_) {
+      // stageRecoveryFor removes a failed shared entry. Re-acquire the
+      // directory-scoped single-flight promise so the next attempt can make
+      // progress after a transient filesystem failure. If the retry also
+      // fails, propagate that concrete error to the picker caller; a later
+      // invocation will get another retry opportunity.
+      this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
+        this.localBookStageDirectory(),
+        (): Promise<void> => this.recoverAbandonedStages(),
+      );
+      await this.stageRecovery;
+    }
   }
 
   /**
@@ -354,53 +445,102 @@ export class ReaderHostRegistry {
 
   /**
    * Commit the Host-owned source asset only after Core has accepted and
-   * persisted the parsed book. Text-like imports need no long-lived file;
-   * EPUB keeps the original archive so body resources can be read lazily.
+   * persisted the parsed book. All formats retain their immutable original
+   * for resources, parser upgrades and interruption recovery.
    */
   async commitLocalBookInput(input: LocalBookInput): Promise<LocalBookAssetCommit> {
-    if (input.assetKind === 'none') {
-      await this.discardLocalBookInput(input);
-      return { bookId: input.bookId, assetKind: 'none', path: '', created: false };
-    }
     const hash = this.requireLocalBookHash(input.bookId);
+    const stagedPath = this.requireLocalBookStagePath(input, hash);
     await this.ensureDirectory(this.localBookAssetDirectory());
-    const finalPath = `${this.localBookAssetDirectory()}/${hash}.epub`;
+    const finalPath = `${this.localBookAssetDirectory()}/${hash}.source`;
     if (await fileIo.access(finalPath)) {
       await this.discardLocalBookInput(input);
-      return { bookId: input.bookId, assetKind: 'epub', path: finalPath, created: false };
+      return { bookId: input.bookId, assetKind: 'source', path: finalPath, created: false };
     }
     try {
-      await fileIo.moveFile(input.stagedPath, finalPath);
-      return { bookId: input.bookId, assetKind: 'epub', path: finalPath, created: true };
+      await fileIo.moveFile(stagedPath, finalPath);
+      return { bookId: input.bookId, assetKind: 'source', path: finalPath, created: true };
     } catch (error) {
       // A second, identical import may have committed between access and
       // move. Accept only the concrete final file and discard our stage.
       if (await fileIo.access(finalPath)) {
         await this.discardLocalBookInput(input);
-        return { bookId: input.bookId, assetKind: 'epub', path: finalPath, created: false };
+        return { bookId: input.bookId, assetKind: 'source', path: finalPath, created: false };
       }
       throw error;
     }
   }
 
   async discardLocalBookInput(input: LocalBookInput): Promise<void> {
-    await this.unlinkIfPresent(input.stagedPath);
+    const hash = this.requireLocalBookHash(input.bookId);
+    const stagedPath = this.requireLocalBookStagePath(input, hash);
+    await this.unlinkIfPresent(stagedPath);
   }
 
   async rollbackLocalBookAsset(commit: LocalBookAssetCommit): Promise<void> {
-    if (commit.assetKind === 'epub' && commit.created && commit.path.length > 0) {
-      await this.unlinkIfPresent(commit.path);
+    if (commit.created) {
+      await this.unlinkIfPresent(this.requireLocalBookAssetPath(commit));
     }
   }
 
   /**
    * Release the Host-owned source archive after Core has committed a local
-   * book deletion. Text/MOBI imports have no retained archive, so the same
-   * deterministic EPUB path is safely idempotent for every local book id.
+   * book deletion. The legacy EPUB name remains eligible for cleanup after migration.
    */
   async releaseLocalBookAsset(bookId: string): Promise<void> {
     const hash = this.requireLocalBookHash(bookId);
+    await this.unlinkIfPresent(`${this.localBookAssetDirectory()}/${hash}.source`);
     await this.unlinkIfPresent(`${this.localBookAssetDirectory()}/${hash}.epub`);
+  }
+
+  /**
+   * Retain one opaque Core compensation token when the visible shelf commit
+   * succeeded but `import.finalize` did not receive an acknowledgement.
+   * This file is app-private, bounded, and atomically replaced; no token is
+   * written to logs, diagnostics, page state, or user export files.
+   */
+  async enqueuePendingLocalImportFinalize(rollbackToken: JsonObject): Promise<void> {
+    const pending = this.decodePendingLocalImportFinalizeToken(rollbackToken);
+    await this.withPendingFinalizeWrite(async (): Promise<void> => {
+      const entries = await this.readPendingLocalImportFinalizesUnsafe();
+      const existing = entries.findIndex(
+        (entry: PendingLocalImportFinalize): boolean => entry.transactionId === pending.transactionId,
+      );
+      if (existing >= 0) {
+        entries[existing] = pending;
+      } else {
+        entries.push(pending);
+      }
+      if (entries.length > ReaderHostRegistry.PendingLocalImportFinalizeMaxEntries) {
+        throw new Error('pending local import finalize queue is full');
+      }
+      await this.writePendingLocalImportFinalizesUnsafe(entries);
+    });
+  }
+
+  /** Read validated opaque cleanup work for the runtime startup drain. */
+  async readPendingLocalImportFinalizes(): Promise<PendingLocalImportFinalize[]> {
+    let entries: PendingLocalImportFinalize[] = [];
+    await this.withPendingFinalizeWrite(async (): Promise<void> => {
+      entries = await this.readPendingLocalImportFinalizesUnsafe();
+    });
+    return entries;
+  }
+
+  /** Remove one cleanup entry only after Core has accepted `import.finalize`. */
+  async removePendingLocalImportFinalize(transactionId: string): Promise<void> {
+    const normalized = this.requirePendingFinalizeTransactionId(transactionId);
+    await this.withPendingFinalizeWrite(async (): Promise<void> => {
+      const entries = await this.readPendingLocalImportFinalizesUnsafe();
+      const remaining = entries.filter(
+        (entry: PendingLocalImportFinalize): boolean => entry.transactionId !== normalized,
+      );
+      if (remaining.length !== entries.length) {
+        // Keep an empty, valid document rather than unlinking the file. This
+        // makes the successful removal itself crash-safe and idempotent.
+        await this.writePendingLocalImportFinalizesUnsafe(remaining);
+      }
+    });
   }
 
   private async readSnapshot(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {
@@ -440,15 +580,19 @@ export class ReaderHostRegistry {
   }
 
   private async stageLocalBook(uri: string, fileName: string): Promise<LocalBookInput> {
-    const stagePath = this.nextStagePath();
+    let stagePath = this.nextStagePath();
     await this.ensureDirectory(this.localBookStageDirectory());
     try {
       const contentHash = await this.copyAndHashLocalBook(uri, stagePath);
+      // Every complete original gets a recovery identity before Core sees it.
+      const recoverablePath = `${stagePath.slice(0, -5)}-${contentHash}.source`;
+      await fileIo.moveFile(stagePath, recoverablePath);
+      stagePath = recoverablePath;
       return {
         fileName,
         bookId: `local:${contentHash}`,
         stagedPath: stagePath,
-        assetKind: fileName.trim().toLowerCase().endsWith('.epub') ? 'epub' : 'none',
+        assetKind: 'source',
       };
     } catch (error) {
       await this.unlinkIfPresent(stagePath);
@@ -461,9 +605,18 @@ export class ReaderHostRegistry {
     if (!Number.isSafeInteger(stat.size) || stat.size <= 0) {
       throw new Error('Selected document has invalid file size');
     }
+    if (stat.size > ReaderHostRegistry.LocalBookLimitBytes) { throw new Error('Local book exceeds 64 MiB limit'); }
+    const freeBytes = await statvfs.getFreeSize(this.context.filesDir);
+    const reserved = ReaderHostRegistry.stagingReservations.get(this.context.filesDir) ?? 0;
+    if (freeBytes < stat.size + reserved + ReaderHostRegistry.StageSpaceReserveBytes) {
+      throw new Error('Insufficient space for local book import');
+    }
+    ReaderHostRegistry.stagingReservations.set(this.context.filesDir, reserved + stat.size);
+    try {
     const digest = cryptoFramework.createMd('SHA256');
     const buffer = new ArrayBuffer(ReaderHostRegistry.HashChunkBytes);
     const source = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+    try {
     const destination = await fileIo.open(
       stagePath,
       fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
@@ -476,6 +629,9 @@ export class ReaderHostRegistry {
           break;
         }
         totalBytes += bytesRead;
+        if (totalBytes > stat.size || totalBytes > ReaderHostRegistry.LocalBookLimitBytes) {
+          throw new Error('Selected document exceeded its staging limit');
+        }
         const chunk = new Uint8Array(buffer, 0, bytesRead);
         await digest.update({ data: chunk });
         let writtenBytes = 0;
@@ -493,13 +649,68 @@ export class ReaderHostRegistry {
       }
       await fileIo.fsync(destination.fd);
     } finally {
-      await fileIo.close(source);
       await fileIo.close(destination);
     }
+    } finally { await fileIo.close(source); }
     const output = await digest.digest();
+    return this.digestToHex(output.data);
+    } finally {
+      const reserved = ReaderHostRegistry.stagingReservations.get(this.context.filesDir) ?? 0;
+      ReaderHostRegistry.stagingReservations.set(this.context.filesDir, Math.max(0, reserved - stat.size));
+    }
+  }
+
+  /**
+   * Re-hash one completed staging file before crash recovery promotes it to
+   * the durable asset directory. A filename is only an identity hint: a
+   * torn/modified file must never become the bytes Core later reads for that
+   * content identity. `undefined` denotes a permanently invalid size; I/O
+   * failures still throw so recovery can retain the file for a later retry.
+   */
+  private async hashLocalBookFile(path: string): Promise<string | undefined> {
+    const stat = await fileIo.stat(path);
+    if (!Number.isSafeInteger(stat.size) || stat.size <= 0 ||
+      stat.size > ReaderHostRegistry.LocalBookLimitBytes) {
+      return undefined;
+    }
+    const digest = cryptoFramework.createMd('SHA256');
+    const buffer = new ArrayBuffer(ReaderHostRegistry.HashChunkBytes);
+    const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
+    let totalBytes = 0;
+    try {
+      while (true) {
+        const bytesRead = await fileIo.read(file.fd, buffer);
+        if (bytesRead === 0) {
+          break;
+        }
+        if (!Number.isSafeInteger(bytesRead) || bytesRead < 0 ||
+          bytesRead > buffer.byteLength) {
+          throw new Error('Staged local book returned an invalid read length');
+        }
+        totalBytes += bytesRead;
+        if (totalBytes > stat.size || totalBytes > ReaderHostRegistry.LocalBookLimitBytes) {
+          throw new Error('Staged local book changed while being verified');
+        }
+        await digest.update({ data: new Uint8Array(buffer, 0, bytesRead) });
+      }
+    } finally {
+      await fileIo.close(file);
+    }
+    if (totalBytes !== stat.size) {
+      throw new Error('Staged local book changed while being verified');
+    }
+    const finalStat = await fileIo.stat(path);
+    if (!Number.isSafeInteger(finalStat.size) || finalStat.size !== stat.size) {
+      throw new Error('Staged local book changed while being verified');
+    }
+    const output = await digest.digest();
+    return this.digestToHex(output.data);
+  }
+
+  private digestToHex(data: Uint8Array): string {
     const alphabet = '0123456789abcdef';
     let hex = '';
-    for (const value of output.data) {
+    for (const value of data) {
       hex += alphabet.charAt((value >>> 4) & 0x0f);
       hex += alphabet.charAt(value & 0x0f);
     }
@@ -551,6 +762,48 @@ export class ReaderHostRegistry {
     }
   }
 
+  private async recoverAbandonedStages(): Promise<void> {
+    const directory = this.localBookStageDirectory();
+    if (!(await fileIo.access(directory))) { return; }
+    // Startup runs once before new staging. Recover complete originals
+    // first: Core may have committed their resource references before death.
+    const entries = await fileIo.listFile(directory);
+    for (const name of entries) {
+      const complete = /^[0-9]+-[0-9]+-([0-9a-f]{64})\.(source|epub)$/.exec(name);
+      if (complete !== null) {
+        const stagePath = `${directory}/${name}`;
+        let actualHash: string | undefined;
+        try {
+          actualHash = await this.hashLocalBookFile(stagePath);
+        } catch (error) {
+          // A transient read/permission error should not destroy a completed
+          // import. Leave the stage in place so the next picker/startup can
+          // retry verification; only an explicit hash/size mismatch is
+          // discarded below.
+          hilog.warn(LOG_DOMAIN, 'Reader',
+            'Completed local-book stage verification deferred for %{private}s: %{private}s',
+            name, errorMessageOf(error));
+          continue;
+        }
+        if (actualHash === undefined || actualHash !== complete[1]) {
+          hilog.error(LOG_DOMAIN, 'Reader',
+            'Discarding local-book stage with mismatched content identity: %{private}s', name);
+          await this.unlinkIfPresent(stagePath);
+          continue;
+        }
+        await this.ensureDirectory(this.localBookAssetDirectory());
+        const destination = `${this.localBookAssetDirectory()}/${complete[1]}.${complete[2]}`;
+        if (await fileIo.access(destination)) {
+          await this.unlinkIfPresent(stagePath);
+        } else {
+          await fileIo.moveFile(stagePath, destination);
+        }
+      } else if (/^[0-9]+-[0-9]+\.book$/.test(name)) {
+        await this.unlinkIfPresent(`${directory}/${name}`);
+      }
+    }
+  }
+
   private localBookStageDirectory(): string {
     return `${this.context.filesDir}/reader-import/staging`;
   }
@@ -565,6 +818,47 @@ export class ReaderHostRegistry {
       throw new Error('Local book identity is not a SHA-256 content identity');
     }
     return match[1];
+  }
+
+  /**
+   * A staged input is an internal capability, not a caller-supplied path.
+   * Bind it to the content identity and the exact staging directory before
+   * any move/unlink so a malformed in-process object cannot target another
+   * app file through path traversal or cross-book substitution.
+   */
+  private requireLocalBookStagePath(input: LocalBookInput, hash: string): string {
+    const path = input.stagedPath;
+    const prefix = `${this.localBookStageDirectory()}/`;
+    if (typeof path !== 'string' || !path.startsWith(prefix)) {
+      throw new Error('Local book staging path is outside the app staging directory');
+    }
+    const name = path.slice(prefix.length);
+    const match = /^[0-9]+-[0-9]+-([0-9a-f]{64})\.source$/.exec(name);
+    if (match === null || match[1] !== hash) {
+      throw new Error('Local book staging path does not match its content identity');
+    }
+    return path;
+  }
+
+  /** Return only the deterministic asset path emitted by this Host. */
+  private requireLocalBookAssetPath(commit: LocalBookAssetCommit): string {
+    const hash = this.requireLocalBookHash(commit.bookId);
+    let extension: string;
+    switch (commit.assetKind) {
+      case 'source':
+        extension = 'source';
+        break;
+      case 'epub':
+        extension = 'epub';
+        break;
+      default:
+        throw new Error('Local book rollback commit has no retained asset');
+    }
+    const expected = `${this.localBookAssetDirectory()}/${hash}.${extension}`;
+    if (commit.path !== expected) {
+      throw new Error('Local book rollback path does not match its content identity');
+    }
+    return expected;
   }
 
   private async unlinkIfPresent(path: string): Promise<void> {
@@ -590,8 +884,10 @@ export class ReaderHostRegistry {
   }
 
   private nextStagePath(): string {
-    this.stageSequence += 1;
-    return `${this.localBookStageDirectory()}/${Date.now()}-${this.stageSequence}.book`;
+    const directory = this.localBookStageDirectory();
+    const next = (ReaderHostRegistry.stageSequences.get(directory) ?? 0) + 1;
+    ReaderHostRegistry.stageSequences.set(directory, next);
+    return `${directory}/${Date.now()}-${next}.book`;
   }
 
   private async writeSnapshot(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {
@@ -644,7 +940,7 @@ export class ReaderHostRegistry {
       return;
     }
     hilog.error(LOG_DOMAIN, 'Reader',
-      'Core snapshot revision conflict: expected=%{public}s actual=%{public}s',
+      'Core snapshot revision conflict: expected=%{private}s actual=%{private}s',
       `${value}`, `${revision}`);
     throw new Error('Reader Core snapshot revision conflict');
   }
@@ -671,6 +967,176 @@ export class ReaderHostRegistry {
 
   private snapshotMigrationMarkerPath(): string {
     return `${this.snapshotDirectory()}/snapshot-v1.migrated-to-sqlite-v1`;
+  }
+
+  private pendingLocalImportFinalizeDirectory(): string {
+    return `${this.context.filesDir}/reader-import`;
+  }
+
+  private pendingLocalImportFinalizePath(): string {
+    return `${this.pendingLocalImportFinalizeDirectory()}/pending-finalize-v1.json`;
+  }
+
+  private async readPendingLocalImportFinalizesUnsafe(): Promise<PendingLocalImportFinalize[]> {
+    const path = this.pendingLocalImportFinalizePath();
+    if (!(await fileIo.access(path))) {
+      return [];
+    }
+    // Read through the bounded chunked path rather than readText: a replaced
+    // file can never make startup allocate beyond the pre-checked limit.
+    const raw = await this.readBoundedUtf8Document(
+      path,
+      ReaderHostRegistry.PendingLocalImportFinalizeMaxFileBytes,
+    );
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch (_) {
+      throw new Error('pending local import finalize queue is not valid JSON');
+    }
+    return this.decodePendingLocalImportFinalizeDocument(parsed);
+  }
+
+  private decodePendingLocalImportFinalizeDocument(value: unknown): PendingLocalImportFinalize[] {
+    if (!this.isJsonObject(value) || value['formatVersion'] !== ReaderHostRegistry.PendingLocalImportFinalizeFormatVersion ||
+      !Array.isArray(value['entries']) || Object.keys(value).some((key: string): boolean =>
+        key !== 'formatVersion' && key !== 'entries')) {
+      throw new Error('pending local import finalize queue envelope is invalid');
+    }
+    const rawEntries = value['entries'] as unknown[];
+    if (rawEntries.length > ReaderHostRegistry.PendingLocalImportFinalizeMaxEntries) {
+      throw new Error('pending local import finalize queue has too many entries');
+    }
+    const entries: PendingLocalImportFinalize[] = [];
+    const seen = new Set<string>();
+    for (const rawEntry of rawEntries) {
+      if (!this.isJsonObject(rawEntry) || Object.keys(rawEntry).some((key: string): boolean =>
+        key !== 'transactionId' && key !== 'rollbackToken')) {
+        throw new Error('pending local import finalize queue entry is invalid');
+      }
+      const transactionId = this.requirePendingFinalizeTransactionId(rawEntry['transactionId']);
+      const rollbackToken = this.decodePendingLocalImportFinalizeToken(rawEntry['rollbackToken']);
+      if (rollbackToken.transactionId !== transactionId || seen.has(transactionId)) {
+        throw new Error('pending local import finalize queue transaction identity is invalid');
+      }
+      seen.add(transactionId);
+      entries.push(rollbackToken);
+    }
+    return entries;
+  }
+
+  private decodePendingLocalImportFinalizeToken(value: unknown): PendingLocalImportFinalize {
+    if (!this.isJsonObject(value) || value['kind'] !== 'localBook' ||
+      Object.keys(value).some((key: string): boolean => key !== 'kind' && key !== 'token')) {
+      throw new Error('pending local import finalize token kind is invalid');
+    }
+    const body = value['token'];
+    if (!this.isJsonObject(body) || Object.keys(body).some((key: string): boolean =>
+      key !== 'transactionId' && key !== 'journal')) {
+      throw new Error('pending local import finalize token body is invalid');
+    }
+    const transactionId = this.requirePendingFinalizeTransactionId(body['transactionId']);
+    if (!this.isJsonObject(body['journal'])) {
+      throw new Error('pending local import finalize journal is invalid');
+    }
+    let encodedBytes: number;
+    try {
+      const serialized = JSON.stringify(value);
+      if (serialized === undefined) {
+        throw new Error('pending local import finalize token is not serializable');
+      }
+      encodedBytes = new util.TextEncoder().encodeInto(serialized).length;
+    } catch (_) {
+      throw new Error('pending local import finalize token is not serializable');
+    }
+    if (encodedBytes <= 0 || encodedBytes > ReaderHostRegistry.PendingLocalImportFinalizeMaxTokenBytes) {
+      throw new Error('pending local import finalize token exceeds its size limit');
+    }
+    return {
+      transactionId,
+      rollbackToken: value as JsonObject,
+    };
+  }
+
+  private requirePendingFinalizeTransactionId(value: unknown): string {
+    if (typeof value !== 'string' || value.length === 0 || value.trim() !== value ||
+      new util.TextEncoder().encodeInto(value).length > 256 || /[\u0000-\u001f\u007f]/.test(value)) {
+      throw new Error('pending local import finalize transaction id is invalid');
+    }
+    return value;
+  }
+
+  private isJsonObject(value: unknown): value is JsonObject {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private async writePendingLocalImportFinalizesUnsafe(entries: PendingLocalImportFinalize[]): Promise<void> {
+    const payload = JSON.stringify({
+      formatVersion: ReaderHostRegistry.PendingLocalImportFinalizeFormatVersion,
+      entries: entries.map((entry: PendingLocalImportFinalize): JsonObject => ({
+        transactionId: entry.transactionId,
+        rollbackToken: entry.rollbackToken,
+      })),
+    });
+    const encodedBytes = new util.TextEncoder().encodeInto(payload).length;
+    if (encodedBytes <= 0 || encodedBytes > ReaderHostRegistry.PendingLocalImportFinalizeMaxFileBytes) {
+      throw new Error('pending local import finalize queue exceeds its size limit');
+    }
+    await this.ensureDirectory(this.pendingLocalImportFinalizeDirectory());
+    const file = new fileIo.AtomicFile(this.pendingLocalImportFinalizePath());
+    try {
+      const stream = file.startWrite();
+      await new Promise<void>((resolve: () => void, reject: (reason?: Error) => void): void => {
+        let settled = false;
+        const rejectOnce = (error: Error): void => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          reject(error);
+        };
+        stream.on('error', (): void => rejectOnce(new Error('pending local import finalize queue write failed')));
+        try {
+          stream.end(payload, 'utf-8', (): void => {
+            if (settled) {
+              return;
+            }
+            if (stream.bytesWritten !== encodedBytes) {
+              rejectOnce(new Error('pending local import finalize queue write was incomplete'));
+              return;
+            }
+            settled = true;
+            resolve();
+          });
+        } catch (error) {
+          rejectOnce(error as Error);
+        }
+      });
+      file.finishWrite();
+    } catch (error) {
+      try {
+        file.failWrite();
+      } catch (_) {
+        // There may be no temporary file when startWrite itself failed.
+      }
+      throw error;
+    }
+  }
+
+  private async withPendingFinalizeWrite(operation: () => Promise<void>): Promise<void> {
+    const previous = this.pendingFinalizeWriteTail;
+    let release: (() => void) | undefined = undefined;
+    this.pendingFinalizeWriteTail = new Promise<void>((resolve: () => void): void => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      await operation();
+    } finally {
+      if (release !== undefined) {
+        release();
+      }
+    }
   }
 
   private async readStoredSnapshot(): Promise<StoredSnapshot | null> {

@@ -1,8 +1,11 @@
+import { SearchViewState } from './SearchViewState';
+import { bookIntroText } from '../common/BookIntroText';
 import {
   type SearchBook,
   type SearchSource,
 } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
@@ -55,6 +58,8 @@ export interface SearchLoadingPresentation {
 
 export interface SearchResultsPresentation {
   kind: 'results';
+  localSearchFailed?: boolean;
+  sourceListFailed?: boolean;
   keyword: string;
   results: SearchBook[];
   /**
@@ -75,6 +80,8 @@ export interface SearchResultsPresentation {
 
 export interface SearchEmptyPresentation {
   kind: 'empty';
+  localSearchFailed?: boolean;
+  sourceListFailed?: boolean;
   keyword: string;
   /** Enabled sources the search actually attempted. */
   searchedSourceCount: number;
@@ -86,6 +93,8 @@ export interface SearchEmptyPresentation {
 
 export interface SearchErrorPresentation {
   kind: 'error';
+  localSearchFailed?: boolean;
+  sourceListFailed?: boolean;
   keyword: string;
   /** Enabled sources the search actually attempted. */
   searchedSourceCount: number;
@@ -117,6 +126,7 @@ export type SearchPresentation =
   | SearchSourceRequiredPresentation
   | SearchSourceLoadErrorPresentation;
 
+@Observed
 class SearchBookGroup {
   book: SearchBook;
   sourceCount: number;
@@ -145,6 +155,88 @@ class SearchBookGroup {
   }
 }
 
+class SearchResultDataSource implements IDataSource {
+  private items: SearchBookGroup[] = [];
+  private keys: string[] = [];
+  private listeners: DataChangeListener[] = [];
+
+  totalCount(): number { return this.items.length; }
+  getData(index: number): SearchBookGroup { return this.items[index]; }
+
+  registerDataChangeListener(listener: DataChangeListener): void {
+    if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
+  }
+
+  unregisterDataChangeListener(listener: DataChangeListener): void {
+    const index = this.listeners.indexOf(listener);
+    if (index >= 0) this.listeners.splice(index, 1);
+  }
+
+  private key(group: SearchBookGroup): string {
+    const book = group.book;
+    if (book.sourceId === 'local') return `local:${book.bookId}`;
+    if (book.groupKey !== undefined) return `online:${book.groupKey}`;
+    const alias = `${book.title.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}\u0000${book.author.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`;
+    return `online:${alias}`;
+  }
+
+  private update(retained: SearchBookGroup, next: SearchBookGroup): void {
+    retained.book = next.book;
+    retained.sourceCount = next.sourceCount;
+    retained.inBookshelf = next.inBookshelf;
+    retained.sourceIds = next.sourceIds;
+    retained.variants = next.variants;
+  }
+
+  replace(items: SearchBookGroup[]): void {
+    // Streaming additions are the common path. Compute each next key once;
+    // never scan existing groups (and invoke ICU) for a key not in the list.
+    const nextKeys = items.map((group: SearchBookGroup): string => this.key(group));
+    const nextKeySet = new Set<string>(nextKeys);
+    // Remove only disappeared rows first. A source/category removal leaves a
+    // subsequence, not thousands of artificial row moves and key scans.
+    for (let index = this.keys.length - 1; index >= 0; index -= 1) {
+      if (!nextKeySet.has(this.keys[index])) {
+        this.items.splice(index, 1);
+        this.keys.splice(index, 1);
+        for (const listener of this.listeners) listener.onDataDelete(index);
+      }
+    }
+    const knownKeys = new Set<string>(this.keys);
+    // Incremental notifications preserve visible lazy rows. Reloading the
+    // entire data source defeats ArkUI's visible-content-position guarantee.
+    for (let index = 0; index < items.length; index += 1) {
+      let next = items[index];
+      const nextKey = nextKeys[index];
+      if (this.items[index] !== undefined && this.keys[index] === nextKey) {
+        const retained = this.items[index];
+        this.update(retained, next);
+        for (const listener of this.listeners) listener.onDataChange(index);
+        continue;
+      }
+      const previous = knownKeys.has(nextKey) ? this.keys.indexOf(nextKey) : -1;
+      if (previous >= 0) {
+        const retained = this.items[previous];
+        this.update(retained, next);
+        next = retained;
+        this.items.splice(previous, 1);
+        this.keys.splice(previous, 1);
+        for (const listener of this.listeners) listener.onDataDelete(previous);
+      }
+      this.items.splice(index, 0, next);
+      this.keys.splice(index, 0, nextKey);
+      knownKeys.add(nextKey);
+      for (const listener of this.listeners) listener.onDataAdd(index);
+    }
+    while (this.items.length > items.length) {
+      this.items.splice(items.length, 1);
+      this.keys.splice(items.length, 1);
+      for (const listener of this.listeners) listener.onDataDelete(items.length);
+    }
+  }
+
+}
+
 /**
  * Figma-backed Book Search for `11 · Search`:
  * `2635:58749`(Phone) / `2635:59195`(Tablet) Initial, `2635:58809` Loading,
@@ -156,9 +248,16 @@ class SearchBookGroup {
 @Component
 export struct SearchPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @Prop presentation: SearchPresentation;
+  @Prop @Watch('refreshVisibleResults') presentation: SearchPresentation;
   @Prop sources: SearchSource[];
-  @Prop shelfBooks: ShelfBook[] = [];
+  viewState: SearchViewState = new SearchViewState();
+  private resultScroller: Scroller = new Scroller();
+  private restoreKey: string = '';
+  private restoreOffset: number = 0;
+  private restoreItemY: number = 0;
+  private scrollRestored: boolean = false;
+  private viewStateRevision: number = -1;
+  @Prop @Watch('refreshVisibleResults') shelfBooks: ShelfBook[] = [];
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
   /**
@@ -177,23 +276,26 @@ export struct SearchPage {
   onManageSources: () => void = (): void => {};
   @State keyword: string = '';
   @State historyExpanded: boolean = false;
-  // Figma search scope = source groups: `全部` sweeps every enabled source;
-  // a group chip re-runs the sweep within that group (Figma 2635:58985 /
-  // 2635:59076 place the chip wall in Results/Empty only — never Initial).
+  // Product result categories filter one session; changing a chip never
+  // starts another network sweep.
   @State selectedGroupName: string = '全部';
+  @State private visibleGroups: SearchBookGroup[] = [];
+  private resultDataSource: SearchResultDataSource = new SearchResultDataSource();
+  private groupedCategory: string = '';
   private groupedResultsInput: SearchBook[] | undefined = undefined;
   private groupedShelfInput: ShelfBook[] | undefined = undefined;
   private groupedResultsCache: SearchBookGroup[] = [];
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
-    // Returning from Source Management rebuilds this page; the pre-leave
-    // presentation survives in Index, so restore its keyword into the field.
-    const presentation = this.presentation;
-    if (presentation.kind === 'loading' || presentation.kind === 'results' ||
-      presentation.kind === 'empty' || presentation.kind === 'error') {
-      this.keyword = presentation.keyword;
-    }
+    this.restoreKey = this.viewState.anchorKey;
+    this.restoreOffset = this.viewState.anchorOffset;
+    this.restoreItemY = this.viewState.anchorItemY;
+    this.scrollRestored = false;
+    this.selectedGroupName = this.viewState.category;
+    this.historyExpanded = this.viewState.historyExpanded;
+    this.keyword = this.viewState.keywordDraft;
+    this.refreshVisibleResults();
   }
 
   build() {
@@ -243,56 +345,29 @@ export struct SearchPage {
       // renders dimmed so the dead submit reads as disabled, not broken.
       return;
     }
+    this.viewState.reset(keyword);
+    this.selectedGroupName = '全部';
     this.onSearch(keyword, scope);
   }
 
   /** undefined = all enabled sources; otherwise the selected group's usable subset. */
   private scopeSourceIds(): string[] | undefined {
-    if (this.selectedGroupName === '全部') {
-      return undefined;
-    }
-    const selected: string[] = [];
-    for (const source of this.sources) {
-      if (source.enabled && source.name.trim().length > 0 &&
-        source.group === this.selectedGroupName) {
-        selected.push(source.sourceId);
-      }
-    }
-    return selected;
+    return undefined;
   }
 
-  private enabledSources(): SearchSource[] {
-    return this.sources.filter((source: SearchSource): boolean =>
-      source.enabled && source.name.trim().length > 0);
-  }
-
-  /** Distinct groups of the enabled sources, in first-appearance order. */
   private groupNames(): string[] {
-    const names: string[] = [];
-    for (const source of this.enabledSources()) {
-      const group = source.group;
-      if (group !== undefined && names.indexOf(group) < 0) {
-        names.push(group);
-      }
-    }
-    return names;
+    return ['本地', '在线'];
   }
 
-  /** Tap a group chip: switch the scope, then re-run the current search within it. */
   private selectGroup(name: string): void {
-    if (this.isSweeping()) {
-      return;
-    }
     this.selectedGroupName = name;
-    const keyword = this.keyword.trim();
-    if (keyword.length === 0) {
-      return;
-    }
-    const scope = this.scopeSourceIds();
-    if (scope !== undefined && scope.length === 0) {
-      return;
-    }
-    this.onSearch(keyword, scope);
+    this.viewState.category = name;
+    this.viewState.anchorKey = '';
+    this.viewState.anchorOffset = 0;
+    this.viewState.anchorIndex = 0;
+    this.viewState.anchorItemY = 0;
+    this.resultScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+    this.refreshVisibleResults();
   }
 
   @Builder
@@ -318,6 +393,7 @@ export struct SearchPage {
           submitEnabled: this.presentation.kind !== 'loading',
           onTextChange: (value: string): void => {
             this.keyword = value;
+            this.viewState.keywordDraft = value;
           },
           onSubmit: (): void => this.submitSearch(),
         });
@@ -389,8 +465,7 @@ export struct SearchPage {
     } else if (this.presentation.kind === 'loading') {
       this.loadingContent();
     } else if (this.presentation.kind === 'results') {
-      this.resultsContent(this.presentation.keyword, this.groupResults(this.presentation.results),
-        this.presentation.searching);
+      this.resultsContent();
     } else if (this.presentation.kind === 'sourceRequired') {
       this.sourceRequiredContent(this.presentation.reason);
     } else if (this.presentation.kind === 'sourceLoadError') {
@@ -477,9 +552,9 @@ export struct SearchPage {
     if (this.groupNames().length > 0) {
       Scroll() {
         Row({ space: TOK_SPACE_XS }) {
-          this.groupScopeChip('全部', this.selectedGroupName === '全部');
+          this.groupScopeChip('全部');
           ForEach(this.groupNames(), (name: string) => {
-            this.groupScopeChip(name, this.selectedGroupName === name);
+            this.groupScopeChip(name);
           }, (name: string): string => `search-group-${name}`);
         }
         .alignItems(VerticalAlign.Center)
@@ -494,22 +569,22 @@ export struct SearchPage {
   }
 
   @Builder
-  private groupScopeChip(label: string, selected: boolean) {
+  private groupScopeChip(label: string) {
     Text(label)
       .fontFamily('ReaderInter')
-      .fontWeight(selected ? FontWeight.Bold : FontWeight.Medium)
+      .fontWeight(this.selectedGroupName === label ? FontWeight.Bold : FontWeight.Medium)
       .fontSize(12)
       .lineHeight(12)
-      .fontColor(selected ? TOK_ON_PRIMARY : TOK_INK)
+      .fontColor(this.selectedGroupName === label ? TOK_ON_PRIMARY : TOK_INK)
       .padding({ left: 10, right: 10, top: 5.5, bottom: 5.5 })
-      .backgroundColor(selected ? TOK_GREEN : TOK_PAPER)
-      .border({ width: TOK_BORDER_W, color: selected ? TOK_GREEN : TOK_BORDER })
+      .backgroundColor(this.selectedGroupName === label ? TOK_GREEN : TOK_PAPER)
+      .border({ width: TOK_BORDER_W, color: this.selectedGroupName === label ? TOK_GREEN : TOK_BORDER })
       .borderRadius(999)
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis })
       .constraintSize({ maxWidth: 160 })
       .onClick((): void => this.selectGroup(label))
-      .accessibilityText(selected ? `当前搜索范围:${label}` : `按书源组筛选:${label}`);
+      .accessibilityText(this.selectedGroupName === label ? `当前搜索范围:${label}` : `筛选搜索结果:${label}`);
   }
 
   @Builder
@@ -532,6 +607,7 @@ export struct SearchPage {
     .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .onClick((): void => {
       this.historyExpanded = true;
+      this.viewState.historyExpanded = true;
     })
     .accessibilityText(`展开其余 ${count} 条搜索历史`);
   }
@@ -548,7 +624,7 @@ export struct SearchPage {
         .height(36)
         .color(TOK_GREEN)
         .enableLoading(true);
-      Text('正在搜索所有书源…')
+      Text('正在搜索本地与在线书籍…')
         .margin({ top: 18 })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
@@ -564,8 +640,30 @@ export struct SearchPage {
     .padding({ bottom: 48 });
   }
 
+  private refreshVisibleResults(): void {
+    if (this.viewStateRevision !== this.viewState.revision) {
+      this.viewStateRevision = this.viewState.revision;
+      this.selectedGroupName = this.viewState.category;
+      this.keyword = this.viewState.keywordDraft;
+      this.historyExpanded = this.viewState.historyExpanded;
+      this.restoreKey = this.viewState.anchorKey;
+      this.restoreOffset = this.viewState.anchorOffset;
+      this.restoreItemY = this.viewState.anchorItemY;
+      this.scrollRestored = false;
+      this.groupedResultsInput = undefined;
+    }
+    // API 23 can retain Repeat rows after replacement even with a state
+    // array. Notify a lazy data source explicitly, as Source Management does.
+    const groups = this.presentation.kind === 'results'
+      ? this.groupResults(this.presentation.results) : [];
+    this.visibleGroups = groups;
+    this.resultDataSource.replace(groups);
+  }
+
+  // ArkUI does not track mutable @Builder value parameters. Read state at
+  // the consuming nodes so category changes and stop both update in place.
   @Builder
-  private resultsContent(keyword: string, results: SearchBookGroup[], searching: boolean) {
+  private resultsContent() {
     Stack({ alignContent: Alignment.Bottom }) {
       Column() {
         Row() {
@@ -575,7 +673,7 @@ export struct SearchPage {
             .fontSize(11)
             .lineHeight(16.5)
             .fontColor(TOK_MUTED);
-          Text(`${results.length}`)
+          Text(`${this.visibleGroups.length}`)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(11)
@@ -591,6 +689,9 @@ export struct SearchPage {
           // minimal-update re-render tracks it exactly like the search/stop
           // pill does: the sweep counter must update live per source landing.
           if (this.presentation.kind === 'results') {
+            if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
+              Text('部分搜索未完成，请重试').fontSize(12).fontColor(TOK_MUTED);
+            }
             if (this.presentation.stopped === true) {
               // ACQ-02: a stopped sweep keeps its partial results; the header
               // states how far the interrupted sweep got so partials never read
@@ -604,7 +705,7 @@ export struct SearchPage {
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             } else if (this.presentation.searching) {
-              Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${results.length} 个`)
+              Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`)
                 .fontFamily('ReaderInter')
                 .fontWeight(FontWeight.Regular)
                 .fontSize(11)
@@ -630,21 +731,47 @@ export struct SearchPage {
         .alignItems(VerticalAlign.Center)
         .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
 
-        List() {
-          Repeat(results)
-            .each((repeatItem: RepeatItem<SearchBookGroup>) => {
-              ListItem() {
-                this.resultCard(repeatItem.item.book, repeatItem.item.sourceCount,
-                  repeatItem.item.inBookshelf, repeatItem.item.variants);
-              }
-            })
-            .key((group: SearchBookGroup): string =>
-              `search-result-${this.normalizedBookKey(group.book.title, group.book.author)}`)
-            .virtualScroll({ reusable: true });
+        List({ scroller: this.resultScroller }) {
+          LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
+            ListItem() {
+              SearchResultCard({ group, isTablet: this.isTablet, cardWidth: this.contentFrame().width,
+                onSelectResult: (book: SearchBook, variants: SearchBook[]): void => this.onSelectResult(book, variants) });
+            }
+          }, (group: SearchBookGroup): string =>
+            this.resultGroupKey(group.book));
         }
         .width('100%')
         .layoutWeight(1)
-        .scrollBar(BarState.Off);
+        .scrollBar(BarState.Off)
+        .maintainVisibleContentPosition(true)
+        .onScrollIndex((start: number): void => {
+          if (!this.scrollRestored) return;
+          const group = this.visibleGroups[start];
+          if (group === undefined) return;
+          this.viewState.anchorIndex = start;
+          this.viewState.anchorKey = this.resultGroupKey(group.book);
+          this.saveScrollAnchor();
+        })
+        .onScroll((): void => { if (this.scrollRestored) this.saveScrollAnchor(); })
+        .onAppear((): void => {
+          const anchor = this.visibleGroups.findIndex((group: SearchBookGroup): boolean =>
+            this.resultGroupKey(group.book) === this.restoreKey);
+          if (anchor >= 0) {
+            this.resultScroller.scrollToIndex(anchor, false, ScrollAlign.START);
+            // Correct by measured item coordinates after the indexed jump;
+            // metadata may have changed the heights of preceding cards.
+            setTimeout((): void => {
+              try {
+                const currentY = this.resultScroller.getItemRect(anchor).y;
+                this.resultScroller.scrollBy(0, currentY - this.restoreItemY);
+              } catch (_error) { /* The anchor may have disappeared after source deletion. */ }
+              this.scrollRestored = true;
+            }, 0);
+          } else {
+            this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.restoreOffset });
+            this.scrollRestored = true;
+          }
+        });
       }
       .width('100%')
       .height('100%');
@@ -653,7 +780,7 @@ export struct SearchPage {
       // still running the live query indicator stays anchored at the same
       // bottom position as the no-results loading state, as a non-interactive
       // overlay — every touch reaches the result list beneath it.
-      if (searching) {
+      if (this.presentation.kind === 'results' && this.presentation.searching) {
         LoadingProgress()
           .width(36)
           .height(36)
@@ -667,140 +794,9 @@ export struct SearchPage {
     .layoutWeight(1);
   }
 
-  @Builder
-  private resultCard(
-    book: SearchBook,
-    sourceCount: number,
-    inBookshelf: boolean,
-    variants: SearchBook[],
-  ) {
-    Row({ space: TOK_SPACE_SM }) {
-      Stack({ alignContent: Alignment.Bottom }) {
-        if (book.coverUrl !== undefined && book.coverUrl.trim().length > 0) {
-          Image(book.coverUrl)
-            .width(this.isTablet ? 68 : 60)
-            .height(this.isTablet ? 92 : 82)
-            .objectFit(ImageFit.Cover)
-            .borderRadius(6);
-        } else {
-          // Figma CoverContainer placeholder: a primary-green gradient with the
-          // book title overlaid at the bottom. No per-book gradient mapping
-          // rule exists, so the sole primary gradient is reused as the
-          // DESIGN_FIXTURE no-cover placeholder.
-          Stack({ alignContent: Alignment.Bottom }) {
-            Text(book.title)
-              .width('100%')
-              .fontFamily('ReaderNotoSerifSCBold')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(9)
-              .lineHeight(11.7)
-              .fontColor('#99FFFAF4')
-              .textAlign(TextAlign.Center)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .padding({ left: TOK_SPACE_ROW_BLOCK, right: TOK_SPACE_ROW_BLOCK, bottom: 6 });
-          }
-          .width(this.isTablet ? 68 : 60)
-          .height(this.isTablet ? 92 : 82)
-          .linearGradient({
-            angle: 141.7,
-            colors: [[TOK_PRIMARY_GRADIENT_START, 0.077], [TOK_PRIMARY_DARK, 0.923]],
-          })
-          .borderRadius(6);
-        }
-      }
-      .width(this.isTablet ? 68 : 60)
-      .height(this.isTablet ? 92 : 82)
-      .borderRadius(6);
-
-      Column({ space: 5 }) {
-        Text(book.title)
-          .width('100%')
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(15)
-          .lineHeight(19.5)
-          .fontColor(TOK_INK)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-        Text(book.author)
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(12)
-          .lineHeight(12)
-          .fontColor(TOK_MUTED)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-        if (book.latestChapterTitle !== undefined) {
-          Text(book.latestChapterTitle)
-            .width('100%')
-            .opacity(0.8)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(11)
-            .fontColor(TOK_MUTED)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-        }
-
-        if (book.intro !== undefined && book.intro.trim().length > 0) {
-          Text(book.intro)
-            .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(18)
-            .fontColor('#9A948E')
-            .maxLines(2)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-        }
-
-        Row({ space: 6 }) {
-          Text(book.sourceName.length > 0 ? book.sourceName : book.sourceId)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(10)
-            .lineHeight(10)
-            .fontColor(TOK_GREEN)
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(TOK_PRIMARY_SOFT)
-            .borderRadius(4)
-            .maxLines(1);
-          Text(`共 ${sourceCount} 个书源`)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .fontColor(TOK_MUTED)
-            .maxLines(1);
-          if (inBookshelf) {
-            Text('已在书架')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(10)
-              .fontColor(TOK_GREEN)
-              .maxLines(1);
-          }
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center);
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start);
-    }
-    .width(this.contentFrame().width)
-    .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
-    .alignItems(VerticalAlign.Top)
-    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } })
-    .onClick((): void => this.onSelectResult(book, variants));
-  }
-
   private groupResults(results: SearchBook[]): SearchBookGroup[] {
-    if (this.groupedResultsInput === results && this.groupedShelfInput === this.shelfBooks) {
+    if (this.groupedResultsInput === results && this.groupedShelfInput === this.shelfBooks &&
+      this.groupedCategory === this.selectedGroupName) {
       return this.groupedResultsCache;
     }
     const byBook = new Map<string, SearchBookGroup>();
@@ -814,9 +810,14 @@ export struct SearchPage {
       shelfBookKeys.add(this.normalizedBookKey(shelf.title, shelf.author));
     }
     for (const book of results) {
-      const key = this.normalizedBookKey(book.title, book.author);
+      const local = book.sourceId === 'local';
+      if ((this.selectedGroupName === '本地' && !local) ||
+        (this.selectedGroupName === '在线' && local)) continue;
+      const titleKey = book.groupKey ?? this.normalizedBookKey(book.title, book.author);
+      const key = this.resultGroupKey(book);
+      this.viewState.rank(key);
       const inBookshelf = shelfIdentityKeys.has(`${book.sourceId}\u0000${book.bookId}`) ||
-        shelfBookKeys.has(key);
+        (!local && shelfBookKeys.has(titleKey));
       const existing = byBook.get(key);
       if (existing === undefined) {
         byBook.set(key, new SearchBookGroup(book, 1, inBookshelf));
@@ -824,18 +825,30 @@ export struct SearchPage {
         existing.admit(book, inBookshelf);
       }
     }
-    // Legado keeps one card per exact title/author and promotes books found
-    // by more origins. Preserve discovery order for equal source counts.
+    // Freeze first-seen order within this query so enrichment/source counts
+    // cannot move the book under the user's finger or invalidate the anchor.
     const grouped = Array.from(byBook.values()).sort((left: SearchBookGroup, right: SearchBookGroup): number =>
-      right.sourceCount - left.sourceCount);
+      this.viewState.rank(this.resultGroupKey(left.book)) - this.viewState.rank(this.resultGroupKey(right.book)));
+    this.groupedCategory = this.selectedGroupName;
     this.groupedResultsInput = results;
     this.groupedShelfInput = this.shelfBooks;
     this.groupedResultsCache = grouped;
     return grouped;
   }
 
+  private saveScrollAnchor(): void {
+    this.viewState.anchorOffset = this.resultScroller.currentOffset().yOffset;
+    try { this.viewState.anchorItemY = this.resultScroller.getItemRect(this.viewState.anchorIndex).y; }
+    catch (_error) { /* A lazy row can be between layout passes. */ }
+  }
+
+  private resultGroupKey(book: SearchBook): string {
+    return book.sourceId === 'local' ? `local:${book.bookId}` :
+      `online:${book.groupKey ?? this.normalizedBookKey(book.title, book.author)}`;
+  }
+
   private normalizedBookKey(title: string, author: string): string {
-    return `${title.trim().toLocaleLowerCase()}\u0000${author.trim().toLocaleLowerCase()}`;
+    return `${title.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}\u0000${author.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`;
   }
 
   @Builder
@@ -1130,5 +1143,148 @@ export struct SearchPage {
       readerVisualSafeRight(metrics),
       new SurfaceWidthSpec(TOK_CONTENT_RAIL_W_TABLET),
     );
+  }
+}
+
+/** A stable lazy row observes enrichment without remounting the whole result. */
+@Component
+struct SearchResultCard {
+  // LazyForEach supplies a regular row value.  ObjectLink requires the
+  // parent to pass an @Observed-owned object and the compiler otherwise
+  // rejects this boundary; the data source emits an explicit row change when
+  // an existing observed group is enriched in place.
+  @Prop group: SearchBookGroup;
+  @Prop isTablet: boolean = false;
+  @Prop cardWidth: number = 0;
+  onSelectResult: (book: SearchBook, variants: SearchBook[]) => void = (): void => {};
+
+  private displayIntro(): string {
+    return bookIntroText(this.group.book.intro);
+  }
+
+  build() {
+    Row({ space: TOK_SPACE_SM }) {
+      Stack({ alignContent: Alignment.Bottom }) {
+        if (this.group.book.coverUrl !== undefined && this.group.book.coverUrl.trim().length > 0) {
+          Image(this.group.book.coverUrl)
+            .width(this.isTablet ? 68 : 60)
+            .height(this.isTablet ? 92 : 82)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(6);
+        } else {
+          // Figma CoverContainer placeholder: a primary-green gradient with the
+          // book title overlaid at the bottom. No per-book gradient mapping
+          // rule exists, so the sole primary gradient is reused as the
+          // DESIGN_FIXTURE no-cover placeholder.
+          Stack({ alignContent: Alignment.Bottom }) {
+            Text(this.group.book.title)
+              .width('100%')
+              .fontFamily('ReaderNotoSerifSCBold')
+              .fontWeight(FontWeight.Bold)
+              .fontSize(9)
+              .lineHeight(11.7)
+              .fontColor('#99FFFAF4')
+              .textAlign(TextAlign.Center)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .padding({ left: TOK_SPACE_ROW_BLOCK, right: TOK_SPACE_ROW_BLOCK, bottom: 6 });
+          }
+          .width(this.isTablet ? 68 : 60)
+          .height(this.isTablet ? 92 : 82)
+          .linearGradient({
+            angle: 141.7,
+            colors: [[TOK_PRIMARY_GRADIENT_START, 0.077], [TOK_PRIMARY_DARK, 0.923]],
+          })
+          .borderRadius(6);
+        }
+      }
+      .width(this.isTablet ? 68 : 60)
+      .height(this.isTablet ? 92 : 82)
+      .borderRadius(6);
+
+      Column({ space: 5 }) {
+        Text(this.group.book.title)
+          .width('100%')
+          .fontFamily('ReaderNotoSerifSCBold')
+          .fontWeight(FontWeight.Bold)
+          .fontSize(15)
+          .lineHeight(19.5)
+          .fontColor(TOK_INK)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+
+        Text(this.group.book.author)
+          .width('100%')
+          .fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(12)
+          .lineHeight(12)
+          .fontColor(TOK_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+
+        if (this.group.book.latestChapterTitle !== undefined) {
+          Text(this.group.book.latestChapterTitle)
+            .width('100%')
+            .opacity(0.8)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(11)
+            .fontColor(TOK_MUTED)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
+
+        if (this.displayIntro().length > 0) {
+          Text(this.displayIntro())
+            .width('100%')
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(12)
+            .lineHeight(18)
+            .fontColor('#9A948E')
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
+
+        Row({ space: 6 }) {
+          Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(10)
+            .lineHeight(10)
+            .fontColor(TOK_GREEN)
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .backgroundColor(TOK_PRIMARY_SOFT)
+            .borderRadius(4)
+            .maxLines(1);
+          Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(16.5)
+            .fontColor(TOK_MUTED)
+            .maxLines(1);
+          if (this.group.inBookshelf) {
+            Text('已在书架')
+              .fontFamily('ReaderInter')
+              .fontWeight(FontWeight.Bold)
+              .fontSize(10)
+              .fontColor(TOK_GREEN)
+              .maxLines(1);
+          }
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center);
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start);
+    }
+    .width(this.cardWidth)
+    .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
+    .alignItems(VerticalAlign.Top)
+    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } })
+    .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
   }
 }

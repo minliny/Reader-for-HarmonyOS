@@ -1,10 +1,11 @@
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import util from '@ohos.util';
-import { readLocalEpubEntry } from '@reader/core-harmony';
+import { readLocalEpubEntryAsync } from '@reader/core-harmony';
 import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
 
 const LOCAL_EPUB_SCHEME = 'reader-local-epub://';
+const LOCAL_MOBI_SCHEME = 'reader-local-mobi://';
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
 
 type LocalEpubResourceLocator = {
@@ -33,12 +34,20 @@ export class LocalEpubResourceHost {
   ): Promise<ReadingBodyImagePayload> {
     this.assertCurrent(isCurrent);
     const locator = this.parseLocator(locatorValue);
-    const archivePath = `${this.context.filesDir}/reader-import/books/${locator.hash}.epub`;
+    let archivePath = `${this.context.filesDir}/reader-import/books/${locator.hash}.source`;
+    if (!(await fileIo.access(archivePath))) {
+      archivePath = `${this.context.filesDir}/reader-import/books/${locator.hash}.epub`;
+    }
     if (!(await fileIo.access(archivePath))) {
       throw new Error('local EPUB source asset is unavailable; re-import is required');
     }
     this.assertCurrent(isCurrent);
-    const bytes = readLocalEpubEntry(archivePath, locator.archivePath, MAX_READING_IMAGE_BYTES);
+    const bytes = await readLocalEpubEntryAsync(
+      archivePath,
+      locator.archivePath,
+      MAX_READING_IMAGE_BYTES,
+    );
+    this.assertCurrent(isCurrent);
     return ReadingBodyImageHost.instance.loadBytes(bytes, isCurrent);
   }
 
@@ -49,10 +58,11 @@ export class LocalEpubResourceHost {
   }
 
   private parseLocator(value: string): LocalEpubResourceLocator {
-    if (!value.startsWith(LOCAL_EPUB_SCHEME)) {
+    const scheme = value.startsWith(LOCAL_MOBI_SCHEME) ? LOCAL_MOBI_SCHEME : LOCAL_EPUB_SCHEME;
+    if (!value.startsWith(scheme)) {
       throw new Error('local EPUB image locator uses an unsupported scheme');
     }
-    const tokens = value.substring(LOCAL_EPUB_SCHEME.length).split('/');
+    const tokens = value.substring(scheme.length).split('/');
     if (tokens.length !== 2 || tokens[0].length === 0 || tokens[1].length === 0) {
       throw new Error('local EPUB image locator is malformed');
     }

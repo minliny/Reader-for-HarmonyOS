@@ -2,7 +2,7 @@ import { audio } from '@kit.AudioKit';
 import { media } from '@kit.MediaKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf } from './ErrorMessage.ts';
-import http from '@ohos.net.http';
+import util from '@ohos.util';
 import {
   type ReaderTtsHost,
   type ReaderTtsHostEvent,
@@ -12,14 +12,20 @@ import {
 import {
   ReaderHttpTtsGateway,
   type ReaderHttpTtsRuntime,
+  type ReaderHttpTtsRequestDescriptor,
 } from '../features/reading/ReaderHttpTtsGateway';
+import { isReaderTtsCredentialAliasForConfig } from '../features/reading/ReaderOnlineTtsProfile';
+import { ReaderTtsCredentialStore } from './ReaderTtsCredentialStore';
+import { HttpExecuteHost } from './HttpExecuteHost';
+import { isCrossOriginSensitiveHeader } from './HttpTransportPolicy';
 
 const LOG_DOMAIN = 0x5244;
 const HTTP_TTS_ENGINE_PREFIX = 'http-tts:';
-const HTTP_TTS_CONNECT_TIMEOUT_MS = 15000;
-const HTTP_TTS_READ_TIMEOUT_MS = 30000;
 const HTTP_TTS_MAX_REDIRECTS = 10;
 const HTTP_TTS_MAX_AUDIO_BYTES = 16 * 1024 * 1024;
+const HTTP_TTS_MAX_URL_LENGTH = 2 * 1024 * 1024;
+const HTTP_TTS_MAX_HEADER_VALUE_LENGTH = 64 * 1024;
+const HTTP_TTS_PCM_SAMPLE_RATES: number[] = [8000, 16000, 22050, 24000, 32000, 44100, 48000];
 
 /** Host-only network/audio transport for a Core-owned HttpTTS descriptor. */
 export class HarmonyHttpTtsHost implements ReaderTtsHost {
@@ -31,8 +37,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
   private listenerOwner: string | undefined = undefined;
   private player: media.AVPlayer | undefined = undefined;
-  private activeRequest: http.HttpRequest | null = null;
-  private rejectActiveRequest: ((reason?: Error) => void) | undefined = undefined;
+  private networkGeneration: number = 0;
   private configId: number | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
   private audioBytes: Uint8Array | undefined = undefined;
@@ -40,6 +45,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private startReported: boolean = false;
   private audioListenersInstalled: boolean = false;
   private audioSessionActive: boolean = false;
+  private audioSessionAllowMixing: boolean | undefined = undefined;
   private closed: boolean = false;
 
   constructor(runtime: ReaderHttpTtsRuntime) {
@@ -103,13 +109,14 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   async activateAudioSession(allowMixing: boolean): Promise<void> {
     this.assertOpen();
     this.installAudioListeners();
-    if (this.audioSessionActive) return;
+    if (this.audioSessionActive && this.audioSessionAllowMixing === allowMixing) return;
     this.audioSessionManager.setAudioSessionScene(audio.AudioSessionScene.AUDIO_SESSION_SCENE_MEDIA);
     const concurrencyMode = allowMixing
       ? audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS
       : audio.AudioConcurrencyMode.CONCURRENCY_PAUSE_OTHERS;
     await this.audioSessionManager.activateAudioSession({ concurrencyMode });
     this.audioSessionActive = true;
+    this.audioSessionAllowMixing = allowMixing;
   }
 
   async deactivateAudioSession(): Promise<void> {
@@ -118,6 +125,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       await this.audioSessionManager.deactivateAudioSession();
     } finally {
       this.audioSessionActive = false;
+      this.audioSessionAllowMixing = undefined;
     }
   }
 
@@ -130,12 +138,10 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     if (request.requestId.trim().length === 0 || request.text.trim().length === 0) {
       throw new Error('Reader HttpTTS requires requestId and text');
     }
-    const descriptor = await this.gateway.buildRequest(configId, request.text);
+    const ratePercent = Math.max(50, Math.min(200, Math.round(request.rate * 20) * 5));
+    const descriptor = await this.gateway.buildRequest(configId, request.text, ratePercent);
     if (this.closed || generation !== this.speakGeneration) return;
-    if (descriptor.body !== undefined) {
-      throw new Error('Reader HttpTTS Host does not accept a body for a GET descriptor');
-    }
-    const bytes = await this.fetchAudio(descriptor.url, descriptor.headers);
+    const bytes = await this.fetchAudio(descriptor, configId);
     if (this.closed || generation !== this.speakGeneration) return;
     await this.releasePlayer();
     if (this.closed || generation !== this.speakGeneration) return;
@@ -232,67 +238,211 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     }
   }
 
-  private async fetchAudio(url: string, headers: Record<string, string>): Promise<Uint8Array> {
-    const request = http.createHttp();
-    let rejectCancellation: (reason?: Error) => void = (): void => undefined;
-    const cancellation = new Promise<http.HttpResponse>((
-      _resolve: (value: http.HttpResponse) => void,
-      reject: (reason?: Error) => void,
-    ): void => {
-      rejectCancellation = reject;
-    });
-    this.activeRequest = request;
-    this.rejectActiveRequest = rejectCancellation;
-    try {
-      const response = await Promise.race([
-        request.request(url, {
-          method: http.RequestMethod.GET,
-          header: headers,
-          expectDataType: http.HttpDataType.ARRAY_BUFFER,
-          usingCache: false,
-          connectTimeout: HTTP_TTS_CONNECT_TIMEOUT_MS,
-          readTimeout: HTTP_TTS_READ_TIMEOUT_MS,
-          maxRedirects: HTTP_TTS_MAX_REDIRECTS,
-        }),
-        cancellation,
-      ]);
-      if (response.responseCode < 200 || response.responseCode >= 300) {
-        throw new Error(`Reader HttpTTS audio request failed with HTTP ${response.responseCode}`);
+  private async fetchAudio(descriptor: ReaderHttpTtsRequestDescriptor, configId: number): Promise<Uint8Array> {
+    const admittedGeneration = this.networkGeneration;
+    this.assertSafeDescriptorHeaders(descriptor.headers);
+    const resolvedRequest = await this.resolveRequest(descriptor, configId);
+    const headers = resolvedRequest.headers;
+    if (descriptor.body !== undefined && descriptor.body.includes('{{apiKey}}')) {
+      throw new Error('Reader HttpTTS request body contains an unresolved credential placeholder');
+    }
+    if (descriptor.body !== undefined && descriptor.contentType !== undefined &&
+      !Object.keys(headers).some((key: string): boolean => key.toLowerCase() === 'content-type')) {
+      headers['Content-Type'] = descriptor.contentType;
+    }
+    const response = await HttpExecuteHost.instance.execute({
+      url: resolvedRequest.url,
+      method: descriptor.method,
+      headers,
+      ...(descriptor.body === undefined ? {} : { body: descriptor.body }),
+      followRedirects: true,
+      maxRedirects: HTTP_TTS_MAX_REDIRECTS,
+      // Core profile URLs are HTTPS-only; enforce the same policy on every
+      // redirect hop so a provider cannot silently downgrade audio or
+      // credentials to cleartext after the initial validation.
+      httpsOnly: true,
+      // A credential-bearing URL must never forward its query secret to a
+      // different origin through a provider-controlled Location header. The
+      // same boundary also covers custom credential headers (for example
+      // X-API-Key), which the generic sensitive-header list cannot identify.
+      sameOriginRedirectsOnly: descriptor.playback?.credentialRef !== undefined,
+    }, undefined, (): boolean => this.closed || admittedGeneration !== this.networkGeneration);
+    const status = response['status'];
+    if (typeof status !== 'number' || status < 200 || status >= 300) {
+      throw new Error(`Reader HttpTTS audio request failed with HTTP ${status ?? 'unknown'}`);
+    }
+    const encoded = response['bodyBase64'];
+    if (typeof encoded !== 'string' || encoded.length === 0) {
+      throw new Error('Reader HttpTTS audio response must be binary');
+    }
+    const bytes = new util.Base64Helper().decodeSync(encoded, util.Type.MIME);
+    if (bytes.length === 0 || bytes.length > HTTP_TTS_MAX_AUDIO_BYTES) {
+      throw new Error(`Reader HttpTTS audio response size ${bytes.length} is outside the allowed range`);
+    }
+    return this.normalizeAudioBytes(bytes, descriptor.playback);
+  }
+
+  /** Resolve only opaque Core-issued credential aliases; raw secrets never
+   * enter Core state, descriptors, or diagnostic logs. */
+  private async resolveRequest(
+    descriptor: ReaderHttpTtsRequestDescriptor,
+    configId: number,
+  ): Promise<{ url: string; headers: Record<string, string> }> {
+    const headers: Record<string, string> = { ...descriptor.headers };
+    const playback = descriptor.playback;
+    let secret: string | undefined = undefined;
+    if (playback?.credentialRef !== undefined) {
+      if (!isReaderTtsCredentialAliasForConfig(playback.credentialRef, configId)) {
+        throw new Error('Reader HttpTTS credential alias does not belong to the selected config');
       }
-      if (!(response.result instanceof ArrayBuffer)) {
-        throw new Error('Reader HttpTTS audio response must be binary');
+      const credentialHeader = playback.credentialHeader?.trim();
+      if (credentialHeader !== undefined &&
+        (credentialHeader.length === 0 || credentialHeader.length > 128 ||
+          !/^[A-Za-z][A-Za-z0-9-]*$/.test(credentialHeader))) {
+        throw new Error('Reader HttpTTS credential header is invalid');
       }
-      const bytes = new Uint8Array(response.result);
-      if (bytes.length === 0 || bytes.length > HTTP_TTS_MAX_AUDIO_BYTES) {
-        throw new Error(`Reader HttpTTS audio response size ${bytes.length} is outside the allowed range`);
+      if (typeof playback.credentialPrefix !== 'string' || playback.credentialPrefix.length > 256 ||
+        /[\u0000-\u001f\u007f]/.test(playback.credentialPrefix)) {
+        throw new Error('Reader HttpTTS credential prefix is invalid');
       }
-      return bytes;
-    } finally {
-      if (this.activeRequest === request) {
-        this.activeRequest = null;
-        this.rejectActiveRequest = undefined;
+      const hasPlaceholder = Object.keys(headers).some((key: string): boolean =>
+        headers[key].includes('{{apiKey}}'));
+      const hasUrlPlaceholder = descriptor.url.includes('{{apiKey}}');
+      if ((credentialHeader === undefined || credentialHeader.length === 0) &&
+        !hasPlaceholder && !hasUrlPlaceholder) {
+        throw new Error('Reader HttpTTS credential header is missing');
       }
+      // A tampered Core descriptor may contain a stale Authorization/Cookie
+      // alongside the opaque alias. Drop every sensitive duplicate before
+      // adding the one authenticated value for this selected config.
+      for (const key of Object.keys(headers)) {
+        if (isCrossOriginSensitiveHeader(key)) delete headers[key];
+      }
+      secret = await ReaderTtsCredentialStore.instance.read(playback.credentialRef, configId);
+      if (credentialHeader !== undefined && credentialHeader.length > 0) {
+        this.deleteHeaderCaseInsensitive(headers, credentialHeader);
+        headers[credentialHeader] = `${playback.credentialPrefix ?? ''}${secret}`;
+      }
+    }
+    // Validate the descriptor before expanding placeholders. Core bounds the
+    // persisted URL/header strings, but a repeated placeholder can otherwise
+    // expand a small descriptor into an unbounded request.
+    if (descriptor.url.length > HTTP_TTS_MAX_URL_LENGTH) {
+      throw new Error('Reader HttpTTS request URL exceeds the allowed range');
+    }
+    for (const key of Object.keys(headers)) {
+      if (headers[key].includes('{{apiKey}}')) {
+        if (secret === undefined) throw new Error('Reader HttpTTS credential placeholder has no secret alias');
+        headers[key] = this.expandCredentialPlaceholder(
+          headers[key], secret, HTTP_TTS_MAX_HEADER_VALUE_LENGTH,
+          'Reader HttpTTS credential header exceeds the allowed range',
+        );
+      }
+    }
+    let requestUrl = descriptor.url;
+    if (requestUrl.includes('{{apiKey}}')) {
+      if (secret === undefined) throw new Error('Reader HttpTTS credential placeholder has no secret alias');
+      let encodedSecret: string;
       try {
-        request.destroy();
+        // URL query/path placeholders are component values, never raw URL
+        // fragments; this also prevents &, # or / in a key changing routing.
+        encodedSecret = encodeURIComponent(secret);
       } catch (_) {
-        // stop() may already be destroying this request; generation remains authoritative.
+        throw new Error('Reader HttpTTS credential cannot be URL-encoded');
+      }
+      requestUrl = this.expandCredentialPlaceholder(
+        requestUrl, encodedSecret, HTTP_TTS_MAX_URL_LENGTH,
+        'Reader HttpTTS request URL exceeds the allowed range',
+      );
+    }
+    this.assertSafeDescriptorHeaders(headers);
+    return { url: requestUrl, headers };
+  }
+
+  private expandCredentialPlaceholder(
+    value: string,
+    replacement: string,
+    maxLength: number,
+    failureMessage: string,
+  ): string {
+    const placeholder = '{{apiKey}}';
+    let count = 0;
+    let offset = 0;
+    while (true) {
+      const found = value.indexOf(placeholder, offset);
+      if (found < 0) break;
+      count += 1;
+      offset = found + placeholder.length;
+    }
+    const expandedLength = value.length + count * (replacement.length - placeholder.length);
+    if (!Number.isSafeInteger(expandedLength) || expandedLength > maxLength) {
+      throw new Error(failureMessage);
+    }
+    // Use a replacer callback: String.replace interprets `$&`, `$'`, and
+    // similar sequences in a replacement string, so passing a raw secret
+    // directly would corrupt or duplicate credential data.
+    return count === 0 ? value : value.replace(/\{\{apiKey\}\}/g, (): string => replacement);
+  }
+
+  private deleteHeaderCaseInsensitive(headers: Record<string, string>, wanted: string): void {
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === wanted.toLowerCase()) delete headers[key];
+    }
+  }
+
+  private assertSafeDescriptorHeaders(headers: Record<string, string>): void {
+    if (typeof headers !== 'object' || headers === null || Array.isArray(headers)) {
+      throw new Error('Reader HttpTTS request headers are invalid');
+    }
+    for (const key of Object.keys(headers)) {
+      const value = headers[key];
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype' ||
+        key.length > 128 || !/^[!#$%&'*+.^_`|~A-Za-z0-9-]+$/.test(key) ||
+        typeof value !== 'string' || value.length > 64 * 1024 ||
+        /[\u0000-\u0008\u000a-\u001f\u007f]/.test(value)) {
+        throw new Error('Reader HttpTTS request headers are invalid');
       }
     }
   }
 
-  private cancelActiveRequest(message: string): void {
-    const request = this.activeRequest;
-    const reject = this.rejectActiveRequest;
-    this.activeRequest = null;
-    this.rejectActiveRequest = undefined;
-    if (request !== null) {
-      try {
-        request.destroy();
-      } catch (_) {
-        // A concurrent fetch cleanup may already own destroy().
-      }
+  /** AVPlayer consumes containerized audio. Wrap validated s16le PCM in a
+   * minimal RIFF/WAVE header so the Core-declared PCM profile is playable. */
+  private normalizeAudioBytes(
+    bytes: Uint8Array,
+    playback: ReaderHttpTtsRequestDescriptor['playback'],
+  ): Uint8Array {
+    if (playback?.format !== 'pcm') return bytes;
+    const sampleRate = playback.sampleRate;
+    const channels = playback.channels;
+    if (sampleRate === undefined || channels === undefined ||
+      !Number.isSafeInteger(sampleRate) || HTTP_TTS_PCM_SAMPLE_RATES.indexOf(sampleRate) < 0 ||
+      !Number.isSafeInteger(channels) || (channels !== 1 && channels !== 2) ||
+      bytes.length % (channels * 2) !== 0) {
+      throw new Error('Reader HttpTTS PCM response metadata or sample alignment is invalid');
     }
-    if (reject !== undefined) reject(new Error(message));
+    if (bytes.length > HTTP_TTS_MAX_AUDIO_BYTES - 44) {
+      throw new Error('Reader HttpTTS PCM response exceeds the allowed range');
+    }
+    const wav = new Uint8Array(bytes.length + 44);
+    const view = new DataView(wav.buffer);
+    const put = (offset: number, text: string): void => {
+      for (let index = 0; index < text.length; index += 1) view.setUint8(offset + index, text.charCodeAt(index));
+    };
+    const writeU16 = (offset: number, value: number): void => view.setUint16(offset, value, true);
+    const writeU32 = (offset: number, value: number): void => view.setUint32(offset, value, true);
+    const byteRate = sampleRate * channels * 2;
+    put(0, 'RIFF'); writeU32(4, wav.length - 8); put(8, 'WAVE'); put(12, 'fmt ');
+    writeU32(16, 16); writeU16(20, 1); writeU16(22, channels); writeU32(24, sampleRate);
+    writeU32(28, byteRate); writeU16(32, channels * 2); writeU16(34, 16);
+    put(36, 'data'); writeU32(40, bytes.length); wav.set(bytes, 44);
+    return wav;
+  }
+
+  private cancelActiveRequest(_message: string): void {
+    // HttpExecuteHost polls this generation and destroys its active platform
+    // request. The shared transport owns DNS pinning, redirect-by-redirect
+    // target validation and cross-origin sensitive-header removal.
+    this.networkGeneration += 1;
   }
 
   private createDataSource(bytes: Uint8Array): media.AVDataSrcDescriptor {
@@ -356,6 +506,6 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
 
   private logError(message: string, error: Object): void {
     const detail = errorMessageOf(error);
-    hilog.error(LOG_DOMAIN, 'Reader', '%{public}s: %{public}s', message, detail);
+    hilog.error(LOG_DOMAIN, 'Reader', '%{private}s: %{private}s', message, detail);
   }
 }

@@ -267,7 +267,7 @@ export class RssSubscriptionEditorOrchestrator {
     if (this.isCurrentSession(session)) {
       this.publish({ busy: false, statusMessage: `${label}：${error.message}` });
     }
-    hilog.error(DOMAIN, 'Reader', '%{public}s: %{public}s', label, error.message);
+    hilog.error(DOMAIN, 'Reader', '%{private}s: %{private}s', label, error.message);
   }
 
   private copySnapshot(source: RssSubscriptionEditorSnapshot): RssSubscriptionEditorSnapshot {

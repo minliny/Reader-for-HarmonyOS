@@ -1,4 +1,5 @@
 import type { ReadingBookDetail } from '../reading/ReadingBookDetail';
+import { bookIntroText } from '../common/BookIntroText';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerVisualSafeLeft,
@@ -234,9 +235,12 @@ export struct LocalBookDetail {
         .width('100%')
         .height(18)
         .margin({ top: TOK_SPACE_XS });
+        Text('分组：默认')
+          .fontSize(12).fontColor(TOK_MUTED).lineHeight(15)
+          .margin({ top: 4 });
       }
       .layoutWeight(1)
-      .height(122)
+      .constraintSize({ minHeight: 142 })
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.contentWidth())
@@ -454,13 +458,7 @@ export struct LocalBookDetail {
   }
 
   private displayIntro(): string {
-    const raw = this.book.intro ?? '';
-    if (raw.length === 0) {
-      return '';
-    }
-    // Sources embed HTML line breaks in intro copy; render them as real
-    // breaks and drop leading/trailing empties (e.g. a "<br>" first line).
-    return raw.replace(/<br\s*\/?>/gi, '\n').replace(/^\n+|\n+$/g, '');
+    return bookIntroText(this.book.intro);
   }
 
   private contentWidth(): number {

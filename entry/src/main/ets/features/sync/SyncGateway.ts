@@ -11,6 +11,8 @@ import {
 
 const DEFAULT_WEBDAV_DIRECTORY = '/ReaderBackup/ReaderHarmony';
 const MAX_TRANSACTION_STEPS = 12;
+const MAX_TRANSACTION_REQUESTS = 100;
+const MAX_WEBDAV_DIRECTORY_LENGTH = 4096;
 
 export type SyncHistoryEntry = {
   timestamp: string;
@@ -203,7 +205,21 @@ export class SyncGateway {
   }
 
   async restoreLatest(): Promise<SyncRestoreResult> {
+    // A conflict result intentionally leaves the Core transaction alive while
+    // the user decides. If the user asks for the latest backup again before
+    // resolving that conflict, close the old transaction first; merely
+    // dropping the local id would strand its credentials/candidate snapshot
+    // until the Core TTL and eventually consume the active-transaction quota.
+    const stalePendingTransactionId = this.pendingRestoreTransactionId;
     this.pendingRestoreTransactionId = '';
+    const staleAborted = await this.abortBestEffort(stalePendingTransactionId);
+    if (stalePendingTransactionId.length > 0 && !staleAborted) {
+      // Do not start a second restore while the old conflict transaction is
+      // still potentially holding credentials and a candidate snapshot. The
+      // user can retry once the transient abort/Host failure has cleared.
+      this.pendingRestoreTransactionId = stalePendingTransactionId;
+      return { ok: false, error: '上一次恢复冲突仍在清理，请稍后重试' };
+    }
     let transactionId = '';
     try {
       const config = await this.requireStoredConfig();
@@ -230,16 +246,19 @@ export class SyncGateway {
     if (transactionId.length === 0) {
       return { ok: false, error: '没有待处理的恢复冲突' };
     }
-    this.pendingRestoreTransactionId = '';
     try {
       const event = await this.runtimeOwner.request('sync.webdav.transaction.resolve', {
         transactionId,
         choice: overwriteLocal ? 'overwriteLocal' : 'cancel',
       });
-      const outcome = await this.driveTransaction(this.decodeTransaction(event.data));
+      const resolved = this.decodeTransaction(event.data);
+      this.assertTransactionIdentity(transactionId, resolved.transactionId,
+        'sync.webdav.transaction.resolve');
+      const outcome = await this.driveTransaction(resolved);
       if (outcome.status !== 'completed') {
         throw new Error('Core 未关闭 WebDAV 恢复事务');
       }
+      this.pendingRestoreTransactionId = '';
       return {
         ok: true,
         applied: overwriteLocal,
@@ -247,7 +266,13 @@ export class SyncGateway {
         path: outcome.remotePath,
       };
     } catch (error) {
-      await this.abortBestEffort(transactionId);
+      // Keep the ID when abort itself failed: a transient resolve/Host error
+      // must remain retryable instead of silently orphaning the Core row.
+      if (await this.abortBestEffort(transactionId)) {
+        this.pendingRestoreTransactionId = '';
+      } else {
+        this.pendingRestoreTransactionId = transactionId;
+      }
       return { ok: false, error: this.errorMessage(error) };
     }
   }
@@ -292,7 +317,10 @@ export class SyncGateway {
           transactionId: current.transactionId,
           responses,
         }, { timeoutMs: 30000 });
-        current = this.decodeTransaction(event.data);
+        const advanced = this.decodeTransaction(event.data);
+        this.assertTransactionIdentity(current.transactionId, advanced.transactionId,
+          'sync.webdav.transaction.advance');
+        current = advanced;
         continue;
       }
       if (current.status === 'applyRequired') {
@@ -311,7 +339,10 @@ export class SyncGateway {
           transactionId: current.transactionId,
           appliedChecksum: checksum,
         });
-        current = this.decodeTransaction(committed.data);
+        const completed = this.decodeTransaction(committed.data);
+        this.assertTransactionIdentity(current.transactionId, completed.transactionId,
+          'sync.webdav.transaction.commit');
+        current = completed;
         continue;
       }
       throw new Error(`Core WebDAV 事务返回未知状态: ${current.status}`);
@@ -319,12 +350,21 @@ export class SyncGateway {
     throw new Error(`Core WebDAV 事务超过 ${MAX_TRANSACTION_STEPS} 个阶段`);
   }
 
+  private assertTransactionIdentity(expected: string, actual: string, operation: string): void {
+    if (expected !== actual) {
+      throw new Error(`${operation} 返回了不匹配的事务身份`);
+    }
+  }
+
   private decodeTransaction(data: JsonObject): CoreWebDavTransaction {
     const transactionId = data['transactionId'];
     const status = data['status'];
     const phase = data['phase'];
-    if (typeof transactionId !== 'string' || transactionId.length === 0 ||
-      typeof status !== 'string' || typeof phase !== 'string') {
+    if (typeof transactionId !== 'string' || transactionId.length === 0 || transactionId.length > 128 ||
+      transactionId.trim() !== transactionId || /[\u0000-\u001f\u007f]/.test(transactionId) ||
+      typeof status !== 'string' || !['hostRequired', 'conflict', 'applyRequired', 'completed'].includes(status) ||
+      typeof phase !== 'string' || phase.length === 0 || phase.length > 256 ||
+      phase.trim() !== phase || /[\u0000-\u001f\u007f]/.test(phase)) {
       throw new Error('Core 返回了无效的 WebDAV 事务');
     }
     const requestsValue = data['requests'];
@@ -332,6 +372,9 @@ export class SyncGateway {
     if (requestsValue !== undefined) {
       if (!Array.isArray(requestsValue)) {
         throw new Error('Core WebDAV requests 不是数组');
+      }
+      if (requestsValue.length > MAX_TRANSACTION_REQUESTS) {
+        throw new Error(`Core WebDAV requests 超过 ${MAX_TRANSACTION_REQUESTS} 项`);
       }
       for (let index = 0; index < requestsValue.length; index += 1) {
         requests.push(this.requireObject(requestsValue[index], `Core WebDAV requests[${index}]`));
@@ -344,16 +387,36 @@ export class SyncGateway {
     if (data['conflict'] !== undefined) {
       transaction.conflict = this.requireObject(data['conflict'], 'Core WebDAV conflict');
     }
-    if (typeof data['backupId'] === 'string') {
-      transaction.backupId = data['backupId'] as string;
+    const backupId = data['backupId'];
+    if (backupId !== undefined) {
+      if (typeof backupId !== 'string' || backupId.length === 0 ||
+        backupId.length > 256 || backupId.trim() !== backupId ||
+        /[\u0000-\u001f\u007f]/.test(backupId)) {
+        throw new Error('Core WebDAV backupId 无效');
+      }
+      transaction.backupId = backupId;
     }
-    if (typeof data['remotePath'] === 'string') {
-      transaction.remotePath = data['remotePath'] as string;
+    const remotePath = data['remotePath'];
+    if (remotePath !== undefined) {
+      if (typeof remotePath !== 'string' || remotePath.length === 0 ||
+        remotePath.length > 4096 || remotePath.trim() !== remotePath ||
+        /[\u0000-\u001f\u007f]/.test(remotePath)) {
+        throw new Error('Core WebDAV remotePath 无效');
+      }
+      transaction.remotePath = remotePath;
     }
-    if (typeof data['contentBytes'] === 'number') {
+    if (data['contentBytes'] !== undefined) {
+      if (typeof data['contentBytes'] !== 'number' || !Number.isSafeInteger(data['contentBytes']) ||
+        data['contentBytes'] < 0) {
+        throw new Error('Core WebDAV contentBytes 无效');
+      }
       transaction.contentBytes = data['contentBytes'] as number;
     }
-    if (typeof data['deletedCount'] === 'number') {
+    if (data['deletedCount'] !== undefined) {
+      if (typeof data['deletedCount'] !== 'number' || !Number.isSafeInteger(data['deletedCount']) ||
+        data['deletedCount'] < 0) {
+        throw new Error('Core WebDAV deletedCount 无效');
+      }
       transaction.deletedCount = data['deletedCount'] as number;
     }
     return transaction;
@@ -386,15 +449,39 @@ export class SyncGateway {
     };
   }
 
-  private async abortBestEffort(transactionId: string): Promise<void> {
+  private async abortBestEffort(transactionId: string): Promise<boolean> {
     if (transactionId.length === 0) {
-      return;
+      return true;
     }
     try {
       await this.runtimeOwner.request('sync.webdav.transaction.abort', { transactionId });
-    } catch (_) {
-      // Advance may already have atomically removed a failed transaction.
+      return true;
+    } catch (error) {
+      // Core removes a transaction atomically on completion/abort. If the
+      // Host loses that acknowledgement, a follow-up abort returns this
+      // deterministic INVALID_PARAMS error; treating it as success keeps a
+      // stale restore id from becoming a permanent retry trap while still
+      // preserving transient transport failures for a later retry.
+      return this.isAlreadyClosedTransactionError(error);
     }
+  }
+
+  private isAlreadyClosedTransactionError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+    const event = (error as { event?: unknown })['event'];
+    if (typeof event !== 'object' || event === null) {
+      return false;
+    }
+    const structured = (event as { error?: unknown })['error'];
+    if (typeof structured !== 'object' || structured === null) {
+      return false;
+    }
+    const code = (structured as { code?: unknown })['code'];
+    const message = (structured as { message?: unknown })['message'];
+    return code === 'INVALID_PARAMS' && typeof message === 'string' &&
+      message.includes('unknown or completed WebDAV transaction');
   }
 
   private async resolveConnectionConfig(
@@ -469,9 +556,14 @@ export class SyncGateway {
     } catch (_) {
       throw new Error('WebDAV 服务器地址无效');
     }
-    if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') || parsed.hostname.length === 0 ||
+    // WebDAV credentials and encrypted snapshots cross this boundary.  Keep
+    // the product path HTTPS-only so an accidentally pasted `http://` URL
+    // can never turn the following Basic Authorization header into cleartext
+    // traffic.  Generic source HTTP remains a separate, explicitly bounded
+    // transport and does not weaken this credential-bearing surface.
+    if (parsed.protocol !== 'https:' || parsed.hostname.length === 0 ||
       parsed.username.length > 0 || parsed.password.length > 0 || parsed.search.length > 0 || parsed.hash.length > 0) {
-      throw new Error('WebDAV 服务器地址必须是无凭据、query 和 fragment 的 http(s) URL');
+      throw new Error('WebDAV 服务器地址必须是无凭据、query 和 fragment 的 HTTPS URL');
     }
     return normalized;
   }
@@ -481,8 +573,15 @@ export class SyncGateway {
     if (normalized.length === 0) {
       normalized = DEFAULT_WEBDAV_DIRECTORY;
     }
-    if (!normalized.startsWith('/') || normalized.includes('..') || normalized.includes('\\') ||
-      normalized.indexOf('?') !== -1 || normalized.indexOf('#') !== -1) {
+    // Keep this Host-side admission in lockstep with Core's path validator.
+    // Encoded dot segments are decoded by some WebDAV servers, so rejecting
+    // only a literal `..` would leave a configuration that can escape its
+    // intended collection (or fail later after being persisted).
+    if (normalized.length > MAX_WEBDAV_DIRECTORY_LENGTH ||
+      !normalized.startsWith('/') || normalized.includes('..') || normalized.includes('\\') ||
+      normalized.indexOf('?') !== -1 || normalized.indexOf('#') !== -1 ||
+      /[\u0000-\u001f\u007f]/.test(normalized) ||
+      normalized.toLowerCase().includes('%2e')) {
       throw new Error('WebDAV 同步目录必须是无上级跳转的绝对路径');
     }
     return normalized.length > 1 ? normalized.replace(/\/+$/, '') : normalized;

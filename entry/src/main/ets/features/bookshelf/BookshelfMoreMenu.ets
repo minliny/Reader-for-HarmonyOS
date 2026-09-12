@@ -36,10 +36,16 @@ export struct BookshelfMoreMenu {
   onDismiss: () => void = (): void => {};
   @State private panelHeight: number = MENU_COLLAPSED_HEIGHT;
   @State private closeInFlight: boolean = false;
+  private mounted: boolean = false;
+  private generation: number = 0;
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.generation += 1;
     registerReaderFonts(this.getUIContext().getFont());
   }
+
+  aboutToDisappear(): void { this.mounted = false; this.generation += 1; }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -153,10 +159,11 @@ export struct BookshelfMoreMenu {
     .width(MENU_WIDTH)
     .height(ACTION_HEIGHT)
     .backgroundColor(Color.Transparent)
-    .onClick((): void => this.collapseMenu(action));
+    .onClick((): void => this.commitAction(action));
   }
 
   private expandMenu(): void {
+    if (!this.mounted || this.closeInFlight) return;
     if (this.reduceMotion) {
       this.panelHeight = MENU_HEIGHT;
       return;
@@ -166,25 +173,34 @@ export struct BookshelfMoreMenu {
     });
   }
 
-  private collapseMenu(onFinish: () => void): void {
-    if (this.closeInFlight) {
+  private collapseMenu(onFinish: () => void, onCommit?: () => void): void {
+    if (!this.mounted || this.closeInFlight) {
       return;
     }
     this.closeInFlight = true;
+    const generation = ++this.generation;
+    if (onCommit !== undefined) onCommit();
+    if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
       this.panelHeight = MENU_COLLAPSED_HEIGHT;
-      this.closeInFlight = false;
       onFinish();
       return;
     }
     this.getUIContext().animateTo(
       motionAnimateParam('dropdown.menu.collapse', (): void => {
-        this.closeInFlight = false;
+        if (!this.mounted || generation !== this.generation) return;
         onFinish();
       }),
       (): void => {
         this.panelHeight = MENU_COLLAPSED_HEIGHT;
       },
     );
+  }
+
+  private commitAction(action: () => void): void {
+    if (!this.mounted || this.closeInFlight) return;
+    // Capture and dispatch once while this menu owns the click. Host navigation
+    // may destroy us immediately; no business action depends on animation finish.
+    this.collapseMenu(this.onDismiss, action);
   }
 }

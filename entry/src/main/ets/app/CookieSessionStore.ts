@@ -3,11 +3,13 @@ import asset from '@ohos.security.asset';
 import url from '@ohos.url';
 import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
+import { isCookieVisibleToScript, isExactCookieDomainScope } from './CookieSecurityPolicy';
 import { errorMessageOf } from './ErrorMessage';
 
 const LOG_DOMAIN = 0x5244;
 const LOG_TAG = 'Reader';
 const ASSET_ALIAS = 'reader.cookie.sessions.v1';
+const ASSET_PENDING_ALIAS = 'reader.cookie.sessions.pending.v2';
 const ASSET_CHUNK_ALIAS_PREFIX = 'reader.cookie.sessions.v1#';
 // Platform hard limit: a single AssetStore SECRET value holds at most 1024
 // bytes, so the jar is striped across chunk records instead of one record.
@@ -17,6 +19,15 @@ const MAX_SESSION_ID_LENGTH = 2048;
 const MAX_PERSISTED_COOKIES = 4096;
 const MAX_PERSISTED_BYTES = 512 * 1024;
 const MAX_PERSISTED_CHUNKS = MAX_PERSISTED_BYTES / ASSET_SECRET_CHUNK_BYTES;
+// Session cookies never enter AssetStore, so durable quotas alone cannot
+// protect the in-memory jar from repeated unique Set-Cookie/cookie.set calls.
+const MAX_COOKIE_NAME_LENGTH = 256;
+const MAX_COOKIE_VALUE_LENGTH = 4096;
+const MAX_COOKIE_PATH_LENGTH = 4096;
+const MAX_SESSION_COOKIES = 256;
+const MAX_SESSION_COOKIE_BYTES = 64 * 1024;
+const MAX_TOTAL_COOKIES = MAX_PERSISTED_COOKIES;
+const MAX_TOTAL_COOKIE_BYTES = 1024 * 1024;
 
 type SameSiteValue = 'Strict' | 'Lax' | 'None' | null;
 
@@ -42,6 +53,12 @@ type PersistedCookieEnvelope = {
 type PersistedChunkHeader = {
   formatVersion: number;
   chunkCount: number;
+  generation?: string;
+};
+
+type CookieWriteTransaction = {
+  next: PersistedChunkHeader;
+  previous: PersistedChunkHeader | null;
 };
 
 export type ArkWebCookieSeed = {
@@ -71,11 +88,10 @@ export type ArkWebObservedCookie = {
  *
  * Session cookies stay in memory. Cookies with Expires/Max-Age are stored in
  * AssetStore, encrypted by the platform and removed with the application. The
- * platform caps each SECRET at 1024 bytes, so the serialized jar is striped
- * across chunk records (`...#0..#N-1`) and the header record commits the chunk
- * count only after every chunk landed; a legacy single-record jar is migrated
- * on the next persist. Persistence is best-effort: a failed write keeps the
- * in-memory jar authoritative and never fails an HTTP request.
+ * platform caps each SECRET at 1024 bytes. Versioned chunks and a single
+ * commit record keep interrupted writes from mixing generations; a journal
+ * recovers abandoned chunks. HTTP persistence may degrade, but explicit
+ * credential clearing resolves only after its empty state is committed.
  * `Tag.IS_PERSISTENT` is deliberately not used: that tag means surviving an
  * uninstall and would be wrong for source credentials.
  */
@@ -85,10 +101,15 @@ export class CookieSessionStore {
   private readonly cookies: StoredCookie[] = [];
   private loadPromise: Promise<void> | null = null;
   private writeTail: Promise<void> = Promise.resolve();
-  private persistDirty: boolean = false;
-  private persistDrainActive: boolean = false;
   private creationSequence: number = Date.now();
   private persistedChunkCount: number = 0;
+  private persistedGeneration: string | undefined = undefined;
+  private generationSequence: number = 0;
+  private readonly sessionGenerations: Map<string, number> = new Map();
+
+  sessionGeneration(sessionId: string): number {
+    return this.sessionGenerations.get(this.requireSessionId(sessionId)) ?? 0;
+  }
 
   async cookieHeader(sessionId: string, requestUrl: string): Promise<string> {
     await this.ensureLoaded();
@@ -113,9 +134,13 @@ export class CookieSessionStore {
     sessionId: string,
     requestUrl: string,
     setCookieHeaders: string[],
+    expectedGeneration?: number,
   ): Promise<JsonObject[]> {
     await this.ensureLoaded();
     const normalizedSessionId = this.requireSessionId(sessionId);
+    if (expectedGeneration !== undefined && expectedGeneration !== this.sessionGeneration(normalizedSessionId)) {
+      return [];
+    }
     const parsedUrl = this.parseHttpUrl(requestUrl);
     const observed: JsonObject[] = [];
     let persistentChanged = false;
@@ -124,13 +149,20 @@ export class CookieSessionStore {
       if (parsed === null) {
         continue;
       }
-      persistentChanged = this.upsert(parsed) || persistentChanged;
-      observed.push(this.toWireCookie(parsed));
+      let accepted = true;
+      try {
+        persistentChanged = this.upsert(parsed) || persistentChanged;
+      } catch (_) {
+        // Ignore over-quota response cookies, matching browser jar behavior.
+        accepted = false;
+      }
+      if (accepted && isCookieVisibleToScript(parsed.httpOnly)) {
+        observed.push(this.toWireCookie(parsed));
+      }
     }
     if (persistentChanged) {
-      // The live in-memory jar is already current. Coalesce secure persistence
-      // behind the response instead of extending request latency with a full
-      // AssetStore rewrite.
+      // Serialize generation commits behind the response; secure storage can
+      // recover either complete generation after an interrupted write.
       void this.schedulePersist();
     }
     return observed;
@@ -150,7 +182,8 @@ export class CookieSessionStore {
     }
     const normalizedDomain = domain === null ? null : this.normalizeDomain(domain);
     const matched = this.cookies.filter((cookie: StoredCookie): boolean => {
-      if (cookie.sessionId !== sessionId || cookie.expiresAtMs !== null && cookie.expiresAtMs <= now) {
+      if (cookie.sessionId !== sessionId || cookie.httpOnly ||
+        cookie.expiresAtMs !== null && cookie.expiresAtMs <= now) {
         return false;
       }
       if (requestedName !== null && cookie.name !== requestedName) {
@@ -159,7 +192,8 @@ export class CookieSessionStore {
       if (parsedUrl !== null) {
         return this.cookieMatchesUrl(cookie, parsedUrl, now);
       }
-      return normalizedDomain === null || this.domainMatches(normalizedDomain, cookie.domain);
+      return normalizedDomain === null || (cookie.hostOnly ? normalizedDomain === cookie.domain :
+        this.domainMatches(normalizedDomain, cookie.domain));
     });
     matched.sort((left: StoredCookie, right: StoredCookie): number => left.createdAt - right.createdAt);
     return { cookies: matched.map((cookie: StoredCookie): JsonObject => this.toWireCookie(cookie)) };
@@ -177,20 +211,29 @@ export class CookieSessionStore {
     const record = wire as Record<string, unknown>;
     const name = this.requireCookieName(record['name']);
     const value = typeof record['value'] === 'string' ? record['value'] : '';
+    if (!this.isSafeCookieValue(value)) {
+      throw new Error('cookie value is invalid');
+    }
     const rawDomain = typeof record['domain'] === 'string' ? record['domain'] : null;
     if (parsedUrl === null && rawDomain === null) {
       throw new Error('cookie.set requires url or cookie.domain');
     }
     const domain = rawDomain === null ? parsedUrl!.hostname.toLowerCase() : this.normalizeDomain(rawDomain);
-    if (parsedUrl !== null && !this.domainMatches(parsedUrl.hostname.toLowerCase(), domain)) {
-      throw new Error('cookie.set domain does not match url host');
+    if (parsedUrl !== null && !isExactCookieDomainScope(parsedUrl.hostname, domain)) {
+      throw new Error('cookie.set domain must exactly match url host');
     }
     const rawPath = typeof record['path'] === 'string' ? record['path'] : null;
     const path = rawPath === null ? this.defaultPath(parsedUrl?.pathname ?? '/') : this.normalizePath(rawPath);
     const expiresAtMs = this.parseWireExpiry(record['expiresAt']);
     const secure = record['secure'] === true;
+    if (secure && (parsedUrl === null || parsedUrl.protocol.toLowerCase() !== 'https:')) {
+      throw new Error('cookie.set rejects Secure cookies from non-HTTPS URLs');
+    }
     const sameSite = this.normalizeSameSite(record['sameSite']);
-    const hostOnly = rawDomain === null;
+    const hostOnly = true;
+    if (record['httpOnly'] === true) {
+      throw new Error('cookie.set cannot create HttpOnly credentials from script');
+    }
     if (sameSite === 'None' && !secure) {
       throw new Error('cookie.set rejects SameSite=None without Secure');
     }
@@ -208,7 +251,7 @@ export class CookieSessionStore {
       path,
       expiresAtMs,
       secure,
-      httpOnly: record['httpOnly'] === true,
+      httpOnly: false,
       sameSite,
       hostOnly,
       createdAt: this.nextCreationSequence(),
@@ -221,19 +264,18 @@ export class CookieSessionStore {
   }
 
   async clearSession(sessionId: string): Promise<void> {
-    await this.ensureLoaded();
     const normalized = this.requireSessionId(sessionId);
-    let persistentChanged = false;
+    // Invalidate already admitted HTTP/WebView work before the first await.
+    this.sessionGenerations.set(normalized, this.sessionGeneration(normalized) + 1);
+    await this.ensureLoaded();
     for (let index = this.cookies.length - 1; index >= 0; index -= 1) {
       if (this.cookies[index].sessionId !== normalized) {
         continue;
       }
-      persistentChanged = persistentChanged || this.cookies[index].expiresAtMs !== null;
       this.cookies.splice(index, 1);
     }
-    if (persistentChanged) {
-      await this.schedulePersist();
-    }
+    // Clearing credentials has durable semantics even after an earlier load/write failure.
+    await this.schedulePersist(true);
   }
 
   /** Seed ArkWeb's incognito jar without exposing cookies to ArkUI. */
@@ -283,9 +325,13 @@ export class CookieSessionStore {
     sessionId: string,
     seeds: ArkWebCookieSeed[],
     observed: ArkWebObservedCookie[],
+    expectedGeneration?: number,
   ): Promise<void> {
     await this.ensureLoaded();
     const normalizedSessionId = this.requireSessionId(sessionId);
+    if (expectedGeneration !== undefined && expectedGeneration !== this.sessionGeneration(normalizedSessionId)) {
+      return;
+    }
     let persistentChanged = false;
     for (let index = this.cookies.length - 1; index >= 0; index -= 1) {
       const cookie = this.cookies[index];
@@ -298,26 +344,35 @@ export class CookieSessionStore {
       this.cookies.splice(index, 1);
     }
     for (const record of observed) {
-      const domain = this.normalizeDomain(record.domain);
-      const path = this.normalizePath(record.path);
-      const sameSite = this.normalizeSameSite(record.sameSite);
-      if (sameSite === 'None' && !record.secure) {
-        continue;
+      try {
+        const domain = this.normalizeDomain(record.domain);
+        const path = this.normalizePath(record.path);
+        const sameSite = this.normalizeSameSite(record.sameSite);
+        if (sameSite === 'None' && !record.secure || !this.isSafeCookieValue(record.value)) {
+          continue;
+        }
+        const cookie: StoredCookie = {
+          sessionId: normalizedSessionId,
+          name: this.requireCookieName(record.name),
+          value: record.value,
+          domain,
+          path,
+          expiresAtMs: this.parseWireExpiry(record.expiresAt),
+          secure: record.secure,
+          httpOnly: record.httpOnly,
+          sameSite,
+          // ArkWeb has already applied its mature RFC6265 parser. Reader keeps
+          // the captured credential exact-host to avoid persisting cross-host
+          // scope without a platform Public Suffix API.
+          hostOnly: true,
+          createdAt: this.nextCreationSequence(),
+        };
+        persistentChanged = this.upsert(cookie) || persistentChanged;
+      } catch (_) {
+        // Keep reconciliation fail-closed when ArkWeb returns a malformed,
+        // oversized, or otherwise untrusted cookie record. One bad platform
+        // row must not discard the other valid credentials from this job.
       }
-      const cookie: StoredCookie = {
-        sessionId: normalizedSessionId,
-        name: this.requireCookieName(record.name),
-        value: record.value,
-        domain,
-        path,
-        expiresAtMs: this.parseWireExpiry(record.expiresAt),
-        secure: record.secure,
-        httpOnly: record.httpOnly,
-        sameSite,
-        hostOnly: record.hostOnly,
-        createdAt: this.nextCreationSequence(),
-      };
-      persistentChanged = this.upsert(cookie) || persistentChanged;
     }
     if (persistentChanged) {
       await this.schedulePersist();
@@ -336,12 +391,18 @@ export class CookieSessionStore {
 
   private ensureLoaded(): Promise<void> {
     if (this.loadPromise === null) {
-      this.loadPromise = this.loadFromAssetStore();
+      this.loadPromise = this.loadFromAssetStore().catch((error: Error): void => {
+        this.loadPromise = null;
+        throw error;
+      });
     }
     return this.loadPromise;
   }
 
   private async loadFromAssetStore(): Promise<void> {
+    try { await this.recoverPendingWrite(); } catch (_) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store cleanup deferred');
+    }
     const header = await this.readRecordSecret(ASSET_ALIAS);
     if (header === null) {
       return;
@@ -352,8 +413,10 @@ export class CookieSessionStore {
       // Legacy single-record jar written before chunked persistence.
       envelope = this.parseEnvelope(header);
     } else {
-      const payload = await this.readChunkedPayload(chunkHeader.chunkCount);
-      envelope = payload === null ? null : this.parseEnvelope(payload);
+      const payload = chunkHeader.chunkCount === 0 ? null :
+        await this.readChunkedPayload(chunkHeader.chunkCount, chunkHeader.generation);
+      envelope = chunkHeader.chunkCount === 0 ? { formatVersion: FORMAT_VERSION, cookies: [] } :
+        (payload === null ? null : this.parseEnvelope(payload));
     }
     if (envelope === null) {
       // A damaged secure payload must not poison every later cookie
@@ -364,80 +427,110 @@ export class CookieSessionStore {
     const now = Date.now();
     for (const candidate of envelope.cookies) {
       if (this.isStoredCookie(candidate) && candidate.expiresAtMs !== null && candidate.expiresAtMs > now) {
-        this.cookies.push(candidate);
-        this.creationSequence = Math.max(this.creationSequence, candidate.createdAt);
+        try {
+          this.upsert(candidate);
+          this.creationSequence = Math.max(this.creationSequence, candidate.createdAt);
+        } catch (_) {
+          // Ignore malformed or over-quota persisted entries and continue with
+          // the remaining valid source-scoped credentials.
+        }
       }
     }
     this.persistedChunkCount = chunkHeader === null ? 0 : chunkHeader.chunkCount;
+    this.persistedGeneration = chunkHeader?.generation;
   }
 
-  private schedulePersist(): Promise<void> {
-    this.persistDirty = true;
-    if (this.persistDrainActive) {
-      return this.writeTail;
-    }
-    this.persistDrainActive = true;
-    const next = this.writeTail.then(async (): Promise<void> => {
-      while (this.persistDirty) {
-        this.persistDirty = false;
-        await this.persist();
-      }
-    }).catch((error: unknown): void => {
-      // Persistence is best-effort: the in-memory jar keeps serving the live
-      // session and the next mutation retries the secure write. Failing the
-      // caller here would fail an already-successful HTTP response.
-      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store persistence degraded, keeping in-memory jar: %{public}s',
-        errorMessageOf(error));
-    }).finally((): void => {
-      this.persistDrainActive = false;
-      if (this.persistDirty) {
-        void this.schedulePersist();
-      }
+  private schedulePersist(required: boolean = false): Promise<void> {
+    const next = this.writeTail.then((): Promise<void> => this.persist());
+    // Keep the serialization chain usable after a fault, while a user's
+    // explicit clear receives the original rejection.
+    this.writeTail = next.catch((): void => {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store persistence failed');
     });
-    this.writeTail = next;
-    return next;
+    return required ? next : this.writeTail;
   }
 
   private async persist(): Promise<void> {
-    const now = Date.now();
+    await this.recoverPendingWrite();
     const persistent = this.cookies.filter((cookie: StoredCookie): boolean => {
-      return cookie.expiresAtMs !== null && cookie.expiresAtMs > now;
+      return cookie.expiresAtMs !== null && cookie.expiresAtMs > Date.now();
     });
-    if (persistent.length > MAX_PERSISTED_COOKIES) {
-      throw new Error(`cookie store exceeds ${MAX_PERSISTED_COOKIES} persistent cookie limit`);
-    }
+    if (persistent.length > MAX_PERSISTED_COOKIES) { throw new Error('cookie count limit exceeded'); }
     const payload = this.utf8(JSON.stringify({ formatVersion: FORMAT_VERSION, cookies: persistent }));
-    if (payload.length > MAX_PERSISTED_BYTES) {
-      throw new Error(`cookie store exceeds ${MAX_PERSISTED_BYTES} secure-byte limit`);
+    if (payload.length > MAX_PERSISTED_BYTES) { throw new Error('cookie byte limit exceeded'); }
+    const chunks = persistent.length === 0 ? [] : this.chunkPayload(payload);
+    this.generationSequence += 1;
+    const generation = `${Date.now().toString(36)}-${this.generationSequence.toString(36)}-${Math.random().toString(36).slice(2)}`;
+    const next: PersistedChunkHeader = { formatVersion: 2, generation, chunkCount: chunks.length };
+    const oldHeader = await this.readRecordSecret(ASSET_ALIAS);
+    const previous = oldHeader === null ? null : this.parseChunkHeader(oldHeader);
+    const transaction: CookieWriteTransaction = { next, previous };
+    await this.writeRecord(ASSET_PENDING_ALIAS, this.utf8(JSON.stringify(transaction)));
+    for (let index = 0; index < chunks.length; index += 1) {
+      await this.writeRecord(this.chunkAlias(index, generation), chunks[index]);
     }
-    if (persistent.length === 0) {
-      await this.removePersistedRecords(0);
-      this.persistedChunkCount = 0;
+    // One Asset overwrite commits the generation, including a durable empty
+    // jar. Older binaries reject format 2 instead of loading old chunk aliases.
+    await this.writeRecord(ASSET_ALIAS, this.utf8(JSON.stringify(next)));
+    this.persistedChunkCount = chunks.length;
+    this.persistedGeneration = generation;
+    try { await this.recoverPendingWrite(); } catch (_) {
+      // The commit is already durable. The journal retains exact garbage
+      // ownership for retry, so cleanup failure cannot revive credentials.
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store cleanup deferred');
+    }
+  }
+
+  private async recoverPendingWrite(): Promise<void> {
+    const pending = await this.readRecordSecret(ASSET_PENDING_ALIAS);
+    if (pending === null) { return; }
+    let transaction: CookieWriteTransaction;
+    try {
+      transaction = JSON.parse(util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(pending)) as CookieWriteTransaction;
+    } catch (_) {
+      // A torn or externally-corrupted journal cannot identify safe garbage
+      // ownership. Remove only the journal marker and keep the live header/
+      // chunks intact so one bad record cannot permanently block every later
+      // cookie write or clear operation.
+      await this.removeRecord(ASSET_PENDING_ALIAS);
       return;
     }
-    const chunks = this.chunkPayload(payload);
-    for (let index = 0; index < chunks.length; index += 1) {
-      await this.writeRecord(this.chunkAlias(index), chunks[index]);
+    const rawNext = transaction !== null && typeof transaction === 'object' ?
+      (transaction as Record<string, unknown>)['next'] : undefined;
+    const rawPrevious = transaction !== null && typeof transaction === 'object' ?
+      (transaction as Record<string, unknown>)['previous'] : undefined;
+    if (rawNext === null || typeof rawNext !== 'object' || Array.isArray(rawNext) ||
+      rawPrevious !== null && (rawPrevious === undefined || typeof rawPrevious !== 'object' || Array.isArray(rawPrevious))) {
+      await this.removeRecord(ASSET_PENDING_ALIAS);
+      return;
     }
-    await this.removePersistedRecords(chunks.length);
-    // The header record is the commit marker: it names the live chunk count
-    // only after every chunk of this generation is on the store.
-    await this.writeRecord(ASSET_ALIAS, this.utf8(JSON.stringify({
-      formatVersion: FORMAT_VERSION,
-      chunkCount: chunks.length,
-    })));
-    this.persistedChunkCount = chunks.length;
+    const next = this.parseChunkHeader(this.utf8(JSON.stringify(rawNext)));
+    if (next === null || next.generation === undefined) {
+      await this.removeRecord(ASSET_PENDING_ALIAS);
+      return;
+    }
+    const previous = rawPrevious === null ? null :
+      this.parseChunkHeader(this.utf8(JSON.stringify(rawPrevious)));
+    if (rawPrevious !== null && previous === null) {
+      await this.removeRecord(ASSET_PENDING_ALIAS);
+      return;
+    }
+    const liveBytes = await this.readRecordSecret(ASSET_ALIAS);
+    const live = liveBytes === null ? null : this.parseChunkHeader(liveBytes);
+    const garbage = live?.generation === next.generation ? previous : next;
+    if (garbage !== null && garbage?.generation !== live?.generation) {
+      for (let index = 0; index < garbage.chunkCount; index += 1) {
+        await this.removeRecord(this.chunkAlias(index, garbage.generation));
+      }
+    } else if (garbage !== null && garbage.generation === undefined && live?.generation !== undefined) {
+      for (let index = 0; index < garbage.chunkCount; index += 1) { await this.removeRecord(this.chunkAlias(index)); }
+    }
+    await this.removeRecord(ASSET_PENDING_ALIAS);
   }
 
-  private async removePersistedRecords(keptChunks: number): Promise<void> {
-    await this.removeRecord(ASSET_ALIAS);
-    for (let index = keptChunks; index < this.persistedChunkCount; index += 1) {
-      await this.removeRecord(this.chunkAlias(index));
-    }
-  }
-
-  private chunkAlias(index: number): string {
-    return `${ASSET_CHUNK_ALIAS_PREFIX}${index}`;
+  private chunkAlias(index: number, generation?: string): string {
+    return generation === undefined ? `${ASSET_CHUNK_ALIAS_PREFIX}${index}` :
+      `${ASSET_CHUNK_ALIAS_PREFIX}${generation}/${index}`;
   }
 
   private chunkPayload(payload: Uint8Array): Uint8Array[] {
@@ -448,14 +541,19 @@ export class CookieSessionStore {
     return chunks;
   }
 
-  private async readChunkedPayload(chunkCount: number): Promise<Uint8Array | null> {
+  private async readChunkedPayload(chunkCount: number, generation?: string): Promise<Uint8Array | null> {
     const parts: Uint8Array[] = [];
     let total = 0;
     for (let index = 0; index < chunkCount; index += 1) {
-      const part = await this.readRecordSecret(this.chunkAlias(index));
+      const part = await this.readRecordSecret(this.chunkAlias(index, generation));
       if (part === null) {
         hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store chunk %{public}d is missing; starting from an empty jar',
           index);
+        return null;
+      }
+      if (part.length > ASSET_SECRET_CHUNK_BYTES ||
+        total > MAX_PERSISTED_BYTES - part.length) {
+        hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store chunk payload exceeds its bounded size');
         return null;
       }
       parts.push(part);
@@ -481,9 +579,7 @@ export class CookieSessionStore {
       if (this.errorCode(error) === asset.ErrorCode.NOT_FOUND) {
         return null;
       }
-      hilog.warn(LOG_DOMAIN, LOG_TAG, 'cookie store cannot read secure AssetStore: %{public}s',
-        this.errorMessage(error));
-      return null;
+      throw new Error('cookie store cannot read secure AssetStore');
     }
     if (records.length === 0) {
       return null;
@@ -530,11 +626,15 @@ export class CookieSessionStore {
       return null;
     }
     const chunkCount = parsed['chunkCount'];
-    if (parsed['formatVersion'] !== FORMAT_VERSION || typeof chunkCount !== 'number' ||
-      !Number.isSafeInteger(chunkCount) || chunkCount < 1 || chunkCount > MAX_PERSISTED_CHUNKS) {
-      return null;
+    const version = parsed['formatVersion'];
+    const generation = parsed['generation'];
+    if (typeof chunkCount !== 'number' || !Number.isSafeInteger(chunkCount) ||
+      chunkCount < 0 || chunkCount > MAX_PERSISTED_CHUNKS) { return null; }
+    if (version === 1 && chunkCount > 0) { return { formatVersion: 1, chunkCount }; }
+    if (version === 2 && typeof generation === 'string' && /^[a-z0-9-]{8,100}$/.test(generation)) {
+      return { formatVersion: 2, chunkCount, generation };
     }
-    return { formatVersion: FORMAT_VERSION, chunkCount };
+    return null;
   }
 
   private parseEnvelope(secret: Uint8Array): PersistedCookieEnvelope | null {
@@ -550,7 +650,20 @@ export class CookieSessionStore {
     }
   }
 
+  /**
+   * Parse one untrusted response header. Browser cookie jars ignore malformed
+   * Set-Cookie lines; do the same here so a single hostile header cannot turn
+   * an otherwise successful HTTP response into a failed source request.
+   */
   private parseSetCookie(sessionId: string, requestUrl: url.URL, header: string): StoredCookie | null {
+    try {
+      return this.parseSetCookieUnsafe(sessionId, requestUrl, header);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  private parseSetCookieUnsafe(sessionId: string, requestUrl: url.URL, header: string): StoredCookie | null {
     const sections = header.split(';');
     const first = sections.shift()?.trim() ?? '';
     const separator = first.indexOf('=');
@@ -559,6 +672,9 @@ export class CookieSessionStore {
     }
     const name = this.requireCookieName(first.substring(0, separator).trim());
     const value = first.substring(separator + 1).trim();
+    if (!this.isSafeCookieValue(value)) {
+      return null;
+    }
     let domain = requestUrl.hostname.toLowerCase();
     let hostOnly = true;
     let path = this.defaultPath(requestUrl.pathname);
@@ -577,11 +693,11 @@ export class CookieSessionStore {
       const attributeValue = equals < 0 ? '' : trimmed.substring(equals + 1).trim();
       if (attributeName === 'domain' && attributeValue.length > 0) {
         const requestedDomain = this.normalizeDomain(attributeValue);
-        if (!this.domainMatches(requestUrl.hostname.toLowerCase(), requestedDomain)) {
+        if (!isExactCookieDomainScope(requestUrl.hostname, requestedDomain)) {
           return null;
         }
         domain = requestedDomain;
-        hostOnly = false;
+        hostOnly = true;
       } else if (attributeName === 'path' && attributeValue.length > 0) {
         path = this.normalizePath(attributeValue);
       } else if (attributeName === 'expires' && attributeValue.length > 0) {
@@ -601,6 +717,9 @@ export class CookieSessionStore {
     }
     if (maxAge !== null) {
       expiresAtMs = maxAge <= 0 ? 0 : Date.now() + maxAge * 1000;
+    }
+    if (secure && requestUrl.protocol.toLowerCase() !== 'https:') {
+      return null;
     }
     // RFC6265bis: SameSite=None is accepted only for Secure cookies. Dropping
     // invalid response cookies mirrors browser behavior and keeps the shared
@@ -631,6 +750,7 @@ export class CookieSessionStore {
 
   /** Returns true when persisted state changed. */
   private upsert(cookie: StoredCookie): boolean {
+    this.assertCookieShape(cookie);
     const index = this.cookies.findIndex((candidate: StoredCookie): boolean => {
       return candidate.sessionId === cookie.sessionId && candidate.name === cookie.name &&
         candidate.domain === cookie.domain && candidate.path === cookie.path;
@@ -642,6 +762,7 @@ export class CookieSessionStore {
       }
       return previousPersistent;
     }
+    this.assertCookieBudget(cookie, index);
     if (index >= 0) {
       cookie.createdAt = this.cookies[index].createdAt;
       this.cookies[index] = cookie;
@@ -649,6 +770,69 @@ export class CookieSessionStore {
       this.cookies.push(cookie);
     }
     return previousPersistent || cookie.expiresAtMs !== null;
+  }
+
+  private assertCookieBudget(cookie: StoredCookie, replacingIndex: number): void {
+    const incomingBytes = this.cookieBytes(cookie);
+    let totalCount = 0;
+    let totalBytes = 0;
+    let sessionCount = 0;
+    let sessionBytes = 0;
+    for (let index = 0; index < this.cookies.length; index += 1) {
+      if (index === replacingIndex) continue;
+      const current = this.cookies[index];
+      const bytes = this.cookieBytes(current);
+      totalCount += 1;
+      totalBytes += bytes;
+      if (current.sessionId === cookie.sessionId) {
+        sessionCount += 1;
+        sessionBytes += bytes;
+      }
+    }
+    const adding = replacingIndex < 0 ? 1 : 0;
+    if (sessionCount + adding > MAX_SESSION_COOKIES ||
+      sessionBytes + incomingBytes > MAX_SESSION_COOKIE_BYTES ||
+      totalCount + adding > MAX_TOTAL_COOKIES ||
+      totalBytes + incomingBytes > MAX_TOTAL_COOKIE_BYTES) {
+      throw new Error('cookie store quota exceeded');
+    }
+  }
+
+  private cookieBytes(cookie: StoredCookie): number {
+    return this.utf8(cookie.sessionId).byteLength + this.utf8(cookie.name).byteLength +
+      this.utf8(cookie.value).byteLength + this.utf8(cookie.domain).byteLength +
+      this.utf8(cookie.path).byteLength;
+  }
+
+  private isSafeCookieName(value: string): boolean {
+    return value.length > 0 && value.length <= MAX_COOKIE_NAME_LENGTH &&
+      !/[\s;,=\u0000-\u001f\u007f]/.test(value);
+  }
+
+  private isSafeCookieValue(value: string): boolean {
+    return value.length <= MAX_COOKIE_VALUE_LENGTH &&
+      !/[;,\u0000-\u001f\u007f]/.test(value);
+  }
+
+  private isSafeCookiePath(value: string): boolean {
+    return value.length > 0 && value.length <= MAX_COOKIE_PATH_LENGTH &&
+      value.startsWith('/') && !/[;?#[\\]\u0000-\u001f\u007f]/.test(value);
+  }
+
+  private isSafeCookieDomain(value: string): boolean {
+    return value.length > 0 && value.length <= 255 &&
+      !/[\s/@?#\\[\],:;=\u0000-\u001f\u007f]/.test(value);
+  }
+
+  private assertCookieShape(cookie: StoredCookie): void {
+    if (cookie.sessionId.trim() !== cookie.sessionId || cookie.sessionId.length === 0 ||
+      cookie.sessionId.length > MAX_SESSION_ID_LENGTH || !this.isSafeCookieName(cookie.name) ||
+      !this.isSafeCookieValue(cookie.value) || !this.isSafeCookieDomain(cookie.domain) ||
+      !this.isSafeCookiePath(cookie.path) ||
+      (cookie.expiresAtMs !== null && (!Number.isFinite(cookie.expiresAtMs) || cookie.expiresAtMs < 0)) ||
+      !Number.isFinite(cookie.createdAt)) {
+      throw new Error('cookie value or scope is invalid');
+    }
   }
 
   private async removeExpiredAndPersist(now: number): Promise<void> {
@@ -779,7 +963,8 @@ export class CookieSessionStore {
 
   private requireSessionId(value: string): string {
     const trimmed = value.trim();
-    if (trimmed.length === 0 || trimmed.length > MAX_SESSION_ID_LENGTH) {
+    if (trimmed.length === 0 || trimmed.length > MAX_SESSION_ID_LENGTH ||
+      /[\u0000-\u001f\u007f]/.test(trimmed)) {
       throw new Error(`cookie session id must contain 1..${MAX_SESSION_ID_LENGTH} characters`);
     }
     return trimmed;
@@ -790,7 +975,7 @@ export class CookieSessionStore {
       throw new Error('cookie name must be a string');
     }
     const trimmed = value.trim();
-    if (trimmed.length === 0 || /[\s;,=]/.test(trimmed)) {
+    if (!this.isSafeCookieName(trimmed) || /[\s;,=]/.test(trimmed)) {
       throw new Error('cookie name is invalid');
     }
     return trimmed;
@@ -836,13 +1021,18 @@ export class CookieSessionStore {
       return false;
     }
     const cookie = value as Partial<StoredCookie>;
-    return typeof cookie.sessionId === 'string' && typeof cookie.name === 'string' &&
-      typeof cookie.value === 'string' && typeof cookie.domain === 'string' &&
-      typeof cookie.path === 'string' &&
-      (cookie.expiresAtMs === null || typeof cookie.expiresAtMs === 'number') &&
+    return typeof cookie.sessionId === 'string' && cookie.sessionId.trim() === cookie.sessionId &&
+      cookie.sessionId.length > 0 && cookie.sessionId.length <= MAX_SESSION_ID_LENGTH &&
+      !/[\u0000-\u001f\u007f]/.test(cookie.sessionId) && typeof cookie.name === 'string' &&
+      this.isSafeCookieName(cookie.name) && typeof cookie.value === 'string' &&
+      this.isSafeCookieValue(cookie.value) && typeof cookie.domain === 'string' &&
+      this.isSafeCookieDomain(cookie.domain) && typeof cookie.path === 'string' &&
+      this.isSafeCookiePath(cookie.path) &&
+      (cookie.expiresAtMs === null || typeof cookie.expiresAtMs === 'number' &&
+        Number.isFinite(cookie.expiresAtMs) && cookie.expiresAtMs >= 0) &&
       typeof cookie.secure === 'boolean' && typeof cookie.httpOnly === 'boolean' &&
       (cookie.sameSite === null || cookie.sameSite === 'Strict' || cookie.sameSite === 'Lax' ||
-        cookie.sameSite === 'None') && typeof cookie.hostOnly === 'boolean' &&
-      typeof cookie.createdAt === 'number';
+        cookie.sameSite === 'None') && cookie.hostOnly === true &&
+      typeof cookie.createdAt === 'number' && Number.isFinite(cookie.createdAt);
   }
 }

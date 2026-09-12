@@ -75,13 +75,17 @@ export class WebDavCredentialStore {
 
   save(config: StoredWebDavConfig): Promise<void> {
     const normalized = this.normalize(config);
-    this.writeTail = this.writeTail.then((): Promise<void> => this.persist(normalized));
-    return this.writeTail;
+    const next = this.writeTail.catch((): void => {}).then((): Promise<void> => this.persist(normalized));
+    // Preserve the error for this caller, but do not let one transient
+    // AssetStore failure poison every later save/clear in this process.
+    this.writeTail = next.catch((): void => {});
+    return next;
   }
 
   clear(): Promise<void> {
-    this.writeTail = this.writeTail.then((): Promise<void> => this.remove());
-    return this.writeTail;
+    const next = this.writeTail.catch((): void => {}).then((): Promise<void> => this.remove());
+    this.writeTail = next.catch((): void => {});
+    return next;
   }
 
   private async persist(config: StoredWebDavConfig): Promise<void> {

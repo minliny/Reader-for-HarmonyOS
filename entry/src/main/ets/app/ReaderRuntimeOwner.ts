@@ -1,3 +1,4 @@
+import { BookAcquisitionCoordinator } from './BookAcquisitionCoordinator';
 import common from '@ohos.app.ability.common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
@@ -5,7 +6,6 @@ import {
   type JsonObject,
   type ReaderCoreResultEvent,
   type ReaderCoreRuntime,
-  ReaderCoreRequestError,
   type RequestOptions,
 } from '@reader/core-harmony';
 import {
@@ -13,8 +13,10 @@ import {
   type LocalBookAssetCommit,
   type LocalBookInput,
   type LocalBookPreparation,
+  type PendingLocalImportFinalize,
   ReaderHostRegistry,
 } from './ReaderHostRegistry';
+import { errorMessageOf } from './ErrorMessage';
 import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
 import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
@@ -39,6 +41,8 @@ import {
   sha256Hex,
 } from './BundledBookSourceSupply';
 import { image } from '@kit.ImageKit';
+import { ReaderAppearanceStore } from '../features/reading/ReaderAppearanceStore';
+import { ReaderAppearancePreferences } from './ReaderAppearancePreferences';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -46,11 +50,13 @@ type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 // The SDK's generic 2s default is unsuitable; callers may still opt into a
 // narrower explicit limit.
 const DEFAULT_CORE_REQUEST_TIMEOUT_MS = 30000;
+// Deferred local-import cleanup is best-effort during startup. A malformed or
+// unavailable Core journal must not blank the application for several minutes.
+const PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS = 5000;
 const LOG_DOMAIN = 0x5244;
-const TEST_BOOK_SOURCE_RAW_FILE = 'reader-test-book-sources.json';
-const TEST_BOOK_SOURCE_VERSION_FIELD = 'readerTestBuiltinVersion';
+const BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection.json';
 // BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
-const BUNDLED_RAW_FILE_SHA256 = '922b29b237138f0d304f27646f6e42afc855d7bd33e0bd4ea307469eb52007d3';
+const BUNDLED_RAW_FILE_SHA256 = '2700f5402ace0ca8febfe3b2c44d937212913029cf4ccb3890c10849c85e90d7';
 // END bundled-source-integrity
 
 type CoreBuildIdentity = {
@@ -61,6 +67,15 @@ type CoreBuildIdentity = {
   cargoLockSha256: string;
   protocolSha256: string;
   rustProfile: string;
+};
+
+type BundledSourceInstallSummary = {
+  collectionRecords: number;
+  uniqueSourceIds: number;
+  processed: number;
+  installedOrUpgraded: number;
+  failed: number;
+  interrupted: boolean;
 };
 
 /**
@@ -75,14 +90,23 @@ export class ReaderRuntimeOwner {
   private readonly localEpubResourceHost: LocalEpubResourceHost;
   private readonly readingImageDiskCache: ReadingImageDiskCache;
   private runtime: ReaderCoreRuntime | undefined = undefined;
+  private appearanceStore: ReaderAppearanceStore | undefined = undefined;
   private startup: Promise<void> | undefined = undefined;
   /** Serializes background storage flushes with teardown. */
   private flushTail: Promise<void> = Promise.resolve();
   /** Lets concurrent Ability teardown callers await the same cleanup. */
   private closeTask: Promise<void> | undefined = undefined;
+  /** Background source seeding never gates page availability. */
+  private sourceSupplyTask: Promise<void> = Promise.resolve();
   private state: RuntimeState = 'new';
+  private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
+  /** Number of live UIAbility instances sharing this process runtime. */
+  private abilityLeases: number = 0;
+  /** A successor never starts platform hosts before its predecessor is closed. */
+  private readonly predecessorClose: Promise<void>;
 
-  private constructor(context: common.UIAbilityContext) {
+  private constructor(context: common.UIAbilityContext, predecessorClose: Promise<void> = Promise.resolve()) {
+    this.predecessorClose = predecessorClose;
     this.host = new ReaderHostRegistry(context);
     this.ttsHost = new HarmonyTtsHostRouter(
       new HarmonySystemTtsHost(),
@@ -96,9 +120,12 @@ export class ReaderRuntimeOwner {
   }
 
   static install(context: common.UIAbilityContext): ReaderRuntimeOwner {
-    if (ReaderRuntimeOwner.instance === undefined) {
-      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context);
+    const current = ReaderRuntimeOwner.instance;
+    if (current === undefined || current.state === 'closing' || current.state === 'closed') {
+      const predecessorClose = current?.closeTask ?? Promise.resolve();
+      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose);
     }
+    ReaderRuntimeOwner.instance.abilityLeases += 1;
     return ReaderRuntimeOwner.instance;
   }
 
@@ -120,7 +147,7 @@ export class ReaderRuntimeOwner {
       return this.startup;
     }
     this.state = 'starting';
-    this.startup = this.startRuntime();
+    this.startup = this.startAfterPredecessor();
     try {
       await this.startup;
     } finally {
@@ -128,7 +155,32 @@ export class ReaderRuntimeOwner {
     }
   }
 
+  /** Release one UIAbility lease; only the final owner tears the runtime down. */
+  async release(): Promise<void> {
+    if (this.abilityLeases > 0) {
+      this.abilityLeases -= 1;
+    }
+    if (this.abilityLeases > 0) {
+      return;
+    }
+    await this.close();
+  }
+
+  bookAcquisitions(): BookAcquisitionCoordinator {
+    if (this.bookCoordinator === undefined) {
+      this.bookCoordinator = new BookAcquisitionCoordinator(
+        (method: string, params: JsonObject, options: RequestOptions): Promise<ReaderCoreResultEvent> =>
+          this.requestDirect(method, params, options),
+      );
+    }
+    return this.bookCoordinator;
+  }
+
   async request(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
+    return this.bookAcquisitions().request(method, params, options);
+  }
+
+  private async requestDirect(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
     await this.start();
     const runtime = this.runtime;
     if (runtime === undefined) {
@@ -190,7 +242,7 @@ export class ReaderRuntimeOwner {
       const embedded = await ReadingBodyImageHost.instance.loadDataUri(imageUrl, isCurrent);
       return this.admitReadingImage(embedded, isCurrent);
     }
-    if (sourceId === 'local' && imageUrl.startsWith('reader-local-epub://')) {
+    if (sourceId === 'local' && (imageUrl.startsWith('reader-local-epub://') || imageUrl.startsWith('reader-local-mobi://'))) {
       const localImage = await this.localEpubResourceHost.load(imageUrl, isCurrent);
       return this.admitReadingImage(localImage, isCurrent);
     }
@@ -225,7 +277,7 @@ export class ReaderRuntimeOwner {
     // write; explicit offline prefetch retains its strict awaited path below.
     void this.readingImageDiskCache.storeResource(identity, bytes)
       .catch((error: Error): void => {
-        console.error(`Reader body image cache write failed: ${error.message}`);
+        hilog.error(LOG_DOMAIN, 'Reader', 'Reader body image cache write failed: %{private}s', error.message);
       });
     return this.admitReadingImage(payload, isCurrent);
   }
@@ -340,11 +392,14 @@ export class ReaderRuntimeOwner {
       // an unresolved successor. Preserve that earlier caller's rejection but
       // always release this slot in `finally`.
       await previousFlush;
-      const runtime = this.runtime;
-      if (runtime === undefined || this.state !== 'ready') {
-        return;
+      try {
+        const runtime = this.runtime;
+        if (runtime !== undefined && this.state === 'ready') {
+          await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
+        }
+      } finally {
+        if (this.appearanceStore !== undefined) await this.appearanceStore.flush();
       }
-      await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
     } finally {
       if (releaseFlush !== undefined) {
         releaseFlush();
@@ -360,6 +415,13 @@ export class ReaderRuntimeOwner {
    */
   getUIAbilityContext(): common.UIAbilityContext {
     return this.host.getContext();
+  }
+
+  getAppearanceStore(): ReaderAppearanceStore {
+    if (this.appearanceStore === undefined) {
+      this.appearanceStore = new ReaderAppearanceStore(new ReaderAppearancePreferences(this.host.getContext()));
+    }
+    return this.appearanceStore;
   }
 
   getTtsHost(): HarmonyTtsHostRouter {
@@ -442,7 +504,20 @@ export class ReaderRuntimeOwner {
     return this.host.releaseLocalBookAsset(bookId);
   }
 
+  /**
+   * Persist an opaque local-import cleanup token after the shelf commit. This
+   * is deliberately a Host-only operation; callers never receive the queue
+   * path or token contents back.
+   */
+  async enqueuePendingLocalImportFinalize(rollbackToken: JsonObject): Promise<void> {
+    // Host app-private storage remains valid during teardown; allowing this
+    // write while the Core runtime is closing closes the last crash window
+    // between the visible shelf commit and the deferred cleanup enqueue.
+    await this.host.enqueuePendingLocalImportFinalize(rollbackToken);
+  }
+
   async close(): Promise<void> {
+    this.bookCoordinator?.close();
     if (this.closeTask !== undefined) {
       return this.closeTask;
     }
@@ -485,10 +560,18 @@ export class ReaderRuntimeOwner {
           // Startup has already closed its candidate runtime on failure.
         }
       }
+      // `close()` sets state=closing first, so the supply loop stops after its
+      // current local Core request. Wait for that request before closing Core.
+      await this.sourceSupplyTask;
       // A foreground/background flush that began before `closing` must finish
       // before the runtime is released. Later flush calls see `closing` and
       // become no-ops, so they cannot race this final flush/close pair.
       await this.flushTail;
+      try {
+        if (this.appearanceStore !== undefined) await this.appearanceStore.flush();
+      } catch (error) {
+        hilog.warn(LOG_DOMAIN, 'Reader', '%{private}s', `Appearance teardown save failed: ${errorMessageOf(error)}`);
+      }
       // Host callbacks must be invalidated before Core is released, otherwise
       // a late platform completion could attempt to advance a closed queue.
       await this.ttsHost.close();
@@ -506,8 +589,18 @@ export class ReaderRuntimeOwner {
       // Runs even when flush throws, so a rebuilt UIAbility in the same
       // process gets a fresh runtime rather than a half-closed one.
       this.state = 'closed';
-      ReaderRuntimeOwner.instance = undefined;
+      if (ReaderRuntimeOwner.instance === this) {
+        ReaderRuntimeOwner.instance = undefined;
+      }
     }
+  }
+
+  private async startAfterPredecessor(): Promise<void> {
+    await this.predecessorClose;
+    if (this.state !== 'starting') {
+      throw new Error('Reader Core runtime was closed before successor startup');
+    }
+    await this.startRuntime();
   }
 
   private async startRuntime(): Promise<void> {
@@ -547,9 +640,10 @@ export class ReaderRuntimeOwner {
       const recovery = await runtime.request('source.switch.recover', {}, { timeoutMs: 30000 });
       const recoveredCount = this.requireSourceSwitchRecoveryCount(recovery.data['recovered']);
       hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
-      const installedTestSourceCount = await this.installBundledTestBookSources(runtime);
-      hilog.info(LOG_DOMAIN, 'Reader',
-        'Bundled test book sources installed or upgraded: %{public}d', installedTestSourceCount);
+      // A shelf commit may have succeeded while the UI lost the finalize
+      // reply. Drain the bounded Host queue before exposing this runtime so a
+      // cold-start page never inherits an unconsumed Core journal.
+      await this.recoverPendingLocalImportFinalizes(runtime);
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
       if (this.state !== 'starting') {
@@ -557,6 +651,21 @@ export class ReaderRuntimeOwner {
       }
       this.runtime = runtime;
       this.state = 'ready';
+      // A 1,951-record collection must not hold the first frame or turn a
+      // single malformed/dead source into an application startup failure.
+      this.sourceSupplyTask = this.installBundledBookSourceCollection(runtime)
+        .then((summary: BundledSourceInstallSummary): void => {
+          hilog.info(LOG_DOMAIN, 'Reader',
+            'Bundled source collection completed: records=%{public}d unique=%{public}d ' +
+            'processed=%{public}d imported=%{public}d failed=%{public}d interrupted=%{private}s',
+            summary.collectionRecords, summary.uniqueSourceIds, summary.processed,
+            summary.installedOrUpgraded, summary.failed, String(summary.interrupted));
+        })
+        .catch((error: Error): void => {
+          hilog.error(LOG_DOMAIN, 'Reader',
+            'Bundled source collection failed without blocking Reader: %{private}s',
+            errorMessageOf(error));
+        });
     } catch (error) {
       try {
         runtime.close();
@@ -571,121 +680,165 @@ export class ReaderRuntimeOwner {
   }
 
   /**
-   * Test builds ship an application-owned source set in raw resources. Seed it
-   * before the runtime becomes observable so fresh and update installs cannot
-   * reach Search with an empty source database. Matching versions are read-only
-   * on later launches; upgrades preserve the user's enabled/explore choices;
-   * user-modified builtin copies are never force-overwritten; identities that
-   * disappear from a newer bundle are retired (disabled, never deleted).
+   * Every install ships the complete recorded source collection as a normal
+   * app-importable JSON array. Seeding runs after Core becomes observable so a
+   * large collection or one bad item can never blank the application. Matching
+   * versions are read-only on later launches; upgrades preserve the user's
+   * enabled/explore choices; user-modified copies are never force-overwritten;
+   * identities removed from a later collection are retired, never deleted.
    */
-  private async installBundledTestBookSources(runtime: ReaderCoreRuntime): Promise<number> {
-    const document = await this.host.readBundledRawFileText(TEST_BOOK_SOURCE_RAW_FILE);
+  private async installBundledBookSourceCollection(
+    runtime: ReaderCoreRuntime,
+  ): Promise<BundledSourceInstallSummary> {
+    const document = await this.host.readBundledRawFileText(BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE);
     const fileDigest = await sha256Hex(document);
     if (fileDigest !== BUNDLED_RAW_FILE_SHA256) {
-      throw new Error(`Bundled test book-source document failed integrity verification: ` +
+      throw new Error(`Bundled book-source collection failed integrity verification: ` +
         `expected ${BUNDLED_RAW_FILE_SHA256}, got ${fileDigest}`);
     }
-    const bundledSources = this.requireBundledTestBookSources(document);
+    const bundledSources = this.requireBundledBookSourceCollection(document);
     // Per-source integrity: the embedded fingerprint must match the rules it
     // certifies. A mismatched source is rejected loudly, never silently skipped.
-    const admitted: JsonObject[] = [];
+    const admittedBySourceId = new Map<string, JsonObject>();
     for (const bundled of bundledSources) {
       const digest = await sha256Hex(canonicalRulePayloadJson(bundled));
       if (digest !== bundled['ruleFingerprint']) {
         hilog.error(LOG_DOMAIN, 'Reader',
-          'Bundled test book source rejected, rule fingerprint mismatch: %{public}s',
+          'Bundled book source rejected, rule fingerprint mismatch: %{private}s',
           bundled['bookSourceName'] as string);
         continue;
       }
-      admitted.push(bundled);
+      // The portable collection retains every tested rule variant. Core uses
+      // bookSourceUrl as its primary key, so the last (preferred) variant is
+      // the one installed for duplicate identities.
+      admittedBySourceId.set(bundled['bookSourceUrl'] as string, bundled);
     }
+    const admitted = Array.from(admittedBySourceId.values());
     if (admitted.length === 0) {
-      throw new Error('Bundled test book-source document admitted no sources');
+      throw new Error('Bundled book-source collection admitted no sources');
     }
+    const existingSources = await this.loadExistingBundledSources(runtime);
+    const ledger = await BundledSourceLedger.load(this.host.getContext());
     let installedCount = 0;
+    let failedCount = 0;
+    let processedCount = 0;
+    let interrupted = false;
+    const managedCurrent: JsonObject[] = [];
     for (const bundled of admitted) {
+      if (this.state === 'closing' || this.state === 'closed') {
+        interrupted = true;
+        break;
+      }
       const sourceId = bundled['bookSourceUrl'] as string;
       const bundledVersion = bundled['builtinVersion'] as number;
       const bundledFingerprint = bundled['ruleFingerprint'] as string;
-      // Query only the bounded app-owned identities. Loading every raw source here
-      // would make cold-start cost scale with a user's imported source corpus.
-      const existing = await this.loadExistingBundledTestBookSource(runtime, sourceId);
-      if (existing === undefined) {
-        await this.importBundledSource(runtime, sourceId, bundled);
+      try {
+        const existing = existingSources.get(sourceId);
+        if (existing === undefined) {
+          await this.importBundledSource(runtime, sourceId, bundled);
+          installedCount += 1;
+          processedCount += 1;
+          managedCurrent.push(bundled);
+          continue;
+        }
+        if (!hasBuiltinMarker(existing)) {
+          // The user imported their own copy over the same identity: preserve
+          // it and ensure the withdrawal ledger never claims that user object.
+          ledger.remove(sourceId);
+          processedCount += 1;
+          continue;
+        }
+        const storedActualFingerprint = await sha256Hex(canonicalRulePayloadJson(existing));
+        const reBundled = existing['readerBuiltinWithdrawn'] === true ||
+          existing['readerTestBuiltinWithdrawn'] === true;
+        if (reBundled && isUserModifiedBuiltinCopy(existing, storedActualFingerprint)) {
+          ledger.remove(sourceId);
+          processedCount += 1;
+          continue;
+        }
+        const decision = decideBundledUpgrade(
+          bundledVersion, bundledFingerprint, existing, storedActualFingerprint);
+        if (decision === 'userCopy') {
+          ledger.remove(sourceId);
+          processedCount += 1;
+          continue;
+        }
+        if (decision === 'unchanged' && !reBundled) {
+          processedCount += 1;
+          managedCurrent.push(bundled);
+          continue;
+        }
+        if (reBundled) {
+          await this.importBundledSource(runtime, sourceId, bundled);
+        } else {
+          const importedSource: JsonObject = { ...bundled };
+          delete importedSource['readerBuiltinWithdrawn'];
+          delete importedSource['readerTestBuiltinWithdrawn'];
+          if (typeof existing['enabled'] === 'boolean') {
+            importedSource['enabled'] = existing['enabled'];
+          }
+          if (typeof existing['enabledExplore'] === 'boolean') {
+            importedSource['enabledExplore'] = existing['enabledExplore'];
+          }
+          await this.importBundledSource(runtime, sourceId, importedSource);
+        }
         installedCount += 1;
-        continue;
+        processedCount += 1;
+        managedCurrent.push(bundled);
+      } catch (error) {
+        failedCount += 1;
+        processedCount += 1;
+        hilog.error(LOG_DOMAIN, 'Reader',
+          'Bundled source item failed and was isolated: %{private}s %{private}s',
+          sourceId, errorMessageOf(error));
       }
-      if (!hasBuiltinMarker(existing)) {
-        // The user imported their own copy over the builtin identity: keep it.
-        hilog.info(LOG_DOMAIN, 'Reader',
-          'Bundled test source preserved as user copy: %{public}s', sourceId);
-        continue;
-      }
-      const storedActualFingerprint = await sha256Hex(canonicalRulePayloadJson(existing));
-      const reBundled = existing['readerTestBuiltinWithdrawn'] === true;
-      if (reBundled && isUserModifiedBuiltinCopy(existing, storedActualFingerprint)) {
-        // User modifications are never touched, not even on re-add.
-        hilog.info(LOG_DOMAIN, 'Reader',
-          'Bundled test source preserved, user-modified rules kept: %{public}s', sourceId);
-        continue;
-      }
-      const decision = decideBundledUpgrade(bundledVersion, bundledFingerprint, existing, storedActualFingerprint);
-      if (decision === 'userCopy') {
-        hilog.info(LOG_DOMAIN, 'Reader',
-          'Bundled test source preserved, user-modified rules kept: %{public}s', sourceId);
-        continue;
-      }
-      if (decision === 'unchanged' && !reBundled) {
-        continue;
-      }
-      if (reBundled) {
-        // A withdrawn identity was re-added to the bundle: restore the clean
-        // certified rules and the bundled default state.
-        hilog.info(LOG_DOMAIN, 'Reader',
-          'Bundled test source re-added after withdrawal, restoring defaults: %{public}s', sourceId);
-        await this.importBundledSource(runtime, sourceId, bundled);
-      } else {
-        const importedSource: JsonObject = { ...bundled };
-        delete importedSource['readerTestBuiltinWithdrawn'];
-        if (typeof existing['enabled'] === 'boolean') {
-          importedSource['enabled'] = existing['enabled'];
-        }
-        if (typeof existing['enabledExplore'] === 'boolean') {
-          importedSource['enabledExplore'] = existing['enabledExplore'];
-        }
-        await this.importBundledSource(runtime, sourceId, importedSource);
-      }
-      installedCount += 1;
     }
-    const ledger = await BundledSourceLedger.load(this.host.getContext());
+    if (interrupted) {
+      return {
+        collectionRecords: bundledSources.length,
+        uniqueSourceIds: admitted.length,
+        processed: processedCount,
+        installedOrUpgraded: installedCount,
+        failed: failedCount,
+        interrupted: true,
+      };
+    }
     const bundledIds = new Set<string>(admitted.map(source => source['bookSourceUrl'] as string));
     for (const entry of ledger.all()) {
       if (bundledIds.has(entry.sourceId)) {
         continue;
       }
-      const stored = await this.loadExistingBundledTestBookSource(runtime, entry.sourceId);
+      const stored = existingSources.get(entry.sourceId);
       if (stored === undefined) {
         ledger.remove(entry.sourceId);
         continue;
       }
-      if (stored['readerTestBuiltinWithdrawn'] === true) {
+      if (stored['readerBuiltinWithdrawn'] === true || stored['readerTestBuiltinWithdrawn'] === true) {
         continue;
       }
       const storedActualFingerprint = await sha256Hex(canonicalRulePayloadJson(stored));
       const userModified = isUserModifiedBuiltinCopy(stored, storedActualFingerprint);
       const retired: JsonObject = { ...stored };
-      retired['readerTestBuiltinWithdrawn'] = true;
+      retired['readerBuiltinWithdrawn'] = true;
+      delete retired['readerTestBuiltinWithdrawn'];
       if (!userModified) {
         retired['enabled'] = false;
       }
       await this.importBundledSource(runtime, entry.sourceId, retired);
       hilog.warn(LOG_DOMAIN, 'Reader',
-        'Bundled test source withdrawn from bundle, marked retired (enabled=%{public}s): %{public}s',
+        'Bundled source withdrawn from collection, marked retired (enabled=%{private}s): %{private}s',
         String(retired['enabled']), entry.sourceId);
     }
-    ledger.syncCurrentBundle(admitted);
+    ledger.syncCurrentBundle(managedCurrent);
     await ledger.save(this.host.getContext());
-    return installedCount;
+    return {
+      collectionRecords: bundledSources.length,
+      uniqueSourceIds: admitted.length,
+      processed: processedCount,
+      installedOrUpgraded: installedCount,
+      failed: failedCount,
+      interrupted: false,
+    };
   }
 
   private async importBundledSource(
@@ -698,77 +851,75 @@ export class ReaderRuntimeOwner {
       bookSource,
     }, { timeoutMs: 30000 });
     if (imported.data['imported'] !== true || imported.data['sourceId'] !== sourceId) {
-      throw new Error(`source.import did not confirm bundled test source ${sourceId}`);
+      throw new Error(`source.import did not confirm bundled source ${sourceId}`);
     }
   }
 
-  private async loadExistingBundledTestBookSource(
+  private async loadExistingBundledSources(
     runtime: ReaderCoreRuntime,
-    sourceId: string,
-  ): Promise<JsonObject | undefined> {
-    let exported: ReaderCoreResultEvent;
-    try {
-      exported = await runtime.request('source.export', {
-        sourceIds: [sourceId],
-        format: 'json',
-      }, { timeoutMs: 30000 });
-    } catch (error) {
-      if (error instanceof ReaderCoreRequestError &&
-        error.event.error.code === 'INVALID_PARAMS' &&
-        error.event.error.details?.['sourceId'] === sourceId) {
-        return undefined;
-      }
-      throw error;
-    }
+  ): Promise<Map<string, JsonObject>> {
+    const exported = await runtime.request('source.export', {
+      format: 'json',
+    }, { timeoutMs: 30000 });
     const data = exported.data['data'];
     const count = exported.data['count'];
-    if (typeof data !== 'string' || count !== 1) {
-      throw new Error(`source.export returned invalid bundled source data for ${sourceId}`);
+    if (typeof data !== 'string' || typeof count !== 'number' || !Number.isSafeInteger(count)) {
+      throw new Error('source.export returned invalid bundled source data');
     }
     let parsed: unknown;
     try {
       parsed = JSON.parse(data) as unknown;
     } catch (error) {
-      throw new Error(`source.export returned invalid JSON for ${sourceId}: ${(error as Error).message}`);
+      throw new Error(`source.export returned invalid JSON: ${(error as Error).message}`);
     }
-    if (!Array.isArray(parsed) || parsed.length !== 1 || typeof parsed[0] !== 'object' ||
-      parsed[0] === null || Array.isArray(parsed[0])) {
-      throw new Error(`source.export returned invalid source shape for ${sourceId}`);
+    if (!Array.isArray(parsed) || parsed.length !== count) {
+      throw new Error('source.export returned invalid source collection shape');
     }
-    return parsed[0] as JsonObject;
+    const sources = new Map<string, JsonObject>();
+    for (const raw of parsed) {
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+        continue;
+      }
+      const source = raw as JsonObject;
+      const sourceId = source['bookSourceUrl'];
+      if (typeof sourceId === 'string' && sourceId.trim().length > 0) {
+        sources.set(sourceId, source);
+      }
+    }
+    return sources;
   }
 
-  private requireBundledTestBookSources(document: string): JsonObject[] {
+  private requireBundledBookSourceCollection(document: string): JsonObject[] {
     let parsed: unknown;
     try {
       parsed = JSON.parse(document) as unknown;
     } catch (error) {
-      throw new Error(`Bundled test book-source JSON is invalid: ${(error as Error).message}`);
+      throw new Error(`Bundled book-source collection JSON is invalid: ${(error as Error).message}`);
     }
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      throw new Error('Bundled test book-source JSON must contain at least one source');
+      throw new Error('Bundled book-source collection must contain at least one source');
     }
     const sources: JsonObject[] = [];
+    const builtinIds = new Set<string>();
     for (let index = 0; index < parsed.length; index += 1) {
       const raw = parsed[index];
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-        throw new Error(`Bundled test book source ${index + 1} must be an object`);
+        throw new Error(`Bundled book source ${index + 1} must be an object`);
       }
       const source = raw as JsonObject;
       const sourceId = source['bookSourceUrl'];
       const name = source['bookSourceName'];
-      const version = source[TEST_BOOK_SOURCE_VERSION_FIELD];
       const builtinVersion = source['builtinVersion'];
       const enabled = source['enabled'];
       const defaultEnabled = source['defaultEnabled'];
-      if (typeof sourceId !== 'string' || !sourceId.startsWith('https://') ||
+      const builtinId = source['builtinId'];
+      if (typeof sourceId !== 'string' || !/^https?:\/\//.test(sourceId) ||
         typeof name !== 'string' || name.trim().length === 0 ||
         typeof enabled !== 'boolean' || typeof defaultEnabled !== 'boolean' ||
         enabled !== defaultEnabled ||
         typeof builtinVersion !== 'number' || !Number.isSafeInteger(builtinVersion) ||
-        builtinVersion < 1 || version !== builtinVersion ||
-        typeof source['builtinId'] !== 'string' ||
-        (source['builtinId'] as string).trim().length === 0 ||
+        builtinVersion < 1 ||
+        typeof builtinId !== 'string' || builtinId.trim().length === 0 ||
         typeof source['ruleFingerprint'] !== 'string' ||
         !/^[0-9a-f]{64}$/.test(source['ruleFingerprint'] as string) ||
         typeof source['verifiedAt'] !== 'string' ||
@@ -776,18 +927,98 @@ export class ReaderRuntimeOwner {
         typeof source['verificationSuiteVersion'] !== 'string' ||
         (source['verificationSuiteVersion'] as string).trim().length === 0 ||
         !Array.isArray(source['capabilities']) || (source['capabilities'] as unknown[]).length === 0 ||
+        !(source['capabilities'] as unknown[]).includes('import') ||
         typeof source['provenance'] !== 'object' || source['provenance'] === null ||
         typeof (source['provenance'] as JsonObject)['origin'] !== 'string' ||
-        typeof source['searchUrl'] !== 'string' ||
-        typeof source['ruleSearch'] !== 'object' || source['ruleSearch'] === null ||
-        typeof source['ruleBookInfo'] !== 'object' || source['ruleBookInfo'] === null ||
-        typeof source['ruleToc'] !== 'object' || source['ruleToc'] === null ||
-        typeof source['ruleContent'] !== 'object' || source['ruleContent'] === null) {
-        throw new Error(`Bundled test book source ${index + 1} has an invalid manifest contract`);
+        typeof source['readerHistoricalTest'] !== 'object' || source['readerHistoricalTest'] === null ||
+        builtinIds.has(builtinId)) {
+        hilog.error(LOG_DOMAIN, 'Reader',
+          'Bundled source record skipped, invalid collection contract at index %{public}d', index + 1);
+        continue;
       }
+      builtinIds.add(builtinId);
       sources.push(source);
     }
+    if (sources.length === 0) {
+      throw new Error('Bundled book-source collection contains no valid source records');
+    }
     return sources;
+  }
+
+  private async recoverPendingLocalImportFinalizes(runtime: ReaderCoreRuntime): Promise<void> {
+    let pending: PendingLocalImportFinalize[];
+    try {
+      pending = await this.host.readPendingLocalImportFinalizes();
+    } catch (_) {
+      // Keep a corrupt queue for forensic repair, but never make startup
+      // fail or print its opaque token contents.
+      hilog.error(LOG_DOMAIN, 'Reader', 'Pending local import finalize queue could not be loaded');
+      return;
+    }
+    let finalized = 0;
+    let deferred = 0;
+    for (const entry of pending) {
+      try {
+        const result = await runtime.request(
+          'import.finalize',
+          { rollbackToken: entry.rollbackToken },
+          { timeoutMs: PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS },
+        );
+        const data = result.data;
+        if (data['kind'] !== 'localBook' || typeof data['data'] !== 'object' || data['data'] === null ||
+          (data['data'] as JsonObject)['finalized'] !== true) {
+          deferred += 1;
+          continue;
+        }
+      } catch (error) {
+        // The original finalize may have committed Core's journal before its
+        // reply was lost. A subsequent retry then returns the deterministic
+        // "journal unavailable" validation error; that is an idempotent
+        // success for this cleanup queue, not a reason to retry forever.
+        if (this.isAlreadyFinalizedLocalImportError(error)) {
+          try {
+            await this.host.removePendingLocalImportFinalize(entry.transactionId);
+            finalized += 1;
+          } catch (_) {
+            deferred += 1;
+          }
+          continue;
+        }
+        deferred += 1;
+        continue;
+      }
+      try {
+        await this.host.removePendingLocalImportFinalize(entry.transactionId);
+        finalized += 1;
+      } catch (_) {
+        // Core accepted the cleanup, but retain the queue entry if the atomic
+        // removal failed; a later idempotent retry can finish the file repair.
+        deferred += 1;
+      }
+    }
+    if (pending.length > 0) {
+      hilog.info(LOG_DOMAIN, 'Reader',
+        'Pending local import finalize recovery: queued=%{public}d finalized=%{public}d deferred=%{public}d',
+        pending.length, finalized, deferred);
+    }
+  }
+
+  private isAlreadyFinalizedLocalImportError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+    const event = (error as { event?: unknown })['event'];
+    if (typeof event !== 'object' || event === null) {
+      return false;
+    }
+    const structured = (event as { error?: unknown })['error'];
+    if (typeof structured !== 'object' || structured === null) {
+      return false;
+    }
+    const code = (structured as { code?: unknown })['code'];
+    const message = (structured as { message?: unknown })['message'];
+    return code === 'INVALID_PARAMS' && typeof message === 'string' &&
+      message.includes('local book journal unavailable');
   }
 
   private requireCoreBuildIdentity(value: unknown): CoreBuildIdentity {

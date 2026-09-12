@@ -1,6 +1,7 @@
 import http from '@ohos.net.http';
 import url from '@ohos.url';
 import util from '@ohos.util';
+import connection from '@ohos.net.connection';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { encodeSharedText, type JsonObject } from '@reader/core-harmony';
 import { CookieSessionStore } from './CookieSessionStore';
@@ -8,6 +9,7 @@ import { errorMessageOf } from './ErrorMessage';
 import {
   allowNextRedirect,
   isCrossOriginSensitiveHeader,
+  isPrivateNetworkTarget,
   mergeCookieHeader,
   normalizeCharsetLabel,
   redirectMethodDecision,
@@ -22,11 +24,16 @@ const MAX_RETRY_BACKOFF_MILLIS = 3000;
 const MAX_RETRY_ATTEMPTS = 5;
 const MAX_REDIRECTS = 20;
 const DEFAULT_MAX_REDIRECTS = 10;
-// Reject oversized responses before TextDecoder/base64 allocation (which would
-// roughly triple peak memory). The platform has already buffered the bytes at
-// this point, so this is a post-hoc guard, not an allocation preventer.
+// Applied to the platform's maxLimit and checked again before TextDecoder/base64.
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
 const MAX_REQUEST_BODY_BYTES = 16 * 1024 * 1024;
+const MAX_REQUEST_HEADERS = 128;
+const MAX_HEADER_NAME_LENGTH = 256;
+const MAX_HEADER_VALUE_LENGTH = 64 * 1024;
+const MAX_FORM_FIELDS = 256;
+const MAX_FORM_FIELD_CHARS = 1024 * 1024;
+const MAX_MULTIPART_FILES = 64;
+const MAX_MULTIPART_METADATA_CHARS = 64 * 1024;
 // Host total deadline must not exceed Core's default 30s request timeout, so
 // a Core caller that gives up never leaves this Host running in the
 // background beyond its own budget.
@@ -41,6 +48,11 @@ type ResponseHeaders = Record<string, string>;
 
 type DeadlineState = {
   deadlineAt: number;
+  cookieGeneration?: number;
+  /** Restrict this request and every redirect hop to HTTPS. */
+  httpsOnly?: boolean;
+  /** Do not carry credential-bearing URL query values to another origin. */
+  sameOriginRedirectsOnly?: boolean;
   cancelled: boolean;
   activeRequest: http.HttpRequest | null;
   timer: number | undefined;
@@ -132,7 +144,9 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  * Wire contract (`HostHttpRequest`, camelCase): url, method, headers,
  * body (Raw=string | Form={fields:[[k,v]]} | Multipart={fields,files}),
  * charset (request-body encoding), followRedirects, maxRedirects, retry,
- * usePlatformCookieJar, session, diagnostic (opaque recorder context).
+ * usePlatformCookieJar, session, diagnostic (opaque recorder context), and
+ * the optional Host-only `httpsOnly` and `sameOriginRedirectsOnly` redirect
+ * policies.
  *
  * Redirects are stopped one hop at a time through API-23's REDIRECTION
  * interceptor, so Core receives an accurate finalUrl and hop list. Method rewriting follows the
@@ -157,6 +171,7 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  * failure throws so the SDK routes `host.error`.
  */
 export class HttpExecuteHost {
+  private static targetTails: Map<string, Promise<void>> = new Map();
   static readonly instance: HttpExecuteHost = new HttpExecuteHost();
   private readonly activeByRequestId = new Map<number, DeadlineState>();
   private readonly sourceDiagnosticsByRequestId = new Map<number, SourceHttpDiagnosticRecord[]>();
@@ -171,6 +186,18 @@ export class HttpExecuteHost {
       throw new Error('http.execute requires non-empty url');
     }
     this.requireHttpUrl(requestUrl);
+    const httpsOnly = params['httpsOnly'];
+    if (httpsOnly !== undefined && httpsOnly !== null && typeof httpsOnly !== 'boolean') {
+      throw new Error('http.execute: httpsOnly must be a boolean');
+    }
+    const sameOriginRedirectsOnly = params['sameOriginRedirectsOnly'];
+    if (sameOriginRedirectsOnly !== undefined && sameOriginRedirectsOnly !== null &&
+      typeof sameOriginRedirectsOnly !== 'boolean') {
+      throw new Error('http.execute: sameOriginRedirectsOnly must be a boolean');
+    }
+    // Final-look SSRF gate at the request execution boundary (P1-5). Every
+    // fetch this Host issues enters here or through the redirect chain, both
+    // of which run the shared private-target judge before any byte moves.
     const parsedMethod = this.parseMethod(params['method']);
     const headers = this.parseHeaders(params['headers']);
     const body = this.parseBody(params['body']);
@@ -191,6 +218,11 @@ export class HttpExecuteHost {
     const diagnostic = this.parseSourceDiagnostic(params['diagnostic']);
     const diagnosticStartedAt = Date.now();
     const deadline = this.createDeadline(TOTAL_DEADLINE_MS);
+    deadline.httpsOnly = httpsOnly === true;
+    deadline.sameOriginRedirectsOnly = sameOriginRedirectsOnly === true;
+    if (sessionId !== null) {
+      deadline.cookieGeneration = CookieSessionStore.instance.sessionGeneration(sessionId);
+    }
     let cancellationPoll: number | undefined = undefined;
     if (requestId !== undefined) {
       this.activeByRequestId.set(requestId, deadline);
@@ -220,7 +252,7 @@ export class HttpExecuteHost {
       // `cancelled` flag still stops background retries and the post-await
       // check rejects a success that lands after the deadline.
       const response = await Promise.race([
-        this.requestWithPolicy(
+        this.requestAfterTargetValidation(
           requestUrl, parsedMethod, headers, body, requestCharset,
           maxRedirects, retry, deadline, useCookieJar ? sessionId : null,
         ),
@@ -385,6 +417,8 @@ export class HttpExecuteHost {
     });
     const state: DeadlineState = {
       deadlineAt: Date.now() + deadlineMs,
+      httpsOnly: false,
+      sameOriginRedirectsOnly: false,
       cancelled: false,
       activeRequest: null,
       timer: undefined,
@@ -426,6 +460,24 @@ export class HttpExecuteHost {
     }
   }
 
+  private async requestAfterTargetValidation(
+    url: string,
+    method: ParsedMethod,
+    headers: Record<string, string>,
+    body: EncodedBody,
+    requestCharset: string | undefined,
+    maxRedirects: number,
+    retry: RetryPolicy | null,
+    deadline: DeadlineState,
+    sessionId: string | null,
+  ): Promise<JsonObject> {
+    this.assertWithinDeadline(deadline);
+    this.requireHttpsIfNeeded(url, deadline);
+    await this.rejectPrivateNetworkTarget(url);
+    this.assertWithinDeadline(deadline);
+    return this.requestWithPolicy(url, method, headers, body, requestCharset, maxRedirects, retry, deadline, sessionId);
+  }
+
   private async requestWithPolicy(
     url: string,
     method: ParsedMethod,
@@ -459,7 +511,7 @@ export class HttpExecuteHost {
         }
       }
     }
-    hilog.error(LOG_DOMAIN, 'Reader', 'http.execute failed after %{public}d attempt(s): %{public}s',
+    hilog.error(LOG_DOMAIN, 'Reader', 'http.execute failed after %{public}d attempt(s): %{private}s',
       attempts, lastError === null ? 'unknown' : lastError.message);
     throw lastError ?? new Error('http.execute request failed');
   }
@@ -482,6 +534,7 @@ export class HttpExecuteHost {
     const observedCookies: JsonObject[] = [];
     while (true) {
       this.assertWithinDeadline(deadline);
+      this.requireHttpsIfNeeded(currentUrl, deadline);
       const effectiveHeaders = this.copyHeaders(currentHeaders);
       if (sessionId !== null) {
         const cookieHeader = await CookieSessionStore.instance.cookieHeader(sessionId, currentUrl);
@@ -496,7 +549,7 @@ export class HttpExecuteHost {
       if (sessionId !== null) {
         const setCookies = this.headerValues(response.rawHeaders, 'set-cookie');
         const stored = await CookieSessionStore.instance.storeResponseCookies(
-          sessionId, currentUrl, setCookies,
+          sessionId, currentUrl, setCookies, deadline.cookieGeneration,
         );
         observedCookies.push(...stored);
       }
@@ -510,6 +563,14 @@ export class HttpExecuteHost {
         throw new Error(`http.execute: exceeded redirect limit ${maxRedirects}`);
       }
       const nextUrl = this.resolveRedirectUrl(location, currentUrl);
+      this.requireHttpsIfNeeded(nextUrl, deadline);
+      if (deadline.sameOriginRedirectsOnly && !this.sameOrigin(currentUrl, nextUrl)) {
+        throw new Error('http.execute: cross-origin redirect is not allowed for this request');
+      }
+      // A public source must not be able to redirect into private address
+      // space either: every hop target passes the same byte/DNS gate as the
+      // entry URL before the next hop is issued.
+      await this.rejectPrivateNetworkTarget(nextUrl);
       const hop: RedirectHop = {
         status: response.status,
         fromUrl: currentUrl,
@@ -544,6 +605,51 @@ export class HttpExecuteHost {
     requestCharset: string | undefined,
     deadline: DeadlineState,
   ): Promise<HopResponse> {
+    const hostname = url.URL.parseURL(requestUrl).hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
+    if (hostname.includes(':') || /^[0-9.]+$/.test(hostname)) {
+      await this.rejectPrivateNetworkTarget(requestUrl);
+      this.assertWithinDeadline(deadline);
+      return this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline);
+    }
+    // The platform DNS override is application-wide. Serialize leases for
+    // this host so another hop cannot remove a pin while it is in use.
+    const prior = HttpExecuteHost.targetTails.get(hostname) ?? Promise.resolve();
+    let release: () => void = (): void => {};
+    const held = new Promise<void>((resolve): void => { release = resolve; });
+    const tail = prior.catch((): void => {}).then((): Promise<void> => held);
+    HttpExecuteHost.targetTails.set(hostname, tail);
+    let pinned = false;
+    try {
+      await prior.catch((): void => {});
+      this.assertWithinDeadline(deadline);
+      const addresses = await this.rejectPrivateNetworkTarget(requestUrl);
+      this.assertWithinDeadline(deadline);
+      await connection.addCustomDnsRule(hostname, addresses);
+      pinned = true;
+      this.assertWithinDeadline(deadline);
+      return await this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline);
+    } finally {
+      if (pinned) {
+        try { await connection.removeCustomDnsRule(hostname); } catch (_) {
+          // A retained rule still contains only validated public addresses.
+          hilog.warn(LOG_DOMAIN, 'Reader', 'DNS pin cleanup deferred');
+        }
+      }
+      release();
+      if (HttpExecuteHost.targetTails.get(hostname) === tail) {
+        HttpExecuteHost.targetTails.delete(hostname);
+      }
+    }
+  }
+
+  private async singleHopTransport(
+    requestUrl: string,
+    method: ParsedMethod,
+    headers: Record<string, string>,
+    body: EncodedBody,
+    requestCharset: string | undefined,
+    deadline: DeadlineState,
+  ): Promise<HopResponse> {
     const request = http.createHttp();
     deadline.activeRequest = request;
     try {
@@ -570,6 +676,7 @@ export class HttpExecuteHost {
         // owns the Core response conversion decision.
         expectDataType: http.HttpDataType.ARRAY_BUFFER,
         usingCache: false,
+        maxLimit: MAX_RESPONSE_BYTES,
         // Clamp every per-request timeout to the remaining deadline budget.
         connectTimeout: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining),
         readTimeout: Math.min(DEFAULT_READ_TIMEOUT_MS, remaining),
@@ -685,6 +792,9 @@ export class HttpExecuteHost {
     }
     if (body.kind === 'form') {
       const bytes = this.encodeFormFields(body.fields, requestCharset);
+      if (bytes.length > MAX_REQUEST_BODY_BYTES) {
+        throw new Error(`http.execute: form body exceeds ${MAX_REQUEST_BODY_BYTES} byte limit`);
+      }
       return bytes.buffer;
     }
     return this.encodeRequestText(body.text, requestCharset);
@@ -709,8 +819,16 @@ export class HttpExecuteHost {
   ): Uint8Array {
     const charset = requestCharset === undefined ? 'utf-8' : requestCharset;
     const parts: string[] = [];
+    let encodedBytes = 0;
     for (const [name, fieldValue] of fields) {
-      parts.push(`${this.formPercentEncode(name, charset)}=${this.formPercentEncode(fieldValue, charset)}`);
+      const encodedName = this.formPercentEncode(name, charset);
+      const encodedValue = this.formPercentEncode(fieldValue, charset);
+      const partBytes = encodedName.length + 1 + encodedValue.length + (parts.length > 0 ? 1 : 0);
+      if (partBytes > MAX_REQUEST_BODY_BYTES - encodedBytes) {
+        throw new Error(`http.execute: form body exceeds ${MAX_REQUEST_BODY_BYTES} byte limit`);
+      }
+      encodedBytes += partBytes;
+      parts.push(`${encodedName}=${encodedValue}`);
     }
     return new util.TextEncoder('utf-8').encode(parts.join('&'));
   }
@@ -797,8 +915,33 @@ export class HttpExecuteHost {
     return resolved;
   }
 
+  private requireHttpsIfNeeded(value: string, deadline: DeadlineState): void {
+    if (!deadline.httpsOnly) return;
+    let parsed: url.URL;
+    try {
+      parsed = url.URL.parseURL(value);
+    } catch (error) {
+      const message = errorMessageOf(error);
+      throw new Error(`http.execute: invalid url: ${message}`);
+    }
+    if (parsed.protocol.toLowerCase() !== 'https:') {
+      throw new Error('http.execute: HTTPS is required for this request and its redirects');
+    }
+  }
+
   private sameOrigin(left: string, right: string): boolean {
-    return url.URL.parseURL(left).origin.toLowerCase() === url.URL.parseURL(right).origin.toLowerCase();
+    const leftUrl = url.URL.parseURL(left);
+    const rightUrl = url.URL.parseURL(right);
+    const effectivePort = (parsed: url.URL): string => {
+      if (parsed.port.length > 0) {
+        const numeric = Number(parsed.port);
+        return Number.isSafeInteger(numeric) ? `${numeric}` : parsed.port;
+      }
+      return parsed.protocol.toLowerCase() === 'https:' ? '443' : '80';
+    };
+    return leftUrl.protocol.toLowerCase() === rightUrl.protocol.toLowerCase() &&
+      leftUrl.hostname.toLowerCase() === rightUrl.hostname.toLowerCase() &&
+      effectivePort(leftUrl) === effectivePort(rightUrl);
   }
 
   private requireHttpUrl(value: string): void {
@@ -813,6 +956,52 @@ export class HttpExecuteHost {
     if ((protocol !== 'http:' && protocol !== 'https:') || parsed.hostname.length === 0) {
       throw new Error('http.execute: url must use http or https');
     }
+  }
+
+  /**
+   * Resolve and validate every address before connecting. singleHop binds
+   * these addresses with the platform DNS rule while preserving the original
+   * URL, TLS server name, certificate validation and Host header.
+   */
+  private async rejectPrivateNetworkTarget(requestUrl: string): Promise<string[]> {
+    let hostname: string;
+    try {
+      hostname = url.URL.parseURL(requestUrl).hostname;
+    } catch (_) {
+      // requireHttpUrl already rejected unparseable URLs; nothing to judge.
+      throw new Error('http.execute: invalid target');
+    }
+    const host = hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
+    if (isPrivateNetworkTarget(host)) {
+      throw new Error(
+        'http.execute: url targets a private, loopback, or link-local address and is not allowed',
+      );
+    }
+    if (host.indexOf(':') >= 0 || /^[0-9.]+$/.test(host)) {
+      return [host]; // IP literal: already judged by the byte rules above.
+    }
+    let addresses: Array<connection.NetAddress>;
+    try {
+      addresses = await connection.getAddressesByName(host);
+    } catch (error) {
+      // Fail closed: an unresolvable target cannot be verified public, and
+      // the subsequent request would fail on the same lookup anyway.
+      throw new Error(
+        `http.execute: cannot verify url target (DNS resolution failed): ${errorMessageOf(error)}`,
+      );
+    }
+    if (addresses.length === 0) throw new Error('http.execute: DNS returned no addresses');
+    for (const address of addresses) {
+      const resolved = address.address.trim()
+        .replace(/^\[/, '').replace(/\]$/, '').split('%')[0];
+      if (resolved.length === 0 || (!resolved.includes(':') && !/^[0-9.]+$/.test(resolved)) ||
+        isPrivateNetworkTarget(resolved)) {
+        throw new Error(
+          'http.execute: url resolves to a private, loopback, or link-local address and is not allowed',
+        );
+      }
+    }
+    return addresses.map((address: connection.NetAddress): string => address.address);
   }
 
   private parseSession(value: unknown): string | null {
@@ -915,11 +1104,16 @@ export class HttpExecuteHost {
     if (typeof value !== 'object' || Array.isArray(value)) {
       throw new Error('http.execute: headers must be an object');
     }
-    for (const key of Object.keys(value)) {
+    const keys = Object.keys(value);
+    if (keys.length > MAX_REQUEST_HEADERS) {
+      throw new Error(`http.execute: headers exceed ${MAX_REQUEST_HEADERS} entries`);
+    }
+    let totalBytes = 0;
+    for (const key of keys) {
       if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
         throw new Error(`http.execute: header name ${key} is not allowed`);
       }
-      if (!this.isValidHttpToken(key)) {
+      if (key.length > MAX_HEADER_NAME_LENGTH || !this.isValidHttpToken(key)) {
         throw new Error(`http.execute: header name ${key} must be a valid HTTP token`);
       }
       const raw = (value as Record<string, unknown>)[key];
@@ -927,6 +1121,14 @@ export class HttpExecuteHost {
         throw new Error(`http.execute: header ${key} must be a string`);
       }
       this.assertNoCrLf(raw, `header ${key}`);
+      if (raw.length > MAX_HEADER_VALUE_LENGTH ||
+        /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(raw)) {
+        throw new Error(`http.execute: header ${key} contains an invalid value`);
+      }
+      totalBytes += key.length + raw.length;
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+        throw new Error(`http.execute: headers exceed ${MAX_REQUEST_BODY_BYTES} bytes`);
+      }
       out[key] = raw;
     }
     return out;
@@ -968,9 +1170,20 @@ export class HttpExecuteHost {
       throw new Error('http.execute: form fields must be an array of [name, value]');
     }
     const entries = value as Array<unknown>;
+    if (entries.length > MAX_FORM_FIELDS) {
+      throw new Error(`http.execute: form fields exceed ${MAX_FORM_FIELDS} entries`);
+    }
+    let totalBytes = 0;
     for (const entry of entries) {
       if (Array.isArray(entry) && entry.length === 2 &&
         typeof entry[0] === 'string' && typeof entry[1] === 'string') {
+        if (entry[0].length > MAX_FORM_FIELD_CHARS || entry[1].length > MAX_FORM_FIELD_CHARS) {
+          throw new Error(`http.execute: form field exceeds ${MAX_FORM_FIELD_CHARS} characters`);
+        }
+        totalBytes += entry[0].length + entry[1].length;
+        if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+          throw new Error(`http.execute: form fields exceed ${MAX_REQUEST_BODY_BYTES} bytes`);
+        }
         fields.push([entry[0], entry[1]]);
       }
     }
@@ -983,6 +1196,11 @@ export class HttpExecuteHost {
       throw new Error('http.execute: multipart files must be an array');
     }
     const entries = value as Array<unknown>;
+    if (entries.length > MAX_MULTIPART_FILES) {
+      throw new Error(`http.execute: multipart files exceed ${MAX_MULTIPART_FILES} entries`);
+    }
+    let totalDataBytes = 0;
+    let totalMetadataBytes = 0;
     for (const entry of entries) {
       if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
         throw new Error('http.execute: multipart file entry must be an object');
@@ -994,6 +1212,15 @@ export class HttpExecuteHost {
       if (typeof fieldName !== 'string' || typeof filename !== 'string' || typeof contentType !== 'string') {
         throw new Error('http.execute: multipart file requires fieldName, filename, contentType');
       }
+      if (fieldName.length > MAX_MULTIPART_METADATA_CHARS ||
+        filename.length > MAX_MULTIPART_METADATA_CHARS ||
+        contentType.length > MAX_MULTIPART_METADATA_CHARS) {
+        throw new Error(`http.execute: multipart metadata exceeds ${MAX_MULTIPART_METADATA_CHARS} characters`);
+      }
+      totalMetadataBytes += fieldName.length + filename.length + contentType.length;
+      if (totalMetadataBytes > MAX_REQUEST_BODY_BYTES) {
+        throw new Error(`http.execute: multipart metadata exceeds ${MAX_REQUEST_BODY_BYTES} bytes`);
+      }
       const data = obj['data'];
       if (data !== undefined && !Array.isArray(data)) {
         throw new Error('http.execute: multipart file data must be a byte array');
@@ -1003,6 +1230,11 @@ export class HttpExecuteHost {
         throw new Error('http.execute: multipart file filePath must be a string');
       }
       const bytes: number[] = data === undefined ? [] : (data as Array<unknown>) as number[];
+      if (bytes.length > MAX_REQUEST_BODY_BYTES ||
+        totalDataBytes > MAX_REQUEST_BODY_BYTES - bytes.length) {
+        throw new Error(`http.execute: multipart file data exceeds ${MAX_REQUEST_BODY_BYTES} bytes`);
+      }
+      totalDataBytes += bytes.length;
       if (bytes.length === 0 && typeof filePath === 'string' && filePath.trim().length > 0) {
         // Security: Core turns a source `@/path` verbatim into filePath
         // (analyze_url.rs:1674). This Host has no user-authorized
@@ -1055,6 +1287,9 @@ export class HttpExecuteHost {
     let total = 0;
     for (const chunk of chunks) {
       total += chunk.length;
+    }
+    if (total > MAX_REQUEST_BODY_BYTES) {
+      throw new Error(`http.execute: multipart body exceeds ${MAX_REQUEST_BODY_BYTES} byte limit`);
     }
     const bytes = new Uint8Array(total);
     let offset = 0;

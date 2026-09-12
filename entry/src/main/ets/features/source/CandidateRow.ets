@@ -19,6 +19,8 @@ type SourceSwitchRowKind = 'current' | 'available' | 'offline' | 'timeout';
 
 @Component
 export struct CandidateRow {
+  @Prop acquisitionState: string | undefined = undefined;
+  @Prop acquisitionMessage: string | undefined = undefined;
   @Prop sourceId: string = '';
   @Prop sourceName: string = '';
   @Prop bookName: string = '';
@@ -167,6 +169,11 @@ export struct CandidateRow {
   }
 
   private chapterText(): string {
+    if (this.acquisitionState === 'discovered') return '已发现 · 待解析';
+    if (this.acquisitionState === 'catalogReady') return '目录已就绪';
+    if (this.acquisitionState === 'readable') return '已验证章节可读';
+    if (this.acquisitionState === 'stale') return '待更新';
+    if (this.acquisitionState === 'failed') return '解析失败 · 可重试';
     return this.currentChapterTitle.trim().length > 0 ? this.currentChapterTitle : '—';
   }
 

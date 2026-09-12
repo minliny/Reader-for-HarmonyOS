@@ -65,6 +65,13 @@ export class ReadingImageDiskCache {
   private readonly context: common.UIAbilityContext;
   private readonly freeSpaceProbe: ReadingImageFreeSpaceProbe;
   private readonly inFlightWrites = new Map<string, Promise<void>>();
+  /**
+   * Serializes destructive/constructive mutations for one book identity.
+   * A chapter clear or corrupt-resource removal must not race a background
+   * prefetch and recreate bytes after the caller has declared them gone.
+   * Different books remain independent and still use the two write lanes.
+   */
+  private readonly bookMutationTails = new Map<string, Promise<void>>();
   private writeLaneA: Promise<void> = Promise.resolve();
   private writeLaneB: Promise<void> = Promise.resolve();
   private nextWriteLane: number = 0;
@@ -101,15 +108,24 @@ export class ReadingImageDiskCache {
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
       throw new Error(`offline reading image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
     }
-    const chapterDirectory = await this.chapterDirectory(identity);
-    await this.ensureDirectory(chapterDirectory);
-    await this.assertWriteCapacity(chapterDirectory, bytes.byteLength);
-    await this.writeAtomicBytes(await this.resourcePath(identity), bytes);
+    // Snapshot caller-owned values before waiting behind an earlier mutation;
+    // page/session teardown must not be able to retarget a queued write.
+    const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
+    const payload = bytes.slice();
+    await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+      const chapterDirectory = await this.chapterDirectory(requestedIdentity);
+      await this.ensureDirectory(chapterDirectory);
+      await this.assertWriteCapacity(chapterDirectory, payload.byteLength);
+      await this.writeAtomicBytes(await this.resourcePath(requestedIdentity), payload);
+    });
   }
 
   async removeResource(identity: ReadingImageCacheIdentity): Promise<void> {
     this.assertResourceIdentity(identity);
-    await this.unlinkIfPresent(await this.resourcePath(identity));
+    const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
+    await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+      await this.unlinkIfPresent(await this.resourcePath(requestedIdentity));
+    });
   }
 
   async markChapterComplete(
@@ -117,37 +133,41 @@ export class ReadingImageDiskCache {
     resources: ReadingImageCacheIdentity[],
   ): Promise<void> {
     this.assertChapterIdentity(chapter);
-    const resourceHashes: string[] = [];
-    for (const resource of resources) {
-      this.assertSameChapter(chapter, resource);
-      const hash = await this.resourceHash(resource);
-      if (!(await fileIo.access(`${await this.chapterDirectory(chapter)}/${hash}.bin`))) {
-        throw new Error('offline reading image manifest cannot reference missing bytes');
+    const requestedChapter: ReadingImageChapterIdentity = { ...chapter };
+    const requestedResources = resources.map((resource: ReadingImageCacheIdentity): ReadingImageCacheIdentity => ({ ...resource }));
+    await this.enqueueBookMutation(this.bookMutationKey(chapter.sourceId, chapter.bookId), async (): Promise<void> => {
+      const resourceHashes: string[] = [];
+      const directory = await this.chapterDirectory(requestedChapter);
+      for (const resource of requestedResources) {
+        this.assertSameChapter(requestedChapter, resource);
+        const hash = await this.resourceHash(resource);
+        if (!(await fileIo.access(`${directory}/${hash}.bin`))) {
+          throw new Error('offline reading image manifest cannot reference missing bytes');
+        }
+        resourceHashes.push(hash);
       }
-      resourceHashes.push(hash);
-    }
-    resourceHashes.sort();
-    const manifest: ReadingImageChapterManifest = {
-      formatVersion: CACHE_FORMAT_VERSION,
-      sourceId: chapter.sourceId,
-      bookId: chapter.bookId,
-      chapterIndex: chapter.chapterIndex,
-      contentVersion: chapter.contentVersion,
-      resourceHashes,
-      completedAt: Date.now(),
-    };
-    const directory = await this.chapterDirectory(chapter);
-    await this.ensureDirectory(directory);
-    const manifestText = JSON.stringify(manifest);
-    const manifestBytes = new util.TextEncoder().encodeInto(manifestText);
-    await this.assertWriteCapacity(directory, manifestBytes.byteLength);
-    await this.writeAtomicBytes(`${directory}/manifest.json`, manifestBytes);
-    try {
-      await this.pruneUnreferencedResources(directory, resourceHashes);
-    } catch (_) {
-      // The atomic manifest is already authoritative. Stale unreachable bytes
-      // may be reclaimed by the next successful prefetch or exact book clear.
-    }
+      resourceHashes.sort();
+      const manifest: ReadingImageChapterManifest = {
+        formatVersion: CACHE_FORMAT_VERSION,
+        sourceId: requestedChapter.sourceId,
+        bookId: requestedChapter.bookId,
+        chapterIndex: requestedChapter.chapterIndex,
+        contentVersion: requestedChapter.contentVersion,
+        resourceHashes,
+        completedAt: Date.now(),
+      };
+      await this.ensureDirectory(directory);
+      const manifestText = JSON.stringify(manifest);
+      const manifestBytes = new util.TextEncoder().encodeInto(manifestText);
+      await this.assertWriteCapacity(directory, manifestBytes.byteLength);
+      await this.writeAtomicBytes(`${directory}/manifest.json`, manifestBytes);
+      try {
+        await this.pruneUnreferencedResources(directory, resourceHashes);
+      } catch (_) {
+        // The atomic manifest is already authoritative. Stale unreachable bytes
+        // may be reclaimed by the next successful prefetch or exact book clear.
+      }
+    });
   }
 
   async isChapterComplete(chapter: ReadingImageChapterIdentity): Promise<boolean> {
@@ -201,8 +221,10 @@ export class ReadingImageDiskCache {
   async clearBook(sourceId: string, bookId: string): Promise<void> {
     this.assertNonBlank(sourceId, 'sourceId');
     this.assertNonBlank(bookId, 'bookId');
-    const path = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
-    await this.removeTree(path);
+    await this.enqueueBookMutation(this.bookMutationKey(sourceId, bookId), async (): Promise<void> => {
+      const path = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
+      await this.removeTree(path);
+    });
   }
 
   private async chapterDirectory(identity: ReadingImageChapterIdentity): Promise<string> {
@@ -216,6 +238,28 @@ export class ReadingImageDiskCache {
 
   private async bookHash(sourceId: string, bookId: string): Promise<string> {
     return this.sha256(`${sourceId}\u0000${bookId}`);
+  }
+
+  private bookMutationKey(sourceId: string, bookId: string): string {
+    // Do not use a delimiter-only key: although normal IDs are opaque strings,
+    // a caller-controlled NUL could otherwise make two distinct pairs share a
+    // mutation tail (for example `a\0b`/`c` and `a`/`b\0c`).
+    return JSON.stringify([sourceId, bookId]);
+  }
+
+  private enqueueBookMutation(
+    key: string,
+    operation: () => Promise<void>,
+  ): Promise<void> {
+    const previous = this.bookMutationTails.get(key) ?? Promise.resolve();
+    const task = previous.catch((): void => {}).then(operation);
+    const settled = task.catch((): void => {});
+    this.bookMutationTails.set(key, settled);
+    return task.finally((): void => {
+      if (this.bookMutationTails.get(key) === settled) {
+        this.bookMutationTails.delete(key);
+      }
+    });
   }
 
   private async resourceHash(identity: ReadingImageCacheIdentity): Promise<string> {

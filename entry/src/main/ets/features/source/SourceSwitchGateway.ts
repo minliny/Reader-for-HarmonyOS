@@ -1,7 +1,13 @@
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
+import { CachedBookIdentityResolver } from '../common/CachedBookIdentity';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import {
+  classifyReaderSource,
+  readerSourceCategoryIsText,
+  type ReaderSourceCategory,
+} from './ReaderSourceCategory';
 
 // Legado caps ChangeBookSourceDialog at nine workers. Keep one lane in reserve
 // for the foreground reading session while avoiding one unbounded request per
@@ -15,8 +21,13 @@ const SOURCE_SWITCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * time fields persisted through Core `search-book.*` storage.
  */
 export type SourceSwitchCandidate = {
+  acquisitionState?: 'discovered' | 'catalogReady' | 'readable' | 'failed' | 'stale';
+  acquisitionMessage?: string;
+  verifiedChapterUrl?: string;
+  sourceVersion?: string;
   sourceId: string;
   sourceName?: string;
+  category: ReaderSourceCategory;
   sourceOrder?: number;
   bookUrl: string;
   bookName: string;
@@ -46,6 +57,8 @@ type SourceSwitchRegistryEntry = {
   sourceId: string;
   sourceName: string;
   sourceOrder: number;
+  sourceVersion?: string;
+  category: ReaderSourceCategory;
 };
 
 type SourceSwitchCachedChapter = {
@@ -56,6 +69,13 @@ type SourceSwitchCachedChapter = {
 /** Stable identity shared by discovery, rendering, and click admission. */
 export function sourceSwitchCandidateKey(sourceId: string, bookUrl: string): string {
   return `${sourceId.length}:${sourceId}:${bookUrl.length}:${bookUrl}`;
+}
+
+/** Match the search card's distinct-source unit; alternate URLs stay selectable. */
+export function sourceSwitchSourceCount(candidates: SourceSwitchCandidate[]): number {
+  const sources = new Set<string>();
+  for (const candidate of candidates) sources.add(candidate.sourceId);
+  return sources.size;
 }
 
 function deduplicateSourceSwitchCandidates(
@@ -160,6 +180,8 @@ export type PendingSourceSwitch = {
  */
 export class SourceSwitchGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
+  private readonly normalizedMatchText = new Map<string, string>();
+  private readonly bookIdentities = new CachedBookIdentityResolver();
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -167,7 +189,7 @@ export class SourceSwitchGateway {
 
   /**
    * Legado-compatible first paint: read durable SearchBook rows, hide disabled
-   * sources, and treat the one-day cache window as empty after expiry. No
+   * sources, and retain expired successes with an explicit stale state. No
    * source HTTP is attempted from this path.
    */
   async loadCachedCandidates(
@@ -185,23 +207,29 @@ export class SourceSwitchGateway {
     if (!Array.isArray(rawBooks)) {
       throw new Error('search-book.list returned invalid data');
     }
-    const now = Date.now();
-    const staleBookUrls: string[] = [];
+    const records: JsonObject[] = [];
+    let processed = 0;
+    for (const raw of rawBooks) {
+      if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
+      if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('search-book.list returned a non-object row');
+      records.push(raw as JsonObject);
+    }
+    const identities = await this.bookIdentities.build(records, new Set(enabledSources.keys()));
+    const group = identities.groupFor(query.sourceId, query.bookId) ??
+      identities.groupForAlias(this.bookIdentities.aliasKey(query.bookName, query.author));
+    if (group === undefined) return [];
     const candidates: SourceSwitchCandidate[] = [];
     for (const raw of rawBooks) {
+      if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
         throw new Error('search-book.list returned a non-object row');
       }
       const book = raw as JsonObject;
-      if (!this.matchesCachedBook(book, query)) {
+      if (identities.groupFor(this.optionalString(book, 'origin') ?? '', this.optionalString(book, 'bookUrl') ?? '') !== group) {
         continue;
       }
       const bookUrl = this.requireString(book, 'bookUrl', 'search-book.list');
       const checkedAt = this.optionalNumber(book, 'time') ?? 0;
-      if (checkedAt <= 0 || now - checkedAt >= SOURCE_SWITCH_CACHE_TTL_MS) {
-        staleBookUrls.push(bookUrl);
-        continue;
-      }
       const sourceId = this.requireString(book, 'origin', 'search-book.list');
       const source = enabledSources.get(sourceId);
       if (source === undefined) {
@@ -209,56 +237,26 @@ export class SourceSwitchGateway {
       }
       candidates.push(this.decodeCachedCandidate(book, query, checkedAt, source));
     }
-    if (staleBookUrls.length > 0) {
-      await Promise.all(staleBookUrls.map((bookUrl: string): Promise<unknown> =>
-        this.runtimeOwner.request(
-          'search-book.delete',
-          { bookUrl },
-          this.requestOptions(isCurrent),
-        )));
-    }
     return this.sortCandidates(candidates);
   }
 
   /**
-   * Full refresh: remove this book's prior SearchBook projection, rediscover
-   * every enabled source, probe the mapped chapter body, and upsert each
-   * completed candidate. This is the operation bound to pull-to-refresh.
+   * Explicit refresh discovers missing candidates without deleting successes.
+   * Shared background preparation progressively publishes TOC/body verdicts.
    */
   async refreshCandidates(
     query: SourceSwitchProbeQuery,
     isCurrent: (() => boolean) | undefined = undefined,
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.validateProbeQuery(query);
-    await this.deleteCachedCandidates(query, isCurrent);
-    const discovery = await this.discoverCandidates(
-      query.sourceId,
-      query.bookId,
-      query.bookName,
-      isCurrent,
-    );
-    if (discovery.kind === 'noSources') {
-      return discovery;
-    }
-    const matching = discovery.candidates.filter((candidate: SourceSwitchCandidate): boolean =>
-      this.matchesCandidateBook(candidate, query));
-    const probed: SourceSwitchCandidate[] = [];
-    for (let start = 0; start < matching.length; start += SOURCE_SWITCH_DISCOVERY_CONCURRENCY) {
-      const end = Math.min(start + SOURCE_SWITCH_DISCOVERY_CONCURRENCY, matching.length);
-      const pending: Promise<SourceSwitchCandidate | undefined>[] = [];
-      for (let index = start; index < end; index += 1) {
-        pending.push(this.probeAndPersistCandidate(matching[index], query, isCurrent));
-      }
-      const batch = await Promise.all(pending);
-      for (const candidate of batch) {
-        if (candidate !== undefined) {
-          probed.push(candidate);
-        }
-      }
-    }
-    return probed.length === 0
-      ? { kind: 'noSources' }
-      : { kind: 'sources', candidates: this.sortCandidates(probed) };
+    await this.discoverCandidates(query.sourceId, query.bookId, query.bookName, isCurrent);
+    const candidates = await this.loadCachedCandidates(query, isCurrent);
+    this.runtimeOwner.bookAcquisitions?.().prepare(candidates.map((candidate: SourceSwitchCandidate) => ({
+      sourceId: candidate.sourceId, bookId: candidate.bookUrl, detailUrl: candidate.bookUrl,
+      title: candidate.bookName, author: candidate.author ?? '', sourceVersion: candidate.sourceVersion,
+      coverUrl: candidate.coverUrl, lastChapter: candidate.latestChapterTitle,
+    })), true);
+    return candidates.length === 0 ? { kind: 'noSources' } : { kind: 'sources', candidates };
   }
 
   /**
@@ -297,10 +295,23 @@ export class SourceSwitchGateway {
       const sourceId = this.optionalString(source, 'sourceId');
       if (sourceId !== undefined && sourceId.length > 0) {
         const sourceName = this.optionalString(source, 'name');
+        const rawBookSource = source['bookSource'];
+        let bookSourceType: unknown = undefined;
+        let group: string | undefined = undefined;
+        if (rawBookSource !== null && typeof rawBookSource === 'object' && !Array.isArray(rawBookSource)) {
+          const bookSource = rawBookSource as JsonObject;
+          bookSourceType = bookSource['bookSourceType'];
+          group = this.optionalString(bookSource, 'bookSourceGroup');
+        }
+        const category = classifyReaderSource({ bookSourceType, name: sourceName, group, sourceId,
+          baseUrl: this.optionalString(source, 'baseUrl') });
+        if (!readerSourceCategoryIsText(category)) continue;
         sources.push({
           sourceId,
           sourceName: sourceName === undefined || sourceName.trim().length === 0 ? sourceId : sourceName,
           sourceOrder,
+          sourceVersion: this.optionalString(source, 'sourceVersion'),
+          category,
         });
       }
     }
@@ -378,6 +389,7 @@ export class SourceSwitchGateway {
       const entry: SourceSwitchCandidate = {
         sourceId,
         sourceName: source.sourceName,
+        category: source.category,
         sourceOrder: source.sourceOrder,
         bookUrl,
         bookName,
@@ -418,6 +430,24 @@ export class SourceSwitchGateway {
   ): Promise<SourceSwitchTargetToc> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
+
+    const coordinator = this.runtimeOwner.bookAcquisitions?.();
+    if (coordinator !== undefined) {
+      const stored = await this.runtimeOwner.request('search-book.get', { origin: sourceId, bookUrl: bookId });
+      const book = this.requireObject(stored.data['book'], 'search-book.get');
+      const session = await coordinator.acquireBook({ sourceId, bookId, detailUrl: bookId,
+        title: this.requireString(book, 'name', 'search-book.get'), author: this.optionalString(book, 'author') ?? '' }, { isCurrent });
+      const variables: JsonObject = {};
+      for (const variable of session.continuationVariables) variables[variable.name] = variable.value;
+      return { sourceId, bookId, bookName: session.book.title, author: session.book.author,
+        coverUrl: session.book.coverUrl, latestChapterTitle: session.book.lastChapter,
+        tocUrl: session.tocUrl, variables,
+        entries: session.entries.map((entry): SourceSwitchTargetTocEntry => {
+          const entryVariables: JsonObject = {};
+          for (const variable of entry.variables) entryVariables[variable.name] = variable.value;
+          return { index: entry.index, title: entry.title, url: entry.url, variables: entryVariables };
+        }) };
+    }
 
     const detail = await this.runtimeOwner.request(
       'book.detail',
@@ -496,108 +526,6 @@ export class SourceSwitchGateway {
       target.latestChapterTitle = latestChapterTitle;
     }
     return target;
-  }
-
-  private async probeAndPersistCandidate(
-    candidate: SourceSwitchCandidate,
-    query: SourceSwitchProbeQuery,
-    isCurrent: (() => boolean) | undefined,
-  ): Promise<SourceSwitchCandidate | undefined> {
-    try {
-      const toc = await this.fetchTargetToc(candidate.sourceId, candidate.bookUrl, isCurrent);
-      if (toc.entries.length === 0) {
-        return undefined;
-      }
-      const chapter = this.matchProbeChapter(toc.entries, query);
-      const startedAt = Date.now();
-      let wordCount = -1;
-      let failureMessage: string | undefined = undefined;
-      try {
-        const content = await this.runtimeOwner.request(
-          'chapter.content',
-          {
-            sourceId: candidate.sourceId,
-            bookId: candidate.bookUrl,
-            chapterTitle: chapter.title,
-            chapterIndex: chapter.index,
-            chapterUrl: chapter.url,
-            variables: this.mergeVariables(toc.variables, chapter.variables),
-          },
-          this.requestOptions(isCurrent),
-        );
-        if (content.data['sourceId'] !== candidate.sourceId || content.data['bookId'] !== candidate.bookUrl ||
-          typeof content.data['content'] !== 'string') {
-          throw new Error('chapter.content returned invalid probe data');
-        }
-        wordCount = (content.data['content'] as string).length;
-      } catch (error) {
-        if (isCurrent !== undefined && !isCurrent()) {
-          throw error;
-        }
-        failureMessage = errorMessageOf(error);
-      }
-      const latencyMs = Math.max(0, Date.now() - startedAt);
-      const displayTitle = chapter.title.length > 20 ? `${chapter.title.substring(0, 20)}…` : chapter.title;
-      const chapterWordCountText = failureMessage === undefined
-        ? `[${chapter.index + 1}] ${displayTitle}\n字数：${wordCount}`
-        : `[${chapter.index + 1}] ${displayTitle}\n获取字数失败：${failureMessage}`;
-      const probed: SourceSwitchCandidate = {
-        ...candidate,
-        bookName: toc.bookName,
-        author: toc.author,
-        currentChapterTitle: chapter.title,
-        currentChapterIndex: chapter.index,
-        chapterWordCount: wordCount,
-        latestChapterTitle: toc.latestChapterTitle ?? toc.entries[toc.entries.length - 1].title,
-        latencyMs,
-        checkedAt: Date.now(),
-      };
-      if (toc.coverUrl !== undefined) {
-        probed.coverUrl = toc.coverUrl;
-      }
-      await this.persistCandidate(probed, toc.tocUrl, chapterWordCountText, isCurrent);
-      return probed;
-    } catch (error) {
-      if (isCurrent !== undefined && !isCurrent()) {
-        throw error;
-      }
-      // Legado's parallel refresh treats one broken detail/TOC chain as a
-      // source-local failure and keeps the remaining candidates progressing.
-      return undefined;
-    }
-  }
-
-  private async persistCandidate(
-    candidate: SourceSwitchCandidate,
-    tocUrl: string,
-    chapterWordCountText: string,
-    isCurrent: (() => boolean) | undefined,
-  ): Promise<void> {
-    const params: JsonObject = {
-      bookUrl: candidate.bookUrl,
-      origin: candidate.sourceId,
-      originName: candidate.sourceName ?? candidate.sourceId,
-      type: 0,
-      name: candidate.bookName,
-      author: candidate.author ?? '',
-      tocUrl,
-      time: candidate.checkedAt ?? Date.now(),
-      originOrder: candidate.sourceOrder ?? 0,
-      chapterWordCountText,
-      chapterWordCount: candidate.chapterWordCount ?? -1,
-      respondTime: candidate.latencyMs ?? -1,
-    };
-    if (candidate.coverUrl !== undefined) {
-      params['coverUrl'] = candidate.coverUrl;
-    }
-    if (candidate.latestChapterTitle !== undefined) {
-      params['latestChapterTitle'] = candidate.latestChapterTitle;
-    }
-    await this.runtimeOwner.request(
-      'search-book.put',
-      params,
-      this.requestOptions(isCurrent),
-    );
   }
 
   private matchProbeChapter(
@@ -888,54 +816,27 @@ export class SourceSwitchGateway {
       const sourceId = this.optionalString(source, 'sourceId');
       if (source['enabled'] === true && sourceId !== undefined && sourceId.trim().length > 0) {
         const sourceName = this.optionalString(source, 'name');
+        const rawBookSource = source['bookSource'];
+        let bookSourceType: unknown = undefined;
+        let group: string | undefined = undefined;
+        if (rawBookSource !== null && typeof rawBookSource === 'object' && !Array.isArray(rawBookSource)) {
+          const bookSource = rawBookSource as JsonObject;
+          bookSourceType = bookSource['bookSourceType'];
+          group = this.optionalString(bookSource, 'bookSourceGroup');
+        }
+        const category = classifyReaderSource({ bookSourceType, name: sourceName, group, sourceId,
+          baseUrl: this.optionalString(source, 'baseUrl') });
+        if (!readerSourceCategoryIsText(category)) continue;
         sources.set(sourceId, {
           sourceId,
           sourceName: sourceName === undefined || sourceName.trim().length === 0 ? sourceId : sourceName,
           sourceOrder,
+          sourceVersion: this.optionalString(source, 'sourceVersion'),
+          category,
         });
       }
     }
     return sources;
-  }
-
-  private async deleteCachedCandidates(
-    query: SourceSwitchProbeQuery,
-    isCurrent: (() => boolean) | undefined,
-  ): Promise<void> {
-    const result = await this.runtimeOwner.request(
-      'search-book.list',
-      {},
-      this.requestOptions(isCurrent),
-    );
-    const rawBooks = result.data['books'];
-    if (!Array.isArray(rawBooks)) {
-      throw new Error('search-book.list returned invalid data');
-    }
-    const bookUrls: string[] = [];
-    for (const raw of rawBooks) {
-      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-        throw new Error('search-book.list returned a non-object row');
-      }
-      const book = raw as JsonObject;
-      if (this.matchesCachedBook(book, query)) {
-        bookUrls.push(this.requireString(book, 'bookUrl', 'search-book.list'));
-      }
-    }
-    await Promise.all(bookUrls.map((bookUrl: string): Promise<unknown> =>
-      this.runtimeOwner.request(
-        'search-book.delete',
-        { bookUrl },
-        this.requestOptions(isCurrent),
-      )));
-  }
-
-  private matchesCachedBook(book: JsonObject, query: SourceSwitchProbeQuery): boolean {
-    const cachedName = this.optionalString(book, 'name');
-    if (cachedName === undefined ||
-      this.normalizeBookName(cachedName) !== this.normalizeBookName(query.bookName)) {
-      return false;
-    }
-    return this.matchesAuthor(this.optionalString(book, 'author'), query.author);
   }
 
   private matchesCandidateBook(
@@ -958,6 +859,7 @@ export class SourceSwitchGateway {
     const candidate: SourceSwitchCandidate = {
       sourceId,
       sourceName: source.sourceName,
+      category: source.category,
       sourceOrder: source.sourceOrder,
       bookUrl,
       bookName,
@@ -965,6 +867,18 @@ export class SourceSwitchGateway {
       isCurrent: sourceSwitchCandidateKey(sourceId, bookUrl) ===
         sourceSwitchCandidateKey(query.sourceId, query.bookId),
     };
+    const facts = book['acquisition'] as JsonObject | undefined;
+    const version = facts === undefined ? undefined : this.optionalString(facts, 'sourceVersion');
+    candidate.sourceVersion = version;
+    const stale = checkedAt <= 0 || Date.now() - checkedAt >= SOURCE_SWITCH_CACHE_TTL_MS ||
+      facts?.['stale'] === true || (source.sourceVersion !== undefined && version !== source.sourceVersion);
+    const failure = facts?.['failure'] as JsonObject | undefined;
+    const readableAt = facts === undefined ? 0 : this.optionalNumber(facts, 'readableAt') ?? 0;
+    const failureAt = failure === undefined ? 0 : this.optionalNumber(failure, 'at') ?? 0;
+    candidate.acquisitionState = stale ? 'stale' : failureAt > readableAt ? 'failed' : readableAt > 0 ? 'readable' :
+      (facts !== undefined && (this.optionalNumber(facts, 'catalogCount') ?? 0) > 0) ? 'catalogReady' : 'discovered';
+    candidate.verifiedChapterUrl = facts === undefined ? undefined : this.optionalString(facts, 'readableChapterUrl');
+    candidate.acquisitionMessage = failure === undefined ? undefined : this.optionalString(failure, 'message');
     const author = this.optionalString(book, 'author');
     const coverUrl = this.optionalString(book, 'coverUrl');
     const latestChapterTitle = this.optionalString(book, 'latestChapterTitle');
@@ -1025,19 +939,25 @@ export class SourceSwitchGateway {
   }
 
   private normalizeBookName(value: string): string {
-    return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+    const cached = this.normalizedMatchText.get(value);
+    if (cached !== undefined) return cached;
+    const normalized = value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+    if (value.length <= 2048) {
+      if (this.normalizedMatchText.size >= 2048) {
+        for (const oldest of this.normalizedMatchText.keys()) { this.normalizedMatchText.delete(oldest); break; }
+      }
+      this.normalizedMatchText.set(value, normalized);
+    }
+    return normalized;
   }
 
   private matchesAuthor(candidateAuthor: string | undefined, queryAuthor: string): boolean {
     const expected = this.normalizeAuthor(queryAuthor);
-    if (expected.length === 0) {
-      return true;
-    }
-    return candidateAuthor !== undefined && this.normalizeAuthor(candidateAuthor).includes(expected);
+    return this.normalizeAuthor(candidateAuthor ?? '') === expected;
   }
 
   private normalizeAuthor(value: string): string {
-    return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+    return this.normalizeBookName(value);
   }
 
   private normalizeChapterTitle(value: string): string {
@@ -1059,7 +979,7 @@ export class SourceSwitchGateway {
     this.assertNonBlankString(query.sourceId, 'sourceId');
     this.assertNonBlankString(query.bookId, 'bookId');
     this.assertNonBlankString(query.bookName, 'bookName');
-    this.assertNonBlankString(query.currentChapterTitle, 'currentChapterTitle');
+
     if (!Number.isInteger(query.currentChapterIndex) || query.currentChapterIndex < 0) {
       throw new Error('currentChapterIndex must be a non-negative integer');
     }

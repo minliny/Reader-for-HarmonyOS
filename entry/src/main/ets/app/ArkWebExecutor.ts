@@ -1,3 +1,5 @@
+import connection from '@ohos.net.connection';
+import { httpUrlHostname, isPrivateNetworkTarget, redactedHttpUrl } from './HttpTransportPolicy';
 import webview from '@ohos.web.webview';
 import type { JsonObject } from '@reader/core-harmony';
 import {
@@ -10,6 +12,10 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const MAX_TIMEOUT_MS = 10 * 60 * 1000;
 const PAGE_SETTLE_MS = 500;
 const SCRIPT_RETRY_MS = 500;
+const MAX_REQUEST_HEADERS = 64;
+const MAX_HEADER_NAME_LENGTH = 256;
+const MAX_HEADER_VALUE_LENGTH = 16 * 1024;
+const MAX_HEADER_BYTES = 64 * 1024;
 
 type ArkWebDocument = {
   kind: 'html' | 'url';
@@ -25,8 +31,11 @@ type ArkWebJob = {
   headers: Array<webview.WebHeader>;
   settleDelayMillis: number;
   profileId?: string;
+  cookieGeneration?: number;
   deadlineAt: number;
   cancelled: boolean;
+  networkDenied?: boolean;
+  pinnedHost?: string;
   pageReadyAt: number;
   finalUrl?: string;
   interactive: boolean;
@@ -94,6 +103,47 @@ export class ArkWebExecutor {
     if (this.active !== undefined) {
       this.active.cancelled = true;
     }
+  }
+
+  /** The admitted document host is DNS-validated and pinned before loading.
+   * Navigation and resources are same-host only, so a page cannot introduce
+   * an unpinned DNS name or redirect into a different network target.
+   */
+  blockNetworkUrl(value: string): boolean {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'about:blank' || normalized.startsWith('data:') || normalized.startsWith('blob:')) return false;
+    const host = httpUrlHostname(value);
+    const admittedHost = this.active?.pinnedHost;
+    const blocked = host === undefined || isPrivateNetworkTarget(host) ||
+      admittedHost === undefined || host !== admittedHost;
+    if (blocked && this.active !== undefined) {
+      this.active.networkDenied = true;
+      try { this.controller?.stop(); } catch (_) {}
+    }
+    return blocked;
+  }
+
+  private async pinDocumentTarget(job: ArkWebJob, value: string): Promise<void> {
+    this.requireHttpUrl(value);
+    const host = httpUrlHostname(value)!;
+    job.pinnedHost = host;
+    if (host.includes(':') || /^[0-9.]+$/.test(host)) return;
+    let addresses: connection.NetAddress[] | undefined;
+    let failed = false;
+    void connection.getAddressesByName(host).then((resolved: connection.NetAddress[]): void => {
+      addresses = resolved;
+    }).catch((): void => { failed = true; });
+    while (addresses === undefined && !failed) {
+      this.assertCurrent(job);
+      await delay(50);
+    }
+    this.assertCurrent(job);
+    if (failed || addresses === undefined || addresses.length === 0 || addresses.some((item: connection.NetAddress): boolean =>
+      item.address.length === 0 || isPrivateNetworkTarget(item.address))) {
+      throw this.hostFailure('NETWORK_POLICY_DENIED', '书源网页无法确认网络目标', false, {phase:'dns'});
+    }
+    webview.WebviewController.setHostIP(host, addresses[0].address,
+      Math.max(1, Math.ceil((job.deadlineAt - Date.now()) / 1000)));
   }
 
   onPageEnd(url: string): void {
@@ -171,6 +221,7 @@ export class ArkWebExecutor {
     try {
       webview.WebCookieManager.clearAllCookiesSync(true);
       const seedUrl = this.documentUrl(job.document);
+      if (seedUrl !== undefined) await this.pinDocumentTarget(job, seedUrl);
       if (job.profileId !== undefined && seedUrl !== undefined) {
         seeds = await CookieSessionStore.instance.arkWebSeeds(job.profileId);
         for (const seed of seeds) {
@@ -203,8 +254,13 @@ export class ArkWebExecutor {
       const finalUrl = this.nonBlank(controller.getUrl()) ?? job.finalUrl ?? seedUrl;
       const title = this.nonBlank(controller.getTitle());
       if (job.profileId !== undefined) {
-        await this.captureCookies(job.profileId, seeds);
+        // Keep the shared source jar exact-host scoped.  ArkWeb may report a
+        // Domain cookie for a parent (or sibling) host; importing that record
+        // as hostOnly would otherwise broaden the cookie to a host the
+        // network policy never admitted for this job.
+        await this.captureCookies(job.profileId, seeds, job.cookieGeneration, job.pinnedHost);
       }
+      this.assertCurrent(job);
       if (!job.interactive) {
         const challengeType = this.detectChallengeType(value, finalUrl, title);
         if (challengeType !== undefined) {
@@ -216,7 +272,7 @@ export class ArkWebExecutor {
               phase: 'response',
               lane: 'anti_bot',
               challengeType,
-              url: finalUrl ?? '',
+              url: finalUrl === undefined ? '' : redactedHttpUrl(finalUrl),
               autoRetryable: false,
             },
           );
@@ -241,6 +297,9 @@ export class ArkWebExecutor {
         // Cleanup is best effort after a detached/render-crashed controller.
       }
       webview.WebCookieManager.clearAllCookiesSync(true);
+      if (job.pinnedHost !== undefined) {
+        try { webview.WebviewController.clearHostIP(job.pinnedHost); } catch (_) {}
+      }
       if (this.active === job) {
         this.active = undefined;
       }
@@ -278,11 +337,23 @@ export class ArkWebExecutor {
     }
   }
 
-  private async captureCookies(profileId: string, seeds: ArkWebCookieSeed[]): Promise<void> {
+  private async captureCookies(
+    profileId: string,
+    seeds: ArkWebCookieSeed[],
+    expectedGeneration?: number,
+    admittedHost?: string,
+  ): Promise<void> {
     const records = await webview.WebCookieManager.fetchAllCookies(true);
     const observed: ArkWebObservedCookie[] = [];
+    const normalizedAdmittedHost = admittedHost === undefined ? undefined : this.normalizeCookieHost(admittedHost);
+    if (normalizedAdmittedHost === undefined) {
+      return;
+    }
     for (const record of records) {
-      const normalizedDomain = record.domain.replace(/^\.+/, '');
+      const normalizedDomain = this.normalizeCookieHost(record.domain);
+      if (normalizedDomain === undefined || normalizedDomain !== normalizedAdmittedHost) {
+        continue;
+      }
       const sameSite = this.sameSite(record.samesitePolicy);
       const cookie: ArkWebObservedCookie = {
         name: record.name,
@@ -301,7 +372,13 @@ export class ArkWebExecutor {
       }
       observed.push(cookie);
     }
-    await CookieSessionStore.instance.reconcileArkWebCookies(profileId, seeds, observed);
+    await CookieSessionStore.instance.reconcileArkWebCookies(profileId, seeds, observed, expectedGeneration);
+  }
+
+  private normalizeCookieHost(value: string): string | undefined {
+    const normalized = value.trim().toLowerCase()
+      .replace(/^\.+/, '').replace(/^\[/, '').replace(/\]$/, '').split('%')[0];
+    return normalized.length > 0 ? normalized : undefined;
   }
 
   private sameSite(
@@ -362,6 +439,7 @@ export class ArkWebExecutor {
       headers,
       settleDelayMillis,
       profileId,
+      cookieGeneration: profileId === undefined ? undefined : CookieSessionStore.instance.sessionGeneration(profileId),
       deadlineAt: Date.now() + timeoutMs,
       cancelled: false,
       pageReadyAt: 0,
@@ -388,14 +466,44 @@ export class ArkWebExecutor {
     }
     const headers: Array<webview.WebHeader> = [];
     const record = value as JsonObject;
-    for (const key of Object.keys(record)) {
+    const keys = Object.keys(record);
+    if (keys.length > MAX_REQUEST_HEADERS) {
+      throw new Error(`webview.evaluateJavaScript headers exceed ${MAX_REQUEST_HEADERS} entries`);
+    }
+    let totalBytes = 0;
+    for (const key of keys) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype' ||
+        key.length === 0 || key.length > MAX_HEADER_NAME_LENGTH || !this.isValidHttpToken(key)) {
+        throw new Error(`webview.evaluateJavaScript header name ${key} is invalid`);
+      }
       const raw = record[key];
       if (raw === undefined || raw === null || typeof raw === 'object') {
         throw new Error(`webview.evaluateJavaScript header ${key} must be scalar`);
       }
-      headers.push({ headerKey: key, headerValue: `${raw}` });
+      const headerValue = `${raw}`;
+      if (headerValue.length > MAX_HEADER_VALUE_LENGTH ||
+        headerValue.indexOf('\r') >= 0 || headerValue.indexOf('\n') >= 0 ||
+        /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(headerValue)) {
+        throw new Error(`webview.evaluateJavaScript header ${key} contains an invalid value`);
+      }
+      totalBytes += key.length + headerValue.length;
+      if (totalBytes > MAX_HEADER_BYTES) {
+        throw new Error(`webview.evaluateJavaScript headers exceed ${MAX_HEADER_BYTES} bytes`);
+      }
+      headers.push({ headerKey: key, headerValue });
     }
     return headers;
+  }
+
+  private isValidHttpToken(value: string): boolean {
+    for (const ch of value) {
+      const code = ch.charCodeAt(0);
+      const alpha = code >= 65 && code <= 90 || code >= 97 && code <= 122;
+      const digit = code >= 48 && code <= 57;
+      const tchar = "!#$%&'*+-.^_`|~".indexOf(ch) >= 0;
+      if (!alpha && !digit && !tchar) return false;
+    }
+    return value.length > 0;
   }
 
   private optionalBoundedMillis(
@@ -425,6 +533,13 @@ export class ArkWebExecutor {
   }
 
   private assertCurrent(job: ArkWebJob): void {
+    if (job.profileId !== undefined && job.cookieGeneration !== undefined &&
+      CookieSessionStore.instance.sessionGeneration(job.profileId) !== job.cookieGeneration) {
+      job.cancelled = true;
+    }
+    if (job.networkDenied) {
+      throw this.hostFailure('NETWORK_POLICY_DENIED', '书源网页请求了不允许的网络地址', false, {phase:'navigation'});
+    }
     if (job.cancelled) {
       throw this.hostFailure(
         'CANCELLED',
@@ -434,12 +549,12 @@ export class ArkWebExecutor {
       );
     }
     if (Date.now() >= job.deadlineAt) {
-      const location = job.finalUrl === undefined ? '' : ` at ${job.finalUrl}`;
+      const location = job.finalUrl === undefined ? '' : ` at ${redactedHttpUrl(job.finalUrl)}`;
       throw this.hostFailure(
         'TIMEOUT',
         `webview.evaluateJavaScript timed out${location}`,
         true,
-        { phase: 'runtime', finalUrl: job.finalUrl ?? '' },
+        { phase: 'runtime', finalUrl: job.finalUrl === undefined ? '' : redactedHttpUrl(job.finalUrl) },
       );
     }
   }
@@ -510,9 +625,9 @@ export class ArkWebExecutor {
   }
 
   private requireHttpUrl(value: string): void {
-    const normalized = value.trim().toLowerCase();
-    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-      throw new Error('webview document URL must use http or https');
+    const host = httpUrlHostname(value);
+    if (host === undefined || isPrivateNetworkTarget(host)) {
+      throw new Error('webview document URL must use http or https on a public host');
     }
   }
 

@@ -279,7 +279,7 @@ export class RssOrchestrator {
       ))
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader',
-          'RSS management mutation failed; projection unchanged: action=%{public}s subscriptionId=%{public}s err=%{public}s',
+          'RSS management mutation failed; projection unchanged: action=%{private}s subscriptionId=%{private}s err=%{private}s',
           action, subscriptionId, error.message);
       });
   }
@@ -296,7 +296,7 @@ export class RssOrchestrator {
       .then((): Promise<void> => task())
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader',
-          'RSS route operation failed: action=%{public}s identity=%{public}s err=%{public}s',
+          'RSS route operation failed: action=%{private}s identity=%{private}s err=%{private}s',
           action, identity, error.message);
         if (isCurrent()) {
           onFailure(error);
@@ -316,7 +316,7 @@ export class RssOrchestrator {
       subscriptions = await this.loadSubscriptionsWithRetry();
     } catch (error) {
       hilog.warn(DOMAIN, 'Reader',
-        'RSS management mutation persisted but list reload failed: action=%{public}s subscriptionId=%{public}s err=%{public}s',
+        'RSS management mutation persisted but list reload failed: action=%{private}s subscriptionId=%{private}s err=%{private}s',
         action, subscriptionId, (error as Error).message);
       return;
     }
@@ -337,7 +337,7 @@ export class RssOrchestrator {
     } catch (error) {
       if (this.isCurrentSession(session)) {
         hilog.error(DOMAIN, 'Reader',
-          'RSS subscription management load failed: %{public}s', (error as Error).message);
+          'RSS subscription management load failed: %{private}s', (error as Error).message);
       }
       return;
     }
@@ -458,7 +458,7 @@ export class RssOrchestrator {
         }
       } catch (error) {
         hilog.warn(DOMAIN, 'Reader',
-          'runtime.status probe failed during RSS idle wait: %{public}s',
+          'runtime.status probe failed during RSS idle wait: %{private}s',
           (error as Error).message);
       }
       await delay(250);

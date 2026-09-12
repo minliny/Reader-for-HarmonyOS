@@ -111,7 +111,7 @@ export class SourceOrchestrator {
       if (this.isCurrentSession(session)) {
         this.publishStatus('error', `书源列表读取失败：${(error as Error).message}`);
         hilog.error(DOMAIN, 'Reader',
-          'Source management load failed: %{public}s', (error as Error).message);
+          'Source management load failed: %{private}s', (error as Error).message);
       }
       return;
     }
@@ -137,7 +137,7 @@ export class SourceOrchestrator {
           this.publishStatus('error', `书源启停失败：${error.message}`);
         }
         hilog.error(DOMAIN, 'Reader',
-          'Source toggle failed; row unchanged: sourceId=%{public}s enabled=%{public}s err=%{public}s',
+          'Source toggle failed; row unchanged: sourceId=%{private}s enabled=%{private}s err=%{private}s',
           id, enabled, error.message);
       });
   }
@@ -157,7 +157,7 @@ export class SourceOrchestrator {
           this.setCheckProjection(id, 'failed', [], error.message);
         }
         hilog.error(DOMAIN, 'Reader',
-          'Source check failed: sourceId=%{public}s err=%{public}s', id, error.message);
+          'Source check failed: sourceId=%{private}s err=%{private}s', id, error.message);
       })
       .finally((): void => {
         if (session === this.session) {
@@ -195,7 +195,7 @@ export class SourceOrchestrator {
           this.setCheckProjection(id, 'unchecked', [], '登录 / 验证已取消');
         }
         hilog.warn(DOMAIN, 'Reader',
-          'Source login/challenge ended without completion: sourceId=%{public}s err=%{public}s',
+          'Source login/challenge ended without completion: sourceId=%{private}s err=%{private}s',
           id, error.message);
       })
       .finally((): void => {
@@ -236,7 +236,7 @@ export class SourceOrchestrator {
           onFailure(error);
         }
         hilog.error(DOMAIN, 'Reader',
-          'Book-source import failed; page kept unchanged: %{public}s', error.message);
+          'Book-source import failed; page kept unchanged: %{private}s', error.message);
       })
       .finally((): void => {
         this.importActive = false;
@@ -276,7 +276,7 @@ export class SourceOrchestrator {
       // logged individually and summarized so the user sees exact counts.
       for (const failure of summary.failures) {
         hilog.warn(DOMAIN, 'Reader',
-          'Book-source import item %{public}d (%{public}s) failed: %{public}s',
+          'Book-source import item %{public}d (%{private}s) failed: %{private}s',
           failure.index + 1, failure.sourceId, failure.message);
       }
       if (summary.failedCount > 0) {
@@ -308,7 +308,7 @@ export class SourceOrchestrator {
         return;
       }
       hilog.warn(DOMAIN, 'Reader',
-        'Book-source import persisted but source.list refresh failed: file=%{public}s count=%{public}d err=%{public}s',
+        'Book-source import persisted but source.list refresh failed: file=%{private}s count=%{public}d err=%{private}s',
         selection.fileName, importedCount, (error as Error).message);
       const refreshWarning = `Core 已导入 ${importedCount} 个书源，但列表刷新失败：${(error as Error).message}`;
       this.publishStatus('warning', refreshWarning);
@@ -319,7 +319,7 @@ export class SourceOrchestrator {
     }
     this.presentSources(sources);
     hilog.info(DOMAIN, 'Reader',
-      'Book-source import completed: file=%{public}s count=%{public}d',
+      'Book-source import completed: file=%{private}s count=%{public}d',
       selection.fileName, importedCount);
     if (failureSummary !== undefined) {
       this.publishStatus('warning', `已导入 ${importedCount} 个书源，${failureSummary}`);
@@ -343,7 +343,7 @@ export class SourceOrchestrator {
         return;
       }
       hilog.warn(DOMAIN, 'Reader',
-        'Book-source import failure reload also failed: file=%{public}s err=%{public}s',
+        'Book-source import failure reload also failed: file=%{private}s err=%{private}s',
         fileName, (reloadError as Error).message);
     }
   }
@@ -364,7 +364,7 @@ export class SourceOrchestrator {
         await this.owner.clearSourceCookieSession(id);
       } catch (error) {
         hilog.error(DOMAIN, 'Reader',
-          'Source disabled but cookie-session cleanup failed: sourceId=%{public}s err=%{public}s',
+          'Source disabled but cookie-session cleanup failed: sourceId=%{private}s err=%{private}s',
           id, (error as Error).message);
       }
     }
@@ -385,6 +385,7 @@ export class SourceOrchestrator {
           enabled,
           enabledExplore: source.enabledExplore,
           group: source.group,
+          category: source.category,
           loginUrl: source.loginUrl,
           checkState: source.checkState,
           checkLevels: source.checkLevels,
@@ -398,7 +399,7 @@ export class SourceOrchestrator {
       sources = await this.gateway.loadSources();
     } catch (error) {
       hilog.warn(DOMAIN, 'Reader',
-        'Source toggle persisted but list reload failed: sourceId=%{public}s enabled=%{public}s err=%{public}s',
+        'Source toggle persisted but list reload failed: sourceId=%{private}s enabled=%{private}s err=%{private}s',
         id, enabled, (error as Error).message);
       return;
     }
@@ -420,7 +421,7 @@ export class SourceOrchestrator {
     }
     this.applySourceCheckOutcome(outcome);
     hilog.info(DOMAIN, 'Reader',
-      'Source check completed: sourceId=%{public}s available=%{public}s levels=%{public}s durationMs=%{public}d reason=%{public}s',
+      'Source check completed: sourceId=%{private}s available=%{private}s levels=%{private}s durationMs=%{public}d reason=%{private}s',
       id, outcome.available, outcome.levelsPassed.join(','), outcome.durationMs,
       outcome.failureReason ?? '');
   }
@@ -460,6 +461,7 @@ export class SourceOrchestrator {
       enabled: source.enabled,
       enabledExplore: source.enabledExplore,
       group: source.group,
+      category: source.category,
       loginUrl: source.loginUrl,
       checkState: state,
       checkLevels: levels,
@@ -518,7 +520,7 @@ export class SourceOrchestrator {
       } catch (error) {
         // The probe itself failed transiently; keep polling until the deadline.
         hilog.warn(DOMAIN, 'Reader',
-          'runtime.status probe failed during idle wait: %{public}s', (error as Error).message);
+          'runtime.status probe failed during idle wait: %{private}s', (error as Error).message);
       }
       await delay(250);
     }
@@ -547,6 +549,7 @@ export class SourceOrchestrator {
         enabled: source.enabled,
         enabledExplore: source.enabledExplore,
         group: source.group,
+        category: source.category,
         loginUrl: source.loginUrl,
         checkState: checked?.checkState ?? source.checkState ?? 'unchecked',
         checkLevels: checked?.checkLevels ?? source.checkLevels ?? [],

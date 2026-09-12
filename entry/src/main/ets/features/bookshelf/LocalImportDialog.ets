@@ -388,7 +388,11 @@ export struct LocalImportDialog {
             .fontColor(TOK_INK)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-          this.resultBadge(item.state === 'success' ? '成功' : '失败', item.state === 'success' ? TOK_GREEN : '#5A4A2A');
+          this.resultBadge(item.state === 'success' ? '成功' :
+            (item.failure?.code === 'recoveryPending' ? '待确认' : '失败'), item.state === 'success' ? TOK_GREEN : '#5A4A2A');
+          if (item.failure !== undefined) {
+            Text(item.failure.message).fontSize(11).fontColor(TOK_INK).maxLines(2).width('100%');
+          }
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start);
@@ -399,7 +403,7 @@ export struct LocalImportDialog {
         }
       }
       .width('100%')
-      .height(61)
+      .constraintSize({ minHeight: 61 })
       .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
       .alignItems(VerticalAlign.Center);
       if (hasDivider) {

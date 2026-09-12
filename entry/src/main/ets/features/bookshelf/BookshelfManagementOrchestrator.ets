@@ -211,7 +211,7 @@ export class BookshelfManagementOrchestrator {
 
   private enqueue(operation: () => Promise<void>): void {
     this.operationTail = this.operationTail.then(operation).catch((error: Error): void => {
-      hilog.error(DOMAIN, 'Reader', 'Bookshelf management operation failed: %{public}s', error.message);
+      hilog.error(DOMAIN, 'Reader', 'Bookshelf management operation failed: %{private}s', error.message);
     });
   }
 
@@ -236,7 +236,7 @@ export class BookshelfManagementOrchestrator {
 
   private fail(session: number, label: string, error: Error): void {
     if (this.isCurrentSession(session)) this.publish({ busy: false, statusMessage: `${label}：${error.message}` });
-    hilog.error(DOMAIN, 'Reader', '%{public}s: %{public}s', label, error.message);
+    hilog.error(DOMAIN, 'Reader', '%{private}s: %{private}s', label, error.message);
   }
 
   private isCurrentSession(session: number): boolean {

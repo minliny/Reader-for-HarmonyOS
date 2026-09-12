@@ -9,6 +9,7 @@ import {
   type BookSource,
 } from './SourceGateway';
 import type { SourceManagementStatusKind } from './SourceOrchestrator';
+import { readerSourceCategoryLabel, type ReaderSourceCategory } from './ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
@@ -108,8 +109,10 @@ export struct SourceManagementPage {
   onRetryLoad: () => void = (): void => {};
   @State private searchQuery: string = '';
   @State private statusValue: string = '全部';
+  @State private categoryValue: string = 'all';
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
+  @State private groupClosing: boolean = false;
   @State private projectedSources: BookSource[] = [];
   private readonly sourceDataSource: SourceListDataSource = new SourceListDataSource();
   // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
@@ -137,6 +140,7 @@ export struct SourceManagementPage {
             this.statusBanner();
           }
           this.filterArea();
+          this.categoryFilter();
           this.sourceList();
           this.bottomActionBar();
         }
@@ -158,18 +162,25 @@ export struct SourceManagementPage {
       });
 
       if (this.groupOpen) {
+        Row().width('100%').height('100%').backgroundColor(Color.Transparent)
+          .onClick((): void => { this.groupClosing = true; });
         ReaderSelectPanel({
           value: this.groupValue,
           options: this.groupOptions(),
           variant: 'sourceGroup',
           controlWidth: this.groupSelectWidth(),
           reduceMotion: this.reduceMotion,
+          closing: this.groupClosing,
+          selectionId: 'source-group',
           x: this.groupX - this.originX,
           y: this.groupY - this.originY,
-          onSelect: (opt: string): void => {
+          onCommit: (opt: string, _identity: string): void => {
             this.groupValue = opt;
             this.rebuildSourceProjection();
+          },
+          onDismiss: (): void => {
             this.groupOpen = false;
+            this.groupClosing = false;
           },
         });
       }
@@ -279,6 +290,34 @@ export struct SourceManagementPage {
   }
 
   @Builder
+  private categoryFilter() {
+    Scroll() {
+      Row({ space: TOK_SPACE_XS }) {
+        ForEach(['all', 'novel', 'comic', 'music', 'download', 'external', 'other'], (category: string) => {
+          Text(category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory))
+            .fontFamily('ReaderNotoSansSC')
+            .fontSize(11)
+            .fontColor(this.categoryValue === category ? TOK_ON_PRIMARY : TOK_INK)
+            .backgroundColor(this.categoryValue === category ? TOK_PRIMARY_DARK : TOK_CARD_BG)
+            .borderRadius(16)
+            .padding({ left: 12, right: 12 })
+            .height(32)
+            .id(`source-category-${category}`)
+            .onClick((): void => {
+              this.categoryValue = category;
+              this.rebuildSourceProjection();
+            });
+        }, (category: string): string => category);
+      }
+    }
+    .scrollable(ScrollDirection.Horizontal)
+    .scrollBar(BarState.Off)
+    .width(this.contentFrame().width)
+    .height(40)
+    .margin({ top: TOK_SPACE_XS });
+  }
+
+  @Builder
   private statusFilter() {
     Row({ space: TOK_SPACE_XS }) {
       this.chip('全部', 58, this.statusValue === '全部', true);
@@ -336,7 +375,8 @@ export struct SourceManagementPage {
         reduceMotion: this.reduceMotion,
         onToggle: (): void => {
           if (this.groupOptions().length > 1) {
-            this.groupOpen = !this.groupOpen;
+            if (this.groupOpen) this.groupClosing = true;
+            else { this.groupClosing = false; this.groupOpen = true; }
           }
         },
       })
@@ -535,18 +575,19 @@ export struct SourceManagementPage {
   }
 
   private sourceMeta(source: BookSource): string {
+    const category = readerSourceCategoryLabel(source.category);
     if (source.checkState !== undefined && source.checkState !== 'unchecked' &&
       source.checkMessage !== undefined && source.checkMessage.length > 0) {
-      return source.checkMessage;
+      return `${category} · ${source.checkMessage}`;
     }
     if (source.baseUrl.length > 0) {
-      return source.baseUrl;
+      return `${category} · ${source.baseUrl}`;
     }
-    return source.enabled ? '已启用' : '已禁用';
+    return `${category} · ${source.enabled ? '已启用' : '已禁用'}`;
   }
 
   private sourceRenderKey(source: BookSource): string {
-    return `source-${source.sourceId}-${source.name}-${source.baseUrl}-${source.group ?? ''}-` +
+    return `source-${source.sourceId}-${source.name}-${source.baseUrl}-${source.group ?? ''}-${source.category}-` +
       `${source.loginUrl ?? ''}-${source.enabled}-${source.checkState ?? 'unchecked'}-` +
       `${source.checkMessage ?? ''}`;
   }
@@ -588,7 +629,8 @@ export struct SourceManagementPage {
       const matchesQuery = query.length === 0 || source.name.toLowerCase().includes(query) ||
         source.baseUrl.toLowerCase().includes(query);
       const matchesGroup = this.groupValue === '全部分组' || source.group === this.groupValue;
-      return matchesQuery && matchesGroup && this.matchesStatus(source);
+      const matchesCategory = this.categoryValue === 'all' || source.category === this.categoryValue;
+      return matchesQuery && matchesGroup && matchesCategory && this.matchesStatus(source);
     });
   }
 

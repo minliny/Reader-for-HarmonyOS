@@ -7,6 +7,7 @@ import {
   type DiscoverKind,
   type DiscoverSource,
 } from './DiscoverGateway';
+import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
 
 const DOMAIN = 0x5244;
 
@@ -79,8 +80,11 @@ export class DiscoverOrchestrator {
       try {
         const stored = await this.sourceGateway.loadSources();
         const sources: DiscoverSource[] = stored
-          .filter((source: BookSource): boolean => source.enabled && source.enabledExplore)
-          .map((source: BookSource): DiscoverSource => ({ sourceId: source.sourceId, name: source.name }));
+          .filter((source: BookSource): boolean => source.enabled && source.enabledExplore &&
+            readerSourceCategoryIsText(source.category))
+          .map((source: BookSource): DiscoverSource => ({
+            sourceId: source.sourceId, name: source.name, category: source.category,
+          }));
         if (!this.isCurrentSession(session)) return;
         if (sources.length === 0) {
           this.publish({ sources, books: [], kinds: [], loading: false, statusMessage: '没有已启用且支持发现的书源' });
@@ -174,7 +178,7 @@ export class DiscoverOrchestrator {
     if (source === undefined || kind === undefined) return;
     this.publishIfCurrent(session, { loading: true, statusMessage: `正在由 Core 加载第 ${page} 页…` });
     try {
-      const books = await this.gateway.loadExplore(source.sourceId, kind.url, page);
+      const books = await this.gateway.loadExplore(source.sourceId, kind.url, page, source.category);
       if (!this.isCurrentSession(session)) return;
       if (probingNext && books.length === 0) {
         this.publish({ loading: false, hasNext: false, statusMessage: 'Core 返回空页，没有更多内容' });
@@ -204,7 +208,7 @@ export class DiscoverOrchestrator {
 
   private enqueue(operation: () => Promise<void>): void {
     this.operationTail = this.operationTail.then(operation).catch((error: Error): void => {
-      hilog.error(DOMAIN, 'Reader', 'Discover operation failed: %{public}s', error.message);
+      hilog.error(DOMAIN, 'Reader', 'Discover operation failed: %{private}s', error.message);
     });
   }
 
@@ -230,7 +234,7 @@ export class DiscoverOrchestrator {
 
   private fail(session: number, label: string, error: Error): void {
     if (this.isCurrentSession(session)) this.publish({ loading: false, statusMessage: `${label}：${error.message}` });
-    hilog.error(DOMAIN, 'Reader', '%{public}s: %{public}s', label, error.message);
+    hilog.error(DOMAIN, 'Reader', '%{private}s: %{private}s', label, error.message);
   }
 
   private isCurrentSession(session: number): boolean {

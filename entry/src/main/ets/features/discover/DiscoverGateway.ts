@@ -1,5 +1,6 @@
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { type ReaderSourceCategory } from '../source/ReaderSourceCategory';
 
 export type DiscoverKind = {
   title: string;
@@ -13,11 +14,13 @@ export type DiscoverBook = {
   author: string;
   coverUrl: string;
   intro: string;
+  category: ReaderSourceCategory;
 };
 
 export type DiscoverSource = {
   sourceId: string;
   name: string;
+  category: ReaderSourceCategory;
 };
 
 /**
@@ -59,7 +62,8 @@ export class DiscoverGateway {
     return kinds;
   }
 
-  async loadExplore(sourceId: string, url: string, page: number): Promise<DiscoverBook[]> {
+  async loadExplore(sourceId: string, url: string, page: number,
+    category: ReaderSourceCategory = 'novel'): Promise<DiscoverBook[]> {
     if (!Number.isSafeInteger(page) || page < 1) {
       throw new Error('source.explore page must be a positive safe integer');
     }
@@ -89,6 +93,10 @@ export class DiscoverGateway {
         author: this.string(obj, 'author') ?? '',
         coverUrl: this.string(obj, 'coverUrl') ?? '',
         intro: this.string(obj, 'intro') ?? '',
+        // The explore response is already scoped to one source. The
+        // orchestrator supplies the source's authoritative category when it
+        // projects this row; the gateway keeps the wire decoder total.
+        category,
       });
     }
     return books;

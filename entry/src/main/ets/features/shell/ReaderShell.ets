@@ -46,6 +46,7 @@ export struct ReaderShell {
   @Prop route: PreparedReaderRoute = 'reading';
   // 目录 overlay。
   @Prop tocEntries: LocalReadingTocEntry[] = [];
+  @Prop bookmarkLoadMessage: string = '';
   @Prop directoryCurrentChapterIndex: number = -1;
   @Prop directoryChapterTitle: string = '';
   @Prop directoryOpenedFromControl: boolean = false;
@@ -81,6 +82,9 @@ export struct ReaderShell {
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
   onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]) => void =
     (_entries: LocalReadingTocEntry[]): void => {};
+  onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean) => Promise<void> =
+    (_sourceId: string, _bookId: string, _isCurrent: () => boolean): Promise<void> =>
+      Promise.reject(new Error('Bookmark projection loader unavailable'));
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest) => void =
@@ -119,6 +123,7 @@ export struct ReaderShell {
           sourceName: this.sourceName,
           totalChapters: this.totalChapters,
           directoryEntries: this.tocEntries,
+          bookmarkLoadMessage: this.bookmarkLoadMessage,
           controlObscured: this.route === 'directory',
           interactionBlocked: !this.visible || this.route !== 'reading' || this.sourceSwitchVisible,
           reduceMotion: this.reduceMotion,
@@ -138,6 +143,8 @@ export struct ReaderShell {
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void =>
             this.onDirectoryProjectionChanged(entries),
+          onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean): Promise<void> =>
+            this.onLoadControlBookmarks(sourceId, bookId, isCurrent),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),

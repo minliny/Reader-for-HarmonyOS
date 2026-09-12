@@ -10,6 +10,7 @@ import type {
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf } from '../../app/ErrorMessage';
+import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
 
 const DOMAIN = 0x5244;
 
@@ -41,10 +42,17 @@ export class SearchOrchestrator {
   private gateway: SearchGateway;
   private emitPresentation: (presentation: SearchPresentation) => void;
   private emitSources: (sources: SearchSource[]) => void;
+  /** Visibility gates dispatch only; it never cancels an admitted request. */
   private isCurrent: () => boolean;
+  private sessionOpen: boolean = false;
+  private dispatchWaiters: Array<() => void> = [];
   /** Authoritative mirror; Index's @State is a projection of it. */
   private presentation: SearchPresentation = { kind: 'initial', history: [] };
   private sources: SearchSource[] = [];
+  private unsubscribeBooks: (() => void) | undefined = undefined;
+  private refreshPending: boolean = false;
+  private refreshAgain: boolean = false;
+  private owner: ReaderRuntimeOwner;
   /** Bumped on every entry into Search; stale-entry async work is dropped. */
   private session: number = 0;
   /** Bumped on every submit/clear; a newer submit supersedes an older one. */
@@ -52,11 +60,7 @@ export class SearchOrchestrator {
   private sourceLoad: Promise<SearchSource[]> | undefined = undefined;
   private sourceLoadSession: number = 0;
   /**
-   * True while a sweep is still winding through its workers for the live
-   * session/work. Leaving the route cancels a sweep's requests and drops its
-   * terminal publish, so the last partial (searching:true) would otherwise
-   * read as a live sweep forever; resumeStaleSweep uses this flag to tell
-   * that residue apart from a genuinely running sweep.
+   * True while the live sweep has active or paused workers.
    */
   private sweepAlive: boolean = false;
   /**
@@ -64,7 +68,7 @@ export class SearchOrchestrator {
    * settle an interrupted loading surface with an honest source count.
    */
   private sweepCompletedSourceCount: number = 0;
-  /** Scope of the most recent search; retry/resume re-run the same subset. */
+  /** Scope of the most recent search; an explicit retry uses the same subset. */
   private lastScope: string[] | undefined = undefined;
 
   constructor(
@@ -73,6 +77,7 @@ export class SearchOrchestrator {
     isCurrent: () => boolean,
     owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
   ) {
+    this.owner = owner;
     this.gateway = new SearchGateway(owner);
     this.emitPresentation = emitPresentation;
     this.emitSources = emitSources;
@@ -81,6 +86,9 @@ export class SearchOrchestrator {
 
   /** Enter the Search page: invalidate prior entries, load sources + history. */
   open(): void {
+    this.close();
+    this.sessionOpen = true;
+    this.unsubscribeBooks = this.owner.bookAcquisitions?.().subscribe((): void => { void this.refreshSharedBooks(); });
     this.session += 1;
     const session = this.session;
     this.work = 0;
@@ -99,9 +107,8 @@ export class SearchOrchestrator {
           return;
         }
         this.presentSources(sources);
-        // A fresh entry whose source list is empty or fully disabled cannot
-        // offer the Initial search surface; surface the configuration gap
-        // instead. A user who already left Initial keeps their state.
+        // Online-source availability does not disable local book search.
+        // A user who already left Initial keeps the active search state.
         if (this.presentation.kind === 'initial') {
           const entry = this.entryPresentationForSources(sources);
           if (entry !== undefined) {
@@ -113,9 +120,9 @@ export class SearchOrchestrator {
         if (!this.isCurrentSession(session)) {
           return;
         }
-        hilog.error(DOMAIN, 'Reader', 'Search source list failed to load: %{public}s', error.message);
+        hilog.error(DOMAIN, 'Reader', 'Search source list failed to load: %{private}s', error.message);
         if (this.presentation.kind === 'initial') {
-          this.present({ kind: 'sourceLoadError' });
+          this.presentInitial();
         }
         this.presentSources([]);
       });
@@ -132,7 +139,7 @@ export class SearchOrchestrator {
         if (!this.isCurrentSession(session)) {
           return;
         }
-        hilog.error(DOMAIN, 'Reader', 'Search history failed to load: %{public}s', error.message);
+        hilog.error(DOMAIN, 'Reader', 'Search history failed to load: %{private}s', error.message);
         // An unavailable history has no admitted error state. Keep the empty
         // Initial Figma state; it must not block a real search.
       });
@@ -141,14 +148,17 @@ export class SearchOrchestrator {
   /**
    * Begin a real search across enabled sources. An explicit `scopeSourceIds`
    * subset (ACQ-02) restricts the sweep to those sources; omitted scope means
-   * all enabled sources. The scope is retained so retry/resume re-run the
-   * same subset instead of silently widening it.
+   * all enabled sources. Explicit retry retains the subset; resume retains
+   * the existing workers and cursor.
    */
   search(keyword: string, scopeSourceIds?: string[]): void {
     if (keyword.trim().length === 0) {
       return;
     }
+    this.sourceLoad = this.gateway.loadSources();
+    this.sourceLoadSession = this.session;
     this.work += 1;
+    this.wakeDispatchers();
     this.sweepAlive = true;
     this.lastScope = scopeSourceIds === undefined ? undefined : scopeSourceIds.slice();
     this.sweepCompletedSourceCount = 0;
@@ -168,8 +178,10 @@ export class SearchOrchestrator {
     const presentation = this.presentation;
     if (presentation.kind === 'loading') {
       this.work += 1;
+      this.wakeDispatchers();
       this.sweepAlive = false;
-      hilog.info(DOMAIN, 'Reader', 'Search sweep stopped by user: %{public}s', presentation.keyword);
+      hilog.info(DOMAIN, 'Reader', 'Search sweep stopped by user: %{private}s',
+        this.truncatedKeywordForLog(presentation.keyword));
       this.present({
         kind: 'empty',
         keyword: presentation.keyword,
@@ -180,8 +192,10 @@ export class SearchOrchestrator {
     }
     if (presentation.kind === 'results' && presentation.searching) {
       this.work += 1;
+      this.wakeDispatchers();
       this.sweepAlive = false;
-      hilog.info(DOMAIN, 'Reader', 'Search sweep stopped by user: %{public}s', presentation.keyword);
+      hilog.info(DOMAIN, 'Reader', 'Search sweep stopped by user: %{private}s',
+        this.truncatedKeywordForLog(presentation.keyword));
       this.present({
         kind: 'results',
         keyword: presentation.keyword,
@@ -206,25 +220,64 @@ export class SearchOrchestrator {
     }
   }
 
-  /**
-   * Restore a search whose route was re-entered without a fresh open(): if the
-   * visible presentation still claims an in-flight sweep but no sweep is
-   * running — leaving the route cancelled its requests and dropped its
-   * terminal publish — re-run the same keyword. A live sweep keeps its
-   * course; restoring the route re-arms its guards and it settles alone.
-   */
-  resumeStaleSweep(): void {
-    if (!this.isCurrent()) {
-      return;
+  /** Resume the same workers and source cursor; never create a new query. */
+  resume(): void {
+    this.wakeDispatchers();
+  }
+
+  /** Called after route or Ability foreground changes. In-flight work is retained. */
+  visibilityChanged(): void {
+    this.wakeDispatchers();
+  }
+
+  /** Logical exit releases the query, including workers waiting for foreground. */
+  close(): void {
+    this.unsubscribeBooks?.();
+    this.unsubscribeBooks = undefined;
+    this.sessionOpen = false;
+    this.work += 1;
+    this.sweepAlive = false;
+    this.wakeDispatchers();
+  }
+
+  private async refreshSharedBooks(): Promise<void> {
+    if (this.refreshPending) { this.refreshAgain = true; return; }
+    if (!this.sessionOpen || this.presentation.kind !== 'results') return;
+    this.refreshAgain = false;
+    this.refreshPending = true;
+    const session = this.session;
+    const work = this.work;
+    const current = this.presentation;
+    try {
+      const results = await this.gateway.refreshBooks(current.results);
+      if (this.isCurrentWork(work, session) && this.presentation === current) {
+        this.present({ kind: 'results', keyword: current.keyword, results,
+          localSearchFailed: current.localSearchFailed, sourceListFailed: current.sourceListFailed,
+          searching: current.searching, stopped: current.stopped, totalSourceCount: current.totalSourceCount,
+          completedSourceCount: current.completedSourceCount, failedSourceCount: current.failedSourceCount }, false);
+      } else if (this.isCurrentWork(work, session)) {
+        this.refreshAgain = true;
+      }
+    } catch (_error) { /* Keep the latest live results when cache projection fails. */ }
+    finally {
+      this.refreshPending = false;
+      if (this.refreshAgain) void this.refreshSharedBooks();
     }
-    const presentation = this.presentation;
-    if (presentation.kind !== 'results') {
-      return;
+  }
+
+  private wakeDispatchers(): void {
+    const waiters = this.dispatchWaiters;
+    this.dispatchWaiters = [];
+    for (const wake of waiters) wake();
+  }
+
+  private async waitForDispatch(work: number, session: number): Promise<boolean> {
+    while (this.isCurrentWork(work, session) && !this.isCurrent()) {
+      await new Promise<void>((resolve: () => void): void => {
+        this.dispatchWaiters.push(resolve);
+      });
     }
-    if (!presentation.searching || this.sweepAlive) {
-      return;
-    }
-    this.search(presentation.keyword, this.lastScope);
+    return this.isCurrentWork(work, session);
   }
 
   /**
@@ -260,7 +313,7 @@ export class SearchOrchestrator {
         if (!this.isCurrentSession(session)) {
           return;
         }
-        hilog.error(DOMAIN, 'Reader', 'Search source list failed to refresh: %{public}s', error.message);
+        hilog.error(DOMAIN, 'Reader', 'Search source list failed to refresh: %{private}s', error.message);
         // Keep the current presentation; the next explicit action retries.
       });
   }
@@ -268,6 +321,7 @@ export class SearchOrchestrator {
   /** Clear recent history back to the Initial surface. */
   clearHistory(): void {
     this.work += 1;
+    this.wakeDispatchers();
     this.sweepAlive = false;
     const work = this.work;
     const session = this.session;
@@ -284,7 +338,7 @@ export class SearchOrchestrator {
         if (!this.isCurrentWork(work, session)) {
           return;
         }
-        hilog.error(DOMAIN, 'Reader', 'Search history clear failed: %{public}s', error.message);
+        hilog.error(DOMAIN, 'Reader', 'Search history clear failed: %{private}s', error.message);
       });
   }
 
@@ -295,35 +349,40 @@ export class SearchOrchestrator {
     void this.gateway.addHistory(keyword)
       .catch((error: Error): void => {
         if (this.isCurrentWork(work, session)) {
-          hilog.warn(DOMAIN, 'Reader', 'Search history add failed: %{public}s', error.message);
+          hilog.warn(DOMAIN, 'Reader', 'Search history add failed: %{private}s', error.message);
         }
       });
     let attemptedSourceCount = 0;
     try {
-      const sources = await this.sourcesForSession(session);
+      let localSearchFailed = false;
+      let sourceListFailed = false;
+      const localAttempt = this.gateway.searchLocalBooks(keyword, searchRequestId)
+        .catch((): SearchBook[] => { localSearchFailed = true; return []; });
+      const sourceAttempt = this.sourcesForSession(session)
+        .catch((): SearchSource[] => { sourceListFailed = true; return []; });
+      // Start both paths before awaiting either. A missing online source never
+      // prevents searching the imported local collection.
+      const sources = await sourceAttempt;
+      const localResults = await localAttempt;
       if (!this.isCurrentWork(work, session)) {
         return;
       }
       this.presentSources(sources);
       const scope = scopeSourceIds === undefined ? undefined : new Set<string>(scopeSourceIds);
       const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0 &&
+        readerSourceCategoryIsText(source.category) &&
         (scope === undefined || scope.has(source.sourceId)));
       attemptedSourceCount = enabled.length;
       if (enabled.length === 0) {
-        if (scopeSourceIds !== undefined &&
-          sources.some((source) => source.enabled && source.name.trim().length > 0)) {
-          // The scope excluded every usable source: an honest empty verdict for
-          // this attempt, not a missing-source configuration gap.
-          this.present({ kind: 'empty', keyword: keyword, searchedSourceCount: 0, failedSourceCount: 0 });
-          return;
+        if (localResults.length > 0) {
+          this.present({ kind: 'results', keyword, results: localResults, searching: false,
+            totalSourceCount: 0, completedSourceCount: 0, failedSourceCount: 0,
+            localSearchFailed, sourceListFailed });
+        } else if (localSearchFailed || sourceListFailed) {
+          this.present({ kind: 'error', keyword, searchedSourceCount: 0, failedSourceCount: 0 });
+        } else {
+          this.present({ kind: 'empty', keyword, searchedSourceCount: 0, failedSourceCount: 0 });
         }
-        // Zero enabled sources is a configuration gap, not a network failure:
-        // route the user to the add/enable-source flow instead of the generic
-        // search-error surface.
-        this.present({
-          kind: 'sourceRequired',
-          reason: sources.length === 0 ? 'noSources' : 'allDisabled',
-        });
         return;
       }
       // Bounded, feature-local concurrency: up to MAX_SEARCH_CONCURRENCY
@@ -348,7 +407,7 @@ export class SearchOrchestrator {
       // bleed into the live list.
       const admitsResult = (book: SearchBook): boolean => book.searchRequestId === searchRequestId;
       const flattenCollected = (): SearchBook[] => {
-        const collected: SearchBook[] = [];
+        const collected: SearchBook[] = localResults.slice();
         for (const bucket of collectedBySource) {
           if (bucket !== undefined) {
             for (const book of bucket) {
@@ -362,10 +421,10 @@ export class SearchOrchestrator {
       };
       // Streaming presentation: every finished source republishes the
       // accumulated, deduped results so cards, per-book source counts and the
-      // source-count ranking update live. Until a book exists the Figma
+      // source counts update live. Until a book exists the Figma
       // loading surface stays up; empty/error stay end-of-sweep verdicts.
       const publishPartial = (): void => {
-        if (!this.isCurrentWork(work, session) || successfulSourceCount === 0) {
+        if (!this.isCurrentWork(work, session)) {
           return;
         }
         const results = flattenCollected();
@@ -380,6 +439,7 @@ export class SearchOrchestrator {
           totalSourceCount: attemptedSourceCount,
           completedSourceCount: this.sweepCompletedSourceCount,
           failedSourceCount: failures.length,
+          localSearchFailed, sourceListFailed,
         });
       };
       const schedulePartialPublish = (): void => {
@@ -396,9 +456,10 @@ export class SearchOrchestrator {
       };
       const worker = async (): Promise<void> => {
         while (true) {
-          if (!this.isCurrentWork(work, session)) {
+          if (nextSourceIndex >= enabled.length || !await this.waitForDispatch(work, session)) {
             return;
           }
+          if (!this.isCurrent()) continue;
           const index = nextSourceIndex;
           nextSourceIndex += 1;
           if (index >= enabled.length) {
@@ -410,6 +471,7 @@ export class SearchOrchestrator {
             keyword,
             (): boolean => this.isCurrentWork(work, session),
             searchRequestId,
+            (): boolean => this.isCurrent(),
           );
           if (!this.isCurrentWork(work, session)) {
             return;
@@ -425,6 +487,7 @@ export class SearchOrchestrator {
           schedulePartialPublish();
         }
       };
+      publishPartial();
       const workerCount = Math.min(MAX_SEARCH_CONCURRENCY, enabled.length);
       const workerPromises: Array<Promise<void>> = [];
       for (let index = 0; index < workerCount; index += 1) {
@@ -442,15 +505,19 @@ export class SearchOrchestrator {
       }
       finalized = true;
       for (const failure of failures) {
-        hilog.warn(DOMAIN, 'Reader', 'Search source %{public}s failed: %{public}s',
-          failure.source.sourceId, failure.error);
+        // P2-9 log hygiene: sourceId is the Legado bookSourceUrl (a URL that
+        // must not reach hilog verbatim) and Core error text can embed the
+        // request or final redirect URL, so both are reduced before logging.
+        hilog.warn(DOMAIN, 'Reader', 'Search source %{private}s failed: %{private}s',
+          this.sourceIdentityForLog(failure.source), this.sanitizedLogText(failure.error));
       }
-      if (successfulSourceCount === 0 && failures.length > 0) {
+      if (localResults.length === 0 && successfulSourceCount === 0 && failures.length > 0) {
         this.present({
           kind: 'error',
           keyword: keyword,
           searchedSourceCount: attemptedSourceCount,
           failedSourceCount: failures.length,
+          localSearchFailed, sourceListFailed,
         });
         return;
       }
@@ -461,6 +528,7 @@ export class SearchOrchestrator {
           keyword: keyword,
           searchedSourceCount: attemptedSourceCount,
           failedSourceCount: failures.length,
+          localSearchFailed, sourceListFailed,
         });
         return;
       }
@@ -472,13 +540,14 @@ export class SearchOrchestrator {
         totalSourceCount: attemptedSourceCount,
         completedSourceCount: this.sweepCompletedSourceCount,
         failedSourceCount: failures.length,
+        localSearchFailed, sourceListFailed,
       });
     } catch (error) {
       if (!this.isCurrentWork(work, session)) {
         return;
       }
       const message = errorMessageOf(error);
-      hilog.error(DOMAIN, 'Reader', 'Search failed: %{public}s', message);
+      hilog.error(DOMAIN, 'Reader', 'Search failed: %{private}s', this.sanitizedLogText(message));
       this.present({
         kind: 'error',
         keyword: keyword,
@@ -486,9 +555,7 @@ export class SearchOrchestrator {
         failedSourceCount: 0,
       });
     } finally {
-      // A sweep ended by route-leave cancellation publishes nothing: workers
-      // exit early and the terminal present is dropped. Marking it dead here
-      // is what lets resumeStaleSweep recognize the searching:true residue.
+      // A paused queue remains alive until it resumes or is explicitly closed.
       if (work === this.work && session === this.session) {
         this.sweepAlive = false;
       }
@@ -496,11 +563,65 @@ export class SearchOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.isCurrent() && session === this.session;
+    return this.sessionOpen && session === this.session;
   }
 
   private isCurrentWork(work: number, session: number): boolean {
-    return this.isCurrent() && session === this.session && work === this.work;
+    return this.sessionOpen && session === this.session && work === this.work;
+  }
+
+  /** P2-9: hilog never carries a raw search keyword; keep a bounded prefix. */
+  private truncatedKeywordForLog(keyword: string): string {
+    const normalized = keyword.trim();
+    if (normalized.length <= 12) {
+      return normalized;
+    }
+    return `${normalized.slice(0, 12)}…`;
+  }
+
+  /**
+   * P2-9: hilog identity for a failing source. sourceId is the Legado
+   * bookSourceUrl, so only its host is logged; a non-URL id falls back to the
+   * bounded display name.
+   */
+  private sourceIdentityForLog(source: SearchSource): string {
+    const host = this.hostOfUrlText(source.sourceId);
+    if (host.length > 0) {
+      return host;
+    }
+    return this.truncatedKeywordForLog(source.name);
+  }
+
+  /**
+   * P2-9: Core and transport error text can embed the request URL or the
+   * final redirect URL; every http(s) URL is reduced to its host and the
+   * whole text is bounded before it reaches hilog.
+   */
+  private sanitizedLogText(text: string): string {
+    const reduced = text.replace(/https?:\/\/[^\s"'<>]+/gi,
+      (match: string): string => {
+        const host = this.hostOfUrlText(match);
+        return host.length > 0 ? `[host:${host}]` : '[url]';
+      });
+    return reduced.length > 240 ? `${reduced.slice(0, 240)}…` : reduced;
+  }
+
+  private hostOfUrlText(value: string): string {
+    let rest = value.trim();
+    const schemeMatch = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.exec(rest);
+    if (schemeMatch !== null) {
+      rest = rest.slice(schemeMatch[0].length);
+    }
+    const authority = rest.split(/[/?#]/)[0];
+    const atSign = authority.lastIndexOf('@');
+    const hostPort = atSign >= 0 ? authority.slice(atSign + 1) : authority;
+    if (hostPort.startsWith('[')) {
+      const bracketEnd = hostPort.indexOf(']');
+      return bracketEnd < 0 ? '' : hostPort.slice(1, bracketEnd).toLowerCase();
+    }
+    const colon = hostPort.indexOf(':');
+    const host = colon >= 0 ? hostPort.slice(0, colon) : hostPort;
+    return host.toLowerCase();
   }
 
   private async sourcesForSession(session: number): Promise<SearchSource[]> {
@@ -520,13 +641,6 @@ export class SearchOrchestrator {
    * result is the configuration gap the entry must show instead.
    */
   private entryPresentationForSources(sources: SearchSource[]): SearchPresentation | undefined {
-    if (sources.length === 0) {
-      return { kind: 'sourceRequired', reason: 'noSources' };
-    }
-    const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0);
-    if (enabled.length === 0) {
-      return { kind: 'sourceRequired', reason: 'allDisabled' };
-    }
     return undefined;
   }
 
@@ -555,7 +669,7 @@ export class SearchOrchestrator {
         if (!this.isCurrentSession(session)) {
           return;
         }
-        hilog.error(DOMAIN, 'Reader', 'Search source list retry failed: %{public}s', error.message);
+        hilog.error(DOMAIN, 'Reader', 'Search source list retry failed: %{private}s', error.message);
         this.present({ kind: 'sourceLoadError' });
       });
   }
@@ -578,9 +692,29 @@ export class SearchOrchestrator {
     this.emitPresentation(this.presentation);
   }
 
-  private present(presentation: SearchPresentation): void {
+  private present(presentation: SearchPresentation, retainShared: boolean = true): void {
+    const previous = this.presentation;
+    if (retainShared && presentation.kind === 'results' && previous.kind === 'results' &&
+      presentation.keyword === previous.keyword) {
+      const results: SearchBook[] = presentation.results.slice();
+      const positions = new Map<string, number>();
+      for (let index = 0; index < results.length; index += 1) {
+        positions.set(`${results[index].sourceId}\u0000${results[index].bookId}`, index);
+      }
+      for (const book of previous.results) {
+        const position = positions.get(`${book.sourceId}\u0000${book.bookId}`);
+        if (position === undefined) results.push(book);
+        else if (book.acquisition !== undefined && book.sourceRuleVersion === results[position].sourceRuleVersion) results[position] = book;
+      }
+      presentation.results = results;
+    }
     this.presentation = presentation;
     this.emitPresentation(presentation);
+    // Core may publish before the first partial result is visible. Refresh
+    // the newly admitted identities too, so that notification cannot be lost.
+    if (retainShared && presentation.kind === 'results' && this.unsubscribeBooks !== undefined) {
+      void this.refreshSharedBooks();
+    }
   }
 
   private presentSources(sources: SearchSource[]): void {

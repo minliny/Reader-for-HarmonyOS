@@ -113,7 +113,7 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
   private enqueue(operation: () => Promise<void>): void {
     const task = this.operationTail.then(operation, operation);
     this.operationTail = task.catch((error: Error): void => {
-      hilog.error(LOG_DOMAIN, 'Reader', 'TTS AVSession update failed: %{public}s', error.message);
+      hilog.error(LOG_DOMAIN, 'Reader', 'TTS AVSession update failed: %{private}s', error.message);
     });
   }
 }

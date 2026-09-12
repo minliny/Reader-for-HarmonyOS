@@ -72,6 +72,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private currentRequestId: string | undefined = undefined;
   private audioListenersInstalled: boolean = false;
   private audioSessionActive: boolean = false;
+  private audioSessionAllowMixing: boolean | undefined = undefined;
   private closed: boolean = false;
 
   constructor() {
@@ -130,13 +131,14 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   async activateAudioSession(allowMixing: boolean): Promise<void> {
     this.assertOpen();
     this.installAudioListeners();
-    if (!this.audioSessionActive) {
+    if (!this.audioSessionActive || this.audioSessionAllowMixing !== allowMixing) {
       this.audioSessionManager.setAudioSessionScene(audio.AudioSessionScene.AUDIO_SESSION_SCENE_MEDIA);
       const concurrencyMode = allowMixing
         ? audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS
         : audio.AudioConcurrencyMode.CONCURRENCY_PAUSE_OTHERS;
       await this.audioSessionManager.activateAudioSession({ concurrencyMode });
       this.audioSessionActive = true;
+      this.audioSessionAllowMixing = allowMixing;
     }
   }
 
@@ -146,6 +148,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       await this.audioSessionManager.deactivateAudioSession();
     } finally {
       this.audioSessionActive = false;
+      this.audioSessionAllowMixing = undefined;
     }
   }
 
@@ -373,6 +376,6 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
 
   private logError(message: string, error: Object): void {
     const detail = errorMessageOf(error);
-    hilog.error(LOG_DOMAIN, 'Reader', '%{public}s: %{public}s', message, detail);
+    hilog.error(LOG_DOMAIN, 'Reader', '%{private}s: %{private}s', message, detail);
   }
 }

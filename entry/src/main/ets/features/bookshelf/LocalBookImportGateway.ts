@@ -1,6 +1,7 @@
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf } from '../../app/ErrorMessage';
+import { localImportFailure, type LocalImportFailure } from '../../app/LocalImportFailure';
 import type {
   LocalBookAssetCommit,
   LocalBookInput,
@@ -13,6 +14,7 @@ const DOMAIN = 0x5244;
 export type LocalImportItem = {
   fileName: string;
   state: 'success' | 'failed';
+  failure?: LocalImportFailure;
 };
 
 export type LocalImportBatch = {
@@ -60,51 +62,191 @@ export class LocalBookImportGateway {
 
   private async importPreparedSelection(selection: LocalBookPreparation): Promise<LocalImportItem> {
     if (selection.state === 'failed') {
-      return { fileName: selection.fileName, state: 'failed' };
+      return { fileName: selection.fileName, state: 'failed', failure: selection.failure ?? localImportFailure('read') };
     }
 
     let rollbackToken: JsonObject | undefined = undefined;
     let assetCommit: LocalBookAssetCommit | undefined = undefined;
+    let persistenceStarted = false;
+    let shelfAddStarted = false;
+    let shelfParams: JsonObject | undefined = undefined;
     try {
       const parsed = await this.runtimeOwner.request('import.parse', {
         kind: 'localBook',
         input: this.localBookParseParams(selection.input),
       });
+      const preview = this.requiredObject(parsed.data, 'preview');
+      const summary = this.requiredObject(preview, 'summary');
+      const integrity = this.requiredObject(summary, 'integrity');
+      if (integrity['schemaVersion'] !== 1 ||
+        (integrity['readability'] !== 'complete' && integrity['readability'] !== 'recoverable')) {
+        throw new Error('local_book_not_readable: incomplete content');
+      }
+      persistenceStarted = true;
       const persisted = await this.runtimeOwner.request('import.persist', {
         transactionId: this.nextTransactionId(selection.input.bookId),
         parsed: parsed.data,
       });
       rollbackToken = this.requiredObject(persisted.data, 'rollbackToken');
-      const shelfParams = this.shelfAddParams(persisted);
+      shelfParams = this.shelfAddParams(persisted);
       assetCommit = await this.runtimeOwner.commitLocalBookInput(selection.input);
+      shelfAddStarted = true;
       await this.runtimeOwner.request('bookshelf.add', shelfParams);
+      await this.finalizeCommittedImport(rollbackToken);
       return { fileName: selection.input.fileName, state: 'success' };
     } catch (error) {
       const message = errorMessageOf(error);
-      // The supplied Figma result state has only a filename and binary
-      // success/failure marker. Keep the real failure reason in diagnostic
-      // logs rather than inventing a fourth visible status or copy.
-      hilog.error(DOMAIN, 'Reader', 'Local import failed for %{public}s: %{public}s',
-        selection.input.fileName, message);
-      if (rollbackToken !== undefined) {
+      // A missing persist reply cannot establish that Core did not commit.
+      // Preserve completed EPUB resources until restart/reconciliation.
+      // A structured deterministic Core rejection is different: import.persist
+      // validates before its first storage mutation, so its staged input can
+      // be discarded immediately instead of leaking a recovery orphan.
+      let recoveryPending = persistenceStarted && rollbackToken === undefined &&
+        !this.isDeterministicCoreRejection(error);
+      // Only reconcile when the mutation outcome could have been lost.  A
+      // deterministic Core rejection (for example INVALID_PARAMS) proves
+      // that bookshelf.add did not commit; querying an old row for the same
+      // identity in that case could turn a failed import into a false
+      // success and leave the old row pointing at rolled-back content.
+      if (shelfAddStarted && shelfParams !== undefined && this.isShelfMutationOutcomeUnknown(error)) {
+        const shelfState = await this.reconcileShelfAdd(shelfParams);
+        if (shelfState === 'committed') {
+          // The write committed and only its response was lost. Report the
+          // durable truth instead of compensating a successful import. The
+          // same opaque token also consumes any large Core compensation
+          // journal now that both the asset and shelf reference are durable.
+          if (rollbackToken !== undefined) {
+            await this.finalizeCommittedImport(rollbackToken);
+          }
+          return { fileName: selection.input.fileName, state: 'success' };
+        }
+        if (shelfState === 'unknown') {
+          // Never roll body/assets back while a shelf reference may exist.
+          recoveryPending = true;
+        }
+      }
+      hilog.error(DOMAIN, 'Reader', 'Local import failed: %{private}s', localImportFailure(message).code);
+      if (!recoveryPending && rollbackToken !== undefined) {
         try {
           await this.runtimeOwner.request('import.rollback', { rollbackToken });
         } catch (_) {
-          // A failed rollback must not be presented as a successful import.
-          // The designed result state only distinguishes success from failure.
+          recoveryPending = true;
         }
       }
       try {
-        if (assetCommit !== undefined) {
+        if (recoveryPending) {
+          // Preserve any committed asset still referenced by Core.
+        } else if (assetCommit !== undefined) {
           await this.runtimeOwner.rollbackLocalBookAsset(assetCommit);
         } else {
           await this.runtimeOwner.discardLocalBookInput(selection.input);
         }
       } catch (_) {
-        // Keep the visible result failed. A later import with the same
-        // content identity safely reuses or replaces the Host asset.
+        recoveryPending = true;
       }
-      return { fileName: selection.input.fileName, state: 'failed' };
+      return { fileName: selection.input.fileName, state: 'failed', failure: localImportFailure(message, recoveryPending) };
+    }
+  }
+
+  private async finalizeCommittedImport(rollbackToken: JsonObject): Promise<boolean> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await this.runtimeOwner.request('import.finalize', { rollbackToken });
+        return true;
+      } catch (error) {
+        // Keep the opaque Core error out of logs; the bounded retry and queue
+        // below are the only recovery state the Host needs to retain.
+      }
+    }
+    // The shelf write is the durable commit point.  A cleanup/finalize
+    // failure must remain observable for recovery, but must not turn an
+    // already-readable book back into a failed import or trigger rollback.
+    hilog.warn(DOMAIN, 'Reader', 'Local import finalize deferred after %{public}d attempts', 3);
+    try {
+      // Keep the opaque token in the app-private Host queue. The next Core
+      // owner drains it before publishing a fresh runtime, so a process death
+      // between shelf commit and cleanup cannot strand a large journal.
+      await this.runtimeOwner.enqueuePendingLocalImportFinalize(rollbackToken);
+    } catch (_) {
+      // The readable shelf commit still wins. Do not roll it back merely
+      // because the local cleanup queue itself was unavailable; the failure
+      // remains visible through the warning above without exposing the token.
+      hilog.error(DOMAIN, 'Reader', 'Local import finalize recovery queue unavailable');
+    }
+    return false;
+  }
+
+  private async reconcileShelfAdd(params: JsonObject): Promise<'committed' | 'absent' | 'unknown'> {
+    const sourceId = this.requiredString(params, 'sourceId');
+    const bookId = this.requiredString(params, 'bookId');
+    try {
+      const result = await this.runtimeOwner.request('bookshelf.get', { sourceId, bookId });
+      const rawBook = result.data['book'];
+      if (rawBook === null || rawBook === undefined) {
+        return 'absent';
+      }
+      const book = this.requiredObject(result.data, 'book');
+      return book['sourceId'] === sourceId && book['bookId'] === bookId ? 'committed' : 'unknown';
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
+  private isShelfMutationOutcomeUnknown(error: unknown): boolean {
+    // ReaderCoreRequestError carries the structured event, while transport
+    // timeouts/cancellation and Host failures are ordinary Error instances.
+    // Keep those latter cases conservative: the request may have reached Core
+    // before its reply was lost, so the durable shelf state must be checked.
+    if (typeof error !== 'object' || error === null) {
+      return true;
+    }
+    const event = (error as { event?: unknown }).event;
+    if (typeof event !== 'object' || event === null) {
+      return true;
+    }
+    const structuredError = (event as { error?: unknown }).error;
+    if (typeof structuredError !== 'object' || structuredError === null) {
+      return true;
+    }
+    const code = (structuredError as { code?: unknown }).code;
+    if (typeof code !== 'string') {
+      return true;
+    }
+    switch (code) {
+      // These errors are validated/rejected before bookshelf.add can commit.
+      case 'UNKNOWN_METHOD':
+      case 'INVALID_PARAMS':
+      case 'INVALID_PROTOCOL_VERSION':
+      case 'INVALID_MESSAGE':
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  private isDeterministicCoreRejection(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+    const event = (error as { event?: unknown }).event;
+    if (typeof event !== 'object' || event === null) {
+      return false;
+    }
+    const structuredError = (event as { error?: unknown }).error;
+    if (typeof structuredError !== 'object' || structuredError === null) {
+      return false;
+    }
+    const code = (structuredError as { code?: unknown }).code;
+    switch (code) {
+      // These failures are rejected before import.persist commits any row or
+      // returns a rollback token.
+      case 'UNKNOWN_METHOD':
+      case 'INVALID_PARAMS':
+      case 'INVALID_PROTOCOL_VERSION':
+      case 'INVALID_MESSAGE':
+        return true;
+      default:
+        return false;
     }
   }
 
