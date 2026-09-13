@@ -1,10 +1,11 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { motionAnimateParam } from '../common/MotionSpec';
 import { registerReaderFonts } from '../common/ReaderFonts';
 
 const MENU_WIDTH = 176;
 const POINTER_HEIGHT = 12;
 const ACTION_HEIGHT = 50;
-const ACTION_COUNT = 4;
+const ACTION_COUNT = 3;
 const ACTIONS_HEIGHT = ACTION_HEIGHT * ACTION_COUNT;
 const MENU_HEIGHT = POINTER_HEIGHT + ACTIONS_HEIGHT;
 const MENU_COLLAPSED_HEIGHT = POINTER_HEIGHT + ACTION_HEIGHT;
@@ -26,11 +27,12 @@ const POINTER_POINTS: Array<Array<number>> = [[0, 12], [12, 0], [24, 12]];
  */
 @Component
 export struct BookshelfMoreMenu {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop anchorRight: number = 0;
   @Prop anchorBottom: number = 0;
   @Prop reduceMotion: boolean = false;
   onBatchManage: () => void = (): void => {};
-  onManageGroups: () => void = (): void => {};
   onLocalImport: () => void = (): void => {};
   onBookshelfSettings: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
@@ -57,24 +59,18 @@ export struct BookshelfMoreMenu {
         .onClick((): void => this.collapseMenu((): void => this.onDismiss()));
 
       Stack({ alignContent: Alignment.TopStart }) {
-        if (this.reduceMotion) {
-          Image($r('app.media.bookshelf_more_menu_surface'))
-            .width(SURFACE_ASSET_WIDTH)
-            .height(SURFACE_ASSET_HEIGHT)
-            .position({ x: -SURFACE_SHADOW_INSET_X, y: -SURFACE_SHADOW_INSET_TOP });
-        } else {
           Row()
             .width(MENU_WIDTH)
             .height(this.panelHeight - POINTER_HEIGHT)
-            .backgroundColor('#FFFCF8')
-            .border({ width: 1, color: '#E3DED6' })
+            .backgroundColor(readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appThemeScheme))
+            .border({ width: 1, color: readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appThemeScheme) })
             .borderRadius(16)
-            .shadow({ radius: 28, color: '#292E261F', offsetX: 0, offsetY: 10 })
+            .shadow({ radius: 28, color: readerAppColor('app.BookshelfMoreMenu.build.color.292E261F', this.appThemeScheme), offsetX: 0, offsetY: 10 })
             .position({ x: 0, y: POINTER_HEIGHT });
 
           Polygon({ width: 24, height: POINTER_HEIGHT + 1 })
             .points(POINTER_POINTS)
-            .fill('#FFFCF8')
+            .fill(readerAppColor('app.BookshelfMoreMenu.build.fill.FFFFFCF8', this.appThemeScheme))
             .stroke(Color.Transparent)
             .position({ x: 131, y: 0.5 });
 
@@ -83,27 +79,24 @@ export struct BookshelfMoreMenu {
           Row()
             .width(24)
             .height(2)
-            .backgroundColor('#FFFCF8')
+            .backgroundColor(readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appThemeScheme))
             .position({ x: 131, y: 11.5 });
 
           Polyline({ width: 24, height: POINTER_HEIGHT + 1 })
             .points(POINTER_POINTS)
             .fill(Color.Transparent)
-            .stroke('#E3DED6')
+            .stroke(readerAppColor('app.BookshelfMoreMenu.build.stroke.FFE3DED6', this.appThemeScheme))
             .strokeWidth(1)
             .strokeLineJoin(LineJoinStyle.Round)
             .position({ x: 131, y: 0.5 });
-        }
 
         Stack({ alignContent: Alignment.TopStart }) {
           Column() {
-            this.action($r('app.media.bookshelf_more_batch'), '批量管理', true,
+            this.action((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_batch_theme_night') : $r('app.media.bookshelf_more_batch')), '批量管理', true,
               (): void => this.onBatchManage());
-            this.action($r('app.media.bookshelf_more_group'), '分组管理', true,
-              (): void => this.onManageGroups());
-            this.action($r('app.media.bookshelf_more_import'), '本地导入', true,
+            this.action((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_import_theme_night') : $r('app.media.bookshelf_more_import')), '本地导入', true,
               (): void => this.onLocalImport());
-            this.action($r('app.media.bookshelf_more_settings'), '书架设置', false,
+            this.action((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_settings_theme_night') : $r('app.media.bookshelf_more_settings')), '书架设置', false,
               (): void => this.onBookshelfSettings());
           }
           .width(MENU_WIDTH)
@@ -141,7 +134,7 @@ export struct BookshelfMoreMenu {
           .fontWeight(FontWeight.Medium)
           .fontSize(15)
           .lineHeight(22)
-          .fontColor('#1F1B17')
+          .fontColor(readerAppColor('app.BookshelfMoreMenu.action.fontColor.FF1F1B17', this.appThemeScheme))
           .maxLines(1);
       }
       .width(MENU_WIDTH)
@@ -152,7 +145,7 @@ export struct BookshelfMoreMenu {
         Divider()
           .width(144)
           .height(1)
-          .color('#E8E2DA')
+          .color(readerAppColor('app.BookshelfMoreMenu.action.color.FFE8E2DA', this.appThemeScheme))
           .position({ x: 16, y: ACTION_HEIGHT - 1 });
       }
     }

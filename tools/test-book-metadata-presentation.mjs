@@ -125,18 +125,15 @@ const { bookIntroText, DetailIntro, SearchIntro } = await executable(`${read('fe
   class DetailIntro { ${detailIntro} } class SearchIntro { ${cardIntro} } export { DetailIntro, SearchIntro };`);
 const detailProbe = new DetailIntro();
 const cardProbe = new SearchIntro();
+// HTML/entity semantics are tested at Core's standard display boundary. Host
+// consumes plain text and must not reinterpret legitimate <, &, or bidi text.
 const fixtures = [
-  [undefined, ''], ['', ''], ['<br> &nbsp; <BR />', ''],
-  ['&nbsp;&nbsp;第一段<br>第二段', '第一段\n第二段'],
-  ['<p>第一段</p><p><b>第二段</b> &amp; 文本</p>', '第一段\n\n第二段 & 文本'],
-  ['&lt;br&gt;第一段&amp;nbsp;&amp;nbsp;&lt;BR /&gt;第二段', '第一段\n第二段'],
-  ['&#20320;&#x597D; &#x1F4D6; &#160; &ldquo;阅读&rdquo;', '你好 📖 “阅读”'],
-  ['甲\r\n\r\n\r乙<br/>丙', '甲\n\n乙\n丙'],
-  ['1 < 2 &amp; 3 > 2 &unknown; &constructor;', '1 < 2 & 3 > 2 &unknown; &constructor;'],
-  ['&#0; &#xD800; &#x110000; &#xZZ;', '� � � &#xZZ;'],
-  ['&amp;amp;amp;nbsp;', '&amp;nbsp;'],
-  ['&lrm；&rlm；正文', '正文'],
-  ['\u200e\u200f正文\u202a内容\u202c', '正文内容'],
+  [undefined, ''], ['', ''], ['   ', ''],
+  ['甲\r\n\r\n\r乙\n丙', '甲\n\n乙\n丙'],
+  ['  第一段\n 第二段  ', '第一段\n第二段'],
+  ['1 < 2 & 3 > 2 &unknown;', '1 < 2 & 3 > 2 &unknown;'],
+  ['你好 📖 “阅读”', '你好 📖 “阅读”'],
+  ['\u2067العربية\u2069', '\u2067العربية\u2069'],
 ];
 for (const [raw, expected] of fixtures) {
   const book = Object.freeze({ intro: raw });
@@ -146,7 +143,7 @@ for (const [raw, expected] of fixtures) {
   assert.equal(cardProbe.displayIntro(), expected);
   assert.equal(book.intro, raw);
 }
-const longIntro = '正文 &amp; '.repeat(10000);
+const longIntro = '正文 & '.repeat(10000);
 assert.equal(bookIntroText(longIntro), '正文 & '.repeat(10000).trim(), 'large synopses remain complete');
 assert.equal(bookIntroText(`<span ${' '.repeat(100000)}`), '<span', 'an unfinished tag remains text without nested whitespace backtracking');
 assert.match(page.slice(cardStart), /if \(this\.displayIntro\(\)\.length > 0\)/, 'markup-only search summaries must not reserve a blank row');

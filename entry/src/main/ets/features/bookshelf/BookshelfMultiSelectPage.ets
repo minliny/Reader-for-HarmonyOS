@@ -1,3 +1,6 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ShelfBookListDetails } from './ShelfBookListDetails';
+import { ShelfBookPresentation } from './ShelfBookPresentation';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeBottom } from '../common/ReaderWindowMetrics';
@@ -24,6 +27,8 @@ const GRID_ROW_GAP = 12;
  */
 @Component
 export struct BookshelfMultiSelectPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
   @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
@@ -75,7 +80,7 @@ export struct BookshelfMultiSelectPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F8F4EC')
+    .backgroundColor(readerAppColor('app.BookshelfMultiSelectPage.build.backgroundColor.FFF8F4EC', this.appThemeScheme))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = this.numericAreaLength(newValue.width);
       if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
@@ -93,7 +98,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
         .lineHeight(15.6)
-        .fontColor('#2D4A3E')
+        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF2D4A3E', this.appThemeScheme))
         .onClick((): void => {
           if (!this.busy) {
             this.onCancel();
@@ -106,7 +111,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(24)
         .lineHeight(34.49)
-        .fontColor('#1F1B17')
+        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF1F1B17', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
 
@@ -116,7 +121,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
         .lineHeight(15.6)
-        .fontColor('#2D4A3E')
+        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF2D4A3E', this.appThemeScheme))
         .textAlign(TextAlign.End)
         .onClick((): void => {
           if (!this.busy) {
@@ -140,7 +145,7 @@ export struct BookshelfMultiSelectPage {
             .height(this.coverHeight())
             .objectFit(ImageFit.Cover)
             .borderRadius(8)
-            .shadow({ radius: 26, color: '#1A594632', offsetX: 0, offsetY: 8 });
+            .shadow({ radius: 26, color: readerAppColor('app.BookshelfMultiSelectPage.selectionCard.color.1A594632', this.appThemeScheme), offsetX: 0, offsetY: 8 });
         } else {
           NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight() });
         }
@@ -151,17 +156,17 @@ export struct BookshelfMultiSelectPage {
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Bold)
               .fontSize(14)
-              .fontColor('#FFFFFF')
+              .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FFFFFFFF', this.appThemeScheme))
               .textAlign(TextAlign.Center);
           }
         }
         .width(22)
         .height(22)
         .margin({ right: 4, bottom: 4 })
-        .backgroundColor(this.isSelected(book) ? '#F58517' : '#FFFCF8')
-        .border({ width: this.isSelected(book) ? 0 : 1.5, color: '#C1C7CD' })
+        .backgroundColor(this.isSelected(book) ? readerAppColor('app.BookshelfMultiSelectPage.selectionCard.backgroundColor.FFF58517', this.appThemeScheme) : readerAppColor('app.BookshelfMultiSelectPage.selectionCard.backgroundColor.FFFFFCF8', this.appThemeScheme))
+        .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.BookshelfMultiSelectPage.selectionCard.color.FFC1C7CD', this.appThemeScheme) })
         .borderRadius(11)
-        .shadow({ radius: 4, color: '#26000000', offsetX: 0, offsetY: 2 });
+        .shadow({ radius: 4, color: readerAppColor('app.BookshelfMultiSelectPage.selectionCard.color.26000000', this.appThemeScheme), offsetX: 0, offsetY: 2 });
       }
       .width(this.cardWidth())
       .height(this.coverHeight());
@@ -172,7 +177,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(this.isWide() ? 16 : 13)
         .lineHeight(this.isWide() ? 19.5 : 16)
-        .fontColor('#1F1B17')
+        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FF1F1B17', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -182,7 +187,7 @@ export struct BookshelfMultiSelectPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(this.isWide() ? 13 : 11)
         .lineHeight(this.isWide() ? 16 : 13.5)
-        .fontColor('#756F69')
+        .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FF756F69', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -209,7 +214,7 @@ export struct BookshelfMultiSelectPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
           .lineHeight(13.31)
-          .fontColor('#D7473E');
+          .fontColor(readerAppColor('app.BookshelfMultiSelectPage.removeBar.fontColor.FFD7473E', this.appThemeScheme));
       }
       .width(74)
       .alignItems(HorizontalAlign.Center)
@@ -223,8 +228,8 @@ export struct BookshelfMultiSelectPage {
     .width('100%')
     .padding({ top: 12, bottom: this.bottomInset() })
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor('#EBFFFCF8')
-    .border({ width: { top: 1 }, color: '#C1C7CD' })
+    .backgroundColor(readerAppColor('app.BookshelfMultiSelectPage.removeBar.backgroundColor.EBFFFCF8', this.appThemeScheme))
+    .border({ width: { top: 1 }, color: readerAppColor('app.BookshelfMultiSelectPage.removeBar.color.FFC1C7CD', this.appThemeScheme) })
     .borderRadius({ topLeft: 24, topRight: 24 });
   }
 
@@ -261,12 +266,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private visibleBooks(): ShelfBook[] {
-    return this.books.filter((book: ShelfBook): boolean => {
-      const group = book.group?.trim() ?? '';
-      if (this.storedSelectedGroup.length === 0) return true;
-      if (this.storedSelectedGroup === '默认') return group.length === 0;
-      return group === this.storedSelectedGroup;
-    });
+    return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup);
   }
 
   private bookKey(book: ShelfBook): string {
@@ -300,22 +300,7 @@ export struct BookshelfMultiSelectPage {
       }
       .width(48)
       .height(80);
-      Column({ space: 2 }) {
-        Text(book.title).fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
-          .fontSize(15).lineHeight(18.3).fontColor('#1F1B17').maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(book.author).fontFamily('ReaderNotoSansSC').fontSize(12).lineHeight(15)
-          .fontColor('#756F69').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(book.lastChapter?.trim() || book.currentChapterTitle?.trim() || '暂无章节信息')
-          .fontFamily('ReaderNotoSansSC').fontSize(11).lineHeight(13.75).fontColor('#756F69')
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(`${this.sourceLabel(book)} · ${this.progressLabel(book)}`)
-          .fontFamily('ReaderNotoSansSC').fontSize(10).lineHeight(12).fontColor('#3B7557')
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }
-      .layoutWeight(1)
-      .constraintSize({ minWidth: 0 })
-      .alignItems(HorizontalAlign.Start);
+      ShelfBookListDetails({ book }).layoutWeight(1).constraintSize({ minWidth: 0 });
     }
     .width(this.gridWidth())
     .height(80)
@@ -330,30 +315,20 @@ export struct BookshelfMultiSelectPage {
   private selectionBadge(book: ShelfBook) {
     Stack({ alignContent: Alignment.Center }) {
       if (this.isSelected(book)) {
-        Text('✓').fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(14).fontColor('#FFFFFF');
+        Text('✓').fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(14).fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.fontColor.FFFFFFFF', this.appThemeScheme));
       }
     }
     .width(22).height(22).margin({ right: 2, bottom: 2 })
-    .backgroundColor(this.isSelected(book) ? '#F58517' : '#FFFCF8')
-    .border({ width: this.isSelected(book) ? 0 : 1.5, color: '#C1C7CD' })
-    .borderRadius(11).shadow({ radius: 4, color: '#26000000', offsetX: 0, offsetY: 2 });
+    .backgroundColor(this.isSelected(book) ? readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.backgroundColor.FFF58517', this.appThemeScheme) : readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.backgroundColor.FFFFFCF8', this.appThemeScheme))
+    .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.color.FFC1C7CD', this.appThemeScheme) })
+    .borderRadius(11).shadow({ radius: 4, color: readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.color.26000000', this.appThemeScheme), offsetX: 0, offsetY: 2 });
   }
 
   private isListMode(): boolean {
     return this.storedViewMode === 'list';
   }
 
-  private progressLabel(book: ShelfBook): string {
-    const basisPoints = book.readProgress ?? 0;
-    if (basisPoints <= 0) return '未读';
-    return `已读 ${Math.floor(basisPoints / 100)}%`;
-  }
 
-  private sourceLabel(book: ShelfBook): string {
-    if (book.sourceId === 'local') return '本地书籍';
-    const sourceName = book.sourceName?.trim() ?? '';
-    return sourceName.length > 0 ? sourceName : (book.sourceId.trim().length > 0 ? book.sourceId : '未知书源');
-  }
 
   private hasCover(book: ShelfBook): boolean {
     return book.coverUrl !== undefined && book.coverUrl.trim().length > 0;

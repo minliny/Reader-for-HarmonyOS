@@ -76,6 +76,10 @@ export class BookshelfFlowGateway {
     return this.localImport.selectLocalBookInputs();
   }
 
+  async releaseUnusedSelections(selections: LocalBookPreparation[]): Promise<void> {
+    return this.localImport.releaseUnusedSelections(selections);
+  }
+
   async importPreparedSelections(selections: LocalBookPreparation[]): Promise<BookshelfImportOutcome> {
     const batch = await this.localImport.importPreparedSelections(selections);
     // Always re-read after the picker returns. A completed batch can upsert an

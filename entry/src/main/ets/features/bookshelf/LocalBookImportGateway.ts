@@ -14,6 +14,8 @@ const DOMAIN = 0x5244;
 export type LocalImportItem = {
   fileName: string;
   state: 'success' | 'failed';
+  /** Only set from Core bookshelf.add's acknowledged created fact. */
+  disposition?: 'created' | 'existing';
   failure?: LocalImportFailure;
 };
 
@@ -39,6 +41,12 @@ export class LocalBookImportGateway {
 
   async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
     return this.runtimeOwner.selectLocalBookInputs();
+  }
+
+  async releaseUnusedSelections(selections: LocalBookPreparation[]): Promise<void> {
+    for (const selection of selections) {
+      if (selection.state !== 'failed') await this.runtimeOwner.discardLocalBookInput(selection.input);
+    }
   }
 
   async importPreparedSelections(selections: LocalBookPreparation[]): Promise<LocalImportBatch> {
@@ -90,9 +98,12 @@ export class LocalBookImportGateway {
       shelfParams = this.shelfAddParams(persisted);
       assetCommit = await this.runtimeOwner.commitLocalBookInput(selection.input);
       shelfAddStarted = true;
-      await this.runtimeOwner.request('bookshelf.add', shelfParams);
+      const added = await this.runtimeOwner.request('bookshelf.add', shelfParams);
       await this.finalizeCommittedImport(rollbackToken);
-      return { fileName: selection.input.fileName, state: 'success' };
+      const item: LocalImportItem = { fileName: selection.input.fileName, state: 'success' };
+      if (added.data['created'] === true) item.disposition = 'created';
+      else if (added.data['created'] === false) item.disposition = 'existing';
+      return item;
     } catch (error) {
       const message = errorMessageOf(error);
       // A missing persist reply cannot establish that Core did not commit.

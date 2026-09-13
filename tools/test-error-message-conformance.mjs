@@ -1,3 +1,4 @@
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -80,9 +81,11 @@ assert.ok(httpHostSource.includes("import { errorMessageOf } from './ErrorMessag
 const bookshelfSource = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
 assert.ok(bookshelfSource.includes('已读 <1%'), 'sub-1% progress renders as <1%');
 assert.ok(bookshelfSource.includes('shelfProgressText(book.readProgress ?? 0)'),
-  'grid and list labels share the basis-point formatter');
-assert.ok(bookshelfSource.includes("return '未读';"),
-  'list keeps the unread label for zero progress');
+  'grid labels retain their basis-point formatter');
+assert.equal(ShelfBookPresentation.progress({ readProgress: 0 }), '未读',
+  'shared ordinary and batch list projection keeps zero progress unread');
+assert.equal(ShelfBookPresentation.progress({ readProgress: 1 }), '已读 <1%');
+assert.equal(ShelfBookPresentation.progress({ readProgress: 8765 }), '已读 87%');
 
 // --- Detail intro: HTML line breaks become real breaks, edges trimmed. ------
 const detailSource = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');

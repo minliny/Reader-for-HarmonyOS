@@ -1,3 +1,6 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { SearchSpinner } from './SearchSpinner';
+import { collapsedHistoryCount } from './SearchHistoryLayout';
 import { SearchViewState } from './SearchViewState';
 import { bookIntroText } from '../common/BookIntroText';
 import {
@@ -247,7 +250,9 @@ class SearchResultDataSource implements IDataSource {
  */
 @Component
 export struct SearchPage {
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
+  @StorageLink('readerWindowMetricsRevision') @Watch('measureHistory') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('refreshVisibleResults') presentation: SearchPresentation;
   @Prop sources: SearchSource[];
   viewState: SearchViewState = new SearchViewState();
@@ -259,6 +264,10 @@ export struct SearchPage {
   private viewStateRevision: number = -1;
   @Prop @Watch('refreshVisibleResults') shelfBooks: ShelfBook[] = [];
   @Prop isTablet: boolean;
+  @Prop reduceMotion: boolean = false;
+  @State private historyWidth: number = 0;
+  @State private historyCollapsedCount: number = 0;
+  @State private spinnerRunKey: number = 0;
   onBack: () => void = (): void => {};
   /**
    * `scopeSourceIds` is undefined for the all-sources scope; an explicit array
@@ -299,32 +308,30 @@ export struct SearchPage {
   }
 
   build() {
-    Column() {
-      this.searchBar();
-      if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
-        this.groupScopeRow();
-      }
-      Stack({ alignContent: Alignment.Bottom }) {
-        this.stateContent();
-        // One mounted indicator owns both the initial loading and streamed
-        // results states. Keeping it outside the state branches avoids two
-        // LoadingProgress nodes racing during loading -> results promotion.
-        if (this.isSweeping()) {
-          LoadingProgress()
-            .width(36)
-            .height(36)
-            .color(TOK_GREEN)
-            .enableLoading(true)
-            .margin({ bottom: 48 })
-            .hitTestBehavior(HitTestMode.None);
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column() {
+        this.searchBar();
+        if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
+          this.groupScopeRow();
         }
-      }
-      .layoutWeight(1)
+        Column() { this.stateContent(); }.layoutWeight(1).width('100%');
+      }.width('100%').height('100%');
+      // Stable actor anchored to the whole safe viewport, outside changing
+      // source/category/result rows. Caption keeps its lane during streaming.
+      Column({ space: 18 }) {
+        SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
+          reduceMotion: this.reduceMotion, diameter: 36 });
+        Text('正在搜索本地与在线书籍…').fontFamily('ReaderInter')
+          .fontWeight(FontWeight.Regular).fontSize(13).lineHeight(19.5).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .textAlign(TextAlign.Center)
+          .opacity(this.presentation.kind === 'loading' ? 1 : 0);
+      }.width('100%').margin({ bottom: 48 })
+        .visibility(this.isSweeping() ? Visibility.Visible : Visibility.Hidden)
+        .hitTestBehavior(HitTestMode.None);
     }
-    .width('100%')
-    .height('100%')
+    .width('100%').height('100%')
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .backgroundColor(TOK_PAPER);
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   private isSweeping(): boolean {
@@ -389,7 +396,7 @@ export struct SearchPage {
   private searchBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.search_back')).width(20).height(20);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back'))).width(20).height(20);
       }
       .width(32)
       .height(32)
@@ -422,40 +429,30 @@ export struct SearchPage {
       // Loading additionally inlines a 13px spinner and submitSearch prevents
       // re-entry.
       Stack({ alignContent: Alignment.Center }) {
-        if (this.presentation.kind === 'loading') {
+        if (this.isSweeping()) {
           Row({ space: 6 }) {
-            LoadingProgress()
-              .width(13)
-              .height(13)
-              .color(TOK_ON_PRIMARY)
-              .enableLoading(true);
+            SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
+              reduceMotion: this.reduceMotion, diameter: 13, light: true });
             Text('停止')
               .fontFamily('ReaderInter')
               .fontWeight(800)
               .fontSize(this.isTablet ? 14 : 13)
               .lineHeight(this.isTablet ? 14 : 13)
-              .fontColor(TOK_ON_PRIMARY);
+              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
           }
           .alignItems(VerticalAlign.Center);
-        } else if (this.presentation.kind === 'results' && this.presentation.searching) {
-          Text('停止')
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(this.isTablet ? 14 : 13)
-            .lineHeight(this.isTablet ? 14 : 13)
-            .fontColor(TOK_ON_PRIMARY);
         } else {
           Text('搜索')
             .fontFamily('ReaderInter')
             .fontWeight(800)
             .fontSize(this.isTablet ? 14 : 13)
             .lineHeight(this.isTablet ? 14 : 13)
-            .fontColor(TOK_ON_PRIMARY);
+            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
         }
       }
       .height(this.isTablet ? 40 : 36)
       .padding({ left: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING, right: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING })
-      .backgroundColor(TOK_GREEN)
+      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
       .opacity(this.canSubmit() ? 1 : 0.4)
       .borderRadius(999)
       .onClick((): void => {
@@ -470,13 +467,13 @@ export struct SearchPage {
     .height(this.isTablet ? 56 : 52)
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
+    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } });
   }
 
   @Builder
   private stateContent() {
     if (this.presentation.kind === 'initial') {
-      this.initialContent();
+      Scroll() { this.initialContent(); }.width('100%').height('100%').scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'loading') {
       this.loadingContent();
     } else if (this.presentation.kind === 'results') {
@@ -506,14 +503,14 @@ export struct SearchPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(13)
             .lineHeight(19.5)
-            .fontColor(TOK_INK)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .layoutWeight(1);
           Text('清空记录')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Medium)
             .fontSize(12)
             .lineHeight(18)
-            .fontColor(TOK_MUTED)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .onClick((): void => this.onClearHistory());
         }
         .width('100%')
@@ -525,17 +522,19 @@ export struct SearchPage {
         // wrapping. Expanded history exposes the matching collapse action.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
           ForEach(this.historyExpanded ? this.presentation.history :
-            this.presentation.history.slice(0, 4), (keyword: string) => {
+            this.presentation.history.slice(0, this.historyCollapsedCount), (keyword: string) => {
             Text(keyword)
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Medium)
               .fontSize(13)
               .lineHeight(19.5)
-              .fontColor(TOK_INK)
+              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
               .padding({ left: 14.5, right: 14.5, top: 7.5, bottom: 7.5 })
-              .backgroundColor(TOK_CARD_BG)
-              .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+              .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+              .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
               .borderRadius(999)
+              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+              .constraintSize({ maxWidth: Math.max(0, this.historyWidth - TOK_SPACE_XS) })
               .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
               .onClick((): void => {
                 this.keyword = keyword;
@@ -544,10 +543,16 @@ export struct SearchPage {
           }, (keyword: string): string => `search-history-${keyword}`);
         }
         .width('100%')
-        .padding({ top: TOK_SPACE_CARD_PADDING });
-        if (this.presentation.history.length > 4) {
+        .padding({ top: TOK_SPACE_CARD_PADDING })
+        .onAreaChange((_old: Area, next: Area): void => {
+          const width = Number(next.width);
+          if (width > 0 && Math.abs(width - this.historyWidth) > .1) {
+            this.historyWidth = width; this.measureHistory();
+          }
+        });
+        if (this.presentation.history.length > this.historyCollapsedCount) {
           Row() {
-            this.moreChip(this.historyExpanded ? 0 : this.presentation.history.length - 4,
+            this.moreChip(this.historyExpanded ? 0 : this.presentation.history.length - this.historyCollapsedCount,
               this.historyExpanded);
           }
           .width('100%')
@@ -596,10 +601,10 @@ export struct SearchPage {
       .fontWeight(this.selectedGroupName === label ? FontWeight.Bold : FontWeight.Medium)
       .fontSize(12)
       .lineHeight(12)
-      .fontColor(this.selectedGroupName === label ? TOK_ON_PRIMARY : TOK_INK)
+      .fontColor(this.selectedGroupName === label ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
       .padding({ left: 10, right: 10, top: 5.5, bottom: 5.5 })
-      .backgroundColor(this.selectedGroupName === label ? TOK_GREEN : TOK_PAPER)
-      .border({ width: TOK_BORDER_W, color: this.selectedGroupName === label ? TOK_GREEN : TOK_BORDER })
+      .backgroundColor(this.selectedGroupName === label ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: this.selectedGroupName === label ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(999)
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -616,16 +621,16 @@ export struct SearchPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(18)
-        .fontColor(TOK_GREEN)
+        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
-      Image($r('app.media.reader_chevron_right'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right')))
         .width(12).height(12)
         .rotate({ angle: expanded ? 270 : 0 });
     }
     .padding({ left: 12.5, right: 12.5, top: 7.5, bottom: 7.5 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: TOK_BORDER_W, color: TOK_GREEN })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
     .borderRadius(999)
     .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .onClick((): void => {
@@ -637,28 +642,23 @@ export struct SearchPage {
 
   @Builder
   private loadingContent() {
-    // Product-approved modification of Figma Loading (2635:58801): the
-    // spinner + caption anchor to the bottom of the screen (fixed gap) so the
-    // same indicator position continues as the results floating overlay once
-    // the first books land.
-    Column({ space: 0 }) {
-      Text('正在搜索本地与在线书籍…')
-        .margin({ top: 18 })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(19.5)
-        .fontColor(TOK_MUTED)
-        .textAlign(TextAlign.Center);
-    }
-    .width('100%')
-    .layoutWeight(1)
-    .justifyContent(FlexAlign.End)
-    .alignItems(HorizontalAlign.Center)
-    .padding({ bottom: 48 });
+    Blank().width('100%').height('100%');
+  }
+
+  private measureHistory(): void {
+    if (this.presentation.kind !== 'initial' || this.historyWidth <= 0) return;
+    const widths = this.presentation.history.map((keyword: string): number => {
+      const measured = this.getUIContext().getMeasureUtils().measureTextSize({
+        textContent: keyword, fontFamily: 'ReaderInter', fontSize: '13fp', fontWeight: '500',
+      });
+      return this.getUIContext().px2vp(Number(measured.width)) + 29 + 2 + TOK_SPACE_XS;
+    });
+    this.historyCollapsedCount = collapsedHistoryCount(widths, this.historyWidth, 0);
   }
 
   private refreshVisibleResults(): void {
+    this.spinnerRunKey = this.viewState.revision;
+    this.measureHistory();
     if (this.viewStateRevision !== this.viewState.revision) {
       this.viewStateRevision = this.viewState.revision;
       this.selectedGroupName = this.viewState.category;
@@ -690,25 +690,25 @@ export struct SearchPage {
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(16.5)
-            .fontColor(TOK_MUTED);
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           Text(`${this.visibleGroups.length}`)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(11)
             .lineHeight(16.5)
-            .fontColor(TOK_GREEN);
+            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
           Text(' 本相关书籍')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(16.5)
-            .fontColor(TOK_MUTED);
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           // Reads the presentation directly (not a builder param) so the
           // minimal-update re-render tracks it exactly like the search/stop
           // pill does: the sweep counter must update live per source landing.
           if (this.presentation.kind === 'results') {
             if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
-              Text('部分搜索未完成，请重试').fontSize(12).fontColor(TOK_MUTED);
+              Text('部分搜索未完成，请重试').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
             }
             if (this.presentation.stopped === true) {
               // ACQ-02: a stopped sweep keeps its partial results; the header
@@ -719,7 +719,7 @@ export struct SearchPage {
                 .fontWeight(FontWeight.Regular)
                 .fontSize(11)
                 .lineHeight(16.5)
-                .fontColor(TOK_MUTED)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             } else if (this.presentation.searching) {
@@ -728,7 +728,7 @@ export struct SearchPage {
                 .fontWeight(FontWeight.Regular)
                 .fontSize(11)
                 .lineHeight(16.5)
-                .fontColor(TOK_MUTED)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
@@ -738,7 +738,7 @@ export struct SearchPage {
                 .fontWeight(FontWeight.Regular)
                 .fontSize(11)
                 .lineHeight(16.5)
-                .fontColor(TOK_MUTED)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
@@ -747,7 +747,7 @@ export struct SearchPage {
         .width(this.contentFrame().width)
         .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
         .alignItems(VerticalAlign.Center)
-        .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } });
+        .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } });
 
         List({ scroller: this.resultScroller }) {
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
@@ -860,7 +860,7 @@ export struct SearchPage {
   private emptyContent(keyword: string, searchedSourceCount: number) {
     Scroll() {
       Column({ space: 0 }) {
-        Image($r('app.media.search_empty'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
           .width(128)
           .height(120)
           .alignSelf(ItemAlign.Center);
@@ -871,7 +871,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(17)
           .lineHeight(25.5)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .textAlign(TextAlign.Center);
 
         Text(this.isStoppedEmpty()
@@ -885,7 +885,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(13)
           .lineHeight(21.125)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .maxLines(3);
 
@@ -896,7 +896,7 @@ export struct SearchPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(12)
             .lineHeight(18)
-            .fontColor(TOK_INK)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1);
           this.suggestion('检查书名拼写是否正确');
           this.suggestion('尝试更短的关键词或作者名');
@@ -905,8 +905,8 @@ export struct SearchPage {
         .width(this.isTablet ? 300 : 190)
         .padding({ left: 18.5, right: 18.5, top: 14.5, bottom: 14.5 })
         .margin({ top: 22 })
-        .backgroundColor(TOK_CARD_BG)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
         .borderRadius(12)
         .alignItems(HorizontalAlign.Start)
         .alignSelf(ItemAlign.Center);
@@ -935,7 +935,7 @@ export struct SearchPage {
   private sourceRequiredContent(reason: string) {
     Scroll() {
       Column({ space: 0 }) {
-        Image($r('app.media.search_empty'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
           .width(128)
           .height(120)
           .alignSelf(ItemAlign.Center);
@@ -946,7 +946,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(17)
           .lineHeight(25.5)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .textAlign(TextAlign.Center);
 
         Text(reason === 'noSources' ? '添加至少一个书源后才能搜索在线书籍' : '启用已有书源,或导入新的书源')
@@ -956,7 +956,7 @@ export struct SearchPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(13)
           .lineHeight(21.125)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .maxLines(3);
 
@@ -979,7 +979,7 @@ export struct SearchPage {
   @Builder
   private sourceLoadErrorContent() {
     Column({ space: 0 }) {
-      Image($r('app.media.search_error')).width(80).height(80);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error'))).width(80).height(80);
 
       Text('书源列表加载失败')
         .margin({ top: 20 })
@@ -987,7 +987,7 @@ export struct SearchPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(17)
         .lineHeight(25.5)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
       Text('无法获取书源列表,请重试')
@@ -996,7 +996,7 @@ export struct SearchPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .lineHeight(19.5)
-        .fontColor(TOK_MUTED)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
@@ -1019,9 +1019,9 @@ export struct SearchPage {
       .fontWeight(800)
       .fontSize(13)
       .lineHeight(13)
-      .fontColor(TOK_ON_PRIMARY)
+      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
       .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-      .backgroundColor(TOK_GREEN)
+      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
       .borderRadius(999)
       .onClick((): void => onTap())
       .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
@@ -1035,10 +1035,10 @@ export struct SearchPage {
       .fontWeight(FontWeight.Bold)
       .fontSize(13)
       .lineHeight(13)
-      .fontColor(TOK_MUTED)
+      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-      .backgroundColor(TOK_CARD_BG)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(999)
       .onClick((): void => onTap())
       .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
@@ -1053,13 +1053,13 @@ export struct SearchPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(11)
         .lineHeight(16.5)
-        .fontColor(TOK_GREEN);
+        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
       Text(text)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(12)
         .lineHeight(19.5)
-        .fontColor(TOK_MUTED)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -1074,7 +1074,7 @@ export struct SearchPage {
     // primary pill (not the outline used before the rebuild). The "检查书源"
     // secondary action is a P0 add-source flow addition.
     Column({ space: 0 }) {
-      Image($r('app.media.search_error')).width(80).height(80);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error'))).width(80).height(80);
 
       Text('书源搜索失败')
         .margin({ top: 20 })
@@ -1082,7 +1082,7 @@ export struct SearchPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(17)
         .lineHeight(25.5)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
       Text(searchedSourceCount > 0
@@ -1093,7 +1093,7 @@ export struct SearchPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .lineHeight(19.5)
-        .fontColor(TOK_MUTED)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(2);
 
@@ -1103,12 +1103,12 @@ export struct SearchPage {
           .fontWeight(800)
           .fontSize(14)
           .lineHeight(14)
-          .fontColor(TOK_ON_PRIMARY);
+          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
       }
       .height(40)
       .margin({ top: TOK_SPACE_LG })
       .padding({ left: 28, right: 28 })
-      .backgroundColor(TOK_GREEN)
+      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
       .borderRadius(999)
       .onClick((): void => this.onRetry())
       .responseRegion({ x: 0, y: -4, width: '100%', height: 48 })
@@ -1119,10 +1119,10 @@ export struct SearchPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
         .lineHeight(13)
-        .fontColor(TOK_MUTED)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-        .backgroundColor(TOK_CARD_BG)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
         .borderRadius(999)
         .margin({ top: TOK_SPACE_CONTROL_INLINE })
         .onClick((): void => this.onManageSources())
@@ -1154,6 +1154,8 @@ export struct SearchPage {
 /** A stable lazy row observes enrichment without remounting the whole result. */
 @Component
 struct SearchResultCard {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   // LazyForEach supplies a regular row value.  ObjectLink requires the
   // parent to pass an @Observed-owned object and the compiler otherwise
   // rejects this boundary; the data source emits an explicit row change when
@@ -1188,7 +1190,7 @@ struct SearchResultCard {
               .fontWeight(FontWeight.Bold)
               .fontSize(9)
               .lineHeight(11.7)
-              .fontColor('#99FFFAF4')
+              .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.99FFFAF4', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1198,7 +1200,7 @@ struct SearchResultCard {
           .height(this.isTablet ? 92 : 82)
           .linearGradient({
             angle: 141.7,
-            colors: [[TOK_PRIMARY_GRADIENT_START, 0.077], [TOK_PRIMARY_DARK, 0.923]],
+            colors: [[readerAppColor('TOK_PRIMARY_GRADIENT_START', this.appThemeScheme), 0.077], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0.923]],
           })
           .borderRadius(6);
         }
@@ -1214,7 +1216,7 @@ struct SearchResultCard {
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
           .lineHeight(19.5)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -1224,7 +1226,7 @@ struct SearchResultCard {
           .fontWeight(FontWeight.Regular)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -1236,7 +1238,7 @@ struct SearchResultCard {
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(11)
-            .fontColor(TOK_MUTED)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -1248,7 +1250,7 @@ struct SearchResultCard {
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
             .lineHeight(18)
-            .fontColor('#9A948E')
+            .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -1259,9 +1261,9 @@ struct SearchResultCard {
             .fontWeight(FontWeight.Bold)
             .fontSize(10)
             .lineHeight(10)
-            .fontColor(TOK_GREEN)
+            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(TOK_PRIMARY_SOFT)
+            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
             .borderRadius(4)
             .maxLines(1);
           Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
@@ -1269,14 +1271,14 @@ struct SearchResultCard {
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(16.5)
-            .fontColor(TOK_MUTED)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1);
           if (this.group.inBookshelf) {
             Text('已在书架')
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Bold)
               .fontSize(10)
-              .fontColor(TOK_GREEN)
+              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .maxLines(1);
           }
         }
@@ -1289,7 +1291,7 @@ struct SearchResultCard {
     .width(this.cardWidth)
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: TOK_BORDER } })
+    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } })
     .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
   }
 }

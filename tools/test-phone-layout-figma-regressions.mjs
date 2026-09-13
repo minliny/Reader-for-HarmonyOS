@@ -20,7 +20,7 @@ assert.match(shelf, /private numericAreaLength\(value: Length\): number \{[\s\S]
 assert.match(shelf,
   /private phoneContentFrame\(\): SurfaceHorizontalFrame \{[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_PHONE, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
   'bookshelf content must resolve the 352vp cap and 19vp design gaps through shared geometry');
-assert.match(shelf, /private bookshelfList\(isTablet: boolean\)[\s\S]*List\(\{ space: TOK_SPACE_CONTROL_INLINE \}\)[\s\S]*\.height\('100%'\)/,
+assert.match(shelf, /private bookshelfList\(isTablet: boolean\)[\s\S]*List\(\{ space: TOK_SPACE_CONTROL_INLINE, scroller: this\.shelfScroller \}\)[\s\S]*\.height\('100%'\)/,
   'the lazy shelf list must occupy the viewport and stay top-aligned');
 assert.equal((shelf.match(/LazyForEach\(this\.rowDataSource/g) ?? []).length, 1,
   'both projections must share one lazily materialized stable row tree');

@@ -1,7 +1,8 @@
+import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
+const read = (relative) => themeDayDesignSource(readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8'));
 const tabs = read('entry/src/main/ets/features/shell/MainTabBar.ets');
 const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
 const search = read('entry/src/main/ets/features/search/SearchPage.ets');
@@ -33,11 +34,11 @@ assert.match(search,
   /private canSubmit\(\): boolean \{[\s\S]*return scope === undefined \|\| scope\.length > 0;/,
   'the default all-source scope must keep the search action enabled before the first search');
 assert.match(search,
-  /\.backgroundColor\(TOK_GREEN\)\s*\.opacity\(this\.canSubmit\(\) \? 1 : 0\.4\)[\s\S]*?if \(this\.isSweeping\(\)\)[\s\S]*this\.onStop\(\);[\s\S]*this\.submitSearch\(\);/,
+  /\.backgroundColor\(readerAppColor\(\'app\.action\.fill\', this\.appThemeScheme\)\)\s*\.opacity\(this\.canSubmit\(\) \? 1 : 0\.4\)[\s\S]*?if \(this\.isSweeping\(\)\)[\s\S]*this\.onStop\(\);[\s\S]*this\.submitSearch\(\);/,
   'the search action must stay dark and switch from submit to stop during a live sweep');
 assert.doesNotMatch(search, /SEARCH_BTN_BG/,
   'the initial search action must not fall back to the misleading pale disabled treatment');
-assert.equal((search.match(/LoadingProgress\(\)/g) ?? []).length, 2,
+assert.equal((search.match(/SearchSpinner\(\{/g) ?? []).length, 2,
   'search loading affordances must share one mounted indicator per active surface without duplicate loading nodes');
 assert.doesNotMatch(search, /importing_spinner_(track|arc)/,
   'search must not present a static spinner as active work');

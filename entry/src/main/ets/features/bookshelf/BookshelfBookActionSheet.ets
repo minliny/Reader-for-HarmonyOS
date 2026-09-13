@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   TOK_BORDER,
   TOK_CARD_BG_HI,
@@ -7,7 +8,7 @@ import {
   TOK_PRIMARY_SOFT,
 } from '../common/ReaderTokens';
 
-const BOOK_ACTION_SHEET_HEIGHT = 224;
+const BOOK_ACTION_SHEET_HEIGHT = 270;
 const BOOK_ACTION_INSET = 14;
 const BOOK_ACTION_HEIGHT = 40;
 
@@ -20,7 +21,10 @@ const BOOK_ACTION_HEIGHT = 40;
  */
 @Component
 export struct BookshelfBookActionSheet {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   onMultiSelect: () => void = (): void => {};
+  onEditGroup: () => void = (): void => {};
   onBookInfo: () => void = (): void => {};
   onRemoveFromBookshelf: () => void = (): void => {};
 
@@ -30,7 +34,7 @@ export struct BookshelfBookActionSheet {
         Blank()
           .width(42)
           .height(4)
-          .backgroundColor(TOK_MUTED)
+          .backgroundColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .borderRadius(999);
       }
       .width('100%')
@@ -43,20 +47,21 @@ export struct BookshelfBookActionSheet {
         .fontWeight(FontWeight.Bold)
         .fontSize(17)
         .lineHeight(20.4)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .position({ x: BOOK_ACTION_INSET, y: 34 });
 
       this.actionSlot('多选', false, 70, (): void => this.onMultiSelect());
       this.actionSlot('书籍信息', false, 116, (): void => this.onBookInfo());
-      this.actionSlot('移除书架', true, 162, (): void => this.onRemoveFromBookshelf());
+      this.actionSlot('编辑分组', false, 162, (): void => this.onEditGroup());
+      this.actionSlot('移除书架', true, 208, (): void => this.onRemoveFromBookshelf());
     }
     .width('100%')
     .height(BOOK_ACTION_SHEET_HEIGHT)
-    .backgroundColor(TOK_CARD_BG_HI)
-    .border({ width: 1, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+    .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(24)
-    .shadow({ radius: 46, color: '#29594632', offsetX: 0, offsetY: 18 })
+    .shadow({ radius: 46, color: readerAppColor('app.BookshelfBookActionSheet.build.color.29594632', this.appThemeScheme), offsetX: 0, offsetY: 18 })
     .clip(true);
   }
 
@@ -69,14 +74,14 @@ export struct BookshelfBookActionSheet {
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
           .lineHeight(15.6)
-          .fontColor(danger ? '#D7473E' : TOK_GREEN)
+          .fontColor(danger ? readerAppColor('app.BookshelfBookActionSheet.actionSlot.fontColor.FFD7473E', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme))
           .maxLines(1);
       }
       .layoutWeight(1)
       .height(BOOK_ACTION_HEIGHT)
       .padding({ left: 12 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(danger ? '#1AD6473D' : TOK_PRIMARY_SOFT)
+      .backgroundColor(danger ? readerAppColor('app.BookshelfBookActionSheet.actionSlot.backgroundColor.1AD6473D', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(12)
       .accessibilityText(label)
       .onClick(action);
