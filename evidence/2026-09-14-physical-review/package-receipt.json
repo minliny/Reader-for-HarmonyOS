@@ -1,0 +1,66 @@
+{
+  "runId": "20260913T182027Z-643bcaf5-1c85dc16",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260913T182027Z-643bcaf5-1c85dc16/manifest.json",
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "commit": "643bcaf559245a79dc094c18b8c148f02e9ca204",
+      "dirty": false,
+      "status": []
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "commit": "952704bd57518af530a948dfd3408a119c20e276",
+      "dirty": false,
+      "status": []
+    },
+    "readerUiCommit": "040adf87",
+    "buildInputs": {
+      "fingerprint": "1c85dc161e777a4b713e18813f913db00de5a90884e0cd5d056a63515903ca21",
+      "fileCount": 718,
+      "snapshot": "source-snapshot.json"
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 19120264,
+      "sha256": "38fb4245cb8b98b694de59cd88abca0fb503b9d89ad01533db68b3baebcc95cf"
+    }
+  },
+  "harmonyContractGroups": 232,
+  "arktsTypeCheck": "PASS",
+  "nonIncrementalBuild": "PASS",
+  "buildSeconds": 14.812,
+  "signed": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 166894504,
+    "sha256": "ab8665284a0fe91dbb85285d4cce4cd42c91c8584adc48e033b901b88822ec1d",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 14582240,
+      "sha256": "31158c6357e93b86f32e0681f0be9921d4780de788727f646cffb95931e37abc"
+    }
+  },
+  "offlineVerify": "PASS",
+  "deviceOperationsThisBatch": false,
+  "installedPhysicalStill": "9509d4fe",
+  "vmInteraction": "OPEN",
+  "physicalInteraction": "OPEN",
+  "userAcceptance": "OPEN",
+  "coreTests": "Not rerun; unchanged Core 952704bd, prior exact-revision evidence remains separate."
+}

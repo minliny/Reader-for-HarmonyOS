@@ -19,4 +19,10 @@
 Reader-UI 040adf87：日夜控件色角色。
 Harmony 070e49a0：共享配色/开关/选择器及来源清单；18686852：书架/详情/书源；7669b101：搜索/表单；1234772a：阅读亮度、轮廓、胶囊、书签和共享Index返回链。
 
-新包与离线复验结果将在构建完成后追加；第二次232组本地检查已通过，但ArkTS两处对象展开已修尚待重新整编。失败记录见 [整合检查](integrated-check-failures.md)。
+## 最终本地交付结果
+
+第三次pipeline：232组本地检查PASS，ArkTS/非增量构建PASS（14.812秒），350图标来源及1046内置书源记录/919身份字节校验PASS，signed debug验签与离线复验PASS。构建时Harmony643bcaf5、Core952704bd均clean；Reader-UI040adf87。Core源码未改，本轮未重跑其全量测试，不冒充新Core门禁。
+
+[不可变manifest](../../.reader-artifacts/hap/20260913T182027Z-643bcaf5-1c85dc16/manifest.json)，[精简回执](package-receipt.json)，[复验](package-verify.log)。signed SHA256：`ab8665284a0fe91dbb85285d4cce4cd42c91c8584adc48e033b901b88822ec1d`。这是iteration包，acceptanceEligible=false，不是设备验收。
+
+本轮没有安装/启动/操作VM或真机，真机仍是9509d4fe；全部本批设备视觉与用户验收OPEN。最初整合检查/编译失败保留在 [整合检查](integrated-check-failures.md)，修后实际整编已通过。
