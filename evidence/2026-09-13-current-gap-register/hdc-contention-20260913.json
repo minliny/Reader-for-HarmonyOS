@@ -1,0 +1,43 @@
+{
+  "recordedAt": "2026-09-13T00:27:39+08:00",
+  "server": {"host":"127.0.0.1","port":8710,"pid":60559},
+  "observedClients": [
+    {"process":"devecostu","pid":68292,"local":"127.0.0.1:63568","state":"ESTABLISHED"},
+    {"process":"devecostu","pid":68292,"local":"127.0.0.1:57715","state":"ESTABLISHED"}
+  ],
+  "commands": {
+    "hdc_list_targets_v": "Connect server failed",
+    "hdc_m_list_targets_v": "Other instance already running, program mutex failed",
+    "hdc_shell_boot_probe": "Connect server failed"
+  },
+  "postClosure": {
+    "devecostudioClosed": true,
+    "serverStillListening": true,
+    "serverPid": 71437,
+    "establishedClientCount": 0,
+    "restartAttempt": "hdc kill -r issued after DevEco closure; subsequent lease-wrapped discovery still returned Connect server failed",
+    "recovery": {
+      "sameInstance": true,
+      "instancePath": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+      "startedVia": "DevEco device manager",
+      "target": "127.0.0.1:5555",
+      "targetState": "Connected",
+      "bootCompleted": true,
+      "leaseBootProbe": "true",
+      "hapInspect": "PASS",
+      "hapInstallLaunch": "PASS",
+      "receipt": ".reader-artifacts/hap/20260912T165214Z-50cad401-ea3dd1c8/deploy-vm-6460677a198b-20260912T175539Z.json"
+    }
+  },
+  "comparison": {
+    "previousRepair": "2026-09-12 controlled hdc kill -r; 5/5 target discovery and 10/10 read-only commands passed",
+    "previousRootCause": "shared 8710 HDC session/channel contention involving DevEco clients, VM TCP and physical USB target",
+    "currentFinding": "same failure class has recurred; current socket snapshot proves persistent DevEco client ownership, but does not prove two independent CLI clients"
+  },
+  "conclusion": "Project-owned HDC operations now serialize on one canonical shared-server lease. The original Mate 80 Pro VM was recovered through DevEco device manager and the fixed HAP pipeline completed. External DevEco/raw-hdc clients remain outside script interception and must not issue concurrent device commands. Device visual acceptance remains open.",
+  "permanentFixImplemented": {
+    "lockScope": "shared HDC server key (default 127.0.0.1:8710; ::ffff: aliases canonicalized), with target retained in owner/event records",
+    "crossTargetRegression": "PASS: different targets sharing one server serialize",
+    "externalClientBoundary": "DevEco/raw hdc clients cannot be intercepted by a project script; device runs must use a single HDC owner and disconnect DevEco sessions before probe"
+  }
+}

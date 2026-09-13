@@ -1,0 +1,59 @@
+{
+  "base_head": "e0e4b550bcffd3b959d7b90fa599c1df713f479e",
+  "safe_commits": [
+    "b69c86e4b9590b0949014b966eef336dcdbb128d",
+    "c42af9a1fb09380bd979f1237b2cff7ee3bb597f"
+  ],
+  "method": "Copied current local-book/domain crates and libmobi into isolated temporary workspace. Appended four production-entrypoint threshold-equivalence tests. Padding is an HTML comment, so text/navigation output must remain unchanged at the 128 KiB threshold. Production worktree content is unmodified.",
+  "command": "cargo test --offline -p reader-local-book --lib commit_review_probes -- --nocapture",
+  "exit_code": 101,
+  "standard_suite": {
+    "command": "cargo test --locked --offline -p reader-local-book",
+    "passed": 253,
+    "failed": 0
+  },
+  "failures": [
+    {
+      "case": "html_void_br",
+      "small": "first\nsecond",
+      "large": "firstsecond"
+    },
+    {
+      "case": "script_raw_text",
+      "small": "visible; kept anchor=0",
+      "large": "empty text and anchors"
+    },
+    {
+      "case": "textarea_raw_text",
+      "small": "before\n\nA & <p>literal\n\nafter",
+      "large": "before\n\nA &\n\nliteral\n\nafter"
+    },
+    {
+      "case": "anchor_after_4096",
+      "small": "a4099=4099",
+      "large": "missing"
+    }
+  ],
+  "files_sha256": {
+    "Cargo.lock": "3ef0014e51799e85af8687e365e4cbd519f6a81c7e8324923603220ed01fc20c",
+    "crates/reader-local-book/Cargo.toml": "2eeadd35f6f6527a5eb62352bd29804c2d616f39e7a6c6736072437d09075789",
+    "crates/reader-local-book/src/epub.rs": "ec218c257321f076bc04681350b1da89ac3b30546aae5373acd88b4ee142285b"
+  },
+  "probe_workdir": "/private/tmp/reader-core-commit-review-_nrqq3ws",
+  "boundaries": "Core/local probes only; no claim about remote book.toc causality, device behavior, application delivery, or user acceptance.",
+  "wip_commit": "5aac38327349ed7089d262b3a8173e1ed794c1d3",
+  "safe_commit_independent_regression": {
+    "head": "c42af9a1fb09380bd979f1237b2cff7ee3bb597f",
+    "command": "cargo test --offline -p reader-local-book",
+    "passed": 252,
+    "failed": 0,
+    "log": "committed-core-split-regression.log",
+    "scope": "Isolated snapshot with committed sources and no streaming WIP implementation."
+  },
+  "format_check": {
+    "command": "cargo fmt --all -- --check",
+    "exit_code": 0
+  },
+  "production_content_changed_during_review": false,
+  "final_core_worktree": "clean"
+}

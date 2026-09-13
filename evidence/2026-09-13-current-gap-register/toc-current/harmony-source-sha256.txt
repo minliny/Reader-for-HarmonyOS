@@ -1,0 +1,5 @@
+7d05247ded992243bb3b007d0e18671fb61b1fa10df050508c5dc183a59deabf  entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts
+12e87d5bea697d770fac4ec4647db76ec05ac4112efcfc77561ce15b3b577232  entry/src/main/ets/features/reading/RemoteReadingContract.ts
+aac01d3ad726d36d6f6ce6f2944748611c6b1bfd94c4132f43e300734eef4602  entry/src/main/ets/app/BookAcquisitionCoordinator.ts
+09aa68c893034547071ca82e826b92c823c4b91f35af56125db5d7ab810083b8  entry/src/main/ets/pages/Index.ets
+3d5085db41a27afb12e97a5e3fa7da5186d94a9920e8de465a64f1a07f763c2a  entry/src/main/ets/features/source/SourceSwitchGateway.ts

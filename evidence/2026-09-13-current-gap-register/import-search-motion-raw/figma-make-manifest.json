@@ -1,0 +1,537 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "This contains the resource links for all the source files in the Figma Make. Start with App.tsx to understand the code."
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/App.tsx",
+      "name": "src/app/App.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/imports/ReferencePhoneBookshelf390844/index.tsx",
+      "name": "src/imports/ReferencePhoneBookshelf390844/index.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/package.json",
+      "name": "package.json",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/ATTRIBUTIONS.md",
+      "name": "ATTRIBUTIONS.md",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/default_shadcn_theme.css",
+      "name": "default_shadcn_theme.css",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/guidelines/Guidelines.md",
+      "name": "guidelines/Guidelines.md",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/pnpm-workspace.yaml",
+      "name": "pnpm-workspace.yaml",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/postcss.config.mjs",
+      "name": "postcss.config.mjs",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/figma/ImageWithFallback.tsx",
+      "name": "src/app/components/figma/ImageWithFallback.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/accordion.tsx",
+      "name": "src/app/components/ui/accordion.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/alert-dialog.tsx",
+      "name": "src/app/components/ui/alert-dialog.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/alert.tsx",
+      "name": "src/app/components/ui/alert.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/aspect-ratio.tsx",
+      "name": "src/app/components/ui/aspect-ratio.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/avatar.tsx",
+      "name": "src/app/components/ui/avatar.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/badge.tsx",
+      "name": "src/app/components/ui/badge.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/breadcrumb.tsx",
+      "name": "src/app/components/ui/breadcrumb.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/button.tsx",
+      "name": "src/app/components/ui/button.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/calendar.tsx",
+      "name": "src/app/components/ui/calendar.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/card.tsx",
+      "name": "src/app/components/ui/card.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/carousel.tsx",
+      "name": "src/app/components/ui/carousel.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/chart.tsx",
+      "name": "src/app/components/ui/chart.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/checkbox.tsx",
+      "name": "src/app/components/ui/checkbox.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/collapsible.tsx",
+      "name": "src/app/components/ui/collapsible.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/command.tsx",
+      "name": "src/app/components/ui/command.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/context-menu.tsx",
+      "name": "src/app/components/ui/context-menu.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/dialog.tsx",
+      "name": "src/app/components/ui/dialog.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/drawer.tsx",
+      "name": "src/app/components/ui/drawer.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/dropdown-menu.tsx",
+      "name": "src/app/components/ui/dropdown-menu.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/form.tsx",
+      "name": "src/app/components/ui/form.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/hover-card.tsx",
+      "name": "src/app/components/ui/hover-card.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/input-otp.tsx",
+      "name": "src/app/components/ui/input-otp.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/input.tsx",
+      "name": "src/app/components/ui/input.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/label.tsx",
+      "name": "src/app/components/ui/label.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/menubar.tsx",
+      "name": "src/app/components/ui/menubar.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/navigation-menu.tsx",
+      "name": "src/app/components/ui/navigation-menu.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/pagination.tsx",
+      "name": "src/app/components/ui/pagination.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/popover.tsx",
+      "name": "src/app/components/ui/popover.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/progress.tsx",
+      "name": "src/app/components/ui/progress.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/radio-group.tsx",
+      "name": "src/app/components/ui/radio-group.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/resizable.tsx",
+      "name": "src/app/components/ui/resizable.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/scroll-area.tsx",
+      "name": "src/app/components/ui/scroll-area.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/select.tsx",
+      "name": "src/app/components/ui/select.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/separator.tsx",
+      "name": "src/app/components/ui/separator.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/sheet.tsx",
+      "name": "src/app/components/ui/sheet.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/sidebar.tsx",
+      "name": "src/app/components/ui/sidebar.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/skeleton.tsx",
+      "name": "src/app/components/ui/skeleton.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/slider.tsx",
+      "name": "src/app/components/ui/slider.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/sonner.tsx",
+      "name": "src/app/components/ui/sonner.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/switch.tsx",
+      "name": "src/app/components/ui/switch.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/table.tsx",
+      "name": "src/app/components/ui/table.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/tabs.tsx",
+      "name": "src/app/components/ui/tabs.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/textarea.tsx",
+      "name": "src/app/components/ui/textarea.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/toggle-group.tsx",
+      "name": "src/app/components/ui/toggle-group.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/toggle.tsx",
+      "name": "src/app/components/ui/toggle.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/tooltip.tsx",
+      "name": "src/app/components/ui/tooltip.tsx",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/use-mobile.ts",
+      "name": "src/app/components/ui/use-mobile.ts",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/app/components/ui/utils.ts",
+      "name": "src/app/components/ui/utils.ts",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/imports/ReferencePhoneBookshelf390844/svg-o1hnootjs1.ts",
+      "name": "src/imports/ReferencePhoneBookshelf390844/svg-o1hnootjs1.ts",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/styles/fonts.css",
+      "name": "src/styles/fonts.css",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/styles/globals.css",
+      "name": "src/styles/globals.css",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/styles/index.css",
+      "name": "src/styles/index.css",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/styles/tailwind.css",
+      "name": "src/styles/tailwind.css",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/src/styles/theme.css",
+      "name": "src/styles/theme.css",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/source/SW2sjgSEPEPuPwyR0TULyP/vite.config.ts",
+      "name": "vite.config.ts",
+      "mimeType": "text/plain"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/1a5ef116184e9e55d4c3f0c3ac2fdb549ee1155f.png",
+      "name": "1a5ef116184e9e55d4c3f0c3ac2fdb549ee1155f.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/1e188c020071950a88f997f849ec84f22f5854a1.png",
+      "name": "1e188c020071950a88f997f849ec84f22f5854a1.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/2aec032b81bd2a1c85c9d5b41d301f0bf26be291.png",
+      "name": "2aec032b81bd2a1c85c9d5b41d301f0bf26be291.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/36adb378bdaac45ff1b67f9d8827053772cc8ed3.png",
+      "name": "36adb378bdaac45ff1b67f9d8827053772cc8ed3.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/5754a701264ca67b0d2d43df922e84dff8be4ff7.png",
+      "name": "5754a701264ca67b0d2d43df922e84dff8be4ff7.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/60b5c4464e52172426e32e8d03c1847620c730de.png",
+      "name": "60b5c4464e52172426e32e8d03c1847620c730de.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/6479ee1e12dbb8f8cd9043fab29c3e34330412cd.png",
+      "name": "6479ee1e12dbb8f8cd9043fab29c3e34330412cd.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/68b69f621b723d75a2269f69ef426cf95161ffcc.png",
+      "name": "68b69f621b723d75a2269f69ef426cf95161ffcc.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/68c81d864ed97eac7fcd0d81467dc855889d0b08.png",
+      "name": "68c81d864ed97eac7fcd0d81467dc855889d0b08.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/7c51cd87342ab42d37ac76d36907ba8db7e8dbda.png",
+      "name": "7c51cd87342ab42d37ac76d36907ba8db7e8dbda.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/82806278c6d7dfd8da9cb464d06f4c4e0b11476b.png",
+      "name": "82806278c6d7dfd8da9cb464d06f4c4e0b11476b.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/8559ee8234f932042ade63d4418562487bbf06d0.png",
+      "name": "8559ee8234f932042ade63d4418562487bbf06d0.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/8fc7b3897e356c8020e5e8319e6f8449fd803f32.png",
+      "name": "8fc7b3897e356c8020e5e8319e6f8449fd803f32.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/977354b17329106dceb220ee0d227ebac3da4274.png",
+      "name": "977354b17329106dceb220ee0d227ebac3da4274.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/9c987181290faa7497efb38bb72e5621e04ed61f.png",
+      "name": "9c987181290faa7497efb38bb72e5621e04ed61f.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/9caae3b7f863772534bbde850a7fa2262b94fe39.png",
+      "name": "9caae3b7f863772534bbde850a7fa2262b94fe39.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/a6dd26a470f0140e7427a626fb9a0783fba2b6f9.png",
+      "name": "a6dd26a470f0140e7427a626fb9a0783fba2b6f9.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/ae93593311f25c197eb69278f53c307533e02b2a.png",
+      "name": "ae93593311f25c197eb69278f53c307533e02b2a.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/b1a423be4c027dcbdcbb66e67ce91fb7a314d405.png",
+      "name": "b1a423be4c027dcbdcbb66e67ce91fb7a314d405.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/cc99190da9f552376b938a162552cd8efb89b9af.png",
+      "name": "cc99190da9f552376b938a162552cd8efb89b9af.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/defc17fb72105d82fe51605618de3ecaece03df8.png",
+      "name": "defc17fb72105d82fe51605618de3ecaece03df8.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/e37bad3082ea62920cbd047fe9a194643c93987c.png",
+      "name": "e37bad3082ea62920cbd047fe9a194643c93987c.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/e4430d03a1d0d3c912198c624ddd898242638b8d.png",
+      "name": "e4430d03a1d0d3c912198c624ddd898242638b8d.png",
+      "mimeType": "image/png"
+    },
+    {
+      "type": "resource_link",
+      "uri": "file://figma/make/image/SW2sjgSEPEPuPwyR0TULyP/ef9b4d6129aed5f75c122d99b123bd7de1687a02.png",
+      "name": "ef9b4d6129aed5f75c122d99b123bd7de1687a02.png",
+      "mimeType": "image/png"
+    }
+  ],
+  "isError": false
+}

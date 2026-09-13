@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-09-12T18:26:13Z",
+  "phenomenon": "受限终端中的 HDC 命令返回 Connect server failed，被误判为 VM 未启动。",
+  "auditScope": [
+    "本机进程与 TCP 监听（Emulator:5555、hdc:8710、DevEco 客户端）",
+    "DevEco 设备管理器 Mate 80 Pro 行状态",
+    "项目 HDC lease 记录与 stale lock",
+    "提升权限后的只读目标发现和 guest boot probe"
+  ],
+  "evidence": {
+    "lsof": "Emulator PID 21552 LISTEN 127.0.0.1:5555; hdc PID 75381 LISTEN 127.0.0.1:8710 and connected to 5555; devecostu PID 78563 has two ESTABLISHED clients to 8710",
+    "devecoUi": "Mate 80 Pro operation icon is stop (running); warning icon text says system image missing but does not indicate target absence",
+    "restrictedHdc": "hdc -s ::ffff:127.0.0.1:8710 list targets -v => Connect server failed",
+    "elevatedHdc": "same command with approved elevated host access => 127.0.0.1:5555 TCP Connected localhost",
+    "elevatedBootProbe": "shell param get bootevent.boot.completed => true",
+    "deployment": "latest iteration receipt 20260912T180456Z... deploy-vm-6460677a198b-20260912T182137Z.json install=PASS launch=PASS dataPolicy=preserve"
+  },
+  "auditConclusion": "VM and HDC were healthy. Failure was caused by restricted terminal network permissions plus DevEco shared HDC clients; an interrupted probe also left stale lease metadata. No app/data fault established.",
+  "operationContribution": "The agent relied on sandbox HDC failures and did not use the elevated host channel, then reported the VM as down.",
+  "boundary": {
+    "vmState": "PASS",
+    "hdcTransport": "PASS with elevated host channel",
+    "hapInstallLaunch": "PASS",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  }
+}

@@ -1,0 +1,653 @@
+{
+  "recordedAt": "2026-09-13T10:31:04.987672+00:00",
+  "scope": "Audit, detailed specification and subject-wise commits of existing changes only. No implementation of the new full plan, build, install, VM/device operation or push.",
+  "workspaceRootIsGitRepository": false,
+  "harmony": {
+    "repository": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+    "initialHead": "50cad401ffc6d235f4ac388136ee5213b9b736ad",
+    "organizedSourceHead": "3ab102c6b32d507fa5f2fc22c0283873a6fec2fe",
+    "commitsBeforeThisDocumentationCommit": [
+      {
+        "hash": "d23cd66c4e8bfb40fde737a4c14669e030542804",
+        "subject": "fix(hdc): serialize existing device tooling through a shared-server lease",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nDoes not restart HDC or change target selection. Transport stability still needs evidence distinct from application behavior.",
+        "files": [
+          "scripts/hap-pipeline.mjs",
+          "tools/reader-control-device-probe.mjs",
+          "tools/reader-control-fast-capture.mjs",
+          "tools/reader-hdc-lease.mjs",
+          "tools/test-reader-hdc-lease.mjs"
+        ]
+      },
+      {
+        "hash": "2f0bfece6d8396b169fe0218762d5d78d49275ae",
+        "subject": "fix(tts): defer platform audio-session manager creation",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.",
+        "files": [
+          "entry/src/main/ets/app/HarmonyHttpTtsHost.ts",
+          "entry/src/main/ets/app/HarmonySystemTtsHost.ts"
+        ]
+      },
+      {
+        "hash": "62f99d3544c1d0e891bbadf727635d258c5037e1",
+        "subject": "fix(reader): preserve held drag displacement when page readiness arrives",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nAlso limits page compositor isolation to active turns. This does not close the full page-turn performance and interruption audit.",
+        "files": [
+          "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets",
+          "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+          "tools/test-reader-drag-follow-gate.mjs",
+          "tools/test-reader-page-input-runtime.mjs"
+        ]
+      },
+      {
+        "hash": "b5998f35d8aad1d4399273b3ec70a2f004022cfe",
+        "subject": "feat(import): expose existing MOBI and AZW format admission",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nAdmission is existing implementation scope, not proof that every format or current Core streaming parser has passed delivery gates.",
+        "files": [
+          "entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts",
+          "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+          "tools/test-local-book-format-entry.mjs",
+          "tools/test-reader-host-selection-boundary.mjs"
+        ]
+      },
+      {
+        "hash": "bce9c46b9d315f78f47ba54ea080e280f6d83919",
+        "subject": "fix(bookshelf): persist view mode and project source metadata",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nPreserves existing list/group rendering changes. Known remaining gaps include URL fallback labels, multi-select footer layout, and two-store preference ordering; no claim of complete persistence or visual closure.",
+        "files": [
+          "entry/src/main/ets/app/ReaderCoreGateway.ts",
+          "entry/src/main/ets/entryability/EntryAbility.ets",
+          "entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets",
+          "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+          "entry/src/main/ets/features/sync/SyncGateway.ts",
+          "entry/src/main/ets/features/sync/WebDavCredentialStore.ts",
+          "entry/src/main/ets/pages/Index.ets",
+          "tools/test-sync-webdav-product.mjs"
+        ]
+      },
+      {
+        "hash": "19c700b78e3083c41eb9de9b8f83fc5028d990ea",
+        "subject": "wip(bookshelf): record current action sheet and management routing",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nPer-book actions use the requested opaque host and 75% width. Existing management route is preserved for review; it must be reconciled with the confirmed lightweight group-selector requirement before delivery.",
+        "files": [
+          "entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets",
+          "entry/src/main/ets/pages/Index.ets",
+          "tools/test-bookshelf-management.mjs"
+        ]
+      },
+      {
+        "hash": "9d9db72bf5ed0bdd7d600a6fe56dfba19b7d1f10",
+        "subject": "fix(import): separate file selection and size result lists from batch count",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nPartial existing repair. Native picker single-flight and post-import navigation revalidation remain open. Import animation and viewport-bounded result geometry are not complete.",
+        "files": [
+          "entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts",
+          "entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts",
+          "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+          "entry/src/main/ets/pages/Index.ets",
+          "tools/test-bookshelf-view-and-menu.mjs"
+        ]
+      },
+      {
+        "hash": "4d78599fd36332bcc72c378b7b36def7cc095bd6",
+        "subject": "fix(search): retain loading actor and add history collapse",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nPreserves current entity cleanup and history action placement. Figma active-state appearance and width-based history packing still require the specified follow-up.",
+        "files": [
+          "entry/src/main/ets/features/common/BookIntroText.ts",
+          "entry/src/main/ets/features/search/SearchPage.ets",
+          "tools/test-book-metadata-presentation.mjs",
+          "tools/test-reader-feedback-regressions.mjs"
+        ]
+      },
+      {
+        "hash": "b0eaef9c66452276a0c618c112d2c6b7955142e6",
+        "subject": "wip(toc): preserve shelf-hit reuse and empty-catalog diagnostic fields",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nDoes not repair the reproduced missing bookUrl context or legacy acquisition cache bypass. Diagnostic fields currently lack a consumer; current runtime audit records the remaining work.",
+        "files": [
+          "entry/src/main/ets/features/reading/RemoteReadingContract.ts",
+          "entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts",
+          "entry/src/main/ets/pages/Index.ets"
+        ]
+      },
+      {
+        "hash": "ba9e25a0be2cbdda506425b555addc9e838c278b",
+        "subject": "feat(tts): wire background and awake preferences into existing controls",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nIncludes 0.50x preset and the existing five-field TTS form/footer changes. Runtime configuration CRUD, text fit, and final visual parity remain subject to the detailed audit.",
+        "files": [
+          "entry/src/main/ets/app/HarmonyTtsHostRouter.ts",
+          "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts",
+          "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets",
+          "entry/src/main/ets/features/reading/ReaderControlTtsStyle.ts",
+          "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+          "entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts",
+          "entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts",
+          "tools/test-reader-control-tts-make.mjs",
+          "tools/test-reader-tts-preferences.mjs",
+          "tools/test-reader-tts-product-surface.mjs"
+        ]
+      },
+      {
+        "hash": "390e095475daa93afeae12e85c8b6a448b2a788a",
+        "subject": "fix(controls): restore settings outlines and route collapse input",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nIncludes existing compact auto-page speed geometry and removal of the redundant back control. Current tests are local methods/structure and cannot establish native hit-test or pixel acceptance.",
+        "files": [
+          "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets",
+          "entry/src/main/ets/features/reading/ReaderControlMotionStage.ets",
+          "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+          "entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts",
+          "entry/src/main/ets/features/reading/ReaderControlSettingsOptionModifier.ets",
+          "tools/lib/reader-control-option-modifier-probe.mjs",
+          "tools/test-reader-auto-page-full.mjs",
+          "tools/test-reader-control-input-routing.mjs",
+          "tools/test-reader-control-motion-presentation.mjs",
+          "tools/test-reader-control-playback-content.mjs",
+          "tools/test-reader-control-search-settings-content.mjs"
+        ]
+      },
+      {
+        "hash": "ba9ce0c93f1ee221f2828dfbc7ba32e2f41b6c6e",
+        "subject": "wip(brightness): preserve current drag-time window update attempt",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nPreserves existing automatic/manual opacity distinction. Latest-value coalescing, cancellation rollback, and in-flight native completion ordering still require follow-up.\nCurrent production probe reproduces only a final native update when window lookup takes 24ms and MOVE arrives every 16ms. A latest-value writer is required before claiming follow-through.",
+        "files": [
+          "entry/src/main/ets/features/reading/ReaderControlPanel.ets"
+        ]
+      },
+      {
+        "hash": "f9425b9b84ae80856790773a7fce7b7f02abadcc",
+        "subject": "fix(reader): pass exact chrome ink and reserve control layout space",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nExisting partial status-bar repair and inset-profile plumbing. Some call sites still confuse reader ownership with control visibility; one-switch notch behavior and reducing the 32vp minimum are not implemented.",
+        "files": [
+          "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+          "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts",
+          "tools/test-reader-layout-architecture.mjs",
+          "tools/test-reader-settings.mjs",
+          "tools/test-reader-window-chrome-p0.mjs",
+          "tools/test-window-flicker-dedup.mjs"
+        ]
+      },
+      {
+        "hash": "45d5b60b81d7848a8a7d83a0f2e2f128f0a7a4ae",
+        "subject": "wip(reader): record current top-more bookmark action",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nPreserves prior work only. A More-labelled actor dispatching a bookmark toggle is not proof that the approved More interaction is implemented; resolve against historical product/design evidence before release.",
+        "files": [
+          "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+          "tools/test-reader-content-business.mjs"
+        ]
+      },
+      {
+        "hash": "3ec045c97f7078137160daf1d65f1f8498676b83",
+        "subject": "wip(capsule): record current snapshot handoff and reveal overlap",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nKnown incomplete behavior: early hide before snapshot creates an empty ownership interval, reveal overlap differs from live Figma 3500ms tracks, footer has no shared progress. These old assertions must be replaced by actor/state tests, not used as acceptance.",
+        "files": [
+          "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ReaderSessionMorphTimeline.ts",
+          "tools/test-reader-control-playback-host-intents.mjs",
+          "tools/test-reader-control-replace-host.mjs",
+          "tools/test-reader-motion-repair.mjs"
+        ]
+      },
+      {
+        "hash": "3ab102c6b32d507fa5f2fc22c0283873a6fec2fe",
+        "subject": "wip(theme): preserve inactive control palette scaffold",
+        "body": "Archive the existing worktree changes by subject without altering production bytes. Current combined worktree passes 198 local contract suites; this is not ArkUI visual, device, Figma, or user acceptance. Remaining defects are tracked in the implementation audit.\n\nFunction ignores its theme ID and the panel prop is not consumed. This is not the new two-app/eight-reader theme architecture; current task authorizes planning, not implementation.",
+        "files": [
+          "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ReaderControlThemeStyle.ets"
+        ]
+      },
+      {
+        "hash": "997318eada6922f9187c390f10fe1be5c75da34b",
+        "subject": "docs(evidence): archive prior control and input captures",
+        "body": "Archive existing control/input issue notes, local logs, physical captures and VM captures by their original dated provenance. Preserve Markdown hard line breaks and raw evidence bytes.\n\nARCHIVE_SCOPE separates historical artifacts from the current repair specification. These captures do not validate current HEAD or make a WIP candidate deliverable. No new device operation was performed.",
+        "files": [
+          "evidence/2026-09-12-control-update-performance/ARCHIVE_SCOPE.md",
+          "evidence/2026-09-12-control-update-performance/ISSUES.md",
+          "evidence/2026-09-12-control-update-performance/REPAIR_REPORT.md",
+          "evidence/2026-09-12-control-update-performance/UI_PARITY_AUDIT_20260912.md",
+          "evidence/2026-09-12-control-update-performance/check-local-after-input-routing.log",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/README.md",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/bookshelf.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/collapse-after-6500ms.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/collapse-before.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/expand-0ms.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/expand-1000ms.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/expand-150ms.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/expand-300ms.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/expand-collapse-probe.jsonl",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/expanded-layout.json",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/hdc-stability-20260912T110500Z.json",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/open-book-probe.jsonl",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/reading-800ms.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/reading-stable.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/retest-20260912/after.jpeg",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/retest-20260912/collapse/reader-control-5638a46b-72c9-4810-84b2-f1e78660b6b3-frame-0.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/retest-20260912/collapse/reader-control-5638a46b-72c9-4810-84b2-f1e78660b6b3-frame-1.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/retest-20260912/collapse/reader-control-5638a46b-72c9-4810-84b2-f1e78660b6b3-frame-2.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/retest-20260912/collapse/reader-control-5638a46b-72c9-4810-84b2-f1e78660b6b3-frame-3.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/retest-20260912/collapse/reader-control-5638a46b-72c9-4810-84b2-f1e78660b6b3-frame-4.png",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/retest-20260912/collapse/reader-control-probe-1789208250731-1784fd2e-5f28-46a8-9104-efa5d3ecf8bc.jsonl",
+          "evidence/2026-09-12-control-update-performance/physical-20260912/transport-failure.jsonl",
+          "evidence/2026-09-12-control-update-performance/repair-source.json",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/README.md",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/after-collapse-layout.json",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/collapse-after-1000ms-scheduled.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/collapse-before-command-return.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/collapse-probe-input-latency.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/emulator-start-20260912T$(date -u +%H%M%SZ).log",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/emulator-start-20260912T111315Z.log",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/emulator-start-hdc15555-20260912T112147Z.log",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/emulator-start-hdc5555-20260912T112117Z.log",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/expand-1000ms.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/expand-160ms.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/expand-probe.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/open-layout.json",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/reading-before-control-click.jpeg",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-collapse/reader-control-probe-1789213280131-6c0b21fa-ee10-4177-ae59-c78c99795516.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-collapse/reader-control-vm-collapse-after.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-collapse/reader-control-vm-collapse-layout.json",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-expand/reader-control-7bfbadb6-666e-4574-bc13-30037471af49-frame-0.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-expand/reader-control-7bfbadb6-666e-4574-bc13-30037471af49-frame-1.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-expand/reader-control-7bfbadb6-666e-4574-bc13-30037471af49-frame-2.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-expand/reader-control-7bfbadb6-666e-4574-bc13-30037471af49-frame-3.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-expand/reader-control-probe-1789213365089-136b0361-6440-4f0b-a268-4802dde3c7b6.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-final/reader-control-probe-1789212989841-bb64874c-d4ed-4d9f-9de5-3204ea30cfa2.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-harness2/reader-control-probe-1789213228831-03f8c8dd-faad-429d-9372-dbb63dab9429.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-harness2/reader-control-vm-harness2-before.png",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-harness2/reader-control-vm-harness2-layout.json",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-hdc2/reader-control-probe-1789212760371-8ee8670f-1d2b-4b4a-8d2d-8bbf6d69eafd.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-ipv4/reader-control-probe-1789212824634-abd065a9-0f37-453f-b9f6-429f48a7f0b5.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-pipe-harness/reader-control-probe-1789213068903-567b4b11-b3f7-4a01-a61c-038c8d18d04b.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912-pipe/reader-control-probe-1789213032566-b460aa41-0758-4291-ab8b-4effd6ba6ff0.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/retest-20260912/reader-control-probe-1789212686187-61bc5b9b-1b12-4f49-bc08-22ad1dab6130.jsonl",
+          "evidence/2026-09-12-control-update-performance/vm-20260912/vm-restart-20260912T114200Z.json"
+        ]
+      },
+      {
+        "hash": "1fc6b187f5717a3668779deb11702947fb065c96",
+        "subject": "docs(evidence): preserve previous UI comparison records",
+        "body": "Preserve existing dated UI/Figma comparison records and captured artifacts without rewriting their historical conclusions or raw YAML whitespace.\n\nThe archive scope points to the current specification for corrected decisions. Evidence preservation is not current visual or user acceptance.",
+        "files": [
+          "evidence/2026-09-12-new-ui-audit/1764-10223.yaml",
+          "evidence/2026-09-12-new-ui-audit/1938-6245.yaml",
+          "evidence/2026-09-12-new-ui-audit/1939-800.yaml",
+          "evidence/2026-09-12-new-ui-audit/1939-848.yaml",
+          "evidence/2026-09-12-new-ui-audit/271-220.yaml",
+          "evidence/2026-09-12-new-ui-audit/2903-1719.yaml",
+          "evidence/2026-09-12-new-ui-audit/4572-1796.yaml",
+          "evidence/2026-09-12-new-ui-audit/487-23.yaml",
+          "evidence/2026-09-12-new-ui-audit/493-196.yaml",
+          "evidence/2026-09-12-new-ui-audit/909-69.yaml",
+          "evidence/2026-09-12-new-ui-audit/ARCHIVE_SCOPE.md",
+          "evidence/2026-09-12-new-ui-audit/ISSUES.md",
+          "evidence/2026-09-12-new-ui-audit/audit-baseline.json",
+          "evidence/2026-09-12-new-ui-audit/figma/auto-page-quick.png",
+          "evidence/2026-09-12-new-ui-audit/figma/auto-page.png",
+          "evidence/2026-09-12-new-ui-audit/figma/book-action-sheet.png",
+          "evidence/2026-09-12-new-ui-audit/figma/book-card-variants.png",
+          "evidence/2026-09-12-new-ui-audit/figma/filter-button.png",
+          "evidence/2026-09-12-new-ui-audit/figma/filter.svg",
+          "evidence/2026-09-12-new-ui-audit/filter-probe.json",
+          "evidence/2026-09-12-new-ui-audit/geometry-probe.json"
+        ]
+      },
+      {
+        "hash": "6a0725e2ee1ec3b77fcb6ecb9d0beaa87a3b8717",
+        "subject": "docs(evidence): archive previous VM retry provenance",
+        "body": "Preserve existing VM retry logs, images and provenance in their dated directory.\n\nThis commit runs no VM or HDC operation and does not promote prior installation or capture results to current-source acceptance. Current open gates remain in the repair specification.",
+        "files": [
+          "evidence/2026-09-13-vm-retry/ARCHIVE_SCOPE.md",
+          "evidence/2026-09-13-vm-retry/reader-control-after-back.png",
+          "evidence/2026-09-13-vm-retry/reader-control-bar.png",
+          "evidence/2026-09-13-vm-retry/reader-control-cold-persist.png",
+          "evidence/2026-09-13-vm-retry/reader-control-cold-persist2.png",
+          "evidence/2026-09-13-vm-retry/reader-control-cold.png",
+          "evidence/2026-09-13-vm-retry/reader-control-cold2.png",
+          "evidence/2026-09-13-vm-retry/reader-control-cold3.png",
+          "evidence/2026-09-13-vm-retry/reader-control-filter-open.png",
+          "evidence/2026-09-13-vm-retry/reader-control-filter.png",
+          "evidence/2026-09-13-vm-retry/reader-control-layout.json",
+          "evidence/2026-09-13-vm-retry/reader-control-layout2.json",
+          "evidence/2026-09-13-vm-retry/reader-control-list-set.png",
+          "evidence/2026-09-13-vm-retry/reader-control-list.png",
+          "evidence/2026-09-13-vm-retry/reader-control-more.png",
+          "evidence/2026-09-13-vm-retry/reader-control-probe-1789237460801-a962e4e9-17ea-4d34-9720-66a08d31915a.jsonl",
+          "evidence/2026-09-13-vm-retry/reader-control-probe-1789237478351-cb93c042-ce60-4153-bbcb-141cdbc4470f.jsonl",
+          "evidence/2026-09-13-vm-retry/reader-control-probe-1789237633966-1ab93818-3e29-4dbe-bdcb-7ccb230085d8.jsonl",
+          "evidence/2026-09-13-vm-retry/reader-control-probe-1789237844218-1e1d05cc-da06-444f-bb27-36052c8910a9.jsonl",
+          "evidence/2026-09-13-vm-retry/reader-control-probe-1789237994104-d4bdee59-9d1d-4b3f-8f89-a1d9b614c866.jsonl",
+          "evidence/2026-09-13-vm-retry/reader-control-probe-1789238882709-f52819a2-086b-4e2f-b75d-eb2128b756a3.jsonl",
+          "evidence/2026-09-13-vm-retry/reader-control-probe-1789238941341-67ba59ee-e761-4dd3-b94c-88bfac3e54f2.jsonl",
+          "evidence/2026-09-13-vm-retry/reader-control-probe-1789239173971-25b8597e-37e3-4a52-87e6-5a037b5f512a.jsonl",
+          "evidence/2026-09-13-vm-retry/reader-control-reader-settled.png",
+          "evidence/2026-09-13-vm-retry/reader-control-readerpage.png",
+          "evidence/2026-09-13-vm-retry/reader-control-readerpage2.png",
+          "evidence/2026-09-13-vm-retry/reader-control-reading.png",
+          "evidence/2026-09-13-vm-retry/reader-control-reading2.png",
+          "evidence/2026-09-13-vm-retry/reader-control-stable.png",
+          "evidence/2026-09-13-vm-retry/reader-control-stable2.png",
+          "evidence/2026-09-13-vm-retry/reader-control-vm-after-install.png",
+          "evidence/2026-09-13-vm-retry/reader-control-vm-screen.png",
+          "evidence/2026-09-13-vm-retry/settings-after-click.png"
+        ]
+      }
+    ]
+  },
+  "core": {
+    "repository": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+    "initialHead": "e0e4b550bcffd3b959d7b90fa599c1df713f479e",
+    "commits": [
+      {
+        "hash": "b69c86e4b9590b0949014b966eef336dcdbb128d",
+        "subject": "test(local-book): cover metadata fallback through format dispatch",
+        "body": "",
+        "files": [
+          "crates/reader-local-book/tests/dispatch_integration.rs"
+        ]
+      },
+      {
+        "hash": "c42af9a1fb09380bd979f1237b2cff7ee3bb597f",
+        "subject": "fix(local-book): normalize UTF-8 BOM before EPUB XML parsing",
+        "body": "",
+        "files": [
+          "crates/reader-local-book/src/epub.rs"
+        ]
+      },
+      {
+        "hash": "5aac38327349ed7089d262b3a8173e1ed794c1d3",
+        "subject": "wip(local-book): preserve streaming XHTML optimization for repair",
+        "body": "Archive the existing 128 KiB html5ever tokenizer path, linear anchor-offset\nmapping, and character-count optimizations as a separate work-in-progress\nchange. This commit preserves prior work; it is not an accepted parser fix.\n\nFour isolated production-entrypoint threshold probes reproduce regressions:\n- HTML <br> loses its line break above the threshold.\n- A script string containing <style> suppresses subsequent visible body text.\n- textarea raw text is interpreted as HTML structure.\n- Navigation anchors after the first 4096 are silently discarded.\n\nThe existing reader-local-book suite passes 253 tests, but those checks do\nnot cover these failures. Do not treat this commit, a green standard suite,\nor any earlier HAP/VM result as delivery or acceptance evidence. Repair and\nrerun the differential probes before using this path in a validated build.\n\nRaw workspace evidence:\n../evidence/local-book-oss-implementation/streaming-xhtml-commit-review.json\n../evidence/local-book-oss-implementation/streaming-xhtml-commit-review.log\n../evidence/local-book-oss-implementation/streaming-xhtml-commit-review-probes.rs",
+        "files": [
+          "Cargo.lock",
+          "crates/reader-local-book/Cargo.toml",
+          "crates/reader-local-book/src/epub.rs"
+        ]
+      },
+      {
+        "hash": "9ccb0c74c25b335a9bdea50dc1f2fb6003191ed2",
+        "subject": "docs(motion): supersede obsolete capsule timing and handoff claims",
+        "body": "",
+        "files": [
+          "docs/frontend-complete-app/MOTION_SPEC.md"
+        ]
+      }
+    ]
+  },
+  "finalDocumentationCommit": {
+    "identity": "The Git commit that adds this receipt and docs/READER_REPAIR_SPEC.md. Resolve with git log -1 --format=%H --follow -- evidence/2026-09-13-current-gap-register/workspace-commit-receipt.json",
+    "subject": "docs(reader): freeze audited repair specification and decision provenance",
+    "selfHashOmitted": true,
+    "expectedTotalCommitsIncludingThisCommit": 24
+  },
+  "sourcePreservation": {
+    "originalModifiedTrackedFiles": 68,
+    "sha256ByPath": {
+      "entry/src/main/ets/app/HarmonyHttpTtsHost.ts": "5d1f2d14bf3542eb9c5b6dec6cb5bd22ea1010c050c9b2e8cea59038ab1900a4",
+      "entry/src/main/ets/app/HarmonySystemTtsHost.ts": "3e5ae832f4ccbad31dad97cc529726f5f423e8c011a280ef23a81f058ef8efca",
+      "entry/src/main/ets/app/HarmonyTtsHostRouter.ts": "f60afe2695186c23f4e6136bf764fad4aa5a4f52d2538bc4e64fd027fa64e223",
+      "entry/src/main/ets/app/ReaderCoreGateway.ts": "da5126e68715de317e5357c96f543a4e87c22539f8c461c5211b21e3b49df607",
+      "entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts": "a23c4a65cb3df45c3b808ccf1082a55401c21aa2c9bd91c6f52936393992acf6",
+      "entry/src/main/ets/app/ReaderWindowCoordinator.ts": "9d7089fc23e4e5cc0562a5fc41d2c9214ebdba1e517f35db1ff96c36f8580b70",
+      "entry/src/main/ets/entryability/EntryAbility.ets": "85be4e996c8ee2f69b3c0c5cb07d6522910dc19464c732b5f951ab173d813fb2",
+      "entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets": "237b964cf87c0daac0360f05e207639f983a64e830a72ff11d9a01399730d611",
+      "entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts": "065a762e8ed4deb21f084e8c17a5473a49a99e7a0d5a8174fd3bb7a1e1bd04c7",
+      "entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets": "194eda483c5ef16ed0bf6847a06fe57ec65866fd2ec78e93ec4dd7bdf7d00df7",
+      "entry/src/main/ets/features/bookshelf/BookshelfPage.ets": "b2fc591806eaa784a3ad3e79f2b4cdf016c66fcae38017322542e376da0c2279",
+      "entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts": "c0a0d5081f769f35f7de04bd5cd1efcc008de839fedc964347408ac4bbe1ce9d",
+      "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets": "51977b33dc54cd44339f94704e1b7686e5a317727d98c0544eb7bb7f5f566631",
+      "entry/src/main/ets/features/common/BookIntroText.ts": "6defcc88fa1da44ecc1ec45cd1a69fc0fce019d8230f815586131b552b20f10f",
+      "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "8e32184c002dec035ea8ef9bf269ac3a9abe39bf1caa6cc22d6f38d97f4db465",
+      "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets": "647655dddd47919f3b31aff7a54b65a8107effd504a913f14432de7cc6b886d7",
+      "entry/src/main/ets/features/reading/ReaderControlMotionStage.ets": "135ef3b2d279a126ad509806eec20649e355c182e398c0624208b9069acab25f",
+      "entry/src/main/ets/features/reading/ReaderControlPanel.ets": "caa35b92e1b9fe156c882a9105659bbef62cd3a8c2d6002b888b979f4f848515",
+      "entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts": "67e4a624e9d624b3d765ea5ff5ea4d927fbf202b10f6f8ec5f9268c9573da094",
+      "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets": "e41dd8ebdd3ceb841e5eacb18aa5dbb6a56bfbd5216f028f31f5f26d5cacfe98",
+      "entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts": "f76540f1989cc1136b955d22e8822e38bb438cb72befd06119189c8c96220ed0",
+      "entry/src/main/ets/features/reading/ReaderControlSettingsOptionModifier.ets": "6d6daa4f79647ccf1d8e316322729fc8692559d81deca77a0df67a205498d693",
+      "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets": "1336b6e43f7e33c072a19cdfbecda241a62a24a4d8cce1b559428273e15ffd48",
+      "entry/src/main/ets/features/reading/ReaderControlTtsStyle.ts": "dbc83e08f0990d6cfafb79301c64f773bfbcced826b8c521b13440859933eb1f",
+      "entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts": "66c9c69d9445480dc06a72d10385cfa13ec58a23bd3e57ec968809bec825df9e",
+      "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets": "48901ca335b5001696b6f3dcf1e4ad57879bcfb5e67160c0d21bd095f5b7a388",
+      "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets": "4d00c324c0c145cf9556fe29f9c552a251b69e124993ee87c2ba450a49306ab4",
+      "entry/src/main/ets/features/reading/ReaderSessionMorphTimeline.ts": "ef68eb636051c802416e409043ce9cd2a02838e8f2b304673f616d1a50741284",
+      "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets": "478b1eae749d64959f47a6da22c540b25d3f10e5dcc030a1d75be500f2c7b14d",
+      "entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts": "2f562fc8d61cbc99656dcd881d517373463b1c0f61a5d5e39c113fe43dee1c19",
+      "entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts": "fe1a1f18953aa4ddb730b5fc8ab30d2143bc422bbdc72983a5ba490c80314188",
+      "entry/src/main/ets/features/reading/RemoteReadingContract.ts": "12e87d5bea697d770fac4ec4647db76ec05ac4112efcfc77561ce15b3b577232",
+      "entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts": "7d05247ded992243bb3b007d0e18671fb61b1fa10df050508c5dc183a59deabf",
+      "entry/src/main/ets/features/search/SearchPage.ets": "f7814fda63ab4c012a7f5cd692cbc0a9498d43127be0f5a95a55e2a944eda8c7",
+      "entry/src/main/ets/features/sync/SyncGateway.ts": "7e40d60dbad4f39399a2958a28fe06253c66cd8d2b558d1348031fdc68d6c829",
+      "entry/src/main/ets/features/sync/WebDavCredentialStore.ts": "19dbfa46aecc82b3e3b643768d94b9f431022945b033c558f78c366f4fc13f89",
+      "entry/src/main/ets/pages/Index.ets": "09aa68c893034547071ca82e826b92c823c4b91f35af56125db5d7ab810083b8",
+      "evidence/2026-09-12-control-update-performance/ISSUES.md": "06d3de479abf8a1bed16e63e90224c634b06a59b8e2c735a03a245ac3ba3e26c",
+      "evidence/2026-09-12-control-update-performance/REPAIR_REPORT.md": "b20a7557b4452733162236a3499caad96cdfd1c35682c5d4466dc40d36ee5a06",
+      "evidence/2026-09-12-control-update-performance/repair-source.json": "c055573d2f8ab695912f2198a52434721da09b2b10d90a30cce2e0b0ef1e7560",
+      "scripts/hap-pipeline.mjs": "fd361183c11000bbd496fa8032ca31d0c62edbfd077c6a5499dcba9468734275",
+      "tools/lib/reader-control-option-modifier-probe.mjs": "508c9d79343ec272a89c7510e10f8679776cc723ae681cac1d26abba6a8f8f99",
+      "tools/reader-control-device-probe.mjs": "8804af5e792e27e49099a575b60735b0ce93d4482781a51fbb7181fd24478b97",
+      "tools/reader-control-fast-capture.mjs": "6846f662bdf7b4299afa07436db018cd93c6f12f9048e051de9bc5d3b0dd2741",
+      "tools/test-book-metadata-presentation.mjs": "1a784b881d19be8784d5a5931e63a2106b190a7869ebfe7fc42a99cac622e590",
+      "tools/test-bookshelf-management.mjs": "dce90c0a217c249969d1404b3b93f25fc8f35ed9d479556e490c9a2c99cadfea",
+      "tools/test-bookshelf-view-and-menu.mjs": "1926d1cc64f6721e332d70e5fa886da7617435de5b1009adc234f6ae7d6b233e",
+      "tools/test-local-book-format-entry.mjs": "62fcb58ef71fc6e25bef99a5a92b5920d6741f6193250cd415c13b47be4370b8",
+      "tools/test-reader-auto-page-full.mjs": "70452f4a179cb1331038174b0a481676074eb08db13054a79292a95e8d15b71a",
+      "tools/test-reader-content-business.mjs": "16bfd15dbf77e312b7957abdeb11e232e169cb2da752a577e0582a715f0dc941",
+      "tools/test-reader-control-motion-presentation.mjs": "9d385c9db495a175014a7841aa350333f751b77030b3a6d818024f190ca50fe6",
+      "tools/test-reader-control-playback-content.mjs": "aa72c5e199841570a49ecde1d2d006f84530a87130b89c0dcf271758ce952b71",
+      "tools/test-reader-control-playback-host-intents.mjs": "739b37d250c69b7197f9e2fe8a082493cfd6c7c0972890a2c82617585bb802c2",
+      "tools/test-reader-control-replace-host.mjs": "9cec7565cf7d1711a6f2b7191884c36dd821331b15ff35f32559cefecb753adf",
+      "tools/test-reader-control-search-settings-content.mjs": "2e219213def8815637d6fa51a8b127eec5bced3f2b2578e56e0dc993c44668d1",
+      "tools/test-reader-control-tts-make.mjs": "5a0cc21fef8cc48de274125c25b397e4deb3d0d412dc8fd0a70504ea5015e009",
+      "tools/test-reader-drag-follow-gate.mjs": "9e5d08c9a3ee7d67ea50afa282dd5f45e5a0babec6c382572fa26c447b71d89f",
+      "tools/test-reader-feedback-regressions.mjs": "0614510157f24c3dcc3d595d26646bc3cce77c854d3a016248fcc5ae52d6c189",
+      "tools/test-reader-host-selection-boundary.mjs": "70a76019a4b62e8b8baca2718088a8c34f35ebf1be58759620e05f950ea5086b",
+      "tools/test-reader-layout-architecture.mjs": "f9e4d02c726c1794183d7aa60590e3c913a060b1d533a6ce0cd7e28d62cce84f",
+      "tools/test-reader-motion-repair.mjs": "2733fefb675d65fd10b70c505b0d6f3a17e1bc7d5c3509694aead76dfe8f1908",
+      "tools/test-reader-page-input-runtime.mjs": "a25af27d718f30a9e4933f49b6cae67b84a5683feafc9165ff9d89e197e289b7",
+      "tools/test-reader-settings.mjs": "4a5effde382c2b2d42367d2995be8eb787d0429a1080c6af7f378ccd44cee38e",
+      "tools/test-reader-tts-preferences.mjs": "002adeb8db9421a6c1a6aabcc3b7302321243302d9ba2c58324487342b0e21b1",
+      "tools/test-reader-tts-product-surface.mjs": "b8f953d90911e8dec75ce1e66de2efb5626cf20e6a09f277efaff968660cdd88",
+      "tools/test-reader-window-chrome-p0.mjs": "f0d9df859d3a7cdcdc765a22ae7c51f3c63956854e14b3101d55cd55ec15603a",
+      "tools/test-sync-webdav-product.mjs": "243063fcd58a1459963c401e3b1429c3870df90960ce84a0a705bdf8e43a31ce",
+      "tools/test-window-flicker-dedup.mjs": "3493a9ca08e1d52e4bb9254941733f1b1f571b5a0a26ee0632ca7136e9f0d061"
+    },
+    "allBytesUnchanged": true,
+    "coreReview": "core-commit-review/streaming-xhtml-commit-review.json",
+    "exception": "New and explicitly corrected documentation only; existing production changes were split into commits without repair."
+  },
+  "validation": {
+    "harmonyExistingContractSuites": {
+      "passed": 198,
+      "log": "current-local-contracts.log",
+      "scope": "Existing local regression baseline; some design assertions are themselves incorrect, not full acceptance."
+    },
+    "coreSafePreStreaming": {
+      "passed": 252,
+      "head": "c42af9a1fb09380bd979f1237b2cff7ee3bb597f"
+    },
+    "coreStreamingWipOrdinarySuite": {
+      "passed": 253
+    },
+    "newAuditProbes": {
+      "remoteTocDefectClassesReproduced": 2,
+      "surfaceDefectClassesReproduced": 4,
+      "streamingThresholdFailures": 4,
+      "fixedInThisTurn": false
+    },
+    "artifactOrDeviceAcceptance": false,
+    "deliverable": false
+  },
+  "rootDocumentSnapshots": [
+    {
+      "liveSource": "/Users/minliny/Documents/Reader/DEVELOPMENT_BACKLOG.md",
+      "snapshot": "workspace-development-backlog.snapshot.md",
+      "sha256": "9f0ef674f83ba8462b7c23d358e05729e27712f680025d6c3266588269ba90bb",
+      "scope": "Immutable audit-time snapshot; future task state is maintained only in the live root DEVELOPMENT_BACKLOG.md."
+    },
+    {
+      "liveSource": "/Users/minliny/Documents/Reader/AUDIT_2026-08-12.md",
+      "snapshot": "workspace-audit.snapshot.md",
+      "sha256": "b26e22c502b1e80746faffc05020a08a725e1aec4ff5da3cd48827433b7365bd",
+      "scope": "Immutable audit-time snapshot; future task state is maintained only in the live root DEVELOPMENT_BACKLOG.md."
+    }
+  ],
+  "repositorySnapshots": [
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader UI",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-UI",
+      "branch": "codex/workspace-cleanup-20260904",
+      "headBeforeFinalDocumentationCommit": "fe7920ea67b328a97df3c938342913608cf5c601",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-Core",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-Core",
+      "branch": "main",
+      "headBeforeFinalDocumentationCommit": "68f21e914ee2993ea7c28a3a3bed685fe620fda9",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "branch": "main",
+      "headBeforeFinalDocumentationCommit": "9ccb0c74c25b335a9bdea50dc1f2fb6003191ed2",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-UI",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-UI",
+      "branch": "codex/workspace-cleanup-20260904",
+      "headBeforeFinalDocumentationCommit": "fe7920ea67b328a97df3c938342913608cf5c601",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-Android",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-Android",
+      "branch": "main",
+      "headBeforeFinalDocumentationCommit": "dfd81cf4bf8e8dcd9ed2fd935e8c83360a54586b",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "branch": "codex/appearance-progress-axis-20260904",
+      "headBeforeFinalDocumentationCommit": "6a0725e2ee1ec3b77fcb6ecb9d0beaa87a3b8717",
+      "cleanAtSnapshot": false,
+      "pendingAtSnapshot": [
+        "?? docs/READER_REPAIR_SPEC.md",
+        "?? evidence/2026-09-13-current-gap-register/"
+      ]
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-baseline",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-baseline",
+      "branch": "",
+      "headBeforeFinalDocumentationCommit": "6547053caf284183dc710c914c7a062077a89c90",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-gap",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-gap",
+      "branch": "dev/capability-gap",
+      "headBeforeFinalDocumentationCommit": "9231eebb49461582f417c8f84d0f16d025c2042f",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-hwshadow",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-hwshadow",
+      "branch": "feat/page-turn-render-latency-20260904",
+      "headBeforeFinalDocumentationCommit": "acf32dff6f5cd61367a82959b2492f2f31c5398b",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-pageturn",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-pageturn",
+      "branch": "dev/pageturn-sim",
+      "headBeforeFinalDocumentationCommit": "53031419bc94d3ad1c6021a5d27f4c13d88382a8",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-visual",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS-visual",
+      "branch": "visual/acceptance",
+      "headBeforeFinalDocumentationCommit": "4db4c07b9e6782bf9f37f1ba1b9412e5d9c2dd74",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-Windows",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-Windows",
+      "branch": "main",
+      "headBeforeFinalDocumentationCommit": "6e885322ec3b6041813bf7f94a862cdfc18d7b63",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-iOS",
+      "resolvedPath": "/Users/minliny/Documents/Reader/Reader-for-iOS",
+      "branch": "main",
+      "headBeforeFinalDocumentationCommit": "2b2ddc591b4f66182f0f9f78d5df652a96650bac",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/wt-20260831-bookmark",
+      "resolvedPath": "/Users/minliny/Documents/Reader/wt-20260831-bookmark",
+      "branch": "feat/bookmark-projection",
+      "headBeforeFinalDocumentationCommit": "433fce91c97a73a2fd09108bf6d7da70003c246d",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/wt-20260831-pageturn",
+      "resolvedPath": "/Users/minliny/Documents/Reader/wt-20260831-pageturn",
+      "branch": "feat/pageturn-arkui-barrier",
+      "headBeforeFinalDocumentationCommit": "6c39f45617700889045c18fd5656d0ca14696690",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/wt-20260831-search",
+      "resolvedPath": "/Users/minliny/Documents/Reader/wt-20260831-search",
+      "branch": "feat/search-source-identity",
+      "headBeforeFinalDocumentationCommit": "b96ec3f6b1798c0b27e7d74ed805d6033c69b851",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/wt-20260831-supply",
+      "resolvedPath": "/Users/minliny/Documents/Reader/wt-20260831-supply",
+      "branch": "feat/source-supply-chain",
+      "headBeforeFinalDocumentationCommit": "ce24c25a41a0f7d473c625b4094ad1507445a037",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/wt-20260831-tts",
+      "resolvedPath": "/Users/minliny/Documents/Reader/wt-20260831-tts",
+      "branch": "feat/tts-state-machine",
+      "headBeforeFinalDocumentationCommit": "f6d62c63e40d04e937bdf72a461b7f6c64ca0066",
+      "cleanAtSnapshot": true,
+      "pendingAtSnapshot": []
+    }
+  ],
+  "preservation": [
+    "No reset, stash, checkout, rebase, clean, directory rename, removal or new root Git repository.",
+    "All unrelated repository/worktree states were clean at inspection and were left unchanged.",
+    "WIP commits retain known defects with explicit commit-body limitations.",
+    "Raw evidence whitespace and original dates are retained; ARCHIVE_SCOPE and supersession notices distinguish historical claims."
+  ]
+}

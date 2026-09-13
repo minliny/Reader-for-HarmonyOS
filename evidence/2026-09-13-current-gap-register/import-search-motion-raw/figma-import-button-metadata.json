@@ -1,0 +1,13 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "<frame id=\"2657:905\" name=\"Page2ImportResult\" x=\"0\" y=\"560\" width=\"350\" height=\"76\">\n  <frame id=\"2657:906\" name=\"Button\" x=\"16\" y=\"16\" width=\"318\" height=\"40\">\n    <frame id=\"2657:907\" name=\"Icon\" x=\"136\" y=\"13\" width=\"14\" height=\"14\" />\n    <text id=\"2657:910\" name=\"完成\" x=\"156\" y=\"10\" width=\"26\" height=\"20\" />\n  </frame>\n</frame>"
+    },
+    {
+      "type": "text",
+      "text": "IMPORTANT: After you call this tool, you MUST call get_design_context if trying to implement the design, since this tool only returns metadata. If you do not call get_design_context, the agent will not be able to implement the design."
+    }
+  ],
+  "isError": false
+}

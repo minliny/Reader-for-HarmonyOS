@@ -1,0 +1,72 @@
+{
+  "retrievedAt": "2026-09-13T18:14:39+08:00",
+  "source": "CUA read-only Figma Make preview DOM",
+  "fileKey": "SW2sjgSEPEPuPwyR0TULyP",
+  "version": "Version 5",
+  "selector": "iframe[title=\"Preview\"] svg.animate-spin",
+  "computedStyles": [
+    {
+      "animation": "1s linear infinite spin",
+      "animationDuration": "1s",
+      "animationIterationCount": "infinite",
+      "animationName": "spin",
+      "animationTimingFunction": "linear",
+      "height": "13",
+      "transformBox": "view-box",
+      "transformOrigin": "6.5px 6.5px",
+      "viewBox": "0 0 24 24",
+      "width": "13"
+    },
+    {
+      "animation": "1s linear infinite spin",
+      "animationDuration": "1s",
+      "animationIterationCount": "infinite",
+      "animationName": "spin",
+      "animationTimingFunction": "linear",
+      "height": "36",
+      "transformBox": "view-box",
+      "transformOrigin": "18px 18px",
+      "viewBox": "0 0 24 24",
+      "width": "36"
+    },
+    {
+      "animation": "1s linear infinite spin",
+      "animationDuration": "1s",
+      "animationIterationCount": "infinite",
+      "animationName": "spin",
+      "animationTimingFunction": "linear",
+      "height": "13",
+      "transformBox": "view-box",
+      "transformOrigin": "6.5px 6.5px",
+      "viewBox": "0 0 24 24",
+      "width": "13"
+    },
+    {
+      "animation": "1s linear infinite spin",
+      "animationDuration": "1s",
+      "animationIterationCount": "infinite",
+      "animationName": "spin",
+      "animationTimingFunction": "linear",
+      "height": "36",
+      "transformBox": "view-box",
+      "transformOrigin": "18px 18px",
+      "viewBox": "0 0 24 24",
+      "width": "36"
+    }
+  ],
+  "styleText": "@keyframes spin {\n  to {\n    transform: rotate(360deg);\n  }\n}",
+  "keyframesCapture": "Read actual rendered <style> text from Make preview; no network fetch or application-state access",
+  "unsupportedAttempt": "Read-only DOM shim did not provide e.getAnimations(): TypeError e.getAnimations is not a function. Replaced with supported getComputedStyle plus DOM <style> text. No animation mutation was attempted.",
+  "codeViewCapture": {
+    "appCharacters": 27356,
+    "appLines": 628,
+    "spinnerLine": 71,
+    "animateSpinLine": 74,
+    "loadingLine": 258,
+    "loading36Line": 261,
+    "demoTimeoutLine": 389,
+    "buttonOnlyTransitionLine": 485,
+    "header13Line": 488,
+    "conditionalLoadingLine": 538
+  }
+}

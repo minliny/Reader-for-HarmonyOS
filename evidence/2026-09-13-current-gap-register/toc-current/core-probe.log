@@ -1,0 +1,8 @@
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-toc-audit-20260913 v0.0.0 (/tmp/reader-toc-audit-20260913)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.92s
+     Running `target/debug/reader-toc-audit-20260913`
+event: Result { protocol_version: 1, request_id: 1, data: Object {"bookId": String("https://example.test/book/1"), "sourceId": String("probe"), "toc": Array []} }
+bookUrl context: Finished
+event: Result { protocol_version: 1, request_id: 1, data: Object {"bookId": String("https://example.test/book/1"), "sourceId": String("probe"), "toc": Array [Object {"index": Number(0), "title": String("Chapter one"), "url": String("https://example.test/chapter/1")}]} }
+baseUrl positive control: Finished

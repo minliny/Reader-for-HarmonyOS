@@ -1,0 +1,332 @@
+   Compiling reader-local-book v0.1.0 (/private/tmp/reader-core-commit-review-_nrqq3ws/crates/reader-local-book)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.97s
+     Running unittests src/lib.rs (target/debug/deps/reader_local_book-6dd82108a4b0e18e)
+
+running 178 tests
+test epub::structural_tests::ncx_nested_points_keep_their_own_targets ... ok
+test epub::tests::epub_image_path_normalization_rejects_archive_escape ... ok
+test epub::structural_tests::navigation_uses_expanded_type_and_preserves_nested_links ... ok
+test epub::structural_tests::metadata_namespaces_entities_and_scope_are_respected ... ok
+test epub::structural_tests::structural_href_entities_are_decoded_exactly_once ... ok
+test epub::structural_tests::malformed_xml_and_entity_expansion_do_not_become_metadata ... ok
+test epub::tests::extract_rootfile_path_finds_opf ... ok
+test epub::tests::parse_nav_toc_extracts_anchors ... ok
+test epub::tests::extract_xhtml_body_text_strips_script_and_tags ... ok
+test epub::tests::html5ever_dom_handles_quoted_attributes_case_and_named_entities ... ok
+test epub::tests::extract_xhtml_body_text_preserves_block_paragraphs_and_inline_breaks ... ok
+test epub::tests::parse_ncx_toc_extracts_navpoints ... ok
+test epub::tests::parse_opf_description_decodes_entities ... ok
+test epub::tests::parse_opf_description_blank_when_missing ... ok
+test epub::structural_tests::malformed_legacy_navigation_uses_existing_html_parser ... ok
+test epub::tests::parse_opf_extracts_description_stripping_html ... ok
+test epub::tests::parse_opf_extracts_title_author_and_manifest ... ok
+test epub::tests::read_zip_text_enforces_aggregate_read_budget ... ok
+test epub::structural_tests::ncx_public_doctype_is_accepted_without_external_loading ... ok
+test epub::tests::read_zip_text_strips_utf8_bom_before_xml_consumers ... ok
+test epub::tests::reading_content_retains_relative_epub_image_as_core_locator ... ok
+test epub::tests::required_spine_and_toc_failures_are_not_partial_success ... ok
+test epub::tests::resolve_href_handles_fragment_and_subdir ... ok
+test epub::tests::toc_chapters_slice_same_document_fragments_and_keep_unfragmented_rows ... ok
+test epub::tests::unresolved_fragment_keeps_legacy_whole_document_behavior ... ok
+test metadata::tests::common_chinese_filename_forms_keep_title_and_author ... ok
+test mobi_decoder::tests::malformed_record_offsets_are_rejected_before_libmobi_allocates ... ok
+test mobi_decoder::tests::oversized_declared_text_is_rejected_before_libmobi_allocates ... ok
+test pdf::tests::extract_strings_from_pdf_array_handles_parens ... ok
+test pdf::tests::decode_pdf_string_handles_escapes ... ok
+test pdf::tests::has_pdf_structure_rejects_truncated ... ok
+test pdf::tests::detect_pdf_signature ... ok
+test tests::chapter_heading_detection_accepts_common_forms_and_rejects_long_lines ... ok
+test metadata::tests::provenance_records_all_non_manual_fields ... ok
+test pdf::tests::parse_pdf_content_extracts_tj_text ... ok
+test tests::chapter_split_policy_wire_values_match_legacy_reader_core_model ... ok
+test tests::empty_or_blank_input_is_rejected ... ok
+test tests::chapter_split_policy_round_trips_and_validates_parameters ... ok
+test tests::epub_archive_preflight_fails_closed_for_encryption_marker ... ok
+test tests::epub_archive_preflight_reports_missing_container_and_unsafe_paths ... ok
+test tests::epub_html_text_boundary_suppresses_invisible_blocks_and_uses_image_fallbacks ... ok
+test tests::epub_html_text_boundary_is_bounded_and_rejects_drifted_request ... ok
+test epub::structural_tests::equivalent_containers_import_the_same_book_and_positions ... ok
+test tests::epub_import_diagnostics_classify_nav_ncx_and_missing_resource_boundaries ... ok
+test tests::epub_import_diagnostics_fail_closed_for_encryption_without_invalid_opf_noise ... ok
+test tests::epub_nav_chapter_index_deduplicates_unresolved_fragments_by_content_path ... ok
+test tests::epub_html_named_entity_variants_decode_legacy_reader_core_fixtures ... ok
+test tests::epub_nav_chapter_index_decodes_entities_percent_and_document_relative_hrefs ... ok
+test tests::epub_nav_chapter_index_filters_non_linear_spine_targets ... ok
+test tests::epub_navigation_fallback_prefers_valid_nav_before_ncx ... ok
+test tests::epub_nav_chapter_index_splits_known_fragments_within_same_document ... ok
+test tests::epub_navigation_fallback_uses_ncx_when_nav_is_empty ... ok
+test tests::epub_navigation_fallback_uses_linear_spine_when_nav_and_ncx_are_empty ... ok
+test tests::epub_package_metadata_fails_closed_for_missing_identifier_and_drifted_json ... ok
+test tests::epub_resource_index_classifies_manifest_media_and_cover_image_property ... ok
+test tests::epub_package_metadata_extracts_legacy_identifier_artifact ... ok
+test tests::epub_resource_index_selects_epub2_cover_meta_before_image_heuristic ... ok
+test tests::epub_opf_preflight_keeps_valid_spine_items_while_reporting_structural_drift ... ok
+test tests::invalid_metadata_rejects_empty_book_id ... ok
+test tests::epub_text_entity_fixture_decodes_metadata_nav_and_preview ... ok
+test tests::local_book_backup_metadata_from_book_uses_parsed_book_state ... ok
+test tests::gbk_encoded_chinese_txt_is_decoded ... ok
+test tests::local_book_backup_metadata_defaults_match_legacy_reader_core ... ok
+test tests::gb18030_label_is_assigned_when_gbk_path_is_not_clean ... ok
+test tests::local_book_cache_metadata_invalidation_matches_legacy_store_rules ... ok
+test tests::local_book_backup_metadata_round_trips_and_denies_unknown_fields ... ok
+test tests::local_book_cache_metadata_upsert_replaces_and_enumerates_by_key ... ok
+test tests::local_book_cache_metadata_round_trips_legacy_shape_and_validates ... ok
+test tests::local_book_backup_metadata_rejects_invalid_required_or_optional_fields ... ok
+test tests::local_book_cache_state_wire_values_match_legacy_runtime ... ok
+test tests::local_book_capability_level_wire_values_match_legacy_reader_core_model ... ok
+test tests::local_book_capability_validation_rejects_drifted_boundary_metadata ... ok
+test tests::local_book_capability_report_preserves_host_owned_parity_boundary ... ok
+test tests::local_book_change_and_validation_policy_wire_values_match_legacy_runtime ... ok
+test tests::local_book_catalog_remove_lookup_and_validation_match_legacy_store ... ok
+test tests::local_book_catalog_upsert_replaces_rows_and_sorts_like_legacy_store ... ok
+test tests::local_book_change_decision_matches_legacy_priority_rules ... ok
+test tests::local_book_change_decision_matches_legacy_policy_state_machine ... ok
+test tests::local_book_duplicate_decision_matches_legacy_full_fingerprint_rules ... ok
+test tests::local_book_chapter_read_request_and_prefetch_plan_match_legacy_runtime_window ... ok
+test tests::local_book_duplicate_decision_wire_values_match_legacy_runtime ... ok
+test tests::local_book_duplicate_decision_matches_legacy_semantic_rules ... ok
+test tests::local_book_format_capability_matches_legacy_core_boundary ... ok
+test tests::local_book_format_detection_accepts_webdav_descriptor_without_fetching ... ok
+test tests::local_book_format_detection_request_defaults_and_preview_cap_match_legacy_core ... ok
+test tests::local_book_format_detection_uses_declared_extension_mime_and_magic ... ok
+test tests::local_book_format_rejects_unknown_or_drifted_wire_values ... ok
+test tests::local_book_format_wire_values_match_legacy_reader_core_model ... ok
+test tests::local_book_html_text_boundary_is_bounded_and_rejects_drifted_request ... ok
+test tests::local_book_import_materialization_plan_handles_empty_books_and_json_drift ... ok
+test tests::local_book_import_state_and_mode_wire_values_match_legacy_runtime ... ok
+test tests::local_book_html_text_boundary_extracts_standalone_title_and_visible_preview ... ok
+test tests::local_book_import_materialization_plan_matches_legacy_mode_matrix ... ok
+test tests::local_book_library_metrics_rejects_inconsistent_recovery32_inputs ... ok
+test tests::local_book_library_metrics_summarize_recovery32_runner_counts ... ok
+test tests::local_book_media_type_mappings_match_legacy_runtime ... ok
+test tests::local_book_reading_progress_json_and_validation_match_legacy_shape ... ok
+test tests::local_book_library_parse_and_remove_are_bounded ... ok
+test tests::local_book_library_reports_missing_chapter_and_invalid_keys ... ok
+test tests::local_book_reading_progress_resets_when_book_or_index_is_missing ... ok
+test tests::local_book_reading_progress_resolves_by_locator_ordinal_and_nearest ... ok
+test tests::local_book_reading_progress_resolves_exact_and_stale_fingerprint_first ... ok
+test tests::local_book_library_upsert_get_list_and_chapter_round_trip ... ok
+test tests::local_book_reading_restore_state_wire_values_match_legacy_runtime ... ok
+test tests::local_book_resource_kind_wire_values_and_classification_match_legacy_runtime ... ok
+test tests::local_book_resource_read_json_shape_and_validation_reject_drift ... ok
+test tests::local_book_resource_read_plan_matches_legacy_safety_size_and_cache_rules ... ok
+test tests::local_book_snapshot_replace_is_atomic_on_validation_failure ... ok
+test tests::local_book_snapshot_replace_round_trips_and_empty_clears ... ok
+test tests::local_reading_progress_accepts_boundary_fractions_and_rejects_invalid_state ... ok
+test tests::local_book_snapshot_export_is_stable_and_json_round_trips ... ok
+test tests::local_book_snapshot_rejects_schema_duplicates_invalid_books_and_unknown_fields ... ok
+test tests::local_book_store_snapshot_rejects_drifted_progress_and_host_path_cache_keys ... ok
+test tests::local_reading_progress_defaults_match_legacy_reader_core ... ok
+test tests::local_reading_progress_round_trips_full_shape_and_domain_progress ... ok
+test tests::local_reading_progress_update_keeps_newest_and_allows_equal_timestamp ... ok
+test tests::local_toc_item_defaults_and_json_match_legacy_reader_core ... ok
+test tests::local_toc_item_rejects_empty_titles_bad_levels_and_unknown_fields ... ok
+test tests::local_toc_item_tree_round_trips_children_and_offsets ... ok
+test tests::local_toc_tree_flattens_depth_first_to_domain_toc ... ok
+test tests::local_book_store_snapshot_persists_catalog_progress_and_cache_without_host_paths ... ok
+test tests::marker_chapter_split_policy_matches_legacy_titles ... ok
+test tests::no_heading_txt_becomes_single_body_chapter ... ok
+test tests::odd_utf16_byte_length_is_rejected ... ok
+test tests::parses_utf8_txt_into_book_toc_and_chapters ... ok
+test tests::short_no_heading_txt_still_single_chapter ... ok
+test tests::missing_policy_parameter_falls_back_to_single_chapter ... ok
+test tests::size_chapter_split_policy_divides_utf8_byte_chunks ... ok
+test tests::unsupported_non_utf8_without_bom_is_rejected ... ok
+test tests::utf16le_bom_is_decoded ... ok
+test tests::utf16be_bom_is_decoded ... ok
+test tests::title_option_overrides_file_name ... ok
+test tests::utf8_bom_is_detected_and_stripped ... ok
+test tests::webdav_descriptor_artifact_matches_legacy_format_differential_fixture ... ok
+test tests::webdav_descriptor_artifact_rejects_drifted_fixture_evidence ... ok
+test txt::tests::detects_bracketed_headings ... ok
+test txt::tests::detects_chinese_chapter_headings ... ok
+test txt::tests::detects_english_chapter_headings ... ok
+test txt::tests::detects_special_headings ... ok
+test tests::regex_chapter_split_policy_drives_txt_parsing ... ok
+test txt::tests::match_rule_returns_none_for_blank_content ... ok
+test tests::long_no_heading_txt_splits_into_size_chunks ... ok
+test txt::tests::match_rule_returns_none_for_empty_rules ... ok
+test txt::tests::match_rule_orders_by_serial_number_ascending ... ok
+test mobi_decoder::tests::retained_mobi_resource_can_be_read_without_an_in_memory_book ... ok
+test txt::tests::match_rule_returns_none_when_no_rule_reaches_threshold ... ok
+test txt::tests::match_rule_picks_first_adequate_rule_not_best_matching ... ok
+test txt::tests::match_rule_selects_rule_at_exactly_four_matches ... ok
+test txt::tests::match_rule_is_deterministic_across_calls ... ok
+test txt::tests::parses_simple_two_chapter_text ... ok
+test txt::tests::match_rule_skips_blank_and_invalid_patterns ... ok
+test txt::tests::rejects_non_chapter_lines_starting_with_第 ... ok
+test txt::tests::rejects_long_lines_and_body_text ... ok
+test txt::tests::split_chapters_empty_rule_falls_back_to_single_chapter ... ok
+test txt::tests::split_chapters_invalid_regex_falls_back ... ok
+test txt::tests::match_rule_skips_disabled_rules ... ok
+test txt::tests::split_chapters_no_match_returns_single_chapter ... ok
+test txt::tests::split_chapters_with_rules_empty_rules_falls_back_to_single_chapter ... ok
+test txt::tests::split_chapters_merges_close_matches_via_gap_heuristic ... ok
+test txt::tests::split_chapters_with_body_returns_body_text ... ok
+test txt::tests::split_chapters_with_rules_no_match_falls_back_to_single_chapter ... ok
+test txt::tests::split_chapters_splits_on_regex_matches_with_gap ... ok
+test txt::tests::toc_and_chapter_body_round_trip ... ok
+test umd::tests::detect_umd_recognizes_magic ... ok
+test umd::tests::parse_umd_book_breaks_on_truncated_chunk ... ok
+test umd::tests::parse_umd_book_extracts_title_author_content ... ok
+test umd::tests::parse_umd_book_parses_chapter_info ... ok
+test umd::tests::parse_umd_book_rejects_non_umd_magic ... ok
+test umd::tests::xor_decrypt_strips_pad_and_decrypts ... ok
+test umd::tests::parse_umd_local_book_builds_single_chapter ... ok
+test umd::tests::parse_umd_local_book_splits_by_chapter_offsets ... ok
+test txt::tests::split_chapters_with_rules_uses_selected_rule_to_split ... ok
+test txt::tests::split_chapters_with_rules_picks_best_rule_among_candidates ... ok
+test txt::tests::split_chapters_with_rules_result_is_stable_across_calls ... ok
+test epub::structural_tests::deep_metadata_traversal_does_not_recurse_in_reader ... ok
+test epub::tests::parse_epub_book_rejects_oversized_structural_entry ... ok
+test epub::tests::read_zip_text_rejects_entry_exceeding_per_entry_limit ... ok
+test epub::tests::parse_epub_book_rejects_oversized_chapter_without_reading_it ... ok
+
+test result: ok. 178 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+
+     Running tests/canonical_checksum.rs (target/debug/deps/canonical_checksum-71bc0cb95fe82c0b)
+
+running 5 tests
+test empty_parts_yield_offset_basis ... ok
+test joined_parts_use_pipe_separator ... ok
+test checksum_is_deterministic_across_calls ... ok
+test multibyte_utf8_hashes_over_bytes ... ok
+test single_part_pins_known_vector ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/content_integrity.rs (target/debug/deps/content_integrity-f6c77f1f960de787)
+
+running 7 tests
+test ordinal_author_notes_remain_body_in_both_txt_entry_points ... ok
+test number_dot_headings_need_sequential_prose_and_preserve_explanatory_lists ... ok
+test fragment_mapping_preserves_prefix_and_never_repeats_a_body ... ok
+test nested_navigation_resolves_from_its_own_directory ... ok
+test legacy_snapshot_integrity_defaults_to_unverified ... ok
+test missing_navigation_is_recoverable_but_missing_spine_content_is_fatal ... ok
+test spine_covers_unlinked_body_and_auxiliary_navigation_cannot_duplicate_it ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/dispatch_integration.rs (target/debug/deps/dispatch_integration-d8aea5fb7109c72d)
+
+running 9 tests
+test dispatch_rejects_empty_input ... ok
+test dispatch_routes_txt_to_txt_parser ... ok
+test dispatch_routes_mobi_to_mobi_parser ... ok
+test dispatch_routes_pdf_to_pdf_parser ... ok
+test dispatch_routes_umd_whole_text_by_magic ... ok
+test dispatch_routes_umd_by_magic_and_extension ... ok
+test dispatch_retains_azw_family_over_shared_mobi_container ... ok
+test rule_aware_dispatch_preserves_non_txt_parsers ... ok
+test dispatch_routes_epub_to_epub_parser ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/epub_fixture.rs (target/debug/deps/epub_fixture-820670efdaf055cf)
+
+running 2 tests
+test fixture_opf_without_identifier_fails_closed_with_diagnostic ... ok
+test fixture_opf_extracts_stable_package_metadata ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/epub_parser_fixture.rs (target/debug/deps/epub_parser_fixture-e24bcdb31283a70e)
+
+running 10 tests
+test rejects_empty_epub_input ... ok
+test parses_epub_spine_only_fallback ... ok
+test parses_epub2_ncx_flat_toc ... ok
+test parses_epub3_nav_with_spine_resources ... ok
+test does_not_treat_an_undeclared_png_as_a_cover ... ok
+test epub3_body_image_fixture_is_renderable_and_locator_reads_the_same_png ... ok
+test does_not_guess_an_undeclared_or_unsupported_cover ... ok
+test returns_epub2_metadata_declared_jpeg_cover ... ok
+test returns_epub3_declared_png_cover_as_bounded_data_uri ... ok
+test ignores_a_declared_cover_over_the_data_uri_limit ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/local_book_metadata.rs (target/debug/deps/local_book_metadata-eef9b067eb3ac2b5)
+
+running 7 tests
+test missing_filename_retains_id_fallback_and_body ... ok
+test explicit_metadata_overrides_each_inferred_field_independently ... ok
+test embedded_metadata_is_cleaned_and_explicit_fields_win_independently ... ok
+test ambiguous_names_and_real_title_qualifiers_are_preserved ... ok
+test filename_metadata_is_shared_by_default_and_rule_aware_imports ... ok
+test placeholder_and_generated_metadata_fall_back_without_discarding_valid_titles ... ok
+test every_supported_format_uses_the_same_filename_fallback ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/mobi_fixture.rs (target/debug/deps/mobi_fixture-9a3e4e8673d1d164)
+
+running 4 tests
+test signature_or_text_fragments_do_not_establish_readability ... ok
+test truncated_records_and_encryption_fail_closed ... ok
+test mobi_uses_shared_explicit_metadata_normalization ... ok
+test upstream_complete_books_have_full_text_and_chapter_ranges ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/pdf_fixture.rs (target/debug/deps/pdf_fixture-ef579041105de13f)
+
+running 3 tests
+test rejects_invalid_pdf_document ... ok
+test pdf_empty_text_yields_ocr_unavailable_chapter ... ok
+test parses_pdf_text_page_pdfkit ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/txt_edgecases.rs (target/debug/deps/txt_edgecases-f15d8b88cd85c9ef)
+
+running 17 tests
+test empty_file_produces_no_chapters_and_no_title ... ok
+test content_before_first_heading_becomes_prologue_chapter ... ok
+test full_chapter_pipeline_round_trips_through_domain_model ... ok
+test crlf_line_endings_are_normalized_to_lf ... ok
+test english_chapter_headings_are_detected ... ok
+test duplicate_headings_are_kept_and_distinguished_by_index ... ok
+test lone_cr_line_endings_are_normalized_to_lf ... ok
+test leading_and_trailing_blank_lines_around_body_are_trimmed ... ok
+test metadata_includes_kind_and_last_chapter ... ok
+test min_chapter_chars_merges_short_middle_segment ... ok
+test mixed_line_endings_are_normalized ... ok
+test no_headings_folds_content_into_single_chapter ... ok
+test no_headings_with_extract_title_disabled_keeps_title_in_body ... ok
+test special_headings_are_detected ... ok
+test toc_entries_have_empty_url_for_local_books ... ok
+test utf8_bom_is_stripped_before_parsing ... ok
+test whitespace_only_file_produces_no_chapters ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/txt_fixture.rs (target/debug/deps/txt_fixture-ed9a662711776f77)
+
+running 6 tests
+test fixture_toc_is_stable_and_local_urls_empty ... ok
+test fixture_chapter_body_accessor_round_trips ... ok
+test fixture_strips_bom_and_extracts_title ... ok
+test fixture_detects_prologue_plus_three_chapters ... ok
+test fixture_parse_is_deterministic_across_calls ... ok
+test fixture_normalizes_crlf_and_trims_bodies ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/umd_fixture.rs (target/debug/deps/umd_fixture-ae1bfd10c678c9f9)
+
+running 4 tests
+test rejects_empty_umd_input ... ok
+test parses_umd_minimal_metadata_only_book ... ok
+test parses_umd_whole_text_book ... ok
+test parses_umd_simple_chaptered_book ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests reader_local_book
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

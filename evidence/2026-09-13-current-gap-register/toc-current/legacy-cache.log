@@ -1,0 +1,1 @@
+{"probe":"durable_toc_without_acquisition_facts","code":"emptyToc","calls":["source.list","search-book.get","book.detail","book.toc"],"diagnostic":{"sourceId":"s","bookId":"b","tocUrl":"https://example.test/toc","returnedEntryCount":0}}

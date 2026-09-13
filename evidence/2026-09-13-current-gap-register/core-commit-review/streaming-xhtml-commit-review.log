@@ -1,0 +1,41 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running unittests src/lib.rs (target/debug/deps/reader_local_book-a7e29c20b1c16f79)
+
+running 4 tests
+
+thread 'epub::commit_review_probes::threshold_preserves_html_raw_text' (59013867) panicked at crates/reader-local-book/src/epub.rs:2167:9:
+assertion `left == right` failed
+  left: ("before\n\nA &\n\nliteral\n\nafter", {})
+ right: ("before\n\nA & <p>literal\n\nafter", {})
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'epub::commit_review_probes::threshold_preserves_html_void_br' (59013868) panicked at crates/reader-local-book/src/epub.rs:2152:9:
+assertion `left == right` failed
+  left: ("firstsecond", {})
+ right: ("first\nsecond", {})
+
+thread 'epub::commit_review_probes::threshold_preserves_script_raw_text_semantics' (59013870) panicked at crates/reader-local-book/src/epub.rs:2157:9:
+assertion `left == right` failed
+  left: ("", {})
+ right: ("visible", {"kept": 0})
+test epub::commit_review_probes::threshold_preserves_html_void_br ... FAILED
+test epub::commit_review_probes::threshold_preserves_html_raw_text ... FAILED
+test epub::commit_review_probes::threshold_preserves_script_raw_text_semantics ... FAILED
+
+thread 'epub::commit_review_probes::threshold_preserves_navigation_anchor_after_4096' (59013869) panicked at crates/reader-local-book/src/epub.rs:2162:9:
+assertion `left == right` failed
+  left: None
+ right: Some(4099)
+test epub::commit_review_probes::threshold_preserves_navigation_anchor_after_4096 ... FAILED
+
+failures:
+
+failures:
+    epub::commit_review_probes::threshold_preserves_html_raw_text
+    epub::commit_review_probes::threshold_preserves_html_void_br
+    epub::commit_review_probes::threshold_preserves_navigation_anchor_after_4096
+    epub::commit_review_probes::threshold_preserves_script_raw_text_semantics
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 179 filtered out; finished in 0.34s
+
+error: test failed, to rerun pass `-p reader-local-book --lib`

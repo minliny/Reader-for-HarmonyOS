@@ -1,0 +1,2 @@
+{"recordedAt":"2026-09-12T17:56:18.097Z","targetRef":"6460677a198b","event":"ready","log":"/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/device-probe-20260913/reader-control-probe-1789235778097-87e19322-0168-4649-bc46-fb2366c379f0.jsonl","warning":"Lock acquired only; boot readiness/authorization must already be established externally. No retries or service startup."}
+{"recordedAt":"2026-09-12T17:56:18.099Z","targetRef":"6460677a198b","event":"closed","reason":"quit-or-eof"}

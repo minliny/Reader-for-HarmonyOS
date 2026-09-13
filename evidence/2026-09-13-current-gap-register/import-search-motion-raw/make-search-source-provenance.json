@@ -1,0 +1,49 @@
+{
+  "fileKey": "SW2sjgSEPEPuPwyR0TULyP",
+  "title": "书籍搜索页设计",
+  "version": "Version 5",
+  "method": "CUA: Chrome official Figma Make Code view > Download code; App.tsx independently copied from code editor and inspected before archive",
+  "sourceZip": "/Users/minliny/Downloads/书籍搜索页设计.zip",
+  "downloadModifiedAt": "2026-09-13T18:14:39.418564",
+  "zipSha256": "9c84d303e69d1a50c4049e36d41f01344619157d74a48185439569a8386e7c17",
+  "extracted": [
+    {
+      "source": "src/app/App.tsx",
+      "bytes": 32181,
+      "characters": 27356,
+      "sha256": "3585f71d1c69336b785e9c81a2d7634fd1a9e84a643541e5e93c98c733ee4007"
+    },
+    {
+      "source": "src/styles/globals.css",
+      "bytes": 0,
+      "characters": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "src/styles/tailwind.css",
+      "bytes": 98,
+      "characters": 98,
+      "sha256": "c7dddb734b0c9e3cfaa6698cd725f018b8a5e41f847ae42fd9b0269d44ee9ff4"
+    },
+    {
+      "source": "src/styles/index.css",
+      "bytes": 72,
+      "characters": 72,
+      "sha256": "9cf0c73c5a7251c9e1f087665c7936fb39a0ee7641cae20cd4b18955a32ed099"
+    },
+    {
+      "source": "src/styles/theme.css",
+      "bytes": 5416,
+      "characters": 5416,
+      "sha256": "c1681f2234da40e988e2bbcb47d779d4501ae2d87cf5a5dad43e13b5224f15ea"
+    },
+    {
+      "source": "package.json",
+      "bytes": 2571,
+      "characters": 2571,
+      "sha256": "52d15119e7988184efbc5aba936fa5f893c146937ccbf04023923583415c3e0d"
+    }
+  ],
+  "productionEdited": false,
+  "figmaEdited": false
+}
