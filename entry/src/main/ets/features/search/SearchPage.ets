@@ -473,7 +473,8 @@ export struct SearchPage {
   @Builder
   private stateContent() {
     if (this.presentation.kind === 'initial') {
-      Scroll() { this.initialContent(); }.width('100%').height('100%').scrollBar(BarState.Off);
+      Scroll() { this.initialContent(); }.width('100%').height('100%')
+        .align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'loading') {
       this.loadingContent();
     } else if (this.presentation.kind === 'results') {
@@ -517,9 +518,8 @@ export struct SearchPage {
         .height(26)
         .alignItems(VerticalAlign.Center);
 
-        // History chips show the first 4; when more remain, the action is kept
-        // in a trailing row so its position is stable regardless of chip
-        // wrapping. Expanded history exposes the matching collapse action.
+        // Measured chips fill at most two rows. The matching expand/collapse
+        // action stays in its trailing row, independent of chip wrapping.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
           ForEach(this.historyExpanded ? this.presentation.history :
             this.presentation.history.slice(0, this.historyCollapsedCount), (keyword: string) => {
@@ -543,14 +543,8 @@ export struct SearchPage {
           }, (keyword: string): string => `search-history-${keyword}`);
         }
         .width('100%')
-        .padding({ top: TOK_SPACE_CARD_PADDING })
-        .onAreaChange((_old: Area, next: Area): void => {
-          const width = Number(next.width);
-          if (width > 0 && Math.abs(width - this.historyWidth) > .1) {
-            this.historyWidth = width; this.measureHistory();
-          }
-        });
-        if (this.presentation.history.length > this.historyCollapsedCount) {
+        .padding({ top: TOK_SPACE_CARD_PADDING });
+        if (this.historyWidth > 0 && this.presentation.history.length > this.historyCollapsedCount) {
           Row() {
             this.moreChip(this.historyExpanded ? 0 : this.presentation.history.length - this.historyCollapsedCount,
               this.historyExpanded);
@@ -567,6 +561,18 @@ export struct SearchPage {
       right: this.isTablet ? 20 : 18,
       top: 28,
       bottom: 20,
+    })
+    // This container exists before history loads and while the visible chip
+    // count is zero. Measuring the conditional empty Flex creates a cycle:
+    // chips need a measured width, but that width depends on those chips.
+    .onAreaChange((_old: Area, next: Area): void => {
+      const outerWidth = Number(next.width);
+      if (!Number.isFinite(outerWidth)) return;
+      const width = Math.max(0, outerWidth - (this.isTablet ? 40 : 36));
+      if (Math.abs(width - this.historyWidth) > .1) {
+        this.historyWidth = width;
+        this.measureHistory();
+      }
     });
   }
 
@@ -646,7 +652,11 @@ export struct SearchPage {
   }
 
   private measureHistory(): void {
-    if (this.presentation.kind !== 'initial' || this.historyWidth <= 0) return;
+    if (this.presentation.kind !== 'initial') return;
+    if (this.historyWidth <= 0) {
+      this.historyCollapsedCount = 0;
+      return;
+    }
     const widths = this.presentation.history.map((keyword: string): number => {
       const measured = this.getUIContext().getMeasureUtils().measureTextSize({
         textContent: keyword, fontFamily: 'ReaderInter', fontSize: '13fp', fontWeight: '500',
