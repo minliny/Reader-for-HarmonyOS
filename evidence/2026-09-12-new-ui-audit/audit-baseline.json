@@ -1,0 +1,64 @@
+{
+  "capturedAt": "2026-09-12T15:05:32.155Z",
+  "capture": "audit-end input snapshot; production files not edited by this audit",
+  "head": "50cad401ffc6d235f4ac388136ee5213b9b736ad",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets",
+      "sha256": "8df763b5ad4c21249840baf97f6ffe558ae6d5f517e4db472fdc077af34d613f"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts",
+      "sha256": "67e4a624e9d624b3d765ea5ff5ea4d927fbf202b10f6f8ec5f9268c9573da094"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+      "sha256": "cd2f04ff7febdcf4e267dcc3c69ff372df22d8cc45a17c77d5151eebdb6abe44"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets",
+      "sha256": "9a295ccfd40e86beb1a27f56c077c86480acad74588b3569b51673dad7452bf2"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets",
+      "sha256": "85d423a081a42799ec11f33402b22960cfce1d9b1ccc00d963afa9acdfe2e873"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets",
+      "sha256": "8b1b9da94baf89527f6fc9837025426fee36fc1b9a49801b13c774f604893aed"
+    },
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts",
+      "sha256": "7919637fcdf168522cba17c172632c26451d704cde5d6ab680285ee568ccb309"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceGateway.ts",
+      "sha256": "b66cb3db17196e06ace47b8ec6ec3d22519b338c4ac93b44abf1e090760d8fec"
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderCoreGateway.ts",
+      "sha256": "56f8aa263fba9a30f05036a7e62d494efd7431057d6bb333e4a7113a45734dff"
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "sha256": "b01d1c7f181b7379a8dc74b101deeda24d2facc1e58e93ae09e2e1ca0fff0973"
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_filter.svg",
+      "sha256": "7a6aa2f19feea44e685b21a209894622018e9e19045d75e9689af4d939315362"
+    },
+    {
+      "path": "entry/src/main/resources/base/media/bookshelf_filter_active.svg",
+      "sha256": "282874c97032b2c4f844df29077945c179341974aba5c6454a3776d662ef8581"
+    }
+  ],
+  "evidenceLayers": {
+    "codeAudit": "PASS - findings recorded",
+    "newBatchFixes": "OPEN",
+    "localRepairRegression": "OPEN",
+    "newHap": "OPEN",
+    "vm": "OPEN - previous HDC blocker; not used in audit",
+    "physical": "NOT_RUN",
+    "userAcceptance": "OPEN"
+  }
+}

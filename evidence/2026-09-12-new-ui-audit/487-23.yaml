@@ -1,0 +1,103 @@
+metadata:
+  name: Reader UI · Phase 2 Design System & Redraw
+  components:
+    487:23:
+      id: 487:23
+      key: 927c5ccd400fd208c753a779e2e1c8865e09fb30
+      name: Icon=Filter, State=Default, Interaction=Default
+      componentSetId: 487:75
+    271:220:
+      id: 271:220
+      key: 37e6b83f891876f3f41a53766c06c92b727e7b75
+      name: Icon/Filter
+  componentSets:
+    487:75:
+      id: 487:75
+      key: f534d0950a9a41999d6525b1a3a2bd67918a6360
+      name: Library/SectionAction
+      description: 'Exact bookshelf header actions from the live 390×844 demo: 34px target, 20px Tabler icon.'
+nodes:
+  - id: 487:23
+    name: Icon=Filter, State=Default, Interaction=Default
+    type: COMPONENT
+    layout: layout_KA8PX9
+    borderRadius: 17px
+    children:
+      - id: 1993:292
+        name: HitTarget/44
+        type: RECTANGLE
+        layout: layout_Y9058E
+        fills: fill_EFVPEU
+      - id: 1993:293
+        name: InteractionStateLayer
+        type: RECTANGLE
+        layout: layout_22P089
+        fills: fill_WBSK43
+        opacity: 0
+        borderRadius: 12px
+      - id: 487:24
+        name: Icon/Filter · 20px
+        type: IMAGE-SVG
+        layout: layout_YGO1K6
+        componentId: 271:220
+globalVars:
+  styles:
+    layout_KA8PX9:
+      mode: none
+      sizing: {}
+      dimensions:
+        width: 34
+        height: 34
+    layout_Y9058E:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: -5
+        y: -5
+      dimensions:
+        width: 44
+        height: 44
+    fill_EFVPEU:
+      - rgba(255, 255, 255, 0)
+    layout_22P089:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 34
+        height: 34
+    fill_WBSK43:
+      - '#F48B13'
+    layout_YGO1K6:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7
+        y: 7
+      dimensions:
+        width: 20
+        height: 20
+    layout_P6W976:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 20
+        height: 20
+    fill_EJJF78: []
+    layout_74OIC6:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.33
+        y: 3.33
+      dimensions:
+        width: 13.33
+        height: 14.17
+    fill_BN78A5:
+      - '#756F69'
+

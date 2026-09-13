@@ -1,0 +1,111 @@
+metadata:
+  name: Reader UI · Phase 2 Design System & Redraw
+  components:
+    271:392:
+      id: 271:392
+      key: 0c4608239ca8855fa2b5e15ccc146a41902b4233
+      name: Icon/Play
+  componentSets: {}
+nodes:
+  - id: 1939:800
+    name: PersistentActor/Play
+    type: FRAME
+    layout: layout_IIVXHP
+    children:
+      - id: 1939:801
+        name: Italic Text
+        type: IMAGE-SVG
+        layout: layout_PNE0IT
+        fills: fill_2ZH14A
+        effects: effect_IE7ZI0
+        borderRadius: 999px
+      - id: 1939:803
+        name: Bold Text
+        type: FRAME
+        layout: layout_JFX5V5
+        children:
+          - id: 1939:804
+            name: 自动翻页
+            type: TEXT
+            layout: layout_8HWX0U
+            text: 自动翻页
+            textStyle: style_SR0OAE
+            fills: fill_J03PV1
+globalVars:
+  styles:
+    layout_IIVXHP:
+      mode: none
+      sizing: {}
+      dimensions:
+        width: 95
+        height: 52
+    layout_PNE0IT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 31.49
+        y: 2.5
+      dimensions:
+        width: 32
+        height: 32
+    fill_2ZH14A:
+      - '#2F6373'
+    effect_IE7ZI0:
+      boxShadow: inset 0px 1px 0px 0px rgba(255, 255, 255, 0.5)
+    layout_FRKZPR:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 6
+        y: 6
+      dimensions:
+        width: 20
+        height: 20
+    layout_CGD6C5:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 20
+        height: 20
+    fill_W2V8HJ: []
+    layout_SPAWYG:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 5.83
+        y: 3.33
+      dimensions:
+        width: 10.83
+        height: 13.33
+    fill_L2O2KE:
+      - '#FFFFFF'
+    layout_JFX5V5:
+      mode: column
+      alignItems: center
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 29.49
+        y: 39
+      dimensions:
+        width: 36
+        height: 9
+    layout_8HWX0U:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+    style_SR0OAE:
+      fontFamily: Inter
+      fontWeight: 800
+      fontSize: 9
+      lineHeight: 1em
+      textAlignHorizontal: CENTER
+      textAlignVertical: TOP
+    fill_J03PV1:
+      - '#332C25'
+

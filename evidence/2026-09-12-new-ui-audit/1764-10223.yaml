@@ -1,0 +1,4403 @@
+metadata:
+  name: Reader UI · Phase 2 Design System & Redraw
+  components:
+    271:124:
+      id: 271:124
+      key: a33e64459e0845a93a899583ea37ff57a3783609
+      name: Icon/ChevronLeft
+    271:392:
+      id: 271:392
+      key: 0c4608239ca8855fa2b5e15ccc146a41902b4233
+      name: Icon/Play
+    362:15:
+      id: 362:15
+      key: 826f87e0e781a1b6c683cf716a9d82c8f7aa8878
+      name: Icon/ChevronRight
+    271:542:
+      id: 271:542
+      key: 09d8f1595420c369b2c8c92aa68f0ff9601c3d96
+      name: Icon/Stop
+    271:136:
+      id: 271:136
+      key: afc35dcd730a2bd5d4f3ec517e403a8fa38a6bbf
+      name: Icon/Clock
+  componentSets: {}
+nodes:
+  - id: 1764:10223
+    name: Section - 完整自动翻页控制
+    type: FRAME
+    layout: layout_BFGCG4
+    children:
+      - id: 1764:10224
+        name: Section
+        type: FRAME
+        layout: layout_F1G77L
+        children:
+          - id: 1764:10225
+            name: Header
+            type: FRAME
+            layout: layout_89KZH5
+            children:
+              - id: 1764:10226
+                name: Bold Text
+                type: FRAME
+                layout: layout_49KEFN
+                children:
+                  - id: 1764:10227
+                    name: 自动翻页控制
+                    type: TEXT
+                    layout: layout_9UBNSV
+                    text: 自动翻页控制
+                    textStyle: style_8S6RX3
+                    fills: fill_3OUGO4
+              - id: 1764:10229
+                name: Italic Text
+                type: FRAME
+                layout: layout_FQRZJQ
+                children:
+                  - id: 1764:10230
+                    name: 未开始
+                    type: TEXT
+                    layout: layout_9UBNSV
+                    text: 未开始
+                    textStyle: style_T1XGKD
+                    fills: fill_KOT2HD
+          - id: 1764:10232
+            name: Section - 自动翻页控制
+            type: FRAME
+            layout: layout_1YBRBT
+            borderRadius: 8px
+            children:
+              - id: 1764:10233
+                name: Button - 上一章
+                type: FRAME
+                layout: layout_OZAXU0
+                children:
+                  - id: 1764:10234
+                    name: Text
+                    type: IMAGE-SVG
+                    layout: layout_1AEOQD
+                    fills: fill_Z7QUPV
+                    borderRadius: 8px
+                  - id: 1764:10242
+                    name: Text
+                    type: FRAME
+                    layout: layout_Q6ZUWD
+                    children:
+                      - id: 1764:10243
+                        name: 上一章
+                        type: TEXT
+                        layout: layout_9UBNSV
+                        text: 上一章
+                        textStyle: style_J2AA42
+                        fills: fill_3OUGO4
+              - id: 1764:10245
+                name: Button
+                type: FRAME
+                layout: layout_UJ65DP
+                children:
+                  - id: 1764:10246
+                    name: Italic Text
+                    type: IMAGE-SVG
+                    layout: layout_W63WQQ
+                    fills: fill_BRF4PL
+                    borderRadius: 16px
+                  - id: 1764:10250
+                    name: Bold Text
+                    type: FRAME
+                    layout: layout_YB6RKV
+                    children:
+                      - id: 1764:10251
+                        name: 自动翻页
+                        type: TEXT
+                        layout: layout_9UBNSV
+                        text: 自动翻页
+                        textStyle: style_VNRG4L
+                        fills: fill_3OUGO4
+              - id: 1764:10254
+                name: Button - 下一章
+                type: FRAME
+                layout: layout_RCLGP2
+                children:
+                  - id: 1764:10255
+                    name: Text
+                    type: IMAGE-SVG
+                    layout: layout_1AEOQD
+                    fills: fill_Z7QUPV
+                    borderRadius: 8px
+                  - id: 1764:10263
+                    name: Text
+                    type: FRAME
+                    layout: layout_Q6ZUWD
+                    children:
+                      - id: 1764:10264
+                        name: 下一章
+                        type: TEXT
+                        layout: layout_9UBNSV
+                        text: 下一章
+                        textStyle: style_J2AA42
+                        fills: fill_3OUGO4
+              - id: 1764:10267
+                name: Italic Text
+                type: IMAGE-SVG
+                layout: layout_16E83O
+                fills: fill_MMR70F
+                effects: effect_5TRHAG
+                borderRadius: 12px
+              - id: 1764:10271
+                name: Bold Text
+                type: FRAME
+                layout: layout_Z0QT7Y
+                children:
+                  - id: 1764:10272
+                    name: 停止
+                    type: TEXT
+                    layout: layout_9UBNSV
+                    text: 停止
+                    textStyle: style_J2AA42
+                    fills: fill_45JDC3
+      - id: 1764:10274
+        name: Section
+        type: FRAME
+        layout: layout_KSUYXL
+        strokes: fill_RX6QRX
+        strokeWeight: 1px 0px 0px
+        children:
+          - id: 1764:10275
+            name: Header
+            type: FRAME
+            layout: layout_YE1NEK
+            children:
+              - id: 1764:10276
+                name: Bold Text
+                type: FRAME
+                layout: layout_49KEFN
+                children:
+                  - id: 1764:10277
+                    name: 定时
+                    type: TEXT
+                    layout: layout_9UBNSV
+                    text: 定时
+                    textStyle: style_8S6RX3
+                    fills: fill_3OUGO4
+              - id: 1764:10279
+                name: Italic Text
+                type: FRAME
+                layout: layout_FKPH6G
+                children:
+                  - id: 1764:10280
+                    name: 15:00
+                    type: TEXT
+                    layout: layout_9UBNSV
+                    text: 15:00
+                    textStyle: style_T1XGKD
+                    fills: fill_KOT2HD
+          - id: 1764:10282
+            name: 自动翻页定时
+            type: FRAME
+            layout: layout_9H2EYT
+            fills: fill_2NJRTC
+            strokes: fill_RX6QRX
+            strokeWeight: 1px
+            effects: effect_NEH5AY
+            borderRadius: 10px
+            children:
+              - id: 1764:10283
+                name: Container
+                type: FRAME
+                layout: layout_2BCXZ4
+                children:
+                  - id: 1764:10284
+                    name: Text
+                    type: IMAGE-SVG
+                    layout: layout_1YJ4Q8
+                    borderRadius: 15px
+                  - id: 1764:10289
+                    name: Bold Text
+                    type: FRAME
+                    layout: layout_N9GVY2
+                    children:
+                      - id: 1764:10290
+                        name: 自动停止
+                        type: TEXT
+                        layout: layout_9UBNSV
+                        text: 自动停止
+                        textStyle: style_96G08E
+                        fills: fill_3OUGO4
+              - id: 1764:10292
+                name: Container
+                type: FRAME
+                layout: layout_DEQ8X6
+                children:
+                  - id: 1764:10293
+                    name: Container
+                    type: FRAME
+                    layout: layout_PVSE40
+                    children:
+                      - id: 1764:10294
+                        name: Container
+                        type: FRAME
+                        layout: layout_2X1R1F
+                        fills: fill_NVVKWE
+                        effects: effect_TG9QTF
+                        borderRadius: 8px
+                        children:
+                          - id: 1764:10295
+                            name: Text
+                            type: FRAME
+                            layout: layout_V8KX6W
+                          - id: 1764:10296
+                            name: 定时分
+                            type: FRAME
+                            layout: layout_USB7F5
+                            children:
+                              - id: 1764:10297
+                                name: Text
+                                type: FRAME
+                                layout: layout_IQV73R
+                              - id: 1764:10298
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10299
+                                    name: '00'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '00'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10301
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10302
+                                    name: '01'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '01'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10304
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10305
+                                    name: '02'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '02'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10307
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10308
+                                    name: '03'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '03'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10310
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10311
+                                    name: '04'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '04'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10313
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10314
+                                    name: '05'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '05'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10316
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10317
+                                    name: '06'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '06'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10319
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10320
+                                    name: '07'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '07'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10322
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10323
+                                    name: '08'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '08'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10325
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10326
+                                    name: '09'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '09'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10328
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10329
+                                    name: '10'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '10'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10331
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10332
+                                    name: '11'
+                                    type: TEXT
+                                    layout: layout_6X4OOE
+                                    text: '11'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10334
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10335
+                                    name: '12'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '12'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10337
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10338
+                                    name: '13'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '13'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10340
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10341
+                                    name: '14'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '14'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10343
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                children:
+                                  - id: 1764:10344
+                                    name: '15'
+                                    type: TEXT
+                                    layout: layout_X1S9NJ
+                                    text: '15'
+                                    textStyle: style_9Q6V2X
+                                    fills: fill_3OUGO4
+                              - id: 1764:10346
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10347
+                                    name: '16'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '16'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10349
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10350
+                                    name: '17'
+                                    type: TEXT
+                                    layout: layout_6HROHV
+                                    text: '17'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10352
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10353
+                                    name: '18'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '18'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10355
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10356
+                                    name: '19'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '19'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10358
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10359
+                                    name: '20'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '20'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10361
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10362
+                                    name: '21'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '21'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10364
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10365
+                                    name: '22'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '22'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10367
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10368
+                                    name: '23'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '23'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10370
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10371
+                                    name: '24'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '24'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10373
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10374
+                                    name: '25'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '25'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10376
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10377
+                                    name: '26'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '26'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10379
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10380
+                                    name: '27'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '27'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10382
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10383
+                                    name: '28'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '28'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10385
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10386
+                                    name: '29'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '29'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10388
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10389
+                                    name: '30'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '30'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10391
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10392
+                                    name: '31'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '31'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10394
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10395
+                                    name: '32'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '32'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10397
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10398
+                                    name: '33'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '33'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10400
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10401
+                                    name: '34'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '34'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10403
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10404
+                                    name: '35'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '35'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10406
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10407
+                                    name: '36'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '36'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10409
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10410
+                                    name: '37'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '37'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10412
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10413
+                                    name: '38'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '38'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10415
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10416
+                                    name: '39'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '39'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10418
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10419
+                                    name: '40'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '40'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10421
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10422
+                                    name: '41'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '41'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10424
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10425
+                                    name: '42'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '42'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10427
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10428
+                                    name: '43'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '43'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10430
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10431
+                                    name: '44'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '44'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10433
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10434
+                                    name: '45'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '45'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10436
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10437
+                                    name: '46'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '46'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10439
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10440
+                                    name: '47'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '47'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10442
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10443
+                                    name: '48'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '48'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10445
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10446
+                                    name: '49'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '49'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10448
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10449
+                                    name: '50'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '50'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10451
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10452
+                                    name: '51'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '51'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10454
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10455
+                                    name: '52'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '52'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10457
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10458
+                                    name: '53'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '53'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10460
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10461
+                                    name: '54'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '54'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10463
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10464
+                                    name: '55'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '55'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10466
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10467
+                                    name: '56'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '56'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10469
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10470
+                                    name: '57'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '57'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10472
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10473
+                                    name: '58'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '58'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10475
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10476
+                                    name: '59'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '59'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10478
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10479
+                                    name: '60'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '60'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10481
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10482
+                                    name: '61'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '61'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10484
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10485
+                                    name: '62'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '62'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10487
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10488
+                                    name: '63'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '63'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10490
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10491
+                                    name: '64'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '64'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10493
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10494
+                                    name: '65'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '65'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10496
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10497
+                                    name: '66'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '66'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10499
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10500
+                                    name: '67'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '67'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10502
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10503
+                                    name: '68'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '68'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10505
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10506
+                                    name: '69'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '69'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10508
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10509
+                                    name: '70'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '70'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10511
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10512
+                                    name: '71'
+                                    type: TEXT
+                                    layout: layout_6HROHV
+                                    text: '71'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10514
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10515
+                                    name: '72'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '72'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10517
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10518
+                                    name: '73'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '73'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10520
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10521
+                                    name: '74'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '74'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10523
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10524
+                                    name: '75'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '75'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10526
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10527
+                                    name: '76'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '76'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10529
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10530
+                                    name: '77'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '77'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10532
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10533
+                                    name: '78'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '78'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10535
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10536
+                                    name: '79'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '79'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10538
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10539
+                                    name: '80'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '80'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10541
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10542
+                                    name: '81'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '81'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10544
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10545
+                                    name: '82'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '82'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10547
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10548
+                                    name: '83'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '83'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10550
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10551
+                                    name: '84'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '84'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10553
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10554
+                                    name: '85'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '85'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10556
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10557
+                                    name: '86'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '86'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10559
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10560
+                                    name: '87'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '87'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10562
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10563
+                                    name: '88'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '88'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10565
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10566
+                                    name: '89'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '89'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10568
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10569
+                                    name: '90'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '90'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10571
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10572
+                                    name: '91'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '91'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10574
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10575
+                                    name: '92'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '92'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10577
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10578
+                                    name: '93'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '93'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10580
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10581
+                                    name: '94'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '94'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10583
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10584
+                                    name: '95'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '95'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10586
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10587
+                                    name: '96'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '96'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10589
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10590
+                                    name: '97'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '97'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10592
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10593
+                                    name: '98'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '98'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10595
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10596
+                                    name: '99'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '99'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10598
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10599
+                                    name: '100'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '100'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10601
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10602
+                                    name: '101'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '101'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10604
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10605
+                                    name: '102'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '102'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10607
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10608
+                                    name: '103'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '103'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10610
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10611
+                                    name: '104'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '104'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10613
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10614
+                                    name: '105'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '105'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10616
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10617
+                                    name: '106'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '106'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10619
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10620
+                                    name: '107'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '107'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10622
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10623
+                                    name: '108'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '108'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10625
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10626
+                                    name: '109'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '109'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10628
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10629
+                                    name: '110'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '110'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10631
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10632
+                                    name: '111'
+                                    type: TEXT
+                                    layout: layout_OQH3SW
+                                    text: '111'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10634
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10635
+                                    name: '112'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '112'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10637
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10638
+                                    name: '113'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '113'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10640
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10641
+                                    name: '114'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '114'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10643
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10644
+                                    name: '115'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '115'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10646
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10647
+                                    name: '116'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '116'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10649
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10650
+                                    name: '117'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '117'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10652
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10653
+                                    name: '118'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '118'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10655
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10656
+                                    name: '119'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '119'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10658
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10659
+                                    name: '120'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '120'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10661
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10662
+                                    name: '121'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '121'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10664
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10665
+                                    name: '122'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '122'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10667
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10668
+                                    name: '123'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '123'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10670
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10671
+                                    name: '124'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '124'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10673
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10674
+                                    name: '125'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '125'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10676
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10677
+                                    name: '126'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '126'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10679
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10680
+                                    name: '127'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '127'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10682
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10683
+                                    name: '128'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '128'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10685
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10686
+                                    name: '129'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '129'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10688
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10689
+                                    name: '130'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '130'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10691
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10692
+                                    name: '131'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '131'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10694
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10695
+                                    name: '132'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '132'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10697
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10698
+                                    name: '133'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '133'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10700
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10701
+                                    name: '134'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '134'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10703
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10704
+                                    name: '135'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '135'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10706
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10707
+                                    name: '136'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '136'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10709
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10710
+                                    name: '137'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '137'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10712
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10713
+                                    name: '138'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '138'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10715
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10716
+                                    name: '139'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '139'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10718
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10719
+                                    name: '140'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '140'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10721
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10722
+                                    name: '141'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '141'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10724
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10725
+                                    name: '142'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '142'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10727
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10728
+                                    name: '143'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '143'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10730
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10731
+                                    name: '144'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '144'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10733
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10734
+                                    name: '145'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '145'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10736
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10737
+                                    name: '146'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '146'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10739
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10740
+                                    name: '147'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '147'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10742
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10743
+                                    name: '148'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '148'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10745
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10746
+                                    name: '149'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '149'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10748
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10749
+                                    name: '150'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '150'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10751
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10752
+                                    name: '151'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '151'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10754
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10755
+                                    name: '152'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '152'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10757
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10758
+                                    name: '153'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '153'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10760
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10761
+                                    name: '154'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '154'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10763
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10764
+                                    name: '155'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '155'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10766
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10767
+                                    name: '156'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '156'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10769
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10770
+                                    name: '157'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '157'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10772
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10773
+                                    name: '158'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '158'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10775
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10776
+                                    name: '159'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '159'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10778
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10779
+                                    name: '160'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '160'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10781
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10782
+                                    name: '161'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '161'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10784
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10785
+                                    name: '162'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '162'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10787
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10788
+                                    name: '163'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '163'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10790
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10791
+                                    name: '164'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '164'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10793
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10794
+                                    name: '165'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '165'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10796
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10797
+                                    name: '166'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '166'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10799
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10800
+                                    name: '167'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '167'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10802
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10803
+                                    name: '168'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '168'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10805
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10806
+                                    name: '169'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '169'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10808
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10809
+                                    name: '170'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '170'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10811
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10812
+                                    name: '171'
+                                    type: TEXT
+                                    layout: layout_ON0SO0
+                                    text: '171'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10814
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10815
+                                    name: '172'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '172'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10817
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10818
+                                    name: '173'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '173'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10820
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10821
+                                    name: '174'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '174'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10823
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10824
+                                    name: '175'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '175'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10826
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10827
+                                    name: '176'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '176'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10829
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10830
+                                    name: '177'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '177'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10832
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10833
+                                    name: '178'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '178'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10835
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10836
+                                    name: '179'
+                                    type: TEXT
+                                    layout: layout_BAS51A
+                                    text: '179'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10838
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10839
+                                    name: '180'
+                                    type: TEXT
+                                    layout: layout_DZABKU
+                                    text: '180'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10841
+                                name: Text
+                                type: FRAME
+                                layout: layout_IQV73R
+                      - id: 1764:10842
+                        name: Small
+                        type: FRAME
+                        layout: layout_HFXO7U
+                        children:
+                          - id: 1764:10843
+                            name: 分
+                            type: TEXT
+                            layout: layout_9UBNSV
+                            text: 分
+                            textStyle: style_5EK9SR
+                            fills: fill_KOT2HD
+                  - id: 1764:10846
+                    name: ':'
+                    type: TEXT
+                    layout: layout_XLZA8C
+                    text: ':'
+                    textStyle: style_5NR0KJ
+                    fills: fill_BRF4PL
+                  - id: 1764:10848
+                    name: Container
+                    type: FRAME
+                    layout: layout_OC0965
+                    children:
+                      - id: 1764:10849
+                        name: Container
+                        type: FRAME
+                        layout: layout_2X1R1F
+                        fills: fill_NVVKWE
+                        effects: effect_TG9QTF
+                        borderRadius: 8px
+                        children:
+                          - id: 1764:10850
+                            name: Text
+                            type: FRAME
+                            layout: layout_V8KX6W
+                          - id: 1764:10851
+                            name: 定时秒
+                            type: FRAME
+                            layout: layout_USB7F5
+                            children:
+                              - id: 1764:10852
+                                name: Text
+                                type: FRAME
+                                layout: layout_IQV73R
+                              - id: 1764:10853
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                children:
+                                  - id: 1764:10854
+                                    name: '00'
+                                    type: TEXT
+                                    layout: layout_1BZUAO
+                                    text: '00'
+                                    textStyle: style_9Q6V2X
+                                    fills: fill_3OUGO4
+                              - id: 1764:10856
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10857
+                                    name: '01'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '01'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10859
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10860
+                                    name: '02'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '02'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10862
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10863
+                                    name: '03'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '03'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10865
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10866
+                                    name: '04'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '04'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10868
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10869
+                                    name: '05'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '05'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10871
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10872
+                                    name: '06'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '06'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10874
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10875
+                                    name: '07'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '07'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10877
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10878
+                                    name: '08'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '08'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10880
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10881
+                                    name: '09'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '09'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10883
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10884
+                                    name: '10'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '10'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10886
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10887
+                                    name: '11'
+                                    type: TEXT
+                                    layout: layout_6X4OOE
+                                    text: '11'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10889
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10890
+                                    name: '12'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '12'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10892
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10893
+                                    name: '13'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '13'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10895
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10896
+                                    name: '14'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '14'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10898
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10899
+                                    name: '15'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '15'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10901
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10902
+                                    name: '16'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '16'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10904
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10905
+                                    name: '17'
+                                    type: TEXT
+                                    layout: layout_6HROHV
+                                    text: '17'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10907
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10908
+                                    name: '18'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '18'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10910
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10911
+                                    name: '19'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '19'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10913
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10914
+                                    name: '20'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '20'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10916
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10917
+                                    name: '21'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '21'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10919
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10920
+                                    name: '22'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '22'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10922
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10923
+                                    name: '23'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '23'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10925
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10926
+                                    name: '24'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '24'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10928
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10929
+                                    name: '25'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '25'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10931
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10932
+                                    name: '26'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '26'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10934
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10935
+                                    name: '27'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '27'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10937
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10938
+                                    name: '28'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '28'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10940
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10941
+                                    name: '29'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '29'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10943
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10944
+                                    name: '30'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '30'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10946
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10947
+                                    name: '31'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '31'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10949
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10950
+                                    name: '32'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '32'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10952
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10953
+                                    name: '33'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '33'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10955
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10956
+                                    name: '34'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '34'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10958
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10959
+                                    name: '35'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '35'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10961
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10962
+                                    name: '36'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '36'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10964
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10965
+                                    name: '37'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '37'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10967
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10968
+                                    name: '38'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '38'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10970
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10971
+                                    name: '39'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '39'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10973
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10974
+                                    name: '40'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '40'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10976
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10977
+                                    name: '41'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '41'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10979
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10980
+                                    name: '42'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '42'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10982
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10983
+                                    name: '43'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '43'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10985
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10986
+                                    name: '44'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '44'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10988
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10989
+                                    name: '45'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '45'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10991
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10992
+                                    name: '46'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '46'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10994
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10995
+                                    name: '47'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '47'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:10997
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:10998
+                                    name: '48'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '48'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11000
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11001
+                                    name: '49'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '49'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11003
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11004
+                                    name: '50'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '50'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11006
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11007
+                                    name: '51'
+                                    type: TEXT
+                                    layout: layout_GE7QK0
+                                    text: '51'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11009
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11010
+                                    name: '52'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '52'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11012
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11013
+                                    name: '53'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '53'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11015
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11016
+                                    name: '54'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '54'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11018
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11019
+                                    name: '55'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '55'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11021
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11022
+                                    name: '56'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '56'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11024
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11025
+                                    name: '57'
+                                    type: TEXT
+                                    layout: layout_C2MEAL
+                                    text: '57'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11027
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11028
+                                    name: '58'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '58'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11030
+                                name: Button
+                                type: FRAME
+                                layout: layout_AHFUL5
+                                opacity: 0.41999998688697815
+                                children:
+                                  - id: 1764:11031
+                                    name: '59'
+                                    type: TEXT
+                                    layout: layout_KISEWB
+                                    text: '59'
+                                    textStyle: style_RC9AW1
+                                    fills: fill_KOT2HD
+                              - id: 1764:11033
+                                name: Text
+                                type: FRAME
+                                layout: layout_IQV73R
+                      - id: 1764:11034
+                        name: Small
+                        type: FRAME
+                        layout: layout_HFXO7U
+                        children:
+                          - id: 1764:11035
+                            name: 秒
+                            type: TEXT
+                            layout: layout_9UBNSV
+                            text: 秒
+                            textStyle: style_5EK9SR
+                            fills: fill_KOT2HD
+      - id: 1764:11037
+        name: Section
+        type: FRAME
+        layout: layout_FR6GQ5
+        strokes: fill_RX6QRX
+        strokeWeight: 1px 0px 0px
+        children:
+          - id: 1764:11038
+            name: Header
+            type: FRAME
+            layout: layout_YE1NEK
+            children:
+              - id: 1764:11039
+                name: Bold Text
+                type: FRAME
+                layout: layout_49KEFN
+                children:
+                  - id: 1764:11040
+                    name: 详细配置
+                    type: TEXT
+                    layout: layout_9UBNSV
+                    text: 详细配置
+                    textStyle: style_8S6RX3
+                    fills: fill_3OUGO4
+              - id: 1764:11042
+                name: Italic Text
+                type: FRAME
+                layout: layout_CJ6RDM
+                children:
+                  - id: 1764:11043
+                    name: 即时生效
+                    type: TEXT
+                    layout: layout_9UBNSV
+                    text: 即时生效
+                    textStyle: style_T1XGKD
+                    fills: fill_KOT2HD
+          - id: 1764:11045
+            name: Container
+            type: FRAME
+            layout: layout_VLUQ8L
+            children:
+              - id: 1764:11046
+                name: Container
+                type: FRAME
+                layout: layout_AZSHCA
+                fills: fill_CYYE7P
+                strokes: fill_RX6QRX
+                strokeWeight: 1px
+                borderRadius: 6px
+                children:
+                  - id: 1764:11047
+                    name: Text
+                    type: FRAME
+                    layout: layout_CD85ZV
+                    children:
+                      - id: 1764:11048
+                        name: Bold Text
+                        type: FRAME
+                        layout: layout_XGP183
+                        children:
+                          - id: 1764:11049
+                            name: 翻页速度
+                            type: TEXT
+                            layout: layout_9UBNSV
+                            text: 翻页速度
+                            textStyle: style_CPU2JM
+                            fills: fill_3OUGO4
+                      - id: 1764:11051
+                        name: Italic Text
+                        type: FRAME
+                        layout: layout_U09ZZ8
+                        children:
+                          - id: 1764:11052
+                            name: 8 秒
+                            type: TEXT
+                            layout: layout_9UBNSV
+                            text: 8 秒
+                            textStyle: style_KVYH13
+                            fills: fill_KOT2HD
+                  - id: 1764:11054
+                    name: Container
+                    type: FRAME
+                    layout: layout_XCKSP0
+                    children:
+                      - id: 1764:11055
+                        name: Text
+                        type: FRAME
+                        layout: layout_RQRAU2
+                        children:
+                          - id: 1764:11056
+                            name: 2 秒
+                            type: TEXT
+                            layout: layout_9UBNSV
+                            text: 2 秒
+                            textStyle: style_3QSJ1D
+                            fills: fill_KOT2HD
+                      - id: 1764:11058
+                        name: Range Slider - 调整翻页速度
+                        type: FRAME
+                        layout: layout_2C9I89
+                      - id: 1764:11059
+                        name: Text
+                        type: FRAME
+                        layout: layout_RZ64E0
+                        children:
+                          - id: 1764:11060
+                            name: 20 秒
+                            type: TEXT
+                            layout: layout_9UBNSV
+                            text: 20 秒
+                            textStyle: style_3QSJ1D
+                            fills: fill_KOT2HD
+              - id: 1764:11062
+                name: Container
+                type: FRAME
+                layout: layout_WSIU8I
+                children:
+                  - id: 1764:11063
+                    name: Switch
+                    type: FRAME
+                    layout: layout_EOKSQJ
+                    fills: fill_CYYE7P
+                    strokes: fill_RX6QRX
+                    strokeWeight: 1px
+                    borderRadius: 6px
+                    children:
+                      - id: 1764:11064
+                        name: Bold Text
+                        type: FRAME
+                        layout: layout_95WO82
+                        children:
+                          - id: 1764:11065
+                            name: 跟随高亮
+                            type: TEXT
+                            layout: layout_9UBNSV
+                            text: 跟随高亮
+                            textStyle: style_2VOU4H
+                            fills: fill_3OUGO4
+                      - id: 1764:11067
+                        name: Text
+                        type: FRAME
+                        layout: layout_07EP4Q
+                        fills: fill_BRF4PL
+                        borderRadius: 999px
+                        children:
+                          - id: 1764:11068
+                            name: Text
+                            type: FRAME
+                            layout: layout_A8I4ZX
+                            fills: fill_Z7QUPV
+                            borderRadius: 10px
+globalVars:
+  styles:
+    layout_BFGCG4:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      padding: 10px
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      dimensions:
+        height: 663
+    layout_F1G77L:
+      mode: column
+      alignSelf: stretch
+      padding: 10px 4px
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 10
+        y: 10
+    layout_89KZH5:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 4
+        y: 10
+    layout_49KEFN:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 0.2
+    layout_9UBNSV:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+    style_8S6RX3:
+      fontFamily: Inter
+      fontWeight: 700
+      fontSize: 12
+      lineHeight: 1.1999999682108562em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_3OUGO4:
+      - '#332C25'
+    layout_FQRZJQ:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 276
+        y: 0.2
+    style_T1XGKD:
+      fontFamily: Inter
+      fontWeight: 500
+      fontSize: 10
+      lineHeight: 1.2102272033691406em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_KOT2HD:
+      - '#5B5046'
+    layout_1YBRBT:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fill
+      locationRelativeToParent:
+        x: 4
+        y: 32.39
+      dimensions:
+        width: 306
+    layout_OZAXU0:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 9.75
+        y: 5
+      dimensions:
+        width: 72
+        height: 52
+    layout_1AEOQD:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 22.5
+        y: 5
+      dimensions:
+        width: 27
+        height: 27
+    fill_Z7QUPV:
+      - rgba(255, 252, 248, 0.74)
+    layout_VIR22D:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3
+        y: 5.5
+      dimensions:
+        width: 16
+        height: 16
+    layout_PN2V95:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 16
+        height: 16
+    fill_0YJST2: []
+    layout_1X9R72:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 6
+        y: 4
+      dimensions:
+        width: 4
+        height: 8
+    fill_BRF4PL:
+      - '#2F6373'
+    layout_HOOG4E:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 8
+        y: 5.5
+      dimensions:
+        width: 16
+        height: 16
+    layout_Q6ZUWD:
+      mode: column
+      alignItems: center
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 22.5
+        y: 39
+      dimensions:
+        width: 27
+        height: 9
+    style_J2AA42:
+      fontFamily: Inter
+      fontWeight: 700
+      fontSize: 9
+      lineHeight: 1em
+      textAlignHorizontal: CENTER
+      textAlignVertical: TOP
+    layout_UJ65DP:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 105.49
+        y: 5
+      dimensions:
+        width: 95
+        height: 52
+    layout_W63WQQ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 31.49
+        y: 2.5
+      dimensions:
+        width: 32
+        height: 32
+    layout_UZPMQV:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 6
+        y: 6
+      dimensions:
+        width: 20
+        height: 20
+    layout_V8J4JL:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 20
+        height: 20
+    layout_6N8U1O:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 5.83
+        y: 3.33
+      dimensions:
+        width: 10.83
+        height: 13.33
+    fill_J5PMJP:
+      - '#FFFFFF'
+    layout_YB6RKV:
+      mode: column
+      alignItems: center
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 29.49
+        y: 39
+      dimensions:
+        width: 36
+        height: 9
+    style_VNRG4L:
+      fontFamily: Inter
+      fontWeight: 800
+      fontSize: 9
+      lineHeight: 1em
+      textAlignHorizontal: CENTER
+      textAlignVertical: TOP
+    layout_RCLGP2:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 224.25
+        y: 5
+      dimensions:
+        width: 72
+        height: 52
+    layout_16E83O:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 188.66
+        y: 15.5
+      dimensions:
+        width: 24
+        height: 24
+    fill_MMR70F:
+      - type: GRADIENT_LINEAR
+        gradient: linear-gradient(180deg, )
+    effect_5TRHAG:
+      boxShadow: inset 0px 1px 0px 0px rgba(255, 255, 255, 0.72)
+    layout_H26WQK:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.5
+        y: 3.5
+      dimensions:
+        width: 17
+        height: 17
+    layout_PG4EKN:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 17
+        height: 17
+    layout_MRHMU6:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.54
+        y: 3.54
+      dimensions:
+        width: 9.92
+        height: 9.92
+    layout_Z0QT7Y:
+      mode: column
+      alignItems: center
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 191.66
+        y: 44
+      dimensions:
+        width: 18
+        height: 9
+    fill_45JDC3:
+      - '#8C3D36'
+    layout_KSUYXL:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      padding: 10px 4px
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 10
+        y: 114.39
+    fill_RX6QRX:
+      - rgba(155, 132, 102, 0.18)
+    layout_YE1NEK:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 4
+        y: 11
+    layout_FKPH6G:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 278.2
+        y: 1.2
+    layout_9H2EYT:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      padding: 11px 14px
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 4
+        y: 33.39
+    fill_2NJRTC:
+      - type: GRADIENT_RADIAL
+        gradient: radial-gradient(circle at 12% 24%, rgba(0, 0, 0, 0) 34%)
+      - type: GRADIENT_LINEAR
+        gradient: linear-gradient(145deg, rgba(238, 230, 219, 0.64) 0%)
+    effect_NEH5AY:
+      boxShadow: inset 0px 1px 0px 0px rgba(255, 255, 255, 0.7)
+    layout_2BCXZ4:
+      mode: row
+      alignItems: center
+      gap: 8px
+      sizing:
+        horizontal: fill
+        vertical: hug
+      locationRelativeToParent:
+        x: 15
+        y: 54
+    layout_1YJ4Q8:
+      mode: column
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 30
+        height: 30
+    layout_GMCNR5:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 6
+        y: 6
+      dimensions:
+        width: 18
+        height: 18
+    layout_Z5MTV5:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 18
+        height: 18
+    layout_HWRS8R:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2.25
+        y: 2.25
+      dimensions:
+        width: 13.5
+        height: 13.5
+    fill_R6802K:
+      - '#1F1B17'
+    layout_3IGUBG:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 9
+        y: 5.25
+      dimensions:
+        width: 2.25
+        height: 6
+    layout_N9GVY2:
+      mode: column
+      sizing:
+        horizontal: hug
+        vertical: hug
+    style_96G08E:
+      fontFamily: Inter
+      fontWeight: 700
+      fontSize: 11
+      lineHeight: 1em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_DEQ8X6:
+      mode: none
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 115
+        y: 12
+      dimensions:
+        height: 114
+    layout_PVSE40:
+      mode: column
+      alignItems: stretch
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 0
+        y: 0
+    layout_2X1R1F:
+      mode: none
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        height: 102
+    fill_NVVKWE:
+      - rgba(255, 255, 255, 0)
+    effect_TG9QTF:
+      boxShadow: inset 0px 0px 0px 1px rgba(155, 132, 102, 0.18)
+    layout_V8KX6W:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 5
+        y: 34
+      dimensions:
+        width: 66
+        height: 35
+    layout_USB7F5:
+      mode: column
+      alignItems: stretch
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 76
+        height: 102
+    layout_IQV73R:
+      mode: none
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      dimensions:
+        height: 34
+    layout_AHFUL5:
+      mode: column
+      alignSelf: stretch
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      dimensions:
+        height: 34
+    layout_KISEWB:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 30.5
+        y: 11.5
+    style_RC9AW1:
+      fontFamily: Inter
+      fontWeight: 600
+      fontSize: 11
+      lineHeight: 1em
+      textAlignHorizontal: CENTER
+      textAlignVertical: TOP
+    layout_GE7QK0:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 31.5
+        y: 11.5
+    layout_C2MEAL:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 31
+        y: 11.5
+    layout_6X4OOE:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 32.5
+        y: 11.5
+    layout_X1S9NJ:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 28
+        y: 8.5
+    style_9Q6V2X:
+      fontFamily: Inter
+      fontWeight: 800
+      fontSize: 17
+      lineHeight: 1em
+      textAlignHorizontal: CENTER
+      textAlignVertical: TOP
+    layout_6HROHV:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 32
+        y: 11.5
+    layout_DZABKU:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 28
+        y: 11.5
+    layout_ON0SO0:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 29
+        y: 11.5
+    layout_BAS51A:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 28.5
+        y: 11.5
+    layout_OQH3SW:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 30
+        y: 11.5
+    layout_HFXO7U:
+      mode: column
+      alignItems: center
+      alignSelf: stretch
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 0
+        y: 106
+    style_5EK9SR:
+      fontFamily: Inter
+      fontWeight: 700
+      fontSize: 8
+      lineHeight: 1em
+      textAlignHorizontal: CENTER
+      textAlignVertical: TOP
+    layout_XLZA8C:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 85
+        y: 40.5
+      dimensions:
+        width: 6
+        height: 22
+    style_5NR0KJ:
+      fontFamily: Inter
+      fontWeight: 800
+      fontSize: 18
+      lineHeight: 1.2102272245619032em
+      textAlignHorizontal: CENTER
+      textAlignVertical: TOP
+    layout_OC0965:
+      mode: column
+      alignItems: stretch
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 100
+        y: 0
+    layout_1BZUAO:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 25.5
+        y: 8.5
+    layout_FR6GQ5:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      padding: 10px 4px
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 10
+        y: 295.78
+    layout_CJ6RDM:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 266
+        y: 0.2
+    layout_VLUQ8L:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 4
+        y: 33.39
+    layout_AZSHCA:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      padding: 9px 10px
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 0
+        y: 0
+    fill_CYYE7P:
+      - rgba(255, 250, 244, 0.98)
+    layout_CD85ZV:
+      mode: column
+      alignItems: stretch
+      sizing:
+        horizontal: fill
+        vertical: hug
+      locationRelativeToParent:
+        x: 11
+        y: 25
+    layout_XGP183:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 0
+    style_CPU2JM:
+      fontFamily: Inter
+      fontWeight: 700
+      fontSize: 10
+      lineHeight: 1.2102272033691406em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_U09ZZ8:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 88.56
+        y: 0
+    style_KVYH13:
+      fontFamily: Inter
+      fontWeight: 400
+      fontSize: 10
+      lineHeight: 1.2102272033691406em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_XCKSP0:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: hug
+      locationRelativeToParent:
+        x: 128
+        y: 10
+    layout_RQRAU2:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 15.5
+    style_3QSJ1D:
+      fontFamily: Inter
+      fontWeight: 400
+      fontSize: 9
+      lineHeight: 1.2102272245619032em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_2C9I89:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 26.3
+        y: 0
+      dimensions:
+        width: 109
+        height: 44
+    layout_RZ64E0:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 143.86
+        y: 15.5
+    layout_WSIU8I:
+      mode: column
+      alignSelf: stretch
+      sizing:
+        horizontal: fill
+        vertical: fill
+      locationRelativeToParent:
+        x: 0
+        y: 70
+    layout_EOKSQJ:
+      mode: column
+      alignSelf: stretch
+      padding: 5px 8px
+      sizing:
+        horizontal: fixed
+        vertical: fill
+      locationRelativeToParent:
+        x: 0
+        y: 0
+    layout_95WO82:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 9
+        y: 11.5
+    style_2VOU4H:
+      fontFamily: Inter
+      fontWeight: 700
+      fontSize: 10
+      lineHeight: 1.3em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_07EP4Q:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 253
+        y: 6
+      dimensions:
+        width: 44
+        height: 24
+    layout_A8I4ZX:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 22
+        y: 2
+      dimensions:
+        width: 20
+        height: 20
+

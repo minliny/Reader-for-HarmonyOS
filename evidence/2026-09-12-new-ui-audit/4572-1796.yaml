@@ -1,0 +1,2473 @@
+metadata:
+  name: Reader UI · Phase 2 Design System & Redraw
+  components:
+    941:3:
+      id: 941:3
+      key: 75a2f6203c9b61e73e68a6986e6ce2cf97466744
+      name: Viewport=Phone, ReadingProgress=Available
+      componentSetId: 941:6
+    461:440:
+      id: 461:440
+      key: 0c9690f1d1b639151bd572e50390d195b4eb9789
+      name: Actions=Two
+      componentSetId: 461:468
+    453:418:
+      id: 453:418
+      key: c508940317cb2525dddf87b8b5389e3d61dd487e
+      name: State=Default
+      componentSetId: 1986:682
+    451:404:
+      id: 451:404
+      key: 94fb9679aa757c628ad7fb0ec90ec9924cbe0ba7
+      name: Navigation/Icon/Search
+    271:466:
+      id: 271:466
+      key: 9fc2b0c35406679812ed44fc361c6d5e6d112772
+      name: Icon/Search
+    451:410:
+      id: 451:410
+      key: 9cad596ebc202f7d1d11579c2e676c1febb8e8eb
+      name: Navigation/Icon/More
+    271:333:
+      id: 271:333
+      key: 8355094a68deae304b5dbdb68bce9e1b7aa61662
+      name: Icon/More
+    493:200:
+      id: 493:200
+      key: aa790ef4cbe1b6c1bfec7c08ad77f86980dd86b3
+      name: Library/ContinueReadingCard
+    493:179:
+      id: 493:179
+      key: f9081224fcfe16ad4698a3fc665a0cb805a03a0c
+      name: Book=LongNight
+      componentSetId: 493:185
+    493:198:
+      id: 493:198
+      key: 0f8ecb9f6686a6cfaf1b4b644bc9c2c3d7a79668
+      name: State=Default
+      componentSetId: 1994:464
+    487:76:
+      id: 487:76
+      key: 89662131906b840288f83aa01af3dd4aa506ed0d
+      name: View=Cover, Filter=Default
+      componentSetId: 487:228
+    487:40:
+      id: 487:40
+      key: 770ba7b801bdcf0d6bd933c9a3666a81649a9a76
+      name: Icon=Grid, State=Active, Interaction=Default
+      componentSetId: 487:75
+    271:262:
+      id: 271:262
+      key: e871abad970fbc0e6c481fded652b004d56c8815
+      name: Icon/Grid
+    487:13:
+      id: 487:13
+      key: 699525745017a09d965ef96c295c190f5daab9af
+      name: Icon=List, State=Default, Interaction=Default
+      componentSetId: 487:75
+    271:303:
+      id: 271:303
+      key: fa9cc92dee5a6c102ae6e485ebf318dec4e8f272
+      name: Icon/List
+    487:23:
+      id: 487:23
+      key: 927c5ccd400fd208c753a779e2e1c8865e09fb30
+      name: Icon=Filter, State=Default, Interaction=Default
+      componentSetId: 487:75
+    271:220:
+      id: 271:220
+      key: 37e6b83f891876f3f41a53766c06c92b727e7b75
+      name: Icon/Filter
+    487:34:
+      id: 487:34
+      key: 384d72d4291f3d73107a513bad6b00e92d3ce0ed
+      name: Icon=Settings, State=Default, Interaction=Default
+      componentSetId: 487:75
+    271:239:
+      id: 271:239
+      key: b201c0e1fd0fa156e666aa7ed68e5214e2750a8f
+      name: Icon/Gear
+    493:187:
+      id: 493:187
+      key: aa4161d818887ab64df96b579080cefd6a5bac5a
+      name: Layout=Cover, TitleLines=1, Viewport=Phone
+      componentSetId: 493:196
+    343:22:
+      id: 343:22
+      key: 996a22895fb97a8ad775472d6eafbc15d8b3d083
+      name: Viewport=Phone, ActiveTab=Bookshelf
+      componentSetId: 344:379
+    342:11:
+      id: 342:11
+      key: 6ac6f6c01b605b6236e3e5217e2995d8e7a7c305
+      name: Viewport=Phone, State=Selected, Interaction=Default
+      componentSetId: 342:175
+    445:335:
+      id: 445:335
+      key: e354063c01dfc48303316b9f8229eefdbd85bcd6
+      name: Navigation/Icon/Bookshelf
+    271:96:
+      id: 271:96
+      key: 9bebe6224da29fe2c36f1695c6212cc50be9bd98
+      name: Icon/Bookshelf
+    342:2:
+      id: 342:2
+      key: 792fced5176f3692ae4beae0a3415a463e1522da
+      name: Viewport=Phone, State=Unselected, Interaction=Default
+      componentSetId: 342:175
+    445:344:
+      id: 445:344
+      key: 36b7aa56ec04f9dfcf38c58027f254c412dea076
+      name: Navigation/Icon/Discover
+    271:189:
+      id: 271:189
+      key: 72b71687de2b61dd4fcecb87460c063949826b38
+      name: Icon/Discover
+    445:354:
+      id: 445:354
+      key: be55453388b62f10a7d75dc4ac255795b1bc19d1
+      name: Navigation/Icon/RSS
+    271:460:
+      id: 271:460
+      key: 38649b2a357a29c39db4a4314319b639429a69fa
+      name: Icon/Rss
+    445:363:
+      id: 445:363
+      key: 3c4bb8d5db12c7743e3a3b7e55e100ff84534c50
+      name: Navigation/Icon/Settings
+    271:472:
+      id: 271:472
+      key: 46acbae12d237b91a8a44c77ed6c5cadea80d866
+      name: Icon/Settings
+    271:109:
+      id: 271:109
+      key: cc1eda9b2190734302c674890c3260b0609d7b9a
+      name: Icon/Check
+    271:195:
+      id: 271:195
+      key: a422557ec4d624770c034942f2098f126fec1e1c
+      name: Icon/Download
+  componentSets:
+    941:6:
+      id: 941:6
+      key: 37641613e882c8bff9489a29a5cd6128f6a4b397
+      name: Page/Bookshelf
+      description: 'Live-demo-derived responsive page master. Viewport variants: Phone, Tablet. ReadingProgress=Available renders ContinueReading; ReadingProgress=None removes it and preserves the same Container auto-layout so the shelf section moves to the top. Compact is not provided.'
+    461:468:
+      id: 461:468
+      key: b31b8ec04839128b1f266f7565bdd23f26b21881
+      name: Navigation/AppTopBar
+      description: 'Reusable Reader AppTopBar. Live demo contract: 390×58, padding 6px 20px 0, 29px serif title, 44px actions, 18px action gap. Transparent; inherits Shell surface.'
+    1986:682:
+      id: 1986:682
+      key: 74a0d1512c375dabf6a3739f98ca04c8b2ceb098
+      name: Navigation/IconButton
+      description: 'Canonical icon button with 44px target. States: Default, Hover, Pressed, Focus, Disabled, Selected, Loading. Icon remains instance-swappable. Motion: button.press 80ms / activate 120ms; Reduced resolves to 0ms.'
+    493:185:
+      id: 493:185
+      key: 53c92ca2cf1038da2935375245302b230184b8e7
+      name: Library/BookCover
+      description: Six local demo cover assets as image-fill variants.
+    1994:464:
+      id: 1994:464
+      key: 86b23812d9a677d68ea85c7fdea02a1d3d73b924
+      name: Library/ContinueAction
+      description: Canonical binding foundation/text-button. ActionId library.continue. States Default/Hover/Pressed/Focus/Disabled/Loading. Minimum target 44px. Motion button press/activate; Reduced 0ms.
+    487:228:
+      id: 487:228
+      key: 3b4cf4d04eafc804c85ff5786effea5c829b19b6
+      name: Library/SectionHeader
+      description: Bookshelf section header rebuilt from the live demo. View and filter states are explicit variants.
+    487:75:
+      id: 487:75
+      key: f534d0950a9a41999d6525b1a3a2bd67918a6360
+      name: Library/SectionAction
+      description: 'Exact bookshelf header actions from the live 390×844 demo: 34px target, 20px Tabler icon.'
+    493:196:
+      id: 493:196
+      key: a9ee47ad4c508157892e80ce76cc9ac0a6e98633
+      name: Library/BookCard
+      description: Canonical reusable bookshelf card. Cover and List layouts support Phone and Tablet without geometric stretching; Tablet List uses a 64×96 cover and a 44×44 action target.
+    344:379:
+      id: 344:379
+      key: 66e0171649c24494a77c42ef7f6051eb4619357f
+      name: Navigation/BottomNav
+      description: Bottom navigation semantic variants. Direct tab hit targets carry ActionIds; actual screen navigation is applied at shell instances because Figma does not allow child layers to CHANGE_TO a parent component variant.
+    342:175:
+      id: 342:175
+      key: dd7832257946e92807de07b2a3557f4621ceb119
+      name: Navigation/MainTabItem
+      description: Navigation tab item. Semantic State remains Unselected/Selected; Interaction adds Default/Hover/Pressed/Focus/Disabled. ActionId nav.tab.select. Motion tab.press 80ms, tab.select 120ms.
+nodes:
+  - id: 4572:1796
+    name: Bookshelf/MorePopover · Phone · Style Reference
+    type: FRAME
+    layout: layout_XNXK45
+    borderRadius: 34px
+    children:
+      - id: 4572:1797
+        name: Page/Bookshelf · Base
+        type: INSTANCE
+        layout: layout_NSS0OB
+        componentId: 941:3
+        children:
+          - id: I4572:1797;940:3
+            name: Main Content - 书架
+            type: FRAME
+            layout: layout_SJ9XHG
+            fills: fill_XMPFB2
+            strokes: fill_TGAVPI
+            strokeWeight: 1px
+            borderRadius: 34px
+            children:
+              - id: I4572:1797;940:4
+                name: Header - 系统状态栏
+                type: FRAME
+                layout: layout_R5OGF0
+                children:
+                  - id: I4572:1797;940:5
+                    name: Text
+                    type: FRAME
+                    layout: layout_OW7B5R
+                    children:
+                      - id: I4572:1797;940:6
+                        name: 10:30
+                        type: TEXT
+                        layout: layout_2TMRUQ
+                        text: 10:30
+                        textStyle: style_551KM0
+                        fills: fill_BK8WQ2
+                  - id: I4572:1797;940:8
+                    name: Text
+                    type: FRAME
+                    layout: layout_WU41MH
+                    children:
+                      - id: I4572:1797;940:9
+                        name: Icon
+                        type: IMAGE-SVG
+                        layout: layout_CP9PW1
+                      - id: I4572:1797;940:15
+                        name: Icon
+                        type: IMAGE-SVG
+                        layout: layout_4N04CX
+                      - id: I4572:1797;940:21
+                        name: Icon
+                        type: IMAGE-SVG
+                        layout: layout_O6DFY9
+                      - id: I4572:1797;940:24
+                        name: Text
+                        type: FRAME
+                        layout: layout_OW7B5R
+                        children:
+                          - id: I4572:1797;940:25
+                            name: 82%
+                            type: TEXT
+                            layout: layout_2TMRUQ
+                            text: 82%
+                            textStyle: style_551KM0
+                            fills: fill_BK8WQ2
+              - id: I4572:1797;2236:1502
+                name: AppTopBar/Phone
+                type: INSTANCE
+                layout: layout_OSEOQR
+                componentId: 461:440
+                componentProperties:
+                  Title: 书架
+                children:
+                  - id: I4572:1797;2236:1502;461:441
+                    name: Title
+                    type: TEXT
+                    layout: layout_WVN1H9
+                    text: 书架
+                    textStyle: Navigation/AppTopBarTitle
+                    fills: fill_BK8WQ2
+                    componentPropertyReferences:
+                      text: Title
+                  - id: I4572:1797;2236:1502;461:442
+                    name: Actions
+                    type: IMAGE-SVG
+                    layout: layout_N62RXC
+              - id: I4572:1797;940:43
+                name: Placeholder for Container
+                type: FRAME
+                layout: layout_4YE2V9
+              - id: I4572:1797;940:249
+                name: Paragraph:margin
+                type: FRAME
+                layout: layout_ZTRTO2
+                children:
+                  - id: I4572:1797;940:44
+                    name: Paragraph
+                    type: FRAME
+                    layout: layout_F7KEL9
+                    children:
+                      - id: I4572:1797;940:45
+                        name: 当前 Tab：书架 · 视图：封面
+                        type: TEXT
+                        layout: layout_2TMRUQ
+                        text: 当前 Tab：书架 · 视图：封面
+                        textStyle: style_HDDW4K
+                        fills: fill_DB4XMV
+              - id: I4572:1797;940:47
+                name: Container
+                type: FRAME
+                layout: layout_R3TJ44
+                children:
+                  - id: I4572:1797;2236:1382
+                    name: ContinueReading/Phone
+                    type: INSTANCE
+                    layout: layout_2PGCFE
+                    fills: fill_F92KCG
+                    strokes: fill_TGAVPI
+                    strokeWeight: 1px
+                    borderRadius: 8px
+                    componentId: 493:200
+                    componentProperties:
+                      Author: 爱潜水的乌贼
+                      Title: 长夜余火
+                      Eyebrow: 继续阅读
+                    children:
+                      - id: I4572:1797;2236:1382;493:201
+                        name: Cover
+                        type: INSTANCE
+                        layout: layout_IQ11OD
+                        fills: fill_PFATYQ
+                        borderRadius: 6px
+                        componentId: 493:179
+                      - id: I4572:1797;2236:1382;493:202
+                        name: Text
+                        type: FRAME
+                        layout: layout_67ZPT8
+                        children:
+                          - id: I4572:1797;2236:1382;493:203
+                            name: Eyebrow
+                            type: TEXT
+                            layout: layout_ADSDBY
+                            text: 继续阅读
+                            textStyle: Library/ContinueEyebrow
+                            fills: fill_1MJCDK
+                            componentPropertyReferences:
+                              text: Eyebrow
+                          - id: I4572:1797;2236:1382;493:204
+                            name: Spacer
+                            type: FRAME
+                            layout: layout_TIIMYL
+                          - id: I4572:1797;2236:1382;493:205
+                            name: Title
+                            type: TEXT
+                            layout: layout_1HKIWV
+                            text: 长夜余火
+                            textStyle: Library/ContinueTitle
+                            fills: fill_BK8WQ2
+                            componentPropertyReferences:
+                              text: Title
+                          - id: I4572:1797;2236:1382;493:206
+                            name: Spacer
+                            type: FRAME
+                            layout: layout_PSFYYH
+                          - id: I4572:1797;2236:1382;493:207
+                            name: Author
+                            type: TEXT
+                            layout: layout_VKJ3XE
+                            text: 爱潜水的乌贼
+                            textStyle: Library/ContinueMeta
+                            fills: fill_DB4XMV
+                            componentPropertyReferences:
+                              text: Author
+                      - id: I4572:1797;2236:1382;493:208
+                        name: Action
+                        type: INSTANCE
+                        layout: layout_T0TRJ4
+                        fills: fill_1MJCDK
+                        borderRadius: 20px
+                        componentId: 493:198
+                        componentProperties:
+                          Label: 阅读
+                        children:
+                          - id: I4572:1797;2236:1382;493:208;1994:465
+                            name: HitTarget/44
+                            type: RECTANGLE
+                            layout: layout_NDUERY
+                            fills: fill_7AQ9V2
+                          - id: I4572:1797;2236:1382;493:208;1994:466
+                            name: InteractionStateLayer
+                            type: RECTANGLE
+                            layout: layout_M1PDQM
+                            fills: fill_LLQ6R8
+                            opacity: 0
+                            borderRadius: 14px
+                          - id: I4572:1797;2236:1382;493:208;493:199
+                            name: Label
+                            type: TEXT
+                            layout: layout_JB1BWT
+                            text: 阅读
+                            textStyle: Library/ActionLabel
+                            fills: fill_8GTEJF
+                            componentPropertyReferences:
+                              text: Label
+                  - id: I4572:1797;940:66
+                    name: Section - 我的书架
+                    type: FRAME
+                    layout: layout_CT6CR7
+                    children:
+                      - id: I4572:1797;2236:1406
+                        name: SectionHeader/Phone
+                        type: INSTANCE
+                        layout: layout_CJKETQ
+                        componentId: 487:76
+                        componentProperties:
+                          Title: 我的书架
+                        children:
+                          - id: I4572:1797;2236:1406;487:77
+                            name: Title
+                            type: TEXT
+                            layout: layout_ELSPLX
+                            text: 我的书架
+                            textStyle: Library/SectionTitle
+                            fills: fill_BK8WQ2
+                            componentPropertyReferences:
+                              text: Title
+                          - id: I4572:1797;2236:1406;487:78
+                            name: Actions
+                            type: IMAGE-SVG
+                            layout: layout_17NEUE
+                      - id: I4572:1797;940:102
+                        name: Section - 书籍封面网格
+                        type: FRAME
+                        layout: layout_9V4B1E
+                        children:
+                          - id: I4572:1797;2236:1294
+                            name: BookItem/long-night/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_UOQJ11
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 爱潜水的乌贼
+                              Title: 长夜余火
+                            children:
+                              - id: I4572:1797;2236:1294;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_PFATYQ
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1294;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 长夜余火
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1294;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 爱潜水的乌贼
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1298
+                            name: BookItem/mystery-lord/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_S00MR2
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 爱潜水的乌贼
+                              Title: 诡秘之主
+                            children:
+                              - id: I4572:1797;2236:1298;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_42FLB6
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1298;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 诡秘之主
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1298;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 爱潜水的乌贼
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1302
+                            name: BookItem/ming-dynasty-stories/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_YN5UX2
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 当年明月
+                              Title: 明朝那些事儿
+                            children:
+                              - id: I4572:1797;2236:1302;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_AEJU7Q
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1302;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 明朝那些事儿
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1302;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 当年明月
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1306
+                            name: BookItem/three-body/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_AKZXYI
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 刘慈欣
+                              Title: 三体
+                            children:
+                              - id: I4572:1797;2236:1306;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_JH4SQB
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1306;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 三体
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1306;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 刘慈欣
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1310
+                            name: BookItem/renjian-cihua/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_7KB9KJ
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 王国维
+                              Title: 人间词话
+                            children:
+                              - id: I4572:1797;2236:1310;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_4MV2RE
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1310;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 人间词话
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1310;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 王国维
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1314
+                            name: BookItem/android-notes/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_HK2F5H
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 本地文档
+                              Title: Android 开发笔记
+                            children:
+                              - id: I4572:1797;2236:1314;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_5KE2QT
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1314;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: Android 开发笔记
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1314;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 本地文档
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1318
+                            name: BookItem/old-day-echoes/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_J4J3D6
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 离线书库
+                              Title: 旧日回响
+                            children:
+                              - id: I4572:1797;2236:1318;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_PFATYQ
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1318;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 旧日回响
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1318;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 离线书库
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1322
+                            name: BookItem/among-stars/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_SXWD3S
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 本地导入
+                              Title: 群星之间
+                            children:
+                              - id: I4572:1797;2236:1322;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_JH4SQB
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1322;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 群星之间
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1322;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 本地导入
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1326
+                            name: BookItem/lighthouse-and-fog/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_69C4DX
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 书源同步
+                              Title: 灯塔与雾
+                            children:
+                              - id: I4572:1797;2236:1326;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_AEJU7Q
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1326;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 灯塔与雾
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1326;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 书源同步
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1330
+                            name: BookItem/paper-city/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_P41BF3
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 默认分组
+                              Title: 纸上城市
+                            children:
+                              - id: I4572:1797;2236:1330;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_42FLB6
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1330;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 纸上城市
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1330;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 默认分组
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+                          - id: I4572:1797;2236:1334
+                            name: BookItem/long-title-layout-sample/Cover/Phone
+                            type: INSTANCE
+                            layout: layout_BA67KK
+                            componentId: 493:187
+                            componentProperties:
+                              Cache: 已缓存
+                              Source: 网络书
+                              Chapter: 第32章 雨夜
+                              Author: 排版样本
+                              Title: 长标题测试：这本书的名字很长需要两行截断
+                            children:
+                              - id: I4572:1797;2236:1334;493:188
+                                name: Cover
+                                type: INSTANCE
+                                layout: layout_5GDVYW
+                                fills: fill_4MV2RE
+                                effects: effect_OLIDJA
+                                borderRadius: 8px
+                                componentId: 493:179
+                              - id: I4572:1797;2236:1334;493:189
+                                name: Title
+                                type: TEXT
+                                layout: layout_OCHS47
+                                text: 长标题测试：这本书的名字很长需要两行截断
+                                textStyle: Library/BookCardTitle
+                                fills: fill_BK8WQ2
+                                componentPropertyReferences:
+                                  text: Title
+                              - id: I4572:1797;2236:1334;493:190
+                                name: Author
+                                type: TEXT
+                                layout: layout_ZCDU1Z
+                                text: 排版样本
+                                textStyle: Library/BookMeta
+                                fills: fill_DB4XMV
+                                componentPropertyReferences:
+                                  text: Author
+              - id: I4572:1797;2236:1583
+                name: BottomNav/Phone
+                type: INSTANCE
+                layout: layout_Q2X9I9
+                fills: fill_N187J9
+                strokes: fill_TGAVPI
+                strokeWeight: 1px
+                borderRadius: 24px
+                componentId: 343:22
+                children:
+                  - id: I4572:1797;2236:1583;343:23
+                    name: Navigation/MainTabItem
+                    type: INSTANCE
+                    layout: layout_0A14ZE
+                    fills: fill_FBS8C6
+                    borderRadius: 24px
+                    componentId: 342:11
+                    componentProperties:
+                      Label: 书架
+                    children:
+                      - id: I4572:1797;2236:1583;343:23;1991:26487
+                        name: InteractionStateLayer
+                        type: RECTANGLE
+                        layout: layout_CGGKHM
+                        fills: fill_LLQ6R8
+                        opacity: 0
+                        borderRadius: 16px
+                      - id: I4572:1797;2236:1583;343:23;342:12
+                        name: icon-shell
+                        type: IMAGE-SVG
+                        layout: layout_6OGUUX
+                      - id: I4572:1797;2236:1583;343:23;342:19
+                        name: label
+                        type: TEXT
+                        layout: layout_ELSPLX
+                        text: 书架
+                        textStyle: Navigation/MainTabLabel
+                        fills: fill_8GTEJF
+                        componentPropertyReferences:
+                          text: Label
+                  - id: I4572:1797;2236:1583;343:45
+                    name: Navigation/MainTabItem
+                    type: INSTANCE
+                    layout: layout_0A14ZE
+                    borderRadius: 24px
+                    componentId: 342:2
+                    componentProperties:
+                      Label: 发现
+                    children:
+                      - id: I4572:1797;2236:1583;343:45;1991:26486
+                        name: InteractionStateLayer
+                        type: RECTANGLE
+                        layout: layout_CGGKHM
+                        fills: fill_LLQ6R8
+                        opacity: 0
+                        borderRadius: 16px
+                      - id: I4572:1797;2236:1583;343:45;342:3
+                        name: icon-shell
+                        type: IMAGE-SVG
+                        layout: layout_6OGUUX
+                      - id: I4572:1797;2236:1583;343:45;342:10
+                        name: label
+                        type: TEXT
+                        layout: layout_ELSPLX
+                        text: 发现
+                        textStyle: Navigation/MainTabLabel
+                        fills: fill_DB4XMV
+                        componentPropertyReferences:
+                          text: Label
+                  - id: I4572:1797;2236:1583;343:56
+                    name: Navigation/MainTabItem
+                    type: INSTANCE
+                    layout: layout_0A14ZE
+                    borderRadius: 24px
+                    componentId: 342:2
+                    componentProperties:
+                      Label: RSS
+                    children:
+                      - id: I4572:1797;2236:1583;343:56;1991:26486
+                        name: InteractionStateLayer
+                        type: RECTANGLE
+                        layout: layout_CGGKHM
+                        fills: fill_LLQ6R8
+                        opacity: 0
+                        borderRadius: 16px
+                      - id: I4572:1797;2236:1583;343:56;342:3
+                        name: icon-shell
+                        type: IMAGE-SVG
+                        layout: layout_6OGUUX
+                      - id: I4572:1797;2236:1583;343:56;342:10
+                        name: label
+                        type: TEXT
+                        layout: layout_ELSPLX
+                        text: RSS
+                        textStyle: Navigation/MainTabLabel
+                        fills: fill_DB4XMV
+                        componentPropertyReferences:
+                          text: Label
+                  - id: I4572:1797;2236:1583;343:67
+                    name: Navigation/MainTabItem
+                    type: INSTANCE
+                    layout: layout_0A14ZE
+                    borderRadius: 24px
+                    componentId: 342:2
+                    componentProperties:
+                      Label: 设置
+                    children:
+                      - id: I4572:1797;2236:1583;343:67;1991:26486
+                        name: InteractionStateLayer
+                        type: RECTANGLE
+                        layout: layout_CGGKHM
+                        fills: fill_LLQ6R8
+                        opacity: 0
+                        borderRadius: 16px
+                      - id: I4572:1797;2236:1583;343:67;342:3
+                        name: icon-shell
+                        type: IMAGE-SVG
+                        layout: layout_6OGUUX
+                      - id: I4572:1797;2236:1583;343:67;342:10
+                        name: label
+                        type: TEXT
+                        layout: layout_ELSPLX
+                        text: 设置
+                        textStyle: Navigation/MainTabLabel
+                        fills: fill_DB4XMV
+                        componentPropertyReferences:
+                          text: Label
+                  - id: I4572:1797;2236:1583;1992:931
+                    name: TabHitTarget/Bookshelf
+                    type: RECTANGLE
+                    layout: layout_GSBEOF
+                    fills: fill_7AQ9V2
+                  - id: I4572:1797;2236:1583;1992:932
+                    name: TabHitTarget/Discover
+                    type: RECTANGLE
+                    layout: layout_OPUFA3
+                    fills: fill_7AQ9V2
+                  - id: I4572:1797;2236:1583;1992:933
+                    name: TabHitTarget/RSS
+                    type: RECTANGLE
+                    layout: layout_KG3XQK
+                    fills: fill_7AQ9V2
+                  - id: I4572:1797;2236:1583;1992:934
+                    name: TabHitTarget/Settings
+                    type: RECTANGLE
+                    layout: layout_HH8I0G
+                    fills: fill_7AQ9V2
+      - id: 4578:583
+        name: More Action · Vertical Dots Override
+        type: IMAGE-SVG
+        layout: layout_9R5DOG
+      - id: 4572:2299
+        name: MorePopover · Style Only
+        type: FRAME
+        layout: layout_7IXRFV
+        children:
+          - id: 4582:2
+            name: Popover Background · Integrated Pointer
+            type: IMAGE-SVG
+            layout: layout_B8PFMQ
+            fills: fill_F9HGF4
+            effects: effect_TV555T
+          - id: 4572:2300
+            name: Popover Surface
+            type: FRAME
+            layout: layout_1T4BNT
+            children:
+              - id: 4572:2301
+                name: Menu Row · 批量管理
+                type: FRAME
+                layout: layout_EYB7R9
+                children:
+                  - id: 4572:2306
+                    name: Label
+                    type: TEXT
+                    layout: layout_FFHIPA
+                    text: 批量管理
+                    textStyle: style_6VU98T
+                    fills: fill_BK8WQ2
+                  - id: 4572:2307
+                    name: Divider
+                    type: RECTANGLE
+                    layout: layout_8IST2K
+                    fills: fill_GT8QZP
+                  - id: 4575:5
+                    name: Icon · 批量管理
+                    type: IMAGE-SVG
+                    layout: layout_FUOYAF
+                    componentId: 271:109
+              - id: 4572:2308
+                name: Menu Row · 本地导入
+                type: FRAME
+                layout: layout_7S26BK
+                children:
+                  - id: 4572:2315
+                    name: Label
+                    type: TEXT
+                    layout: layout_FFHIPA
+                    text: 本地导入
+                    textStyle: style_6VU98T
+                    fills: fill_BK8WQ2
+                  - id: 4572:2316
+                    name: Divider
+                    type: RECTANGLE
+                    layout: layout_8IST2K
+                    fills: fill_GT8QZP
+                  - id: 4575:14
+                    name: Icon · 本地导入
+                    type: IMAGE-SVG
+                    layout: layout_FUOYAF
+                    componentId: 271:195
+              - id: 4572:2317
+                name: Menu Row · 书架设置
+                type: FRAME
+                layout: layout_D14WDY
+                children:
+                  - id: 4572:2323
+                    name: Label
+                    type: TEXT
+                    layout: layout_FFHIPA
+                    text: 书架设置
+                    textStyle: style_6VU98T
+                    fills: fill_BK8WQ2
+                  - id: 4575:24
+                    name: Icon · 书架设置
+                    type: IMAGE-SVG
+                    layout: layout_FUOYAF
+                    componentId: 271:472
+globalVars:
+  styles:
+    layout_XNXK45:
+      mode: none
+      sizing: {}
+      dimensions:
+        width: 390
+        height: 844
+    layout_NSS0OB:
+      mode: column
+      alignItems: stretch
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 390
+        height: 844
+    layout_SJ9XHG:
+      mode: column
+      overflowScroll:
+        - y
+      alignSelf: stretch
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      dimensions:
+        height: 844
+    fill_XMPFB2:
+      - '#F8F4EC'
+    fill_TGAVPI:
+      - '#C1C7CD'
+    layout_R5OGF0:
+      mode: row
+      justifyContent: space-between
+      alignItems: flex-end
+      alignSelf: stretch
+      padding: 0px 23px 9px
+      sizing:
+        horizontal: fill
+        vertical: fixed
+    layout_OW7B5R:
+      mode: column
+      sizing:
+        horizontal: hug
+        vertical: hug
+    layout_2TMRUQ:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+    style_551KM0:
+      fontFamily: Inter
+      fontWeight: 700
+      fontSize: 14
+      lineHeight: 1.2102272851126534em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_BK8WQ2:
+      - '#1F1B17'
+    layout_WU41MH:
+      mode: row
+      alignItems: center
+      gap: 5px
+      sizing:
+        horizontal: hug
+        vertical: hug
+    layout_CP9PW1:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 14
+        height: 12
+    layout_VHIHIC:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 1
+        y: 0
+      dimensions:
+        width: 12
+        height: 12
+    layout_7F601S:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 4
+        y: 7.5
+      dimensions:
+        width: 0
+        height: 1.5
+    layout_F9G021:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 6
+        y: 6
+      dimensions:
+        width: 0
+        height: 3
+    layout_2WHNI3:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 8
+        y: 4.5
+      dimensions:
+        width: 0
+        height: 4.5
+    layout_C0Z4B6:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 10
+        y: 3
+      dimensions:
+        width: 0
+        height: 6
+    layout_4N04CX:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 15
+        height: 12
+    layout_L1GST6:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 1.5
+        y: 0
+      dimensions:
+        width: 12
+        height: 12
+    layout_MSELJL:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7.5
+        y: 9
+      dimensions:
+        width: 0.01
+        height: 0
+    layout_T40MT1:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 6.09
+        y: 7
+      dimensions:
+        width: 2.83
+        height: 0.59
+    layout_JMQDI9:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 4.67
+        y: 5
+      dimensions:
+        width: 5.66
+        height: 1.17
+    layout_Z4QULA:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.26
+        y: 3
+      dimensions:
+        width: 8.5
+        height: 1.76
+    layout_O6DFY9:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 12
+        height: 14
+    layout_8OR71H:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 1
+      dimensions:
+        width: 12
+        height: 12
+    layout_5IZI1F:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2
+        y: 4.5
+      dimensions:
+        width: 8
+        height: 5
+    layout_OSEOQR:
+      mode: row
+      alignItems: center
+      padding: 6px 20px 0px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 388
+        height: 58
+    layout_WVN1H9:
+      mode: none
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      dimensions:
+        height: 38
+    Navigation/AppTopBarTitle:
+      fontFamily: Noto Serif SC
+      fontWeight: 700
+      fontSize: 29
+      lineHeight: 1.4370000115756332em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_N62RXC:
+      mode: row
+      alignItems: center
+      gap: 18px
+      sizing:
+        horizontal: hug
+        vertical: hug
+    layout_RHCAZN:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 44
+        height: 44
+    layout_Z2SV6G:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 44
+        height: 44
+    fill_LLQ6R8:
+      - '#F48B13'
+    layout_AGGJKH:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 10
+        y: 10
+      dimensions:
+        width: 24
+        height: 24
+    layout_WDJMWE:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 24
+        height: 24
+    fill_F9HGF4: []
+    layout_XHCDMK:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3
+        y: 3
+      dimensions:
+        width: 14
+        height: 14
+    layout_KPL3IN:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 15
+        y: 15
+      dimensions:
+        width: 6
+        height: 6
+    fill_7AQ9V2:
+      - rgba(255, 255, 255, 0)
+    layout_YE6TXN:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 4
+        y: 11
+      dimensions:
+        width: 2
+        height: 2
+    layout_YUQR6I:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 11
+        y: 11
+      dimensions:
+        width: 2
+        height: 2
+    layout_8BYH1C:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 18
+        y: 11
+      dimensions:
+        width: 2
+        height: 2
+    layout_4YE2V9:
+      mode: none
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      dimensions:
+        height: 736
+    layout_ZTRTO2:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      dimensions:
+        height: 13
+    layout_F7KEL9:
+      mode: column
+      sizing:
+        horizontal: fixed
+        vertical: hug
+      position: absolute
+      locationRelativeToParent:
+        x: 0
+        y: -4
+      dimensions:
+        width: 388
+    style_HDDW4K:
+      fontFamily: Noto Sans SC
+      fontWeight: 400
+      fontSize: 12
+      lineHeight: 1.3999999364217122em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_DB4XMV:
+      - '#756F69'
+    layout_R3TJ44:
+      mode: column
+      gap: 8px
+      padding: 8px 0px 628px 19px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      position: absolute
+      locationRelativeToParent:
+        x: 1
+        y: 107
+      dimensions:
+        width: 388
+        height: 1637.77
+    layout_2PGCFE:
+      mode: row
+      alignItems: center
+      gap: 13.993049621582031px
+      padding: 0px 16.553821563720703px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 350
+        height: 100
+    fill_F92KCG:
+      - rgba(255, 255, 255, 0.88)
+    layout_IQ11OD:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 62
+        height: 92.99
+    fill_PFATYQ:
+      - type: IMAGE
+        imageRef: e37bad3082ea62920cbd047fe9a194643c93987c
+        scaleMode: FILL
+        objectFit: cover
+        isBackground: false
+        imageDownloadArguments:
+          needsCropping: false
+          requiresImageDimensions: false
+    layout_67ZPT8:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+    layout_ADSDBY:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 145.82
+        height: 15.6
+    Library/ContinueEyebrow:
+      fontFamily: Noto Sans SC
+      fontWeight: 900
+      fontSize: 13
+      lineHeight: 1.200000029343825em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_1MJCDK:
+      - '#2D4A3E'
+    layout_TIIMYL:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 1
+        height: 6
+    layout_1HKIWV:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: hug
+      dimensions:
+        width: 145.82
+    Library/ContinueTitle:
+      fontFamily: Noto Serif SC
+      fontWeight: 700
+      fontSize: 20
+      lineHeight: 1.2em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_PSFYYH:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 1
+        height: 5
+    layout_VKJ3XE:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 145.82
+        height: 16.8
+    Library/ContinueMeta:
+      fontFamily: Noto Sans SC
+      fontWeight: 400
+      fontSize: 14
+      lineHeight: 1.1999999455043249em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_T0TRJ4:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 82
+        height: 40
+    layout_NDUERY:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: -2
+      dimensions:
+        width: 82
+        height: 44
+    layout_M1PDQM:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 82
+        height: 40
+    layout_JB1BWT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 28
+        y: 12
+      dimensions:
+        width: 26
+        height: 16
+    Library/ActionLabel:
+      fontFamily: Noto Sans SC
+      fontWeight: 700
+      fontSize: 13
+      lineHeight: 1.200000029343825em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_8GTEJF:
+      - '#FFFAF4'
+    layout_CT6CR7:
+      mode: column
+      gap: 10px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 350
+        height: 893.77
+    layout_CJKETQ:
+      mode: row
+      justifyContent: space-between
+      alignItems: center
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 350
+        height: 38
+    layout_ELSPLX:
+      mode: none
+      sizing:
+        horizontal: fill
+        vertical: hug
+    Library/SectionTitle:
+      fontFamily: Noto Sans SC
+      fontWeight: 700
+      fontSize: 15
+      lineHeight: 1.2em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_17NEUE:
+      mode: row
+      alignItems: center
+      gap: 8px
+      sizing:
+        horizontal: hug
+        vertical: fixed
+      dimensions:
+        height: 34
+    layout_FO7RGP:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 34
+        height: 34
+    layout_X95E5I:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: -5
+        y: -5
+      dimensions:
+        width: 44
+        height: 44
+    layout_QIYACG:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 34
+        height: 34
+    layout_BZKCBU:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7
+        y: 7
+      dimensions:
+        width: 20
+        height: 20
+    layout_NNWA82:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 20
+        height: 20
+    layout_L3IV19:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.33
+        y: 3.33
+      dimensions:
+        width: 5
+        height: 5
+    layout_EO5FIW:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 11.67
+        y: 3.33
+      dimensions:
+        width: 5
+        height: 5
+    layout_BP6FJU:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.33
+        y: 11.67
+      dimensions:
+        width: 5
+        height: 5
+    layout_03XRZL:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 11.67
+        y: 11.67
+      dimensions:
+        width: 5
+        height: 5
+    layout_PSDDEU:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7.5
+        y: 5
+      dimensions:
+        width: 9.17
+        height: 0
+    layout_KLAVVN:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7.5
+        y: 10
+      dimensions:
+        width: 9.17
+        height: 0
+    layout_IQOGDU:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7.5
+        y: 15
+      dimensions:
+        width: 9.17
+        height: 0
+    layout_DD1ND1:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 4.17
+        y: 5
+      dimensions:
+        width: 0
+        height: 0.01
+    layout_2ZR8FI:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 4.17
+        y: 10
+      dimensions:
+        width: 0
+        height: 0.01
+    layout_CED55A:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 4.17
+        y: 15
+      dimensions:
+        width: 0
+        height: 0.01
+    layout_XD9RJT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.33
+        y: 3.33
+      dimensions:
+        width: 13.33
+        height: 14.17
+    layout_G22ZWJ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2.5
+        y: 2.5
+      dimensions:
+        width: 15
+        height: 15
+    layout_MA475H:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7.5
+        y: 7.5
+      dimensions:
+        width: 5
+        height: 5
+    layout_9V4B1E:
+      mode: column
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 350
+        height: 845.77
+    layout_UOQJ11:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 96.66
+        height: 190.3
+    layout_5GDVYW:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 96.96
+        height: 145.44
+    effect_OLIDJA:
+      boxShadow: 0px 8px 26px 0px rgba(89, 70, 50, 0.1)
+    layout_OCHS47:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 96.96
+        height: 18.3
+    Library/BookCardTitle:
+      fontFamily: Noto Serif SC
+      fontWeight: 700
+      fontSize: 15
+      lineHeight: 1.2199999491373699em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_ZCDU1Z:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: hug
+      dimensions:
+        width: 96.96
+    Library/BookMeta:
+      fontFamily: Noto Sans SC
+      fontWeight: 400
+      fontSize: 12
+      lineHeight: 1.25em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_S00MR2:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 126.66
+        y: 0
+      dimensions:
+        width: 96.67
+        height: 190.3
+    fill_42FLB6:
+      - type: IMAGE
+        imageRef: 68b69f621b723d75a2269f69ef426cf95161ffcc
+        scaleMode: FILL
+        objectFit: cover
+        isBackground: false
+        imageDownloadArguments:
+          needsCropping: false
+          requiresImageDimensions: false
+    layout_YN5UX2:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 253.33
+        y: 0
+      dimensions:
+        width: 96.66
+        height: 190.3
+    fill_AEJU7Q:
+      - type: IMAGE
+        imageRef: ae93593311f25c197eb69278f53c307533e02b2a
+        scaleMode: FILL
+        objectFit: cover
+        isBackground: false
+        imageDownloadArguments:
+          needsCropping: false
+          requiresImageDimensions: false
+    layout_AKZXYI:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 206.3
+      dimensions:
+        width: 96.66
+        height: 208.58
+    fill_JH4SQB:
+      - type: IMAGE
+        imageRef: a6dd26a470f0140e7427a626fb9a0783fba2b6f9
+        scaleMode: FILL
+        objectFit: cover
+        isBackground: false
+        imageDownloadArguments:
+          needsCropping: false
+          requiresImageDimensions: false
+    layout_7KB9KJ:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 126.66
+        y: 206.3
+      dimensions:
+        width: 96.67
+        height: 208.58
+    fill_4MV2RE:
+      - type: IMAGE
+        imageRef: 6479ee1e12dbb8f8cd9043fab29c3e34330412cd
+        scaleMode: FILL
+        objectFit: cover
+        isBackground: false
+        imageDownloadArguments:
+          needsCropping: false
+          requiresImageDimensions: false
+    layout_HK2F5H:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 253.33
+        y: 206.3
+      dimensions:
+        width: 96.66
+        height: 208.58
+    fill_5KE2QT:
+      - type: IMAGE
+        imageRef: 977354b17329106dceb220ee0d227ebac3da4274
+        scaleMode: FILL
+        objectFit: cover
+        isBackground: false
+        imageDownloadArguments:
+          needsCropping: false
+          requiresImageDimensions: false
+    layout_J4J3D6:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 430.88
+      dimensions:
+        width: 96.66
+        height: 190.3
+    layout_SXWD3S:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 126.66
+        y: 430.88
+      dimensions:
+        width: 96.67
+        height: 190.3
+    layout_69C4DX:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 253.33
+        y: 430.88
+      dimensions:
+        width: 96.66
+        height: 190.3
+    layout_P41BF3:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 637.17
+      dimensions:
+        width: 96.66
+        height: 208.59
+    layout_BA67KK:
+      mode: column
+      gap: 6px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 126.66
+        y: 637.17
+      dimensions:
+        width: 96.67
+        height: 208.59
+    layout_Q2X9I9:
+      mode: row
+      justifyContent: center
+      alignItems: center
+      padding: 8px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      position: absolute
+      locationRelativeToParent:
+        x: 15
+        y: 761
+      dimensions:
+        width: 360
+        height: 68
+    fill_N187J9:
+      - rgba(255, 252, 248, 0.9)
+    layout_0A14ZE:
+      mode: column
+      justifyContent: center
+      alignItems: center
+      gap: 2px
+      padding: 2px 0px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 86.5
+        height: 54
+    fill_FBS8C6:
+      - '#1F3528'
+    layout_CGGKHM:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      position: absolute
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 86.5
+        height: 54
+    layout_6OGUUX:
+      mode: row
+      justifyContent: center
+      alignItems: center
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 30
+        height: 30
+    layout_M735VO:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 24
+        height: 24
+    layout_2Y61XL:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7
+        y: 3
+      dimensions:
+        width: 14
+        height: 14
+    layout_KCGRXU:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3
+        y: 7.26
+      dimensions:
+        width: 13.5
+        height: 13.74
+    layout_1SC4G2:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 11
+        y: 7
+      dimensions:
+        width: 5
+        height: 0
+    layout_RGJ83K:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 11
+        y: 10
+      dimensions:
+        width: 6
+        height: 0
+    layout_MA00ZE:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 11
+        y: 13
+      dimensions:
+        width: 3
+        height: 0
+    Navigation/MainTabLabel:
+      fontFamily: Noto Sans SC
+      fontWeight: 700
+      fontSize: 11
+      lineHeight: 1.6363636363636365em
+      textAlignHorizontal: CENTER
+      textAlignVertical: TOP
+    layout_PPU6JZ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 8
+        y: 8
+      dimensions:
+        width: 8
+        height: 8
+    layout_4SOHY9:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3
+        y: 3
+      dimensions:
+        width: 18
+        height: 18
+    layout_D9KK5N:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 12
+        y: 3
+      dimensions:
+        width: 0
+        height: 2
+    layout_XR7VLS:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 12
+        y: 19
+      dimensions:
+        width: 0
+        height: 2
+    layout_MCU4XP:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3
+        y: 12
+      dimensions:
+        width: 2
+        height: 0
+    layout_8K270D:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 19
+        y: 12
+      dimensions:
+        width: 2
+        height: 0
+    layout_4FW4FK:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 14
+        y: 3
+      dimensions:
+        width: 5
+        height: 5
+    layout_7GIM8C:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 5
+        y: 3
+      dimensions:
+        width: 14
+        height: 18
+    layout_PTWAM0:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 9
+        y: 14
+      dimensions:
+        width: 3
+        height: 3
+    layout_KMV0VD:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 9
+        y: 11
+      dimensions:
+        width: 6
+        height: 6
+    layout_TYTQSL:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 9
+        y: 17
+      dimensions:
+        width: 0.01
+        height: 0
+    layout_PY3RSI:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 9
+        y: 9
+      dimensions:
+        width: 6
+        height: 6
+    layout_GSBEOF:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      position: absolute
+      locationRelativeToParent:
+        x: 8
+        y: 7
+      dimensions:
+        width: 86.5
+        height: 54
+    layout_OPUFA3:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      position: absolute
+      locationRelativeToParent:
+        x: 94.5
+        y: 7
+      dimensions:
+        width: 86.5
+        height: 54
+    layout_KG3XQK:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      position: absolute
+      locationRelativeToParent:
+        x: 181
+        y: 7
+      dimensions:
+        width: 86.5
+        height: 54
+    layout_HH8I0G:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      position: absolute
+      locationRelativeToParent:
+        x: 267.5
+        y: 7
+      dimensions:
+        width: 86.5
+        height: 54
+    layout_9R5DOG:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 325
+        y: 59
+      dimensions:
+        width: 44
+        height: 44
+    layout_ZKE0VL:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 8
+        y: 8
+      dimensions:
+        width: 28
+        height: 28
+    layout_0JCAIJ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 20.5
+        y: 13.5
+      dimensions:
+        width: 3
+        height: 3
+    layout_EM3FQM:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 20.5
+        y: 20.5
+      dimensions:
+        width: 3
+        height: 3
+    layout_BASINY:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 20.5
+        y: 27.5
+      dimensions:
+        width: 3
+        height: 3
+    layout_7IXRFV:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 204
+        y: 98
+      dimensions:
+        width: 176
+        height: 162
+    layout_B8PFMQ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 176
+        height: 162
+    effect_TV555T:
+      boxShadow: 0px 10px 28px 0px rgba(46, 38, 31, 0.16)
+    layout_SNYQ0O:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0.5
+        y: 0.5
+      dimensions:
+        width: 175
+        height: 161
+    fill_CNSN8E:
+      - '#FFFCF8'
+    fill_59JAO4:
+      - '#E3DED6'
+    layout_1T4BNT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 12
+      dimensions:
+        width: 176
+        height: 150
+    layout_EYB7R9:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 176
+        height: 50
+    layout_FFHIPA:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 58
+        y: 14
+      dimensions:
+        width: 60
+        height: 22
+    style_6VU98T:
+      fontFamily: Noto Sans SC
+      fontWeight: 500
+      fontSize: 15
+      lineHeight: 1.4666666666666666em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_8IST2K:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 16
+        y: 49
+      dimensions:
+        width: 144
+        height: 1
+    fill_GT8QZP:
+      - '#E8E2DA'
+    layout_FUOYAF:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 18
+        y: 13
+      dimensions:
+        width: 24
+        height: 24
+    layout_H0MARS:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 5
+        y: 7
+      dimensions:
+        width: 15
+        height: 10
+    layout_7S26BK:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 50
+      dimensions:
+        width: 176
+        height: 50
+    layout_2B24CT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 4
+        y: 17
+      dimensions:
+        width: 16
+        height: 4
+    layout_UNOQM1:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 7
+        y: 11
+      dimensions:
+        width: 10
+        height: 5
+    layout_CCE4UL:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 12
+        y: 4
+      dimensions:
+        width: 0
+        height: 12
+    layout_D14WDY:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 100
+      dimensions:
+        width: 176
+        height: 50
+

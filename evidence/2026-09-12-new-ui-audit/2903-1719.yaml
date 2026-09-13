@@ -1,0 +1,184 @@
+metadata:
+  name: Reader UI · Phase 2 Design System & Redraw
+  components:
+    2903:1719:
+      id: 2903:1719
+      key: 5397a6566ee39dccbf1a6252e6b84c770a0a00e8
+      name: Viewport=Phone
+      componentSetId: 2903:1737
+  componentSets:
+    2903:1737:
+      id: 2903:1737
+      key: 3f87e7ebee3e8bbc37a3f40d4b0a61994fde5369
+      name: Library/BookActionSheet
+      description: Canonical book action sheet. Native entry is long press on the target bookshelf item. Figma Plugin API has no long-press trigger, so this is documented rather than substituted with an ON_CLICK reaction.
+nodes:
+  - id: 2903:1719
+    name: Viewport=Phone
+    type: COMPONENT
+    layout: layout_HQ1E7I
+    fills: fill_NRYO0X
+    strokes: fill_6UEZSZ
+    strokeWeight: 1px
+    effects: Shadow/Elevated
+    borderRadius: 24px 24px 0px 0px
+    children:
+      - id: 2903:1720
+        name: Rectangle
+        type: RECTANGLE
+        layout: layout_6D2HEJ
+        fills: fill_6J833Y
+        borderRadius: 999px
+      - id: 2903:1721
+        name: Title
+        type: TEXT
+        layout: layout_82X7GU
+        text: 书籍操作
+        textStyle: style_H4EB8Q
+        fills: fill_C31W6F
+      - id: 2903:1722
+        name: Action=BookInfo
+        type: FRAME
+        layout: layout_Y85N80
+        fills: fill_HWFWYU
+        borderRadius: 12px
+        children:
+          - id: 2903:1723
+            name: 书籍信息
+            type: TEXT
+            layout: layout_N0S33F
+            text: 书籍信息
+            textStyle: style_7M8T6V
+            fills: fill_M72UOS
+      - id: 2903:1724
+        name: Action=RemoveFromBookshelf
+        type: FRAME
+        layout: layout_QSLW0O
+        fills: fill_CAYBL8
+        borderRadius: 12px
+        children:
+          - id: 2903:1725
+            name: 移出书架
+            type: TEXT
+            layout: layout_N0S33F
+            text: 移除书架
+            textStyle: style_7M8T6V
+            fills: fill_KGE2SV
+      - id: 2935:932
+        name: Action=MultiSelect
+        type: FRAME
+        layout: layout_JL787U
+        fills: fill_HWFWYU
+        borderRadius: 12px
+        children:
+          - id: 2935:933
+            name: 多选
+            type: TEXT
+            layout: layout_XEFKNY
+            text: 多选
+            textStyle: style_7M8T6V
+            fills: fill_M72UOS
+globalVars:
+  styles:
+    layout_HQ1E7I:
+      mode: none
+      sizing: {}
+      dimensions:
+        width: 366
+        height: 224
+    fill_NRYO0X:
+      - rgba(255, 252, 248, 0.92)
+    fill_6UEZSZ:
+      - '#C1C7CD'
+    Shadow/Elevated:
+      boxShadow: 0px 18px 46px 0px rgba(89, 70, 50, 0.16)
+    layout_6D2HEJ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 162
+        y: 9
+      dimensions:
+        width: 42
+        height: 4
+    fill_6J833Y:
+      - '#756F69'
+    layout_82X7GU:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 14
+        y: 34
+      dimensions:
+        width: 68
+        height: 20
+    style_H4EB8Q:
+      fontFamily: Noto Sans SC
+      fontWeight: 700
+      fontSize: 17
+      lineHeight: 1.2000000897575827em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_C31W6F:
+      - '#1F1B17'
+    layout_Y85N80:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 14
+        y: 116
+      dimensions:
+        width: 338
+        height: 40
+    fill_HWFWYU:
+      - rgba(45, 74, 62, 0.09)
+    layout_N0S33F:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 12
+        y: 12
+      dimensions:
+        width: 52
+        height: 16
+    style_7M8T6V:
+      fontFamily: Noto Sans SC
+      fontWeight: 700
+      fontSize: 13
+      lineHeight: 1.200000029343825em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_M72UOS:
+      - '#2D4A3E'
+    layout_QSLW0O:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 14
+        y: 162
+      dimensions:
+        width: 338
+        height: 40
+    fill_CAYBL8:
+      - rgba(214, 71, 61, 0.1)
+    fill_KGE2SV:
+      - '#D7473E'
+    layout_JL787U:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 14
+        y: 70
+      dimensions:
+        width: 338
+        height: 40
+    layout_XEFKNY:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 12
+        y: 12
+      dimensions:
+        width: 26
+        height: 16
+

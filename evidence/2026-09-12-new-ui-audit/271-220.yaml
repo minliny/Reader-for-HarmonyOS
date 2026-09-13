@@ -1,0 +1,51 @@
+metadata:
+  name: Reader UI · Phase 2 Design System & Redraw
+  components:
+    271:220:
+      id: 271:220
+      key: 37e6b83f891876f3f41a53766c06c92b727e7b75
+      name: Icon/Filter
+  componentSets: {}
+nodes:
+  - id: 271:220
+    name: Icon/Filter
+    type: COMPONENT
+    layout: layout_MGSHR2
+    children:
+      - id: 412:75
+        name: Tabler/filter/outline
+        type: IMAGE-SVG
+        layout: layout_0BFNHT
+        fills: fill_9KOL71
+globalVars:
+  styles:
+    layout_MGSHR2:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 48
+        height: 48
+    layout_0BFNHT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        y: 0
+      dimensions:
+        width: 48
+        height: 48
+    fill_9KOL71: []
+    layout_HFQC7A:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 8
+        y: 8
+      dimensions:
+        width: 32
+        height: 34
+    fill_8Q74KU:
+      - '#1F1B17'
+

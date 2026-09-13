@@ -1,0 +1,82 @@
+{
+  "method": "Executed production sampleReaderControlAutoPage; child bounds derived from live ArkUI speedRow declarations. No device rendering measurement.",
+  "samples": [
+    {
+      "progress": 0,
+      "availableWidth": 262,
+      "speed": {
+        "x": -1.45,
+        "y": -175.2324,
+        "width": 240,
+        "height": 32,
+        "opacity": 1
+      },
+      "textTop": 175.54959999999997,
+      "textBottom": 189.54959999999997,
+      "speedBottom": 182.54959999999997,
+      "rangeRight": 295,
+      "horizontalOverflow": 55,
+      "textOverflowBelowCard": 7
+    },
+    {
+      "progress": 0,
+      "availableWidth": 286,
+      "speed": {
+        "x": -1.45,
+        "y": -175.2324,
+        "width": 264,
+        "height": 32,
+        "opacity": 1
+      },
+      "textTop": 175.54959999999997,
+      "textBottom": 189.54959999999997,
+      "speedBottom": 182.54959999999997,
+      "rangeRight": 295,
+      "horizontalOverflow": 31,
+      "textOverflowBelowCard": 7
+    },
+    {
+      "progress": 1,
+      "availableWidth": 312,
+      "speed": {
+        "x": 4,
+        "y": 33.390600000000006,
+        "width": 280,
+        "height": 64,
+        "opacity": 1
+      },
+      "textTop": 356.1726,
+      "textBottom": 370.1726,
+      "speedBottom": 395.1726,
+      "rangeRight": 295,
+      "horizontalOverflow": 15,
+      "textOverflowBelowCard": 0
+    },
+    {
+      "progress": 1,
+      "availableWidth": 338,
+      "speed": {
+        "x": 4,
+        "y": 33.390600000000006,
+        "width": 306,
+        "height": 64,
+        "opacity": 1
+      },
+      "textTop": 356.1726,
+      "textBottom": 370.1726,
+      "speedBottom": 395.1726,
+      "rangeRight": 295,
+      "horizontalOverflow": 0,
+      "textOverflowBelowCard": 0
+    }
+  ],
+  "fourLineText": {
+    "title": 18.3,
+    "author": 15,
+    "chapter": 13.75,
+    "tags": 18,
+    "gaps": 9,
+    "total": 74.05,
+    "currentPhoneDetailsHeight": 72
+  }
+}

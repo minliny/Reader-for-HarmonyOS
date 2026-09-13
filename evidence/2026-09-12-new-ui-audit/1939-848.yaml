@@ -1,0 +1,185 @@
+metadata:
+  name: Reader UI · Phase 2 Design System & Redraw
+  components: {}
+  componentSets: {}
+nodes:
+  - id: 1939:848
+    name: PersistentActor/PageSpeed
+    type: FRAME
+    layout: layout_YUQ0HX
+    fills: fill_MF026V
+    strokes: fill_ASWJ2T
+    strokeWeight: 1px
+    borderRadius: 6px
+    children:
+      - id: 1939:849
+        name: Text
+        type: FRAME
+        layout: layout_6HYEI4
+        effects: effect_2DQS7N
+        children:
+          - id: 1939:850
+            name: Bold Text
+            type: FRAME
+            layout: layout_58LVVH
+            children:
+              - id: 1939:851
+                name: 翻页速度
+                type: TEXT
+                layout: layout_1N8H2T
+                text: 翻页速度
+                textStyle: style_3XNZ8H
+                fills: fill_VT48NB
+          - id: 1939:852
+            name: Italic Text
+            type: FRAME
+            layout: layout_66UG0G
+            children:
+              - id: 1939:853
+                name: 8 秒
+                type: TEXT
+                layout: layout_1N8H2T
+                text: 8 秒
+                textStyle: style_BJH9CL
+                fills: fill_CS23SB
+      - id: 1939:854
+        name: Container
+        type: FRAME
+        layout: layout_NPVSDK
+        effects: effect_2DQS7N
+        children:
+          - id: 1939:855
+            name: Text
+            type: FRAME
+            layout: layout_FV89KX
+            children:
+              - id: 1939:856
+                name: 2 秒
+                type: TEXT
+                layout: layout_1N8H2T
+                text: 2 秒
+                textStyle: style_KEAHG3
+                fills: fill_CS23SB
+          - id: 1939:857
+            name: Range Slider - 调整翻页速度
+            type: FRAME
+            layout: layout_RS2U8S
+          - id: 1939:858
+            name: Text
+            type: FRAME
+            layout: layout_8K55DQ
+            children:
+              - id: 1939:859
+                name: 20 秒
+                type: TEXT
+                layout: layout_1N8H2T
+                text: 20 秒
+                textStyle: style_KEAHG3
+                fills: fill_CS23SB
+globalVars:
+  styles:
+    layout_YUQ0HX:
+      mode: column
+      alignItems: stretch
+      alignSelf: stretch
+      padding: 9px 10px
+      sizing:
+        horizontal: hug
+        vertical: hug
+    fill_MF026V:
+      - rgba(255, 250, 244, 0.98)
+    fill_ASWJ2T:
+      - rgba(155, 132, 102, 0.18)
+    layout_6HYEI4:
+      mode: column
+      alignItems: stretch
+      sizing:
+        horizontal: fill
+        vertical: hug
+      locationRelativeToParent:
+        x: 11
+        y: 25
+    effect_2DQS7N:
+      filter: blur(0px)
+    layout_58LVVH:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 0
+    layout_1N8H2T:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+    style_3XNZ8H:
+      fontFamily: Inter
+      fontWeight: 700
+      fontSize: 10
+      lineHeight: 1.2102272033691406em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_VT48NB:
+      - '#332C25'
+    layout_66UG0G:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 88.56
+        y: 0
+    style_BJH9CL:
+      fontFamily: Inter
+      fontWeight: 400
+      fontSize: 10
+      lineHeight: 1.2102272033691406em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    fill_CS23SB:
+      - '#5B5046'
+    layout_NPVSDK:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: hug
+      locationRelativeToParent:
+        x: 128
+        y: 10
+    layout_FV89KX:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        y: 15.5
+    style_KEAHG3:
+      fontFamily: Inter
+      fontWeight: 400
+      fontSize: 9
+      lineHeight: 1.2102272245619032em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_RS2U8S:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 26.3
+        y: 0
+      dimensions:
+        width: 109
+        height: 44
+    layout_8K55DQ:
+      mode: column
+      sizing:
+        horizontal: fill
+        vertical: fixed
+      locationRelativeToParent:
+        x: 143.86
+        y: 15.5
+
