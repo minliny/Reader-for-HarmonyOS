@@ -11,7 +11,6 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
 import { motionAnimateParam } from './MotionSpec';
-import { APPEARANCE_SELECT_FILL, APPEARANCE_SELECT_OPEN_FILL } from './ReaderSelectAppearanceStyle';
 import {
   TYPE_SELECT_APPEARANCE_VALUE,
   TYPE_SELECT_DEFAULT_VALUE,
@@ -95,7 +94,7 @@ export struct ReaderSelect {
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12)
         .rotate({ angle: this.isOpen ? 90 : 0 }).animation(this.dropdownAnimation());
     }.width('100%').height(30).padding({ left: 11, right: 9 }).borderRadius(999)
-      .backgroundColor(this.isOpen ? APPEARANCE_SELECT_OPEN_FILL : APPEARANCE_SELECT_FILL)
+      .backgroundColor(this.isOpen ? readerAppColor('app.appearance.selectOpenFill', this.appThemeScheme) : readerAppColor('app.appearance.selectFill', this.appThemeScheme))
       .responseRegion({ x: 0, y: -6, width: '100%', height: 42 })
       .onClick((): void => this.onToggle());
   }

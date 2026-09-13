@@ -12,7 +12,6 @@ import {
 } from '../common/ReaderTokens';
 import { motionAnimateParam } from './MotionSpec';
 import {
-  APPEARANCE_SELECT_BORDER, APPEARANCE_SELECT_SELECTED, APPEARANCE_SELECT_SURFACE,
   APPEARANCE_SELECT_OPTION_HEIGHT, appearanceSelectMenuHeight,
 } from './ReaderSelectAppearanceStyle';
 import type { ReaderSelectVariant } from './ReaderSelect';
@@ -132,7 +131,7 @@ export struct ReaderSelectPanel {
         Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check'))).width(11).height(9);
       }
     }.width('100%').height(APPEARANCE_SELECT_OPTION_HEIGHT).padding({ left: 9, right: 9 })
-      .borderRadius(6).backgroundColor(opt === this.renderedValue() ? APPEARANCE_SELECT_SELECTED : Color.Transparent)
+      .borderRadius(6).backgroundColor(opt === this.renderedValue() ? readerAppColor('app.appearance.selectSelected', this.appThemeScheme) : Color.Transparent)
       .accessibilityText(`${opt}${opt === this.renderedValue() ? '，已选择' : ''}`)
       .onClick((): void => this.selectAndCollapse(opt));
   }
@@ -278,7 +277,7 @@ export struct ReaderSelectPanel {
   }
 
   private panelBackgroundColor(): ResourceColor {
-    if (this.variant === 'appearanceLibrary') return APPEARANCE_SELECT_SURFACE;
+    if (this.variant === 'appearanceLibrary') return readerAppColor('app.appearance.selectSurface', this.appThemeScheme);
     if (this.variant === 'appearanceCompact') {
       return readerAppColor('app.ReaderSelectPanel.panelBackgroundColor.paint.D1FFF8EF', this.appThemeScheme);
     }
@@ -289,7 +288,7 @@ export struct ReaderSelectPanel {
   }
 
   private panelBorderColor(): ResourceColor {
-    if (this.variant === 'appearanceLibrary') return APPEARANCE_SELECT_BORDER;
+    if (this.variant === 'appearanceLibrary') return readerAppColor('app.appearance.selectBorder', this.appThemeScheme);
     if (this.variant === 'appearanceCompact') {
       return readerAppColor('app.ReaderSelectPanel.panelBorderColor.paint.FFC1C7CD', this.appThemeScheme);
     }

@@ -27,7 +27,7 @@ export struct ReaderToggle {
     .width(44)
     .height(24)
     .borderRadius(this.radius)
-    .backgroundColor(this.value ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme))
+    .backgroundColor(this.value ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('app.toggle.offTrack', this.appThemeScheme))
     .onClick((): void => this.onToggle());
   }
 }
