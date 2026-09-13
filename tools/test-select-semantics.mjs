@@ -1,10 +1,11 @@
+import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (path) => readFileSync(resolve(repo, path), 'utf8');
+const read = (path) => themeDayDesignSource(readFileSync(resolve(repo, path), 'utf8'));
 
 const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
 assert.doesNotMatch(rss, /import \{ ReaderSelect \}/);
@@ -61,13 +62,13 @@ assert.doesNotMatch(panel, /@Prop (appearanceCompact|settingsPage|settingsTablet
 assert.match(select, /@Prop reduceMotion: boolean = false/);
 assert.match(panel, /@Prop reduceMotion: boolean = false/);
 assert.match(select,
-  /private settingsTrigger[\s\S]*?\.height\(34\)[\s\S]*?\.backgroundColor\('#0F2D4A3E'\)[\s\S]*?\.borderRadius\(7\)/,
+  /private settingsTrigger[\s\S]*?\.height\(34\)[\s\S]*?\.backgroundColor\(readerAppColor\('app\.ReaderSelect\.settingsTrigger\.backgroundColor\.0F2D4A3E', this\.appThemeScheme\)\)[\s\S]*?\.borderRadius\(7\)/,
   'Settings/SelectTrigger must use its page-specific Figma geometry and surface');
 assert.match(select,
-  /private sourceGroupTrigger[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontSizeFp[\s\S]*?\.backgroundColor\('#FFFCF8'\)[\s\S]*?\.borderRadius\(8\)/,
+  /private sourceGroupTrigger[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontSizeFp[\s\S]*?\.backgroundColor\(readerAppColor\('app\.ReaderSelect\.sourceGroupTrigger\.backgroundColor\.FFFFFCF8', this\.appThemeScheme\)\)[\s\S]*?\.borderRadius\(8\)/,
   'SourceManagement/GroupFilter must not inherit the generic Reader select styling');
 assert.match(select,
-  /private appearanceTrigger[\s\S]*?Text\(this\.value\)[\s\S]*?TYPE_SELECT_APPEARANCE_VALUE\.fontFamily[\s\S]*?app\.media\.reader_chevron_down[\s\S]*?TOK_SURFACE_FIELD[\s\S]*?'#C1C7CD'[\s\S]*?responseRegion\(\{ x: 0, y: -4, width: '100%', height: 44 \}\)/,
+  /private appearanceTrigger[\s\S]*?Text\(this\.value\)[\s\S]*?TYPE_SELECT_APPEARANCE_VALUE\.fontFamily[\s\S]*?app\.media\.reader_chevron_down[\s\S]*?TOK_SURFACE_FIELD[\s\S]*?readerAppColor\('app\.ReaderSelect\.appearanceTrigger\.color\.FFC1C7CD', this\.appThemeScheme\)[\s\S]*?responseRegion\(\{ x: 0, y: -4, width: '100%', height: 44 \}\)/,
   'the Reader Appearance trigger must render its selected value, chevron, field, border, and 44vp hit target');
 assert.doesNotMatch(select,
   /appearancePortGradient|linearGradient\(\{[\s\S]*?Color\.Transparent[\s\S]*?'#41484C'/,
@@ -90,10 +91,10 @@ assert.match(panel,
 assert.match(panel, /this\.chevronAngle = -180/,
   'the selected-row chevron must rotate around its fixed center while the panel expands');
 assert.match(panel,
-  /private sourceGroupSelectedRow[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?app\.media\.source_group_chevron[\s\S]*?\.backgroundColor\('#FFFCF8'\)/,
+  /private sourceGroupSelectedRow[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?app\.media\.source_group_chevron[\s\S]*?\.backgroundColor\(readerAppColor\('app\.ReaderSelectPanel\.sourceGroupSelectedRow\.backgroundColor\.FFFFFCF8', this\.appThemeScheme\)\)/,
   'the expanded source-group selected row must preserve the trigger typography, icon, and surface');
 assert.match(panel,
-  /private panelBorderColor[\s\S]*?this\.variant === 'sourceGroup'[\s\S]*?return '#85B4A697'/,
+  /private panelBorderColor[\s\S]*?this\.variant === 'sourceGroup'[\s\S]*?return readerAppColor\('app\.ReaderSelectPanel\.panelBorderColor\.paint\.85B4A697', this\.appThemeScheme\)/,
   'the expanded source-group panel must preserve the source-management field border');
 assert.match(panel,
   /private collapsePanel\(onFinish: \(\) => void, onCommit\?: \(\) => void\): void[\s\S]*?motionAnimateParam\('dropdown\.menu\.collapse'[\s\S]*?this\.expandedHeight = OPTION_H[\s\S]*?this\.chevronAngle = 0/,

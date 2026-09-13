@@ -127,28 +127,23 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.panel.appearance.morph.dissolve', durationMs: 183, curve: Curve.EaseOut },
   { id: 'reader.panel.appearance.chrome.dissolve', durationMs: 237, curve: Curve.EaseOut },
   { id: 'reader.panel.appearance.header.deblur', durationMs: 164, curve: Curve.EaseOut },
-  // Reader-UI tokens (MOTION_SPEC.md §2.5): Figma Review C/D/E/F are
-  // review-only with no authored product timing, so this pair carries the
-  // token source, not the canvas. Fade only — no invented translation.
+  // Existing non-launch entrance/exit tokens; launch uses the complete Figma
+  // 3500ms C/D/E/F timeline in ReaderSessionLaunchPresentation.
   { id: 'reader.session.capsule.enter', durationMs: 160, curve: Curve.EaseOut },
   { id: 'reader.session.capsule.exit', durationMs: 200, curve: Curve.EaseOut },
-  // Figma Review C/D/E/F capsule morph: the authored loop is review-only
-  // (3.5s, no product timing), so these three values are the 2026-09-02
-  // product supplement. Flight shrinks the captured source actor toward the
-  // bottom-right capsule anchor with the Figma flight bezier; expand reopens
-  // the shell width 24 -> capsule width right-edge anchored; reveal slides
-  // the content out of the dot. Source fade, blur ghost, canonical-shell
-  // handoff and dot hold reproduce the authored intermediate beats; the exit
-  // keeps the existing 200ms fade because the loop authors no reverse frames.
+  // Registry mirrors authored interval durations, not a sequential sum:
+  // flight 200–1400, ghost-in 600–900, sharp-fade 700–1100, handoff
+  // 1100–1400, hold 1400–1700, expand + reveal 1700–2300. Only the
+  // single launch sampler owns start times and per-actor keyframe overlap.
   { id: 'reader.session.capsule.morph.flight',
-    durationMs: 480, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
-  { id: 'reader.session.capsule.morph.ghost.in', durationMs: 120, curve: Curve.EaseOut },
-  { id: 'reader.session.capsule.morph.source.fade', durationMs: 120, curve: Curve.EaseOut },
-  { id: 'reader.session.capsule.morph.shell.handoff', durationMs: 120, curve: Curve.EaseOut },
-  { id: 'reader.session.capsule.morph.dot.hold', durationMs: 120, curve: Curve.Linear },
+    durationMs: 1200, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
+  { id: 'reader.session.capsule.morph.ghost.in', durationMs: 300, curve: Curve.EaseInOut },
+  { id: 'reader.session.capsule.morph.source.fade', durationMs: 400, curve: Curve.EaseIn },
+  { id: 'reader.session.capsule.morph.shell.handoff', durationMs: 300, curve: Curve.EaseOut },
+  { id: 'reader.session.capsule.morph.dot.hold', durationMs: 300, curve: Curve.Linear },
   { id: 'reader.session.capsule.morph.expand',
-    durationMs: 240, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
-  { id: 'reader.session.capsule.morph.reveal', durationMs: 160, curve: Curve.EaseOut },
+    durationMs: 600, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'reader.session.capsule.morph.reveal', durationMs: 600, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   // Page turns use ReaderPageSettlementTimeline / Native motion directly.
   // Their distance/velocity clock must not acquire an implicit second animation.
   // Frozen simulated-page contract: a released bookmark pull returns the
@@ -167,9 +162,6 @@ const ENTRIES: MotionSpecEntry[] = [
 ];
 
 /** Product layer beats, relative to the single capsule flight clock. */
-export const SESSION_MORPH_GHOST_START_MS = 80;
-export const SESSION_MORPH_FADE_START_MS = 200;
-export const SESSION_MORPH_HANDOFF_START_MS = 320;
 
 export function motionSpecGet(id: string): MotionSpecEntry | undefined {
   return ENTRIES.find((entry: MotionSpecEntry): boolean => entry.id === id);

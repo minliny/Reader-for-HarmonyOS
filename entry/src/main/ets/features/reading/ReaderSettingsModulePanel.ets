@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER_W,
@@ -32,6 +33,8 @@ type ReaderSettingsSegmentGroup = 'direction' | 'pageTurn' | 'timeout';
  */
 @Component
 export struct ReaderSettingsModulePanel {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop isTablet: boolean = false;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   @Prop pageTurnSimulationAvailable: boolean = true;
@@ -63,8 +66,8 @@ export struct ReaderSettingsModulePanel {
     .constraintSize({ maxWidth: this.panelWidth() })
     .height(190)
     .padding({ left: 11, right: 11, top: 13, bottom: 17 })
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true);
   }
@@ -79,7 +82,7 @@ export struct ReaderSettingsModulePanel {
         .fontWeight(FontWeight.Medium)
         .fontSize(10)
         .lineHeight(12)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .maxLines(1)
         .position({ x: 0, y: 0 });
 
@@ -91,7 +94,7 @@ export struct ReaderSettingsModulePanel {
       .width('100%')
       .height(30)
       .padding(3)
-      .backgroundColor(TOK_READ_DISABLED_BG)
+      .backgroundColor(readerAppColor('TOK_READ_DISABLED_BG', this.appThemeScheme))
       .borderRadius(8)
       .position({ x: 0, y: 17 });
     }
@@ -105,12 +108,12 @@ export struct ReaderSettingsModulePanel {
       .layoutWeight(1)
       .height(24)
       .padding({ left: 3, right: 3 })
-      .backgroundColor(this.isActive(group, option) ? TOK_READ_ELEVATED : Color.Transparent)
+      .backgroundColor(this.isActive(group, option) ? readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme) : Color.Transparent)
       .borderRadius(6)
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(this.isActive(group, option) ? FontWeight.Bold : FontWeight.Medium)
       .fontSize(9)
-      .fontColor(this.isActive(group, option) ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+      .fontColor(this.isActive(group, option) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
       .textAlign(TextAlign.Center)
       .maxLines(1)
       .enabled(this.isAvailable(group, option))

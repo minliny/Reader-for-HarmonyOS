@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback } from '@kit.ArkUI';
 import curves from '@ohos.curves';
@@ -8,7 +9,8 @@ import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, re
   type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
 import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observeReaderControlMorphScroll,
   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
-  type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
+  readerControlMorphScrollPath, sampleReaderControlMorphScrollPath,
+  type ReaderControlMorphScrollPath, type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import { ReaderSelect } from '../common/ReaderSelect';
@@ -53,7 +55,7 @@ class ReaderFontMotionFrameCallback extends FrameCallback {
 /**
  * Restored Appearance 1691:20749: viewport content ONLY. The common Stage owns
  * shell, brightness, module navigation, Full header, handle, gesture and clock.
- * Eight swatches and eight font cells keep one semantic identity for the whole
+ * Registry swatches and font cells keep one semantic identity for the whole
  * morph. There is no Quick tree / Full tree cross-fade or actor-local animation.
  *
  * Source issue: Import 20807 overlaps System 20799 in the live Full endpoint.
@@ -64,6 +66,8 @@ class ReaderFontMotionFrameCallback extends FrameCallback {
  */
 @Component
 export struct ReaderControlAppearanceContent {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop @Watch('onMotionChanged') motionProgress: number = 0;
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
@@ -121,39 +125,54 @@ export struct ReaderControlAppearanceContent {
   private cachedProgress: number = 0;
   private cachedWidth: number = 286;
   private cachedFullHeight: number = 666;
+  private cachedThemeCount: number = -1;
 
   private endpointWidth: number = -1;
   private endpointHeight: number = -1;
+  private endpointThemeCount: number = -1;
   private quickEndpoint: ReaderControlAppearanceFrame | undefined = undefined;
   private fullEndpoint: ReaderControlAppearanceFrame | undefined = undefined;
   private paintProgress: number = -1;
   private cachedPaint: ReaderControlMotionPresentation | undefined = undefined;
   private fontOrderKey: string = '';
   private cachedFontIds: ReaderAppearanceFontSlot[] = [];
+  // Added registry rows may overflow both endpoints. Reuse the existing
+  // endpoint scroll path, preserving one native Scroll and stable theme IDs.
+  @State private extendedScrollOffset: number = 0;
+  private extendedScrollPath: ReaderControlMorphScrollPath = readerControlMorphScrollPath(0, 0);
+  private extendedScrollInMotion: boolean = false;
+  private extendedScrollEndpoint: number = 0;
 
-  aboutToAppear(): void { registerReaderFonts(this.getUIContext().getFont()); }
+  aboutToAppear(): void {
+    registerReaderFonts(this.getUIContext().getFont());
+    if (this.extendedThemes()) this.syncExtendedThemeScroll();
+  }
   aboutToDisappear(): void { this.dismissTemporaryLayer(); this.cancelFontDrag(); }
 
   private frame(): ReaderControlAppearanceFrame {
     // Many declarative attributes read the frame. Share that one sampled value
     // rather than allocate actor arrays again for every width/position/opacity.
+    const count = this.themeIds().length;
     if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth ||
-      this.cachedFullHeight !== this.fullContentHeight) {
+      this.cachedFullHeight !== this.fullContentHeight || this.cachedThemeCount !== count) {
       this.cachedProgress = this.motionProgress;
       this.cachedWidth = this.availableWidth;
       this.cachedFullHeight = this.fullContentHeight;
+      this.cachedThemeCount = count;
       this.cachedFrame = sampleReaderControlAppearance(this.motionProgress, this.availableWidth,
-        this.fullContentHeight);
+        this.fullContentHeight, count);
     }
     return this.cachedFrame;
   }
   private endpointFrame(full: boolean): ReaderControlAppearanceFrame {
+    const count = this.themeIds().length;
     if (this.endpointWidth !== this.availableWidth || this.endpointHeight !== this.fullContentHeight ||
-      this.quickEndpoint === undefined || this.fullEndpoint === undefined) {
+      this.endpointThemeCount !== count || this.quickEndpoint === undefined || this.fullEndpoint === undefined) {
       this.endpointWidth = this.availableWidth;
       this.endpointHeight = this.fullContentHeight;
-      this.quickEndpoint = sampleReaderControlAppearance(0, this.availableWidth, this.fullContentHeight);
-      this.fullEndpoint = sampleReaderControlAppearance(1, this.availableWidth, this.fullContentHeight);
+      this.endpointThemeCount = count;
+      this.quickEndpoint = sampleReaderControlAppearance(0, this.availableWidth, this.fullContentHeight, count);
+      this.fullEndpoint = sampleReaderControlAppearance(1, this.availableWidth, this.fullContentHeight, count);
     }
     return full ? this.fullEndpoint! : this.quickEndpoint!;
   }
@@ -162,6 +181,16 @@ export struct ReaderControlAppearanceContent {
   }
   private sharedInput(): boolean {
     return readerControlAppearanceEndpoint(this.motionProgress, this.interactionEnabled) !== 'none';
+  }
+  private extendedThemes(): boolean { return this.themeIds().length > 8; }
+  private scrollInput(): boolean { return this.extendedThemes() ? this.sharedInput() : this.fullInput(); }
+  private scrollContentHeight(): number {
+    if (!this.extendedThemes()) return Math.max(this.frame().contentHeight,
+      this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion));
+    const frame = this.frame();
+    return Math.max(this.availableHeight, frame.quickContentHeight +
+      (frame.contentHeight - frame.quickContentHeight) * frame.progress,
+      this.availableHeight + this.extendedScrollOffset);
   }
   private presentation(): ReaderControlMotionPresentation {
     if (this.cachedPaint === undefined || this.paintProgress !== this.motionProgress) {
@@ -179,6 +208,20 @@ export struct ReaderControlAppearanceContent {
     const a = kind === 'theme' ? full.themeSwatches[index] : this.fontActorAt(font, full);
     const b = kind === 'theme' ? this.frame().themeSwatches[index] : this.fontActor(font);
     const c = kind === 'theme' ? quick.themeSwatches[index] : this.fontActorAt(font, quick);
+    if (this.extendedThemes()) {
+      const currentOffset = this.extendedScrollInMotion ?
+        sampleReaderControlMorphScrollPath(this.extendedScrollPath, this.motionProgress) : this.extendedScrollOffset;
+      const fullOffset = this.extendedScrollInMotion ? this.extendedScrollPath.fullOffset :
+        this.motionProgress === 1 ? this.extendedScrollOffset : 0;
+      const quickOffset = this.extendedScrollInMotion ? this.extendedScrollPath.quickOffset :
+        this.motionProgress === 0 ? this.extendedScrollOffset : 0;
+      return this.pathCache.fromPath(`${kind}:${index}:${font}`,
+        readerControlMotionClipPath(readerControlMotionClipRects(this.motionProgress,
+          { x: a.x, y: a.y - fullOffset, width: a.width, height: a.height },
+          { x: b.x, y: b.y - currentOffset, width: b.width, height: b.height },
+          { x: c.x, y: c.y - quickOffset, width: c.width, height: c.height },
+          this.fullContentHeight, 0), this.getUIContext().vp2px(1)));
+    }
     // The common content x transform is identical for source and destination;
     // it does not change the actor-local clipping coordinate space.
     const rects: ReaderControlMotionClipRect[] = font === 'import' && kind === 'font' ?
@@ -191,6 +234,7 @@ export struct ReaderControlAppearanceContent {
     return { x: actor.x, y: actor.y + (shared ? this.sharedScrollTranslation() : this.fullOnlyScrollTranslation()) };
   }
   private syncMorphScroll(): void {
+    if (this.extendedThemes()) { this.syncExtendedThemeScroll(); return; }
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
       this.interactionEnabled, this.scroller.currentOffset().yOffset);
     this.scrollMotion = update.state;
@@ -200,18 +244,48 @@ export struct ReaderControlAppearanceContent {
     }
   }
   private onFullDidScroll(): void {
+    if (this.extendedThemes()) {
+      this.extendedScrollOffset = Math.max(0, this.scroller.currentOffset().yOffset);
+      return;
+    }
     this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion,
       this.scroller.currentOffset().yOffset, this.fullInput());
   }
   private nativeScrollDelta(y: number, source: ScrollSource): OffsetResult {
+    if (this.extendedThemes()) return { xOffset: 0,
+      yOffset: this.scrollInput() || source === ScrollSource.SCROLLER ? y : 0 };
     return { xOffset: 0, yOffset: readerControlMorphScrollAllowsNative(this.scrollMotion,
       this.fullInput(), source === ScrollSource.SCROLLER) ? y : 0 };
   }
   private sharedScrollTranslation(): number {
+    if (this.extendedThemes()) return this.extendedScrollInMotion ? this.extendedScrollOffset -
+      sampleReaderControlMorphScrollPath(this.extendedScrollPath, this.motionProgress) : 0;
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress);
   }
   private fullOnlyScrollTranslation(): number {
+    if (this.extendedThemes()) return this.extendedScrollInMotion ?
+      this.extendedScrollOffset - this.extendedScrollPath.fullOffset : 0;
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'fullOnly');
+  }
+
+  private syncExtendedThemeScroll(): void {
+    const offset = Math.max(0, this.scroller.currentOffset().yOffset);
+    this.extendedScrollOffset = offset;
+    if (!this.sharedInput()) {
+      if (!this.extendedScrollInMotion) {
+        this.extendedScrollPath = readerControlMorphScrollPath(this.extendedScrollEndpoint, offset);
+        this.extendedScrollInMotion = true;
+        this.scroller.scrollTo({ xOffset: 0, yOffset: offset, animation: false });
+      }
+      return;
+    }
+    if (this.extendedScrollInMotion) {
+      const target = sampleReaderControlMorphScrollPath(this.extendedScrollPath, this.motionProgress);
+      this.scroller.scrollTo({ xOffset: 0, yOffset: target, animation: false });
+      this.extendedScrollOffset = target;
+      this.extendedScrollInMotion = false;
+    }
+    this.extendedScrollEndpoint = this.motionProgress;
   }
 
   private onMotionChanged(): void {
@@ -264,7 +338,7 @@ export struct ReaderControlAppearanceContent {
           }, (theme: ReaderAppearanceTheme): string => `control-appearance-theme-${theme}`);
           this.themeAction(true);
           this.themeAction(false);
-          Row().width(this.frame().divider.width).height(1).backgroundColor(TOK_LINE)
+          Row().width(this.frame().divider.width).height(1).backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
             .position(this.actorPosition(this.frame().divider)).opacity(this.frame().divider.opacity)
             .hitTestBehavior(HitTestMode.None);
           this.fontHeaders();
@@ -273,11 +347,11 @@ export struct ReaderControlAppearanceContent {
           }, (font: ReaderAppearanceFontSlot): string => `control-appearance-font-${font}`);
           this.layoutLibrary();
         }
-        .width(this.availableWidth).height(Math.max(this.frame().contentHeight, this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion)))
+        .width(this.availableWidth).height(this.scrollContentHeight())
         .translate({ x: this.frame().contentTranslateX });
       }
       .width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
-      .enableScrollInteraction(this.fullInput() && this.draggedFontId === '' && this.openSelect === '')
+      .enableScrollInteraction(this.scrollInput() && this.draggedFontId === '' && this.openSelect === '')
       .edgeEffect(EdgeEffect.None)
       .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
         this.nativeScrollDelta(y, source))
@@ -291,9 +365,9 @@ export struct ReaderControlAppearanceContent {
   private themeHeaders() {
     Stack({ alignContent: Alignment.TopStart }) {
       Text('主题库').fontFamily('ReaderNotoSansSCUIBold').fontSize(9).lineHeight(9.9)
-        .fontWeight(FontWeight.Bold).fontColor(TOK_READ_INK).position({ x: 0, y: 0 });
+        .fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 0, y: 0 });
       Text(this.themeSummary()).width(88).fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(7.5).lineHeight(8)
-        .fontColor(TOK_READ_MUTED).maxLines(1).textAlign(TextAlign.End)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textAlign(TextAlign.End)
         .position({ x: Math.max(0, this.frame().quickThemeHeader.width - 88), y: 3.95 });
     }.width(this.frame().quickThemeHeader.width).height(15.898)
       .position(this.actorPosition(this.frame().quickThemeHeader, true))
@@ -302,9 +376,9 @@ export struct ReaderControlAppearanceContent {
       .hitTestBehavior(HitTestMode.None);
     Stack({ alignContent: Alignment.TopStart }) {
       Text('主题库').fontFamily('ReaderNotoSansSCUIBold').fontSize(12).lineHeight(17)
-        .fontWeight(FontWeight.Bold).fontColor(TOK_READ_INK).position({ x: 0, y: 1 });
+        .fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 0, y: 1 });
       Text(this.themeSummary()).width(140).fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(9).lineHeight(13)
-        .fontColor(TOK_READ_MUTED).maxLines(1).textAlign(TextAlign.End)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textAlign(TextAlign.End)
         .position({ x: Math.max(0, this.frame().fullThemeHeader.width - 140), y: 3 });
     }.width(this.frame().fullThemeHeader.width).height(20)
       .position(this.actorPosition(this.frame().fullThemeHeader))
@@ -318,12 +392,12 @@ export struct ReaderControlAppearanceContent {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.themeLabel(theme)).width(Math.max(0, this.frame().themeShells[index].width - 10))
         .height(13).fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(9).lineHeight(13)
-        .fontColor(TOK_READ_MUTED).textAlign(TextAlign.Center).maxLines(1)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center).maxLines(1)
         .position({ x: 5, y: 39 });
     }.width(this.frame().themeShells[index].width).height(58.8).borderRadius(8)
-      .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT : TOK_SURFACE_PANEL_SOFT)
+      .backgroundColor(this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: this.snapshot.activeTheme === theme ? TOK_BORDER_W : 0,
-        color: TOK_READ_PRIMARY })
+        color: readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) })
       .position(this.actorPosition(this.frame().themeShells[index]))
       .opacity(this.frame().themeShells[index].opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .accessibilityLevel('no-hide-descendants')
@@ -335,7 +409,7 @@ export struct ReaderControlAppearanceContent {
     Stack({ alignContent: Alignment.TopStart }) {
       Row().width(46).height(18).backgroundColor(this.themeColor(theme)).borderRadius(6)
         .border({ width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
-          color: this.snapshot.activeTheme === theme ? TOK_READ_PRIMARY : TOK_LINE })
+          color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
         .position({ x: 8.25, y: 2 })
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
     }.width(62.5).height(24).borderRadius(8)
@@ -355,8 +429,8 @@ export struct ReaderControlAppearanceContent {
   private themeAction(day: boolean) {
     Text(day ? '设为日间主题' : '设为夜间主题').width(74).height(28)
       .fontFamily('ReaderNotoSansSCUIBold').fontSize(9).lineHeight(13).fontWeight(FontWeight.Bold)
-      .fontColor(TOK_READ_INK).textAlign(TextAlign.Center).borderRadius(6)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center).borderRadius(6)
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .position(this.actorPosition(day ? this.frame().themeDayAction : this.frame().themeNightAction))
       .opacity(this.motionProgress * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .enabled(this.fullInput())
@@ -373,14 +447,14 @@ export struct ReaderControlAppearanceContent {
   private fontHeaders() {
     Text('字体库').width(this.frame().quickFontHeader.width).height(10)
       .fontFamily('ReaderNotoSansSCUIBold').fontSize(9).lineHeight(9.9).fontWeight(FontWeight.Bold)
-      .fontColor(TOK_READ_INK).position(this.actorPosition(this.frame().quickFontHeader, true))
+      .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position(this.actorPosition(this.frame().quickFontHeader, true))
       .accessibilityLevel(this.motionProgress === 0 ? 'auto' : 'no-hide-descendants')
       .opacity(this.frame().quickFontHeader.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .hitTestBehavior(HitTestMode.None);
     Row() {
-      Text('字体库').fontFamily('ReaderNotoSansSCUIMedium').fontSize(13).fontWeight(FontWeight.Medium).fontColor(TOK_READ_INK);
+      Text('字体库').fontFamily('ReaderNotoSansSCUIMedium').fontSize(13).fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Blank();
-      Text('可拖动调整位置').fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10).fontColor(APPEARANCE_LAYOUT_CAPTION);
+      Text('可拖动调整位置').fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10).fontColor(readerAppColor('app.appearance.layoutCaption', this.appThemeScheme));
     }.width(this.frame().fullFontHeader.width).height(16)
       .position(this.actorPosition(this.frame().fullFontHeader))
       .opacity(this.frame().fullFontHeader.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -422,8 +496,8 @@ export struct ReaderControlAppearanceContent {
       // A PathShape on the painted node overrides its rounded background in RS,
       // making the borderless selected font appear as a square-cornered block.
       Row().width(this.fontActor(font).width).height(this.fontActor(font).height)
-        .backgroundColor(this.activeFont(font) ? TOK_READ_PRIMARY : '#FFFCF8')
-        .border({ width: this.activeFont(font) ? 0 : TOK_BORDER_W, color: TOK_LINE,
+        .backgroundColor(this.activeFont(font) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.ReaderControlAppearanceContent.fontCell.backgroundColor.FFFFFCF8', this.appThemeScheme))
+        .border({ width: this.activeFont(font) ? 0 : TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme),
           style: font === 'import' ? BorderStyle.Dashed : BorderStyle.Solid })
         .borderRadius(12).clip(true).hitTestBehavior(HitTestMode.None);
       Text(readerAppearanceFontSlotLabel(this.snapshot, font))
@@ -431,7 +505,7 @@ export struct ReaderControlAppearanceContent {
         .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, font) === 'ReaderNotoSansSC' ?
           'ReaderNotoSansSCUIRegular' : readerAppearanceFontSlotFamily(this.snapshot, font)).fontSize(12)
         .fontWeight(FontWeight.Regular, { enableVariableFontWeight: true })
-        .fontColor(this.activeFont(font) ? '#FFFAF4' : TOK_READ_INK)
+        .fontColor(this.activeFont(font) ? readerAppColor('app.ReaderControlAppearanceContent.fontCell.fontColor.FFFFFAF4', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
     }.width(this.fontActor(font).width).height(this.fontActor(font).height)
@@ -459,13 +533,13 @@ export struct ReaderControlAppearanceContent {
   private layoutLibrary() {
     Stack({ alignContent: Alignment.TopStart }) {
       Row() {
-        Text('排版库').fontFamily('ReaderNotoSansSCUIMedium').fontSize(13).lineHeight(17).fontWeight(FontWeight.Medium).fontColor(TOK_READ_INK);
+        Text('排版库').fontFamily('ReaderNotoSansSCUIMedium').fontSize(13).lineHeight(17).fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
         Blank();
-        Text('即时应用').fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10).lineHeight(13).fontColor(APPEARANCE_LAYOUT_CAPTION);
+        Text('即时应用').fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10).lineHeight(13).fontColor(readerAppColor('app.appearance.layoutCaption', this.appThemeScheme));
       }.width(Math.max(0, this.frame().sectionWidth - 8)).height(17)
         .position({ x: 4, y: 10 });
       Row().width(Math.max(0, this.frame().sectionWidth - 4)).height(338)
-        .backgroundColor(APPEARANCE_LAYOUT_SURFACE).border({ width: 1, color: APPEARANCE_LAYOUT_BORDER })
+        .backgroundColor(readerAppColor('app.appearance.layoutSurface', this.appThemeScheme)).border({ width: 1, color: readerAppColor('app.appearance.layoutBorder', this.appThemeScheme) })
         .borderRadius(12).position({ x: 2, y: 37 }).hitTestBehavior(HitTestMode.None);
       this.selectField('indent', 38);
       this.selectField('language', 80);
@@ -485,7 +559,7 @@ export struct ReaderControlAppearanceContent {
   private selectField(kind: string, y: number) {
     Row() {
       Text(this.selectLabel(kind)).fontFamily('ReaderNotoSansSCUIRegular').fontSize(12).lineHeight(18)
-        .fontWeight(FontWeight.Regular).fontColor(TOK_READ_INK).maxLines(1);
+        .fontWeight(FontWeight.Regular).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
       Blank();
       ReaderSelect({ value: this.selectValue(kind), options: this.selectOptions(kind),
         isOpen: this.openSelect === kind && !this.selectClosing, variant: 'appearanceLibrary',
@@ -493,7 +567,7 @@ export struct ReaderControlAppearanceContent {
       }).enabled(this.fullInput())
         .accessibilityText(`${this.selectLabel(kind)}，当前${this.selectValue(kind)}`);
     }.width(Math.max(0, this.frame().sectionWidth - 6)).height(42)
-      .padding({ left: 13, right: 9 }).border({ width: { bottom: 1 }, color: TOK_LINE })
+      .padding({ left: 13, right: 9 }).border({ width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .position({ x: 3, y: y });
   }
 
@@ -535,18 +609,18 @@ export struct ReaderControlAppearanceContent {
   private stepperRow(metric: ReaderAppearanceMetric, y: number) {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.metricLabel(metric)).height(18).fontFamily('ReaderNotoSansSCUIRegular').fontSize(12).lineHeight(18)
-        .fontWeight(FontWeight.Regular).fontColor(TOK_READ_INK).position({ x: 13, y: 12 });
+        .fontWeight(FontWeight.Regular).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 13, y: 12 });
       Row().width(98).height(27).backgroundColor(APPEARANCE_SELECT_SURFACE)
         .border({ width: 1, color: APPEARANCE_SELECT_BORDER }).borderRadius(8)
         .position({ x: Math.max(0, this.frame().sectionWidth - 113), y: 7 }).hitTestBehavior(HitTestMode.None);
       this.stepButton(metric, -1, Math.max(0, this.frame().sectionWidth - 121));
       Text(this.metricValue(metric)).width(44).height(25).fontFamily('ReaderNotoSansSCUIMedium').fontSize(11)
-        .fontWeight(FontWeight.Medium).fontColor(TOK_READ_INK).textAlign(TextAlign.Center)
-        .border({ width: { left: 1, right: 1 }, color: '#339B8466' })
+        .fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center)
+        .border({ width: { left: 1, right: 1 }, color: readerAppColor('app.ReaderControlAppearanceContent.stepperRow.color.339B8466', this.appThemeScheme) })
         .position({ x: Math.max(0, this.frame().sectionWidth - 86), y: 8 }).hitTestBehavior(HitTestMode.None);
       this.stepButton(metric, 1, Math.max(0, this.frame().sectionWidth - 51));
     }.width(Math.max(0, this.frame().sectionWidth - 6)).height(42)
-      .border({ width: { bottom: metric === 'letterSpacing' ? 0 : 1 }, color: TOK_LINE })
+      .border({ width: { bottom: metric === 'letterSpacing' ? 0 : 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .position({ x: 3, y: y });
   }
 
@@ -554,7 +628,7 @@ export struct ReaderControlAppearanceContent {
   private stepButton(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection, x: number) {
     Stack({ alignContent: Alignment.Center }) {
       Text(direction < 0 ? '−' : '+').width(26).height(25).fontFamily('ReaderNotoSansSCUIRegular').fontSize(15)
-        .fontWeight(FontWeight.Regular).fontColor(TOK_READ_MUTED).textAlign(TextAlign.Center);
+        .fontWeight(FontWeight.Regular).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.width(44).height(42).position({ x: x, y: 0 })
       .opacity(readerAppearanceCanStep(this.snapshot, metric, direction) ? 1 : 0.38)
       .enabled(this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction))

@@ -34,7 +34,7 @@ export type ReaderContentInsetProfile = {
   expanded: number;
 };
 export const DEFAULT_READER_CONTENT_INSET_PROFILE: ReaderContentInsetProfile = {
-  compact: 32,
+  compact: 24,
   expanded: 44.44,
 };
 /** Optical clearance below a live status/cutout edge for the 54vp control top bar. */
@@ -107,6 +107,7 @@ export class ReaderReadingLayoutSnapshot {
   titleTrackHeightVp: number;
   systemFontScale: number;
   pageChromeVisualSafeTop: number;
+  pageChromeTopRegionHeight: number;
   pageChromeVisualSafeRight: number;
   pageChromeVisualSafeBottom: number;
   pageChromeVisualSafeLeft: number;
@@ -128,6 +129,7 @@ export class ReaderReadingLayoutSnapshot {
     pageChromeVisualSafeLeft: number = 0,
     pageChromeInteractiveSafeRight: number = 0,
     pageChromeInteractiveSafeBottom: number = 0,
+    pageChromeTopRegionHeight: number = 0,
   ) {
     this.widthClass = widthClass;
     this.viewportWidth = viewportWidth;
@@ -141,6 +143,7 @@ export class ReaderReadingLayoutSnapshot {
     this.systemFontScale = systemFontScale;
     this.titleTrackHeightVp = this.titleLineHeightFp * systemFontScale + this.titleToBodySpacingVp;
     this.pageChromeVisualSafeTop = pageChromeVisualSafeTop;
+    this.pageChromeTopRegionHeight = pageChromeTopRegionHeight;
     this.pageChromeVisualSafeRight = pageChromeVisualSafeRight;
     this.pageChromeVisualSafeBottom = pageChromeVisualSafeBottom;
     this.pageChromeVisualSafeLeft = pageChromeVisualSafeLeft;
@@ -232,7 +235,7 @@ export function resolveReaderReadingLayout(
   expandedHint: boolean,
   metrics: ReaderWindowMetricsSnapshot,
   extendIntoCutout: boolean = false,
-  insetProfile: ReaderContentInsetProfile = DEFAULT_READER_CONTENT_INSET_PROFILE,
+  insetProfile?: ReaderContentInsetProfile,
 ): ReaderReadingLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
@@ -244,13 +247,21 @@ export function resolveReaderReadingLayout(
     Number.isFinite(metrics.systemInsets.left) ? Math.max(0, metrics.systemInsets.left) : 0,
     Number.isFinite(metrics.systemInsets.right) ? Math.max(0, metrics.systemInsets.right) : 0,
   );
-  const safeHorizontal = extendIntoCutout ? systemHorizontal : readerContentSafeHorizontal(metrics);
+  const safeHorizontal = Math.max(systemHorizontal, readerContentSafeHorizontal(metrics));
   // Reading text is a centred optical track. A one-sided cutout or system
   // inset therefore expands both authored margins by the same amount instead
   // of shifting the body and making the two screen-edge gaps visibly uneven.
-  const configuredHorizontal = widthClass === 'expanded' ? insetProfile.expanded : insetProfile.compact;
-  const contentHorizontal = Math.max(profile.contentHorizontal, configuredHorizontal, safeHorizontal);
-  const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop);
+  const autoHorizontal = widthClass === 'expanded' ? 44.44 : Math.max(16, Math.min(28, 24 * width / 390));
+  const requestedHorizontal = insetProfile === undefined ? autoHorizontal :
+    widthClass === 'expanded' ? insetProfile.expanded : insetProfile.compact;
+  const configuredHorizontal = Number.isFinite(requestedHorizontal) ? Math.max(0, requestedHorizontal) : autoHorizontal;
+  const contentHorizontal = Math.max(configuredHorizontal, safeHorizontal,
+    widthClass === 'expanded' && insetProfile === undefined ? Math.max(0, (width - 720) / 2) : 0);
+  // Reserve the information lane exactly once. With system chrome visible,
+  // it starts below the retained status region; when extended it owns that region.
+  const informationBottom = (extendIntoCutout ? 0 : metrics.statusBarHeight) + metrics.statusBarHeight;
+  const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop,
+    informationBottom > 0 ? informationBottom + 8 : 0);
   const contentBottom = Math.max(
     metrics.systemInsets.bottom,
     cutoutSafeBottom,
@@ -267,12 +278,13 @@ export function resolveReaderReadingLayout(
     Math.max(profile.contentBottom, contentBottom),
     contentHorizontal,
     systemFontScale,
-    readerVisualSafeTop(metrics),
+    extendIntoCutout ? 0 : metrics.statusBarHeight,
     readerVisualSafeRight(metrics),
     readerVisualSafeBottom(metrics),
     readerVisualSafeLeft(metrics),
     readerInteractiveSafeRight(metrics, true),
     readerInteractiveSafeBottom(metrics, true),
+    metrics.statusBarHeight,
   );
 }
 
@@ -292,7 +304,11 @@ export function resolveReaderControlLayout(
   const height = viewportHeight > 0 ? viewportHeight : profile.referenceHeight;
   const safeHorizontal = readerContentSafeHorizontal(metrics);
   const safeTop = readerContentSafeTop(metrics);
-  const safeBottom = readerInteractiveSafeBottom(metrics, true);
+  // A resized content viewport has already paid part/all of the IME inset.
+  // Subtract only the keyboard area that still intersects this viewport.
+  const consumedKeyboard = Math.max(0, metrics.windowRect.height - height);
+  const keyboardOcclusion = Math.max(0, metrics.keyboardInsets.bottom - consumedKeyboard);
+  const safeBottom = Math.max(readerInteractiveSafeBottom(metrics, false), keyboardOcclusion);
   const topBarSideGap = Math.max(profile.topBarSideGap, safeHorizontal);
   const topBarWidth = Math.min(profile.topBarMaxWidth, Math.max(0, width - topBarSideGap * 2));
   const dockLeftGap = Math.max(profile.dockLeftGap, safeHorizontal);

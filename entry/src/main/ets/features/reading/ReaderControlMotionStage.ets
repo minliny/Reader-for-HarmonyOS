@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { FrameCallback } from '@kit.ArkUI';
 import {
   advanceReaderControlSession, copyReaderControlSessionState, createReaderControlSessionState,
@@ -48,6 +49,7 @@ interface ReaderControlTopBarFrame {
  */
 @Component
 export struct ReaderControlMotionStage {
+  @StorageLink('readerAppScheme') private appScheme: string = 'day';
   /**
    * Sparse semantic input from the host.  The Stage never writes this prop;
    * direct frame/gesture samples stay in the local visual clock below and are
@@ -672,8 +674,8 @@ export struct ReaderControlMotionStage {
           .id('reader-control-verification-shell')
           .width(this.frame().shell.width).height(this.frame().shell.height)
           .position({ x: 0, y: this.frame().shell.y })
-          .backgroundColor(TOK_READ_SURFACE).borderRadius(24)
-          .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+          .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appScheme)).borderRadius(24)
+          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
           .opacity(this.frame().shell.opacity)
           .hitTestBehavior(this.frame().visibility > 0 ? HitTestMode.Block : HitTestMode.None);
         // Keep the independent Full-content surface mounted for the entire
@@ -686,8 +688,8 @@ export struct ReaderControlMotionStage {
           .id('reader-control-verification-content-surface')
           .width(this.frame().contentSurface.width).height(this.frame().contentSurface.height)
           .position({ x: this.frame().contentSurface.x, y: this.frame().contentSurface.y })
-          .backgroundColor(TOK_SURFACE_PANEL).borderRadius(12)
-          .border({ width: TOK_BORDER_W, color: TOK_LINE })
+          .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme)).borderRadius(12)
+          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
           // Keep the compositor node visible for every route. Toggling
           // Visibility at the same VSync as a morph asks ArkUI/RenderService
           // to detach and reattach the layer; on hardware that can expose an
@@ -736,7 +738,7 @@ export struct ReaderControlMotionStage {
             this.visualSession.transition === undefined && this.visualSession.heldPointerId < 0)
           .hitTestBehavior(this.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
         Stack({ alignContent: Alignment.Top }) {
-          Row().width(42).height(4).borderRadius(2).backgroundColor(TOK_READ_HANDLE)
+          Row().width(42).height(4).borderRadius(2).backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appScheme))
             .margin({ top: 9 }).opacity(this.frame().grabber.opacity);
         }
         .width(72).height(28)

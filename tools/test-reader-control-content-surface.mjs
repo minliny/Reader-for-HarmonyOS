@@ -42,7 +42,7 @@ for (const name of ['Tts', 'Appearance']) {
   assert.doesNotMatch(body, /Row\(\).width\(this.availableWidth\).height\(this.availableHeight\)/);
 }
 const ttsSurface = read('entry/src/main/ets/features/reading/ReaderControlTtsContent.ets');
-assert.match(ttsSurface, /private quickBackdrop\(\)[\s\S]*?#FFFAF4[\s\S]*?#F6ECDD[\s\S]*?\.opacity\(1 - this\.p\(\)\)\.hitTestBehavior\(HitTestMode.None\)/,
+assert.match(ttsSurface, /private quickBackdrop\(\)[\s\S]*?app\.control\.paint\.FFFAF4[\s\S]*?app\.control\.paint\.F6ECDD[\s\S]*?\.opacity\(1 - this\.p\(\)\)\.hitTestBehavior\(HitTestMode.None\)/,
   'Make Quick parchment backdrop must retire on the same p and never duplicate the Full surface');
 assert.equal((ttsSurface.match(/this\.quickBackdrop\(\)/g) ?? []).length, 1);
 console.log('reader control independent FullContentSurface source geometry and single-background wiring: PASS');

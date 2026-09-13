@@ -44,6 +44,7 @@ export class ReaderWindowMetricsSnapshot {
   systemFontScale: number;
   revision: number;
   ready: boolean;
+  statusBarHeight: number;
 
   constructor(
     windowRect: ReaderRectVp = new ReaderRectVp(),
@@ -57,6 +58,7 @@ export class ReaderWindowMetricsSnapshot {
     systemFontScale: number = 1,
     revision: number = 0,
     ready: boolean = false,
+    statusBarHeight: number = systemInsets.top,
   ) {
     this.windowRect = windowRect;
     this.globalRect = globalRect;
@@ -69,6 +71,7 @@ export class ReaderWindowMetricsSnapshot {
     this.systemFontScale = systemFontScale;
     this.revision = revision;
     this.ready = ready;
+    this.statusBarHeight = Math.max(0, statusBarHeight);
   }
 }
 

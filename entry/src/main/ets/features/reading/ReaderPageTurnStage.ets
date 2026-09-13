@@ -1,3 +1,4 @@
+import { readerThemeDefinition } from '../common/ReaderThemeRegistry';
 import { FrameCallback } from '@kit.ArkUI';
 import {
   createDefaultReaderAppearanceSnapshot,
@@ -32,8 +33,6 @@ class ReaderPageTurnFrameCallback extends FrameCallback {
 // together so cover modes do not invent independent direction-specific shade.
 const COVER_OCCLUSION_RADIUS_VP = 16;
 const COVER_OCCLUSION_OFFSET_X_VP = 6;
-const COVER_OCCLUSION_DAY_MAX_ALPHA = 56;
-const COVER_OCCLUSION_NIGHT_MAX_ALPHA = 34;
 
 /**
  * Immutable-by-convention input for one already measured physical page.
@@ -143,7 +142,9 @@ struct ReaderPageTurnSurface {
   @Prop chromeSessionVisible: boolean = false;
   @Prop chromeSessionWidth: number = 0;
   @Prop chromeSessionHeight: number = 0;
-  /** Called after ArkUI has had a frame to compose this slot's new content. */
+  /** This exact revision reached the resident slot; not a paint/display fence. */
+  onContentReady: (revision: number) => void = (_revision: number): void => {};
+  /** Scheduling acknowledgement only; never evidence of physical scanout. */
   onPresented: (revision: number) => void = (_revision: number): void => {};
 
   aboutToAppear(): void {
@@ -152,8 +153,8 @@ struct ReaderPageTurnSurface {
 
   private onRenderRevisionChanged(): void {
     const revision = this.renderRevision;
-    // Defer until the next frame: the owner must not hide the retained Native
-    // terminal frame before this slot has entered a compositor frame.
+    this.onContentReady(revision);
+    // Keep content admission separate from the following scheduling callback.
     this.getUIContext().postFrameCallback(new ReaderPageTurnFrameCallback((): void => {
       this.onPresented(revision);
     }));
@@ -212,10 +213,10 @@ struct ReaderPageTurnSurface {
   }
 
   private shadowColor(): string {
-    const maxAlpha = readerAppearanceChromeTone(this.appearance.activeTheme) === 'light' ?
-      COVER_OCCLUSION_NIGHT_MAX_ALPHA : COVER_OCCLUSION_DAY_MAX_ALPHA;
+    const shade = readerThemeDefinition(this.appearance.activeTheme).turnShadow;
+    const maxAlpha = Number.parseInt(shade.slice(1, 3), 16);
     const alpha = Math.round(Math.max(0, Math.min(1, this.shadowStrength)) * maxAlpha);
-    return `#${alpha.toString(16).padStart(2, '0')}000000`;
+    return `#${alpha.toString(16).padStart(2, '0')}${shade.slice(3)}`;
   }
 
 }
@@ -252,7 +253,8 @@ export struct ReaderPageTurnStage {
   @Prop autoPageHighlightStart: number | undefined = undefined;
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop longPressSelectText: boolean = false;
-  /** Optional acknowledgement that the promoted current page composed. */
+  onCurrentPageContentReady: (revision: number) => void = (_revision: number): void => {};
+  /** Optional scheduling acknowledgement, not a compositor/display fence. */
   onCurrentPagePresented: (revision: number) => void = (_revision: number): void => {};
 
   private slotPageA: ReaderPageTurnRenderPage | undefined = undefined;
@@ -275,6 +277,7 @@ export struct ReaderPageTurnStage {
         highlightTextureIdentity: this.slotPage('a').textureIdentity,
         onDynamicHighlights: this.onDynamicHighlights,
         renderRevision: this.slotPage('a').renderRevision,
+        onContentReady: (revision: number): void => this.slotContentReady('a', revision),
         onPresented: (revision: number): void => this.slotPresented('a', revision),
         chapterTitle: this.slotPage('a').chapterTitle,
         showChapterTitle: this.slotPage('a').showChapterTitle,
@@ -309,6 +312,7 @@ export struct ReaderPageTurnStage {
         highlightTextureIdentity: this.slotPage('b').textureIdentity,
         onDynamicHighlights: this.onDynamicHighlights,
         renderRevision: this.slotPage('b').renderRevision,
+        onContentReady: (revision: number): void => this.slotContentReady('b', revision),
         onPresented: (revision: number): void => this.slotPresented('b', revision),
         chapterTitle: this.slotPage('b').chapterTitle,
         showChapterTitle: this.slotPage('b').showChapterTitle,
@@ -391,6 +395,12 @@ export struct ReaderPageTurnStage {
     // Keep a unique ID on each mounted static subtree; transferring one ID
     // between slots can resolve the hidden empty reserve after promotion.
     return this.currentPageSnapshotId.length > 0 ? `${this.currentPageSnapshotId}-${slot}` : '';
+  }
+
+  private slotContentReady(slot: ReaderPageTurnSlot, revision: number): void {
+    if (slot === this.currentPageSlot && revision === this.currentRenderPage().renderRevision) {
+      this.onCurrentPageContentReady(revision);
+    }
   }
 
   private slotPresented(slot: ReaderPageTurnSlot, revision: number): void {

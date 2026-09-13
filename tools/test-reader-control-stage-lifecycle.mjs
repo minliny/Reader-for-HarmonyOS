@@ -26,6 +26,7 @@ function loadStage(source = stageSource, overrides = {}) {
     .replace(/^import[\s\S]*?;\s*/gm, '')
     .replace(/@(?:Component|Link|Prop|State|BuilderParam|Builder)\b\s*/g, '')
     .replace(/@Watch\('[^']+'\)\s*/g, '')
+    .replace(/@StorageLink\('[^']+'\)\s*/g, '')
     .replace('export struct ReaderControlMotionStage', 'class ReaderControlMotionStage');
   const executable = stripTypeScriptTypes(methods);
   const globals = { ...dependencies, ...overrides };

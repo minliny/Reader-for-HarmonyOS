@@ -127,3 +127,11 @@ for (let i = 0; i < inputs.length; i++) {
   const restored = cache.sample(...inputs);
   assert.deepEqual(restored, cached, 'cache invalidation must not mutate a previous frame');
 }
+
+for (const [width, height] of [[0, 0], [320, 0], [320, 28], [320, 65]]) {
+  const b = readerControlMotionBounds(width, height, 20);
+  assert.equal(b.fullHeight, height, 'zero live budget must not resurrect a 736vp sheet');
+  const f = sampleReaderControlMotionComposition({ expansionProgress: 1, visibilityProgress: 1 }, b);
+  assert.equal(f.shell.height, height);
+  assert.ok(f.content.height >= 0);
+}

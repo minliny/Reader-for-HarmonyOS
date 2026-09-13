@@ -1,4 +1,6 @@
 import { display, window } from '@kit.ArkUI';
+import { ReaderBrightnessWriter, type ReaderBrightnessWindow } from './ReaderBrightnessWriter';
+import { ReaderStatusBarMeasurement } from './ReaderStatusBarMeasurement';
 import {
   ReaderInsetsVp,
   ReaderRectVp,
@@ -69,8 +71,17 @@ const APP_CHROME_STYLE = new ReaderWindowChromeStyle('#F8F4EC', 'dark', '#FF2B24
  * inspect px avoid areas themselves.
  */
 export class ReaderWindowCoordinator {
+  private static appChromeStyle: ReaderWindowChromeStyle = APP_CHROME_STYLE;
   private static mainWindow: window.Window | undefined = undefined;
+  private static brightnessWriter: ReaderBrightnessWriter = new ReaderBrightnessWriter(
+    (): Promise<ReaderBrightnessWindow> => {
+      const win = ReaderWindowCoordinator.mainWindow;
+      return win === undefined ? Promise.reject(new Error('Reader main window is unavailable')) :
+        Promise.resolve(win);
+    });
   private static metricsSnapshot: ReaderWindowMetricsSnapshot = createDefaultReaderWindowMetrics();
+  private static statusBarMeasurement: ReaderStatusBarMeasurement = new ReaderStatusBarMeasurement();
+  private static statusBarHiddenApplied: boolean = false;
   private static windowSizeListener: ((size: window.Size) => void) | undefined = undefined;
   private static avoidAreaListener: ((options: window.AvoidAreaOptions) => void) | undefined = undefined;
   private static desiredChrome: ReaderWindowChromeRequest =
@@ -129,6 +140,9 @@ export class ReaderWindowCoordinator {
   }
 
   static detach(): void {
+    ReaderWindowCoordinator.brightnessWriter.reset();
+    ReaderWindowCoordinator.statusBarMeasurement = new ReaderStatusBarMeasurement();
+    ReaderWindowCoordinator.statusBarHiddenApplied = false;
     const win = ReaderWindowCoordinator.mainWindow;
     if (win !== undefined) {
       try {
@@ -156,8 +170,17 @@ export class ReaderWindowCoordinator {
     return ReaderWindowCoordinator.metricsSnapshot;
   }
 
+  static brightness(): ReaderBrightnessWriter {
+    return ReaderWindowCoordinator.brightnessWriter;
+  }
+
   static requestAppChrome(): void {
-    ReaderWindowCoordinator.requestChrome(new ReaderWindowChromeRequest('app', APP_CHROME_STYLE));
+    ReaderWindowCoordinator.requestChrome(new ReaderWindowChromeRequest('app', ReaderWindowCoordinator.appChromeStyle));
+  }
+
+  static updateAppChromeStyle(style: ReaderWindowChromeStyle): void {
+    ReaderWindowCoordinator.appChromeStyle = style;
+    if (ReaderWindowCoordinator.desiredChrome.owner === 'app') ReaderWindowCoordinator.requestAppChrome();
   }
 
   static requestReaderChrome(style: ReaderWindowChromeStyle): void {
@@ -193,7 +216,7 @@ export class ReaderWindowCoordinator {
     AppStorage.setOrCreate<boolean>('readerWindowHideNavigationBar', policy.hideNavigationBar);
     AppStorage.setOrCreate<boolean>('readerWindowExtendIntoCutout', policy.extendIntoCutout);
     return ReaderWindowCoordinator.enqueueWindowPolicy(revision,
-      (win: window.Window): Promise<void> => ReaderWindowCoordinator.applyReaderWindowPolicy(win, policy));
+      (win: window.Window): Promise<void> => ReaderWindowCoordinator.applyReaderWindowPolicy(win, policy, revision));
   }
 
   /** Restore the app policy captured when the Ability installed the window. */
@@ -210,7 +233,7 @@ export class ReaderWindowCoordinator {
     AppStorage.setOrCreate<boolean>('readerWindowHideNavigationBar', false);
     AppStorage.setOrCreate<boolean>('readerWindowExtendIntoCutout', false);
     return ReaderWindowCoordinator.enqueueWindowPolicy(revision,
-      (win: window.Window): Promise<void> => ReaderWindowCoordinator.applyAppWindowPolicy(win));
+      (win: window.Window): Promise<void> => ReaderWindowCoordinator.applyAppWindowPolicy(win, revision));
   }
 
   /** Reapply the latest semantic policy after foreground/window restoration. */
@@ -281,19 +304,34 @@ export class ReaderWindowCoordinator {
   private static async applyReaderWindowPolicy(
     win: window.Window,
     policy: ReaderWindowPolicy,
+    revision: number,
   ): Promise<void> {
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setPreferredOrientation(ReaderWindowCoordinator.orientationValue(policy.orientation));
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setWindowKeepScreenOn(policy.keepScreenOn);
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setSpecificSystemBarEnabled('status', !policy.hideStatusBar, false);
+    if (win === ReaderWindowCoordinator.mainWindow) {
+      ReaderWindowCoordinator.statusBarHiddenApplied = policy.hideStatusBar;
+    }
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setSpecificSystemBarEnabled('navigation', !policy.hideNavigationBar, false);
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setSpecificSystemBarEnabled('navigationIndicator', !policy.hideNavigationBar, false);
   }
 
-  private static async applyAppWindowPolicy(win: window.Window): Promise<void> {
+  private static async applyAppWindowPolicy(win: window.Window, revision: number): Promise<void> {
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setPreferredOrientation(ReaderWindowCoordinator.appOrientation);
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setWindowKeepScreenOn(ReaderWindowCoordinator.appKeepScreenOn);
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setSpecificSystemBarEnabled('status', true, false);
+    if (win === ReaderWindowCoordinator.mainWindow) ReaderWindowCoordinator.statusBarHiddenApplied = false;
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setSpecificSystemBarEnabled('navigation', true, false);
+    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setSpecificSystemBarEnabled('navigationIndicator', true, false);
   }
 
@@ -330,7 +368,14 @@ export class ReaderWindowCoordinator {
     const keyboardInsets = ReaderWindowCoordinator.avoidInsetsVp(window.AvoidAreaType.TYPE_KEYBOARD, density);
     const systemFontScale = scaledDensity / density;
     const previous = ReaderWindowCoordinator.metricsSnapshot;
-    if (previous.ready &&
+    const statusMeasurementKey = `${windowRect.left}:${windowRect.top}:${windowRect.width}:` +
+      `${windowRect.height}:${globalRectVp.left}:${globalRectVp.top}:${density}`;
+    const statusBarHeight = ReaderWindowCoordinator.statusBarMeasurement.observe(statusMeasurementKey,
+      windowRect.width > windowRect.height, systemInsets.top,
+      ReaderWindowCoordinator.statusBarHiddenApplied ||
+      (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
+      ReaderWindowCoordinator.desiredReaderWindowPolicy.hideStatusBar));
+    if (previous.ready && previous.statusBarHeight === statusBarHeight &&
       ReaderWindowCoordinator.sameRectVp(previous.windowRect, windowRect) &&
       ReaderWindowCoordinator.sameRectVp(previous.globalRect, globalRectVp) &&
       ReaderWindowCoordinator.sameInsetsVp(previous.systemInsets, systemInsets) &&
@@ -358,6 +403,7 @@ export class ReaderWindowCoordinator {
       systemFontScale,
       revision,
       true,
+      statusBarHeight,
     );
     AppStorage.setOrCreate<number>('readerWindowMetricsRevision', revision);
   }

@@ -35,8 +35,8 @@ function pose(p, width = 286 + 52 * p, active = 0, enabled = true) {
     assert.deepEqual(v.get('setWidth'), [frame.width]); assert.deepEqual(v.get('setHeight'), [frame.height]);
     assert.deepEqual(v.get('setPosition'), [false, frame.x, frame.y]);
     assert.deepEqual(v.get('setOpacity'), [paint.contentOpacity]); assert.deepEqual(v.get('setBlur'), [paint.contentBlur, undefined]);
-    assert.deepEqual(v.get('setFontColor'), [index === active ? 'TOK_READ_PRIMARY' : 'TOK_READ_INK']);
-    assert.deepEqual(v.get('setBackgroundColor'), [index === active ? 'TOK_READ_ELEVATED' : 'Color.Transparent']);
+    assert.deepEqual(v.get('setFontColor'), [index === active ? '#FF2F6373' : '#FF332C25']);
+    assert.deepEqual(v.get('setBackgroundColor'), [index === active ? '#BDFFFCF8' : 'Color.Transparent']);
     assert.deepEqual(v.get('setEnabled'), [enabled]);
   });
 }

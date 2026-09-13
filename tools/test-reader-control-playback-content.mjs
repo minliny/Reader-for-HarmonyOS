@@ -124,7 +124,7 @@ function loadInputAdapter(name, source) {
   const adapter = (source.slice(0, boundary) + '\n' + rateMethod + '\n}')
     .replace(/^import[\s\S]*?;\s*/gm, '')
     .replace(/@(?:Component|Prop|State)\b\s*/g, '')
-    .replace(/@Watch\('[^']+'\)\s*/g, '')
+    .replace(/@(?:Watch|StorageLink)\('[^']+'\)\s*/g, '')
     .replace(`export struct ${name}`, `class ${name}`);
   return new Function(...Object.keys(deps), `${stripTypeScriptTypes(adapter)}\nreturn ${name};`)(...Object.values(deps));
 }
@@ -340,7 +340,7 @@ for (const [name, module] of [['ReaderControlTtsContent', 'tts'], ['ReaderContro
       const body = source.split(`  private ${actor}() {`)[1].split('  @Builder')[0];
       assert.match(body, /\.translate\(\{ y: this\.sharedScrollTranslation\(\) \}\)/);
     }
-    const scrollBody = source.slice(source.indexOf('\n  build() {'), source.indexOf('\n  private headerActor'));
+    const scrollBody = source.slice(source.indexOf('\n  private normalContent() {'), source.indexOf('\n  private headerActor'));
     assert.equal([...scrollBody.matchAll(/\.translate\(/g)].length, 2, 'only two Full-only coordinate compensations, never whole-Scroll rewind');
     assert.equal([...scrollBody.matchAll(/\.translate\(\{ y: this\.fullOnlyScrollTranslation\(\) \}\)/g)].length, 2);
     for (const s of [0, 180, 523, 780]) {

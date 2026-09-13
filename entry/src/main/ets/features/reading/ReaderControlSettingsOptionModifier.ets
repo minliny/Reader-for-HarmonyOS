@@ -1,4 +1,4 @@
-import { TOK_LINE, TOK_READ_ELEVATED, TOK_READ_INK, TOK_READ_PRIMARY } from '../common/ReaderTokens';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { type ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import { type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
 
@@ -9,6 +9,7 @@ export class ReaderControlSettingsOptionModifier implements AttributeModifier<Te
   private actor: ReaderControlActorFrame = { x: 0, y: 0, width: 0, height: 0, opacity: 1 };
   private opacity: number = 1;
   private blur: number = 0;
+  private appScheme: string = 'day';
   private active: boolean = false;
   private enabled: boolean = false;
   private accessibility: string = '';
@@ -17,8 +18,9 @@ export class ReaderControlSettingsOptionModifier implements AttributeModifier<Te
   constructor(action: () => void) { this.action = action; }
 
   update(actor: ReaderControlActorFrame, paint: ReaderControlMotionPresentation,
-    active: boolean, enabled: boolean, accessibility: string): ReaderControlSettingsOptionModifier {
+    active: boolean, enabled: boolean, accessibility: string, appScheme: string = 'day'): ReaderControlSettingsOptionModifier {
     this.actor = actor;
+    this.appScheme = appScheme;
     this.opacity = paint.contentOpacity;
     this.blur = paint.contentBlur;
     this.active = active;
@@ -31,10 +33,10 @@ export class ReaderControlSettingsOptionModifier implements AttributeModifier<Te
     instance.opacity(this.opacity).blur(this.blur)
       .width(this.actor.width).height(this.actor.height)
       .position({ x: this.actor.x, y: this.actor.y })
-      .backgroundColor(this.active ? TOK_READ_ELEVATED : Color.Transparent)
+      .backgroundColor(this.active ? readerAppColor('TOK_READ_ELEVATED', this.appScheme) : Color.Transparent)
       .borderRadius(6)
-      .border({ width: 0.5, color: TOK_LINE })
-      .fontColor(this.active ? TOK_READ_PRIMARY : TOK_READ_INK)
+      .border({ width: 0.5, color: readerAppColor('TOK_LINE', this.appScheme) })
+      .fontColor(this.active ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_INK', this.appScheme))
       .enabled(this.enabled).accessibilityText(this.accessibility).onClick(this.action);
   }
 }

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import * as paint from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
 import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
 import * as appearance from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
+import { READER_CONTROL_APPEARANCE_THEMES } from '../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts';
 import * as appearanceState from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
 import * as render from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import * as playback from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
@@ -59,9 +60,9 @@ const enums = new Proxy({}, { get: (_, k) => k });
 const native = new Proxy({}, { get: () => () => {} });
 const { owner: font } = createReaderBuilderProbe(source('Appearance'),
   ['frame', 'endpointFrame', 'fullInput', 'sharedInput', 'presentation', 'sharedClip', 'actorPosition',
-    'sharedScrollTranslation', 'fullOnlyScrollTranslation', 'fontIds', 'fontActor', 'fontActorAt',
+    'sharedScrollTranslation', 'fullOnlyScrollTranslation', 'extendedThemes', 'themeIds', 'fontIds', 'fontActor', 'fontActorAt',
     'fontInput', 'activeFont', 'fontCellPosition', 'fontCell'],
-  { ...deps, ...appearance, ...appearanceState, ...render,
+  { ...deps, ...appearance, ...appearanceState, ...render, READER_CONTROL_APPEARANCE_THEMES,
     BorderStyle: enums, GesturePriority: enums, Gesture: native, LongPressGesture: native,
     globalThis: { Gesture: native, LongPressGesture: native } });
 Object.assign(font, props(), { snapshot: appearanceState.createDefaultReaderAppearanceSnapshot(),
@@ -76,11 +77,11 @@ assert.equal(surfaceNodes.length, font.fontIds().length);
 for (const selected of ['serif', 'sans', 'kai', 'system', 'custom']) {
   font.snapshot = { ...font.snapshot, font: selected };
   font.replay();
-  assert.equal(surfaceNodes.filter(n => n.backgroundColor === 'TOK_READ_PRIMARY').length, 1);
+  assert.equal(surfaceNodes.filter(n => n.backgroundColor === '#FF2F6373').length, 1);
   for (const [i, slot] of font.fontIds().entries()) {
     const active = slot === 'import' ? selected === 'custom' : selected === slot;
-    assert.equal(surfaceNodes[i].backgroundColor, active ? 'TOK_READ_PRIMARY' : '#FFFCF8');
-    assert.equal(textNodes[i].fontColor, active ? '#FFFAF4' : 'TOK_READ_INK');
+    assert.equal(surfaceNodes[i].backgroundColor, active ? '#FF2F6373' : '#FFFFFCF8');
+    assert.equal(textNodes[i].fontColor, active ? '#FFFFFAF4' : '#FF332C25');
   }
 }
 for (const offset of [0, 250, 565, 1000]) for (const p of [0, .1, .5, .9, 1, .7, .1, 0]) {
@@ -123,7 +124,7 @@ console.log('PASS global presentation: shared policies, production actor-local c
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 let endpointSamples=0;
 const EndpointOwner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url),
-  ['endpointFrame','fontIds','presentation'], {...appearanceState,...paint,
+  ['endpointFrame','themeIds','fontIds','presentation'], {...appearanceState,...paint,READER_CONTROL_APPEARANCE_THEMES,
     sampleReaderControlAppearance: (...args) => { endpointSamples++; return appearance.sampleReaderControlAppearance(...args); }});
 const cache = Object.assign(new EndpointOwner(), {availableWidth:286,fullContentHeight:666,motionProgress:0,
   snapshot:appearanceState.createDefaultReaderAppearanceSnapshot(), draggedFontId:'',previewFontOrder:[]});

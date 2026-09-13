@@ -16,7 +16,7 @@ export const BOOK_TURN_EVENT_SURFACE_LOST = 5;
 export const BOOK_TURN_EVENT_RENDER_FAILURE = 6;
 export const BOOK_TURN_EVENT_SLOTS_COMMITTED = 7;
 /** The retained terminal frame was cleared after the generation-matched
- *  ArkUI presented confirmation (barrier closed). */
+ *  ArkUI content admission and scheduled hide (barrier closed; no display fence). */
 export const BOOK_TURN_EVENT_TERMINAL_RELEASED = 8;
 /** Native surface has drawn the first frame for a new generation. */
 export const BOOK_TURN_EVENT_FRAME_PRESENTED = 9;
@@ -161,12 +161,12 @@ export class BookTurnPresentationSession {
   }
 
   /** ArkUI presentation barrier: after promote, hold the new-page terminal
-   *  frame until this page's promoted content is confirmed composited. */
+   *  frame until the owner admits this page's promoted content and hides Native. */
   retainTerminalFrame(generation: number): boolean {
     return bookTurnNative.retainTerminalFrame(this.componentId, generation);
   }
 
-  /** Confirm the promoted content was composited; this only closes the native
+  /** Confirm the owner admitted promoted content and scheduled its hide; this closes the native
    *  retain barrier. The ArkUI owner must hide the XComponent and then call
    *  clearSurface. Returns false for stale generations. */
   releaseTerminalFrame(generation: number): boolean {

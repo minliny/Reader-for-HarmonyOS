@@ -141,6 +141,21 @@ export interface ReaderTtsCoordinatorGateway {
   ): Promise<ReaderTtsCallbackResult>;
 }
 
+export interface ReaderTtsAuditionInput {
+  engine?: string;
+  language: string;
+  person: number;
+  rate?: number;
+  pitch?: number;
+}
+interface ReaderTtsAuditionSession {
+  requestId: string;
+  restoreEngine: string | undefined;
+  timer: number;
+  resolve: () => void;
+  reject: (error: Error) => void;
+}
+
 type ActiveSession = {
   identity: ReaderTtsSessionIdentity;
   input: ReaderTtsStartInput;
@@ -195,6 +210,9 @@ export class ReaderTtsSessionCoordinator {
   private probedConfig: ReaderTtsConfig | undefined = undefined;
   private active: ActiveSession | undefined = undefined;
   private disposed: boolean = false;
+  private desiredPlaying: boolean = true;
+  private audition: ReaderTtsAuditionSession | undefined = undefined;
+  private auditionSequence: number = 0;
   private timerHandle: number = -1;
   private timerGeneration: number = 0;
   private readonly utterances: Map<string, CorrelatedUtterance> = new Map();
@@ -228,6 +246,19 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private routeHostEvent(event: ReaderTtsHostEvent): void {
+    const audition = this.audition;
+    if (audition !== undefined) {
+      if ('requestId' in event && event.requestId === audition.requestId) {
+        if (event.type === 'error') this.voidLogged(this.finishAudition(audition, new Error(event.message)), 'audition.error');
+        else if (event.type === 'stop' || (event.type === 'complete' && event.completion === 'audio')) {
+          this.voidLogged(this.finishAudition(audition), 'audition.complete');
+        }
+        return; // Audition callbacks never enter Core's book queue or progress path.
+      }
+      if (event.type === 'interruption' || event.type === 'deviceChange') {
+        this.voidLogged(this.stopAudition(), 'audition.interruption');
+      }
+    }
     if (event.type === 'mediaControl') {
       if (event.action === 'play') this.voidLogged(this.resume(), 'mediaControl.play');
       else if (event.action === 'pause') this.voidLogged(this.pause(), 'mediaControl.pause');
@@ -255,6 +286,83 @@ export class ReaderTtsSessionCoordinator {
       return;
     }
     this.voidLogged(this.enqueue(async (): Promise<void> => this.handleHostEvent(event)), `callback.${event.type}`);
+  }
+
+  auditionVoice(input: ReaderTtsAuditionInput): Promise<void> {
+    if (this.disposed || !input.language.trim() || !Number.isSafeInteger(input.person) || input.person < 0 ||
+        (input.rate !== undefined && (!Number.isFinite(input.rate) || input.rate < 0.5 || input.rate > 2)) ||
+        (input.pitch !== undefined && (!Number.isFinite(input.pitch) || input.pitch < 0.5 || input.pitch > 2))) {
+      return Promise.reject(new Error('试听参数无效'));
+    }
+    const previous = this.stopAudition();
+    const pause = this.pause();
+    let resolve: () => void = (): void => {};
+    let reject: (error: Error) => void = (_error: Error): void => {};
+    const completed = new Promise<void>((accept, fail): void => { resolve = accept; reject = fail; });
+    const session: ReaderTtsAuditionSession = {
+      requestId: `${this.ownerToken}-audition-${++this.auditionSequence}`,
+      restoreEngine: this.active?.config?.engine ?? this.probedConfig?.engine,
+      timer: -1, resolve, reject,
+    };
+    this.audition = session;
+    session.timer = globalThis.setTimeout((): void => {
+      this.voidLogged(this.finishAudition(session, new Error('试听超时，请重试')), 'audition.timeout');
+    }, 15000) as number;
+    const current = (): boolean => this.audition === session && !this.disposed;
+    const prepare = this.enqueue(async (): Promise<void> => {
+      try {
+        await previous;
+        await pause;
+        if (!current()) return;
+        const selected = await this.host.selectEngine(input.engine ?? session.restoreEngine);
+        if (!current()) return;
+        if (!selected) throw new Error('当前试听引擎不可用');
+        const probe = await this.host.probe();
+        if (!current()) return;
+        if (!probe.available) throw new Error(probe.reason ?? '当前音色不可用');
+        this.host.setBackgroundPlaybackEnabled?.(false);
+        await this.host.activateAudioSession(false);
+        if (!current()) return;
+        // Speaking is an owned transport operation. Its completion is delivered by
+        // the existing Host listener; a missing acceptance ACK must not hold
+        // the config lane and prevent cancellation/engine restoration.
+        void this.host.speak({ requestId: session.requestId,
+          text: '这是音色试听。愿你在阅读中，发现更广阔的世界。',
+          language: input.language, person: input.person, rate: input.rate ?? 1,
+          pitch: input.pitch ?? 1, engine: input.engine ?? session.restoreEngine })
+          .catch((error: Error): void => {
+            if (current()) void this.finishAudition(session, error).catch((): void => {});
+          });
+      } catch (error) {
+        // Release after this operation returns; awaiting our own queued cleanup would deadlock.
+        void this.finishAudition(session, new Error(errorMessageOf(error))).catch((): void => {});
+      }
+    });
+    void prepare.catch((error: Error): void => { void this.finishAudition(session, error).catch((): void => {}); });
+    return completed;
+  }
+
+  stopAudition(): Promise<void> {
+    const session = this.audition;
+    return session === undefined ? Promise.resolve() : this.finishAudition(session);
+  }
+
+  private finishAudition(session: ReaderTtsAuditionSession, failure?: Error): Promise<void> {
+    if (this.audition !== session) return Promise.resolve();
+    this.audition = undefined;
+    globalThis.clearTimeout(session.timer);
+    const stopping = this.stopHostTransportImmediately();
+    return this.enqueue(async (): Promise<void> => {
+      let result = failure;
+      try {
+        const stopError = await stopping;
+        if (stopError !== undefined) throw stopError;
+        await this.host.deactivateAudioSession();
+        if (!await this.host.selectEngine(session.restoreEngine)) throw new Error('试听后恢复朗读引擎失败');
+      } catch (error) { result = new Error(errorMessageOf(error)); }
+      if (result === undefined) session.resolve();
+      else session.reject(result);
+    });
   }
 
   getState(): ReaderTtsState {
@@ -359,8 +467,10 @@ export class ReaderTtsSessionCoordinator {
     }
   }
 
-  start(input: ReaderTtsStartInput): Promise<void> {
+  start(input: ReaderTtsStartInput, desiredPlaying: boolean = true): Promise<void> {
     this.assertStartInput(input);
+    this.voidLogged(this.stopAudition(), 'audition.formal-start');
+    this.desiredPlaying = desiredPlaying;
     const chapterKey = this.chapterKey(input.chapter);
     const rate = input.rate ?? 1;
     this.clearUtteranceCorrelations();
@@ -410,6 +520,12 @@ export class ReaderTtsSessionCoordinator {
     });
   }
 
+  /** Synchronous launch intent; preparation reads it again before any native speech.
+   * Ready/playing callers still use resume()/pause() for the transport transaction. */
+  setDesiredPlaying(value: boolean): void {
+    this.desiredPlaying = value;
+  }
+
   pause(): Promise<void> {
     return this.pauseForReason('user');
   }
@@ -419,6 +535,7 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private pauseForReason(reason: 'user' | 'routeBackground'): Promise<void> {
+    this.desiredPlaying = false;
     const active = this.active;
     if (active === undefined || !this.canPause()) return Promise.resolve();
     this.invalidateUtterance(reason === 'user' ? undefined : reason);
@@ -442,6 +559,8 @@ export class ReaderTtsSessionCoordinator {
   }
 
   resume(): Promise<void> {
+    this.voidLogged(this.stopAudition(), 'audition.formal-resume');
+    this.desiredPlaying = true;
     const active = this.active;
     if ((this.state.status !== 'paused' && this.state.status !== 'interrupted') ||
       active === undefined || active.plan === undefined ||
@@ -583,6 +702,7 @@ export class ReaderTtsSessionCoordinator {
   }
 
   setVoice(language: string, person: number): Promise<void> {
+    this.voidLogged(this.stopAudition(), 'audition.voice-change');
     const normalizedLanguage = language.trim();
     if (normalizedLanguage.length === 0 || !Number.isSafeInteger(person) || person < 0) {
       return Promise.reject(new Error('Reader TTS voice requires a language and non-negative person'));
@@ -631,6 +751,7 @@ export class ReaderTtsSessionCoordinator {
 
   stop(reason: 'user' | 'timer' | 'lifecycle' | 'contentChanged' | 'screenOff' |
     'systemInterruption' = 'user'): Promise<void> {
+    this.voidLogged(this.stopAudition(), 'audition.stop');
     const active = this.active;
     this.clearTimer();
     this.clearStartWatchdog();
@@ -857,7 +978,26 @@ export class ReaderTtsSessionCoordinator {
     this.resolveStartWaiters(false);
   }
 
+  private async parkPreparedSession(active: ActiveSession): Promise<boolean> {
+    if (!this.isSessionCurrent(active.identity)) return true;
+    if (this.desiredPlaying) return false;
+    this.invalidateUtterance();
+    const paused = await this.gateway.pause(active.input.chapter);
+    if (!this.isSessionCurrent(active.identity)) return true;
+    this.applyCoreSnapshot(paused, undefined, 'user');
+    await this.host.deactivateAudioSession();
+    if (!this.isSessionCurrent(active.identity)) return true;
+    this.transport = { ...this.transport, audioSession: 'inactive', focus: 'none' };
+    if (!this.desiredPlaying) return true;
+    // A second click while the pause acknowledgement was in flight is newer.
+    const resumed = await this.gateway.resume(active.input.chapter);
+    if (!this.isSessionCurrent(active.identity)) return true;
+    this.applyCoreSnapshot(resumed);
+    return false;
+  }
+
   private async speakSlice(active: ActiveSession, index: number, status: 'preparing'): Promise<void> {
+    if (await this.parkPreparedSession(active)) return;
     const plan = active.plan;
     if (plan === undefined) throw new Error('Reader TTS has no active slice plan');
     const slice = plan.slices[index];
@@ -904,6 +1044,12 @@ export class ReaderTtsSessionCoordinator {
     }
     this.transport = { ...this.transport, audioSession: 'active', focus: 'held' };
     if (!this.isUtteranceCurrent(token)) return;
+    if (!this.desiredPlaying) {
+      if (!await this.parkPreparedSession(active) && this.isSessionCurrent(active.identity)) {
+        await this.speakSlice(active, index, status);
+      }
+      return;
+    }
     try {
       await this.host.speak({
         requestId: token.requestId,
@@ -1053,6 +1199,7 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private async pauseForSystem(reason: 'systemInterruption' | 'deviceChange'): Promise<void> {
+    this.desiredPlaying = false;
     const active = this.active;
     if (active === undefined || !this.canPause()) return;
     this.invalidateUtterance(reason);
@@ -1322,7 +1469,7 @@ export class ReaderTtsSessionCoordinator {
       pauseReason: snapshot.state === 'paused' ? pauseReason ?? this.state.pauseReason : undefined,
       errorMessage,
     });
-    const published = snapshot.state === 'playing' ? 'playing' :
+    const published = snapshot.state === 'playing' ? (status === 'playing' ? 'playing' : 'preparing') :
       snapshot.state === 'paused' ? 'paused' :
         snapshot.state === 'completed' ? 'completed' :
           snapshot.state === 'stopped' && errorMessage !== undefined ? 'error' : 'stopped';

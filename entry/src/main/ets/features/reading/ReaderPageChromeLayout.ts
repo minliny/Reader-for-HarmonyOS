@@ -100,16 +100,11 @@ export function resolveReaderPageChromeLayout(
   const interactiveRightInset = measurements.sessionVisible ?
     Math.max(visualRightInset, layout.pageChromeInteractiveSafeRight) : visualRightInset;
   const visualRight = Math.max(visualLeft, layout.viewportWidth - visualRightInset);
-  // In edge-to-edge windows the page coordinate origin remains above the
-  // visible status-bar boundary. Anchoring exactly at visualSafeTop lets the
-  // first glyph/icon row be clipped by the system compositor on real devices.
-  // Preserve the authored 25vp position when no top inset exists, otherwise
-  // place the row just below the live system/cutout edge. Eight vp still keeps
-  // the row clear of the 72vp phone body track on current compact geometry.
-  const top = Math.max(
-    READER_PAGE_CHROME_TOP_INSET,
-    layout.pageChromeVisualSafeTop + READER_PAGE_CHROME_SAFE_TOP_GAP,
-  );
+  // Reuse the measured system-bar-height lane. In extended reading it
+  // starts at zero; otherwise the same-height information lane follows it.
+  const top = layout.pageChromeTopRegionHeight > 0 ? layout.pageChromeVisualSafeTop +
+    Math.max(0, (layout.pageChromeTopRegionHeight - measurements.topStartHeight) / 2) :
+    Math.max(READER_PAGE_CHROME_TOP_INSET, layout.pageChromeVisualSafeTop + READER_PAGE_CHROME_SAFE_TOP_GAP);
   const bottomInset = measurements.sessionVisible ?
     Math.max(READER_PAGE_CHROME_BOTTOM_INSET, layout.pageChromeInteractiveSafeBottom) :
     Math.max(READER_PAGE_CHROME_BOTTOM_INSET, layout.pageChromeVisualSafeBottom);

@@ -34,7 +34,8 @@ for (const name of ['Tts', 'AutoPage', 'Settings', 'Appearance', 'Replace']) {
   for (const start of [0, 180, 523, 3300]) {
     const owner = new Component(), calls = [];
     let native = start;
-    Object.assign(owner, { motionProgress: 1, interactionEnabled: true,
+    Object.assign(owner, { motionProgress: 1, interactionEnabled: true, sourceOnly: 'none', reportMorphActor: () => {},
+      extendedThemes: () => false,
       scrollMotion: policy.createReaderControlMorphScroll(),
       scroller: { currentOffset: () => ({ yOffset: native }), scrollTo: command => calls.push(command) } });
     owner.syncMorphScroll(); owner.onFullDidScroll();

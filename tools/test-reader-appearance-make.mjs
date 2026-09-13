@@ -47,7 +47,12 @@ assert.deepEqual(['fontSize', 'lineHeightMultiplier', 'paragraphSpacing', 'lette
   ['18px', '1.96', '16px', '0px']);
 
 // Independent Make V9 values, read from the actual rendered preview.
-const expected = ['#FCF8F0', '#F4E3BF', '#2B2823', '#413020', '#EBDABB', '#D7E8CF', '#26313F', '#24382C'];
+const expected = ['#FFFCF8F0', '#FFF4E3BF', '#FF2B2823', '#FF413020', '#FFEBDABB', '#FFD7E8CF', '#FF26313F', '#FF24382C'];
+const SharedActors = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderAppearanceSharedActors.ets', import.meta.url),
+  ['themeIds', 'themeLabel', 'themeColor'], { ...style });
+const shared = new SharedActors();
+assert.deepEqual(shared.themeIds().map(id => shared.themeColor(id)), expected);
+assert.equal(shared.themeLabel('paperNight'), '靛夜');
 for (const progress of [0, .25, .5, .75, 1]) {
   content.motionProgress = progress;
   assert.deepEqual(content.themeIds().map(id => content.themeColor(id)), expected);
@@ -55,7 +60,7 @@ for (const progress of [0, .25, .5, .75, 1]) {
 content.snapshot = normalizeReaderAppearanceSnapshot(setReaderAppearanceTheme(snapshot, 'paperNight'));
 assert.equal(content.snapshot.activeTheme, 'paperNight');
 assert.equal(content.themeLabel(content.snapshot.activeTheme), '靛夜');
-assert.equal(content.themeSummary(), '日间：纸纹 · 夜间：靛夜');
+assert.equal(content.themeSummary(), '日间：日间 · 夜间：夜间');
 
 // Both directions and native scroll offsets keep the entire menu hittable.
 for (const [width, height] of [[308, 360], [338, 666], [690, 780]]) {

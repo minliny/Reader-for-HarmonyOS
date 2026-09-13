@@ -1,3 +1,4 @@
+import { readerThemeDefinition } from '../common/ReaderThemeRegistry';
 import type { ReaderTextStyle } from '../common/ReaderTypography';
 import {
   TYPE_READER_IMMERSIVE_PAGE_ORDINAL,
@@ -38,6 +39,14 @@ const readerPageChromeTextMeasurements: Map<string, Size> = new Map<string, Size
  */
 @Component
 export struct ReaderPageChrome {
+  @StorageLink('readerSessionChromeOverlayActive') private sessionOverlayActive: boolean = false;
+  @Prop isSessionOverlay: boolean = false;
+  @Prop incomingOpacity: number = 1;
+  @Prop footerOpacity: number = 1;
+  @Prop footerTranslateX: number = 0;
+  @Prop sessionExitProgress: number = 0;
+
+  @StorageLink('readerTopInfoSuppressed') private topInfoSuppressed: boolean = false;
   @Prop topStartText: string = '';
   @Prop topEndText: string = '';
   @Prop bottomStartText: string = '';
@@ -52,10 +61,11 @@ export struct ReaderPageChrome {
   private textMeasureCache: Map<string, Size> = readerPageChromeTextMeasurements;
   private chromeLayoutCacheKey: string = '';
   private chromeLayoutCache: ReaderPageChromeLayoutSnapshot | undefined = undefined;
+  private noSessionChromeLayout: ReaderPageChromeLayoutSnapshot | undefined = undefined;
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.topStartText.length > 0) {
+      if (!this.topInfoSuppressed && this.topStartText.length > 0) {
         Text(this.topStartText)
           .fontFamily(TYPE_READER_IMMERSIVE_TIME.fontFamily)
           .fontWeight(TYPE_READER_IMMERSIVE_TIME.fontWeight)
@@ -66,10 +76,10 @@ export struct ReaderPageChrome {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .constraintSize({ maxWidth: this.chromeLayout().topStartMaxWidth })
-          .position({ x: this.chromeLayout().topStartX, y: this.chromeLayout().topStartY });
+          .position({ x: this.chromeLayout().topStartX, y: this.chromeLayout().topStartY }).opacity(this.incomingOpacity);
       }
 
-      if (this.topEndText.length > 0) {
+      if (!this.topInfoSuppressed && this.topEndText.length > 0) {
         Text(this.topEndText)
           .fontFamily(TYPE_READER_IMMERSIVE_TIME.fontFamily)
           .fontWeight(TYPE_READER_IMMERSIVE_TIME.fontWeight)
@@ -78,7 +88,7 @@ export struct ReaderPageChrome {
           .letterSpacing(TYPE_READER_IMMERSIVE_TIME.letterSpacingFp)
           .fontColor(this.metaColor())
           .maxLines(1)
-          .position({ x: this.chromeLayout().topEndX, y: this.chromeLayout().topEndY });
+          .position({ x: this.chromeLayout().topEndX, y: this.chromeLayout().topEndY }).opacity(this.incomingOpacity);
       }
 
       if (this.bottomStartText.length > 0) {
@@ -92,7 +102,7 @@ export struct ReaderPageChrome {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .constraintSize({ maxWidth: this.chromeLayout().bottomStartMaxWidth })
-          .position({ x: this.chromeLayout().bottomStartX, y: this.chromeLayout().bottomStartY });
+          .position({ x: this.chromeLayout().bottomStartX, y: this.chromeLayout().bottomStartY }).opacity(this.incomingOpacity);
       }
 
       if (this.bottomEndText.length > 0 && this.chromeLayout().bottomEndMaxWidth > 0) {
@@ -106,11 +116,13 @@ export struct ReaderPageChrome {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .constraintSize({ maxWidth: this.chromeLayout().bottomEndMaxWidth })
-          .position({ x: this.chromeLayout().bottomEndX, y: this.chromeLayout().bottomEndY });
+          .position({ x: this.chromeLayout().bottomEndX, y: this.chromeLayout().bottomEndY })
+          .translate({ x: this.footerTranslateX + this.footerExitX(), y: this.footerExitY() }).opacity(this.footerOpacity);
       }
     }
     .width('100%')
     .height('100%')
+    .opacity(this.isSessionOverlay || !this.sessionOverlayActive ? 1 : 0)
     .hitTestBehavior(HitTestMode.None)
     .accessibilityGroup(false);
   }
@@ -122,7 +134,7 @@ export struct ReaderPageChrome {
       this.bottomEndText, this.sessionVisible, this.sessionWidth, this.sessionHeight,
       layout.viewportWidth, layout.viewportHeight, layout.systemFontScale,
       layout.pageChromeVisualSafeLeft, layout.pageChromeVisualSafeRight,
-      layout.pageChromeVisualSafeTop, layout.pageChromeVisualSafeBottom,
+      layout.pageChromeVisualSafeTop, layout.pageChromeTopRegionHeight, layout.pageChromeVisualSafeBottom,
       layout.pageChromeInteractiveSafeRight, layout.pageChromeInteractiveSafeBottom,
       context.px2vp(1), context.fp2px(1)]);
     if (key === this.chromeLayoutCacheKey && this.chromeLayoutCache !== undefined) return this.chromeLayoutCache;
@@ -143,9 +155,22 @@ export struct ReaderPageChrome {
       this.sessionWidth,
       this.sessionHeight,
     ));
+    this.noSessionChromeLayout = resolveReaderPageChromeLayout(layout, new ReaderPageChromeMeasurements(
+      topStart.width, topStart.height, topEnd.width, topEnd.height, bottomStart.width, bottomStart.height,
+      bottomEnd.width, bottomEnd.height, false, 0, 0));
     this.chromeLayoutCacheKey = key;
     this.chromeLayoutCache = result;
     return result;
+  }
+
+  private footerExitX(): number {
+    const current = this.chromeLayout();
+    return ((this.noSessionChromeLayout?.bottomEndX ?? current.bottomEndX) - current.bottomEndX) * this.sessionExitProgress;
+  }
+
+  private footerExitY(): number {
+    const current = this.chromeLayout();
+    return ((this.noSessionChromeLayout?.bottomEndY ?? current.bottomEndY) - current.bottomEndY) * this.sessionExitProgress;
   }
 
   private textMeasure(text: string, style: ReaderTextStyle): Size {
@@ -184,8 +209,7 @@ export struct ReaderPageChrome {
   }
 
   private metaColor(): string {
-    return readerAppearanceChromeTone(this.appearance.activeTheme) === 'light' ?
-      TOK_READ_IMMERSIVE_META_NIGHT : TOK_READ_IMMERSIVE_META;
+    return readerThemeDefinition(this.appearance.activeTheme).chromeMeta;
   }
 
 }

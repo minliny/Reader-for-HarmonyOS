@@ -78,7 +78,7 @@ slider.interactionEnabled=false; slider.changeRateSlider(2,3); assert.equal(rate
 
 const KeyboardAvoidMode={OFFSET:0,RESIZE:1,NONE:4};
 const Manager=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets'),
-  ['aboutToAppear','aboutToDisappear','current','setBusy','beginEdit','canSubmit','submit','selectEngine','deleteEngine','clearDraft','resetDraft'],{KeyboardAvoidMode});
+  ['stopPreview','aboutToAppear','aboutToDisappear','current','setBusy','beginEdit','canSubmit','submit','selectEngine','deleteEngine','clearDraft','resetDraft'],{KeyboardAvoidMode});
 const tick=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
 // Actual tab routing: no automatic modal, real engine switch only when configured,
 // and failed async switches return to the still-active engine.
@@ -97,7 +97,7 @@ tabs.selectTtsServiceType(false); await tick();
 assert.equal(tabs.onlineServicePage(),true); assert.equal(tabs.serviceError,'Switch failed');
 tabs.onEngineChange=async id=>{tabs.engine=id;}; tabs.selectTtsServiceType(false); await tick();
 assert.equal(tabs.onlineServicePage(),false); assert.equal(tabs.engine,'system'); assert.equal(tabs.configField,'');
-const manager=Object.assign(new Manager(),{mounted:false,generation:0,busy:false,draftId:-1,draftName:'服务',draftUrl:'https://example.invalid/?text={{text}}',
+const manager=Object.assign(new Manager(),{mounted:false,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,draftId:-1,draftName:'服务',draftUrl:'https://example.invalid/?text={{text}}',
   draftApiKey:'',draftVoice:'',draftFormat:'mp3',draftClearApiKey:false,
   errorText:'',onBusyChange(){},onClose(){}}); manager.aboutToAppear();
 let resolveSave; manager.onPut=()=>new Promise(resolve=>resolveSave=resolve);
@@ -113,19 +113,19 @@ resolveSave(); await tick(); assert.equal(manager.draftName,'失败草稿','late
 
 // A modal must restore the actual prior UI mode, including a non-default mode.
 const keyboardWrites=[];
-const modal=Object.assign(new Manager(),{windowModal:true,manager:false,generation:0,onBusyChange(){},
+const modal=Object.assign(new Manager(),{windowModal:true,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},
   getUIContext:()=>({getKeyboardAvoidMode:()=>KeyboardAvoidMode.NONE,
     setKeyboardAvoidMode:mode=>keyboardWrites.push(mode)})});
 modal.aboutToAppear(); modal.aboutToDisappear(); modal.aboutToDisappear();
 assert.deepEqual(keyboardWrites,[KeyboardAvoidMode.RESIZE,KeyboardAvoidMode.NONE]);
-const menu=Object.assign(new Manager(),{windowModal:false,manager:false,generation:0,onBusyChange(){},
+const menu=Object.assign(new Manager(),{windowModal:false,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},
   getUIContext:()=>{throw new Error('an anchored choice menu must not change keyboard policy');}});
 menu.aboutToAppear(); menu.aboutToDisappear();
 
 const Overlay=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets'),
-  ['choose','aboutToDisappear','onIdentityChanged']);
+  ['stopPreview','choose','aboutToDisappear','onIdentityChanged']);
 let complete, closed=[];
-const overlay=Object.assign(new Overlay(),{mounted:true,generation:0,busy:false,selectionId:'engine:1',choices:[{id:'system',label:'系统'}],
+const overlay=Object.assign(new Overlay(),{mounted:true,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,selectionId:'engine:1',choices:[{id:'system',label:'系统'}],
   onChoose:()=>new Promise(resolve=>complete=resolve),onClose:id=>closed.push(id)});
 overlay.choose('system'); overlay.choose('system'); overlay.selectionId='voice:2'; overlay.onIdentityChanged();
 complete(); await tick(); assert.deepEqual(closed,[],'old completion cannot close a newer menu');

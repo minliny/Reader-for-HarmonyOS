@@ -1,3 +1,4 @@
+import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import * as morphScroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
 import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
 const motionDeps = { ...presentation, RectShape: class { width(value) { this.widthValue = value; return this; } height(value) { this.heightValue = value; return this; } }, PathShape: class { commands(path) { this.path = path; return this; } } };
@@ -19,7 +20,7 @@ import { createReaderBuilderProbe, readerBuilderSdkAvailable } from './lib/reade
 import { productionSettingsOptionModifier } from './lib/reader-control-option-modifier-probe.mjs';
 import * as searchScroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
 
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+const read = path => themeDayDesignSource(readFileSync(new URL('../' + path, import.meta.url), 'utf8'));
 const fixture = JSON.parse(read('tools/fixtures/reader-control-search-settings-live-20260905.json'));
 const clipFixture = JSON.parse(read('tools/fixtures/reader-control-search-results-clip-live-20260906.json'));
 assert.equal(fixture.fileKey, 'klhs2jMM4MncaJFqZMfqEK');
@@ -151,8 +152,8 @@ for (const p of points) {
   }
   for (const [name, groupId, start, baseY, count] of [
     ['status', '1692:3952', 3953, 263, 3],
-    ['typography', '1692:3997', 3998, 432, 2],
-    ['control', '1692:4032', 4033, 563, 3],
+    ['typography', '1692:3997', 3998, 394, 2],
+    ['control', '1692:4032', 4033, 525, 3],
   ]) {
     const group = readerControlSettingsAddedGroup(name, p, width);
     near(group.y, baseY + track(settingsMotion, groupId, 'translate', p)[1]);
@@ -269,19 +270,19 @@ Object.assign(settings, { interactionEnabled: true, justifyText: true, p: () => 
   onToggleChange: (key, value) => toggles.push([key, value]),
   onJustifyTextChange: value => justify.push(value) });
 const originalSnapshot = structuredClone(settings.snapshot);
-for (const key of ['hideStatusBar', 'hideNavigationBar', 'extendIntoCutout', 'alignPageBottom',
+for (const key of ['hideNavigationBar', 'extendIntoCutout', 'alignPageBottom',
   'volumeKeysTurnPage', 'stopTtsOnScreenOff', 'longPressSelectText']) {
   settings.handleToggle(key);
   assert.deepEqual(toggles.at(-1), [key, !settings.snapshot[key]]);
 }
 assert.deepEqual(settings.snapshot, originalSnapshot, 'content dispatches without owning/persisting state');
-settings.handleToggle('justifyText'); assert.equal(toggles.length, 7, 'no second justification owner');
+settings.handleToggle('justifyText'); assert.equal(toggles.length, 6, 'no second justification owner');
 settings.handleJustify(); assert.deepEqual(justify, [false], 'Appearance owns justification');
-settings.p = () => 0; settings.handleToggle('hideStatusBar'); settings.handleJustify();
-assert.equal(toggles.length, 7); assert.deepEqual(justify, [false], 'hidden AddedModules reject input');
+settings.p = () => 0; settings.handleToggle('extendIntoCutout'); settings.handleJustify();
+assert.equal(toggles.length, 6); assert.deepEqual(justify, [false], 'hidden AddedModules reject input');
 settings.p = () => 1; settings.interactionEnabled = false;
-settings.handleToggle('hideStatusBar'); settings.handleJustify();
-assert.equal(toggles.length, 7); assert.deepEqual(justify, [false]);
+settings.handleToggle('extendIntoCutout'); settings.handleJustify();
+assert.equal(toggles.length, 6); assert.deepEqual(justify, [false]);
 const Search = new Function(stripTypeScriptTypes('class Probe {' +
   ['canSearch', 'submit', 'statusText', 'dismissTemporaryLayer', 'onInputChanged'].map(n =>
     method(searchUI, n)).join('\n') + '}') + ';return Probe;')();
@@ -552,18 +553,18 @@ if (readerBuilderSdkAvailable) {
   Object.assign(owner, { motionProgress: 0, availableWidth: 286, interactionEnabled: true,
     ...motionProps, optionModifiers: [], clipEndpointWidth: -1, clipFullRects: [], clipQuickRects: [],
     clipCache: new presentation.ReaderControlMotionClipCache(path => new motionDeps.PathShape().commands(path), () => new motionDeps.RectShape().width('100%').height('100%')), snapshot: settingsPolicy.createDefaultReaderSettingsSnapshot(), pageTurnSimulationAvailable: true });
-  owner.segmentRow('pageTurn', 1); owner.toggleRow('隐藏状态栏', 'hideStatusBar', 0);
+  owner.segmentRow('pageTurn', 1); owner.toggleRow('拓展到刘海', 'extendIntoCutout', 0);
   assert.equal(geometrySamples, 1, 'all mounted actor attributes share one pose');
   assert.equal(paintSamples, 1, 'all mounted paint attributes share one presentation');
   const label = owner.nodes.get(0);
   const choices = [...owner.nodes.values()].filter(n => n.type === 'Text' && ['覆盖', '滑动', '仿真', '滚动', '无动画'].includes(n.create));
   assert.equal(choices.length, 5);
   const changes = []; owner.onToggleChange = (...args) => changes.push(args);
-  const toggleClick = [...owner.nodes.values()].find(n => n.accessibilityText?.startsWith('隐藏状态栏')).onClick;
+  const toggleClick = [...owner.nodes.values()].find(n => n.accessibilityText?.startsWith('拓展到刘海')).onClick;
   for (const p of [1, .25, 0, .5, 1]) {
     const samplesBefore = geometrySamples, paintBefore = paintSamples;
     Object.assign(owner, { motionProgress: p, availableWidth: 286 + 52 * p,
-      snapshot: { ...owner.snapshot, pageTransition: 'cover', hideStatusBar: true }, pageTurnSimulationAvailable: false });
+      snapshot: { ...owner.snapshot, pageTransition: 'cover', extendIntoCutout: true }, pageTurnSimulationAvailable: false });
     owner.replay();
     assert.equal(geometrySamples, samplesBefore + 1, 'one new pose per changed progress/width');
     assert.equal(paintSamples, paintBefore + 1, 'one paint sample per changed progress');
@@ -581,7 +582,7 @@ if (readerBuilderSdkAvailable) {
     assert.deepEqual(label.position, { x: owner.label(1).x, y: owner.label(1).y });
     assert.equal(label.height, owner.label(1).height);
     assert.equal(choices.find(n => n.create === '仿真').enabled, false, 'live capability change updates the mounted option');
-    assert.equal(choices.find(n => n.create === '覆盖').backgroundColor, 'TOK_READ_ELEVATED');
+    assert.equal(choices.find(n => n.create === '覆盖').backgroundColor, '#BDFFFCF8');
     assert.equal(choices.find(n => n.create === '滑动').backgroundColor, 'Color.Transparent', 'selected option follows live V4 snapshot');
     assert.equal([...owner.children.values()][0].params.value, true, 'current snapshot reaches the same switch child');
   }
@@ -593,8 +594,8 @@ if (readerBuilderSdkAvailable) {
   assert.equal(geometrySamples, beforeWidth + 1, 'viewport and scrolling remain live without resampling unrelated actors');
   assert.deepEqual(label.clipShape.path, owner.sharedClip(1, false).path,
     'clip still reflects the current viewport, scrolling and density outside the actor cache');
-  toggleClick(); owner.snapshot = { ...owner.snapshot, hideStatusBar: false }; owner.replay(); toggleClick();
-  assert.deepEqual(changes, [['hideStatusBar', false], ['hideStatusBar', true]], 'retained Settings click uses latest snapshot');
+  toggleClick(); owner.snapshot = { ...owner.snapshot, extendIntoCutout: false }; owner.replay(); toggleClick();
+  assert.deepEqual(changes, [['extendIntoCutout', false], ['extendIntoCutout', true]], 'retained Settings click uses latest snapshot');
   console.log('Actual SDK Search/Settings mounted Builder observers: live payload/geometry/capability/switch changes PASS');
 } else console.log('Mounted Builder SDK regression SKIP: ETS loader unavailable');
 console.log('PASS Search/Settings real actor geometry + production callback methods; not native/visual acceptance');

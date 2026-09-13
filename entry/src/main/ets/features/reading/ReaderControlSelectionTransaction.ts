@@ -97,6 +97,23 @@ export interface ReaderControlSelectionReconciliationDependencies {
   isCurrent: () => boolean;
   runSerial: (operation: () => Promise<void>) => Promise<void>;
   readProgress: () => Promise<ReaderControlSelectionStoredProgress | undefined>;
+  observationTimeoutMs?: number;
+}
+
+/** Bound UI observation, never cancel/release the actual serialized write lane. */
+export async function observeReaderProgressOperation(operation: Promise<void>,
+  timeoutMs: number = 35000): Promise<'completed' | 'unknown'> {
+  let timer: number = -1;
+  try {
+    return await Promise.race([
+      operation.then((): 'completed' => 'completed'),
+      new Promise<'unknown'>((resolve): void => {
+        timer = setTimeout((): void => resolve('unknown'), Math.max(1, timeoutMs));
+      }),
+    ]);
+  } finally {
+    if (timer >= 0) clearTimeout(timer);
+  }
 }
 
 /**
@@ -108,11 +125,12 @@ export async function reconcileReaderControlSelectionProgress(
   dependencies: ReaderControlSelectionReconciliationDependencies,
 ): Promise<ReaderControlSelectionReconciliation> {
   let result: ReaderControlSelectionReconciliation = { kind: 'obsolete', errorCode: '' };
+  let observing = true;
   try {
-    await dependencies.runSerial(async (): Promise<void> => {
-      if (!dependencies.isCurrent()) return;
+    const operation = dependencies.runSerial(async (): Promise<void> => {
+      if (!observing || !dependencies.isCurrent()) return;
       const progress = await dependencies.readProgress();
-      if (!dependencies.isCurrent()) return;
+      if (!observing || !dependencies.isCurrent()) return;
       if (progress === undefined || !Number.isSafeInteger(progress.chapterIndex) ||
         progress.chapterIndex < 0 || !Number.isSafeInteger(progress.chapterOffset) ||
         progress.chapterOffset < 0) {
@@ -121,12 +139,16 @@ export async function reconcileReaderControlSelectionProgress(
         result = { kind: 'verified', progress: progress, errorCode: '' };
       }
     });
+    if (await observeReaderProgressOperation(operation, dependencies.observationTimeoutMs) === 'unknown') {
+      result = { kind: 'unavailable', errorCode: 'READING_PROGRESS_RECONCILIATION_UNKNOWN' };
+    }
   } catch (error) {
     if (dependencies.isCurrent()) {
       result = { kind: 'unavailable', errorCode: error instanceof Error ?
         error.message : 'READING_PROGRESS_RECONCILIATION_FAILED' };
     }
   }
+  observing = false;
   if (!dependencies.isCurrent()) return { kind: 'obsolete', errorCode: '' };
   return result;
 }

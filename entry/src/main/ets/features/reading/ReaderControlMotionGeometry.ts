@@ -61,9 +61,9 @@ export function readerControlHasFullContentSurface(module: string | undefined): 
 
 export function readerControlMotionBounds(width: number, fullHeight: number,
   bottomGap: number, quickHeight: number = 330): ReaderControlMotionBounds {
-  const height = positive(fullHeight, 736);
+  const height = Number.isFinite(fullHeight) ? Math.max(0, fullHeight) : 736;
   return {
-    width: positive(width, 364), fullHeight: height,
+    width: Number.isFinite(width) ? Math.max(0, width) : 364, fullHeight: height,
     quickHeight: Math.min(height, positive(quickHeight, 330)),
     bottomGap: Number.isFinite(bottomGap) ? Math.max(0, bottomGap) : 0,
   };

@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionClipRects, readerControlMotionClipPath,
   type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
@@ -27,6 +28,28 @@ import { ReaderControlTimerWheel } from './ReaderControlTimerWheel';
  * wheel and native range-input business commands are supplied by the owner. */
 @Component
 export struct ReaderControlAutoPageContent {
+  @StorageLink('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
+
+  // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
+  @Prop sourceOnly: 'none' | 'quick' | 'full' = 'none';
+  @Prop @Watch('onSourceDetachedChanged') sourceDetached: boolean = false;
+  onMorphActorVisible: (kind: ReaderSessionMorphSourceKind) => void =
+    (_kind: ReaderSessionMorphSourceKind): void => {};
+
+  private onSourceDetachedChanged(): void {
+    if (this.sourceOnly !== 'none' || this.sourceDetached) return;
+    const measured = this.form === 'full' ? this.fullMeasurement : this.quickMeasurement;
+    if (measured === undefined || measured.width <= 0 || measured.height <= 0) return;
+    this.reportMorphActor();
+    this.onMorphActorVisible(readerControlPlaybackSourceKind('autoPage', this.form));
+  }
+
+  private reportActorVisible(full: boolean, visible: boolean, ratio: number): void {
+    if (this.sourceOnly !== 'none' || this.sourceDetached || !visible || ratio <= 0 ||
+      (this.form === 'full') !== full) return;
+    this.reportMorphActor();
+    this.onMorphActorVisible(readerControlPlaybackSourceKind('autoPage', this.form));
+  }
   @Prop @Watch('onMotionChanged') motionProgress: number = 0;
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
@@ -60,6 +83,7 @@ export struct ReaderControlAutoPageContent {
   private readonly scroller: Scroller = new Scroller();
   private quickMeasurement: ReaderControlPlaybackMeasuredRect | undefined = undefined;
   private fullMeasurement: ReaderControlPlaybackMeasuredRect | undefined = undefined;
+  private fullMeasurementScrollOffset: number = 0;
   private cachedProgress: number = -1;
   private cachedWidth: number = -1;
   private cachedFrame: ReaderControlAutoPageFrame = sampleReaderControlAutoPage(0, 286);
@@ -73,6 +97,7 @@ export struct ReaderControlAutoPageContent {
     return this.cachedFrame;
   }
   private onMotionChanged(): void {
+    if (this.sourceOnly !== 'none') return;
     this.syncMorphScroll();
     if (!this.sharedInput()) this.speedPreviewSeconds = -1;
   }
@@ -86,8 +111,10 @@ export struct ReaderControlAutoPageContent {
     }
   }
   private onFullDidScroll(): void {
+    if (this.sourceOnly !== 'none') return;
     this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion,
       this.scroller.currentOffset().yOffset, this.fullInput());
+    this.reportMorphActor();
   }
   private nativeScrollDelta(y: number, source: ScrollSource): OffsetResult {
     return { xOffset: 0, yOffset: readerControlMorphScrollAllowsNative(this.scrollMotion,
@@ -136,25 +163,65 @@ export struct ReaderControlAutoPageContent {
   private contentWidth(): number { return this.frame().content.width; }
   private sectionInnerWidth(): number { return Math.max(0, this.frame().content.width - 8); }
   private actorId(full: boolean): string {
+    if (this.sourceOnly !== 'none') return '';
     if ((this.form === 'full') === full) return readerSessionMorphActorId(readerControlPlaybackSourceKind('autoPage', this.form));
     return full ? 'reader-control-auto-page-playback' : 'reader-control-auto-page-viewport';
   }
   private measureActor(full: boolean, area: Area): void {
+    if (this.sourceOnly !== 'none' || this.sourceDetached) return;
     const rect: ReaderControlPlaybackMeasuredRect = { left: Number(area.globalPosition.x),
       top: Number(area.globalPosition.y), width: Number(area.width), height: Number(area.height) };
-    if (full) this.fullMeasurement = rect; else this.quickMeasurement = rect;
+    if (full) { this.fullMeasurement = rect; this.fullMeasurementScrollOffset = this.scroller.currentOffset().yOffset; }
+    else this.quickMeasurement = rect;
     this.reportMorphActor();
   }
   private reportMorphActor(): void {
-    const rect = readerControlPlaybackMeasuredSource(this.form, this.quickMeasurement, this.fullMeasurement);
+    if (this.sourceOnly !== 'none' || this.sourceDetached) return;
+    const full = this.fullMeasurement;
+    const scrolled: ReaderControlPlaybackMeasuredRect | undefined = full === undefined ? undefined : {
+      left: full.left, top: full.top - (this.scroller.currentOffset().yOffset - this.fullMeasurementScrollOffset),
+      width: full.width, height: full.height,
+    };
+    const rect = readerControlPlaybackMeasuredSource(this.form, this.quickMeasurement, scrolled);
     if (rect !== undefined) this.onMorphActorMeasured(readerControlPlaybackSourceKind('autoPage', this.form),
       rect.left, rect.top, rect.width, rect.height);
   }
 
   build() {
+    if (this.sourceOnly !== 'none') {
+      this.launchSourceContent();
+    } else {
+      this.normalContent();
+    }
+  }
+
+
+  @Builder
+  private launchSourceContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row().width(this.availableWidth).height(this.availableHeight).backgroundColor(TOK_SURFACE_PANEL)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE }).borderRadius(12).hitTestBehavior(HitTestMode.None);
+      if (this.sourceOnly === 'full') {
+        this.controlSection();
+      } else {
+        Stack({ alignContent: Alignment.TopStart }) {
+          this.controlSection();
+          this.timerSection();
+          Stack({ alignContent: Alignment.TopStart }) {
+            this.moduleHeader('details'); this.speedRow(); this.followHighlightRow();
+          }.width(this.frame().details.width).height(this.frame().details.height)
+            .position({ x: this.frame().details.x, y: this.frame().details.y });
+        }.width(this.frame().content.width).height(this.frame().content.height)
+          .position({ x: this.frame().content.x, y: this.frame().content.y });
+      }
+    }.width(this.sourceOnly === 'full' ? this.frame().control.width : this.availableWidth)
+      .height(this.sourceOnly === 'full' ? this.frame().control.height : this.availableHeight)
+      .clip(true).enabled(false).hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
+  }
+
+  @Builder
+  private normalContent() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row().width(this.availableWidth).height(this.availableHeight).backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(12).hitTestBehavior(HitTestMode.None);
       Scroll(this.scroller) {
         Stack({ alignContent: Alignment.TopStart }) {
           // Quick endpoint intentionally has no in-panel Back affordance.
@@ -180,17 +247,19 @@ export struct ReaderControlAutoPageContent {
           this.nativeScrollDelta(y, source))
         .onDidScroll((): void => this.onFullDidScroll());
     }.width(this.availableWidth).height(this.availableHeight).clip(true)
-      .id(this.actorId(false)).onAreaChange((_old: Area, area: Area): void => this.measureActor(false, area));
+      .opacity(this.sourceDetached && this.form === 'quick' ? 0 : 1)
+      .id(this.actorId(false)).onAreaChange((_old: Area, area: Area): void => this.measureActor(false, area))
+      .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => this.reportActorVisible(false, visible, ratio));
   }
 
   @Builder
   private quickBack() {
     Row({ space: 4 }) {
-      Image($r('app.media.reader_quick_back')).width(11).height(11);
+      Image($r(this.appScheme === 'night' ? 'app.media.reader_quick_back_theme_night' : 'app.media.reader_quick_back')).width(11).height(11);
       Text('返回').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-        .fontSize(10).fontColor(TOK_READ_PRIMARY);
+        .fontSize(10).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
     }.width(this.frame().back.width).height(this.frame().back.height)
-      .padding({ left: 9, right: 9 }).backgroundColor(TOK_SURFACE_PANEL).borderRadius(8)
+      .padding({ left: 9, right: 9 }).backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme)).borderRadius(8)
       .alignItems(VerticalAlign.Center).position({ x: this.frame().back.x, y: this.frame().back.y })
       .translate({ y: readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'quickOnly') })
       .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -214,8 +283,8 @@ export struct ReaderControlAutoPageContent {
   private moduleHeader(kind: 'control' | 'details') {
     Row() {
       Text(kind === 'control' ? '自动翻页控制' : '详细配置').layoutWeight(1).fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
-        .fontSize(12).fontColor(TOK_READ_INK).maxLines(1);
-      Text(this.headerMeta(kind)).fontFamily('ReaderInter').fontSize(10).fontColor(TOK_READ_MUTED);
+        .fontSize(12).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
+      Text(this.headerMeta(kind)).fontFamily('ReaderInter').fontSize(10).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
     }.width(this.headerActor(kind).width).height(this.headerActor(kind).height).alignItems(VerticalAlign.Center)
       .position({ x: this.headerActor(kind).x, y: this.headerActor(kind).y })
       .translate({ y: this.fullOnlyScrollTranslation() })
@@ -234,10 +303,12 @@ export struct ReaderControlAutoPageContent {
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
         .clipShape(this.sharedClip('control'));
     }.width(this.frame().control.width).height(this.frame().control.height)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .backgroundColor(this.sourceOnly === 'full' ? Color.Transparent : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appScheme))
+      .border({ width: this.sourceOnly === 'full' ? 0 : TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
       .borderRadius(8)
-      .id(this.actorId(true)).onAreaChange((_old: Area, area: Area): void => this.measureActor(true, area));
+      .opacity(this.sourceDetached && this.form === 'full' ? 0 : 1)
+      .id(this.actorId(true)).onAreaChange((_old: Area, area: Area): void => this.measureActor(true, area))
+      .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => this.reportActorVisible(true, visible, ratio));
   }
 
   private chapterActor(previous: boolean): ReaderControlActorFrame {
@@ -247,14 +318,14 @@ export struct ReaderControlAutoPageContent {
   private chapterButton(previous: boolean) {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
-        Image($r(previous ? 'app.media.reader_auto_full_chevron_left' : 'app.media.reader_auto_full_chevron_right'))
+        Image($r(previous ? (this.appScheme === 'night' ? 'app.media.reader_auto_full_chevron_left_theme_night' : 'app.media.reader_auto_full_chevron_left') : (this.appScheme === 'night' ? 'app.media.reader_auto_full_chevron_right_theme_night' : 'app.media.reader_auto_full_chevron_right')))
           .width(16).height(16).position({ x: 3, y: 5.5 });
-        Image($r(previous ? 'app.media.reader_auto_full_chevron_left' : 'app.media.reader_auto_full_chevron_right'))
+        Image($r(previous ? (this.appScheme === 'night' ? 'app.media.reader_auto_full_chevron_left_theme_night' : 'app.media.reader_auto_full_chevron_left') : (this.appScheme === 'night' ? 'app.media.reader_auto_full_chevron_right_theme_night' : 'app.media.reader_auto_full_chevron_right')))
           .width(16).height(16).position({ x: 8, y: 5.5 });
-      }.width(27).height(27).backgroundColor(TOK_READ_ELEVATED)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE }).borderRadius(8).position({ x: 22.5, y: 5 });
+      }.width(27).height(27).backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(8).position({ x: 22.5, y: 5 });
       Text(previous ? '上一章' : '下一章').width(27).height(9).fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold).fontSize(9).lineHeight(9).fontColor(TOK_READ_INK)
+        .fontWeight(FontWeight.Bold).fontSize(9).lineHeight(9).fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .textAlign(TextAlign.Center).position({ x: 22.5, y: 39 });
     }.width(this.chapterActor(previous).width).height(this.chapterActor(previous).height)
       .position({ x: this.chapterActor(previous).x, y: this.chapterActor(previous).y })
@@ -271,15 +342,15 @@ export struct ReaderControlAutoPageContent {
   private runningButton() {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r(this.status === 'running' ? 'app.media.reader_session_pause' : 'app.media.reader_auto_full_play'))
+        Image($r(this.status === 'running' ? (this.appScheme === 'night' ? 'app.media.reader_session_pause_theme_night' : 'app.media.reader_session_pause') : (this.appScheme === 'night' ? 'app.media.reader_auto_full_play_theme_night' : 'app.media.reader_auto_full_play')))
           .width(20).height(20);
       }.width(this.frame().playIcon.width).height(this.frame().playIcon.height)
-        .backgroundColor(TOK_READ_PRIMARY).borderRadius(16)
+        .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).borderRadius(16)
         .position({ x: this.frame().playIcon.x, y: this.frame().playIcon.y });
       // 1939:803 is static inside its parent. The -31.492/-2.5 track belongs
       // to 1939:801 above, not this label (the previous Full adapter mixed them).
       Text('自动翻页').width(36).height(9).fontFamily('ReaderInter').fontWeight(800).fontSize(9)
-        .lineHeight(9).fontColor(TOK_READ_INK).textAlign(TextAlign.Center)
+        .lineHeight(9).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).textAlign(TextAlign.Center)
         .position({ x: 29.4921875, y: 39 });
     }.width(this.frame().toggle.width).height(this.frame().toggle.height)
       .position({ x: this.frame().toggle.x, y: this.frame().toggle.y }).clip(true)
@@ -291,15 +362,15 @@ export struct ReaderControlAutoPageContent {
   @Builder
   private stopButton() {
     Stack({ alignContent: Alignment.Center }) {
-      Image($r('app.media.reader_auto_full_stop')).width(17).height(17);
+      Image($r(this.appScheme === 'night' ? 'app.media.reader_auto_full_stop_theme_night' : 'app.media.reader_auto_full_stop')).width(17).height(17);
     }.width(this.frame().stop.width).height(this.frame().stop.height)
-      .backgroundColor(TOK_READ_ELEVATED).border({ width: TOK_BORDER_W, color: TOK_LINE }).borderRadius(12)
+      .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(12)
       .position({ x: this.frame().stop.x, y: this.frame().stop.y })
       .enabled(this.sharedInput() && this.status !== 'stopped').opacity(this.status === 'stopped' ? 0.4 : 1)
       .accessibilityText('停止自动翻页').onClick((): void => { if (this.sharedInput() && this.status !== 'stopped') this.onStop(); });
     Text('停止').width(this.frame().stopLabel.width).height(this.frame().stopLabel.height)
       .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(9).lineHeight(9)
-      .fontColor('#8C3D36').textAlign(TextAlign.Center)
+      .fontColor(readerAppColor('app.control.paint.8C3D36', this.appScheme)).textAlign(TextAlign.Center)
       .position({ x: this.frame().stopLabel.x, y: this.frame().stopLabel.y }).hitTestBehavior(HitTestMode.None);
   }
 
@@ -326,7 +397,7 @@ export struct ReaderControlAutoPageContent {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(14.4)
-          .fontColor(TOK_READ_INK)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
           .maxLines(1);
         Text(this.timerSummaryText)
           .width(27.8)
@@ -336,7 +407,7 @@ export struct ReaderControlAutoPageContent {
           .fontWeight(FontWeight.Medium)
           .fontSize(10)
           .lineHeight(12)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
           .textAlign(TextAlign.End)
           .maxLines(1);
       }
@@ -347,7 +418,7 @@ export struct ReaderControlAutoPageContent {
       Stack({ alignContent: Alignment.TopStart }) {
         Row({ space: 8 }) {
           Stack({ alignContent: Alignment.Center }) {
-            Image($r('app.media.reader_auto_full_clock'))
+            Image($r(this.appScheme === 'night' ? 'app.media.reader_auto_full_clock_theme_night' : 'app.media.reader_auto_full_clock'))
               .width(18)
               .height(18);
           }
@@ -359,7 +430,7 @@ export struct ReaderControlAutoPageContent {
             .fontWeight(FontWeight.Bold)
             .fontSize(11)
             .lineHeight(11)
-            .fontColor(TOK_READ_INK)
+            .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
             .maxLines(1);
         }
         .width(84)
@@ -376,7 +447,7 @@ export struct ReaderControlAutoPageContent {
             .fontWeight(800)
             .fontSize(18)
             .lineHeight(22)
-            .fontColor(TOK_READ_PRIMARY)
+            .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
             .textAlign(TextAlign.Center)
             .position({ x: 84, y: 40.5 });
           this.timerWheel(false);
@@ -387,14 +458,14 @@ export struct ReaderControlAutoPageContent {
       }
       .width(this.sectionInnerWidth())
       .height(138)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .backgroundColor(this.sourceOnly === 'full' ? Color.Transparent : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appScheme))
+      .border({ width: this.sourceOnly === 'full' ? 0 : TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
       .borderRadius(10)
       .position({ x: 4, y: 33.39 });
     }
     .width(this.contentWidth())
     .height(this.frame().timer.height)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appScheme) })
     .position({ x: this.frame().timer.x, y: this.frame().timer.y })
     .translate({ y: this.fullOnlyScrollTranslation() })
     .opacity(this.frame().timer.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -419,7 +490,7 @@ export struct ReaderControlAutoPageContent {
           .fontWeight(FontWeight.Bold)
           .fontSize(10)
           .lineHeight(13)
-          .fontColor(TOK_READ_INK)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
           .maxLines(1);
         Text(`${this.effectiveSpeedSeconds()} 秒`)
           .width(19.44)
@@ -429,7 +500,7 @@ export struct ReaderControlAutoPageContent {
           .fontWeight(FontWeight.Regular)
           .fontSize(10)
           .lineHeight(13)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
           .maxLines(1);
       }
       .width(108)
@@ -439,7 +510,7 @@ export struct ReaderControlAutoPageContent {
       .position({ x: 11, y: this.speedControlsY() });
 
       Stack({ alignContent: Alignment.TopStart }) {
-        Text('−').width(24).height(24).fontSize(16).fontColor(TOK_READ_PRIMARY)
+        Text('−').width(24).height(24).fontSize(16).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
           .textAlign(TextAlign.Center).position({ x: this.speedMinusX(), y: this.speedControlsY() }).opacity(1 - this.p())
           .enabled(this.sharedInput()).onClick((): void => {
             if (this.sharedInput()) this.onSpeedChange(Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
@@ -452,7 +523,7 @@ export struct ReaderControlAutoPageContent {
           .fontWeight(FontWeight.Regular)
           .fontSize(9)
           .lineHeight(13)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
           .maxLines(1)
           .position({ x: 0, y: this.speedLabelY() });
 
@@ -490,11 +561,11 @@ export struct ReaderControlAutoPageContent {
           .fontWeight(FontWeight.Regular)
           .fontSize(9)
           .lineHeight(13)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
           .textAlign(TextAlign.End)
           .maxLines(1)
           .position({ x: this.speedMaxLabelX(), y: this.speedLabelY() });
-        Text('+').width(24).height(24).fontSize(16).fontColor(TOK_READ_PRIMARY)
+        Text('+').width(24).height(24).fontSize(16).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
           .textAlign(TextAlign.Center).position({ x: this.speedPlusX(), y: this.speedControlsY() }).opacity(1 - this.p())
           .enabled(this.sharedInput()).onClick((): void => {
             if (this.sharedInput()) this.onSpeedChange(Math.min(READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS,
@@ -510,8 +581,8 @@ export struct ReaderControlAutoPageContent {
     }
     .width(this.frame().speed.width)
     .height(this.frame().speed.height)
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
     .borderRadius(6)
     // 1939:848 keeps its 32 -> 64 actor track, but its source layout has
     // min-h44 children and no overflow clip. Quick text extends below the
@@ -533,16 +604,16 @@ export struct ReaderControlAutoPageContent {
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(13)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .maxLines(1);
-      ReaderControlSwitchTrack({ value: this.followHighlight, inactiveColor: TOK_SURFACE_PANEL_SOFT })
+      ReaderControlSwitchTrack({ value: this.followHighlight, inactiveColor: readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appScheme) })
         .margin({ left: 8 }).accessibilityText(`跟随高亮，${this.followHighlight ? '已开启' : '已关闭'}`);
     }
     .width(this.sectionInnerWidth())
     .height(36)
     .padding({ left: 9, right: 9, top: 6, bottom: 6 })
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
     .borderRadius(6)
     .alignItems(VerticalAlign.Center)
     .position({ x: this.frame().follow.x, y: this.frame().follow.y })

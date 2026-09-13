@@ -76,9 +76,9 @@ export function readerControlSettingsScreenTitle(p: number): ReaderControlActorF
 
 export function readerControlSettingsAddedGroup(group: ReaderControlSettingsAddedGroup,
   p: number, availableWidth: number): ReaderControlActorFrame {
-  const y = group === 'status' ? 263 : group === 'typography' ? 432 : 563;
+  const y = group === 'status' ? 263 : group === 'typography' ? 394 : 525;
   const translation = group === 'status' ? 14 : group === 'typography' ? 18 : 22;
-  const height = group === 'typography' ? 131 : 169;
+  const height = group === 'control' ? 169 : 131;
   return sample(actor(15, y + translation, Math.max(0, availableWidth - 30), height, 0),
     actor(15, y, Math.max(0, availableWidth - 30), height), p);
 }
