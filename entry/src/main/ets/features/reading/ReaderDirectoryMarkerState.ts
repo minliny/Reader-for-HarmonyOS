@@ -16,6 +16,8 @@ export type ReaderPageBookmarkToggleRequest = {
   chapterOffset: number;
   chapterTitle: string;
   bookmarkTimes: number[];
+  /** Captured original text from this exact visible page; never a user note. */
+  bookText?: string;
 };
 
 /**

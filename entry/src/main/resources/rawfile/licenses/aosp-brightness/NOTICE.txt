@@ -1,0 +1,5 @@
+ReaderBrightnessCurve.ts includes a port of AOSP BrightnessUtils.java.
+Copyright (C) 2018 The Android Open Source Project
+Apache License, Version 2.0
+Source: android-15.0.0_r1 frameworks/base/packages/SettingsLib/DisplayUtils/src/com/android/settingslib/display/BrightnessUtils.java
+Modified for Reader: ArkTS conversion, normalized control coordinates, finite inputs, continuous inverse and window range adapter.

@@ -80,7 +80,7 @@ export function sampleReaderControlAppearance(progress: number, viewportWidth: n
   const height = Number.isFinite(fullContentHeight) ? Math.max(0, fullContentHeight) : 666;
   return {
     progress: p, fullViewportWidth: fullWidth, sectionWidth: sectionWidth,
-    contentHeight: Math.max(height, 773 + fullExtra),
+    contentHeight: Math.max(height, 689 + fullExtra),
     quickContentHeight: 190 + quickExtra,
     themeExtraRows: extraRows,
     // Appearance-only viewport X track. Stage already applies its Y track.
@@ -93,7 +93,7 @@ export function sampleReaderControlAppearance(progress: number, viewportWidth: n
     divider: actor(11, 220 + fullExtra, sectionWidth, 1, p),
     themeDayAction: actor(sectionWidth - 145, 183 + fullExtra + 8 * (1 - p), 74, 28, p),
     themeNightAction: actor(sectionWidth - 65, 183 + fullExtra + 8 * (1 - p), 74, 28, p),
-    layout: actor(11, 367 + fullExtra + 96 * (1 - p), sectionWidth, 406, p),
+    layout: actor(11, 367 + fullExtra + 96 * (1 - p), sectionWidth, 322, p),
     themeSwatches: themeSwatches, themeShells: themeShells,
   };
 }

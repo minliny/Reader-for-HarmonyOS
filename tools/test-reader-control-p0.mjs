@@ -96,7 +96,7 @@ assert.match(experience, /this\.paginationIndex\.findPreviousPage\(key, page\.st
 assert.doesNotMatch(experience, /pageBackStack|ReadingPageHistoryAnchor/);
 assert.match(experience, /private seekControlProgress\(percent: number\): void/);
 assert.match(experience, /private stepControlChapter\(delta: number\): void/);
-assert.match(experience, /this\.enqueueReaderBrightness\(normalized, 'manual'\)/);
+assert.match(experience, /this\.enqueueReaderBrightness\(readerBrightnessWindowValue\(percent\), 'manual'\)/);
 assert.match(experience, /this\.enqueueReaderBrightness\(-1, 'automatic'\)/);
 assert.match(experience, /private brightnessMutationQueue: Promise<void> = Promise\.resolve\(\)/,
   'brightness side effects must be serialized so the last user intent wins');

@@ -207,13 +207,21 @@ export function sampleReaderSessionLaunch(
   const footerDot = geometry.footerDot;
   const footerFirst = motionSegment(time, 100, 1300, curves.easeInOut);
   const footerSecond = motionSegment(time, 1700, 600, curves.easeInOut);
+  const proxyLeft = geometry.sourceLeft + (geometry.dotLeft - geometry.sourceLeft) * flight - expandedWidth * expansion;
+  const authoredFooter = geometry.footerStart + (footerDot - geometry.footerStart) * footerFirst +
+    (geometry.footerEnd - footerDot) * footerSecond;
+  // PH10: the authored footer ease-in-out lags the shell's fast expansion.
+  // Preserve all 3500ms tracks; once both actors share the footer lane, project
+  // the footer onto the non-intersecting side of the moving shell. The final
+  // localized text layout already reserves the canonical five-vp gap.
+  const footerOffset = time >= 1400 ? Math.min(authoredFooter, proxyLeft - geometry.targetLeft) : authoredFooter;
   return {
     timeMs: time, phase: time < 200 ? 'initial' : time < 1400 ? 'flight' :
       time < 1700 ? 'dotHold' : time < 2300 ? 'expand' : 'settled',
     type: geometry.type, finished: time >= 3500, settled: time >= 2300,
     sourceNeeded: time < 1400, controlsPresented: time < 700,
     flight, expansion,
-    proxyLeft: geometry.sourceLeft + (geometry.dotLeft - geometry.sourceLeft) * flight - expandedWidth * expansion,
+    proxyLeft,
     proxyTop: geometry.sourceTop + (geometry.targetTop - geometry.sourceTop) * flight,
     proxyWidth: geometry.sourceWidth + (24 - geometry.sourceWidth) * flight + expandedWidth * expansion,
     proxyHeight: geometry.sourceHeight + (24 - geometry.sourceHeight) * flight,
@@ -235,8 +243,7 @@ export function sampleReaderSessionLaunch(
     leadingOpacity: time >= 1700 ? 1 : 0,
     pauseX: 4 + expandedWidth * expansion, pauseOpacity: handoff,
     capsuleWidth: geometry.capsuleWidth,
-    footerTranslateX: geometry.footerStart + (footerDot - geometry.footerStart) * footerFirst +
-      (geometry.footerEnd - footerDot) * footerSecond,
+    footerTranslateX: footerOffset,
     footerOpacity: info, immersiveOpacity: info,
     topBarOffsetY: -geometry.topBarExitDistance * outgoing,
     dockOffsetY: geometry.dockExitDistance * outgoing,

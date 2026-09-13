@@ -6,7 +6,8 @@ import { ReaderSessionLaunchController, type ReaderSessionLaunchTransaction,
   type ReaderSessionLaunchIdentity, type ReaderSessionLaunchCancelReason } from './ReaderSessionLaunchController';
 import { ReaderPageChrome } from './ReaderPageChrome';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import type { BusinessError } from '@kit.BasicServicesKit';
+import { settings, type BusinessError } from '@kit.BasicServicesKit';
+import { readerBrightnessWindowValue, readerBrightnessControlPercent, readerBrightnessSystemValue } from './ReaderBrightnessCurve';
 import { readerNativeHighlightValues, type ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
 import { ReaderPageSettlementTimeline } from './ReaderPageSettlementTimeline';
 import { resumeReaderPagePan } from './ReaderPageGestureState';
@@ -17,6 +18,7 @@ import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../common/ProductMotionTiming';
 import {
   type LocalReadingAnchor,
+  type LocalReadingBookmark,
   type LocalReadingContentMetrics,
   type LocalReadingLayout,
   type LocalReadingProgress,
@@ -162,8 +164,6 @@ import {
   type ReaderPageChromeLayoutSnapshot,
 } from './ReaderPageChromeLayout';
 import {
-  READER_CONTROL_BRIGHTNESS_MAX,
-  READER_CONTROL_BRIGHTNESS_MIN,
   READER_CONTROL_PROGRESS_MAX,
   READER_CONTROL_PROGRESS_MIN,
 } from './ReaderControlGeometry';
@@ -1038,8 +1038,11 @@ export struct ReadingExperience {
   @State private pageTurnSettlementActive: boolean = false;
   @State private bookmarkPageOffsetY: number = 0;
   private bookmarkRollbackGeneration: number = 0;
-  /** Gesture bookkeeping retained for the transaction, not a render input. */
-  private bookmarkPreviewChanged: boolean = false;
+  /** Shared gesture preview directly paints the right-corner feedback. */
+  @State private bookmarkPreviewChanged: boolean = false;
+  private bookmarkStatusEntries: LocalReadingTocEntry[] | undefined = undefined;
+  private bookmarkStatusAnchor: string = '';
+  private bookmarkStatusValue: 'unknown' | 'empty' | 'bookmarked' = 'unknown';
   /** Native simulation surface remains mounted; this immediate opacity gate
    *  hands final composition to ArkUI without submitting a transparent EGL
    *  frame. The generation rejects delayed hides/clears from older turns. */
@@ -1098,7 +1101,7 @@ export struct ReadingExperience {
   @State private dismissControlTemporaryRevision: number = 0;
   @State private quickSearchQuery: string = '';
   @State private quickSearchState: ReaderQuickSearchState = { kind: 'idle' };
-  @State private brightnessPercent: number = 100;
+  @State private brightnessPercent: number = 50;
   @State private brightnessAutomatic: boolean = true;
   @State private brightnessRevision: number = 0;
   @State private autoPageState: ReaderAutoPageState = createReaderAutoPageState(8);
@@ -1150,6 +1153,8 @@ export struct ReadingExperience {
   private sessionLaunchTopExit: number = 0;
   private sessionLaunchDockExit: number = 0;
   private sessionLaunchFramePending: boolean = false;
+  private sessionLaunchHoldTimer: number = -1;
+  @State private sessionControlClosing: boolean = false;
   private pendingSessionLaunchGeneration: number = 0;
   private sessionLaunchExitGeneration: number = 0;
   private appearanceLoaded: boolean = false;
@@ -1271,6 +1276,8 @@ export struct ReadingExperience {
   private brightnessRequestGeneration: number = 0;
   private brightnessMutationQueue: Promise<void> = Promise.resolve();
   private brightnessOwner: number = 0;
+  private brightnessAutomaticIntent: boolean | undefined = undefined;
+  private systemBrightnessRead: Promise<number | undefined> | undefined = undefined;
   private autoPageTimer: number = -1;
   private autoPageDeadlineMs: number = 0;
   private autoPageTimerGeneration: number = -1;
@@ -1385,6 +1392,10 @@ export struct ReadingExperience {
   private contentMetricsLoading: boolean = false;
   private contentMetricIndex: LocalReadingContentMetricIndex = new LocalReadingContentMetricIndex();
   private controlDirectoryParentSource: LocalReadingTocEntry[] | undefined = undefined;
+  private bookmarkExcerptSource: LocalReadingTocEntry[] | undefined = undefined;
+  private bookmarkExcerptChapter: ReadingSessionChapter | undefined = undefined;
+  private bookmarkExcerptProjection: LocalReadingTocEntry[] = [];
+  private bookmarkExcerptCache: Map<string, string> = new Map<string, string>();
   private controlDirectoryTocSource: LocalReadingTocEntry[] | undefined = undefined;
   private controlDirectoryProjection: LocalReadingTocEntry[] = [];
   /**
@@ -1713,6 +1724,7 @@ export struct ReadingExperience {
           // snapshot for Back/close only; the Panel owns the visual @State.
           const wasPresented = this.controlsPresentedForWindow();
           this.latestControlVisualSession = copyReaderControlSessionState(state);
+          this.admitSessionControlClosing(readerControlHostClosing(state));
           if (wasPresented !== this.controlsPresentedForWindow()) this.applyWindowPolicyForChromeOwner();
         },
         onTemporaryLayerChange: (active: boolean): void => { this.controlTemporaryLayer = active; },
@@ -1920,6 +1932,7 @@ export struct ReadingExperience {
           onGestureDecision: (decision: ReaderPageGestureDecision): ReaderPageGestureDecision =>
             this.onReaderPageGestureDecision(decision),
       });
+      this.bookmarkCornerFeedback();
       if (this.sessionLaunch === undefined && this.shouldShowSessionCapsule()) {
         ReaderSessionCapsule({
           type: this.sessionCapsuleType(), sessionState: this.sessionCapsuleState(), countdown: this.sessionCapsuleCountdown(),
@@ -1934,11 +1947,11 @@ export struct ReadingExperience {
           onMeasured: (width: number, height: number): void => this.onSessionCapsuleMeasured(this.sessionCapsuleType(), width, height),
         }).position({ x: this.sessionCapsuleLayout().sessionX, y: this.sessionCapsuleLayout().sessionY }).zIndex(8);
       }
-      if (this.sessionLaunch !== undefined && (!this.sessionLaunch.sample.finished || this.sessionLaunch.ownership !== 'stage')) {
+      if (this.sessionLaunch !== undefined) {
         ReaderPageChrome({
-          isSessionOverlay: true, topStartText: this.sessionLaunchChrome.topStartText,
-          topEndText: this.sessionLaunchChrome.topEndText, bottomStartText: this.sessionLaunchChrome.bottomStartText,
-          bottomEndText: this.sessionLaunchChrome.bottomEndText, sessionVisible: true,
+          isSessionOverlay: true, topStartText: this.sessionChromeForPresentation().topStartText,
+          topEndText: this.sessionChromeForPresentation().topEndText, bottomStartText: this.sessionChromeForPresentation().bottomStartText,
+          bottomEndText: this.sessionChromeForPresentation().bottomEndText, sessionVisible: true,
           sessionWidth: this.sessionLaunch.geometry.capsuleWidth, sessionHeight: 24,
           layout: this.readingLayout(), appearance: this.appearanceSnapshot,
           incomingOpacity: this.sessionLaunch.sample.immersiveOpacity,
@@ -2804,7 +2817,7 @@ export struct ReadingExperience {
       chrome.sessionVisible.toString(),
       chrome.sessionWidth.toString(),
       chrome.sessionHeight.toString(),
-      (this.sessionLaunch !== undefined && !this.sessionLaunch.sample.finished) ? 'session-overlay' : 'page-chrome',
+      this.sessionLaunch !== undefined ? 'session-overlay' : 'page-chrome',
     ].join('|');
   }
 
@@ -5719,6 +5732,45 @@ export struct ReadingExperience {
   }
 
   private controlDirectoryEntries(): LocalReadingTocEntry[] {
+    const entries = this.controlDirectorySourceEntries();
+    const chapter = this.chapter;
+    const map = this.chapterLayoutMap;
+    if (chapter === undefined || map === undefined) return entries;
+    if (this.bookmarkExcerptSource === entries && this.bookmarkExcerptChapter === chapter) {
+      return this.bookmarkExcerptProjection;
+    }
+    this.bookmarkExcerptSource = entries;
+    this.bookmarkExcerptChapter = chapter;
+    this.bookmarkExcerptProjection = entries;
+    const entry = entries.find((candidate: LocalReadingTocEntry): boolean => candidate.index === chapter.chapterIndex);
+    if (entry?.bookmarks === undefined || !entry.bookmarks.some((mark: LocalReadingBookmark): boolean =>
+      (mark.bookText ?? '').length === 0 && mark.chapterOffset < map.scalarCount())) return entries;
+    const bookmarks = entry.bookmarks.map((mark: LocalReadingBookmark): LocalReadingBookmark => {
+      if ((mark.bookText ?? '').length > 0 || mark.chapterOffset >= map.scalarCount()) return mark;
+      const key = JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex,
+        chapter.contentVersion, mark.time, mark.chapterOffset]);
+      let excerpt = this.bookmarkExcerptCache.get(key);
+      if (excerpt === undefined) {
+        excerpt = chapter.content.substring(map.utf16ForScalar(mark.chapterOffset),
+          map.utf16ForScalar(Math.min(map.scalarCount(), mark.chapterOffset + 160)));
+        if (this.bookmarkExcerptCache.size >= 128) {
+          for (const oldest of this.bookmarkExcerptCache.keys()) { this.bookmarkExcerptCache.delete(oldest); break; }
+        }
+        this.bookmarkExcerptCache.set(key, excerpt);
+      }
+      // Display-only recovery for older records. Never overwrite the user's
+      // note or persist guessed original text, and never fetch another chapter.
+      return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
+        chapterTitle: mark.chapterTitle, content: mark.content, bookText: excerpt };
+    });
+    const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title,
+      downloadState: entry.downloadState, navigable: entry.navigable, bookmarks };
+    this.bookmarkExcerptProjection = entries.map((candidate: LocalReadingTocEntry): LocalReadingTocEntry =>
+      candidate === entry ? hydrated : candidate);
+    return this.bookmarkExcerptProjection;
+  }
+
+  private controlDirectorySourceEntries(): LocalReadingTocEntry[] {
     // Parent-owned bookmark/download projections can lag after a runtime
     // conversion switch. Prefer the current session's Core-projected title
     // while retaining the parent's marker and offline state.
@@ -5745,6 +5797,7 @@ export struct ReadingExperience {
         index: entry.index,
         title: projected.title,
         downloadState: entry.downloadState,
+        navigable: entry.navigable,
         bookmarks: entry.bookmarks,
       };
     });
@@ -7807,7 +7860,8 @@ export struct ReadingExperience {
       pageReady: this.phase === 'ready',
       controlObscured: this.controlObscured,
       interactionBlocked: this.interactionBlocked,
-      controlVisible: !ignoreClosingControl && this.controlVisible(),
+      controlVisible: !ignoreClosingControl && this.controlVisible() &&
+        !this.sessionControlClosing && !this.controlShellExitArmed(),
       autoPageStatus: this.autoPageState.status,
       autoPageRemainingSeconds: this.autoPageState.remainingSeconds,
       ttsStatus: this.ttsState.status,
@@ -7971,7 +8025,7 @@ export struct ReadingExperience {
     this.sessionLaunch = this.sessionLaunchController.begin(identity, geometry, readerMotionNowMs(), this.reduceMotion);
     if (this.sessionLaunch === undefined) return false;
     this.invalidateControlBackdrop();
-    AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', !this.sessionLaunch.sample.finished);
+    AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', true);
     this.pageTurnRenderRevision += 1;
     if (!this.sessionLaunch.sample.controlsPresented) this.commitSessionLaunchControlHidden();
     this.applyWindowPolicyForChromeOwner();
@@ -7982,6 +8036,20 @@ export struct ReadingExperience {
   private scheduleSessionLaunchFrame(generation: number): void {
     if ((this.sessionLaunchFramePending && this.pendingSessionLaunchGeneration === generation) ||
       !this.sessionLaunchController.isCurrent(generation) || this.sessionLaunch?.sample.finished) return;
+    const held = this.sessionLaunch;
+    if (held !== undefined && held.sample.settled) {
+      // Figma's 2300..3500 tail is a hold, not 1200ms of new visual state.
+      // Keep actors and input alive; publish the terminal semantic sample once.
+      if (this.sessionLaunchHoldTimer >= 0) return;
+      this.sessionLaunchHoldTimer = setTimeout((): void => {
+        this.sessionLaunchHoldTimer = -1;
+        if (!this.mounted || !this.appForeground || this.exitRequested ||
+          !this.sessionLaunchController.isCurrent(generation)) return;
+        this.sessionLaunch = this.sessionLaunchController.advance(generation, readerMotionNowMs());
+        if (!this.sessionLaunch?.sample.finished) this.scheduleSessionLaunchFrame(generation);
+      }, Math.max(1, Math.ceil(this.sessionLaunchController.remainingHoldMs())));
+      return;
+    }
     this.sessionLaunchFramePending = true;
     this.pendingSessionLaunchGeneration = generation;
     this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
@@ -7995,22 +8063,25 @@ export struct ReadingExperience {
       const next = this.sessionLaunchController.advance(generation, readerMotionNowMs());
       if (next === undefined) return;
       this.sessionLaunch = next;
-      const anchor = `${this.currentChapterIndex()}|${this.visiblePage?.startScalar}|${this.pageChromeClockText}`;
-      if (anchor !== this.sessionLaunchChromeAnchor) {
-        this.sessionLaunchChromeAnchor = anchor;
-        const page = this.currentPageTurnRenderPage();
-        this.sessionLaunchChrome = new ReaderPageChromeSnapshot(page.chromeTopStartText, page.chromeTopEndText,
-          page.chromeBottomStartText, page.chromeBottomEndText, true, next.geometry.capsuleWidth, 24);
-      }
       if (previous?.sample.controlsPresented && !next.sample.controlsPresented) {
         this.commitSessionLaunchControlHidden();
         this.applyWindowPolicyForChromeOwner();
       }
-      if (next.sample.finished) {
-        AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', false);
-        this.pageTurnRenderRevision += 1;
-      } else this.scheduleSessionLaunchFrame(generation);
+      if (!next.sample.finished) this.scheduleSessionLaunchFrame(generation);
     }));
+  }
+
+  private sessionChromeForPresentation(): ReaderPageChromeSnapshot {
+    const anchor = `${this.currentChapterIndex()}|${this.visiblePage?.startScalar}|${this.pageChromeClockText}|${this.pageTurnRenderRevision}`;
+    if (anchor !== this.sessionLaunchChromeAnchor && !this.pageChromeStateFrozen()) {
+      this.sessionLaunchChromeAnchor = anchor;
+      // Do not read a frozen page/texture snapshot at the stage-to-hold boundary.
+      const chapter = this.chapter;
+      const key = this.pageChromePaginationKey(chapter?.chapterIndex ?? -1, this.materializedContentVersion);
+      this.sessionLaunchChrome = this.pageChromeSnapshot(chapter?.chapterIndex ?? -1,
+        this.visiblePage?.startScalar ?? -1, this.chapterLayoutMap?.scalarCount() ?? 0, key, this.paginationDraft);
+    }
+    return this.sessionLaunchChrome;
   }
 
   private commitSessionLaunchControlHidden(): void {
@@ -8023,7 +8094,7 @@ export struct ReadingExperience {
     if (!this.reduceMotion || this.sessionLaunch === undefined) return;
     this.sessionLaunch = this.sessionLaunchController.setReduceMotion(true);
     this.commitSessionLaunchControlHidden();
-    AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', false);
+    AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', true);
     this.pageTurnRenderRevision += 1;
     this.applyWindowPolicyForChromeOwner();
   }
@@ -8042,6 +8113,8 @@ export struct ReadingExperience {
 
   private cancelSessionLaunch(reason: ReaderSessionLaunchCancelReason): void {
     if (this.sessionLaunch === undefined || this.sessionLaunch.ownership !== 'stage') return;
+    if (this.sessionLaunchHoldTimer >= 0) clearTimeout(this.sessionLaunchHoldTimer);
+    this.sessionLaunchHoldTimer = -1;
     const launch = this.sessionLaunchController.cancel(reason);
     if (launch === undefined) return;
     this.sessionLaunch = launch;
@@ -8104,6 +8177,8 @@ export struct ReadingExperience {
   }
 
   private finishSessionCapsuleMorph(): void {
+    if (this.sessionLaunchHoldTimer >= 0) clearTimeout(this.sessionLaunchHoldTimer);
+    this.sessionLaunchHoldTimer = -1;
     const hadLaunch = this.sessionLaunch !== undefined;
     this.sessionLaunchExitGeneration += 1;
     this.sessionLaunchController.dispose();
@@ -8310,6 +8385,7 @@ export struct ReadingExperience {
     this.dismissControlTemporaryLayers();
     this.controlSession = dismissReaderControlSession(this.latestControlVisualSession ?? this.controlSession,
       this.controlTiming().dismissDurationMs);
+    this.pageTurnRenderRevision += 1;
   }
 
   /** The current visual sample, kept outside the reading @State tree. */
@@ -8390,6 +8466,7 @@ export struct ReadingExperience {
     // Panel's sparse watcher runs.  This assignment does not participate in
     // build invalidation.
     this.latestControlVisualSession = copyReaderControlSessionState(this.controlSession);
+    this.admitSessionControlClosing(readerControlHostClosing(this.controlSession));
     // Status-bar visibility follows the control session rather than the
     // mounted reader route, including the first collapse/open frame.
     this.applyWindowPolicyForChromeOwner();
@@ -8424,6 +8501,14 @@ export struct ReadingExperience {
     this.replaceState = createHiddenReaderReplaceQuickState();
     // Reading/TTS/auto-page/selection ownership is not reset by closing UI.
     if (this.mounted && !this.exitRequested) this.drainPageTurnPreparationQueue();
+  }
+
+  private admitSessionControlClosing(closing: boolean): void {
+    // Drag dismissal is driven inside Panel. Publish only this ownership edge,
+    // not every control frame, so an existing capsule can mount at first close.
+    if (this.sessionControlClosing === closing) return;
+    this.sessionControlClosing = closing;
+    this.pageTurnRenderRevision += 1;
   }
 
   private expandControlDirectory(): void {
@@ -8840,26 +8925,65 @@ export struct ReadingExperience {
   }
 
   private refreshReaderBrightness(): void {
-    const generation = ++this.brightnessRequestGeneration;
+    // Opening controls observes the window; it must not cancel a pending user intent.
+    const generation = this.brightnessRequestGeneration;
     const owner = this.claimReaderBrightness();
     void ReaderWindowCoordinator.brightness().read(owner).then((result): void => {
-      if (result.applied && this.mounted && generation === this.brightnessRequestGeneration) {
+      if (result.applied && this.mounted && generation === this.brightnessRequestGeneration &&
+        this.brightnessAutomaticIntent === undefined) {
         this.admitReaderBrightness(result.value);
         this.brightnessRevision += 1;
+        if (result.value < 0) this.refreshSystemBrightness(generation);
       }
     }).catch((error: Error): void => {
       hilog.error(0x5244, 'Reader', '%{private}s', `Reader brightness read failed: ${error.message}`);
     });
   }
 
+  private readSystemBrightnessValue(): Promise<number | undefined> {
+    if (this.systemBrightnessRead !== undefined) return this.systemBrightnessRead;
+    try {
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) return Promise.resolve(undefined);
+      const observation = settings.getValue(context, settings.display.SCREEN_BRIGHTNESS_STATUS)
+        .then((raw: string): number | undefined => readerBrightnessSystemValue(raw))
+        .catch((_error: Error): undefined => undefined);
+      this.systemBrightnessRead = observation;
+      void observation.then((): void => {
+        if (this.systemBrightnessRead === observation) this.systemBrightnessRead = undefined;
+      });
+      return observation;
+    } catch (_error) { return Promise.resolve(undefined); }
+  }
+
+  private refreshSystemBrightness(generation: number): void {
+    void this.readSystemBrightnessValue().then((value: number | undefined): void => {
+      if (value !== undefined && this.mounted && generation === this.brightnessRequestGeneration &&
+        this.brightnessAutomatic && this.brightnessAutomaticIntent !== false) {
+        this.brightnessPercent = readerBrightnessControlPercent(value);
+        this.brightnessRevision += 1;
+      }
+    });
+  }
+
   private setReaderBrightness(percent: number): void {
-    const normalized = Math.max(READER_CONTROL_BRIGHTNESS_MIN / READER_CONTROL_BRIGHTNESS_MAX,
-      Math.min(1, percent / READER_CONTROL_BRIGHTNESS_MAX));
-    this.enqueueReaderBrightness(normalized, 'manual');
+    if (!Number.isFinite(percent)) return;
+    this.enqueueReaderBrightness(readerBrightnessWindowValue(percent), 'manual');
   }
 
   private setReaderAutomaticBrightness(): void {
-    this.enqueueReaderBrightness(-1, 'automatic');
+    const automatic = this.brightnessAutomaticIntent ?? this.brightnessAutomatic;
+    if (!automatic) { this.enqueueReaderBrightness(-1, 'automatic'); return; }
+    // Do not jump to the initial/old rail position while the first system read
+    // is pending. A second tap or manual drag invalidates this pending intent.
+    const generation = ++this.brightnessRequestGeneration;
+    this.brightnessAutomaticIntent = false;
+    void this.readSystemBrightnessValue().then((value: number | undefined): void => {
+      if (this.mounted && generation === this.brightnessRequestGeneration &&
+        this.brightnessAutomaticIntent === false) {
+        this.enqueueReaderBrightness(value ?? readerBrightnessWindowValue(this.brightnessPercent), 'manual');
+      }
+    });
   }
 
   private cancelReaderBrightness(): void {
@@ -8871,11 +8995,13 @@ export struct ReadingExperience {
     this.brightnessMutationQueue = ReaderWindowCoordinator.brightness().cancelAndSettle(owner)
       .then((result): void => {
         if (result.applied && this.mounted && generation === this.brightnessRequestGeneration) {
+          this.brightnessAutomaticIntent = undefined;
           this.admitReaderBrightness(result.value);
           this.brightnessRevision += 1;
         }
       }).catch((error: Error): void => {
         if (this.mounted && generation === this.brightnessRequestGeneration) {
+          this.brightnessAutomaticIntent = undefined;
           hilog.error(0x5244, 'Reader', '%{private}s', `Reader brightness cancel failed: ${error.message}`);
           this.refreshReaderBrightness();
         }
@@ -8883,6 +9009,7 @@ export struct ReadingExperience {
   }
 
   private enqueueReaderBrightness(target: number, mode: 'manual' | 'automatic'): void {
+    this.brightnessAutomaticIntent = mode === 'automatic';
     const generation = ++this.brightnessRequestGeneration;
     const owner = this.claimReaderBrightness();
     // The window-wide writer merges pending samples while retaining an active
@@ -8890,11 +9017,14 @@ export struct ReadingExperience {
     this.brightnessMutationQueue = ReaderWindowCoordinator.brightness().request(owner, target)
       .then((result): void => {
         if (result.applied && this.mounted && generation === this.brightnessRequestGeneration) {
+          this.brightnessAutomaticIntent = undefined;
           this.admitReaderBrightness(result.value);
           this.brightnessRevision += 1;
+          if (result.value < 0) this.refreshSystemBrightness(generation);
         }
       }).catch((error: Error): void => {
         if (this.mounted && generation === this.brightnessRequestGeneration) {
+          this.brightnessAutomaticIntent = undefined;
           hilog.error(0x5244, 'Reader', '%{private}s', `Reader brightness ${mode} failed: ${error.message}`);
           this.refreshReaderBrightness();
         }
@@ -8905,8 +9035,7 @@ export struct ReadingExperience {
     if (!Number.isFinite(brightness)) return;
     this.brightnessAutomatic = brightness < 0;
     if (brightness >= 0) {
-      this.brightnessPercent = Math.max(READER_CONTROL_BRIGHTNESS_MIN,
-        Math.min(READER_CONTROL_BRIGHTNESS_MAX, Math.round(brightness * READER_CONTROL_BRIGHTNESS_MAX)));
+      this.brightnessPercent = readerBrightnessControlPercent(brightness);
     }
   }
 
@@ -10164,15 +10293,57 @@ export struct ReadingExperience {
   private currentPageBookmarkStatus(): 'unknown' | 'empty' | 'bookmarked' {
     const page = this.visiblePage;
     if (page === undefined) return 'unknown';
-    const entry = this.controlDirectoryEntries().find((candidate: LocalReadingTocEntry): boolean =>
+    const entries = this.controlDirectoryEntries();
+    const anchor = `${this.currentChapterIndex()}:${page.startScalar}:${page.endScalar}`;
+    if (entries === this.bookmarkStatusEntries && anchor === this.bookmarkStatusAnchor) return this.bookmarkStatusValue;
+    this.bookmarkStatusEntries = entries;
+    this.bookmarkStatusAnchor = anchor;
+    const entry = entries.find((candidate: LocalReadingTocEntry): boolean =>
       candidate.index === this.currentChapterIndex());
-    if (entry?.bookmarks === undefined) return 'unknown';
+    this.bookmarkStatusValue = entry?.bookmarks === undefined ? 'unknown' : 'empty';
+    if (entry?.bookmarks === undefined) return this.bookmarkStatusValue;
     for (const bookmark of entry.bookmarks) {
       if (page.endScalar > page.startScalar ?
         bookmark.chapterOffset >= page.startScalar && bookmark.chapterOffset < page.endScalar :
-        bookmark.chapterOffset === page.startScalar) return 'bookmarked';
+        bookmark.chapterOffset === page.startScalar) { this.bookmarkStatusValue = 'bookmarked'; break; }
     }
-    return 'empty';
+    return this.bookmarkStatusValue;
+  }
+
+  @Builder
+  private bookmarkCornerFeedback() {
+    // The existing bookmark gesture owns preview and its 160ms rollback.
+    // The persistent marker reads only the admitted Core projection, so a
+    // failed/unknown write cannot paint a false success state.
+    if (!this.controlVisible() && !this.controlObscured &&
+      (this.bookmarkPageOffsetY > 0 || this.currentPageBookmarkStatus() === 'bookmarked')) {
+      Row({ space: 6 }) {
+        if (this.bookmarkPageOffsetY > 0) {
+          Text(this.bookmarkPreviewChanged ? (this.currentPageBookmarkStatus() === 'bookmarked' ?
+            '松手移除书签' : '松手添加书签') : '取消书签操作')
+            .fontFamily('ReaderNotoSansSC').fontSize(11).maxLines(1)
+            .fontColor(readerAppColor('TOK_READ_INK', this.readerAppScheme));
+        }
+        Image(this.readerAppScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
+          $r('app.media.reader_directory_marker_bookmark_active'))
+          .width(24).height(24)
+          .opacity(this.bookmarkPageOffsetY > 0 && !this.bookmarkPreviewChanged ? 0.35 : 1);
+      }.height(28).justifyContent(FlexAlign.End)
+        .width(Math.max(0, this.viewportWidth - 50))
+        .position({ x: 25, y: this.readingLayout().pageChromeVisualSafeTop +
+          this.readingLayout().pageChromeTopRegionHeight + 8 })
+        .translate({ y: Math.min(24, this.bookmarkPageOffsetY) })
+        .zIndex(6).hitTestBehavior(HitTestMode.None);
+    }
+  }
+
+  private currentPageBookmarkText(): string {
+    const page = this.visiblePage;
+    const chapter = this.chapter;
+    const map = this.chapterLayoutMap;
+    if (page === undefined || chapter === undefined || map === undefined) return '';
+    return chapter.content.substring(map.utf16ForScalar(page.startScalar),
+      map.utf16ForScalar(Math.min(page.endScalar, page.startScalar + 160)));
   }
 
   private toggleCurrentPageBookmark(): void {
@@ -10204,6 +10375,7 @@ export struct ReadingExperience {
       chapterOffset: page.startScalar,
       chapterTitle: currentEntry.title,
       bookmarkTimes,
+      bookText: this.currentPageBookmarkText(),
     });
   }
 

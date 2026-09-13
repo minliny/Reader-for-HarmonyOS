@@ -67,7 +67,7 @@ near(full.themeShells[0].x, 13, 'static Full card shell position');
 near(full.themeShells[0].y, 43.39, 'static Full card shell position');
 near(full.themeShells[0].width, 73.5, 'static Full card shell width');
 near(full.layout.y, 367, 'static Full layout origin');
-near(full.layout.height, 406, 'static Full layout height');
+near(full.layout.height, 322, 'Full layout removes two duplicate 42vp settings rows');
 
 // Every actor's transformation is linear in ONE p. Reverse/stop/re-grab samples
 // have no previous-frame state and cannot trigger a local easing/window.

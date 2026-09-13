@@ -29,6 +29,7 @@ export type ReaderBookmarkRecord = {
   chapterOffset: number;
   chapterTitle: string;
   content: string;
+  bookText?: string;
 };
 
 /** Legacy storage shape: ownership carried only by bookName+bookAuthor. */
@@ -40,6 +41,7 @@ export type ReaderLegacyBookmark = {
   chapterOffset: number;
   chapterTitle: string;
   content: string;
+  bookText?: string;
 };
 
 /** Row model rendered by ReaderBookmarkRow; pure data, no UI types. */
@@ -107,6 +109,7 @@ export function migrateLegacyBookmarks(
         chapterOffset: item.chapterOffset,
         chapterTitle: item.chapterTitle,
         content: item.content,
+        bookText: item.bookText,
       });
       continue;
     }
@@ -123,6 +126,7 @@ export function migrateLegacyBookmarks(
       chapterOffset: item.chapterOffset,
       chapterTitle: item.chapterTitle,
       content: item.content,
+      bookText: item.bookText,
     });
   }
   return records;
@@ -160,7 +164,7 @@ export function readerBookmarkTimeLabel(time: number): string {
 
 /**
  * In-chapter position: a percent when the chapter scalar length is known,
- * otherwise the exact Core Unicode-scalar offset.
+ * otherwise no user-facing percentage. The exact Core anchor stays in data.
  */
 export function readerBookmarkPositionLabel(
   chapterOffset: number,
@@ -170,7 +174,7 @@ export function readerBookmarkPositionLabel(
     const percent = Math.min(100, Math.max(0, Math.floor((chapterOffset / chapterScalarLength) * 100)));
     return `${percent}%`;
   }
-  return `偏移 ${chapterOffset}`;
+  return '';
 }
 
 function readerBookmarkRowFromBookmark(
@@ -189,7 +193,7 @@ function readerBookmarkRowFromBookmark(
     chapterIndex: bookmark.chapterIndex,
     chapterOffset: bookmark.chapterOffset,
     chapterTitle: bookmark.chapterTitle,
-    excerpt: readerBookmarkExcerpt(bookmark.content),
+    excerpt: readerBookmarkExcerpt(bookmark.bookText || bookmark.content || '暂无正文摘录'),
     positionLabel: readerBookmarkPositionLabel(bookmark.chapterOffset, chapterLength),
     timeLabel: readerBookmarkTimeLabel(bookmark.time),
   };
@@ -206,7 +210,7 @@ function readerBookmarkRowFromRecord(
     chapterIndex: record.chapterIndex,
     chapterOffset: record.chapterOffset,
     chapterTitle: record.chapterTitle,
-    excerpt: readerBookmarkExcerpt(record.content),
+    excerpt: readerBookmarkExcerpt(record.bookText || record.content || '暂无正文摘录'),
     positionLabel: readerBookmarkPositionLabel(record.chapterOffset, chapterLength),
     timeLabel: readerBookmarkTimeLabel(record.time),
   };
@@ -236,7 +240,7 @@ export function projectReaderBookmarkRows(
     for (const bookmark of ordered) {
       if (normalizedQuery.length > 0 &&
         bookmark.chapterTitle.toLocaleLowerCase().indexOf(normalizedQuery) < 0 &&
-        bookmark.content.toLocaleLowerCase().indexOf(normalizedQuery) < 0) {
+        `${bookmark.bookText ?? ''} ${bookmark.content}`.toLocaleLowerCase().indexOf(normalizedQuery) < 0) {
         continue;
       }
       rows.push(readerBookmarkRowFromBookmark(bookmark, identity, 'confirmed', chapterScalarLengths));

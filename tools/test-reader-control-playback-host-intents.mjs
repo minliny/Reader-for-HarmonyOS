@@ -82,14 +82,15 @@ for(const invalidate of [h=>h.stopTts(),h=>{h.mounted=false;},h=>{h.lifecycleTok
 }
 
 // Run the actual Host visual methods with the real ownership controller. This
-// verifies first-frame publication / 700ms semantic close / 3500ms persistence.
-let now=10000;const storage=new Map();const frames=[];
+// verifies first-frame publication / 350ms close / 1750ms persistence (PH09).
+let now=10000;const storage=new Map();const frames=[],holdTimers=[];
 class Callback{constructor(callback){this.onFrame=callback;}}
 const Visual=productionMotionMethods(file,['beginSessionCapsuleMorph','scheduleSessionLaunchFrame'],{
  readerSessionMorphSourceKindForPage,buildReaderSessionLaunchGeometry,ReaderPageChromeMeasurements,ReaderPageChromeSnapshot,
  copyReaderControlSessionState,readerSessionCapsuleMinimumWidth:type=>type==='tts'?94:96,
  readerMotionNowMs:()=>now,ReaderUIFrameCallback:Callback,resolveReaderPageChromeLayout:()=>({sessionX:250,sessionY:760}),
  AppStorage:{setOrCreate:(k,v)=>storage.set(k,v)},hilog:{warn:()=>{}},
+ setTimeout:(fn,ms)=>{holdTimers.push({fn,ms});return holdTimers.length;},
 });
 const c=p=>p,controller=new ReaderSessionLaunchController({flight:c,expand:c,easeIn:c,easeOut:c,easeInOut:c});
 const source=new ReaderSessionMorphSourceMeasurement('quickAutoPage','source',25,524,286,196,1);
@@ -97,7 +98,7 @@ const visual=Object.assign(new Visual(),{mounted:true,appForeground:true,exitReq
  lifecycleToken:1,sourceId:'src',bookId:'book',controlOpenRevision:1,controlModuleVisitRevision:1,readerWindowMetricsRevision:1,
  sharedAppearanceRevision:1,appearanceMutationGeneration:1,measurementEpoch:1,reduceMotion:false,
  sessionLaunchController:controller,sessionLaunchSourceContexts:new Map([['quickAutoPage','measured']]),
- sessionLaunchTopExit:73,sessionLaunchDockExit:349,sessionLaunchExitGeneration:0,pageTurnRenderRevision:0,
+ sessionLaunchTopExit:73,sessionLaunchDockExit:349,sessionLaunchExitGeneration:0,pageTurnRenderRevision:0,sessionLaunchHoldTimer:-1,
  controlVisible:()=>true,controlPage:()=> 'quickAutoPage',sessionMorphSourceMeasurement:()=>source,
  sessionLaunchMeasurementKey:()=> 'measured',sessionLaunchLayoutKey:()=> 'layout',readingLayout:()=>({}),
  currentChapterIndex:()=>4,visiblePage:{startScalar:20},pageChromeClockText:'10:00',
@@ -109,12 +110,14 @@ const visual=Object.assign(new Visual(),{mounted:true,appForeground:true,exitReq
 });
 assert.equal(visual.beginSessionCapsuleMorph('autoPage'),true);assert.equal(visual.sessionLaunch.sample.timeMs,0);
 assert.equal(visual.sessionLaunch.sample.sharpOpacity,1);assert.equal(visual.hiddenCalls,0);assert.equal(frames.length,1);
-for(const elapsed of [699,700,1400,1700,2300,3500]){
+for(const elapsed of [349,350,700,850,1150]){
  now=10000+elapsed;frames.shift().onFrame(now*1e6);
- assert.equal(visual.sessionLaunch.sample.timeMs,elapsed);
- assert.equal(visual.hiddenCalls,elapsed>=700?1:0);
+ assert.equal(visual.sessionLaunch.sample.timeMs,elapsed*2);
+ assert.equal(visual.hiddenCalls,elapsed>=350?1:0);
 }
+assert.equal(frames.length,0);assert.equal(holdTimers.length,1);assert.equal(holdTimers[0].ms,600);
+now=11750;holdTimers[0].fn();
 assert.equal(visual.sessionLaunch.sample.finished,true);assert.equal(visual.sessionLaunch.ownership,'stage');
-assert.equal(frames.length,0);assert.equal(storage.get('readerSessionChromeOverlayActive'),false);
-assert.equal(visual.pageTurnRenderRevision,2,'only ownership boundaries invalidate page presentation, not frames');
-console.log('Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 700/3500 ownership)');
+assert.equal(frames.length,0);assert.equal(storage.get('readerSessionChromeOverlayActive'),true);
+assert.equal(visual.pageTurnRenderRevision,1,'the stable stage does not hand the footer back to old page textures');
+console.log('Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 350/1750 ownership)');

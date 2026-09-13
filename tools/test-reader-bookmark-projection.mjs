@@ -189,8 +189,8 @@ assert.equal(readerBookmarkExcerpt(long, 4), 'ああああ…');
 const sampleTime = new Date(2026, 7, 31, 9, 5).getTime();
 assert.equal(readerBookmarkTimeLabel(sampleTime), '08-31 09:05');
 assert.equal(readerBookmarkPositionLabel(120, 1200), '10%');
-assert.equal(readerBookmarkPositionLabel(120, 0), '偏移 120');
-assert.equal(readerBookmarkPositionLabel(120, undefined), '偏移 120');
+assert.equal(readerBookmarkPositionLabel(120, 0), '');
+assert.equal(readerBookmarkPositionLabel(120, undefined), '');
 assert.equal(readerBookmarkPositionLabel(5000, 100), '100%', 'percent must clamp at 100');
 assert.equal(readerBookmarkPositionLabel(0, 100), '0%');
 

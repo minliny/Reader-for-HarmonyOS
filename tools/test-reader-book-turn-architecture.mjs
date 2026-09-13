@@ -133,7 +133,6 @@ const localBuild = method(local, 'build() {');
 for (const field of [
   'pageTurnPresentationPhase',
   'bookTurnSurfaceGeneration',
-  'bookmarkPreviewChanged',
   'autoPageSessionRemainingSeconds',
   'failureCode',
 ]) {

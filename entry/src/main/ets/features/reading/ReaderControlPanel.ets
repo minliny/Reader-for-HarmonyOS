@@ -850,11 +850,20 @@ export struct ReaderControlPanel {
           .width(this.frame().contentSurface.width).height(this.frame().contentSurface.height)
           .position({ x: this.frame().contentSurface.x, y: this.frame().contentSurface.y })
           .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme)).borderRadius(12)
-          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
           .opacity(readerControlHasFullContentSurface(this.contentLocation().module) ?
             this.frame().contentSurface.opacity : 0)
           .visibility(Visibility.Visible)
           .enabled(false).hitTestBehavior(HitTestMode.None);
+        // Original Quick card (e.g. 924:69) is distinct from FullContentSurface.
+        // TTS and Home own their own painted cards, so they are not doubled.
+        Stack()
+          .id('reader-control-quick-content-surface')
+          .width(this.frame().content.width).height(this.frame().content.height)
+          .position({ x: this.frame().content.x, y: this.frame().content.y })
+          .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appScheme)).borderRadius(8)
+          .opacity(this.contentLocation().level !== 'home' && this.contentLocation().module !== 'tts' ?
+            this.frame().content.opacity * (1 - this.frame().progress) : 0)
+          .hitTestBehavior(HitTestMode.None);
         Stack({ alignContent: Alignment.TopStart }) {
           Stack({ alignContent: Alignment.TopStart }) { this.controlContent(); }
             .width(this.frame().content.width).height(this.frame().content.height)
@@ -865,6 +874,18 @@ export struct ReaderControlPanel {
           .clip(true).opacity(this.frame().content.opacity)
           .enabled(this.contentInputEnabled())
           .hitTestBehavior(this.frame().visibility > 0 ? HitTestMode.Default : HitTestMode.None);
+        // Paint the stroke after content; scrolling opaque rows must not erase it.
+        Stack()
+          .id('reader-control-content-outline')
+          .width(this.frame().content.width).height(this.frame().content.height)
+          .position({ x: this.frame().content.x, y: this.frame().content.y })
+          .borderRadius(8 + 4 * this.frame().progress)
+          .border({ width: TOK_BORDER_W, color: readerAppColor(this.contentLocation().module === 'settings' &&
+            this.frame().progress === 0 ? 'TOK_LINE_STRONG' : 'TOK_LINE', this.appScheme) })
+          .opacity(this.frame().content.opacity * (
+            (this.contentLocation().level !== 'home' && this.contentLocation().module !== 'tts' ? 1 - this.frame().progress : 0) +
+            (readerControlHasFullContentSurface(this.contentLocation().module) ? this.frame().progress : 0)))
+          .hitTestBehavior(HitTestMode.None);
         Stack({ alignContent: Alignment.TopStart }) { this.controlHeader(); }
           .width(this.frame().header.width).height(this.frame().header.height)
           .position({ x: this.frame().header.x, y: this.frame().header.y })
@@ -872,8 +893,10 @@ export struct ReaderControlPanel {
           // Default admits the child collapse action and masks lower siblings.
           // Block here would skip every child, leaving a visible but dead button.
           .zIndex(2)
-          .hitTestBehavior(HitTestMode.Default)
-          .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0);
+          .hitTestBehavior(this.frame().header.opacity > 0 || this.contentLocation().module === 'replace' ?
+            HitTestMode.Default : HitTestMode.None)
+          .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0 &&
+            (this.frame().header.opacity > 0 || this.contentLocation().module === 'replace'));
         Stack({ alignContent: Alignment.TopStart }) { this.brightnessRail(); }
           .width(this.frame().brightness.width).height(this.frame().brightness.height)
           .position({ x: this.frame().brightness.x, y: this.frame().brightness.y })
@@ -894,6 +917,7 @@ export struct ReaderControlPanel {
         }
         .width(72).height(28)
         .id('reader-control-motion-grabber')
+        .zIndex(3)
         .position({ x: (this.layout.fullPanelWidth - 72) / 2, y: this.frame().shell.y })
         .hitTestBehavior(HitTestMode.Block)
         .accessibilityText(this.contentLocation().level === 'home' ?
@@ -1672,17 +1696,16 @@ export struct ReaderControlPanel {
       // BrightnessTrack 8×92 with a 24×92 pointer target. Gesture coordinates
       // are mapped to the whole authored track; an invisible OutSet slider
       // would retain an implicit thumb inset and shorten the usable range.
-      Stack({ alignContent: Alignment.Bottom }) {
-        Row()
-          .width(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH)
-          .height('100%')
-          .backgroundColor(readerAppColor('TOK_BORDER', this.appScheme))
-          .borderRadius(999);
-        Row()
-          .width(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH)
-          .height(`${this.effectiveBrightnessPercent()}%`)
-          .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-          .borderRadius(999);
+      Stack({ alignContent: Alignment.Center }) {
+        Stack({ alignContent: Alignment.Bottom }) {
+          Row()
+            .width('100%').height(`${this.effectiveBrightnessPercent()}%`)
+            .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
+        }
+        .width(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH).height('100%')
+        .backgroundColor(readerAppColor('TOK_BORDER', this.appScheme))
+        .borderRadius(READER_CONTROL_BRIGHTNESS_TRACK_WIDTH / 2).clip(true)
+        .hitTestBehavior(HitTestMode.None);
       }
       .width(READER_CONTROL_BRIGHTNESS_TRACK_HIT_WIDTH)
       .height(READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT)
@@ -1728,7 +1751,7 @@ export struct ReaderControlPanel {
       // state through the existing control opacity; no unapproved color is
       // introduced for the selected endpoint.
       .opacity(this.brightnessAutomatic ? 1 : 0.72)
-      .accessibilityText(this.brightnessAutomatic ? '跟随系统亮度，已开启' : '跟随系统亮度')
+      .accessibilityText(this.brightnessAutomatic ? '跟随系统亮度，已开启，点击改为手动' : '手动亮度，点击跟随系统')
       .onClick((): void => {
         this.brightnessDragging = false;
         this.brightnessPreviewPercent = -1;

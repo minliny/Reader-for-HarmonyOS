@@ -68,6 +68,11 @@ function probe(sourceText) {
   const layers = [...owner.nodes.entries()].filter(([, n]) => n.type === 'Stack' && n.backgroundColor !== undefined);
   assert.equal(layers.length, 3, 'one painted surface for each real group');
   function validate() {
+    for (const [row, labelText] of ['direction', 'pageTurn', 'timeout'].map(group => owner.groupLabel(group)).entries()) {
+      const label = [...owner.nodes.values()].find(n => n.type === 'Text' && n.create === labelText);
+      assert.ok(label.lineHeight <= label.height, 'a native label line must fit its motion clipping box');
+      assert.ok(label.position.y + label.height <= owner.bar(row).y, 'the complete label stays above its option bar');
+    }
     layers.forEach(([id, layer], row) => {
       const parent = owner.nodes.get(parentById.get(id));
       assert.ok(parent?.clipShape, 'rounded paint must have a separate parent carrying the dynamic visibility mask');
@@ -107,6 +112,9 @@ function probe(sourceText) {
 }
 
 const result = probe(source);
+assert.throws(() => probe(source.replace('.fontSize(10 + this.p()).lineHeight(this.label(row).height)',
+  '.fontSize(11).lineHeight(16)')), /native label line/,
+  'the shipped fixed Full typography in a Quick 12vp mask reproduces PH05');
 const collapsed = source.replace('      .borderRadius(8).clip(true).position({ x: 0, y: 0 });',
   '      .borderRadius(8).clip(true).position({ x: 0, y: 0 }).clipShape(this.sharedClip(row, true));')
   .replace('    .clipShape(this.sharedClip(row, true));', '    ;');

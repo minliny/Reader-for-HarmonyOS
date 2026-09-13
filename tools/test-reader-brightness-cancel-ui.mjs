@@ -1,3 +1,4 @@
+import { readerBrightnessControlPercent } from '../entry/src/main/ets/features/reading/ReaderBrightnessCurve.ts';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
@@ -8,7 +9,7 @@ let writer;
 const Host = productionMotionMethods(source('LocalReadingExperience'), [
   'cancelReaderBrightness', 'enqueueReaderBrightness', 'admitReaderBrightness',
 ], {
-  ReaderWindowCoordinator: { brightness: () => writer },
+  ReaderWindowCoordinator: { brightness: () => writer }, readerBrightnessControlPercent,
   READER_CONTROL_BRIGHTNESS_MIN: 1, READER_CONTROL_BRIGHTNESS_MAX: 100,
   hilog: { error() {} },
 });
@@ -16,6 +17,7 @@ const Panel = productionMotionMethods(source('ReaderControlPanel'), [
   'cancelBrightnessDrag', 'onBrightnessConfirmed',
 ]);
 const host = () => Object.assign(new Host(), {
+  refreshSystemBrightness() {},
   mounted: true, brightnessOwner: 4, brightnessRequestGeneration: 0,
   brightnessPercent: 50, brightnessAutomatic: false, brightnessRevision: 0,
   claimReaderBrightness() { return this.brightnessOwner; },
@@ -39,7 +41,7 @@ const host = () => Object.assign(new Host(), {
   a.resolve({ applied: true, value: .2 }); await settle();
   assert.equal(h.brightnessPercent, 50, 'old ordinary ACK cannot race the cancel transaction');
   cancelled.resolve({ applied: true, value: .2 }); await h.brightnessMutationQueue;
-  assert.equal(h.brightnessPercent, 20); assert.equal(h.brightnessRevision, 1);
+  assert.equal(h.brightnessPercent, readerBrightnessControlPercent(.2)); assert.equal(h.brightnessRevision, 1);
   p.onBrightnessConfirmed(); assert.equal(p.brightnessPreviewPercent, -1);
 }
 
@@ -59,7 +61,7 @@ const host = () => Object.assign(new Host(), {
 {
   writer = { cancelAndSettle: async () => ({ applied: true, value: .5 }) };
   const h = host(); h.brightnessPercent = 80; h.cancelReaderBrightness(); await h.brightnessMutationQueue;
-  assert.equal(h.brightnessPercent, 50); assert.equal(h.brightnessRevision, 1);
+  assert.equal(h.brightnessPercent, readerBrightnessControlPercent(.5)); assert.equal(h.brightnessRevision, 1);
   let calls = 0;
   const p = Object.assign(new Panel(), { brightnessDragging: false, onBrightnessCancel: () => calls++ });
   p.cancelBrightnessDrag(); assert.equal(calls, 0);

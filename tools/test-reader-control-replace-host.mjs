@@ -14,11 +14,12 @@ const { ReaderControlReplaceGatewayError } =
   await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
 const { copyReaderControlSessionState } =
   await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const {readerControlHostClosing}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
 const names = ['openQuickReplace', 'controlReplaceCurrent', 'reloadControlReplace', 'runControlReplaceMutation',
   'beginReplaceMutation', 'isReplaceMutationCurrent', 'finishReplaceMutation', 'invalidateReplaceMutationOwner',
-  'onControlSessionChanged'];
+  'onControlSessionChanged','admitSessionControlClosing'];
 function method(name) {
   const match = new RegExp('  private (?:async )?' + name + '\\(').exec(source);
   assert.ok(match, 'real Host method ' + name);
@@ -32,7 +33,7 @@ function method(name) {
   assert.equal(depth, 0);
   return source.slice(match.index, end);
 }
-const deps = { ...statePolicy, ...quickPolicy, copyReaderControlSessionState, ReaderControlReplaceGatewayError,
+const deps = { ...statePolicy, ...quickPolicy, copyReaderControlSessionState, ReaderControlReplaceGatewayError, readerControlHostClosing,
   readerControlContentLocation: session => session.location,
   readerControlHostCloseCommitted: (session, revision) => session.closeRevision > revision,
   ReaderWindowCoordinator: { metrics: () => ({}) }, readerControlKeyboardVisible: () => false,

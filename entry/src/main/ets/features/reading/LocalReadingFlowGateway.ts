@@ -26,6 +26,8 @@ export type LocalReadingBookmark = {
   chapterOffset: number;
   chapterTitle: string;
   content: string;
+  /** Original text, separate from the user's note in content. */
+  bookText?: string;
 };
 
 export type LocalReadingChapterStartBookmarkInput = {
@@ -37,6 +39,7 @@ export type LocalReadingChapterStartBookmarkInput = {
 
 export type LocalReadingPositionBookmarkInput = LocalReadingChapterStartBookmarkInput & {
   chapterOffset: number;
+  bookText?: string;
 };
 
 export type LocalReadingToc = {
@@ -253,6 +256,7 @@ export class LocalReadingFlowGateway {
         index: entry.index,
         title: entry.title,
         downloadState: stateByChapter.get(entry.index) ?? 'unknown',
+        navigable: entry.navigable,
         bookmarks: entry.bookmarks,
       });
     }
@@ -299,6 +303,7 @@ export class LocalReadingFlowGateway {
         chapterOffset: this.requireNonNegativeInteger(bookmark, 'chapterPos', 'bookmark.list bookmark'),
         chapterTitle: this.requireString(bookmark, 'chapterName', 'bookmark.list bookmark'),
         content: this.requireString(bookmark, 'content', 'bookmark.list bookmark'),
+        bookText: this.requireString(bookmark, 'bookText', 'bookmark.list bookmark'),
       });
     }
 
@@ -318,6 +323,7 @@ export class LocalReadingFlowGateway {
         index: entry.index,
         title: entry.title,
         downloadState: entry.downloadState,
+        navigable: entry.navigable,
         bookmarks: bookmarksByChapter.get(entry.index) ?? [],
       });
     }
@@ -360,6 +366,7 @@ export class LocalReadingFlowGateway {
       chapterIndex: input.chapterIndex,
       chapterPos: input.chapterOffset,
       chapterName: input.chapterTitle,
+      bookText: input.bookText ?? '',
     }, this.requestOptions(isCurrent));
     const rawBookmark = this.requireObject(result.data['bookmark'], 'bookmark.create bookmark');
     const time = this.requireSafeInteger(rawBookmark, 'time', 'bookmark.create bookmark');
@@ -372,14 +379,14 @@ export class LocalReadingFlowGateway {
       'bookmark.create bookmark',
     );
     const chapterTitle = this.requireString(rawBookmark, 'chapterName', 'bookmark.create bookmark');
-    this.requireString(rawBookmark, 'bookText', 'bookmark.create bookmark');
+    const bookText = this.requireString(rawBookmark, 'bookText', 'bookmark.create bookmark');
     const content = this.requireString(rawBookmark, 'content', 'bookmark.create bookmark');
     if (bookName !== input.bookName || bookAuthor !== input.bookAuthor ||
       chapterIndex !== input.chapterIndex || chapterOffset !== input.chapterOffset ||
       chapterTitle !== input.chapterTitle) {
       throw new Error('bookmark.create returned a mismatched position bookmark');
     }
-    return { time, chapterIndex, chapterOffset, chapterTitle, content };
+    return { time, chapterIndex, chapterOffset, chapterTitle, content, bookText };
   }
 
   /** Deletes one already-projected bookmark by its Core-owned primary key. */

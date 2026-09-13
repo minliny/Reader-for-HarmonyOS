@@ -78,7 +78,12 @@ for (const [i,scene] of archive.nodes.entries()) {
     for(const time of times){
       const actual=projected(actor,sampleReaderSessionLaunch(time,geometry,curves));
       for(const [property,frames]of authored){
-        const expected=cssSample(frames,time);assert.equal(actual[property]?.length,expected.length);
+        const expected=cssSample(frames,time);
+        // PH10 user override: keep the archived timeline, constrain the footer
+        // to the left of the shell where both occupy the bottom information lane.
+        if(actor.nodeName.startsWith('PageLabel') && property==='translate' && time>=1400)
+          expected[0]=Math.min(expected[0],sampleReaderSessionLaunch(time,geometry,curves).proxyLeft-geometry.targetLeft);
+        assert.equal(actual[property]?.length,expected.length);
         expected.forEach((v,k)=>{assert.ok(Math.abs(actual[property][k]-v)<.00001,
           `${scene.nodeId}/${actor.nodeId} ${property}[${k}] at ${time}: ${actual[property][k]} != ${v}`);comparisons++;});
       }
@@ -99,14 +104,14 @@ const g=geometries[0];
 const identity={lifecycle:1,bookIdentity:'book-a',moduleVisit:2,viewportRevision:1,scrollRevision:2,
   layoutRevision:3,paletteRevision:4,fontRevision:5,sourceRevision:g.sourceRevision,sourceActorId:g.sourceActorId};
 for(const delay of [0,100,1000]){
-  const c=new ReaderSessionLaunchController(curves);const t=c.begin(identity,g,10000);
+  const c=new ReaderSessionLaunchController(curves,1);const t=c.begin(identity,g,10000);
   assert.equal(t.businessStatus,'preparing');assert.equal(t.sample.sharpOpacity,1);assert.equal(t.sample.proxyWidth,g.sourceWidth);
   assert.equal(c.begin(identity,g,10001),t,'duplicate click is idempotent');
   c.advance(t.generation,10000+delay);const pose=c.snapshot().sample;
   c.acknowledgeBusiness(t.generation,'playing');assert.equal(c.snapshot().sample,pose,'business ACK cannot replay motion');
   c.advance(t.generation,10000);assert.equal(c.snapshot().sample.timeMs,delay,'clock cannot run backwards');
 }
-const c=new ReaderSessionLaunchController(curves);let t=c.begin(identity,g,0);
+const c=new ReaderSessionLaunchController(curves,1);let t=c.begin(identity,g,0);
 c.setDesiredPlaying(t.generation,false);assert.equal(c.mayStartBusiness(t.generation),false);
 assert.equal(c.snapshot().businessStatus,'preparing');assert.equal(c.acknowledgeBusiness(t.generation,'playing'),false);
 assert.equal(c.acknowledgeBusiness(t.generation,'paused'),true);
@@ -130,13 +135,13 @@ assert.equal(c.admitPreparedResource(t.generation,identity,resource(),10,10,100)
 const before=releases;c.advance(t.generation,5400);assert.equal(releases,before+1);
 c.advance(t.generation,7500);c.dispose();assert.equal(releases,before+1,'terminal cleanup cannot double release');
 for(const reason of ['stop','failure','stopBarrierFailure','background','leave','bookChanged','sourceChanged']){
- const r=new ReaderSessionLaunchController(curves),old=r.begin(identity,g,0);r.advance(old.generation,800);
+ const r=new ReaderSessionLaunchController(curves,1),old=r.begin(identity,g,0);r.advance(old.generation,800);
  const cancelled=r.cancel(reason);assert.equal(r.mayStartBusiness(old.generation),false);
  assert.equal(r.acknowledgeBusiness(old.generation,'playing'),false);assert.equal(cancelled.sample.timeMs,800);
  const next=r.begin({...identity,moduleVisit:3},g,1000);assert.notEqual(old.generation,next.generation);
  assert.equal(r.acknowledgeBusiness(old.generation,'playing'),false,'late success cannot revive old generation');
 }
-const reduce=new ReaderSessionLaunchController(curves);const reduced=reduce.begin(identity,g,0);
+const reduce=new ReaderSessionLaunchController(curves,1);const reduced=reduce.begin(identity,g,0);
 reduce.advance(reduced.generation,500);reduce.setReduceMotion(true);assert.equal(reduce.snapshot().sample.timeMs,3500);
 reduce.setReduceMotion(false);reduce.advance(reduced.generation,700);assert.equal(reduce.snapshot().sample.timeMs,3500);
 // Invalid measurement or changed source actor cannot silently fly from stale geometry.

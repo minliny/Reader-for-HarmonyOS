@@ -23,8 +23,7 @@ const content = Object.assign(new Content(), { snapshot, pageTurnSimulationAvail
 // Run the real menu handlers: selection updates the value, dismissal keeps it,
 // stale/foreign options never leak into another setting, and reopen reads state.
 for (const [kind, value, y] of [['indent', '1字符', 38], ['indent', '2字符', 38],
-  ['language', '繁转简', 80], ['language', '简转繁', 80], ['alignment', '关闭', 164],
-  ['alignment', '开启', 164], ['pageTurn', '滚动', 122], ['pageTurn', '覆盖', 122]]) {
+  ['language', '繁转简', 80], ['language', '简转繁', 80]]) {
   content.openSelect = '';
   content.toggleSelect(kind, y);
   assert.equal(content.selectClosing, false);
@@ -41,13 +40,18 @@ for (const [kind, value, y] of [['indent', '1字符', 38], ['indent', '2字符',
   assert.equal(content.selectValue(kind), value, 'invalid options cannot reach Host callbacks');
 }
 content.pageTurnSimulationAvailable = false;
+for(const kind of ['alignment','pageTurn']) {
+  content.openSelect=''; content.toggleSelect(kind,122);
+  assert.equal(content.openSelect,'','duplicate settings are not selectable in Appearance');
+  assert.deepEqual(content.selectOptions(kind),[]);
+}
 assert.ok(!content.selectOptions('pageTurn').includes('仿真'));
 assert.ok(!content.selectOptions('pageTurn').includes('淡入'), 'visual update cannot invent an unsupported page-turn model');
 assert.deepEqual(['fontSize', 'lineHeightMultiplier', 'paragraphSpacing', 'letterSpacing'].map(m => content.metricValue(m)),
   ['18px', '1.96', '16px', '0px']);
 
-// Independent Make V9 values, read from the actual rendered preview.
-const expected = ['#FFFCF8F0', '#FFF4E3BF', '#FF2B2823', '#FF413020', '#FFEBDABB', '#FFD7E8CF', '#FF26313F', '#FF24382C'];
+// PH29 explicitly replaces independent Make preview colors with actual reader paper fills; geometry stays Make-authored.
+const expected = ['#FFFFFFFF', '#FFFFF6E9', '#FF26231F', '#FF27231F', '#FFFBF4E9', '#FFEEF5E8', '#FF302B26', '#FF202B26'];
 const SharedActors = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderAppearanceSharedActors.ets', import.meta.url),
   ['themeIds', 'themeLabel', 'themeColor'], { ...style });
 const shared = new SharedActors();

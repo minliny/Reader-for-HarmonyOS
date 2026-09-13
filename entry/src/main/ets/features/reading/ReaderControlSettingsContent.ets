@@ -207,7 +207,8 @@ export struct ReaderControlSettingsContent {
   private segmentRow(group: ReaderControlSettingsGroup, row: number) {
     Text(this.groupLabel(group)).width(this.label(row).width).height(this.label(row).height)
       .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-      .fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1)
+      .fontSize(10 + this.p()).lineHeight(this.label(row).height)
+      .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1)
       .position({ x: this.label(row).x, y: this.label(row).y })
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .clipShape(this.sharedClip(row, false));

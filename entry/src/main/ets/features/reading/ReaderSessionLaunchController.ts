@@ -2,6 +2,9 @@ import { sampleReaderSessionLaunch } from './ReaderSessionLaunchPresentation.ts'
 import type { ReaderSessionLaunchCurves, ReaderSessionLaunchGeometry, ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 
+/** PH09 physical review: one production time mapping for all Figma actors. */
+export const READER_SESSION_LAUNCH_TIME_SCALE = 0.5;
+
 /** Identity captured from the same visible-source measurement transaction. */
 export interface ReaderSessionLaunchIdentity {
   readonly lifecycle: number;
@@ -58,8 +61,16 @@ export class ReaderSessionLaunchController {
   private lastTimeMs: number = 0;
   private reducedMotion: boolean = false;
   private readonly curves: ReaderSessionLaunchCurves;
+  private readonly timeScale: number;
 
-  constructor(curves: ReaderSessionLaunchCurves) { this.curves = curves; }
+  constructor(curves: ReaderSessionLaunchCurves, timeScale: number = READER_SESSION_LAUNCH_TIME_SCALE) {
+    this.curves = curves;
+    this.timeScale = Number.isFinite(timeScale) && timeScale > 0 ? timeScale : READER_SESSION_LAUNCH_TIME_SCALE;
+  }
+
+  remainingHoldMs(): number {
+    return Math.max(0, 3500 - (this.current?.sample.timeMs ?? 3500)) * this.timeScale;
+  }
 
   snapshot(): ReaderSessionLaunchTransaction | undefined { return this.current; }
 
@@ -94,7 +105,8 @@ export class ReaderSessionLaunchController {
     const value = this.current;
     if (value === undefined || !this.isCurrent(generation)) return value;
     if (Number.isFinite(monotonicTimeMs)) this.lastTimeMs = Math.max(this.lastTimeMs, monotonicTimeMs);
-    const sample = sampleReaderSessionLaunch(this.lastTimeMs - value.startTimeMs, value.geometry, this.curves, this.reducedMotion);
+    const sample = sampleReaderSessionLaunch((this.lastTimeMs - value.startTimeMs) / this.timeScale,
+      value.geometry, this.curves, this.reducedMotion);
     this.current = { ...value, sample };
     if (!sample.sourceNeeded) this.releaseResource();
     return this.current;

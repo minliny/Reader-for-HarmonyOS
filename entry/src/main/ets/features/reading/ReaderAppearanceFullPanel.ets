@@ -635,11 +635,9 @@ export struct ReaderAppearanceFullPanel {
       Stack({ alignContent: Alignment.TopStart }) {
         this.indentRow();
         this.selectField('language', 9, 61);
-        this.selectField('pageTurn', 21 + this.selectRowWidth(), 61);
-        this.selectField('alignment', 9, 113);
       }
       .width(this.sectionInnerWidth())
-      .height(168)
+      .height(116)
       .position({ x: 2, y: 44 });
 
       Stack({ alignContent: Alignment.TopStart }) {
@@ -651,10 +649,10 @@ export struct ReaderAppearanceFullPanel {
       .width(this.stepperPanelWidth())
       .height(140)
       .borderRadius(8)
-      .position({ x: 2, y: 228 });
+      .position({ x: 2, y: 176 });
     }
     .width(this.sectionWidth())
-    .height(406)
+    .height(354)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .position({ x: 11, y: 366.98 })
     .opacity(this.motionFrameOrUndefined()?.typography.opacity ?? 1)

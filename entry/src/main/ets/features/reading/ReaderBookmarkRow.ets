@@ -8,7 +8,7 @@ const BOOKMARK_PENDING_LABEL = '待确认';
 
 /**
  * One bookmark row: icon, chapter title, in-chapter position (percent when the
- * chapter scalar length is known, exact scalar offset otherwise), excerpt and
+ * chapter scalar length is known), excerpt and
  * creation time. Tap emits the exact Core anchor — never a chapter opening.
  */
 @Component

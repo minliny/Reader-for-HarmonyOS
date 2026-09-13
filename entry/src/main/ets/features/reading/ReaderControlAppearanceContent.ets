@@ -14,11 +14,12 @@ import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observ
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import { ReaderSelect } from '../common/ReaderSelect';
-import { APPEARANCE_SELECT_MENU_WIDTH, APPEARANCE_SELECT_SURFACE, APPEARANCE_SELECT_BORDER,
+import { APPEARANCE_SELECT_MENU_WIDTH,
   appearanceSelectMenuPosition } from '../common/ReaderSelectAppearanceStyle';
 import { APPEARANCE_LAYOUT_SURFACE, APPEARANCE_LAYOUT_BORDER, APPEARANCE_LAYOUT_CAPTION,
   READER_CONTROL_APPEARANCE_THEMES, readerControlAppearanceThemeLabel,
-  readerControlAppearanceThemeSwatch } from './ReaderControlAppearanceStyle';
+  readerControlAppearanceThemeSwatch, readerControlAppearanceThemeEnd,
+  readerControlAppearanceThemeScheme } from './ReaderControlAppearanceStyle';
 import {
   TOK_BORDER_W, TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
   TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT,
@@ -407,7 +408,8 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private themeSwatch(theme: ReaderAppearanceTheme, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row().width(46).height(18).backgroundColor(this.themeColor(theme)).borderRadius(6)
+      Row().width(46).height(18).backgroundColor(this.themeColor(theme))
+        .linearGradient({ angle: 180, colors: [[this.themeColor(theme), 0], [readerControlAppearanceThemeEnd(theme), 1]] }).borderRadius(6)
         .border({ width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
           color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
         .position({ x: 8.25, y: 2 })
@@ -427,7 +429,7 @@ export struct ReaderControlAppearanceContent {
 
   @Builder
   private themeAction(day: boolean) {
-    Text(day ? '设为日间主题' : '设为夜间主题').width(74).height(28)
+    Text(this.defaultThemeActionLabel(day)).width(74).height(28)
       .fontFamily('ReaderNotoSansSCUIBold').fontSize(9).lineHeight(13).fontWeight(FontWeight.Bold)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center).borderRadius(6)
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
@@ -437,10 +439,25 @@ export struct ReaderControlAppearanceContent {
       .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None)
       .onClick((): void => {
-        if (!this.fullInput()) return;
-        if (day) this.onSetDayTheme(this.snapshot.activeTheme);
-        else this.onSetNightTheme(this.snapshot.activeTheme);
+        this.requestDefaultTheme(day);
       });
+  }
+
+  private defaultThemeActionLabel(day: boolean): string {
+    const current = day ? this.snapshot.dayTheme : this.snapshot.nightTheme;
+    return current === this.snapshot.activeTheme ? (day ? '已设为日间' : '已设为夜间') :
+      (day ? '设为日间主题' : '设为夜间主题');
+  }
+
+  private requestDefaultTheme(day: boolean): void {
+    if (!this.fullInput()) return;
+    const scheme = day ? 'day' : 'night';
+    if (readerControlAppearanceThemeScheme(this.snapshot.activeTheme) !== scheme) {
+      this.getUIContext().getPromptAction().showToast({ message: day ? '请先选择日间阅读主题' : '请先选择夜间阅读主题' });
+      return;
+    }
+    if (day) this.onSetDayTheme(this.snapshot.activeTheme);
+    else this.onSetNightTheme(this.snapshot.activeTheme);
   }
 
   @Builder
@@ -538,18 +555,16 @@ export struct ReaderControlAppearanceContent {
         Text('即时应用').fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10).lineHeight(13).fontColor(readerAppColor('app.appearance.layoutCaption', this.appThemeScheme));
       }.width(Math.max(0, this.frame().sectionWidth - 8)).height(17)
         .position({ x: 4, y: 10 });
-      Row().width(Math.max(0, this.frame().sectionWidth - 4)).height(338)
+      Row().width(Math.max(0, this.frame().sectionWidth - 4)).height(254)
         .backgroundColor(readerAppColor('app.appearance.layoutSurface', this.appThemeScheme)).border({ width: 1, color: readerAppColor('app.appearance.layoutBorder', this.appThemeScheme) })
         .borderRadius(12).position({ x: 2, y: 37 }).hitTestBehavior(HitTestMode.None);
       this.selectField('indent', 38);
       this.selectField('language', 80);
-      this.selectField('pageTurn', 122);
-      this.selectField('alignment', 164);
-      this.stepperRow('fontSize', 206);
-      this.stepperRow('lineHeightMultiplier', 248);
-      this.stepperRow('paragraphSpacing', 290);
-      this.stepperRow('letterSpacing', 332);
-    }.width(this.frame().layout.width).height(406).position(this.actorPosition(this.frame().layout))
+      this.stepperRow('fontSize', 122);
+      this.stepperRow('lineHeightMultiplier', 164);
+      this.stepperRow('paragraphSpacing', 206);
+      this.stepperRow('letterSpacing', 248);
+    }.width(this.frame().layout.width).height(322).position(this.actorPosition(this.frame().layout))
       .opacity(this.frame().layout.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None);
@@ -572,7 +587,7 @@ export struct ReaderControlAppearanceContent {
   }
 
   private toggleSelect(kind: string, localY: number): void {
-    if (!this.fullInput()) return;
+    if (!this.fullInput() || (kind !== 'indent' && kind !== 'language')) return;
     if (this.openSelect === kind) { this.requestSelectClose(); return; }
     const anchor = appearanceSelectMenuPosition(this.frame().layout.x + this.frame().sectionWidth - 12,
       this.frame().layout.y + localY + 5.5 - this.scrollMotion.nativeScrollOffset,
@@ -610,8 +625,8 @@ export struct ReaderControlAppearanceContent {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.metricLabel(metric)).height(18).fontFamily('ReaderNotoSansSCUIRegular').fontSize(12).lineHeight(18)
         .fontWeight(FontWeight.Regular).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 13, y: 12 });
-      Row().width(98).height(27).backgroundColor(APPEARANCE_SELECT_SURFACE)
-        .border({ width: 1, color: APPEARANCE_SELECT_BORDER }).borderRadius(8)
+      Row().width(98).height(27).backgroundColor(readerAppColor('app.appearance.selectSurface', this.appThemeScheme))
+        .border({ width: 1, color: readerAppColor('app.appearance.selectBorder', this.appThemeScheme) }).borderRadius(8)
         .position({ x: Math.max(0, this.frame().sectionWidth - 113), y: 7 }).hitTestBehavior(HitTestMode.None);
       this.stepButton(metric, -1, Math.max(0, this.frame().sectionWidth - 121));
       Text(this.metricValue(metric)).width(44).height(25).fontFamily('ReaderNotoSansSCUIMedium').fontSize(11)
@@ -640,26 +655,19 @@ export struct ReaderControlAppearanceContent {
   }
 
   private selectLabel(kind: string): string {
-    return kind === 'indent' ? '缩进' : (kind === 'language' ? '简繁' :
-      (kind === 'pageTurn' ? '翻页动画' : '文字两端对齐'));
+    return kind === 'indent' ? '缩进' : (kind === 'language' ? '简繁' : '');
   }
   private selectOptions(kind: string): string[] {
     if (kind === 'indent') return ['无', '1字符', '2字符'];
     if (kind === 'language') return ['原文', '繁转简', '简转繁'];
-    if (kind === 'alignment') return ['开启', '关闭'];
-    return this.pageTurnSimulationAvailable ? ['仿真', '覆盖', '平移', '滚动', '无动画'] :
-      ['覆盖', '平移', '滚动', '无动画'];
+    return [];
   }
   private selectValue(kind: string): string {
     if (kind === 'indent') return this.snapshot.indent === 'none' ? '无' :
       (this.snapshot.indent === 'single' ? '1字符' : '2字符');
     if (kind === 'language') return this.chineseConversionMode === 'none' ? '原文' :
       (this.chineseConversionMode === 't2s' ? '繁转简' : '简转繁');
-    if (kind === 'alignment') return this.snapshot.alignment === 'justify' ? '开启' : '关闭';
-    if (this.pageTurnStyle === 'simulation') return this.pageTurnSimulationAvailable ? '仿真' : '仿真不可用';
-    if (this.pageTurnStyle === 'cover') return '覆盖';
-    if (this.pageTurnStyle === 'scroll') return '滚动';
-    return this.pageTurnStyle === 'none' ? '无动画' : '平移';
+    return '';
   }
   private applySelect(kind: string, value: string): void {
     if (kind === 'indent') {
@@ -668,14 +676,6 @@ export struct ReaderControlAppearanceContent {
     } else if (kind === 'language') {
       const mode: ReaderChineseConversionMode = value === '繁转简' ? 't2s' : (value === '简转繁' ? 's2t' : 'none');
       if (mode !== this.chineseConversionMode) this.onChineseConversionChange(mode);
-    } else if (kind === 'alignment') {
-      const alignment: ReaderAppearanceAlignment = value === '开启' ? 'justify' : 'start';
-      if (alignment !== this.snapshot.alignment) this.onAlignmentRequest(this.snapshot.alignment);
-    } else if (kind === 'pageTurn') {
-      const style: ReaderPageTurnStyle = value === '仿真' ? 'simulation' : (value === '覆盖' ? 'cover' :
-        (value === '滚动' ? 'scroll' : (value === '无动画' ? 'none' : 'slide')));
-      if (style === 'simulation' && !this.pageTurnSimulationAvailable) return;
-      if (style !== this.pageTurnStyle) this.onPageTurnStyleChange(style);
     }
   }
   private metricLabel(metric: ReaderAppearanceMetric): string {

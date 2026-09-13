@@ -369,6 +369,7 @@ struct Index {
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   @State private rulesManagementSnapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   @State private discoverPresentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
+  @State private settingsSection: 'home' | 'general' = 'home';
   @State private settingsSnapshot: SettingsSnapshot = {
     autoCheckUpdate: true,
     tapBottomScrollTop: true,
@@ -556,6 +557,10 @@ struct Index {
       if (!this.bookshelfBatchRemovalBusy) {
         this.returnToBookshelf();
       }
+      return true;
+    }
+    if (this.route === 'settings' && this.settingsSection === 'general') {
+      this.settingsSection = 'home';
       return true;
     }
     if (this.route === 'search' || this.route === 'rss' || this.route === 'settings' ||
@@ -829,6 +834,8 @@ struct Index {
         });
       } else if (this.route === 'settings') {
         SettingsPage({
+          activeSection: this.settingsSection,
+          onSectionChange: (section: 'home' | 'general'): void => { this.settingsSection = section; },
           onRestoreDefaults: (): Promise<boolean> => this.getSettingsOrchestrator().restoreDefaults(),
           snapshot: this.settingsSnapshot,
           isTablet: deviceInfo.deviceType === 'tablet',
@@ -1172,6 +1179,7 @@ struct Index {
   }
 
   private openSettings(): void {
+    this.settingsSection = 'home';
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
@@ -3877,6 +3885,7 @@ struct Index {
         chapterIndex: request.chapterIndex,
         chapterOffset: request.chapterOffset,
         chapterTitle: request.chapterTitle,
+        bookText: request.bookText,
       }, isCurrent);
       writeConfirmed = true;
       if (!isCurrent()) return;

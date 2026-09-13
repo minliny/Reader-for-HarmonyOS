@@ -44,7 +44,7 @@ export const READER_CONTROL_PROGRESS_MAX = 100;
 export const READER_CONTROL_PROGRESS_STEP = 0.1;
 export const READER_CONTROL_BRIGHTNESS_MIN = 1;
 export const READER_CONTROL_BRIGHTNESS_MAX = 100;
-export const READER_CONTROL_BRIGHTNESS_STEP = 1;
+export const READER_CONTROL_BRIGHTNESS_STEP = 0.1;
 
 /** Phone/Tablet values whose variation is owned by the control composition. */
 export class ReaderControlGeometry {

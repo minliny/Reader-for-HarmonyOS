@@ -139,7 +139,7 @@ for (const height of [190, 666]) for (const offset of [0, 100, 250, 666]) for (c
   }
 }
 
-const Directory = productionMotionMethods(source('ReaderControlDirectoryContent'), ['onProgressChanged', 'queueLeadingCorrection', 'captureLeadingRow', 'rowHeight', 'value'],
+const Directory = productionMotionMethods(source('ReaderControlDirectoryContent'), ['onProgressChanged', 'queueLeadingCorrection', 'captureLeadingRow', 'rowHeight', 'value', 'leadingAnchorIsAligned'],
   { ControlDirectoryFrame: Frame, ScrollAlign: { START: 1 }, LengthMetrics: { vp: n => n } });
 for (const atTop of [true, false]) for (const nativeAnchored of [true, false]) {
   const queue = []; let corrections = 0;
