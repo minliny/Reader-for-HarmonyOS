@@ -383,6 +383,8 @@ export struct ReaderControlPanel {
   @State private brightnessPreviewPercent: number = -1;
   @State private appearanceFontReorderActive: boolean = false;
   private brightnessDragStartPercent: number = READER_CONTROL_BRIGHTNESS_MAX;
+  private brightnessLastEmittedAtMs: number = 0;
+  private brightnessLastEmittedPercent: number = -1;
   private geo: ReaderControlGeometry = new ReaderControlGeometry(false);
   private dockRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0 };
   private dockMeasured: boolean = false;
@@ -1505,6 +1507,10 @@ export struct ReaderControlPanel {
       .width(READER_CONTROL_BRIGHTNESS_AUTO_HIT_WIDTH)
       .height(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
       .margin({ top: READER_CONTROL_BRIGHTNESS_CONTROL_GAP })
+      // Preserve the authored palette while exposing the automatic/manual
+      // state through the existing control opacity; no unapproved color is
+      // introduced for the selected endpoint.
+      .opacity(this.brightnessAutomatic ? 1 : 0.72)
       .accessibilityText(this.brightnessAutomatic ? '跟随系统亮度，已开启' : '跟随系统亮度')
       .onClick((): void => this.onBrightnessAuto());
     }
@@ -1528,6 +1534,8 @@ export struct ReaderControlPanel {
   private beginBrightnessDrag(): void {
     this.brightnessDragStartPercent = this.effectiveBrightnessPercent();
     this.brightnessPreviewPercent = this.brightnessDragStartPercent;
+    this.brightnessLastEmittedAtMs = 0;
+    this.brightnessLastEmittedPercent = this.brightnessDragStartPercent;
   }
 
   private updateBrightnessDrag(offsetY: number): void {
@@ -1538,6 +1546,16 @@ export struct ReaderControlPanel {
     this.brightnessPreviewPercent = this.roundBrightness(
       this.brightnessDragStartPercent - offsetY / READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT * range,
     );
+    const now = Date.now();
+    const changed = Math.abs(this.brightnessPreviewPercent - this.brightnessLastEmittedPercent) >= 1;
+    // Keep the rail visually immediate while coalescing native Window writes
+    // to at most one update per frame. The final End event still commits the
+    // exact sampled value.
+    if (changed && (this.brightnessLastEmittedAtMs === 0 || now - this.brightnessLastEmittedAtMs >= 16)) {
+      this.brightnessLastEmittedAtMs = now;
+      this.brightnessLastEmittedPercent = this.brightnessPreviewPercent;
+      this.onBrightnessChange(this.brightnessPreviewPercent);
+    }
   }
 
   private finishBrightnessDrag(offsetY: number): void {
@@ -1545,6 +1563,8 @@ export struct ReaderControlPanel {
     const committed = this.effectiveBrightnessPercent();
     this.brightnessPreviewPercent = -1;
     this.onBrightnessChange(committed);
+    this.brightnessLastEmittedAtMs = 0;
+    this.brightnessLastEmittedPercent = -1;
   }
 
   private cancelBrightnessDrag(): void {
