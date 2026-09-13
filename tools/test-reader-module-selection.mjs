@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(repo, path), 'utf8');
@@ -9,6 +10,9 @@ const read = (path) => readFileSync(resolve(repo, path), 'utf8');
 const control = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
 const directory = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
 const provenance = read('tools/svg-provenance.config.mjs');
+const Control = productionMotionMethods(resolve(repo, 'entry/src/main/ets/features/reading/ReaderControlPanel.ets'), ['moduleIcon']);
+const selected = new Control();
+selected.isActiveModule = () => true;
 
 for (const [module, asset] of [
   ['directory', 'reader_directory_list_active'],
@@ -16,8 +20,10 @@ for (const [module, asset] of [
   ['appearance', 'reader_appearance_nav_active'],
   ['settings', 'reader_settings_nav_active'],
 ]) {
-  assert.match(control, new RegExp(`module === '${module}'[\\s\\S]*?return '${asset}'`),
-    `${module} must use its official light active resource`);
+  selected.appScheme = 'day';
+  assert.equal(selected.moduleIcon('', module), asset, `${module}: authored Day active outline`);
+  selected.appScheme = 'night';
+  assert.equal(selected.moduleIcon('', module), `${asset}_theme_night`, `${module}: Night active outline`);
 }
 assert.doesNotMatch(control, /module === 'appearance'[\s\S]*?\.fillColor\('#FFFAF4'\)/,
   'module selection must not depend on runtime tinting of hard-coded SVG strokes');

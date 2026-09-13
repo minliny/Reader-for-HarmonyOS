@@ -475,8 +475,9 @@ export struct ReaderDirectoryModulePanel {
   }
 
   private downloadMarker(entry: LocalReadingTocEntry): string {
-    return entry.downloadState === 'completed' ?
+    const resource = entry.downloadState === 'completed' ?
       'reader_directory_marker_check' : 'reader_directory_marker_download';
+    return this.appThemeScheme === 'night' ? `${resource}_theme_night` : resource;
   }
 
   private downloadMarkerLabel(entry: LocalReadingTocEntry): string {

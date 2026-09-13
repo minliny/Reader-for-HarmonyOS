@@ -1,0 +1,738 @@
+{
+  "dynamic": [
+    [
+      "features/reading/FullDirectoryPanel.ets",
+      "`app.media.${this.downloadMarker(entry)}`"
+    ],
+    [
+      "features/reading/FullDirectoryPanel.ets",
+      "`app.media.${this.bookmarkMarker(entry)}`"
+    ],
+    [
+      "features/reading/ReaderControlPanel.ets",
+      "`app.media.${this.quickActionIcon(icon)}`"
+    ],
+    [
+      "features/reading/ReaderControlPanel.ets",
+      "`app.media.${this.moduleIcon(icon, module)}`"
+    ],
+    [
+      "features/reading/ReaderDirectoryModulePanel.ets",
+      "`app.media.${this.downloadMarker(entry)}`"
+    ],
+    [
+      "features/shell/MainTabBar.ets",
+      "`app.media.${this.tabIconResource(key, active)}`"
+    ]
+  ],
+  "bindings": [
+    {
+      "resource": "app.media.reader_directory_list_active",
+      "dayName": "reader_directory_list_active",
+      "scheme": "day",
+      "role": "app.control.onPrimary",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.rc_headphones",
+      "dayName": "rc_headphones",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_palette",
+      "dayName": "rc_palette",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_settings",
+      "dayName": "rc_settings",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_list",
+      "dayName": "rc_list",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_tts_nav_active",
+      "dayName": "reader_tts_nav_active",
+      "scheme": "day",
+      "role": "app.control.onPrimary",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.rc_palette",
+      "dayName": "rc_palette",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_settings",
+      "dayName": "rc_settings",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_list",
+      "dayName": "rc_list",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_headphones",
+      "dayName": "rc_headphones",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_appearance_nav_active",
+      "dayName": "reader_appearance_nav_active",
+      "scheme": "day",
+      "role": "app.control.onPrimary",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.rc_settings",
+      "dayName": "rc_settings",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_list",
+      "dayName": "rc_list",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_headphones",
+      "dayName": "rc_headphones",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_palette",
+      "dayName": "rc_palette",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_settings_nav_active",
+      "dayName": "reader_settings_nav_active",
+      "scheme": "day",
+      "role": "app.control.onPrimary",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.reader_directory_list_active_theme_night",
+      "dayName": "reader_directory_list_active",
+      "scheme": "night",
+      "role": "app.control.onPrimary",
+      "color": "#1C1A18"
+    },
+    {
+      "resource": "app.media.rc_headphones_theme_night",
+      "dayName": "rc_headphones",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_palette_theme_night",
+      "dayName": "rc_palette",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_settings_theme_night",
+      "dayName": "rc_settings",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_list_theme_night",
+      "dayName": "rc_list",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.reader_tts_nav_active_theme_night",
+      "dayName": "reader_tts_nav_active",
+      "scheme": "night",
+      "role": "app.control.onPrimary",
+      "color": "#1C1A18"
+    },
+    {
+      "resource": "app.media.rc_palette_theme_night",
+      "dayName": "rc_palette",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_settings_theme_night",
+      "dayName": "rc_settings",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_list_theme_night",
+      "dayName": "rc_list",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_headphones_theme_night",
+      "dayName": "rc_headphones",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.reader_appearance_nav_active_theme_night",
+      "dayName": "reader_appearance_nav_active",
+      "scheme": "night",
+      "role": "app.control.onPrimary",
+      "color": "#1C1A18"
+    },
+    {
+      "resource": "app.media.rc_settings_theme_night",
+      "dayName": "rc_settings",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_list_theme_night",
+      "dayName": "rc_list",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_headphones_theme_night",
+      "dayName": "rc_headphones",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.rc_palette_theme_night",
+      "dayName": "rc_palette",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.reader_settings_nav_active_theme_night",
+      "dayName": "reader_settings_nav_active",
+      "scheme": "night",
+      "role": "app.control.onPrimary",
+      "color": "#1C1A18"
+    },
+    {
+      "resource": "app.media.reader_directory_list_active",
+      "dayName": "reader_directory_list_active",
+      "scheme": "day",
+      "role": "app.control.onPrimary",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.rc_headphones",
+      "dayName": "rc_headphones",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_palette",
+      "dayName": "rc_palette",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_settings",
+      "dayName": "rc_settings",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_list",
+      "dayName": "rc_list",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_tts_nav_active",
+      "dayName": "reader_tts_nav_active",
+      "scheme": "day",
+      "role": "app.control.onPrimary",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.rc_palette",
+      "dayName": "rc_palette",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_settings",
+      "dayName": "rc_settings",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_list",
+      "dayName": "rc_list",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_headphones",
+      "dayName": "rc_headphones",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_appearance_nav_active",
+      "dayName": "reader_appearance_nav_active",
+      "scheme": "day",
+      "role": "app.control.onPrimary",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.rc_settings",
+      "dayName": "rc_settings",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_list",
+      "dayName": "rc_list",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_headphones",
+      "dayName": "rc_headphones",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.rc_palette",
+      "dayName": "rc_palette",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_settings_nav_active",
+      "dayName": "reader_settings_nav_active",
+      "scheme": "day",
+      "role": "app.control.onPrimary",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.rc_search",
+      "dayName": "rc_search",
+      "scheme": "day",
+      "role": "TOK_READ_INK",
+      "color": "#332C25"
+    },
+    {
+      "resource": "app.media.rc_autopage",
+      "dayName": "rc_autopage",
+      "scheme": "day",
+      "role": "TOK_READ_INK",
+      "color": "#332C25"
+    },
+    {
+      "resource": "app.media.rc_replace",
+      "dayName": "rc_replace",
+      "scheme": "day",
+      "role": "TOK_READ_INK",
+      "color": "#332C25"
+    },
+    {
+      "resource": "app.media.rc_search_theme_night",
+      "dayName": "rc_search",
+      "scheme": "night",
+      "role": "TOK_READ_INK",
+      "color": "#EADFCE"
+    },
+    {
+      "resource": "app.media.rc_autopage_theme_night",
+      "dayName": "rc_autopage",
+      "scheme": "night",
+      "role": "TOK_READ_INK",
+      "color": "#EADFCE"
+    },
+    {
+      "resource": "app.media.rc_replace_theme_night",
+      "dayName": "rc_replace",
+      "scheme": "night",
+      "role": "TOK_READ_INK",
+      "color": "#EADFCE"
+    },
+    {
+      "resource": "app.media.rc_search",
+      "dayName": "rc_search",
+      "scheme": "day",
+      "role": "TOK_READ_INK",
+      "color": "#332C25"
+    },
+    {
+      "resource": "app.media.rc_autopage",
+      "dayName": "rc_autopage",
+      "scheme": "day",
+      "role": "TOK_READ_INK",
+      "color": "#332C25"
+    },
+    {
+      "resource": "app.media.rc_replace",
+      "dayName": "rc_replace",
+      "scheme": "day",
+      "role": "TOK_READ_INK",
+      "color": "#332C25"
+    },
+    {
+      "resource": "app.media.bookshelf_library_outline",
+      "dayName": "bookshelf_library_outline",
+      "scheme": "day",
+      "role": "TOK_MUTED",
+      "color": "#756F69"
+    },
+    {
+      "resource": "app.media.bookshelf_library_active",
+      "dayName": "bookshelf_library_active",
+      "scheme": "day",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_compass_outline",
+      "dayName": "bookshelf_compass_outline",
+      "scheme": "day",
+      "role": "TOK_MUTED",
+      "color": "#756F69"
+    },
+    {
+      "resource": "app.media.bookshelf_compass_active",
+      "dayName": "bookshelf_compass_active",
+      "scheme": "day",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_rss_outline",
+      "dayName": "bookshelf_rss_outline",
+      "scheme": "day",
+      "role": "TOK_MUTED",
+      "color": "#756F69"
+    },
+    {
+      "resource": "app.media.bookshelf_rss_active",
+      "dayName": "bookshelf_rss_active",
+      "scheme": "day",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_settings_outline",
+      "dayName": "bookshelf_settings_outline",
+      "scheme": "day",
+      "role": "TOK_MUTED",
+      "color": "#756F69"
+    },
+    {
+      "resource": "app.media.bookshelf_settings_active",
+      "dayName": "bookshelf_settings_active",
+      "scheme": "day",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_library_outline_theme_night",
+      "dayName": "bookshelf_library_outline",
+      "scheme": "night",
+      "role": "TOK_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.bookshelf_library_active",
+      "dayName": "bookshelf_library_active",
+      "scheme": "night",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_compass_outline_theme_night",
+      "dayName": "bookshelf_compass_outline",
+      "scheme": "night",
+      "role": "TOK_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.bookshelf_compass_active",
+      "dayName": "bookshelf_compass_active",
+      "scheme": "night",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_rss_outline_theme_night",
+      "dayName": "bookshelf_rss_outline",
+      "scheme": "night",
+      "role": "TOK_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.bookshelf_rss_active",
+      "dayName": "bookshelf_rss_active",
+      "scheme": "night",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_settings_outline_theme_night",
+      "dayName": "bookshelf_settings_outline",
+      "scheme": "night",
+      "role": "TOK_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.bookshelf_settings_active",
+      "dayName": "bookshelf_settings_active",
+      "scheme": "night",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_library_outline",
+      "dayName": "bookshelf_library_outline",
+      "scheme": "day",
+      "role": "TOK_MUTED",
+      "color": "#756F69"
+    },
+    {
+      "resource": "app.media.bookshelf_library_active",
+      "dayName": "bookshelf_library_active",
+      "scheme": "day",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_compass_outline",
+      "dayName": "bookshelf_compass_outline",
+      "scheme": "day",
+      "role": "TOK_MUTED",
+      "color": "#756F69"
+    },
+    {
+      "resource": "app.media.bookshelf_compass_active",
+      "dayName": "bookshelf_compass_active",
+      "scheme": "day",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_rss_outline",
+      "dayName": "bookshelf_rss_outline",
+      "scheme": "day",
+      "role": "TOK_MUTED",
+      "color": "#756F69"
+    },
+    {
+      "resource": "app.media.bookshelf_rss_active",
+      "dayName": "bookshelf_rss_active",
+      "scheme": "day",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.bookshelf_settings_outline",
+      "dayName": "bookshelf_settings_outline",
+      "scheme": "day",
+      "role": "TOK_MUTED",
+      "color": "#756F69"
+    },
+    {
+      "resource": "app.media.bookshelf_settings_active",
+      "dayName": "bookshelf_settings_active",
+      "scheme": "day",
+      "role": "TOK_ON_PRIMARY",
+      "color": "#FFFAF4"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_check",
+      "dayName": "reader_directory_marker_check",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "day",
+      "role": "TOK_READ_MUTED",
+      "color": "#5B5046"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "day",
+      "role": "TOK_READ_MUTED",
+      "color": "#5B5046"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "day",
+      "role": "TOK_READ_MUTED",
+      "color": "#5B5046"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_check_theme_night",
+      "dayName": "reader_directory_marker_check",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download_theme_night",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "night",
+      "role": "TOK_READ_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download_theme_night",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "night",
+      "role": "TOK_READ_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download_theme_night",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "night",
+      "role": "TOK_READ_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_check",
+      "dayName": "reader_directory_marker_check",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "day",
+      "role": "TOK_READ_MUTED",
+      "color": "#5B5046"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "day",
+      "role": "TOK_READ_MUTED",
+      "color": "#5B5046"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "day",
+      "role": "TOK_READ_MUTED",
+      "color": "#5B5046"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_bookmark",
+      "dayName": "reader_directory_marker_bookmark",
+      "scheme": "day",
+      "role": "TOK_READ_MUTED",
+      "color": "#5B5046"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_bookmark_active",
+      "dayName": "reader_directory_marker_bookmark_active",
+      "scheme": "day",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#2F6373"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_check_theme_night",
+      "dayName": "reader_directory_marker_check",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download_theme_night",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "night",
+      "role": "TOK_READ_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download_theme_night",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "night",
+      "role": "TOK_READ_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_download_theme_night",
+      "dayName": "reader_directory_marker_download",
+      "scheme": "night",
+      "role": "TOK_READ_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_bookmark_theme_night",
+      "dayName": "reader_directory_marker_bookmark",
+      "scheme": "night",
+      "role": "TOK_READ_MUTED",
+      "color": "#BAAD9C"
+    },
+    {
+      "resource": "app.media.reader_directory_marker_bookmark_active_theme_night",
+      "dayName": "reader_directory_marker_bookmark_active",
+      "scheme": "night",
+      "role": "TOK_READ_PRIMARY",
+      "color": "#D2BD96"
+    }
+  ],
+  "evidenceLayer": "SDK-emitted native Builder calls + real methods + actual SVG bytes; no native pixel acceptance"
+}

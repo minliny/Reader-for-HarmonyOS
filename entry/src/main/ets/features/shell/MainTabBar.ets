@@ -163,14 +163,21 @@ export struct MainTabBar {
   // Final Phone/Tablet 页面在选中态仍使用同一套 Tabler outline glyph，
   // 只由资源颜色和深色胶囊表达状态；不要切换成本地 filled 轮廓。
   private tabIconResource(key: string, active: boolean): string {
+    // Active glyphs retain onPrimary on the dark App action fill; only the
+    // inactive muted outline changes to the Night palette.
+    const night = this.appThemeScheme === 'night';
     if (key === 'bookshelf') {
-      return active ? 'bookshelf_library_active' : 'bookshelf_library_outline';
+      return active ? 'bookshelf_library_active' :
+        (night ? 'bookshelf_library_outline_theme_night' : 'bookshelf_library_outline');
     } else if (key === 'discover') {
-      return active ? 'bookshelf_compass_active' : 'bookshelf_compass_outline';
+      return active ? 'bookshelf_compass_active' :
+        (night ? 'bookshelf_compass_outline_theme_night' : 'bookshelf_compass_outline');
     } else if (key === 'rss') {
-      return active ? 'bookshelf_rss_active' : 'bookshelf_rss_outline';
+      return active ? 'bookshelf_rss_active' :
+        (night ? 'bookshelf_rss_outline_theme_night' : 'bookshelf_rss_outline');
     }
-    return active ? 'bookshelf_settings_active' : 'bookshelf_settings_outline';
+    return active ? 'bookshelf_settings_active' :
+      (night ? 'bookshelf_settings_outline_theme_night' : 'bookshelf_settings_outline');
   }
 
   @Builder

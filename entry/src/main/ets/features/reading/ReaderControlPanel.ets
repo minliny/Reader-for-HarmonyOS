@@ -1479,7 +1479,7 @@ export struct ReaderControlPanel {
   @Builder
   private quickAction(icon: string, label: string, action: ReaderQuickAction) {
     Column() {
-      Image($r(`app.media.${icon}`))
+      Image($r(`app.media.${this.quickActionIcon(icon)}`))
         .width(24)
         .height(24)
         .margin({ top: 4.72   });
@@ -1888,11 +1888,29 @@ export struct ReaderControlPanel {
     return false;
   }
 
+  private quickActionIcon(icon: string): string {
+    if (this.appScheme === 'night') {
+      if (icon === 'rc_search') return 'rc_search_theme_night';
+      if (icon === 'rc_autopage') return 'rc_autopage_theme_night';
+      if (icon === 'rc_replace') return 'rc_replace_theme_night';
+    }
+    return icon;
+  }
+
   private moduleIcon(icon: string, module: string): string {
-    if (module === 'directory' && this.isActiveModule(module)) return 'reader_directory_list_active';
-    if (module === 'tts' && this.isActiveModule(module)) return 'reader_tts_nav_active';
-    if (module === 'appearance' && this.isActiveModule(module)) return 'reader_appearance_nav_active';
-    if (module === 'settings' && this.isActiveModule(module)) return 'reader_settings_nav_active';
+    const night = this.appScheme === 'night';
+    if (module === 'directory') return this.isActiveModule(module) ?
+      (night ? 'reader_directory_list_active_theme_night' : 'reader_directory_list_active') :
+      (night ? 'rc_list_theme_night' : icon);
+    if (module === 'tts') return this.isActiveModule(module) ?
+      (night ? 'reader_tts_nav_active_theme_night' : 'reader_tts_nav_active') :
+      (night ? 'rc_headphones_theme_night' : icon);
+    if (module === 'appearance') return this.isActiveModule(module) ?
+      (night ? 'reader_appearance_nav_active_theme_night' : 'reader_appearance_nav_active') :
+      (night ? 'rc_palette_theme_night' : icon);
+    if (module === 'settings') return this.isActiveModule(module) ?
+      (night ? 'reader_settings_nav_active_theme_night' : 'reader_settings_nav_active') :
+      (night ? 'rc_settings_theme_night' : icon);
     return icon;
   }
 }
