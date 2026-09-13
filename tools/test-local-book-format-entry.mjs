@@ -19,15 +19,14 @@ assert.deepEqual(Array.from(admissionByFamily.keys()),
   'the product matrix must account for every audited local or remote-file family');
 assert.deepEqual(READER_LOCAL_BOOK_FORMAT_ADMISSIONS
   .filter((entry) => entry.state === 'l0')
-  .map((entry) => entry.family), ['TXT', 'EPUB'],
-  'Core recognition must not admit a format into the L0 product picker');
-for (const family of ['MOBI', 'AZW', 'UMD']) {
-  assert.equal(admissionByFamily.get(family)?.state, 'deferred-partial');
-}
+  .map((entry) => entry.family), ['TXT', 'EPUB', 'MOBI', 'AZW'],
+  'the product picker must admit every format with a complete Core and Host lifecycle');
+assert.equal(admissionByFamily.get('UMD')?.state, 'deferred-partial');
 for (const family of ['PDF', 'HTML', 'ARCHIVE', 'WEBDAV']) {
   assert.equal(admissionByFamily.get(family)?.state, 'not-admitted');
 }
-assert.equal(READER_LOCAL_BOOK_PICKER_FILTER, 'TXT、EPUB|.txt,.epub');
+assert.equal(READER_LOCAL_BOOK_PICKER_FILTER,
+  'TXT、EPUB、MOBI、AZW3|.txt,.epub,.mobi,.azw,.azw3,.kf8');
 assert.match(host, /fileSuffixFilters = \[\s*READER_LOCAL_BOOK_PICKER_FILTER,\s*\]/,
   'the Host picker must consume the product admission filter');
 
@@ -35,12 +34,15 @@ for (const label of ['TXT', 'EPUB']) {
   assert.match(dialog, new RegExp(`formatBadge\\('${label}'`),
     `the import surface must disclose admitted ${label} support`);
 }
-for (const label of ['MOBI', 'AZW', 'UMD']) {
+for (const label of ['UMD']) {
   assert.doesNotMatch(dialog, new RegExp(`formatBadge\\('${label}'`),
     `the import surface must not advertise deferred ${label} support`);
 }
-assert.match(dialog, /支持多选 TXT、EPUB/);
-assert.doesNotMatch(dialog, /支持多选[^\n]*(MOBI|AZW|UMD)/);
+for (const label of ['MOBI', 'AZW3']) {
+  assert.match(dialog, new RegExp(`formatBadge\\('${label}'`),
+    `the import surface must advertise admitted ${label} support`);
+}
+assert.match(dialog, /支持多选 TXT、EPUB、MOBI、AZW3/);
 assert.match(gateway, /request\('import\.parse'/);
 assert.match(gateway, /request\('import\.persist'/);
 assert.match(gateway, /filePath: input\.stagedPath/,

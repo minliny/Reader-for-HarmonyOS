@@ -121,7 +121,7 @@ export struct LocalImportDialog {
               .lineHeight(19.5)
               .letterSpacing(-0.0762)
               .fontColor(TOK_INK);
-            Text('支持多选 TXT、EPUB')
+            Text('支持多选 TXT、EPUB、MOBI、AZW3')
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Regular)
               .fontSize(11)
@@ -135,6 +135,8 @@ export struct LocalImportDialog {
           Row({ space: 6 }) {
             this.formatBadge('TXT', TOK_GREEN);
             this.formatBadge('EPUB', '#5A4A2A');
+            this.formatBadge('MOBI', '#7A5A38');
+            this.formatBadge('AZW3', '#6A4F7A');
           }
         }
         .width('100%')

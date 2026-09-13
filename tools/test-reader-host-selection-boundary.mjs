@@ -43,7 +43,7 @@ const Harness = new Function(
   },
   error => error instanceof Error ? error.message : String(error),
   reason => ({ code: 'readFailed', message: String(reason) }),
-  'TXT、EPUB|.txt,.epub',
+  'TXT、EPUB、MOBI、AZW3|.txt,.epub,.mobi,.azw,.azw3,.kf8',
   0x5244,
 );
 

@@ -26,8 +26,10 @@ export interface ReaderLocalBookFormatAdmission {
 export const READER_LOCAL_BOOK_FORMAT_ADMISSIONS: ReaderLocalBookFormatAdmission[] = [
   { family: 'TXT', suffixes: ['.txt'], state: 'l0' },
   { family: 'EPUB', suffixes: ['.epub'], state: 'l0' },
-  { family: 'MOBI', suffixes: ['.mobi'], state: 'deferred-partial' },
-  { family: 'AZW', suffixes: ['.azw', '.azw3', '.kf8'], state: 'deferred-partial' },
+  // libmobi-backed Core parsing and the shared local resource Host are now
+  // wired through the same staging/reading lifecycle as EPUB.
+  { family: 'MOBI', suffixes: ['.mobi'], state: 'l0' },
+  { family: 'AZW', suffixes: ['.azw', '.azw3', '.kf8'], state: 'l0' },
   { family: 'UMD', suffixes: ['.umd'], state: 'deferred-partial' },
   { family: 'PDF', suffixes: ['.pdf'], state: 'not-admitted' },
   { family: 'HTML', suffixes: ['.html', '.htm'], state: 'not-admitted' },
@@ -35,4 +37,5 @@ export const READER_LOCAL_BOOK_FORMAT_ADMISSIONS: ReaderLocalBookFormatAdmission
   { family: 'WEBDAV', suffixes: [], state: 'not-admitted' },
 ];
 
-export const READER_LOCAL_BOOK_PICKER_FILTER: string = 'TXT、EPUB|.txt,.epub';
+export const READER_LOCAL_BOOK_PICKER_FILTER: string =
+  'TXT、EPUB、MOBI、AZW3|.txt,.epub,.mobi,.azw,.azw3,.kf8';
