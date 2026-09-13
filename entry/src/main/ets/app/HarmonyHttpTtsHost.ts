@@ -30,7 +30,7 @@ const HTTP_TTS_PCM_SAMPLE_RATES: number[] = [8000, 16000, 22050, 24000, 32000, 4
 /** Host-only network/audio transport for a Core-owned HttpTTS descriptor. */
 export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private readonly gateway: ReaderHttpTtsGateway;
-  private readonly audioSessionManager: audio.AudioSessionManager;
+  private audioSessionManager: audio.AudioSessionManager | undefined = undefined;
   private readonly audioSessionDeactivatedCallback: (event: audio.AudioSessionDeactivatedEvent) => void;
   private readonly audioSessionStateChangedCallback: (event: audio.AudioSessionStateChangedEvent) => void;
   private readonly outputDeviceChangedCallback: (event: audio.CurrentOutputDeviceChangedEvent) => void;
@@ -50,7 +50,6 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
 
   constructor(runtime: ReaderHttpTtsRuntime) {
     this.gateway = new ReaderHttpTtsGateway(runtime);
-    this.audioSessionManager = audio.getAudioManager().getSessionManager();
     this.audioSessionDeactivatedCallback = (_event: audio.AudioSessionDeactivatedEvent): void => {
       this.emit({ type: 'interruption', action: 'stop' });
     };
@@ -108,21 +107,28 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
 
   async activateAudioSession(allowMixing: boolean): Promise<void> {
     this.assertOpen();
+    let audioSessionManager = this.audioSessionManager;
+    if (audioSessionManager === undefined) {
+      audioSessionManager = audio.getAudioManager().getSessionManager();
+      this.audioSessionManager = audioSessionManager;
+    }
     this.installAudioListeners();
     if (this.audioSessionActive && this.audioSessionAllowMixing === allowMixing) return;
-    this.audioSessionManager.setAudioSessionScene(audio.AudioSessionScene.AUDIO_SESSION_SCENE_MEDIA);
+    audioSessionManager.setAudioSessionScene(audio.AudioSessionScene.AUDIO_SESSION_SCENE_MEDIA);
     const concurrencyMode = allowMixing
       ? audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS
       : audio.AudioConcurrencyMode.CONCURRENCY_PAUSE_OTHERS;
-    await this.audioSessionManager.activateAudioSession({ concurrencyMode });
+    await audioSessionManager.activateAudioSession({ concurrencyMode });
     this.audioSessionActive = true;
     this.audioSessionAllowMixing = allowMixing;
   }
 
   async deactivateAudioSession(): Promise<void> {
     if (!this.audioSessionActive) return;
+    const audioSessionManager = this.audioSessionManager;
+    if (audioSessionManager === undefined) return;
     try {
-      await this.audioSessionManager.deactivateAudioSession();
+      await audioSessionManager.deactivateAudioSession();
     } finally {
       this.audioSessionActive = false;
       this.audioSessionAllowMixing = undefined;
@@ -469,18 +475,28 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
 
   private installAudioListeners(): void {
     if (this.audioListenersInstalled) return;
-    this.audioSessionManager.on('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
-    this.audioSessionManager.on('audioSessionStateChanged', this.audioSessionStateChangedCallback);
-    this.audioSessionManager.on('currentOutputDeviceChanged', this.outputDeviceChangedCallback);
+    const audioSessionManager = this.ensureAudioSessionManager();
+    audioSessionManager.on('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
+    audioSessionManager.on('audioSessionStateChanged', this.audioSessionStateChangedCallback);
+    audioSessionManager.on('currentOutputDeviceChanged', this.outputDeviceChangedCallback);
     this.audioListenersInstalled = true;
   }
 
   private removeAudioListeners(): void {
     if (!this.audioListenersInstalled) return;
-    this.audioSessionManager.off('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
-    this.audioSessionManager.off('audioSessionStateChanged', this.audioSessionStateChangedCallback);
-    this.audioSessionManager.off('currentOutputDeviceChanged', this.outputDeviceChangedCallback);
+    const audioSessionManager = this.audioSessionManager;
+    if (audioSessionManager === undefined) return;
+    audioSessionManager.off('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
+    audioSessionManager.off('audioSessionStateChanged', this.audioSessionStateChangedCallback);
+    audioSessionManager.off('currentOutputDeviceChanged', this.outputDeviceChangedCallback);
     this.audioListenersInstalled = false;
+  }
+
+  private ensureAudioSessionManager(): audio.AudioSessionManager {
+    if (this.audioSessionManager === undefined) {
+      this.audioSessionManager = audio.getAudioManager().getSessionManager();
+    }
+    return this.audioSessionManager;
   }
 
   private handleAudioStateHint(hint: audio.AudioSessionStateChangeHint): void {
