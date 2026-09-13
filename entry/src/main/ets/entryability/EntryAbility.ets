@@ -5,12 +5,14 @@ import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerControlVerificationColdStartPage } from '../app/ReaderControlVerificationLaunch';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
+import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';
 const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
   private windowStageGeneration: number = 0;
   private coldStartPage: string = 'pages/Index';
   private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;
+  private bookshelfModeReady: Promise<void> = Promise.resolve();
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     // Deliberately no onNewWant route switching: a warm request must not bypass
@@ -23,6 +25,13 @@ export default class EntryAbility extends UIAbility {
       want.parameters?.readerOpenSourcePilot,
     );
     AppStorage.setOrCreate('readerAppForeground', true);
+    WebDavCredentialStore.instance.attachContext(this.context);
+    this.bookshelfModeReady = WebDavCredentialStore.instance.loadBookshelfViewMode()
+      .then((mode): void => {
+        if (mode !== null) {
+          AppStorage.setOrCreate('readerBookshelfViewMode', mode);
+        }
+      }).catch((): void => {});
     const owner = ReaderRuntimeOwner.install(this.context);
     this.runtimeOwner = owner;
     owner.start().catch((error: Error): void => {
@@ -35,14 +44,14 @@ export default class EntryAbility extends UIAbility {
     const win = windowStage.getMainWindowSync();
     void ReaderWindowCoordinator.install(win).then((installed: boolean): void => {
       if (installed && generation === this.windowStageGeneration) {
-        this.loadMainContent(windowStage);
+        void this.bookshelfModeReady.then((): void => this.loadMainContent(windowStage));
       }
     }).catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);
       // Window setup failure must not strand the application before its first
       // page. The default zero-inset snapshot keeps the UI recoverable.
       if (generation === this.windowStageGeneration) {
-        this.loadMainContent(windowStage);
+        void this.bookshelfModeReady.then((): void => this.loadMainContent(windowStage));
       }
     });
   }

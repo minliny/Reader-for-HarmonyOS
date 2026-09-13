@@ -43,6 +43,7 @@ import {
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
 import { isReaderProductSurfaceEnabled } from '../../app/ReaderProductScope';
+import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';
 import {
   BookshelfViewMotionContract,
   bookshelfViewCoverDelayMs,
@@ -54,9 +55,9 @@ const PHONE_BOOK_HEIGHT_RATIO = 145.443 / PHONE_BOOK_WIDTH;
 const TABLET_BOOK_WIDTH = 186.672;
 const TABLET_BOOK_HEIGHT_RATIO = 280 / TABLET_BOOK_WIDTH;
 const PHONE_LIST_COVER_WIDTH = 48;
-const PHONE_LIST_COVER_HEIGHT = 72;
+const PHONE_LIST_COVER_HEIGHT = 80;
 const TABLET_LIST_COVER_WIDTH = 64;
-const TABLET_LIST_COVER_HEIGHT = 96;
+const TABLET_LIST_COVER_HEIGHT = 104;
 const BOOKSHELF_WIDE_BREAKPOINT = 600;
 const TABLET_RAIL_WIDTH = 82;
 const TABLET_RAIL_LEFT_GAP = 17;
@@ -104,6 +105,11 @@ class BookshelfRowDataSource implements IDataSource {
 @Component
 export struct BookshelfPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  // The bookshelf page is rebuilt when leaving and returning from reading.
+  // Keep the user's projection choice in app storage so route recreation does
+  // not silently restore the cover projection.
+  @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
+  @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop continueReading: ShelfBook | undefined;
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
@@ -156,10 +162,23 @@ export struct BookshelfPage {
   private readonly viewMoveCurve = curves.cubicBezierCurve(.2, 0, 0, 1);
   private readonly viewScaleCurve = curves.cubicBezierCurve(.25, .1, 0, 1);
   private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource();
+  private readonly webDavCredentials: WebDavCredentialStore = WebDavCredentialStore.instance;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    const restoredMode: BookshelfViewMode = this.storedViewMode === 'list' ? 'list' : 'cover';
+    this.viewMode = restoredMode;
+    this.selectedGroup = this.storedSelectedGroup;
+    this.setRestingProjectionOpacity(restoredMode);
     this.rebuildShelfProjection();
+    this.webDavCredentials.loadBookshelfViewMode().then((mode): void => {
+      if (mode !== null && mode !== this.viewMode) {
+        this.viewMode = mode;
+        this.storedViewMode = mode;
+        this.setRestingProjectionOpacity(mode);
+        this.rebuildShelfProjection();
+      }
+    }).catch((): void => {});
   }
 
   aboutToDisappear(): void {
@@ -236,12 +255,12 @@ export struct BookshelfPage {
     })
     .bindSheet(this.actionBook !== undefined, this.bookActionSheetContent, {
       height: 224,
-      width: '100%',
-      preferType: SheetType.BOTTOM,
+      width: '75%',
+      preferType: SheetType.CENTER,
       dragBar: false,
       showClose: false,
-      backgroundColor: Color.Transparent,
-      maskColor: Color.Transparent,
+      backgroundColor: '#FFFCF8',
+      maskColor: '#52000000',
       enableOutsideInteractive: false,
       onDisappear: (): void => {
         this.actionBook = undefined;
@@ -458,11 +477,13 @@ export struct BookshelfPage {
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
         this.filterChip('全部', this.selectedGroup === '', (): void => {
           this.selectedGroup = '';
+          this.storedSelectedGroup = '';
           this.rebuildShelfProjection();
         });
         ForEach(this.projectedGroups, (group: string) => {
           this.filterChip(group, this.selectedGroup === group, (): void => {
             this.selectedGroup = group;
+            this.storedSelectedGroup = group;
             this.rebuildShelfProjection();
           });
         }, (group: string): string => `shelf-group-${group}`);
@@ -499,19 +520,22 @@ export struct BookshelfPage {
 
   @Builder
   private checkUpdatesAction() {
-    Button(this.updateActionLabel(), { type: ButtonType.Normal })
+    // Use a self-sized text actor instead of the platform Button, whose
+    // implicit minimum height/padding made this compact filter chip oversized.
+    Text(this.updateActionLabel())
       .fontFamily('ReaderInter')
       .fontWeight(FontWeight.Bold)
       .fontSize(12)
+      .lineHeight(18)
       .fontColor(this.updateRunning ? TOK_MUTED : TOK_GREEN)
-      .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+      .padding({ left: 12, right: 12, top: 6, bottom: 6 })
       .backgroundColor(TOK_CARD_BG)
       .border({ width: TOK_BORDER_W, color: this.updateRunning ? TOK_BORDER : TOK_GREEN })
       .borderRadius(TOK_RADIUS_MD)
-      .constraintSize({ minHeight: 44 })
       .enabled(!this.updateRunning)
       .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-      .labelStyle({ maxLines: 1, overflow: TextOverflow.Ellipsis })
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
       .onClick((): void => {
         if (!this.updateRunning) {
           this.onCheckUpdatesRequested();
@@ -535,6 +559,13 @@ export struct BookshelfPage {
     return false;
   }
 
+  // Keep the canonical active asset referenced for provenance and future
+  // state-layer parity; Figma's current active treatment uses the default
+  // outline glyph with a surrounding state layer.
+  private canonicalFilterActiveAsset(): Resource {
+    return $r('app.media.bookshelf_filter_active');
+  }
+
   // A single unconditional Image per action: if/else nodes inside a
   // multi-instance @Builder get mis-diffed on state change and whole actions
   // vanish from the tree. Only the src attribute swaps.
@@ -549,7 +580,8 @@ export struct BookshelfPage {
     }
     if (assetName === 'bookshelf_filter') {
       return this.filterRowVisible
-        ? $r('app.media.bookshelf_filter_active') : $r('app.media.bookshelf_filter');
+        ? this.canonicalFilterActiveAsset()
+        : $r('app.media.bookshelf_filter');
     }
     return $r('app.media.bookshelf_settings');
   }
@@ -737,43 +769,46 @@ export struct BookshelfPage {
           .fontColor(TOK_INK)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        Row({ space: 4 }) {
-          Text(book.author)
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(15)
-            .fontColor(TOK_MUTED)
-            .maxLines(1);
-          Text('·')
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(13.75)
-            .fontColor(TOK_MUTED);
-          Text(this.listChapter(book))
-            .layoutWeight(1)
-            .constraintSize({ minWidth: 0 })
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(13.75)
-            .fontColor(TOK_MUTED)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        Text(book.author)
+          .width('100%')
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(12)
+          .lineHeight(15)
+          .fontColor(TOK_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+        Text(this.listChapter(book))
+          .width('100%')
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(11)
+          .lineHeight(13.75)
+          .fontColor(TOK_MUTED)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+        Stack({ alignContent: Alignment.Center }) {
+          // Keep the source label at the leading edge while the progress
+          // actor is centered against the complete information column.
+          Stack({ alignContent: Alignment.Center }) {
+            this.listStatusPill(this.listSourceLabel(book), false);
+          }
+          .width(64)
+          .height(18)
+          .align(Alignment.Start);
+          Stack({ alignContent: Alignment.Center }) {
+            this.listStatusPill(this.listProgressLabel(book), true);
+          }
+          .width(64)
+          .height(18)
+          .align(Alignment.Center);
         }
         .width('100%')
-        .height(15)
-        .alignItems(VerticalAlign.Center);
-        Row({ space: 6 }) {
-          this.listStatusPill(this.listSourceLabel(book), false);
-          this.listStatusPill(this.listProgressLabel(book), true);
-        }
         .height(18);
       }
       .layoutWeight(1)
       .constraintSize({ minWidth: 0 })
-      .height(58.3)
+      .height(76)
       .alignItems(HorizontalAlign.Start);
 
       Stack({ alignContent: Alignment.Center }) {
@@ -909,11 +944,16 @@ export struct BookshelfPage {
   }
 
   private listSourceLabel(book: ShelfBook): string {
-    return book.sourceId === 'local' ? '本地书' : '网络书';
+    if (book.sourceId === 'local' || book.kind === 'TXT' || book.kind === 'EPUB' ||
+      book.kind === 'MOBI' || book.kind === 'AZW' || book.kind === 'AZW3' || book.kind === 'KF8') {
+      return book.kind !== undefined && book.kind.length > 0 ? `本地 ${book.kind}` : '本地书';
+    }
+    const sourceName = book.sourceName?.trim() ?? '';
+    return sourceName.length > 0 ? sourceName : (book.sourceId.trim().length > 0 ? book.sourceId : '未知书源');
   }
 
   private listChapter(book: ShelfBook): string {
-    const chapter = book.currentChapterTitle?.trim() || book.lastChapter?.trim();
+    const chapter = book.lastChapter?.trim() || book.currentChapterTitle?.trim();
     return chapter !== undefined && chapter.length > 0 ? chapter : '尚未阅读';
   }
 
@@ -927,9 +967,6 @@ export struct BookshelfPage {
   }
 
   private listProgressLabel(book: ShelfBook): string {
-    if ((book.unreadCount ?? 0) > 0) {
-      return `更新 ${book.unreadCount} 章`;
-    }
     if ((book.readProgress ?? 0) <= 0) {
       return '未读';
     }
@@ -1066,11 +1103,16 @@ export struct BookshelfPage {
     const groups: string[] = [];
     const seenGroups: Set<string> = new Set<string>();
     for (const book of this.books) {
-      if (this.selectedGroup === '' || this.selectedGroup === '默认') visible.push(book);
-      const group = '默认';
-      if (group.length > 0 && !seenGroups.has(group)) {
-        seenGroups.add(group);
-        groups.push(group);
+      const group = book.group?.trim() ?? '';
+      const belongsToDefault = group.length === 0;
+      if (this.selectedGroup === '' ||
+        (this.selectedGroup === '默认' && belongsToDefault) || group === this.selectedGroup) {
+        visible.push(book);
+      }
+      const projectedGroup = belongsToDefault ? '默认' : group;
+      if (!seenGroups.has(projectedGroup)) {
+        seenGroups.add(projectedGroup);
+        groups.push(projectedGroup);
       }
     }
     const rows: ShelfBook[][] = [];
@@ -1103,6 +1145,16 @@ export struct BookshelfPage {
   }
 
   private setViewMode(mode: BookshelfViewMode): void {
+    // Commit the semantic choice before starting the reversible visual track;
+    // returning from a reader route can therefore restore the same projection
+    // even if the transition was interrupted.
+    this.storedViewMode = mode;
+    // Persist the user choice independently of the in-memory projection. The
+    // credential store mirrors it into the secure WebDAV envelope when one is
+    // configured, and otherwise uses its local non-secret preference.
+    if (this.webDavCredentials !== undefined) {
+      void this.webDavCredentials.saveBookshelfViewMode(mode).catch((): void => {});
+    }
     if (this.reduceMotion) {
       this.resetViewSwitchMotion();
       this.viewMode = mode;

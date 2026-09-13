@@ -3,6 +3,8 @@ import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 
 export type ShelfBook = {
   sourceId: string;
+  /** Display name from the actual book-source registry, when available. */
+  sourceName?: string;
   bookId: string;
   title: string;
   author: string;
@@ -234,6 +236,7 @@ export class ReaderCoreGateway {
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
     const intro = this.optionalString(book, 'intro');
+    const sourceName = this.optionalString(book, 'sourceName');
     const kind = this.optionalString(book, 'kind');
     const lastChapter = this.optionalString(book, 'lastChapter');
     const lastReadAt = this.optionalNumber(book, 'lastReadAt');
@@ -247,6 +250,9 @@ export class ReaderCoreGateway {
     }
     if (intro !== undefined) {
       decoded.intro = intro;
+    }
+    if (sourceName !== undefined) {
+      decoded.sourceName = sourceName;
     }
     if (kind !== undefined) {
       decoded.kind = kind;

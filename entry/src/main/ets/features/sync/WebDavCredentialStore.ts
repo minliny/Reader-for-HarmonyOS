@@ -1,3 +1,5 @@
+import common from '@ohos.app.ability.common';
+import preferences from '@ohos.data.preferences';
 import asset from '@ohos.security.asset';
 import util from '@ohos.util';
 import { errorMessageOf } from '../../app/ErrorMessage';
@@ -6,6 +8,8 @@ const ASSET_ALIAS = 'reader.webdav.config.v2';
 const FORMAT_VERSION = 2;
 const MAX_CONFIG_BYTES = 64 * 1024;
 const MAX_FIELD_LENGTH = 4096;
+const LOCAL_PREFERENCES_NAME = 'reader_webdav_local_v1';
+const LOCAL_VIEW_MODE_KEY = 'bookshelfViewMode';
 
 export type StoredWebDavConfig = {
   url: string;
@@ -13,6 +17,8 @@ export type StoredWebDavConfig = {
   password: string;
   backupPassword: string;
   directory: string;
+  /** Local bookshelf projection; kept beside the WebDAV credentials. */
+  bookshelfViewMode?: 'cover' | 'list';
 };
 
 type StoredWebDavEnvelope = {
@@ -33,6 +39,15 @@ export class WebDavCredentialStore {
   static readonly instance: WebDavCredentialStore = new WebDavCredentialStore();
 
   private writeTail: Promise<void> = Promise.resolve();
+  private localModeWriteTail: Promise<void> = Promise.resolve();
+  private context: common.UIAbilityContext | undefined;
+  private localPreferences: preferences.Preferences | undefined;
+
+  /** Attach the ability context for non-secret WebDAV-adjacent preferences. */
+  attachContext(context: common.UIAbilityContext): void {
+    this.context = context;
+    this.localPreferences = undefined;
+  }
 
   async load(): Promise<StoredWebDavConfig | null> {
     const query = new Map<asset.Tag, asset.Value>();
@@ -70,7 +85,48 @@ export class WebDavCredentialStore {
       password: envelope.config.password,
       backupPassword: envelope.config.backupPassword,
       directory: envelope.config.directory,
+      bookshelfViewMode: envelope.config.bookshelfViewMode ?? 'cover',
     };
+  }
+
+  async loadBookshelfViewMode(): Promise<'cover' | 'list' | null> {
+    const config = await this.load();
+    if (config?.bookshelfViewMode !== undefined) return config.bookshelfViewMode;
+    const store = await this.ensureLocalPreferences();
+    if (store === undefined) return null;
+    const mode = await store.get(LOCAL_VIEW_MODE_KEY, '') as string;
+    return mode === 'list' || mode === 'cover' ? mode : null;
+  }
+
+  /** Update only the local projection while preserving every WebDAV field. */
+  async saveBookshelfViewMode(mode: 'cover' | 'list'): Promise<void> {
+    const previous = this.localModeWriteTail;
+    let release: (() => void) | undefined;
+    this.localModeWriteTail = new Promise<void>((resolve: () => void): void => { release = resolve; });
+    await previous;
+    try {
+      const store = await this.ensureLocalPreferences();
+      if (store !== undefined) {
+        await store.put(LOCAL_VIEW_MODE_KEY, mode);
+        await store.flush();
+      }
+    } finally {
+      if (release !== undefined) release();
+    }
+    const existing = await this.load();
+    if (existing === null) {
+      // Keep credentials absent when WebDAV is not configured. The local
+      // preference above still makes the bookshelf choice survive a restart.
+      return;
+    }
+    await this.save({ ...existing, bookshelfViewMode: mode });
+  }
+
+  private async ensureLocalPreferences(): Promise<preferences.Preferences | undefined> {
+    if (this.localPreferences !== undefined) return this.localPreferences;
+    if (this.context === undefined) return undefined;
+    this.localPreferences = await preferences.getPreferences(this.context, LOCAL_PREFERENCES_NAME);
+    return this.localPreferences;
   }
 
   save(config: StoredWebDavConfig): Promise<void> {
@@ -124,6 +180,7 @@ export class WebDavCredentialStore {
       password: this.field(config.password, 'password', true, false),
       backupPassword: this.field(config.backupPassword, 'backup password', false, false),
       directory: this.field(config.directory, 'directory'),
+      bookshelfViewMode: config.bookshelfViewMode === 'list' ? 'list' : 'cover',
     };
     if ((normalized.user.length === 0) !== (normalized.password.length === 0)) {
       throw new Error('WebDAV user and password must either both be set or both be empty');

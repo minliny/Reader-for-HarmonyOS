@@ -25,6 +25,8 @@ const GRID_ROW_GAP = 12;
 @Component
 export struct BookshelfMultiSelectPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
+  @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
   @Prop books: ShelfBook[] = [];
   @Prop initialSelectedKey: string = '';
   @Prop busy: boolean = false;
@@ -49,7 +51,11 @@ export struct BookshelfMultiSelectPage {
             ListItem() {
             Row({ space: GRID_COLUMN_GAP }) {
               ForEach(repeatItem.item, (book: ShelfBook) => {
-                this.selectionCard(book);
+                if (this.isListMode()) {
+                  this.selectionListCard(book);
+                } else {
+                  this.selectionCard(book);
+                }
               }, (book: ShelfBook): string => `bookshelf-multi-${this.bookKey(book)}`);
             }
             .width(this.gridWidth())
@@ -232,15 +238,18 @@ export struct BookshelfMultiSelectPage {
   }
 
   private toggleAll(): void {
+    const visible = this.visibleBooks();
     if (this.allSelected()) {
       this.selectedKeys = [];
       return;
     }
-    this.selectedKeys = this.books.map((book: ShelfBook): string => this.bookKey(book));
+    this.selectedKeys = visible.map((book: ShelfBook): string => this.bookKey(book));
   }
 
   private allSelected(): boolean {
-    return this.books.length > 0 && this.selectedKeys.length === this.books.length;
+    const visible = this.visibleBooks();
+    return visible.length > 0 && visible.every((book: ShelfBook): boolean =>
+      this.selectedKeys.includes(this.bookKey(book)));
   }
 
   private isSelected(book: ShelfBook): boolean {
@@ -248,7 +257,16 @@ export struct BookshelfMultiSelectPage {
   }
 
   private hasBookKey(key: string): boolean {
-    return this.books.some((book: ShelfBook): boolean => this.bookKey(book) === key);
+    return this.visibleBooks().some((book: ShelfBook): boolean => this.bookKey(book) === key);
+  }
+
+  private visibleBooks(): ShelfBook[] {
+    return this.books.filter((book: ShelfBook): boolean => {
+      const group = book.group?.trim() ?? '';
+      if (this.storedSelectedGroup.length === 0) return true;
+      if (this.storedSelectedGroup === '默认') return group.length === 0;
+      return group === this.storedSelectedGroup;
+    });
   }
 
   private bookKey(book: ShelfBook): string {
@@ -256,11 +274,85 @@ export struct BookshelfMultiSelectPage {
   }
 
   private bookRows(): ShelfBook[][] {
+    const visible = this.visibleBooks();
     const rows: ShelfBook[][] = [];
-    for (let index = 0; index < this.books.length; index += 3) {
-      rows.push(this.books.slice(index, index + 3));
+    const columnCount = this.isListMode() ? 1 : 3;
+    for (let index = 0; index < visible.length; index += columnCount) {
+      rows.push(visible.slice(index, index + columnCount));
     }
     return rows;
+  }
+
+  @Builder
+  private selectionListCard(book: ShelfBook) {
+    Row({ space: 12 }) {
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        if (this.hasCover(book)) {
+          Image(book.coverUrl as string)
+            .width(48)
+            .height(80)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(6);
+        } else {
+          NoCoverCover({ coverWidth: 48, coverHeight: 80 });
+        }
+        this.selectionBadge(book);
+      }
+      .width(48)
+      .height(80);
+      Column({ space: 2 }) {
+        Text(book.title).fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
+          .fontSize(15).lineHeight(18.3).fontColor('#1F1B17').maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+        Text(book.author).fontFamily('ReaderNotoSansSC').fontSize(12).lineHeight(15)
+          .fontColor('#756F69').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        Text(book.lastChapter?.trim() || book.currentChapterTitle?.trim() || '暂无章节信息')
+          .fontFamily('ReaderNotoSansSC').fontSize(11).lineHeight(13.75).fontColor('#756F69')
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        Text(`${this.sourceLabel(book)} · ${this.progressLabel(book)}`)
+          .fontFamily('ReaderNotoSansSC').fontSize(10).lineHeight(12).fontColor('#3B7557')
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+      }
+      .layoutWeight(1)
+      .constraintSize({ minWidth: 0 })
+      .alignItems(HorizontalAlign.Start);
+    }
+    .width(this.gridWidth())
+    .height(80)
+    .alignItems(VerticalAlign.Center)
+    .accessibilityText(`${book.title}，${this.isSelected(book) ? '已选择' : '未选择'}`)
+    .onClick((): void => {
+      if (!this.busy) this.toggleBook(book);
+    });
+  }
+
+  @Builder
+  private selectionBadge(book: ShelfBook) {
+    Stack({ alignContent: Alignment.Center }) {
+      if (this.isSelected(book)) {
+        Text('✓').fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(14).fontColor('#FFFFFF');
+      }
+    }
+    .width(22).height(22).margin({ right: 2, bottom: 2 })
+    .backgroundColor(this.isSelected(book) ? '#F58517' : '#FFFCF8')
+    .border({ width: this.isSelected(book) ? 0 : 1.5, color: '#C1C7CD' })
+    .borderRadius(11).shadow({ radius: 4, color: '#26000000', offsetX: 0, offsetY: 2 });
+  }
+
+  private isListMode(): boolean {
+    return this.storedViewMode === 'list';
+  }
+
+  private progressLabel(book: ShelfBook): string {
+    const basisPoints = book.readProgress ?? 0;
+    if (basisPoints <= 0) return '未读';
+    return `已读 ${Math.floor(basisPoints / 100)}%`;
+  }
+
+  private sourceLabel(book: ShelfBook): string {
+    if (book.sourceId === 'local') return '本地书籍';
+    const sourceName = book.sourceName?.trim() ?? '';
+    return sourceName.length > 0 ? sourceName : (book.sourceId.trim().length > 0 ? book.sourceId : '未知书源');
   }
 
   private hasCover(book: ShelfBook): boolean {

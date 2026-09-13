@@ -12,9 +12,20 @@ const gateway = read('entry/src/main/ets/features/sync/SyncGateway.ts');
 const orchestrator = read('entry/src/main/ets/features/sync/SyncOrchestrator.ets');
 const page = read('entry/src/main/ets/features/sync/SyncPage.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
+const ability = read('entry/src/main/ets/entryability/EntryAbility.ets');
 
 assert.match(store, /import asset from '@ohos\.security\.asset'/);
 assert.match(store, /backupPassword:\s*string/);
+assert.match(store, /bookshelfViewMode\?:\s*'cover' \| 'list'/,
+  'the bookshelf projection must live in the secure WebDAV configuration');
+assert.match(store, /loadBookshelfViewMode\(\)/);
+assert.match(store, /saveBookshelfViewMode\(mode: 'cover' \| 'list'\)/);
+assert.match(store, /ensureLocalPreferences\(\)/,
+  'bookshelf mode must have a durable local preference fallback');
+assert.match(store, /if \(existing === null\)[\s\S]*local\n\s+\/\/ preference/,
+  'missing WebDAV config must not manufacture a credential record');
+assert.match(store, /await this\.save\(\{ \.\.\.existing, bookshelfViewMode: mode \}\)/,
+  'projection writes must preserve every existing WebDAV field');
 assert.match(store, /ASSET_ALIAS\s*=\s*'reader\.webdav\.config\.v2'/);
 assert.match(store, /FORMAT_VERSION\s*=\s*2/);
 assert.match(store, /asset\.Tag\.SECRET/);
@@ -133,5 +144,9 @@ assert.match(index, /this\.getSyncOrchestrator\(\)\.open\(\)/);
 assert.match(index, /onSyncSaveConfig/);
 assert.match(index, /onSyncRestoreLatest/);
 assert.match(index, /onSyncResolveRestore/);
+assert.match(index, /book\.sourceName === undefined[\s\S]*book\.sourceName = this\.sourceDisplayName\(book\.sourceId\)/,
+  'bookshelf rows must use the actual source registry label');
+assert.match(ability, /loadBookshelfViewMode\(\)[\s\S]*AppStorage\.setOrCreate\('readerBookshelfViewMode', mode\)/,
+  'cold start must hydrate the projection before the first page is mounted');
 
 console.log('WebDAV product boundary/static contract: PASS');

@@ -4973,7 +4973,16 @@ struct Index {
       return;
     }
     this.isCoreShelfEmpty = state.kind === 'empty';
+    // Keep the source's own display name with the shelf projection. The
+    // source id remains the stable identity; the label is resolved from the
+    // admitted source registry and never replaced with a generic "网络书".
     this.shelfBooks = state.shelf.books;
+    for (const book of this.shelfBooks) {
+      if (book.sourceName === undefined || book.sourceName.trim().length === 0) {
+        book.sourceName = this.sourceDisplayName(book.sourceId);
+      }
+    }
+    this.hydrateShelfSourceNames(this.bookshelfLoadGeneration);
     this.continueReading = state.continueReading;
     if (state.kind !== 'populated') {
       this.isBookshelfVisualAdmitted = false;
@@ -4986,6 +4995,61 @@ struct Index {
     // silently dropping the entire shelf.
     this.isBookshelfVisualAdmitted = true;
     this.scheduleBookshelfBackgroundRefresh(state.shelf.books);
+  }
+
+  private hydrateShelfSourceNames(generation: number): void {
+    void new SourceGateway(ReaderRuntimeOwner.current()).loadSources()
+      .then((sources: BookSource[]): void => {
+        if (generation !== this.bookshelfLoadGeneration || this.shelfBooks.length === 0) return;
+        const names = new Map<string, string>();
+        for (const source of sources) {
+          const name = source.name.trim();
+          if (name.length > 0) names.set(source.sourceId, name);
+        }
+        let changed = false;
+        const projected = this.shelfBooks.map((book: ShelfBook): ShelfBook => {
+          const name = names.get(book.sourceId);
+          if (name === undefined || book.sourceName === name) return book;
+          changed = true;
+          return this.copyShelfBookWithSourceName(book, name);
+        });
+        if (changed) this.shelfBooks = projected;
+      })
+      .catch((): void => {
+        // Source names are optional presentation data; sourceId remains a
+        // stable fallback if source.list is temporarily unavailable.
+      });
+  }
+
+  /**
+   * ArkTS does not support object spread for structural records. Keep the
+   * bookshelf projection immutable while copying every optional field
+   * explicitly, so source-name hydration cannot drop read progress or other
+   * Core-owned metadata.
+   */
+  private copyShelfBookWithSourceName(book: ShelfBook, sourceName: string): ShelfBook {
+    const copy: ShelfBook = {
+      sourceId: book.sourceId,
+      sourceName,
+      bookId: book.bookId,
+      title: book.title,
+      author: book.author,
+      addedAt: book.addedAt,
+    };
+    if (book.kind !== undefined) copy.kind = book.kind;
+    if (book.coverUrl !== undefined) copy.coverUrl = book.coverUrl;
+    if (book.intro !== undefined) copy.intro = book.intro;
+    if (book.lastChapter !== undefined) copy.lastChapter = book.lastChapter;
+    if (book.lastReadAt !== undefined) copy.lastReadAt = book.lastReadAt;
+    if (book.group !== undefined) copy.group = book.group;
+    if (book.sortIndex !== undefined) copy.sortIndex = book.sortIndex;
+    if (book.unreadCount !== undefined) copy.unreadCount = book.unreadCount;
+    if (book.lastCheckAt !== undefined) copy.lastCheckAt = book.lastCheckAt;
+    if (book.currentChapterTitle !== undefined) copy.currentChapterTitle = book.currentChapterTitle;
+    if (book.currentChapterIndex !== undefined) copy.currentChapterIndex = book.currentChapterIndex;
+    if (book.chapterCount !== undefined) copy.chapterCount = book.chapterCount;
+    if (book.readProgress !== undefined) copy.readProgress = book.readProgress;
+    return copy;
   }
 
   private scheduleBookshelfBackgroundRefresh(books: ShelfBook[]): void {

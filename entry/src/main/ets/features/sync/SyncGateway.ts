@@ -140,6 +140,9 @@ export class SyncGateway {
         password,
         backupPassword,
         directory: this.requireDirectory(directoryValue),
+        // Saving WebDAV credentials must never reset the local bookshelf
+        // projection stored in the same secure configuration record.
+        bookshelfViewMode: existing?.bookshelfViewMode,
       };
       this.requireCredentialPair(config);
       if (config.backupPassword.length === 0) {
