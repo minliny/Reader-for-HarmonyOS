@@ -32,6 +32,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   private active: ReaderTtsHost;
   private readonly mediaSession: ReaderTtsMediaSessionBridge;
   private readonly backgroundSession: ReaderTtsBackgroundSessionBridge | undefined;
+  private backgroundPlaybackEnabled: boolean = true;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
   private listenerOwner: string | undefined = undefined;
 
@@ -91,11 +92,18 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     } catch (_error) {
       // Best effort: foreground TTS remains available without AVSession.
     }
-    try {
-      await this.backgroundSession?.activate();
-    } catch (_error) {
-      // Best effort: a denied background lease must not block foreground TTS.
+    if (this.backgroundPlaybackEnabled) {
+      try {
+        await this.backgroundSession?.activate();
+      } catch (_error) {
+        // Best effort: a denied background lease must not block foreground TTS.
+      }
     }
+  }
+
+  setBackgroundPlaybackEnabled(enabled: boolean): void {
+    this.backgroundPlaybackEnabled = enabled;
+    if (!enabled) void this.backgroundSession?.deactivate();
   }
 
   async deactivateAudioSession(): Promise<void> {

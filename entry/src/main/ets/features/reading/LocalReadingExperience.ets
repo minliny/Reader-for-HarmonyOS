@@ -1098,6 +1098,8 @@ export struct ReadingExperience {
   @State private ttsFollowHighlight: boolean = true;
   @State private ttsPauseOnInterruption: boolean = true;
   @State private ttsAllowMixing: boolean = false;
+  @State private ttsBackgroundPlayback: boolean = true;
+  @State private ttsKeepScreenOn: boolean = false;
   @State private ttsFailurePolicy: 'skip' | 'stop' = 'stop';
   @State private ttsEngine: string = 'system';
   @State private ttsHttpEngines: ReaderHttpTtsConfig[] = [];
@@ -1713,6 +1715,8 @@ export struct ReadingExperience {
         ttsFollowHighlight: this.ttsFollowHighlight,
         ttsPauseOnInterruption: this.ttsPauseOnInterruption,
         ttsAllowMixing: this.ttsAllowMixing,
+        ttsBackgroundPlayback: this.ttsBackgroundPlayback,
+        ttsKeepScreenOn: this.ttsKeepScreenOn,
         ttsFailurePolicy: this.ttsFailurePolicy,
         ttsEngine: this.ttsEngine,
         ttsHttpEngines: this.ttsHttpEngines,
@@ -1811,6 +1815,8 @@ export struct ReadingExperience {
         onTtsPauseOnInterruptionChange: (enabled: boolean): void =>
           this.changeTtsPauseOnInterruption(enabled),
         onTtsAllowMixingChange: (enabled: boolean): void => this.changeTtsAllowMixing(enabled),
+        onTtsBackgroundPlaybackChange: (enabled: boolean): void => this.changeTtsBackgroundPlayback(enabled),
+        onTtsKeepScreenOnChange: (enabled: boolean): void => this.changeTtsKeepScreenOn(enabled),
         onTtsFailurePolicyChange: (policy: 'skip' | 'stop'): void => this.changeTtsFailurePolicy(policy),
         onTtsVoiceChange: (language: string, person: number): void => this.changeTtsVoice(language, person),
         onTtsEngineChange: (engine: string): Promise<void> => this.changeTtsEngine(engine),
@@ -5805,6 +5811,8 @@ export struct ReadingExperience {
     this.ttsPerson = person;
     this.ttsPauseOnInterruption = preferences.pauseOnInterruption;
     this.ttsAllowMixing = preferences.allowMixing;
+    this.ttsBackgroundPlayback = preferences.backgroundPlayback;
+    this.ttsKeepScreenOn = preferences.keepScreenOn;
     this.ttsFailurePolicy = preferences.failurePolicy;
     this.ttsFollowHighlight = preferences.followHighlight;
     this.ttsCoordinator?.setPauseOnInterruption(preferences.pauseOnInterruption);
@@ -5834,6 +5842,8 @@ export struct ReadingExperience {
       allowMixing: this.ttsAllowMixing,
       failurePolicy: this.ttsFailurePolicy,
       followHighlight: this.ttsFollowHighlight,
+      backgroundPlayback: this.ttsBackgroundPlayback,
+      keepScreenOn: this.ttsKeepScreenOn,
     };
   }
 
@@ -5851,6 +5861,8 @@ export struct ReadingExperience {
       allowMixing: value.allowMixing,
       failurePolicy: value.failurePolicy,
       followHighlight: value.followHighlight,
+      backgroundPlayback: value.backgroundPlayback,
+      keepScreenOn: value.keepScreenOn,
     };
   }
 
@@ -5957,6 +5969,7 @@ export struct ReadingExperience {
       person: this.ttsPerson,
       pauseOnInterruption: this.ttsPauseOnInterruption,
       allowMixing: this.ttsAllowMixing,
+      backgroundPlayback: this.ttsBackgroundPlayback,
       failurePolicy: this.ttsFailurePolicy,
       timerDurationMs: this.ttsTimerDurationMs(),
     }).then((): Promise<boolean> => coordinator.whenStarted()).then((started: boolean): void => {
@@ -6096,6 +6109,37 @@ export struct ReadingExperience {
       }
     };
     void apply().catch((error: Error): void => this.logTtsFailure('audio-session', error));
+  }
+
+  private changeTtsBackgroundPlayback(enabled: boolean): void {
+    const generation = this.nextTtsPreferenceMutationGeneration();
+    const previous = this.ttsPreferencesSnapshot();
+    const candidate = this.copyTtsPreferencesSnapshot(previous);
+    candidate.backgroundPlayback = enabled;
+    this.ttsBackgroundPlayback = enabled;
+    const host = this.ttsCoordinator === undefined ? undefined : ReaderRuntimeOwner.current().getTtsHost();
+    host?.setBackgroundPlaybackEnabled?.(enabled);
+    void this.persistTtsPreferencesSnapshot(candidate).catch((error: Error): void => {
+      if (generation !== this.ttsPreferenceMutationGeneration) return;
+      this.ttsBackgroundPlayback = previous.backgroundPlayback;
+      host?.setBackgroundPlaybackEnabled?.(previous.backgroundPlayback);
+      this.logTtsFailure('preference-persist', error);
+    });
+  }
+
+  private changeTtsKeepScreenOn(enabled: boolean): void {
+    const generation = this.nextTtsPreferenceMutationGeneration();
+    const previous = this.ttsPreferencesSnapshot();
+    const candidate = this.copyTtsPreferencesSnapshot(previous);
+    candidate.keepScreenOn = enabled;
+    this.ttsKeepScreenOn = enabled;
+    void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.windowChromeActive)
+      .then((): Promise<void> => this.persistTtsPreferencesSnapshot(candidate))
+      .catch((error: Error): void => {
+        if (generation !== this.ttsPreferenceMutationGeneration) return;
+        this.ttsKeepScreenOn = previous.keepScreenOn;
+        this.logTtsFailure('preference-persist', error);
+      });
   }
 
   private changeTtsFailurePolicy(policy: 'skip' | 'stop'): void {

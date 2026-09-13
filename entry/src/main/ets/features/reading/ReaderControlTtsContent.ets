@@ -31,7 +31,8 @@ import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, re
 
 type ReaderControlTtsSection = 'playback' | 'timer' | 'speed';
 type ReaderControlTtsField = 'voice' | 'engine' | 'language' | 'session' | 'failure';
-type ReaderControlTtsToggle = 'followHighlight' | 'pauseOnInterruption' | 'allowMixing';
+type ReaderControlTtsToggle = 'followHighlight' | 'pauseOnInterruption' | 'allowMixing' |
+  'backgroundPlayback' | 'keepScreenOn';
 
 /** Make v17 redraw on persistent Playback/Timer/Speed actors.
  * All actors consume the production Runtime's one p. Header, grabber, shell and whole visibility are
@@ -51,6 +52,8 @@ export struct ReaderControlTtsContent {
   @Prop followHighlight: boolean = true;
   @Prop pauseOnInterruption: boolean = true;
   @Prop allowMixing: boolean = false;
+  @Prop backgroundPlayback: boolean = true;
+  @Prop keepScreenOn: boolean = false;
   @Prop failurePolicy: 'skip' | 'stop' = 'stop';
   @Prop @Watch('onEngineChanged') engine: string = 'system';
   @Prop httpEngines: ReaderTtsEngineOption[] = [];
@@ -71,6 +74,8 @@ export struct ReaderControlTtsContent {
   onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
+  onBackgroundPlaybackChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
+  onKeepScreenOnChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onFailurePolicyChange: (policy: 'skip' | 'stop') => void = (_policy: 'skip' | 'stop'): void => {};
   onVoiceChange: (language: string, person: number) => void =
     (_language: string, _person: number): void => {};
@@ -388,7 +393,8 @@ export struct ReaderControlTtsContent {
         }
         Text(this.headerMeta(kind)).fontFamily(kind === 'speed' ? 'ReaderInter' : 'ReaderNotoSansSCUIMedium')
           .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(kind === 'speed' ? 11 : 10)
-          .lineHeight(14).fontColor(kind === 'timer' && this.timerMode === 'off' ? '#8A7D6F' : TOK_TTS_TEAL)
+          .lineHeight(14).fontColor(kind === 'timer' && this.timerMode === 'off' ? TOK_TTS_MUTED :
+            kind === 'playback' && !this.isActivelySpeaking() ? TOK_TTS_MUTED : TOK_TTS_TEAL)
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.height(18).padding({ left: kind === 'playback' ? 8 : 0, right: kind === 'playback' ? 8 : 0 })
         .borderRadius(999).backgroundColor(kind === 'playback' ?
@@ -416,8 +422,10 @@ export struct ReaderControlTtsContent {
           .fontColor(TOK_TTS_INK).height(kind === 'playback' ? 16 : 18).maxLines(1);
         if (kind === 'playback') {
           Row({ space: 4 }) {
-            Row().width(5).height(5).borderRadius(3).backgroundColor(TOK_TTS_TEAL);
-            Text(this.playbackLabel()).fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10).fontColor(TOK_TTS_TEAL)
+            Row().width(5).height(5).borderRadius(3)
+              .backgroundColor(this.isActivelySpeaking() ? TOK_TTS_TEAL : '#B4A697');
+            Text(this.playbackLabel()).fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10)
+              .fontColor(this.isActivelySpeaking() ? TOK_TTS_TEAL : TOK_TTS_MUTED)
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
           }.height(13).width('100%').alignItems(VerticalAlign.Center);
         }
@@ -456,7 +464,8 @@ export struct ReaderControlTtsContent {
     Stack({ alignContent: Alignment.TopStart }) {
       this.sectionSurface('playback');
       Stack({ alignContent: Alignment.TopStart }) {
-        Row().width(3).height(42).borderRadius(2).backgroundColor(TOK_TTS_TEAL)
+        Row().width(3).height(42).borderRadius(2)
+          .backgroundColor(this.isActivelySpeaking() ? TOK_TTS_TEAL : '#B4A697')
           .position({ x: 0, y: 12 }).opacity(1 - this.p()).hitTestBehavior(HitTestMode.None);
         this.moduleHeader('playback');
         this.quickLabel('playback');
@@ -496,6 +505,7 @@ export struct ReaderControlTtsContent {
 
   /** A static decorative sample from Make, not an audio-level meter or a second clock. */
   private waveformHeights(): number[] {
+    if (!this.isActivelySpeaking()) return Array(24).fill(4);
     return [3.14, 6.02, 3.60, 17.03, 8.72, 8.89, 9.74, 4.36, 15.13, 12.62, 4.20, 15.27,
       6.24, 12.03, 13.56, 7.14, 17.37, 9.28, 8.53, 11.27, 14.69, 9.20, 14.72, 4.41];
   }
@@ -503,7 +513,8 @@ export struct ReaderControlTtsContent {
   private waveform() {
     Row() {
       ForEach(this.waveformHeights(), (height: number): void => {
-        Row().width(2.5).height(height).borderRadius(2).backgroundColor(TOK_TTS_TEAL);
+        Row().width(2.5).height(height).borderRadius(2)
+          .backgroundColor(this.isActivelySpeaking() ? TOK_TTS_TEAL : '#B4A697');
       }, (_height: number, index: number): string => index.toString());
     }.width(this.frame().waveform.width).height(this.frame().waveform.height)
       .justifyContent(FlexAlign.SpaceBetween).alignItems(VerticalAlign.Center)
@@ -660,7 +671,12 @@ export struct ReaderControlTtsContent {
       .onClick((): void => { if (this.fullInput()) this.stepTimer(minutes, delta); });
   }
 
-  private ratePresets(): number[] { return [0.75, 1.0, 1.25, 1.5]; }
+  private ratePresets(): number[] { return [0.50, 0.75, 1.0, 1.25, 1.5]; }
+  private ratePresetWidth(): number {
+    // Five presets share the Make 8vp gaps and consume the full responsive
+    // row, keeping 0.50x visible at the left edge without horizontal overflow.
+    return Math.max(0, (this.frame().speedPresets.width - 32) / 5);
+  }
   private chooseRatePreset(rate: number): void {
     if (!this.fullInput()) return;
     this.ratePreview = -1;
@@ -715,7 +731,7 @@ export struct ReaderControlTtsContent {
   private ratePreset(rate: number) {
     Text(rate.toFixed(2) + 'x').fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(12)
       .fontColor(this.effectiveRate() === rate ? TOK_TTS_PAPER : '#5B5046')
-      .width(50).height(32).textAlign(TextAlign.Center).borderRadius(10)
+      .width(this.ratePresetWidth()).height(32).textAlign(TextAlign.Center).borderRadius(10)
       .backgroundColor(this.effectiveRate() === rate ? TOK_TTS_TEAL : TOK_TTS_FIELD)
       .border({ width: this.effectiveRate() === rate ? 0 : 0.5, color: TOK_TTS_LINE })
       .shadow({ radius: 7, color: this.effectiveRate() === rate ? '#472F6373' : Color.Transparent, offsetY: 2 })
@@ -730,8 +746,9 @@ export struct ReaderControlTtsContent {
       Column({ space: 0 }) {
         this.voiceSelectorRow();
         this.toggleRow('followHighlight'); this.toggleRow('pauseOnInterruption'); this.toggleRow('allowMixing');
+        this.toggleRow('backgroundPlayback'); this.toggleRow('keepScreenOn');
         this.ttsClosedConfigRow('failure');
-      }.width('100%').height(244).backgroundColor(TOK_TTS_CARD)
+      }.width('100%').height(340).backgroundColor(TOK_TTS_CARD)
         .border({ width: 0.5, color: TOK_TTS_LINE }).borderRadius(14).clip(true);
     }.width('100%').alignItems(HorizontalAlign.Start);
   }
@@ -840,7 +857,9 @@ export struct ReaderControlTtsContent {
   private toggleRow(kind: ReaderControlTtsToggle) {
     Row({ space: 8 }) {
       Text(kind === 'followHighlight' ? '跟随高亮' :
-        (kind === 'pauseOnInterruption' ? '来电自动暂停' : '允许与其他应用同时播放'))
+        (kind === 'pauseOnInterruption' ? '来电自动暂停' :
+          (kind === 'allowMixing' ? '允许与其他应用同时播放' :
+            (kind === 'backgroundPlayback' ? '后台继续朗读' : '朗读时屏幕常亮'))))
         .layoutWeight(1).fontFamily('ReaderNotoSansSCUIMedium').fontWeight(FontWeight.Medium).fontSize(12).fontColor(TOK_TTS_INK)
         .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
       ReaderControlSwitchTrack({ value: this.toggleValue(kind), trackWidth: 42,
@@ -871,7 +890,9 @@ export struct ReaderControlTtsContent {
 
   private toggleValue(kind: ReaderControlTtsToggle): boolean {
     if (kind === 'followHighlight') return this.followHighlight;
-    return kind === 'pauseOnInterruption' ? this.pauseOnInterruption : this.allowMixing;
+    if (kind === 'pauseOnInterruption') return this.pauseOnInterruption;
+    if (kind === 'allowMixing') return this.allowMixing;
+    return kind === 'backgroundPlayback' ? this.backgroundPlayback : this.keepScreenOn;
   }
 
   private changeToggle(kind: ReaderControlTtsToggle): void {
@@ -879,7 +900,9 @@ export struct ReaderControlTtsContent {
     const next = !this.toggleValue(kind);
     if (kind === 'followHighlight') this.onFollowHighlightChange(next);
     else if (kind === 'pauseOnInterruption') this.onPauseOnInterruptionChange(next);
-    else this.onAllowMixingChange(next);
+    else if (kind === 'allowMixing') this.onAllowMixingChange(next);
+    else if (kind === 'backgroundPlayback') this.onBackgroundPlaybackChange(next);
+    else this.onKeepScreenOnChange(next);
   }
 
   private timerSummary(): string {

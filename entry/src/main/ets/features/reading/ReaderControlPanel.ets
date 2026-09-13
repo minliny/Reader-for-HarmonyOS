@@ -225,6 +225,8 @@ export struct ReaderControlPanel {
   @Prop ttsFollowHighlight: boolean = true;
   @Prop ttsPauseOnInterruption: boolean = true;
   @Prop ttsAllowMixing: boolean = false;
+  @Prop ttsBackgroundPlayback: boolean = true;
+  @Prop ttsKeepScreenOn: boolean = false;
   @Prop ttsFailurePolicy: 'skip' | 'stop' = 'stop';
   @Prop ttsEngine: string = 'system';
   @Prop ttsHttpEngines: ReaderTtsEngineOption[] = [];
@@ -326,6 +328,8 @@ export struct ReaderControlPanel {
   onTtsFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onTtsPauseOnInterruptionChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onTtsAllowMixingChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
+  onTtsBackgroundPlaybackChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
+  onTtsKeepScreenOnChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onTtsFailurePolicyChange: (policy: 'skip' | 'stop') => void =
     (_policy: 'skip' | 'stop'): void => {};
   onTtsVoiceChange: (language: string, person: number) => void =
@@ -1051,6 +1055,8 @@ export struct ReaderControlPanel {
       followHighlight: this.ttsFollowHighlight,
       pauseOnInterruption: this.ttsPauseOnInterruption,
       allowMixing: this.ttsAllowMixing,
+      backgroundPlayback: this.ttsBackgroundPlayback,
+      keepScreenOn: this.ttsKeepScreenOn,
       failurePolicy: this.ttsFailurePolicy,
       engine: this.ttsEngine,
       httpEngines: this.ttsHttpEngines,
@@ -1070,6 +1076,8 @@ export struct ReaderControlPanel {
       onPauseOnInterruptionChange: (enabled: boolean): void =>
         this.onTtsPauseOnInterruptionChange(enabled),
       onAllowMixingChange: (enabled: boolean): void => this.onTtsAllowMixingChange(enabled),
+      onBackgroundPlaybackChange: (enabled: boolean): void => this.onTtsBackgroundPlaybackChange(enabled),
+      onKeepScreenOnChange: (enabled: boolean): void => this.onTtsKeepScreenOnChange(enabled),
       onFailurePolicyChange: (policy: 'skip' | 'stop'): void => this.onTtsFailurePolicyChange(policy),
       onVoiceChange: (language: string, person: number): void => this.onTtsVoiceChange(language, person),
       onEngineChange: (engine: string): Promise<void> => this.onTtsEngineChange(engine),

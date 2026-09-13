@@ -77,6 +77,8 @@ export interface ReaderTtsHost {
   speak(request: ReaderTtsHostSpeakRequest): Promise<void>;
   stop(): Promise<void>;
   publishPlaybackState(state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error'): void;
+  /** Optional policy gate for the platform continuous-task lease. */
+  setBackgroundPlaybackEnabled?(enabled: boolean): void;
 }
 
 export type ReaderTtsStartInput = {
@@ -90,6 +92,7 @@ export type ReaderTtsStartInput = {
   person?: number;
   pauseOnInterruption?: boolean;
   allowMixing?: boolean;
+  backgroundPlayback?: boolean;
   failurePolicy?: 'skip' | 'stop';
   timerDurationMs?: number;
 };
@@ -892,6 +895,7 @@ export class ReaderTtsSessionCoordinator {
       failurePolicy: active.input.failurePolicy ?? 'stop',
     });
     try {
+      this.host.setBackgroundPlaybackEnabled?.(active.input.backgroundPlayback ?? true);
       await this.host.activateAudioSession(active.input.allowMixing ?? false);
     } catch (error) {
       await this.handleSessionUtteranceFailure(active, token,

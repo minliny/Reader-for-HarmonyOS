@@ -76,8 +76,13 @@ export function sampleReaderControlTts(progress: number, availableWidth: number,
       readerControlLerp(66, 171, p) + seek),
     waveform: readerControlActor(16, 43, Math.max(0, innerWidth - 32), 28, p),
     voice: readerControlActor(16, 161, Math.max(0, innerWidth - 97), 21, p),
+    // Keep a little more width for the Make two-line playback label. The
+    // previous 106vp actor left the status row with ~30vp after the 34vp icon
+    // and gap, so longer statuses were ellipsized on the quick card. 110vp is
+    // the largest width that preserves a small gap before the transport hits
+    // even at the narrowest supported quick-card width.
     quickPlaybackLabel: readerControlActor(13, readerControlLerp(16, 24, p),
-      Math.max(44, 106 + Math.min(0, widthDelta)), 34, 1 - p),
+      Math.max(44, 110 + Math.min(0, widthDelta)), 34, 1 - p),
     previous: previous, toggle: toggle, stop: stop, next: next,
     timer: readerControlActor(x, readerControlLerp(87, 401.5, p) + seek, innerWidth,
       readerControlLerp(42, 194, p)),

@@ -14,6 +14,10 @@ export type ReaderTtsPreferencesSnapshot = {
   allowMixing: boolean;
   failurePolicy: ReaderTtsFailurePolicy;
   followHighlight: boolean;
+  /** Keep the continuous-task lease while speech continues in background. */
+  backgroundPlayback: boolean;
+  /** Hold the Reader window awake for the duration of speech. */
+  keepScreenOn: boolean;
 };
 
 /**
@@ -40,6 +44,8 @@ export function createDefaultReaderTtsPreferencesSnapshot(): ReaderTtsPreference
     allowMixing: false,
     failurePolicy: 'stop',
     followHighlight: true,
+    backgroundPlayback: true,
+    keepScreenOn: false,
   };
 }
 
@@ -61,6 +67,10 @@ export function normalizeReaderTtsPreferencesSnapshot(
       value.failurePolicy : fallback.failurePolicy,
     followHighlight: typeof value.followHighlight === 'boolean' ?
       value.followHighlight : fallback.followHighlight,
+    backgroundPlayback: typeof value.backgroundPlayback === 'boolean' ?
+      value.backgroundPlayback : fallback.backgroundPlayback,
+    keepScreenOn: typeof value.keepScreenOn === 'boolean' ?
+      value.keepScreenOn : fallback.keepScreenOn,
   };
 }
 

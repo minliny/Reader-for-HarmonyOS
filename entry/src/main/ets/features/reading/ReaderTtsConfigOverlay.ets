@@ -70,7 +70,11 @@ export struct ReaderTtsConfigOverlay {
       Math.max(0, Math.min(this.voicePicker ? this.availableWidth - 42 : 260, this.availableWidth - 16));
   }
   private panelHeight(): number {
-    const content = this.manager ? 468 + this.engines.length * 62 :
+    // Make V17: header + a bounded scrolling body + fixed footer.  The
+    // footer must remain visible while the keyboard or a long form body is
+    // present; putting it inside the Scroll makes the production sheet drift
+    // away from the reference and hides Save on small windows.
+    const content = this.manager ? 58 + 440 + 76 :
       (this.voicePicker ? 0 : 40) + this.choices.length * (this.voicePicker ? 54 : 44) +
       (this.message.length > 0 ? 80 : 0) + (this.showManage ? 44 : 0) + (this.errorText.length > 0 ? 48 : 0);
     return Math.max(44, Math.min(content, this.manager ? this.modalUsableHeight - 32 : this.availableHeight - 16));
@@ -131,8 +135,11 @@ export struct ReaderTtsConfigOverlay {
           }.width('100%').alignItems(HorizontalAlign.Start)
             .constraintSize({ minHeight: this.manager ? 244 : 0 })
             .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');
-        }.width('100%').height(Math.max(0, this.panelHeight() - (this.voicePicker ? 0 : this.manager ? 58 : 40)))
+        }.width('100%').height(Math.max(0, this.panelHeight() - (this.voicePicker ? 0 : this.manager ? 58 + 76 : 40)))
           .align(Alignment.TopStart).scrollBar(BarState.Off);
+        if (this.manager) {
+          this.managerFooter();
+        }
       }.width(this.manager ? '100%' : this.panelWidth()).height(this.panelHeight())
         .constraintSize({ maxWidth: this.manager ? 364 : this.panelWidth(), maxHeight: '100%' }).backgroundColor('#FFFAF4')
         .border({ width: .5, color: '#66B4A697' }).borderRadius(this.manager ? 22 : 14)
@@ -201,33 +208,6 @@ export struct ReaderTtsConfigOverlay {
   @Builder
   private managerForm() {
     Column({ space: 14 }) {
-      if (this.engines.length > 0) {
-        Column({ space: 8 }) {
-          Text(`已配置服务 · ${this.engines.length} 项`).width('100%').fontFamily('ReaderNotoSansSCUIMedium')
-            .fontWeight(FontWeight.Medium).fontSize(11).fontColor('#5B5046');
-          ForEach(this.engines, (engine: ReaderTtsEngineOption) => {
-            Row({ space: 8 }) {
-              Text(engine.name).layoutWeight(1).fontFamily('ReaderNotoSansSCUIBold')
-                .fontWeight(FontWeight.Bold).fontSize(12).fontColor('#332C25')
-                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-              Text(this.isSelected(engine) ? '当前' : '选择').width(38).height(28)
-                .fontFamily('ReaderNotoSansSCUIMedium').fontWeight(FontWeight.Medium)
-                .fontSize(10).fontColor(this.isSelected(engine) ? '#FFFAF4' : '#2F6373').textAlign(TextAlign.Center)
-                .backgroundColor(this.isSelected(engine) ? '#2F6373' : '#1A2F6373').borderRadius(999)
-                .enabled(!this.busy).onClick((): void => this.selectEngine(`http-tts:${engine.id}`));
-              Text('编辑').width(32).height(28).fontFamily('ReaderNotoSansSCUIMedium')
-                .fontWeight(FontWeight.Medium).fontSize(10)
-                .fontColor('#5B5046').textAlign(TextAlign.Center).enabled(!this.busy)
-                .onClick((): void => this.beginEdit(engine));
-              Text('删除').width(32).height(28).fontFamily('ReaderNotoSansSCUIMedium')
-                .fontWeight(FontWeight.Medium).fontSize(10)
-                .fontColor('#A8543A').textAlign(TextAlign.Center).enabled(!this.busy)
-                .onClick((): void => this.deleteEngine(engine.id));
-            }.width('100%').height(54).padding({ left: 12, right: 10 })
-              .backgroundColor('#99FFF8EF').border({ width: .5, color: '#66B4A697' }).borderRadius(10);
-          }, (engine: ReaderTtsEngineOption): string => `${engine.id}:${engine.lastUpdateTime}`);
-        }.width('100%').alignItems(HorizontalAlign.Start);
-      }
       Column({ space: 6 }) {
         Text('服务名称').width('100%').fontFamily('ReaderNotoSansSCUIMedium')
           .fontWeight(FontWeight.Medium).fontSize(11).fontColor('#5B5046');
@@ -241,7 +221,7 @@ export struct ReaderTtsConfigOverlay {
       Column({ space: 6 }) {
         Text('接口地址').width('100%').fontFamily('ReaderNotoSansSCUIMedium')
           .fontWeight(FontWeight.Medium).fontSize(11).fontColor('#5B5046');
-        TextInput({ placeholder: '请求 URL（使用 {{text}} 占位）', text: this.draftUrl })
+        TextInput({ placeholder: 'https://api.example.com/tts', text: this.draftUrl })
           .enabled(!this.busy).accessibilityText('在线 TTS 请求 URL').width('100%').height(42)
           .fontFamily('ReaderInter').fontSize(13).fontColor('#332C25').placeholderColor('#B4A697')
           .padding({ left: 12, right: 12 }).backgroundColor('#CCFFF8EF')
@@ -249,9 +229,9 @@ export struct ReaderTtsConfigOverlay {
           .onChange((value: string): void => { this.draftUrl = value; });
       }.width('100%');
       Column({ space: 6 }) {
-        Text('访问密钥（可选）').width('100%').fontFamily('ReaderNotoSansSCUIMedium')
+        Text('API 密钥').width('100%').fontFamily('ReaderNotoSansSCUIMedium')
           .fontWeight(FontWeight.Medium).fontSize(11).fontColor('#5B5046');
-        TextInput({ placeholder: '留空保持已保存密钥', text: this.draftApiKey })
+        TextInput({ placeholder: '填入访问密钥', text: this.draftApiKey })
           .enabled(!this.busy).type(InputType.Password).accessibilityText('在线 TTS 访问密钥，不会显示或写入 Core')
           .width('100%').height(42).fontFamily('ReaderInter').fontSize(13).fontColor('#332C25')
           .placeholderColor('#B4A697').padding({ left: 12, right: 12 }).backgroundColor('#CCFFF8EF')
@@ -270,9 +250,9 @@ export struct ReaderTtsConfigOverlay {
           });
       }.width('100%');
       Column({ space: 6 }) {
-        Text('音色（可选）').width('100%').fontFamily('ReaderNotoSansSCUIMedium')
+        Text('发音人 / 音色').width('100%').fontFamily('ReaderNotoSansSCUIMedium')
           .fontWeight(FontWeight.Medium).fontSize(11).fontColor('#5B5046');
-        TextInput({ placeholder: '例如 zh-CN-XiaoxiaoNeural 或 alloy', text: this.draftVoice })
+        TextInput({ placeholder: '例如 xiaoxiao', text: this.draftVoice })
           .enabled(!this.busy).accessibilityText('在线 TTS 音色')
           .width('100%').height(42).fontFamily('ReaderInter').fontSize(13).fontColor('#332C25')
           .placeholderColor('#B4A697').padding({ left: 12, right: 12 }).backgroundColor('#CCFFF8EF')
@@ -294,21 +274,25 @@ export struct ReaderTtsConfigOverlay {
           .fontColor('#A8543A').maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
           .accessibilityText(`在线 TTS 操作失败：${this.errorText}`);
       }
-      Row({ space: 10 }) {
-        Text('取消').layoutWeight(1).height(44).fontFamily('ReaderNotoSansSCUIMedium')
-          .fontWeight(FontWeight.Medium).fontSize(13)
-          .fontColor('#5B5046').textAlign(TextAlign.Center).backgroundColor('#29B4A697').borderRadius(12)
-          .enabled(!this.busy).onClick((): void => this.close());
-        Text('保存').layoutWeight(1).height(44).fontFamily('ReaderNotoSansSCUIBold')
-          .fontWeight(FontWeight.Bold).fontSize(13)
-          .fontColor('#FFFAF4').textAlign(TextAlign.Center)
-          .linearGradient({ angle: 155, colors: [['#2F6373', 0], ['#244F5C', 1]] }).borderRadius(12)
-          .shadow({ radius: 12, color: '#4D2F6373', offsetY: 4 })
-          .enabled(this.canSubmit() && !this.busy).opacity(this.canSubmit() && !this.busy ? 1 : 0.42)
-          .onClick((): void => this.submit());
-      }.width('100%').margin({ top: 10 });
     }.width('100%').padding({ top: 8, bottom: 16, left: 18, right: 18 })
       .alignItems(HorizontalAlign.Start).constraintSize({ minHeight: 244 }).id('reader-tts-manager-form');
+  }
+
+  @Builder
+  private managerFooter() {
+    Row({ space: 10 }) {
+      Text('取消').layoutWeight(1).height(44).fontFamily('ReaderNotoSansSCUIMedium')
+        .fontWeight(FontWeight.Medium).fontSize(13)
+        .fontColor('#5B5046').textAlign(TextAlign.Center).backgroundColor('#29B4A697').borderRadius(12)
+        .enabled(!this.busy).onClick((): void => this.close());
+      Text('保存').layoutWeight(1).height(44).fontFamily('ReaderNotoSansSCUIBold')
+        .fontWeight(FontWeight.Bold).fontSize(13)
+        .fontColor('#FFFAF4').textAlign(TextAlign.Center)
+        .linearGradient({ angle: 155, colors: [['#2F6373', 0], ['#244F5C', 1]] }).borderRadius(12)
+        .shadow({ radius: 12, color: '#4D2F6373', offsetY: 4 })
+        .enabled(this.canSubmit() && !this.busy).opacity(this.canSubmit() && !this.busy ? 1 : 0.42)
+        .onClick((): void => this.submit());
+    }.width('100%').height(76).padding({ left: 18, right: 18, top: 16, bottom: 16 });
   }
 
   private current(generation: number): boolean { return this.mounted && generation === this.generation; }

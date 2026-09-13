@@ -41,10 +41,11 @@ const source = readFileSync(new URL('../entry/src/main/ets/features/reading/Read
 const methods = ['p', 'fullInput', 'sharedInput', 'effectiveRate', 'timerSummary', 'timerCaption', 'twoDigits',
   'timerPresetSelected', 'timerPresetLabel', 'timerPresetIsSelected', 'chooseTimerPreset', 'timerPreset',
   'cycleQuickTimer', 'timerStepper', 'timerStepButton', 'stepTimer',
-  'ratePresets', 'chooseRatePreset', 'ratePreset'];
+  'ratePresets', 'ratePresetWidth', 'chooseRatePreset', 'ratePreset'];
 const { owner } = createReaderBuilderProbe(source, methods, { ...geometry, ...actors, ...tts });
 Object.assign(owner, { motionProgress: 1, interactionEnabled: true, state: { rate: 1 }, ratePreview: -1,
-  timerMode: 'duration', timerMinutes: 25, timerSeconds: 0 });
+  timerMode: 'duration', timerMinutes: 25, timerSeconds: 0,
+  frame: () => ({ speedPresets: { width: 280 } }) });
 for (const minutes of [0, 15, 30, 45, 60, 'chapterEnd']) owner.timerPreset(minutes);
 owner.timerStepper(true); owner.timerStepper(false);
 owner.ratePresets().forEach(rate => owner.ratePreset(rate));

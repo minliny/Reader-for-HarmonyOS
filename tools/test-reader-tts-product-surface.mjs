@@ -68,6 +68,8 @@ assert.match(fullPanel,
   'System shows two selection rows; Online shows its separate service-information entry');
 assert.match(fullPanel, /private detailSection\(\)[\s\S]*?toggleRow\('allowMixing'\)[\s\S]*?ttsClosedConfigRow\('failure'\)/,
   'mixing and failure policy stay reachable in playback configuration');
+assert.match(fullPanel, /toggleRow\('backgroundPlayback'\)[\s\S]*?toggleRow\('keepScreenOn'\)/,
+  'Make playback options expose background playback and keep-screen-on controls');
 assert.match(fullPanel,
   /private fieldLabel\(kind:[\s\S]*?'语音引擎'[\s\S]*?'朗读语言'[\s\S]*?'音频会话'[\s\S]*?'不可用处理'/,
   'static field identities must retain their original user-facing labels');
@@ -113,7 +115,8 @@ assert.match(ttsBinding, /reportSessionMorphSource\(kind, left, top, width, heig
 assert.doesNotMatch(ttsBinding, /content\.(?:width|height) \+|readerSessionMorphActorId\('fullTtsPlayback'\)/);
 for (const callback of ['onTtsToggle', 'onTtsStop', 'onTtsPrevious', 'onTtsNext', 'onTtsSeek',
   'onTtsRateChange', 'onTtsTimerChange', 'onTtsFollowHighlightChange', 'onTtsPauseOnInterruptionChange',
-  'onTtsAllowMixingChange', 'onTtsFailurePolicyChange', 'onTtsVoiceChange', 'onTtsEngineChange',
+  'onTtsAllowMixingChange', 'onTtsBackgroundPlaybackChange', 'onTtsKeepScreenOnChange',
+  'onTtsFailurePolicyChange', 'onTtsVoiceChange', 'onTtsEngineChange',
   'onTtsHttpEnginePut', 'onTtsHttpEngineDelete']) {
   assert.ok(ttsBinding.includes(`this.${callback}(`), `business callback lost from actual TTS: ${callback}`);
 }
@@ -144,7 +147,10 @@ assert.match(experience, /gateway\.put\(merged\)/);
 assert.doesNotMatch(experience, /gateway\.put\(\{ \.\.\./);
 assert.match(experience, /await httpGateway\.delete\(id\)/);
 assert.match(manager, /TextInput\(\{ placeholder: '例如 Azure 语音'/);
-assert.match(manager, /TextInput\(\{ placeholder: '请求 URL（使用 \{\{text\}\} 占位）'/);
+assert.match(manager, /TextInput\(\{ placeholder: 'https:\/\/api\.example\.com\/tts'/);
+assert.match(manager, /Text\('API 密钥'\)/);
+assert.match(manager, /private managerFooter\(\)/,
+  'the Make modal keeps Cancel and Save outside the scrolling form body');
 assert.match(manager, /void this\.onPut\(config\)[\s\S]*?if \(this\.current\(generation\)\) \{ this\.resetDraft\(\)/,
   'only the current confirmed save may clear its draft');
 assert.match(manager, /if \(this\.current\(generation\)\) this\.errorText = error\.message/,
@@ -155,5 +161,10 @@ assert.match(manager, /在线 TTS 操作失败/);
 assert.match(moduleManifest, /ohos\.permission\.KEEP_BACKGROUND_RUNNING/);
 assert.match(moduleManifest, /"backgroundModes": \[[\s\S]*?"audioPlayback"/);
 assert.match(runtimeOwner, /new HarmonyTtsBackgroundSession\(context\)/);
+assert.match(experience, /ttsBackgroundPlayback: this\.ttsBackgroundPlayback/);
+assert.match(experience, /ttsKeepScreenOn: this\.ttsKeepScreenOn/);
+assert.match(experience, /backgroundPlayback: this\.ttsBackgroundPlayback/);
+assert.match(experience, /keepScreenOn: this\.ttsKeepScreenOn/);
+assert.match(manager, /Text\('API 密钥'\)/);
 
 console.log('reader TTS system and HttpTTS product surface: PASS');

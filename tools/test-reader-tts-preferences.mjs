@@ -16,6 +16,8 @@ assert.deepEqual(fallback, {
   allowMixing: false,
   failurePolicy: 'stop',
   followHighlight: true,
+  backgroundPlayback: true,
+  keepScreenOn: false,
 });
 
 assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({
@@ -26,6 +28,8 @@ assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({
   allowMixing: true,
   failurePolicy: 'skip',
   followHighlight: false,
+  backgroundPlayback: true,
+  keepScreenOn: false,
 }), {
   version: 1,
   language: 'en-US',
@@ -34,6 +38,8 @@ assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({
   allowMixing: true,
   failurePolicy: 'skip',
   followHighlight: false,
+  backgroundPlayback: true,
+  keepScreenOn: false,
 });
 
 assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({
@@ -75,7 +81,7 @@ assert.match(coordinator, /this\.active\?\.input\.pauseOnInterruption \?\? true/
 assert.match(gateway, /reader_tts_preferences_v1/);
 assert.match(gateway, /await store\.flush\(\)/);
 assert.match(panel, /this\.toggleRow\('pauseOnInterruption'\)/);
-assert.match(panel, /kind === 'pauseOnInterruption' \? this\.pauseOnInterruption : this\.allowMixing/,
+assert.match(panel, /kind === 'pauseOnInterruption'[\s\S]*?kind === 'allowMixing'[\s\S]*?backgroundPlayback/,
   'the persisted pause preference must be read live, not captured in a Builder value argument');
 assert.match(panel, /this\.ttsClosedConfigRow\('failure'\)/);
 assert.match(panel, /private fieldValue\(kind:[\s\S]*?this\.failurePolicy === 'skip'/,
