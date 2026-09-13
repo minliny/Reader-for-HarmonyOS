@@ -9,7 +9,8 @@
  * node tools/reader-control-device-probe.mjs --target EXACT --hdc /absolute/hdc
  *   --server ::ffff:127.0.0.1:8710 --output-dir /absolute/evidence-directory
  * stdin JSON lines: {op:'click',x:100,y:200,preflightConfirmed:true}, etc.
- * Use JSON double quotes. quit/EOF releases only this process's target lock.
+ * Use JSON double quotes. quit/EOF releases only this process's shared target
+ * lease. Set READER_HDC_LEASE_WAIT_MS to bound queueing (default 30000).
  * --self-test performs pure validation; it does not invoke HDC or touch locks.
  */
 import assert from 'node:assert/strict';
@@ -17,12 +18,13 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   accessSync, appendFileSync, constants, lstatSync, mkdirSync,
-  readFileSync, realpathSync, rmdirSync, statSync, unlinkSync, writeFileSync,
+  readFileSync, realpathSync, statSync, writeFileSync,
 } from 'node:fs';
 import { isIP } from 'node:net';
 import { basename, isAbsolute, parse, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
+import { acquireLease, canonicalServerKey, releaseLease, targetRef as serverRefHash } from './reader-hdc-lease.mjs';
 
 const BUNDLE = 'io.reader.harmonyos';
 const TIMEOUT_MS = 30000;
@@ -222,9 +224,12 @@ function operationPlan(operation, outputDir) {
   fail('operation is not on the diagnostic whitelist');
 }
 
+// Retained for the pure self-test's ownership predicate; production target
+// locking is delegated to the shared cross-process HDC lease.
 function ownerMatches(owner, expected) {
   return owner?.pid === expected.pid && owner?.targetRef === expected.targetRef && owner?.probeNonce === expected.probeNonce;
 }
+
 function evidenceEntryExists(path) {
   try { lstatSync(path); return true; }
   catch (error) { if (error.code === 'ENOENT') return false; throw error; }
@@ -247,35 +252,29 @@ function pngExtent(bytes) {
   }
   fail('PNG has no complete IEND');
 }
-function acquireTargetLock(target) {
+async function acquireTargetLock(target, hdc, configuredServer) {
   const targetRef = targetReference(target);
-  const directory = `/private/tmp/reader-harmony-target-${targetRef}.lock`;
-  // Unlike pipeline stale-lock recovery, this probe NEVER deletes/takes over an
-  // existing lock, including one with an absent/unreadable owner or dead PID.
-  mkdirSync(directory, { mode: 0o700 });
-  const identity = lstatSync(directory);
-  const owner = { pid: process.pid, targetRef, startedAt: new Date().toISOString(), probeNonce: randomUUID() };
-  const path = resolve(directory, 'owner.json');
-  try { writeFileSync(path, `${JSON.stringify(owner, null, 2)}\n`, { flag: 'wx', mode: 0o600 }); }
-  catch (error) { try { rmdirSync(directory); } catch {} throw error; }
+  // HDC session/channel state is shared by all targets on one server.
+  const serverKey = canonicalServerKey(configuredServer || process.env.READER_HDC_SERVER_KEY || '127.0.0.1:8710');
+  const serverRef = serverRefHash(serverKey);
+  const root = process.env.READER_HDC_LEASE_ROOT || '/private/tmp/reader-hdc-target-leases';
+  const owner = {
+    pid: process.pid, ppid: process.ppid, agentId: process.env.CODEX_AGENT_ID || process.env.AGENT_ID || 'unspecified',
+    target, targetRef, serverKey, serverRef, hdc, command: ['probe-session'], startedAt: new Date().toISOString(), token: randomUUID(),
+  };
+  const configuredWait = Number(process.env.READER_HDC_LEASE_WAIT_MS || '30000');
+  const waitMs = Number.isInteger(configuredWait) && configuredWait >= 0 && configuredWait <= 3600000 ? configuredWait : 30000;
+  const lease = await acquireLease({ root, target, targetRefValue: targetRef, lockRefValue: serverRef, waitMs, owner });
   return {
     targetRef,
-    release() {
-      try {
-        const current = lstatSync(directory);
-        if (!current.isDirectory() || current.ino !== identity.ino || current.dev !== identity.dev ||
-          !ownerMatches(JSON.parse(readFileSync(path, 'utf8')), owner)) return;
-        unlinkSync(path); // Only our nonce-bound owner; never recursive deletion.
-        rmdirSync(directory);
-      } catch (error) { process.stderr.write(`Lock release left state untouched where ownership/contents were uncertain: ${error.message}\n`); }
-    },
+    release() { releaseLease(root, lease.lockDir, owner); },
   };
 }
 
 async function probe(options) {
   accessSync(options.hdc, constants.X_OK);
   if (!statSync(options.hdc).isFile()) fail('hdc must be an executable file');
-  const lock = acquireTargetLock(options.target);
+  const lock = await acquireTargetLock(options.target, options.hdc, options.server);
   let input;
   let activeChild;
   let stopping = false;

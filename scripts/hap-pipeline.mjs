@@ -34,6 +34,8 @@ const DEFAULT_SIGN_TOOL =
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar';
 const DEFAULT_STRIP_TOOL =
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-objcopy';
+const HDC_LEASE_SCRIPT = resolve(REPO_ROOT, 'tools/reader-hdc-lease.mjs');
+const HDC_SERVER = process.env.READER_HDC_SERVER_KEY ?? '::ffff:127.0.0.1:8710';
 const BUNDLE_NAME = 'io.reader.harmonyos';
 const EXPECTED_NATIVE_ENTRIES = [
   'libs/arm64-v8a/libc++_shared.so',
@@ -110,6 +112,17 @@ function run(binary, args, options = {}) {
 function capture(binary, args, options = {}) {
   const result = run(binary, args, options);
   return typeof result.stdout === 'string' ? result.stdout.trim() : result.stdout;
+}
+
+// Device operations share one cross-process target lease.  Keeping this at
+// the command boundary covers inspect/install/launch without changing the
+// existing signing and preserve-data gates.  The lease wrapper never starts,
+// kills, or rediscovers HDC; it only serializes the already-authorized argv.
+function runTargetHdc(hdc, target, args, options = {}) {
+  const leaseArgs = [HDC_LEASE_SCRIPT, '--target', target, '--hdc', hdc,
+    '--server-key', HDC_SERVER,
+    ...(options.waitMs === undefined ? [] : ['--wait-ms', String(options.waitMs)]), '--', '-s', HDC_SERVER, ...args];
+  return run(process.execPath, leaseArgs, options);
 }
 
 function parseOptions(argv) {
@@ -981,18 +994,18 @@ function targetReference(target) {
 }
 
 function assertTargetConnected(hdc, target) {
-  const output = capture(hdc, ['list', 'targets', '-v']);
+  const output = runTargetHdc(hdc, target, ['list', 'targets', '-v']).stdout?.trim() ?? '';
   const match = output.split('\n').find((line) => line.split(/\s+/)[0] === target);
   if (match === undefined || !/Connected/i.test(match)) fail('the exact HDC target is not connected');
 }
 
 function installedMetadata(hdc, target) {
-  const result = run(hdc, ['-t', target, 'shell', `bm dump -n ${BUNDLE_NAME}`], { allowFailure: true });
+  const result = runTargetHdc(hdc, target, ['-t', target, 'shell', `bm dump -n ${BUNDLE_NAME}`], { allowFailure: true });
   const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
   // Harmony's generic lookup error also covers missing bundles. Require a
   // successful, structurally valid inventory before admitting a new install.
   if (result.status === 0 && output.trim() === BUNDLE_LOOKUP_UNAVAILABLE) {
-    const listing = run(hdc, ['-t', target, 'shell', 'bm dump -a'], { allowFailure: true });
+    const listing = runTargetHdc(hdc, target, ['-t', target, 'shell', 'bm dump -a'], { allowFailure: true });
     if (listing.status === 0 && !listing.stderr?.trim()) {
       return parseBundleMetadata(output, listing.stdout ?? '');
     }
@@ -1060,7 +1073,7 @@ function installDeployment(options) {
   try {
     const resolved = resolveDeployment(options);
     if (!resolved.route.allowed) fail(`deployment stopped: ${resolved.route.reason}`, 3);
-    const install = run(resolved.hdc, [
+    const install = runTargetHdc(resolved.hdc, resolved.target, [
       '-t', resolved.target, 'install', '-r', resolved.artifactPath,
     ], { allowFailure: true });
     const installOutput = `${install.stdout ?? ''}\n${install.stderr ?? ''}`;
@@ -1077,7 +1090,7 @@ function installDeployment(options) {
     }
     let launch = 'NOT_RUN';
     if (options.get('--no-launch') !== true) {
-      const start = run(resolved.hdc, [
+      const start = runTargetHdc(resolved.hdc, resolved.target, [
         '-t', resolved.target, 'shell',
         `aa start -a EntryAbility -b ${BUNDLE_NAME} -m entry`,
       ], { allowFailure: true });
