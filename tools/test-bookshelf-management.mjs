@@ -32,10 +32,10 @@ assert.match(orchestrator, /await this\.gateway\.assignGroup\(book, group\)/);
 assert.match(orchestrator, /groups: source\.data\.groups\.slice\(\)/);
 assert.doesNotMatch(gateway, /preferences|relationalStore|fileIo/);
 assert.match(page, /export struct BookshelfManagementPage/);
-// Preserve the future group manager implementation while keeping its route unreachable in L0.
+// The group manager is now reachable from the shelf controls.
 assert.match(page, /在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
-// The shelf tool now enters the default-only group selector.
+// The shelf tool enters the shared group manager route.
 assert.match(shelfPage,
   /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\)\)/,
   'the shelf tool must open the shared group selector');
@@ -45,10 +45,7 @@ assert.match(index,
   /onBookshelfSettingsRequested: \(\): void => this\.openSettings\(\)/,
   'the more-menu shelf settings entry still enters the settings flow');
 assert.match(index, /'bookshelfManagement'/);
-assert.doesNotMatch(index, /route = 'bookshelfManagement'/);
-assert.match(index, /title: '选择分组'/);
-assert.match(index, /buttons: \[\{ text: '默认'/);
+assert.match(index, /this\.route = 'bookshelfManagement';[\s\S]*?getBookshelfManagementOrchestrator\(\)\.open\(\)/);
 assert.match(index, /BookshelfManagementPage\(\{/);
-assert.doesNotMatch(index, /getBookshelfManagementOrchestrator\(\)\.open\(\)/);
 
 console.log('bookshelf management Core ownership contract: PASS');

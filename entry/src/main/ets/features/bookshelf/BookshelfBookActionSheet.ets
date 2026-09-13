@@ -12,11 +12,11 @@ const BOOK_ACTION_INSET = 14;
 const BOOK_ACTION_HEIGHT = 40;
 
 /**
- * Canonical per-book action sheet.
+ * Per-book action surface. The host presents this content as a centered
+ * opaque floating panel so its outline remains visible on every device.
  *
- * Figma: `Library/BookActionSheet` (`2903:1737`), Phone 366×224 and
- * Tablet 720×224. The width follows the live window; every internal x/y,
- * typography, fill, border and elevation value comes from that component.
+ * The action contents retain the Figma typography and spacing; the host-level
+ * presentation intentionally follows the product's new 75% width requirement.
  */
 @Component
 export struct BookshelfBookActionSheet {
@@ -55,7 +55,7 @@ export struct BookshelfBookActionSheet {
     .height(BOOK_ACTION_SHEET_HEIGHT)
     .backgroundColor(TOK_CARD_BG_HI)
     .border({ width: 1, color: TOK_BORDER })
-    .borderRadius({ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 })
+    .borderRadius(24)
     .shadow({ radius: 46, color: '#29594632', offsetX: 0, offsetY: 18 })
     .clip(true);
   }

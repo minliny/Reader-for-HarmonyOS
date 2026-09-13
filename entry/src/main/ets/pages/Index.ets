@@ -1127,14 +1127,12 @@ struct Index {
   }
 
   private openBookshelfManagement(): void {
-    void this.getUIContext().getPromptAction().showActionMenu({
-      title: '选择分组',
-      buttons: [{ text: '默认', color: '#3B7557' }],
-    }).then((): void => {
-      // All L0 books project into the default group. Legacy assignments are
-      // preserved in Core for a later, explicit migration.
-      this.refreshBookshelf();
-    }).catch((): void => {});
+    this.nextNavigationGeneration();
+    this.readingSessionActive = false;
+    this.readingExitRequest = undefined;
+    this.exitToDetailOriginAfterReader = false;
+    this.route = 'bookshelfManagement';
+    this.getBookshelfManagementOrchestrator().open();
   }
 
   private openBookshelfMultiSelect(initialBook?: ShelfBook): void {
