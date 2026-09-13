@@ -1,0 +1,33 @@
+{
+  "recordedAt": "2026-09-12T11:42:00Z",
+  "instance": "Mate 80 Pro",
+  "instancePath": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+  "targetRef": "6460677a198b",
+  "target": "127.0.0.1:5555",
+  "boot": {
+    "status": "PASS",
+    "emulatorLog": "Emulator.log",
+    "marker": "Guest OS Boot Completed!!",
+    "sceneBoard": "com.ohos.sceneboard FOREGROUND",
+    "reader": "io.reader.harmonyos FOREGROUND"
+  },
+  "delivery": {
+    "manifest": ".reader-artifacts/hap/20260912T103957Z-50cad401-bacf9041/manifest.json",
+    "inspect": "PASS",
+    "install": "PASS",
+    "launch": "PASS",
+    "receipt": ".reader-artifacts/hap/20260912T103957Z-50cad401-bacf9041/deploy-vm-6460677a198b-20260912T113048Z.json",
+    "dataPreserved": true
+  },
+  "transport": {
+    "preflight": "5/5 list targets and 5/5 shell checks after local hdc restart",
+    "ptyProbe": "OPEN/failed with Connect server failed",
+    "nonPtyHarness": "PASS; sequential layout/screenCap/file recv commands"
+  },
+  "interaction": {
+    "collapse": "PASS-partial; click 1120,1761 returned ~195ms; screenshot at ~270ms hid control bar",
+    "expand": "PASS-partial; sampled click 0/160/640/1000ms transport passed; visible by ~345ms, stable by ~640ms",
+    "acceptance": "OPEN"
+  },
+  "dataPolicy": "preserve; no uninstall or clear-data"
+}

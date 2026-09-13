@@ -1,0 +1,40 @@
+{
+  "recordedAt": "2026-09-12T11:05:00Z",
+  "targetRef": "b1f20b88963d",
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8710,
+    "pid": 59204
+  },
+  "restart": {
+    "method": "hdc kill -r",
+    "deviceDataTouched": false
+  },
+  "contention": {
+    "devEcoHdcClientCountAtCapture": 24,
+    "interpretation": "shared local HDC server; DevEco clients remain connected"
+  },
+  "continuousListTargets": {
+    "attempts": 5,
+    "passes": 5,
+    "timeouts": 0
+  },
+  "continuousReadOnlyCommands": {
+    "attempts": 10,
+    "passes": 10,
+    "categories": [
+      "shell true",
+      "bm dump",
+      "hidumper WindowManagerService",
+      "aa dump -a",
+      "echo"
+    ]
+  },
+  "conclusion": "After controlled local HDC restart, target discovery and read-only command transport stayed stable for this check; recurring risk remains shared DevEco HDC client contention. Physical feature evidence remains open.",
+  "delayedCheck": {
+    "afterSeconds": 30,
+    "attempts": 5,
+    "passes": 5,
+    "timeouts": 0
+  }
+}

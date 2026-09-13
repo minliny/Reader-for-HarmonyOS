@@ -1,12 +1,12 @@
 {
-  "recordedAt": "2026-09-12T03:14:47.065653+00:00",
-  "harmonyHead": "35f2f99a8d635615475fde75120bf8629f944565",
-  "coreHead": "6b2a9d87048e3da812bec08b7c2b3fff1c16e2e2",
+  "recordedAt": "2026-09-12T10:15:22.684Z",
+  "harmonyHead": "9abd21a7ef88d22966268a95527af89193fbbf5f",
+  "coreHead": "76fdda044ddbacc27553f7b293c0e7717f72b44f",
   "files": [
     {
       "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
-      "sha256": "8b15a3be8d275c32011ae8419d4ba8c495ffc79dce6e078189040f66b9c8af97",
-      "size": 77857
+      "sha256": "3a702dd42a291dd8d0fa5bdb3e1b55d4ffe4c289a97060fb2f4c8817c8ee3dfe",
+      "size": 78221
     },
     {
       "path": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
@@ -92,18 +92,67 @@
       "path": "tools/test-reader-motion-repair.mjs",
       "sha256": "b9c4a32a26c64bbaaf8a59212560fea4653105af3608d5f1d812369b19fd95e5",
       "size": 12716
+    },
+    {
+      "path": "tools/test-reader-control-input-routing.mjs",
+      "sha256": "2accf508dfd4d936edee73c2fdb73e81069cc6d82dd2b34f08eaa1d2a934e902",
+      "size": 3133
     }
   ],
   "runningBuildsOwnedByThisTask": 0,
   "vmLockOwnedByThisTask": false,
   "codeAndNecessaryLocalRegression": "complete",
-  "publishedCandidate": null,
+  "publishedCandidate": {
+    "runId": "20260912T103957Z-50cad401-bacf9041",
+    "manifest": ".reader-artifacts/hap/20260912T103957Z-50cad401-bacf9041/manifest.json",
+    "artifact": "entry-default-signed.hap",
+    "sha256": "7b81ead7eb7dcb738097534f2ec2cbcc087023ce7863eae0b70cd054745d281a",
+    "signature": "verified-debug",
+    "targetKind": "physical",
+    "targetRef": null,
+    "install": "OPEN; post-fix candidate install/launch not repeated after HDC recovery",
+    "launch": "OPEN",
+    "dataPolicy": "preserve"
+  },
   "safeToContinueEditing": true,
   "localGate": {
     "script": "scripts/check-local.sh",
     "result": "PASS",
-    "tests": 196,
+    "tests": 197,
     "exitCode": 0,
-    "evidence": "check-local-final-v4.log"
+    "evidence": "check-local-after-input-routing.log"
+  },
+  "vmEvidence": {
+    "directory": "vm-20260912",
+    "expand": "PASS-partial; non-PTY 0/160/640/1000ms sample commands passed, visible by ~345ms and stable by ~640ms",
+    "collapse": "PASS-partial; non-PTY click returned ~195ms and ~270ms screenshot hid the control bar; no VSync trace",
+    "userAcceptance": "OPEN"
+  },
+  "physicalDeviceEvidence": {
+    "targetRef": "b1f20b88963d",
+    "directory": "physical-20260912",
+    "install": "PASS",
+    "launch": "PASS",
+    "dataPreserved": true,
+    "expand": "PASS-partial; approximately 150ms visible and 300-1000ms stable",
+    "collapse": "OPEN; approximately 7.1s input return and system call overlay contaminated capture",
+    "transport": "two initial Connect server failed stops; later 8710 endpoint succeeded",
+    "retest": {
+      "date": "2026-09-12",
+      "collapseNoOverlay": "OPEN; first no-overlay click returned ~4.62s and 0-4000ms frame hashes were identical with panel still expanded",
+      "adjacentHit": "uiInput click accepted at ~422ms; post-click UI tree read failed with Connect server failed",
+      "conclusion": "OPEN; input acceptance and app state transition remain unproven",
+      "evidence": "physical-20260912/retest-20260912"
+    },
+    "codeFix": "reader-control-motion-shell HitTestMode.None; header zIndex 2 + Block; explicit collapse target",
+    "postFixDeviceVerification": "OPEN; HDC transport recovered after local server restart, but post-fix candidate install/interaction remains unverified",
+    "hdcTransportEvidence": {
+      "status": "RECOVERED_CURRENT_SESSION",
+      "record": "physical-20260912/hdc-stability-20260912T110500Z.json",
+      "rootCause": "shared 8710 HDC server session/channel contention involving DevEco clients, VM TCP and physical USB target",
+      "restart": "hdc kill -r; device data untouched",
+      "continuousChecks": "5/5 target discovery and 10/10 read-only commands passed",
+      "recurrenceRisk": "DevEco clients remain connected; use a single probe owner and re-run preflight after any Connect server failed"
+    }
   }
 }
