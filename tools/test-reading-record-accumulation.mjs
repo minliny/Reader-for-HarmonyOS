@@ -24,7 +24,14 @@ assert.match(reader, /this\.phase = 'ready';\s*this\.beginReadingRecordClock\(li
 assert.match(reader, /const READING_RECORD_FLUSH_INTERVAL_MS = 30000/);
 assert.match(reader, /private readingRecordFlushTail: Promise<void> = Promise\.resolve\(\)/);
 assert.match(reader, /if \(!this\.appForeground\) \{[\s\S]*?this\.captureReadingRecordElapsed\(false\);\s*this\.clearReadingRecordTimer\(\);\s*void this\.flushReadingRecord\(\);/);
-assert.match(reader, /this\.exitRequested = true;\s*this\.stopReaderTtsAudition\(\);\s*this\.captureReadingRecordElapsed\(false\);/);
+const beginExit = reader.match(/private beginExit\(\): void \{[\s\S]*?\n  \}/)?.[0] ?? '';
+const exitCaptureSteps = ['this.exitRequested = true;', 'this.stopReaderTtsAudition();',
+  'this.captureReadingRecordElapsed(false);'].map(step => beginExit.indexOf(step));
+assert.ok(exitCaptureSteps.every((offset, index) => offset >= 0 &&
+  (index === 0 || offset > exitCaptureSteps[index - 1])),
+  'guarded exit stops audition before capturing the final reading interval');
+assert.doesNotMatch(beginExit.slice(exitCaptureSteps[0], exitCaptureSteps[2]), /\b(?:await|return)\b|this\.finishExit\(/,
+  'synchronous ownership updates may intervene; early return or asynchronous exit may not skip interval capture');
 assert.match(reader, /await this\.flushReadingRecordForExit\(\);[\s\S]*await this\.commitVisiblePage\(lifecycleToken\);/);
 assert.match(reader, /this\.exitDelivered = true;\s*this\.onExit\(\);/);
 

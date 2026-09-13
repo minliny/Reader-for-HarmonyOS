@@ -51,3 +51,11 @@
 4. 已取消/重试成功的旧弹窗按钮不再执行；新的显式退出已开始时，旧弹窗不能撤销目的地；旧 lifecycle 卸载后不再触发动作。
 
 `vm-reader-info-cancel-before.log` 保存本 agent 新回归修前失败（直接重试成功后，旧 secondary 仍错误恢复阅读记录）；集成 agent 原取消→书架失败继续保留。`vm-reader-info-cancel-after.log` 为修改后整份实际生产链通过。现有原始 before/after 日志未覆写。代码和本地回归完成；完整构建与 VM 复验仍由 root 统一执行。
+
+## 验收构建前置门禁：旧断言紧邻假设
+
+`/private/tmp/reader-vm-followup-acceptance.log` 在 `tools/test-reading-record-accumulation.mjs:27` 失败：旧源码断言要求 `exitRequested=true` 后必须立即停止试听，不允许任何同步状态更新。本次加入 `exitAttemptGeneration += 1` 后，退出仍按“锁定退出→停止试听→收集阅读时长”同步执行，生产集成链通过；故该失败是测试的无依据紧邻假设，不是新发现的退出行为回退。
+
+处理仅修改该测试：把断言限定到 `beginExit` 方法内部，验证必要动作顺序，以及锁定退出到收集阅读时长之间不出现提前 return/await/异步 finishExit；允许同步代次更新。扫描其他同类退出相邻断言，`exitDelivered→onExit` 和后台记录收集链当前未被改动，不放松这些检查。生产代码不变。
+
+修后 `test-reading-record-accumulation.mjs` 与 `test-bookshelf-reading-entry.mjs` 均 exit 0；输出分别在 `vm-reader-info-record-contract.log`、`vm-reader-info-post-gate-integration.log`。本次不重复执行设备或完整构建，由 root 续行统一流水线。
