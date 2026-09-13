@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import {
   readerDirectoryBookmarkMarkerState,
@@ -54,8 +55,6 @@ const DIRECTORY_CURRENT_BAR_WIDTH = 3;
 const DIRECTORY_MARKER_HIT_SIZE = 26;
 const DIRECTORY_MARKER_ICON_SIZE = 15;
 const DIRECTORY_BOOKMARK_TRAILING_GAP = 3;
-const DIRECTORY_EDGE_FADE_COLOR = '#D9FFFCF8';
-const DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR = '#00FFFCF8';
 
 /**
  * Figma Reader Module Directory / Phone (`943:9888`) content area only.
@@ -64,6 +63,8 @@ const DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR = '#00FFFCF8';
  */
 @Component
 export struct ReaderDirectoryModulePanel {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop @Watch('onInputsChanged') entries: LocalReadingTocEntry[] = [];
   @Prop @Watch('onInputsChanged') currentChapterIndex: number = -1;
   @Prop chapterDownloadEnabled: boolean = false;
@@ -129,7 +130,7 @@ export struct ReaderDirectoryModulePanel {
               .height(READER_DIRECTORY_EDGE_FADE_HEIGHT)
               .linearGradient({
                 direction: GradientDirection.Bottom,
-                colors: [[DIRECTORY_EDGE_FADE_COLOR, 0], [DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR, 1]],
+                colors: [[readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR', this.appThemeScheme), 0], [readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR', this.appThemeScheme), 1]],
               });
             Blank()
               .layoutWeight(1);
@@ -138,7 +139,7 @@ export struct ReaderDirectoryModulePanel {
               .height(READER_DIRECTORY_EDGE_FADE_HEIGHT)
               .linearGradient({
                 direction: GradientDirection.Top,
-                colors: [[DIRECTORY_EDGE_FADE_COLOR, 0], [DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR, 1]],
+                colors: [[readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR', this.appThemeScheme), 0], [readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR', this.appThemeScheme), 1]],
               });
           }
           .width('100%')
@@ -158,8 +159,8 @@ export struct ReaderDirectoryModulePanel {
       top: DIRECTORY_PANEL_PADDING_TOP,
       bottom: DIRECTORY_PANEL_PADDING_BOTTOM,
     })
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(TOK_RADIUS_MD)
     .clip(true);
   }
@@ -175,13 +176,13 @@ export struct ReaderDirectoryModulePanel {
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(10)
-            .fontColor(this.activeTab === 'directory' ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+            .fontColor(this.activeTab === 'directory' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center);
           if (this.activeTab === 'directory') {
             Row()
               .width(DIRECTORY_TAB_INDICATOR_WIDTH)
               .height(DIRECTORY_TAB_INDICATOR_HEIGHT)
-              .backgroundColor(TOK_READ_PRIMARY)
+              .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
               .borderRadius(TOK_RADIUS_PILL);
           }
         }
@@ -199,13 +200,13 @@ export struct ReaderDirectoryModulePanel {
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(10)
-            .fontColor(this.activeTab === 'bookmarks' ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+            .fontColor(this.activeTab === 'bookmarks' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center);
           if (this.activeTab === 'bookmarks') {
             Row()
               .width(DIRECTORY_TAB_INDICATOR_WIDTH)
               .height(DIRECTORY_TAB_INDICATOR_HEIGHT)
-              .backgroundColor(TOK_READ_PRIMARY)
+              .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
               .borderRadius(TOK_RADIUS_PILL);
           }
         }
@@ -222,7 +223,7 @@ export struct ReaderDirectoryModulePanel {
       Row()
         .width('100%')
         .height(DIRECTORY_TAB_DIVIDER_HEIGHT)
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
     }
     .width('100%')
     .height(DIRECTORY_TABS_HEIGHT);
@@ -236,7 +237,7 @@ export struct ReaderDirectoryModulePanel {
           Row()
             .width(DIRECTORY_CURRENT_BAR_WIDTH)
             .height(READER_DIRECTORY_ROW_HEIGHT)
-            .backgroundColor(TOK_ACCENT)
+            .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
             .borderRadius(TOK_RADIUS_PILL);
         }
         Stack({ alignContent: Alignment.Center }) {
@@ -256,15 +257,18 @@ export struct ReaderDirectoryModulePanel {
       }
       .layoutWeight(1)
       .height(READER_DIRECTORY_ROW_HEIGHT)
-      .accessibilityText(`打开章节：${repeatItem.item.title}`)
-      .onClick((): void => this.onSelectChapter(repeatItem.item.index));
-      this.statusMarkerHitTarget(repeatItem.item);
-      this.bookmarkMarkerHitTarget(repeatItem.item);
+      .accessibilityText(repeatItem.item.navigable === false ? `卷标题：${repeatItem.item.title}` : `打开章节：${repeatItem.item.title}`)
+      .enabled(repeatItem.item.navigable !== false)
+      .onClick((): void => { if (repeatItem.item.navigable !== false) this.onSelectChapter(repeatItem.item.index); });
+      if (repeatItem.item.navigable !== false) {
+        this.statusMarkerHitTarget(repeatItem.item);
+        this.bookmarkMarkerHitTarget(repeatItem.item);
+      }
     }
     .width('100%')
     .height(READER_DIRECTORY_ROW_HEIGHT)
-    .backgroundColor(this.isCurrent(repeatItem.item) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
-    .border({ width: { top: 1 }, color: TOK_LINE })
+    .backgroundColor(this.isCurrent(repeatItem.item) ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
+    .border({ width: { top: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(TOK_RADIUS_SM)
     .alignItems(VerticalAlign.Center);
   }
@@ -278,24 +282,24 @@ export struct ReaderDirectoryModulePanel {
     }
     .width(DIRECTORY_MARKER_HIT_SIZE)
     .height(DIRECTORY_MARKER_HIT_SIZE)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .borderRadius(TOK_RADIUS_PILL)
-    .enabled(this.chapterDownloadEnabled && this.downloadMarkerEnabled(entry))
+    .enabled(entry.navigable !== false && this.chapterDownloadEnabled && this.downloadMarkerEnabled(entry))
     .accessibilityText(this.downloadMarkerLabel(entry))
-    .onClick((): void => this.onDownloadChapter(entry.index));
+    .onClick((): void => { if (entry.navigable !== false) this.onDownloadChapter(entry.index); });
   }
 
   @Builder
   private statusMarkerHitTarget(entry: LocalReadingTocEntry) {
     if (this.isRead(entry)) {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.reader_directory_marker_check'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')))
           .width(DIRECTORY_MARKER_ICON_SIZE)
           .height(DIRECTORY_MARKER_ICON_SIZE);
       }
       .width(DIRECTORY_MARKER_HIT_SIZE)
       .height(DIRECTORY_MARKER_HIT_SIZE)
-      .backgroundColor('#1A2F6373')
+      .backgroundColor(readerAppColor('app.ReaderDirectoryModulePanel.statusMarkerHitTarget.backgroundColor.1A2F6373', this.appThemeScheme))
       .borderRadius(TOK_RADIUS_PILL)
       .accessibilityText('已读');
     } else if (this.chapterDownloadEnabled) {
@@ -307,7 +311,7 @@ export struct ReaderDirectoryModulePanel {
   private bookmarkMarkerHitTarget(entry: LocalReadingTocEntry) {
     Stack({ alignContent: Alignment.Center }) {
       if (this.hasBookmark(entry)) {
-        Image($r('app.media.reader_directory_marker_bookmark_active'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')))
           .width(DIRECTORY_MARKER_ICON_SIZE)
           .height(DIRECTORY_MARKER_ICON_SIZE);
       }
@@ -443,12 +447,12 @@ export struct ReaderDirectoryModulePanel {
    */
   private titleColor(entry: LocalReadingTocEntry): ResourceColor {
     if (this.isCurrent(entry)) {
-      return TOK_READ_PRIMARY;
+      return readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme);
     }
     if (this.currentChapterIndex >= 0 && entry.index < this.currentChapterIndex) {
-      return TOK_READ_INK;
+      return readerAppColor('TOK_READ_INK', this.appThemeScheme);
     }
-    return TOK_READ_UNREAD;
+    return readerAppColor('TOK_READ_UNREAD', this.appThemeScheme);
   }
 
   private hasBookmark(entry: LocalReadingTocEntry): boolean {

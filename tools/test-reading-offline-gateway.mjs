@@ -358,3 +358,33 @@ await assert.rejects(() => remote.loadChapter(cachedSession, 0), /REMOTE_CHAPTER
 assert.equal(offlineChapterRequests, 0, 'offline missing body must fail before chapter.content and Host HTTP');
 
 console.log('reading offline gateway deterministic runtime: PASS');
+
+// Volume headings retain canonical positions but never become download actors,
+// manifest requests, progress totals or chapter materialization work.
+{
+  const volumeSession = { ...session, entries: [
+    { index: 0, title: 'volume', url: '', variables: [] },
+    { index: 1, title: 'chapter', url: '/one', variables: [] },
+    { index: 2, title: 'volume 2', url: '', variables: [] },
+  ] };
+  const requests = [], progress = [];
+  let maliciousLease = false;
+  const runtime = { request: async (method, params) => {
+    requests.push({ method, params });
+    if (method === 'cache.book.status') return { data: { sourceId: SOURCE_ID, bookId: BOOK_ID,
+      chapters: [{ chapterIndex: 0, state: 'completed', cachedBytes: 0 }] } };
+    if (method === 'cache.book.prefetch') return { data: { sourceId: SOURCE_ID, bookId: BOOK_ID,
+      chapterRange: params.chapterRange, materializations: maliciousLease ? [{ chapterIndex: 0, token: 'invalid-volume' }] : [] } };
+    throw Error('unexpected materialization');
+  }, isOfflineImageChapterMaterialized: async () => { throw Error('volume must not request a manifest'); } };
+  const gateway = new ReadingOfflineGateway(runtime);
+  const projection = await gateway.loadProjection(volumeSession);
+  assert.deepEqual(projection.map(e => [e.index, e.navigable, e.downloadState]), [[0, false, 'unknown'], [1, true, 'missing'], [2, false, 'unknown']]);
+  await gateway.prefetchRange(volumeSession, 0, 1);
+  assert.equal(requests.filter(r => r.method === 'cache.book.prefetch').length, 0);
+  await gateway.prefetchBook(volumeSession, undefined, p => progress.push([p.completedChapters, p.totalChapters]));
+  assert.deepEqual(progress, [[1, 1]]);
+  maliciousLease = true;
+  await assert.rejects(gateway.prefetchRange(volumeSession, 0, 3), /invalid materialization lease/);
+}
+console.log('offline canonical volume projection, range guard, readable totals and lease rejection: PASS');

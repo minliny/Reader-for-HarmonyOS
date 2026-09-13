@@ -44,7 +44,7 @@ function fixture() {
       row.acquisition={...row.acquisition,...params.acquisition};
       return {data:{book:row}};
     }
-    if(method==='cache.book.status') throw new Error('fixture cache miss');
+    if(method==='cache.book.status') return {data:{sourceId:params.sourceId,bookId:params.bookId,tocAvailable:false,chapters:[]}};
     throw new Error(`unhandled ${method}`);
   });
   return {runtime,calls,gates,rows,key,setVersion:v=>{version=v;}};

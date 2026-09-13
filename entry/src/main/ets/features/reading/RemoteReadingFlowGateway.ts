@@ -11,6 +11,7 @@ import {
   decodeRemoteReadingVariables,
   encodeRemoteReadingVariables,
   mergeRemoteReadingVariables,
+  remoteReadingHttpSummary,
   RemoteReadingGatewayError,
   type RemoteReadingTocDiagnostic,
   type RemoteReadingCommand,
@@ -71,6 +72,8 @@ export type RemoteReadingSession = {
   continuationVariables: RemoteReadingVariable[];
   entries: RemoteReadingTocEntry[];
   hostRequirements: RemoteReadingHostCapabilityId[];
+  requiresContextRefresh?: boolean;
+  refreshRecommended?: boolean;
 };
 
 export type RemoteReadingProgress = {
@@ -218,12 +221,16 @@ export class RemoteReadingFlowGateway {
     }, options.isCurrent);
     this.assertIdentity(tocResult.data, identity, 'book.toc');
     const entries = this.decodeToc(tocResult.data['toc']);
-    if (entries.length === 0) {
+    const readableEntryCount = entries.filter((entry): boolean => entry.url.trim().length > 0).length;
+    if (readableEntryCount === 0) {
       const diagnostic: RemoteReadingTocDiagnostic = {
         sourceId: identity.sourceId,
         bookId: identity.bookId,
         tocUrl,
-        returnedEntryCount: 0,
+        returnedEntryCount: entries.length,
+        readableEntryCount,
+        requestId: tocResult.requestId,
+        ...remoteReadingHttpSummary(tocResult.data['http']),
       };
       throw new RemoteReadingGatewayError(
         'emptyToc', 'book.toc returned no readable chapters', 'book.toc', undefined, diagnostic);
@@ -250,6 +257,18 @@ export class RemoteReadingFlowGateway {
     seed: RemoteReadingBookSeed,
     isCurrent?: () => boolean,
   ): Promise<RemoteReadingSession> {
+    try {
+      return await this.readCachedSession(seed, isCurrent);
+    } catch (error) {
+      if (error instanceof RemoteReadingGatewayError && error.code === 'invalidResponse') {
+        throw new RemoteReadingGatewayError('cacheDerivedCorrupt', error.message, 'cache.book.status',
+          undefined, error.diagnostic, error);
+      }
+      throw error;
+    }
+  }
+
+  private async readCachedSession(seed: RemoteReadingBookSeed, isCurrent?: () => boolean): Promise<RemoteReadingSession> {
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
     assertRemoteReadingNonBlankString(seed.detailUrl, 'detailUrl');
     assertRemoteReadingNonBlankString(seed.title, 'title');
@@ -279,11 +298,12 @@ export class RemoteReadingFlowGateway {
       );
     }
     const entries: RemoteReadingTocEntry[] = [];
-    const continuationVariables = decodeRemoteReadingVariables(
-      result.data['continuationVariables'],
-      'cache.book.status',
-      true,
-    );
+    let invalidVariables = false;
+    const cachedVariables = (value: unknown): RemoteReadingVariable[] => {
+      try { return decodeRemoteReadingVariables(value, 'cache.book.status', true); }
+      catch (_) { invalidVariables = true; return []; }
+    };
+    const continuationVariables = cachedVariables(result.data['continuationVariables']);
     for (let position = 0; position < rawChapters.length; position += 1) {
       const raw = this.requireObject(rawChapters[position], 'cache.book.status chapter');
       const index = this.requireChapterIndex(raw, 'chapterIndex', 'cache.book.status chapter');
@@ -297,13 +317,12 @@ export class RemoteReadingFlowGateway {
       entries.push({
         index,
         title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
-        url: this.requireNonBlankString(raw, 'url', 'cache.book.status chapter'),
-        variables: decodeRemoteReadingVariables(
-          raw['variables'],
-          'cache.book.status chapter',
-          true,
-        ),
+        url: this.requireString(raw, 'url', 'cache.book.status chapter'),
+        variables: cachedVariables(raw['variables']),
       });
+    }
+    if (!entries.some((entry): boolean => entry.url.trim().length > 0)) {
+      throw new RemoteReadingGatewayError('cachedSessionUnavailable', 'REMOTE_TOC_NOT_DOWNLOADED', 'cache.book.status');
     }
     return {
       acquisitionMode: 'offline',
@@ -325,6 +344,7 @@ export class RemoteReadingFlowGateway {
       ),
       entries,
       hostRequirements: [],
+      requiresContextRefresh: invalidVariables,
     };
   }
 
@@ -336,10 +356,11 @@ export class RemoteReadingFlowGateway {
   async openCachedCatalogSession(
     seed: RemoteReadingBookSeed,
     isCurrent?: () => boolean,
+    contextIsCurrent: boolean = false,
   ): Promise<RemoteReadingSession> {
     const cached = await this.openCachedSession(seed, isCurrent);
     return {
-      acquisitionMode: 'online',
+      acquisitionMode: contextIsCurrent && !cached.requiresContextRefresh ? 'online' : 'offline',
       sourceVersion: cached.sourceVersion,
       identity: cached.identity,
       detailUrl: cached.detailUrl,
@@ -347,7 +368,8 @@ export class RemoteReadingFlowGateway {
       book: cached.book,
       continuationVariables: cached.continuationVariables,
       entries: cached.entries,
-      hostRequirements: ['httpExecute'],
+      hostRequirements: contextIsCurrent && !cached.requiresContextRefresh ? ['httpExecute'] : [],
+      requiresContextRefresh: !contextIsCurrent || cached.requiresContextRefresh,
     };
   }
 
@@ -388,7 +410,7 @@ export class RemoteReadingFlowGateway {
       return {
         index,
         title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
-        url: this.requireNonBlankString(raw, 'url', 'cache.book.status chapter'),
+        url: this.requireString(raw, 'url', 'cache.book.status chapter'),
         variables: session.entries[position].variables,
       };
     });
@@ -405,14 +427,35 @@ export class RemoteReadingFlowGateway {
     this.assertChapterIndex(chapterIndex, 'chapterIndex');
     assertRemoteReadingHostRequirements(session.hostRequirements);
     const selected = this.chapterEntry(session, chapterIndex);
-    if (selected === undefined) {
+    if (selected === undefined || selected.url.trim().length === 0) {
       throw new RemoteReadingGatewayError(
         'chapterNotFound',
         `chapter ${chapterIndex} is not present in the remote session TOC`,
       );
     }
+    if (session.acquisitionMode === 'online' && coordinator !== undefined) {
+      const currentVersion = await coordinator.currentSourceVersion(identity.sourceId);
+      if (session.sourceVersion !== currentVersion) {
+        // A rule edit never invalidates downloaded bodies. Re-enter through
+        // cache-only admission; only a missing body can request fresh rules.
+        return this.loadChapter({ ...session, acquisitionMode: 'offline', hostRequirements: [],
+          sourceVersion: currentVersion, requiresContextRefresh: currentVersion !== undefined }, chapterIndex, isCurrent);
+      }
+    }
     if (session.acquisitionMode === 'offline') {
-      await this.assertOfflineChapterAvailable(identity, chapterIndex, isCurrent);
+      try {
+        await this.assertOfflineChapterAvailable(identity, chapterIndex, isCurrent);
+      } catch (error) {
+        if (!(error instanceof RemoteReadingGatewayError) || error.code !== 'chapterNotDownloaded' ||
+          session.requiresContextRefresh !== true) throw error;
+        const fresh = await this.openSession({ ...session.book, ...identity, detailUrl: session.detailUrl,
+          sourceVersion: session.sourceVersion, searchVariables: [] }, { forceRefresh: true, isCurrent });
+        const refreshedEntry = fresh.entries.find((entry): boolean => entry.index === selected.index && entry.url === selected.url);
+        if (refreshedEntry === undefined) {
+          throw new RemoteReadingGatewayError('sourceVersionChanged', '目录已更新，请重新打开本书以恢复阅读位置', 'book.toc');
+        }
+        return this.loadChapter(fresh, chapterIndex, isCurrent);
+      }
     }
     assertRemoteReadingNonBlankString(selected.title, 'session chapter title');
     assertRemoteReadingNonBlankString(selected.url, 'session chapter URL');
@@ -787,6 +830,7 @@ export class RemoteReadingFlowGateway {
     isCurrent: (() => boolean) | undefined,
   ): Promise<ReaderCoreResultEvent> {
     try {
+      if (isCurrent?.() === false) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消', command);
       return await this.runtimeOwner.request(command, params, this.requestOptions(isCurrent));
     } catch (error) {
       throw classifyRemoteReadingCommandFailure(command, error);
@@ -857,7 +901,7 @@ export class RemoteReadingFlowGateway {
       entries.push({
         index,
         title: this.requireNonBlankString(raw, 'title', 'book.toc entry'),
-        url: this.requireNonBlankString(raw, 'url', 'book.toc entry'),
+        url: this.requireString(raw, 'url', 'book.toc entry'),
         variables: decodeRemoteReadingVariables(raw['variables'], 'book.toc entry', true),
       });
     }

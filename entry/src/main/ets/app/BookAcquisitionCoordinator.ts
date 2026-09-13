@@ -6,7 +6,9 @@ import {
   RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingOpenOptions,
   type RemoteReadingSession,
 } from '../features/reading/RemoteReadingFlowGateway';
-import { decodeRemoteReadingVariables } from '../features/reading/RemoteReadingContract';
+import { decodeRemoteReadingVariables, RemoteReadingGatewayError, classifyRemoteReadingCommandFailure,
+  isRemoteReadingCacheRecoveryEligible, remoteReadingFailureRecord,
+  type RemoteReadingFailureRecord } from '../features/reading/RemoteReadingContract';
 
 const PREPARED_SESSION_LIMIT = 32;
 const CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
@@ -44,6 +46,9 @@ export class BookAcquisitionCoordinator {
   private listeners: Set<() => void> = new Set();
   private notifyTimer: number = -1;
   private attemptClock: number = 0;
+  private failures: RemoteReadingFailureRecord[] = [];
+  private failureIdentities: Map<string, number> = new Map();
+  private identityCounter: number = 0;
 
   private execute: BookRequestExecutor;
 
@@ -55,6 +60,15 @@ export class BookAcquisitionCoordinator {
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return (): void => { this.listeners.delete(listener); };
+  }
+
+  recentFailures(): RemoteReadingFailureRecord[] { return this.failures.map((record) => ({ ...record })); }
+
+  recordFailure(error: RemoteReadingGatewayError, attemptId: number = this.beginAttempt(),
+    context: Partial<RemoteReadingFailureRecord> = {}): void {
+    this.failures.push({ ...remoteReadingFailureRecord(error, attemptId), ...context });
+    if (this.failures.length > 32) this.failures.shift();
+    this.changed();
   }
 
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {},
@@ -77,6 +91,8 @@ export class BookAcquisitionCoordinator {
       }
     }
     if (method === 'source.import' || method === 'source.update' || method === 'source.delete') {
+      if (method === 'source.import' || sourceId.length === 0) this.versions.clear();
+      else this.versions.delete(sourceId);
       this.registryReady = false;
       this.prepared.clear();
       this.attempted.clear();
@@ -113,10 +129,9 @@ export class BookAcquisitionCoordinator {
 
   async acquireBook(seed: RemoteReadingBookSeed, options: RemoteReadingOpenOptions = {},
     priority: BookRequestPriority = 'foreground'): Promise<RemoteReadingSession> {
-    if (options.isCurrent?.() === false || this.closed) throw new Error('书籍请求已取消');
+    if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     await this.ensureSources();
     const version = this.versions.get(seed.sourceId);
-    if (version === undefined) throw new Error('书源已停用或删除');
     const key = JSON.stringify([seed.sourceId, seed.bookId, version]);
     if (priority === 'foreground') {
       this.pending.delete(acquisitionBookKey(seed.sourceId, seed.bookId));
@@ -161,18 +176,22 @@ export class BookAcquisitionCoordinator {
     Promise<BookAcquisitionAdmission> {
     await this.ensureSources();
     const version = this.versions.get(seed.sourceId);
-    if (version === undefined) throw new Error('书源已停用或删除');
     const key = JSON.stringify([seed.sourceId, seed.bookId, version]);
     const cachedEntry = this.prepared.get(key);
     const cached = !options.forceRefresh && cachedEntry !== undefined &&
       Date.now() - cachedEntry.at < CACHE_FRESH_MS;
     const session = await this.acquireBook(seed, options, priority);
-    if (!cached || options.forceRefresh || this.closed) return { session };
+    if ((!cached && session.refreshRecommended !== true) || options.forceRefresh || this.closed || version === undefined) return { session };
     // Do not pass the page's isCurrent guard to process-owned refresh work;
     // the visible subscriber may disappear while the refresh updates the
     // shared admission cache for the next opener.
     const backgroundRefresh = this.acquireBook(seed, { forceRefresh: true }, 'background');
     return { session, backgroundRefresh };
+  }
+
+  async currentSourceVersion(sourceId: string): Promise<string | undefined> {
+    await this.ensureSources();
+    return this.versions.get(sourceId);
   }
 
   beginAttempt(): number {
@@ -182,7 +201,7 @@ export class BookAcquisitionCoordinator {
 
   async reportVerdict(session: RemoteReadingSession, chapterUrl: string, message?: string, checkedAt: number = this.beginAttempt()): Promise<void> {
     const version = session.sourceVersion;
-    if (version === undefined || version.length === 0) return;
+    if (version === undefined || version.length === 0 || session.acquisitionMode === 'offline') return;
     const acquisition: JsonObject = { schemaVersion: 1, sourceVersion: version,
       stage: message === undefined ? 'readable' : 'failed', checkedAt };
     if (message === undefined) acquisition['chapterUrl'] = chapterUrl;
@@ -197,16 +216,37 @@ export class BookAcquisitionCoordinator {
     this.scheduler.close();
     this.prepared.clear();
     this.listeners.clear();
+    this.failureIdentities.clear();
     if (this.notifyTimer >= 0) clearTimeout(this.notifyTimer);
     this.notifyTimer = -1;
   }
 
-  private async openBook(seed: RemoteReadingBookSeed, version: string, job: BookJob,
+  private async openBook(seed: RemoteReadingBookSeed, version: string | undefined, job: BookJob,
     forceRefresh: boolean): Promise<RemoteReadingSession> {
+    const attemptId = this.beginAttempt();
+    const started = Date.now();
+    const identityKey = acquisitionBookKey(seed.sourceId, seed.bookId);
+    let identityRef = this.failureIdentities.get(identityKey);
+    if (identityRef === undefined) {
+      identityRef = ++this.identityCounter;
+      this.failureIdentities.set(identityKey, identityRef);
+      if (this.failureIdentities.size > PREPARED_SESSION_LIMIT) {
+        const oldest = this.failureIdentities.keys().next().value;
+        if (oldest !== undefined) this.failureIdentities.delete(oldest);
+      }
+    }
+    const failureContext = (cacheDecision: RemoteReadingFailureRecord['cacheDecision']): Partial<RemoteReadingFailureRecord> => ({
+      identityRef, ruleVersion: version !== undefined && /^[a-f0-9]{64}$/i.test(version) ? version : undefined,
+      elapsedMs: Math.max(0, Date.now() - started), cacheDecision,
+    });
     const stored = await this.request('search-book.get', { origin: seed.sourceId, bookUrl: seed.bookId });
     const row = objectValue(stored.data['book']);
+    if ((typeof row?.['origin'] === 'string' && row['origin'] !== seed.sourceId) ||
+      (typeof row?.['bookUrl'] === 'string' && row['bookUrl'] !== seed.bookId)) {
+      throw new RemoteReadingGatewayError('identityMismatch', 'search-book.get returned a different identity');
+    }
     const facts = objectValue(row?.['acquisition']);
-    const current = facts?.['sourceVersion'] === version;
+    const current = version !== undefined && facts?.['sourceVersion'] === version;
     const actual: RemoteReadingBookSeed = { sourceId: seed.sourceId, bookId: seed.bookId,
       detailUrl: seed.detailUrl, title: current && typeof row?.['name'] === 'string' ? row['name'] as string : seed.title,
       author: current && typeof row?.['author'] === 'string' ? row['author'] as string : seed.author,
@@ -214,7 +254,7 @@ export class BookAcquisitionCoordinator {
       intro: current && typeof row?.['intro'] === 'string' ? row['intro'] as string : seed.intro,
       kind: current && typeof row?.['kind'] === 'string' ? row['kind'] as string : seed.kind,
       lastChapter: current && typeof row?.['latestChapterTitle'] === 'string' ? row['latestChapterTitle'] as string : seed.lastChapter,
-      searchVariables: seed.sourceVersion === undefined || seed.sourceVersion === version ? seed.searchVariables : [],
+      searchVariables: version !== undefined && seed.sourceVersion === version ? seed.searchVariables : [],
       sourceVersion: version };
     let storedVariablesValid = true;
     if (current && typeof row?.['variable'] === 'string') {
@@ -228,7 +268,7 @@ export class BookAcquisitionCoordinator {
         // A legacy or partially-written continuation is a cache miss, not a
         // permanent book-open failure. The fresh detail response replaces it.
         storedVariablesValid = false;
-        actual.searchVariables = seed.searchVariables;
+        actual.searchVariables = seed.sourceVersion === version ? seed.searchVariables : [];
       }
     }
     const gateway = new RemoteReadingFlowGateway({
@@ -236,17 +276,40 @@ export class BookAcquisitionCoordinator {
         this.request(method, params, options, job.priority),
     });
     const isCurrent = (): boolean => !this.closed && this.versions.get(seed.sourceId) === version;
-    if (!forceRefresh && current && storedVariablesValid && typeof facts?.['catalogAt'] === 'number' &&
-      Date.now() - (facts['catalogAt'] as number) < CACHE_FRESH_MS) {
+    let cacheFailure: RemoteReadingGatewayError | undefined;
+    if (!forceRefresh) {
       try {
-        const cached = await gateway.openCachedCatalogSession(actual, isCurrent);
-        return { ...cached, sourceVersion: version };
-      } catch (_error) { /* Missing/cleared catalog falls through to shared acquisition. */ }
+        const contextIsCurrent = current && storedVariablesValid && typeof facts?.['catalogAt'] === 'number';
+        const cached = contextIsCurrent ? await gateway.openCachedCatalogSession(actual, isCurrent, true) :
+          await gateway.openCachedSession(actual, isCurrent);
+        if (this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消', 'cache.book.status');
+        if (!isCurrent()) throw new RemoteReadingGatewayError('sourceVersionChanged', '书源规则已更新，请重试', 'cache.book.status');
+        return { ...cached, sourceVersion: version, requiresContextRefresh: (!contextIsCurrent || cached.requiresContextRefresh === true) && version !== undefined,
+          refreshRecommended: !contextIsCurrent || Date.now() - (facts?.['catalogAt'] as number) >= CACHE_FRESH_MS };
+      } catch (error) {
+        const classified = classifyRemoteReadingCommandFailure('cache.book.status', error);
+        this.recordFailure(classified, attemptId, failureContext(classified.code === 'cachedSessionUnavailable' ? 'miss' : classified.code === 'cacheDerivedCorrupt' ? 'derivedCorrupt' : 'blocked'));
+        if (!isRemoteReadingCacheRecoveryEligible(classified)) throw classified;
+        cacheFailure = classified;
+      }
     }
-    const session = await gateway.openSession(actual, { isCurrent });
-    if (session.sourceVersion !== undefined && session.sourceVersion !== version) {
+    if (version === undefined) {
+      throw new RemoteReadingGatewayError('cachedSessionUnavailable', '书源已停用或删除，且本机没有可读目录',
+        'cache.book.status', undefined, undefined, cacheFailure);
+    }
+    let session: RemoteReadingSession;
+    try {
+      session = await gateway.openSession(actual, { isCurrent });
+    } catch (error) {
+      const classified = classifyRemoteReadingCommandFailure('book.toc', error);
+      const failure = cacheFailure === undefined ? classified : new RemoteReadingGatewayError(classified.code,
+        classified.message, classified.command, classified.capability, classified.diagnostic, cacheFailure, classified.category);
+      this.recordFailure(failure, attemptId, failureContext('refresh'));
+      throw failure;
+    }
+    if (!isCurrent() || (session.sourceVersion !== undefined && session.sourceVersion !== version)) {
       this.registryReady = false;
-      throw new Error('书源规则已更新，请重试');
+      throw new RemoteReadingGatewayError('sourceVersionChanged', '书源规则已更新，请重试');
     }
     return { ...session, sourceVersion: version };
   }
@@ -280,7 +343,7 @@ export class BookAcquisitionCoordinator {
       });
       const progress = await gateway.loadProgress(session.identity);
       const start = progress.kind === 'restored' ? progress.progress.chapterIndex : 0;
-      const entries = session.entries.filter((entry): boolean => entry.index >= start).slice(0, progress.kind === 'restored' ? 1 : 3);
+      const entries = session.entries.filter((entry): boolean => entry.index >= start && entry.url.trim().length > 0).slice(0, progress.kind === 'restored' ? 1 : 3);
       let failure = '没有可读章节';
       let attemptAt = this.beginAttempt();
       for (const entry of entries) {

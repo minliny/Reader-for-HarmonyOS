@@ -49,7 +49,10 @@ export class RemoteReadingSourceError extends RemoteReadingGatewayError {
   readonly kind: RemoteReadingFailureKind;
 
   constructor(kind: RemoteReadingFailureKind, message: string, command?: RemoteReadingCommand) {
-    super('commandFailed', message, command);
+    super('commandFailed', message, command, undefined, undefined, undefined,
+      kind === 'SOURCE_CONTENT_EMPTY' ? 'SOURCE_CONTENT_EMPTY' :
+      kind === 'SOURCE_TOC_EMPTY' ? 'SOURCE_TOC_EMPTY' :
+      kind === 'SOURCE_PARSE_FAILED' ? 'SOURCE_RULE_FAILED' : undefined);
     this.name = 'RemoteReadingSourceError';
     this.kind = kind;
   }
@@ -189,16 +192,20 @@ export function remoteReadingFailureKindOf(error: unknown): RemoteReadingFailure
       case 'emptyToc':
         return 'SOURCE_TOC_EMPTY';
       case 'invalidResponse':
-      case 'identityMismatch':
       case 'missingTocUrl':
       case 'nonTextChapter':
       case 'chapterNotFound':
         return 'SOURCE_PARSE_FAILED';
       case 'chapterNotDownloaded':
       case 'cachedSessionUnavailable':
+      case 'cacheDerivedCorrupt':
+      case 'storageFailure':
         return 'STORAGE_FAILED';
       case 'commandFailed':
         return 'SOURCE_HTTP_FAILED';
+      case 'identityMismatch':
+      case 'sourceVersionChanged':
+      case 'cancelled':
       case 'invalidInput':
       case 'unsupportedHostCapability':
       default:

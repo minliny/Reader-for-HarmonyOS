@@ -453,9 +453,9 @@ await assert.rejects(
     title: 'Stale book',
     author: '',
   }, { isCurrent: () => false }),
-  (error) => error.code === 'commandFailed' && error.command === 'book.detail',
+  (error) => error.code === 'cancelled' && error.command === 'book.detail',
 );
-assert.equal(staleRequestCount, 1,
+assert.equal(staleRequestCount, 0,
   'a cancelled detail request must not continue into TOC or chapter work');
 
 let staleChapterRequestCount = 0;
@@ -470,9 +470,9 @@ const staleChapterGateway = new RemoteReadingFlowGateway({
 });
 await assert.rejects(
   staleChapterGateway.loadChapter(session, 0, () => false),
-  (error) => error.code === 'commandFailed' && error.command === 'chapter.content',
+  (error) => error.code === 'cancelled' && error.command === 'chapter.content',
 );
-assert.equal(staleChapterRequestCount, 1);
+assert.equal(staleChapterRequestCount, 0);
 
 let mismatchRequestCount = 0;
 const mismatchGateway = new RemoteReadingFlowGateway({

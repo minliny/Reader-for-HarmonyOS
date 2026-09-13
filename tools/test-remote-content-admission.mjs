@@ -77,13 +77,17 @@ assert.equal(remoteReadingFailureKindOf(new RemoteReadingSourceError('SOURCE_PAY
 const codeExpectations = [
   ['emptyToc', 'SOURCE_TOC_EMPTY'],
   ['invalidResponse', 'SOURCE_PARSE_FAILED'],
-  ['identityMismatch', 'SOURCE_PARSE_FAILED'],
+  ['identityMismatch', 'RENDER_FAILED'],
   ['missingTocUrl', 'SOURCE_PARSE_FAILED'],
   ['nonTextChapter', 'SOURCE_PARSE_FAILED'],
   ['chapterNotFound', 'SOURCE_PARSE_FAILED'],
   ['commandFailed', 'SOURCE_HTTP_FAILED'],
   ['chapterNotDownloaded', 'STORAGE_FAILED'],
   ['cachedSessionUnavailable', 'STORAGE_FAILED'],
+  ['cacheDerivedCorrupt', 'STORAGE_FAILED'],
+  ['storageFailure', 'STORAGE_FAILED'],
+  ['cancelled', 'RENDER_FAILED'],
+  ['sourceVersionChanged', 'RENDER_FAILED'],
   ['unsupportedHostCapability', 'RENDER_FAILED'],
   ['invalidInput', 'RENDER_FAILED'],
 ];

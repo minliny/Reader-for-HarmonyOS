@@ -3,7 +3,7 @@ import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 
 export type ShelfBook = {
   sourceId: string;
-  /** Display name from the actual book-source registry, when available. */
+  /** Core projects the existing durable source registry, independent of source.list. */
   sourceName?: string;
   bookId: string;
   title: string;
@@ -252,7 +252,10 @@ export class ReaderCoreGateway {
       decoded.intro = intro;
     }
     if (sourceName !== undefined) {
-      decoded.sourceName = sourceName;
+      const name = sourceName.trim();
+      decoded.sourceName = name.length > 0 && name !== decoded.sourceId.trim() &&
+        !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)
+        ? name : '书源名称暂不可用';
     }
     if (kind !== undefined) {
       decoded.kind = kind;

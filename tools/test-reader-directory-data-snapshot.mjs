@@ -40,3 +40,11 @@ assert.match(panel, /private flushDeferredMutations\(\): void \{[\s\S]*?sameRead
   'the deferred endpoint flush performs the admitted-data equality check');
 assert.match(panel, /aboutToAppear\(\): void \{[\s\S]*?this\.admittedEntries = snapshotReaderDirectoryData\(this\.entries\)/);
 console.log('reader directory business-value snapshot and no-op prop refresh: PASS (native scroll still separate)');
+
+const headings = [{ index: 0, title: 'Volume', downloadState: 'unknown', navigable: false }, { index: 1, title: 'Chapter', downloadState: 'cached' }];
+const headingsSnapshot = copy(headings);
+assert.equal(headingsSnapshot[0].navigable, false);
+assert.equal(headingsSnapshot[1].index, 1);
+assert.equal(same(headingsSnapshot, headings), true);
+headings[0].navigable = true;
+assert.equal(same(headingsSnapshot, headings), false, 'a heading becoming readable must refresh the row actions');

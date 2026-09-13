@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { sameReaderDirectoryData, snapshotReaderDirectoryData } from './ReaderDirectoryDataSnapshot';
 import {
@@ -70,6 +71,8 @@ import {
  */
 @Component
 export struct FullDirectoryPanel {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop @Watch('onReadingAnchorChanged') currentChapterIndex: number = -1;
   @Prop chapterDownloadEnabled: boolean = false;
@@ -254,7 +257,7 @@ export struct FullDirectoryPanel {
       Text('')
         .width(42)
         .height(4)
-        .backgroundColor(TOK_READ_HANDLE)
+        .backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
         .borderRadius(999)
         .margin({ left: this.gripLeft(), top: 9 });
 
@@ -268,8 +271,8 @@ export struct FullDirectoryPanel {
     }
     .width(this.panelWidth())
     .height(this.panelHeight())
-    .backgroundColor(TOK_READ_SURFACE)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(24)
     .clip(true);
   }
@@ -301,7 +304,7 @@ export struct FullDirectoryPanel {
         .width(this.activeTab === 'bookmarks' ? this.panelWidth() + 52 * (1 - this.controlProgress()) - 2 :
           Math.max(0, this.panelWidth() - this.controlValue(22, 2)))
         .height(1)
-        .backgroundColor(TOK_LINE)
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: this.activeTab === 'bookmarks' ? 1 : this.controlValue(11, 1),
           y: this.activeTab === 'bookmarks' ? this.controlValue(50, 42) : this.controlValue(44, 42) })
         .opacity(this.activeTab === 'bookmarks' ? this.controlProgress() : 1);
@@ -313,7 +316,7 @@ export struct FullDirectoryPanel {
         Text('')
           .width(Math.max(0, this.panelWidth() - 2))
           .height(1)
-          .backgroundColor(TOK_LINE)
+          .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
           .position({ x: 0, y: this.controlValue(63, 51) })
           .opacity(this.controlProgress());
       }
@@ -365,11 +368,11 @@ export struct FullDirectoryPanel {
     Row() {
       Row({ space: TOK_SPACE_XS }) {
         if (this.activeTab === 'bookmarks') {
-          Image($r('app.media.reader_directory_marker_bookmark'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark')))
             .width(16)
             .height(16);
         } else {
-          Image($r('app.media.reader_directory_directory'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')))
             .width(16)
             .height(16);
         }
@@ -378,7 +381,7 @@ export struct FullDirectoryPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(14)
           .lineHeight(20)
-          .fontColor(TOK_READ_INK);
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .layoutWeight(1)
       .height(30)
@@ -391,12 +394,12 @@ export struct FullDirectoryPanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(10)
           .lineHeight(14)
-          .fontColor(TOK_READ_PRIMARY)
+          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
       .width(40)
       .height(26)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(8)
       .accessibilityText('收起目录')
       .onClick((): void => this.onExit());
@@ -420,8 +423,8 @@ export struct FullDirectoryPanel {
     }
     .width(this.innerWidth())
     .height(this.bodyContentHeight())
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(12)
     .clip(true);
   }
@@ -439,7 +442,7 @@ export struct FullDirectoryPanel {
       Text('')
         .width('100%')
         .height(1)
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
     }
     .width('100%')
     .height(42);
@@ -454,7 +457,7 @@ export struct FullDirectoryPanel {
           .fontWeight(600)
           .fontSize(11)
           .lineHeight(16)
-          .fontColor(this.activeTab === 'directory' ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+          .fontColor(this.activeTab === 'directory' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
       .width('100%')
@@ -465,7 +468,7 @@ export struct FullDirectoryPanel {
         Text('')
           .width(this.activeTabLineWidth())
           .height(2)
-          .backgroundColor(TOK_READ_PRIMARY)
+          .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .borderRadius(999);
       }
     }
@@ -487,11 +490,11 @@ export struct FullDirectoryPanel {
     Stack({ alignContent: Alignment.Bottom }) {
       Row({ space: 5 }) {
         if (this.activeTab === 'bookmarks') {
-          Image($r('app.media.reader_directory_marker_bookmark_active'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')))
             .width(15)
             .height(15);
         } else {
-          Image($r('app.media.reader_directory_marker_bookmark'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark')))
             .width(15)
             .height(15);
         }
@@ -500,7 +503,7 @@ export struct FullDirectoryPanel {
           .fontWeight(600)
           .fontSize(11)
           .lineHeight(16)
-          .fontColor(this.activeTab === 'bookmarks' ? TOK_READ_PRIMARY : TOK_READ_MUTED);
+          .fontColor(this.activeTab === 'bookmarks' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       .width('100%')
       .height(this.tabHeight())
@@ -510,7 +513,7 @@ export struct FullDirectoryPanel {
         Text('')
           .width(this.activeTabLineWidth())
           .height(2)
-          .backgroundColor(TOK_READ_PRIMARY)
+          .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .borderRadius(999);
       }
     }
@@ -562,7 +565,7 @@ export struct FullDirectoryPanel {
         Text('')
           .width('100%')
           .height(1)
-          .backgroundColor(TOK_LINE);
+          .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       }
     }
     .width('100%')
@@ -573,18 +576,18 @@ export struct FullDirectoryPanel {
   private controlButton(kind: string) {
     Stack({ alignContent: Alignment.Center }) {
       if (kind === 'search') {
-        Image($r('app.media.reader_directory_search')).width(16).height(16);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search'))).width(16).height(16);
       } else if (kind === 'top') {
-        Image($r('app.media.reader_directory_top')).width(16).height(16);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_top_theme_night') : $r('app.media.reader_directory_top'))).width(16).height(16);
       } else if (kind === 'bottom') {
-        Image($r('app.media.reader_directory_bottom')).width(16).height(16);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_bottom_theme_night') : $r('app.media.reader_directory_bottom'))).width(16).height(16);
       } else {
         if (this.ascending) {
-          Image($r('app.media.reader_directory_sort_ascending'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_sort_ascending_theme_night') : $r('app.media.reader_directory_sort_ascending')))
             .width(16)
             .height(16);
         } else {
-          Image($r('app.media.reader_directory_sort_descending'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_sort_descending_theme_night') : $r('app.media.reader_directory_sort_descending')))
             .width(16)
             .height(16);
         }
@@ -592,7 +595,7 @@ export struct FullDirectoryPanel {
     }
     .width(32)
     .height(32)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .borderRadius(8)
     .accessibilityText(this.controlButtonLabel(kind))
     .onClick((): void => this.handleControl(kind));
@@ -645,7 +648,7 @@ export struct FullDirectoryPanel {
             Text('')
             .width(3)
             .height(this.directoryListRowHeight())
-            .backgroundColor(TOK_ACCENT)
+            .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
             .borderRadius(999);
         }
         Stack({ alignContent: Alignment.Center }) {
@@ -655,7 +658,7 @@ export struct FullDirectoryPanel {
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(11)
-            .fontColor(TOK_READ_INK)
+            .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -664,18 +667,19 @@ export struct FullDirectoryPanel {
       }
       .layoutWeight(1)
       .height(this.directoryListRowHeight())
-      .accessibilityText(`打开章节：${repeatItem.item.title}`)
-      .onClick((): void => this.onSelectChapter(repeatItem.item.index));
-      if (this.chapterDownloadEnabled && repeatItem.item.downloadState !== 'unknown') {
+      .accessibilityText(repeatItem.item.navigable === false ? `卷标题：${repeatItem.item.title}` : `打开章节：${repeatItem.item.title}`)
+      .enabled(repeatItem.item.navigable !== false)
+      .onClick((): void => { if (repeatItem.item.navigable !== false) this.onSelectChapter(repeatItem.item.index); });
+      if (repeatItem.item.navigable !== false && this.chapterDownloadEnabled && repeatItem.item.downloadState !== 'unknown') {
         this.downloadMarkerHitTarget(repeatItem.item);
       }
-      if (repeatItem.item.bookmarks !== undefined) {
+      if (repeatItem.item.navigable !== false && repeatItem.item.bookmarks !== undefined) {
         this.bookmarkMarkerHitTarget(repeatItem.item);
       }
     }
     .width('100%')
     .height(this.directoryListRowHeight())
-    .backgroundColor(this.isCurrent(repeatItem.item) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
+    .backgroundColor(this.isCurrent(repeatItem.item) ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
     .borderRadius(6);
   }
 
@@ -760,9 +764,9 @@ export struct FullDirectoryPanel {
     .width(26)
     .height(26)
     .borderRadius(6)
-    .enabled(this.chapterDownloadEnabled && this.downloadMarkerEnabled(entry))
+    .enabled(entry.navigable !== false && this.chapterDownloadEnabled && this.downloadMarkerEnabled(entry))
     .accessibilityText(this.downloadMarkerLabel(entry))
-    .onClick((): void => this.onDownloadChapter(entry.index));
+    .onClick((): void => { if (entry.navigable !== false) this.onDownloadChapter(entry.index); });
   }
 
   @Builder
@@ -774,7 +778,7 @@ export struct FullDirectoryPanel {
     }
     .width(26)
     .height(26)
-    .backgroundColor(this.hasBookmark(entry) ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
+    .backgroundColor(this.hasBookmark(entry) ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
     .borderRadius(6)
     .margin({ right: 5 })
     .enabled(this.bookmarkMarkerEnabled(readerDirectoryBookmarkMarkerState(entry)))
@@ -795,7 +799,7 @@ export struct FullDirectoryPanel {
       Text('')
         .width('100%')
         .height(1)
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
         Text(this.currentTitle())
           .layoutWeight(1)
@@ -803,7 +807,7 @@ export struct FullDirectoryPanel {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
-          .fontColor(TOK_READ_INK)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -812,14 +816,14 @@ export struct FullDirectoryPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(9)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textAlign(TextAlign.End);
       }
       .width('100%')
       .height(47)
       .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 1 })
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .alignItems(VerticalAlign.Center);
     }
     .width('100%')

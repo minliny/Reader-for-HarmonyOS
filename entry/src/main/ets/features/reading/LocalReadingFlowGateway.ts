@@ -10,6 +10,8 @@ export type LocalReadingTocEntry = {
   index: number;
   title: string;
   downloadState: LocalReadingDownloadState;
+  /** Remote volume headings retain their index but cannot navigate/download/bookmark. */
+  navigable?: boolean;
   // `undefined` means the bookmark projection has not been admitted yet;
   // an empty array is the Core-confirmed "no bookmarks" result.
   bookmarks?: LocalReadingBookmark[];

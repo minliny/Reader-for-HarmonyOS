@@ -10,7 +10,13 @@ export type RemoteReadingErrorCode =
   'invalidInput' | 'unsupportedHostCapability' | 'invalidResponse' |
   'identityMismatch' | 'missingTocUrl' | 'emptyToc' |
   'chapterNotFound' | 'chapterNotDownloaded' | 'cachedSessionUnavailable' |
-  'nonTextChapter' | 'commandFailed';
+  'nonTextChapter' | 'commandFailed' | 'cancelled' | 'storageFailure' |
+  'sourceVersionChanged' | 'cacheDerivedCorrupt';
+
+export type RemoteReadingFailureCategory = 'CACHE_MISSING' | 'CACHE_DERIVED_CORRUPT' |
+  'STORAGE_FAILURE' | 'CANCELLED' | 'IDENTITY_MISMATCH' | 'SOURCE_VERSION_CHANGED' |
+  'SOURCE_HTTP_FAILED' | 'SOURCE_RESPONSE_FORMAT' | 'SOURCE_RULE_FAILED' |
+  'SOURCE_TOC_EMPTY' | 'SOURCE_CONTENT_EMPTY';
 
 export type RemoteReadingHostCapabilityId =
   'httpExecute' | 'responseCharsetDecoding' | 'platformCookieJar' |
@@ -39,6 +45,35 @@ export type RemoteReadingTocDiagnostic = {
   bookId: string;
   tocUrl: string;
   returnedEntryCount: number;
+  readableEntryCount?: number;
+  responseBytes?: number;
+  firstResponseBytes?: number;
+  responseDigest?: string;
+  firstResponseDigest?: string;
+  finalUrlDigest?: string;
+  httpStatus?: number;
+  requestId?: number;
+};
+
+/** Bounded, log-safe facts. URLs, response text and continuation values never enter this record. */
+export type RemoteReadingFailureRecord = {
+  attemptId: number;
+  category: RemoteReadingFailureCategory;
+  stage?: RemoteReadingCommand;
+  returnedEntryCount?: number;
+  readableEntryCount?: number;
+  responseBytes?: number;
+  firstResponseBytes?: number;
+  responseDigest?: string;
+  firstResponseDigest?: string;
+  finalUrlDigest?: string;
+  httpStatus?: number;
+  previousCategory?: RemoteReadingFailureCategory;
+  requestId?: number;
+  elapsedMs?: number;
+  identityRef?: number;
+  ruleVersion?: string;
+  cacheDecision?: 'miss' | 'derivedCorrupt' | 'blocked' | 'refresh';
 };
 
 /**
@@ -50,6 +85,8 @@ export class RemoteReadingGatewayError extends Error {
   readonly command: RemoteReadingCommand | undefined;
   readonly capability: RemoteReadingHostCapabilityId | undefined;
   readonly diagnostic: RemoteReadingTocDiagnostic | undefined;
+  readonly category: RemoteReadingFailureCategory;
+  readonly causeValue: unknown;
 
   constructor(
     code: RemoteReadingErrorCode,
@@ -57,6 +94,8 @@ export class RemoteReadingGatewayError extends Error {
     command: RemoteReadingCommand | undefined = undefined,
     capability: RemoteReadingHostCapabilityId | undefined = undefined,
     diagnostic: RemoteReadingTocDiagnostic | undefined = undefined,
+    causeValue: unknown = undefined,
+    category?: RemoteReadingFailureCategory,
   ) {
     super(message);
     this.name = 'RemoteReadingGatewayError';
@@ -64,7 +103,58 @@ export class RemoteReadingGatewayError extends Error {
     this.command = command;
     this.capability = capability;
     this.diagnostic = diagnostic;
+    this.causeValue = causeValue;
+    this.category = category ?? remoteReadingCategoryForCode(code);
   }
+}
+
+function remoteReadingCategoryForCode(code: RemoteReadingErrorCode): RemoteReadingFailureCategory {
+  switch (code) {
+    case 'cancelled': return 'CANCELLED';
+    case 'storageFailure': return 'STORAGE_FAILURE';
+    case 'sourceVersionChanged': return 'SOURCE_VERSION_CHANGED';
+    case 'identityMismatch': return 'IDENTITY_MISMATCH';
+    case 'cachedSessionUnavailable': case 'chapterNotDownloaded': return 'CACHE_MISSING';
+    case 'cacheDerivedCorrupt': return 'CACHE_DERIVED_CORRUPT';
+    case 'emptyToc': return 'SOURCE_TOC_EMPTY';
+    case 'commandFailed': case 'unsupportedHostCapability': return 'SOURCE_HTTP_FAILED';
+    default: return 'SOURCE_RESPONSE_FORMAT';
+  }
+}
+
+export function remoteReadingFailureRecord(error: RemoteReadingGatewayError, attemptId: number): RemoteReadingFailureRecord {
+  const record: RemoteReadingFailureRecord = { attemptId, category: error.category, stage: error.command };
+  for (const name of ['returnedEntryCount', 'readableEntryCount', 'responseBytes', 'firstResponseBytes', 'httpStatus', 'requestId'] as const) {
+    const value = error.diagnostic?.[name];
+    if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) record[name] = value;
+  }
+  for (const name of ['responseDigest', 'firstResponseDigest', 'finalUrlDigest'] as const) {
+    const value = error.diagnostic?.[name];
+    if (typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value)) record[name] = value;
+  }
+  if (error.causeValue instanceof RemoteReadingGatewayError) record.previousCategory = error.causeValue.category;
+  return record;
+}
+
+/** Select summaries only; never copy Host headers, cookie sessions or URLs to logs. */
+export function remoteReadingHttpSummary(value: unknown): Partial<RemoteReadingTocDiagnostic> {
+  const summary: Partial<RemoteReadingTocDiagnostic> = {};
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return summary;
+  const raw = value as JsonObject;
+  for (const name of ['responseBytes', 'firstResponseBytes', 'httpStatus'] as const) {
+    const candidate = raw[name] ?? (name === 'httpStatus' ? raw['status'] : undefined);
+    if (typeof candidate === 'number' && Number.isSafeInteger(candidate) && candidate >= 0) summary[name] = candidate;
+  }
+  for (const name of ['responseDigest', 'firstResponseDigest', 'finalUrlDigest'] as const) {
+    const candidate = raw[name];
+    if (typeof candidate === 'string' && /^[a-f0-9]{64}$/i.test(candidate)) summary[name] = candidate;
+  }
+  return summary;
+}
+
+export function isRemoteReadingCacheRecoveryEligible(error: unknown): boolean {
+  return error instanceof RemoteReadingGatewayError &&
+    (error.code === 'cachedSessionUnavailable' || error.code === 'cacheDerivedCorrupt');
 }
 
 /**
@@ -218,6 +308,31 @@ export function classifyRemoteReadingCommandFailure(
     return error;
   }
   const message = errorMessageOf(error);
+  const raw = error !== null && typeof error === 'object' ? error as {
+    code?: unknown; details?: JsonObject; error?: { code?: unknown; details?: JsonObject };
+    event?: { requestId?: number; error?: { code?: unknown; details?: JsonObject } };
+  } : undefined;
+  const code = raw?.event?.error?.code ?? raw?.code ?? raw?.error?.code;
+  const details = raw?.event?.error?.details ?? raw?.details ?? raw?.error?.details;
+  const diagnostic: RemoteReadingTocDiagnostic = {sourceId:'',bookId:'',tocUrl:'',returnedEntryCount:0,
+    requestId:raw?.event?.requestId,
+    ...remoteReadingHttpSummary(details)};
+  const category = details?.['category'];
+  if (code === 'CANCELLED' || /cancelled|canceled|已取消/i.test(message)) {
+    return new RemoteReadingGatewayError('cancelled', message, command, undefined, diagnostic, error);
+  }
+  if (details?.['reason'] === 'sourceVersionDrift' || category === 'SOURCE_VERSION_CHANGED') {
+    return new RemoteReadingGatewayError('sourceVersionChanged', message, command, undefined, diagnostic, error);
+  }
+  if (category === 'CACHE_DERIVED_CORRUPT') return new RemoteReadingGatewayError('cacheDerivedCorrupt', message, command, undefined, diagnostic, error);
+  if (category === 'STORAGE_FAILURE' || command === 'cache.book.status') {
+    return new RemoteReadingGatewayError('storageFailure', message, command, undefined, diagnostic, error);
+  }
+  if (category === 'SOURCE_HTTP_FAILED') return new RemoteReadingGatewayError('commandFailed', message, command, undefined, diagnostic, error);
+  if (category === 'SOURCE_RULE_FAILED' || category === 'SOURCE_RESPONSE_FORMAT') {
+    return new RemoteReadingGatewayError('invalidResponse', message, command, undefined,
+      diagnostic, error, category);
+  }
   if (message.indexOf('usePlatformCookieJar is not supported') >= 0) {
     return new RemoteReadingGatewayError(
       'unsupportedHostCapability', message, command, 'platformCookieJar',
@@ -231,7 +346,7 @@ export function classifyRemoteReadingCommandFailure(
       'unsupportedHostCapability', message, command, 'nonUtf8RequestBody',
     );
   }
-  return new RemoteReadingGatewayError('commandFailed', `${command} failed: ${message}`, command);
+  return new RemoteReadingGatewayError('commandFailed', `${command} failed: ${message}`, command, undefined, diagnostic, error);
 }
 
 /**

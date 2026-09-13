@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { sampleReaderControlMotionPresentation, type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -55,6 +56,8 @@ class ControlDirectoryFrame extends FrameCallback {
  */
 @Component
 export struct ReaderControlDirectoryContent {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop @Watch('refreshData') entries: LocalReadingTocEntry[] = [];
   @Prop @Watch('refreshData') currentChapterIndex: number = -1;
   @Prop @Watch('openList') tab: string = 'directory';
@@ -248,28 +251,28 @@ export struct ReaderControlDirectoryContent {
     Stack({ alignContent: Alignment.Bottom }) {
       Row({ space: 5 }) {
         if (tab === 'directory') {
-          Image(this.tab === tab ? $r('app.media.rc_list') :
-            $r('app.media.reader_directory_directory')).width(15).height(15);
+          Image(this.tab === tab ? (this.appThemeScheme === 'night' ? $r('app.media.rc_list_theme_night') : $r('app.media.rc_list')) :
+            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory'))).width(15).height(15);
         } else {
-          Image(this.tab === tab ? $r('app.media.reader_directory_marker_bookmark_active') :
-            $r('app.media.reader_directory_marker_bookmark')).width(15).height(15);
+          Image(this.tab === tab ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')) :
+            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark'))).width(15).height(15);
         }
         Text(title).fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).lineHeight(16)
-          .fontColor(this.tab === tab ? TOK_READ_PRIMARY : TOK_READ_MUTED);
+          .fontColor(this.tab === tab ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }.width('100%').height(this.value(31, 36)).justifyContent(FlexAlign.Center)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
       if (this.tab === tab) {
-        Row().width('52%').height(2).borderRadius(999).backgroundColor(TOK_READ_PRIMARY);
+        Row().width('52%').height(2).borderRadius(999).backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       }
     }.width(Math.max(0, (this.availableWidth - this.value(32, 18)) / 2)).height(this.value(31, 36))
-      .borderRadius(8).backgroundColor(this.tab === tab ? TOK_READ_ACTIVE_SOFT : Color.Transparent)
+      .borderRadius(8).backgroundColor(this.tab === tab ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
       .accessibilityText(title).onClick((): void => this.onTabChange(tab));
   }
 
   @Builder
   private tool(icon: Resource, title: string, action: () => void) {
     Stack() { Image(icon).width(16).height(16); }
-      .width(32).height(32).backgroundColor(TOK_SURFACE_PANEL_SOFT).borderRadius(8)
+      .width(32).height(32).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
       .accessibilityText(title).onClick(action);
   }
 
@@ -283,19 +286,19 @@ export struct ReaderControlDirectoryContent {
             onTextChange: (value: string): void => { this.draft = value; },
             onSubmit: (): void => this.search() });
         }.layoutWeight(1).height(32);
-        this.tool($r('app.media.reader_directory_search'), '搜索', (): void => this.search());
+        this.tool((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search')), '搜索', (): void => this.search());
         if (this.tab === 'directory') {
-          this.tool($r('app.media.reader_directory_top'), '到顶部', (): void => {
+          this.tool((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_top_theme_night') : $r('app.media.reader_directory_top')), '到顶部', (): void => {
             this.userScroll(); this.scroller.scrollEdge(Edge.Top);
           });
-          this.tool($r('app.media.reader_directory_bottom'), '到底部', (): void => {
+          this.tool((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_bottom_theme_night') : $r('app.media.reader_directory_bottom')), '到底部', (): void => {
             this.userScroll(); this.scroller.scrollEdge(Edge.Bottom);
           });
-          this.tool(this.ascending ? $r('app.media.reader_directory_sort_ascending') :
-            $r('app.media.reader_directory_sort_descending'), '切换排序', (): void => this.sort());
+          this.tool(this.ascending ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_sort_ascending_theme_night') : $r('app.media.reader_directory_sort_ascending')) :
+            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_sort_descending_theme_night') : $r('app.media.reader_directory_sort_descending')), '切换排序', (): void => this.sort());
         }
       }.width('100%').height(50).padding({ left: 10, right: 10, top: 9 });
-      Row().width('100%').height(1).backgroundColor(TOK_LINE)
+      Row().width('100%').height(1).backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: 0, y: this.value(63, 51) }).opacity(this.progress);
     }.width(Math.max(0, this.availableWidth - 2)).height(52);
   }
@@ -305,31 +308,32 @@ export struct ReaderControlDirectoryContent {
     Row() {
       Row() {
         if (entry.index === this.currentChapterIndex) {
-          Row().width(3).height(this.rowHeight()).borderRadius(999).backgroundColor(TOK_ACCENT);
+          Row().width(3).height(this.rowHeight()).borderRadius(999).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
         Text(entry.title).layoutWeight(1).padding({ left: 9, right: 9 })
-          .fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).fontColor(TOK_READ_INK)
+          .fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.layoutWeight(1).height(this.rowHeight()).accessibilityText(`打开章节：${entry.title}`)
-        .onClick((): void => this.onSelectChapter(entry.index));
-      if (this.chapterDownloadEnabled && entry.downloadState !== 'unknown') {
+      }.layoutWeight(1).height(this.rowHeight()).accessibilityText(entry.navigable === false ? `卷标题：${entry.title}` : `打开章节：${entry.title}`)
+        .enabled(entry.navigable !== false)
+        .onClick((): void => { if (entry.navigable !== false) this.onSelectChapter(entry.index); });
+      if (entry.navigable !== false && this.chapterDownloadEnabled && entry.downloadState !== 'unknown') {
         Stack() {
-          Image(entry.downloadState === 'completed' ? $r('app.media.reader_directory_marker_check') :
-            $r('app.media.reader_directory_marker_download')).width(15).height(15);
+          Image(entry.downloadState === 'completed' ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
+            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download'))).width(15).height(15);
         }.width(26).height(this.rowHeight()).accessibilityText(entry.downloadState === 'completed' ? '已下载' : '下载章节')
           .enabled(entry.downloadState === 'missing' || entry.downloadState === 'cached' ||
             entry.downloadState === 'failed' || entry.downloadState === 'cancelled')
           .onClick((): void => this.onDownloadChapter(entry.index));
       }
-      if (entry.bookmarks !== undefined) {
+      if (entry.navigable !== false && entry.bookmarks !== undefined) {
         Stack() {
-          Image(entry.bookmarks.length > 0 ? $r('app.media.reader_directory_marker_bookmark_active') :
-            $r('app.media.reader_directory_marker_bookmark')).width(15).height(15);
+          Image(entry.bookmarks.length > 0 ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')) :
+            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark'))).width(15).height(15);
         }.width(26).height(this.rowHeight()).accessibilityText(entry.bookmarks.length > 0 ? '删除本章已有书签' : '添加本章章首书签')
           .onClick((): void => this.marker(entry));
       }
     }.width('100%').height(this.rowHeight()).borderRadius(6)
-      .backgroundColor(entry.index === this.currentChapterIndex ? TOK_READ_ACTIVE_SOFT : Color.Transparent);
+      .backgroundColor(entry.index === this.currentChapterIndex ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent);
   }
 
   @Builder
@@ -342,7 +346,7 @@ export struct ReaderControlDirectoryContent {
     } else if (this.snapshot.rows.length === 0 && this.tab === 'bookmarks') {
       ReaderBookmarkEmptyState({ onReturnToDirectory: (): void => this.onTabChange('directory') });
     } else if (this.snapshot.rows.length === 0) {
-      Text('没有匹配的章节').fontColor(TOK_READ_MUTED).fontSize(12);
+      Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(12);
     } else {
       List({ scroller: this.scroller }) {
         LazyForEach(this.dataSource, (row: ReaderControlDirectoryRow) => {
@@ -377,7 +381,7 @@ export struct ReaderControlDirectoryContent {
         .position({ x: this.value(this.tab === 'bookmarks' ? 142 : 143, 169) + (this.availableWidth - this.value(286, 338)) / 2,
           y: this.value(this.tab === 'bookmarks' ? 12 : 13, 6) });
       Row().width(this.tab === 'bookmarks' ? this.availableWidth + 52 * (1 - this.progress) - 2 :
-        Math.max(0, this.availableWidth - this.value(22, 2))).height(1).backgroundColor(TOK_LINE)
+        Math.max(0, this.availableWidth - this.value(22, 2))).height(1).backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: this.tab === 'bookmarks' ? 1 : this.value(11, 1),
           y: this.tab === 'bookmarks' ? this.value(50, 42) : this.value(44, 42) })
         .opacity(this.tab === 'bookmarks' ? this.progress : 1);
@@ -391,17 +395,17 @@ export struct ReaderControlDirectoryContent {
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
       if (this.tab === 'directory') {
         Column({ space: 0 }) {
-          Row().width('100%').height(1).backgroundColor(TOK_LINE);
+          Row().width('100%').height(1).backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
           Row({ space: 10 }) {
-            Text('当前章节').fontFamily('ReaderNotoSansSC').fontSize(9).fontColor(TOK_READ_MUTED)
+            Text('当前章节').fontFamily('ReaderNotoSansSC').fontSize(9).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
               .flexShrink(0);
             Text(this.snapshot.currentTitle).layoutWeight(1).fontFamily('ReaderNotoSansSC')
-              .fontWeight(FontWeight.Bold).fontSize(11).fontColor(TOK_READ_INK)
+              .fontWeight(FontWeight.Bold).fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
             Text(this.snapshot.currentPosition).fontFamily('ReaderNotoSansSC').fontSize(9)
-              .fontColor(TOK_READ_MUTED).flexShrink(0).maxLines(1).textAlign(TextAlign.End);
+              .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).flexShrink(0).maxLines(1).textAlign(TextAlign.End);
           }.width('100%').height(47).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 1 })
-            .backgroundColor(TOK_SURFACE_PANEL_SOFT);
+            .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme));
         }.width(Math.max(0, this.availableWidth - 2)).height(48)
           .position({ x: 1, y: this.availableHeight - 49 + this.value(24, 0) })
           .opacity(this.progress * this.presentation().contentOpacity).blur(this.presentation().contentBlur)

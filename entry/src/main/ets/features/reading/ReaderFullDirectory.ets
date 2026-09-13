@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
@@ -38,6 +39,8 @@ import { motionAnimateParam } from '../common/MotionSpec';
  */
 @Component
 export struct ReaderFullDirectory {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop bookTitle: string = '';
   @Prop chapterTitle: string = '';
@@ -161,7 +164,7 @@ export struct ReaderFullDirectory {
     Row() {
       Row() {
         Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.reader_directory_back'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_back_theme_night') : $r('app.media.reader_directory_back')))
             .width(24)
             .height(24);
         }
@@ -178,7 +181,7 @@ export struct ReaderFullDirectory {
             .fontFamily('ReaderNotoSerifSCBold')
             .fontWeight(FontWeight.Bold)
             .fontSize(16)
-            .fontColor(TOK_READ_INK)
+            .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -188,7 +191,7 @@ export struct ReaderFullDirectory {
             .fontFamily('ReaderNotoSerifSCRegular')
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
-            .fontColor(TOK_READ_MUTED)
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -197,7 +200,7 @@ export struct ReaderFullDirectory {
         .margin({ left: 8 });
 
         Column({ space: 3.5 }) {
-          Image($r('app.media.reader_directory_switch'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')))
             .width(20)
             .height(20)
             .alignSelf(ItemAlign.Center)
@@ -208,7 +211,7 @@ export struct ReaderFullDirectory {
             .fontFamily('ReaderInter')
             .fontWeight(800)
             .fontSize(12)
-            .fontColor(TOK_READ_INK)
+            .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
             .textAlign(TextAlign.Center)
             .alignSelf(ItemAlign.Center);
         }
@@ -225,7 +228,7 @@ export struct ReaderFullDirectory {
         });
 
         Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.reader_directory_more'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_more_theme_night') : $r('app.media.reader_directory_more')))
             .width(20)
             .height(20);
         }
@@ -244,8 +247,8 @@ export struct ReaderFullDirectory {
       .width('100%')
       .height(54)
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(TOK_READ_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .borderRadius(24);
     }
     .width('100%')
@@ -265,7 +268,7 @@ export struct ReaderFullDirectory {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Medium)
           .fontSize(13)
-          .fontColor(TOK_READ_INK)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .accessibilityText('下载整书')
           .onClick((): void => {
@@ -273,7 +276,7 @@ export struct ReaderFullDirectory {
             this.onDownloadBook();
           });
         Divider()
-          .color(TOK_LINE_STRONG)
+          .color(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
           .strokeWidth(TOK_BORDER_W);
         Text('清除本书离线')
           .width('100%')
@@ -282,7 +285,7 @@ export struct ReaderFullDirectory {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Medium)
           .fontSize(13)
-          .fontColor(TOK_READ_INK)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .accessibilityText('清除本书离线内容')
           .onClick((): void => {
@@ -292,8 +295,8 @@ export struct ReaderFullDirectory {
       }
       .width(142)
       .height(85)
-      .backgroundColor(TOK_READ_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .borderRadius(12)
       .position({ x: this.offlineMenuLeft(), y: this.topBarTop() + 56 })
       .zIndex(8);
