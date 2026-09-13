@@ -1,0 +1,3 @@
+Reader brightness production writer: PASS (held MOVE, coalescing, ownership, restore, failure, cancel, microtask tail)
+PASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner
+PASS brightness failure boundaries: stale Window/owner lookup, current rejection, synchronous properties failure and subsequent drain

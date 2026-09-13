@@ -1,0 +1,10 @@
+Reader brightness production writer: PASS (held MOVE, coalescing, ownership, restore, failure, cancel, microtask tail)
+PASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner
+file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-brightness-writer.mjs:96
+  oldLookup.reject(Error('obsolete window lookup'));
+                   ^
+
+Error: obsolete window lookup
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-brightness-writer.mjs:96:20
+
+Node.js v26.0.0

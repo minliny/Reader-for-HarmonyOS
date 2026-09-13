@@ -2,7 +2,7 @@
 
 ## 发现与范围
 
-- 触发：二包 `b17f29a4` 在 VM 展开完整自动翻页；控制栏已到稳定态。
+- 触发：二包 `a91af09f`（`b17f29a4` 仅为采集文件命名前缀，不是安装源码） 在 VM 展开完整自动翻页；控制栏已到稳定态。
 - 原始证据：`implementation-vm-followup-20260913/reader-control-b17f29a4-20260913-auto-full.png` 和同名 `.json`。
 - 定时卡 `bounds/origBounds=[148,1112][1134,1595]`；分钟轮 `[551,1154][817,1553]`；秒轮 `[901,1154][1167,1553]`；分秒组合 `[551,1154][1167,1553]`。秒轮分隔线右端超出卡片 33px。密度 3.5 时约 9.43vp。
 - 仅修当前 `ReaderControlAutoPageContent` 的 Full timer 宽度预算及其共享 `ReaderControlTimerWheel` 入参；不动设备、时长逻辑、主题、其它布局和 HAP。

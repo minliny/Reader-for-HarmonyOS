@@ -1,0 +1,32 @@
+[
+  {
+    "file": "test-reader-brightness-control.mjs",
+    "result": {
+      "chunk_id": "f03872",
+      "wall_time_seconds": 0.000002667,
+      "exit_code": 0,
+      "original_token_count": 11,
+      "output": "reader brightness control contract: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-brightness-cancel-ui.mjs",
+    "result": {
+      "chunk_id": "f844ad",
+      "wall_time_seconds": 0.370199416,
+      "exit_code": 0,
+      "original_token_count": 75,
+      "output": "PASS brightness cancel UI: issued ACK, preview retention, cancelled pending, newer intent, failed write convergence\n(node:53823) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "file": "test-surface-repair.mjs",
+    "result": {
+      "chunk_id": "5e224b",
+      "wall_time_seconds": 0.353551917,
+      "exit_code": 0,
+      "original_token_count": 86,
+      "output": "PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership\n(node:53822) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  }
+]

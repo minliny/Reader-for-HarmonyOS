@@ -1,0 +1,3 @@
+{"result":"PASS","before":"第 3 / 4 页","after":"第 2 / 4 页","anchor":200,"note":"Synthetic page boundaries exercise the actual ordinal method; these are not VM page-start values."}
+(node:92460) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

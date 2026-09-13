@@ -1,0 +1,52 @@
+[
+  {
+    "file": "test-reader-control-header-content.mjs",
+    "result": {
+      "chunk_id": "1bbc7a",
+      "wall_time_seconds": 0.41390325,
+      "exit_code": 0,
+      "original_token_count": 66,
+      "output": "reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS\n(node:82881) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "file": "test-reader-control-accessibility.mjs",
+    "result": {
+      "chunk_id": "34b27b",
+      "wall_time_seconds": 0.348159125,
+      "exit_code": 0,
+      "original_token_count": 77,
+      "output": "Control accessibility: actual Host close/Back + SDK virtual-node mounted observers PASS; NOT native screen-reader acceptance\n(node:82882) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "file": "test-reader-control-runtime.mjs",
+    "result": {
+      "chunk_id": "ac2f52",
+      "wall_time_seconds": 0.334003166,
+      "exit_code": 0,
+      "original_token_count": 97,
+      "output": "Production control runtime: seven modules, frame revocation, regrab, close, lifecycle PASS\nProduction Panel scalar projection: seven modules x 101 frames retain route identity and current input state PASS\n(node:82886) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "file": "test-reader-control-session-state.mjs",
+    "result": {
+      "chunk_id": "ad47b3",
+      "wall_time_seconds": 0.000001833,
+      "exit_code": 0,
+      "original_token_count": 14,
+      "output": "reader control session production state behavior: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-control-gesture-driver.mjs",
+    "result": {
+      "chunk_id": "b15d28",
+      "wall_time_seconds": 0.010437208,
+      "exit_code": 0,
+      "original_token_count": 14,
+      "output": "reader control gesture production driver behavior: PASS\n"
+    }
+  }
+]

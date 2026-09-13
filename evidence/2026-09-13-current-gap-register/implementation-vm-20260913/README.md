@@ -6,7 +6,7 @@
 
 已观察：原四本书及列表配置仍在、普通与批量列表、75%宽实色单书菜单、顶More三动作、筛选展开与小更新按钮、轻量默认分组、正文、快捷控制、自动翻页快捷启动/暂停、朗读快捷和完整页启动/暂停、0.50倍速入口。JSONL保留逐操作回执，PNG完整性通过才算有效截图。五张采样不是连续视频，不能据此判断3500ms全帧流畅度。
 
-四项现场问题均先代码定位并修复，等待新包VM复验：空作者行折叠 `d6a08fc5`；快捷自动翻页越界 `594cee9e`；书籍信息导航及失败取消 `8d2ea1f3`；设置分组圆角被矩形裁剪覆盖 `3cf395d7`。详见本目录各 observation/回归记录及相邻 auto-quick/settings-rounded 审计。
+首包结束时，四项现场问题均先代码定位并修复，彼时等待新包VM复验（历史快照；后来的二包结果见[followup观察](../implementation-vm-followup-20260913/followup-vm-observation-20260913.md)，当前状态只见根DEVELOPMENT_BACKLOG §11）：空作者行折叠 `d6a08fc5`；快捷自动翻页越界 `594cee9e`；书籍信息导航及失败取消 `8d2ea1f3`；设置分组圆角被矩形裁剪覆盖 `3cf395d7`。详见本目录各 observation/回归记录及相邻 auto-quick/settings-rounded 审计。
 
 文件名不等于验收结论：`tts-full`、`full-open` 是操作未进入完整模块时的Home画面，真正完整朗读是 `tts-full-2`；`full-tts-restored` 是点击整颗胶囊后的播放态；`book-more` 是动效中间态，稳态看 `book-more-settled`。`reader-control-settings-quick.png` 带多余尾部，是拒收证据，详见 `capture-integrity-stop.md`，其布局JSON单独通过完整性校验。
 

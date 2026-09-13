@@ -1,0 +1,21 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: autoPage: production Header ancestor must admit its child button; Block suppresses descendants
++ actual - expected
+
++ 'HitTestMode.Block'
+- 'HitTestMode.Default'
+               ^
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-control-input-routing.mjs:107:12 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'HitTestMode.Block',
+  expected: 'HitTestMode.Default',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

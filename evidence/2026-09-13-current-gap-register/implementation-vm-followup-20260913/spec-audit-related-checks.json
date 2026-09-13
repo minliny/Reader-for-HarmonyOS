@@ -1,0 +1,132 @@
+[
+  {
+    "file": "test-toc-repair-regressions.mjs",
+    "result": {
+      "chunk_id": "1e141a",
+      "wall_time_seconds": 0.19203575,
+      "exit_code": 0,
+      "original_token_count": 19,
+      "output": "durable catalog admission, source isolation and protected failures: PASS\n"
+    }
+  },
+  {
+    "file": "test-book-acquisition-coordinator.mjs",
+    "result": {
+      "chunk_id": "542711",
+      "wall_time_seconds": 0.1187765,
+      "exit_code": 0,
+      "original_token_count": 17,
+      "output": "shared book acquisition lifecycle, identities, and scheduling: PASS\n"
+    }
+  },
+  {
+    "file": "test-book-metadata-presentation.mjs",
+    "result": {
+      "chunk_id": "439779",
+      "wall_time_seconds": 0.305348416,
+      "exit_code": 0,
+      "original_token_count": 78,
+      "output": "(node:54652) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nshared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-page-input-runtime.mjs",
+    "result": {
+      "chunk_id": "e22cd4",
+      "wall_time_seconds": 0.127275708,
+      "exit_code": 0,
+      "original_token_count": 60,
+      "output": "reader page input production sequence regressions: PASS\n(node:54646) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "file": "test-reader-drag-follow-gate.mjs",
+    "result": {
+      "chunk_id": "b3ce97",
+      "wall_time_seconds": 0.094181583,
+      "exit_code": 0,
+      "original_token_count": 10,
+      "output": "reader drag-follow gate contract: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-page-turn-stage.mjs",
+    "result": {
+      "chunk_id": "ee2a36",
+      "wall_time_seconds": 0.192982292,
+      "exit_code": 0,
+      "original_token_count": 62,
+      "output": "reader page-turn stable slot geometry and role transition: PASS\n(node:54648) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "file": "test-reader-page-settlement-runtime.mjs",
+    "result": {
+      "chunk_id": "0ffc90",
+      "wall_time_seconds": 0.756970208,
+      "exit_code": 0,
+      "original_token_count": 102,
+      "output": "production flat settle/regrab continuity and transaction boundary: PASS\nproduction simulation mode-switch teardown and capability recovery: PASS\nqueued tap cue and physical velocity settlement use independent durations: PASS\n(node:54620) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "file": "test-reader-page-preparation-runtime.mjs",
+    "result": {
+      "chunk_id": "5869e8",
+      "wall_time_seconds": 0.895814917,
+      "exit_code": 0,
+      "original_token_count": 244,
+      "output": "production adjacent measurement isolation, cancellation and rejected admission: PASS\nproduction current snapshot remains bound to physical slot after promotion: PASS\nasync texture copy preserves lifetime and rejects superseded capture: PASS\n(node:54627) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nproduction evicted previous chapter: demand refill, coalescing, stale/failed replies and explicit retry: PASS\nproduction promotion preparation honors requested direction and stale callback guard: PASS\nproduction image snapshot admission: cold decode, no blank publication, bounded retry, stale/held cancellation and one disposal: PASS\nsingle offscreen snapshot tree: detach immediately, dispose once after outstanding capture: PASS\nsnapshot publication interruption: pointer retains exact pixels; new page/exit drops them; UP revalidates upload: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-page-progress-runtime.mjs",
+    "result": {
+      "chunk_id": "704564",
+      "wall_time_seconds": 0.719928709,
+      "exit_code": 0,
+      "original_token_count": 67,
+      "output": "(node:54616) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nproduction page commit reply-loss reconciliation and unknown-result retention: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-progress-observation.mjs",
+    "result": {
+      "chunk_id": "1cb5eb",
+      "wall_time_seconds": 0.798134708,
+      "exit_code": 0,
+      "original_token_count": 73,
+      "output": "(node:54614) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nproduction finite unknown observation, queued query expiry, late durable and continuous single drain: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-continuous-input-runtime.mjs",
+    "result": {
+      "chunk_id": "e4c818",
+      "wall_time_seconds": 0.959926584,
+      "exit_code": 0,
+      "original_token_count": 362,
+      "output": "continuous production pointer, same-row anchor and trailing exit commit: PASS\nproduction batched image reflow preserves leading fragment fraction and concurrent scroll: PASS\n(node:54617) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\ncontinuous mode change save/error/obsolete ownership and late stop receipt: PASS\nproduction continuous restore waits for layout and rejects stale frame callbacks: PASS\nproduction continuous cold-entry projection branch observes its reactive revision: PASS\ncontinuous scalar quantization: five positions, 100 repeat round trips each: PASS\ncontinuous restore suppresses premature stops and unknown-geometry progress writes: PASS\ncontinuous padded viewport: START, positive y and negative y round trips: PASS\nnative List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS\nproduction continuous image row identity: decoder admission replaces placeholder, unchanged siblings retained: PASS\ncontinuous short tap and stationary long UP share paged 500ms clock boundary: PASS\ncontinuous-to-paged anchor: warm/cold/partial/foreign layout, containing page only: PASS\nmeasured prefix whitespace gaps match complete canonical page identity: PASS\nnative List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-continuous-reading.mjs",
+    "result": {
+      "chunk_id": "8bdf03",
+      "wall_time_seconds": 0.042468709,
+      "exit_code": 0,
+      "original_token_count": 16,
+      "output": "reader continuous reading and canonical progress pipeline: PASS\n"
+    }
+  },
+  {
+    "file": "test-reader-presentation-recovery.mjs",
+    "result": {
+      "chunk_id": "c944b6",
+      "wall_time_seconds": 0.768935583,
+      "exit_code": 0,
+      "original_token_count": 83,
+      "output": "production target-revision and stale-generation release guards: PASS\nproduction dropped-native-ACK, unadmitted revision and stable 2D recovery: PASS\n(node:54625) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  }
+]

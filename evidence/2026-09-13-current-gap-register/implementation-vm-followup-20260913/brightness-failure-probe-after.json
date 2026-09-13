@@ -1,0 +1,47 @@
+{
+  "productionModule": "entry/src/main/ets/app/ReaderBrightnessWriter.ts",
+  "results": [
+    {
+      "case": "old lookup fails after window replacement",
+      "expected": {
+        "latestApplied": true,
+        "writes": [
+          0.8
+        ]
+      },
+      "actual": {
+        "latest": {
+          "ok": true,
+          "value": {
+            "applied": true,
+            "value": 0.8
+          }
+        },
+        "writes": [
+          0.8
+        ],
+        "lookupCount": 2
+      },
+      "passes": true
+    },
+    {
+      "case": "synchronous native properties failure",
+      "expected": {
+        "firstSettled": true,
+        "unhandled": []
+      },
+      "actual": {
+        "firstSettled": true,
+        "unhandled": [],
+        "writes": [
+          0.7
+        ],
+        "later": {
+          "applied": true,
+          "value": 0.7
+        }
+      },
+      "passes": true
+    }
+  ]
+}

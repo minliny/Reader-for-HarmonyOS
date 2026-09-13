@@ -1,0 +1,12 @@
+{
+  "entry/src/main/ets/app/ReaderBrightnessWriter.ts": "1a0b5de52e814fa02e28ebad95cb6ad98f579479ab14f4c927bbc25e26a157d4",
+  "tools/test-reader-brightness-writer.mjs": "88fbb8fa2941d7d10d91773a7eda28296bf2de3cda7f6250ecf08a22cc7fde9b",
+  "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets": "138646b69b27e59c395377e7133015fc7f11f86161762ddeba30cdfa31ec409a",
+  "entry/src/main/ets/features/bookshelf/LocalImportLayout.ts": "0656b8e4420ea89ce3c3b7a31a611278283351f5fba7b0b6f02bf8f1ad43b485",
+  "entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts": "0dc0d646267c3d415d6d7bb96218f0586ecabc528cbe08ca0bb365ad28feefa4",
+  "entry/src/main/ets/app/BookAcquisitionCoordinator.ts": "f770ad9166dc228731a067f4f0f778c12bce3b977985ca5f99e9d9ae221291dd",
+  "entry/src/main/ets/features/search/SearchPage.ets": "120db652d3a3fb77efad3572ca9a260bab9961ab81af496ae99e54c14cb9aad1",
+  "entry/src/main/ets/features/search/SearchSpinner.ets": "7b75d1e049dd62ce1889c900be70e80ad84774dc6afe33bab4fb71b767077abc",
+  "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets": "6ec951354ce83e473dae5e103c8a65ab2c17fb75d48951185532f33968b4f41e",
+  "entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets": "48901ca335b5001696b6f3dcf1e4ad57879bcfb5e67160c0d21bd095f5b7a388"
+}
