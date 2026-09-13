@@ -135,6 +135,8 @@ const fixtures = [
   ['1 < 2 &amp; 3 > 2 &unknown; &constructor;', '1 < 2 & 3 > 2 &unknown; &constructor;'],
   ['&#0; &#xD800; &#x110000; &#xZZ;', '� � � &#xZZ;'],
   ['&amp;amp;amp;nbsp;', '&amp;nbsp;'],
+  ['&lrm；&rlm；正文', '正文'],
+  ['\u200e\u200f正文\u202a内容\u202c', '正文内容'],
 ];
 for (const [raw, expected] of fixtures) {
   const book = Object.freeze({ intro: raw });

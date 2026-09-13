@@ -304,7 +304,22 @@ export struct SearchPage {
       if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
         this.groupScopeRow();
       }
-      this.stateContent();
+      Stack({ alignContent: Alignment.Bottom }) {
+        this.stateContent();
+        // One mounted indicator owns both the initial loading and streamed
+        // results states. Keeping it outside the state branches avoids two
+        // LoadingProgress nodes racing during loading -> results promotion.
+        if (this.isSweeping()) {
+          LoadingProgress()
+            .width(36)
+            .height(36)
+            .color(TOK_GREEN)
+            .enableLoading(true)
+            .margin({ bottom: 48 })
+            .hitTestBehavior(HitTestMode.None);
+        }
+      }
+      .layoutWeight(1)
     }
     .width('100%')
     .height('100%')
@@ -505,9 +520,9 @@ export struct SearchPage {
         .height(26)
         .alignItems(VerticalAlign.Center);
 
-        // History chips show the first 4; when more remain, a primary-outline
-        // "N 条更多" chip follows (Figma 2635:58745) and expands the rest in
-        // place — its wired intent per P0-DEAD-CONTROL-CLEANUP.
+        // History chips show the first 4; when more remain, the action is kept
+        // in a trailing row so its position is stable regardless of chip
+        // wrapping. Expanded history exposes the matching collapse action.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
           ForEach(this.historyExpanded ? this.presentation.history :
             this.presentation.history.slice(0, 4), (keyword: string) => {
@@ -527,12 +542,18 @@ export struct SearchPage {
                 this.submitSearch();
               });
           }, (keyword: string): string => `search-history-${keyword}`);
-          if (this.presentation.history.length > 4 && !this.historyExpanded) {
-            this.moreChip(this.presentation.history.length - 4);
-          }
         }
         .width('100%')
         .padding({ top: TOK_SPACE_CARD_PADDING });
+        if (this.presentation.history.length > 4) {
+          Row() {
+            this.moreChip(this.historyExpanded ? 0 : this.presentation.history.length - 4,
+              this.historyExpanded);
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.End)
+          .margin({ top: TOK_SPACE_XS });
+        }
       }
     }
     .width('100%')
@@ -588,9 +609,9 @@ export struct SearchPage {
   }
 
   @Builder
-  private moreChip(count: number) {
+  private moreChip(count: number, expanded: boolean = false) {
     Row({ space: TOK_SPACE_ROW_BLOCK }) {
-      Text(`${count} 条更多`)
+      Text(expanded ? '收起' : `${count} 条更多`)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
@@ -598,7 +619,9 @@ export struct SearchPage {
         .fontColor(TOK_GREEN)
         .textAlign(TextAlign.Center)
         .maxLines(1);
-      Image($r('app.media.reader_chevron_right')).width(12).height(12);
+      Image($r('app.media.reader_chevron_right'))
+        .width(12).height(12)
+        .rotate({ angle: expanded ? 270 : 0 });
     }
     .padding({ left: 12.5, right: 12.5, top: 7.5, bottom: 7.5 })
     .alignItems(VerticalAlign.Center)
@@ -606,10 +629,10 @@ export struct SearchPage {
     .borderRadius(999)
     .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .onClick((): void => {
-      this.historyExpanded = true;
-      this.viewState.historyExpanded = true;
+      this.historyExpanded = !expanded;
+      this.viewState.historyExpanded = !expanded;
     })
-    .accessibilityText(`展开其余 ${count} 条搜索历史`);
+    .accessibilityText(expanded ? '收起搜索历史' : `展开其余 ${count} 条搜索历史`);
   }
 
   @Builder
@@ -619,11 +642,6 @@ export struct SearchPage {
     // same indicator position continues as the results floating overlay once
     // the first books land.
     Column({ space: 0 }) {
-      LoadingProgress()
-        .width(36)
-        .height(36)
-        .color(TOK_GREEN)
-        .enableLoading(true);
       Text('正在搜索本地与在线书籍…')
         .margin({ top: 18 })
         .fontFamily('ReaderInter')
@@ -776,19 +794,6 @@ export struct SearchPage {
       .width('100%')
       .height('100%');
 
-      // Product-approved extension (no Figma frame): while the source sweep is
-      // still running the live query indicator stays anchored at the same
-      // bottom position as the no-results loading state, as a non-interactive
-      // overlay — every touch reaches the result list beneath it.
-      if (this.presentation.kind === 'results' && this.presentation.searching) {
-        LoadingProgress()
-          .width(36)
-          .height(36)
-          .color(TOK_GREEN)
-          .enableLoading(true)
-          .margin({ bottom: 48 })
-          .hitTestBehavior(HitTestMode.None);
-      }
     }
     .width('100%')
     .layoutWeight(1);

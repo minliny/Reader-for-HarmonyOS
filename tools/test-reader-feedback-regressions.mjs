@@ -37,8 +37,8 @@ assert.match(search,
   'the search action must stay dark and switch from submit to stop during a live sweep');
 assert.doesNotMatch(search, /SEARCH_BTN_BG/,
   'the initial search action must not fall back to the misleading pale disabled treatment');
-assert.equal((search.match(/LoadingProgress\(\)/g) ?? []).length, 3,
-  'every search loading affordance (submit button, bottom loading state, floating sweep overlay) must be an animated progress indicator');
+assert.equal((search.match(/LoadingProgress\(\)/g) ?? []).length, 2,
+  'search loading affordances must share one mounted indicator per active surface without duplicate loading nodes');
 assert.doesNotMatch(search, /importing_spinner_(track|arc)/,
   'search must not present a static spinner as active work');
 
