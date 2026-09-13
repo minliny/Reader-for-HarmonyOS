@@ -1,3 +1,4 @@
+import { searchResultRelevance } from './SearchResultRelevance';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { SearchSpinner } from './SearchSpinner';
 import { collapsedHistoryCount } from './SearchHistoryLayout';
@@ -291,6 +292,7 @@ export struct SearchPage {
   @State private visibleGroups: SearchBookGroup[] = [];
   private resultDataSource: SearchResultDataSource = new SearchResultDataSource();
   private groupedCategory: string = '';
+  private groupedKeyword: string = '';
   private groupedResultsInput: SearchBook[] | undefined = undefined;
   private groupedShelfInput: ShelfBook[] | undefined = undefined;
   private groupedResultsCache: SearchBookGroup[] = [];
@@ -622,7 +624,7 @@ export struct SearchPage {
   @Builder
   private moreChip(count: number, expanded: boolean = false) {
     Row({ space: TOK_SPACE_ROW_BLOCK }) {
-      Text(expanded ? '收起' : `${count} 条更多`)
+      Text(expanded ? '收起' : '展开')
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
@@ -810,11 +812,14 @@ export struct SearchPage {
   }
 
   private groupResults(results: SearchBook[]): SearchBookGroup[] {
+    const keyword = this.presentation.kind === 'results' || this.presentation.kind === 'loading' ||
+      this.presentation.kind === 'empty' || this.presentation.kind === 'error' ? this.presentation.keyword : '';
     if (this.groupedResultsInput === results && this.groupedShelfInput === this.shelfBooks &&
-      this.groupedCategory === this.selectedGroupName) {
+      this.groupedCategory === this.selectedGroupName && this.groupedKeyword === keyword) {
       return this.groupedResultsCache;
     }
     const byBook = new Map<string, SearchBookGroup>();
+    const relevance = new Map<string, number>();
     // The shelf is stable for this render pass. Build both identity views once
     // so every streamed search result uses O(1) membership instead of scanning
     // the full shelf again.
@@ -833,18 +838,29 @@ export struct SearchPage {
       this.viewState.rank(key);
       const inBookshelf = shelfIdentityKeys.has(`${book.sourceId}\u0000${book.bookId}`) ||
         (!local && shelfBookKeys.has(titleKey));
+      const score = searchResultRelevance(book.title, book.author, keyword);
       const existing = byBook.get(key);
       if (existing === undefined) {
         byBook.set(key, new SearchBookGroup(book, 1, inBookshelf));
+        relevance.set(key, score);
       } else {
         existing.admit(book, inBookshelf);
+        if (score < (relevance.get(key) ?? score)) {
+          existing.book = book;
+          relevance.set(key, score);
+        }
       }
     }
-    // Freeze first-seen order within this query so enrichment/source counts
-    // cannot move the book under the user's finger or invalidate the anchor.
-    const grouped = Array.from(byBook.values()).sort((left: SearchBookGroup, right: SearchBookGroup): number =>
-      this.viewState.rank(this.resultGroupKey(left.book)) - this.viewState.rank(this.resultGroupKey(right.book)));
+    // Relevance precedes arrival order. First-seen rank breaks ties, while
+    // retained identity/viewport anchors keep asynchronous enrichment stable.
+    const grouped = Array.from(byBook.values()).sort((left: SearchBookGroup, right: SearchBookGroup): number => {
+      const leftKey = this.resultGroupKey(left.book);
+      const rightKey = this.resultGroupKey(right.book);
+      return (relevance.get(leftKey) ?? 5) - (relevance.get(rightKey) ?? 5) ||
+        this.viewState.rank(leftKey) - this.viewState.rank(rightKey);
+    });
     this.groupedCategory = this.selectedGroupName;
+    this.groupedKeyword = keyword;
     this.groupedResultsInput = results;
     this.groupedShelfInput = this.shelfBooks;
     this.groupedResultsCache = grouped;

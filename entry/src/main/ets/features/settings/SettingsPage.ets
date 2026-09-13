@@ -53,7 +53,8 @@ export interface SettingsSnapshot {
 export struct SettingsPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @State private activeSection: 'home' | 'general' = 'home';
+  @Prop activeSection: 'home' | 'general' = 'home';
+  onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
 
   @Prop @Watch('onSnapshotChanged') snapshot: SettingsSnapshot = {
     autoCheckUpdate: true,
@@ -108,7 +109,7 @@ export struct SettingsPage {
     SettingsShell({
       activeSection: this.activeSection,
       onSectionChange: (section: 'home' | 'general'): void => {
-        this.activeSection = section;
+        this.onSectionChange(section);
       },
       onBack: this.onBack,
       onOpenSourceManagement: this.onOpenSourceManagement,
@@ -134,7 +135,7 @@ export struct SettingsPage {
   private buildHome() {
     CategorySection({ title: '设置' }) {
       this.navRow('通用设置', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_general_theme_night') : $r('app.media.settings_row_general')), (): void => {
-        this.activeSection = 'general';
+        this.onSectionChange('general');
       });
       this.navRow('书源管理', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_source_theme_night') : $r('app.media.settings_row_source')), (): void => this.onOpenSourceManagement());
       if (isReaderProductSurfaceEnabled('sync')) {
@@ -361,11 +362,12 @@ export struct SettingsPage {
         Text(this.cacheActionLabel)
           .fontFamily('ReaderInter')
           .fontWeight(800)
-          .fontSize(11)
+          .fontSize(11).lineHeight(16).maxLines(2)
+          .textAlign(TextAlign.Center)
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
       }
-      .width(66)
-      .height(34)
+      .constraintSize({ minWidth: 66, maxWidth: '55%', minHeight: 34 })
+      .padding({ left: 10, right: 10, top: 8, bottom: 8 })
       .borderRadius(6)
       .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
     }

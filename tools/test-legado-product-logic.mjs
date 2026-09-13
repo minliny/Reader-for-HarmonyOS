@@ -69,17 +69,19 @@ assert.match(remote, /async openCachedCatalogSession\([\s\S]*acquisitionMode: co
   'only current continuation context enables online fallback; stale or deleted source remains offline-readable');
 assert.match(search, /this\.normalizedBookKey\(book\.title, book\.author\)/,
   'search results must group the same title and author across origins');
-assert.match(search, /this\.viewState\.rank\(this\.resultGroupKey\(left\.book\)\)/,
-  'progressive source counts preserve first-seen order and scroll anchor');
+// Ordering is a behavior contract: relevance may move a late exact title
+// ahead of fan fiction, but ties and a retained viewport must remain stable.
+// Execute the real production grouping/data-source/anchor regression rather
+// than fixing the comparator to one spelling of its intermediate keys.
+await import('./test-search-view-state.mjs');
 assert.match(search, /Text\('已在书架'\)/,
   'grouped search results must expose current shelf membership');
-// ACQ-02 scope control follows the Figma canonical masters: the chip wall is
-// the source-group filter in Results/Empty (never Initial), and tapping a
-// group re-runs the sweep within that group's enabled sources.
+// ACQ-02 keeps the canonical result-chip surface. Current Local/Online tabs
+// filter one unified session; explicit query submissions still forward scope.
 assert.match(search, /groupScopeRow\(\)/,
   'the search surface must present the source-group chip row under the bar');
 assert.match(search, /selectGroup\(/,
-  'group chips must switch the scope and re-run the current search');
+  'group chips must apply the current result category');
 assert.match(search, /return \['本地', '在线'\]/, 'result tabs filter one unified session');
 assert.match(search, /onSearch\(keyword, scope\)/,
   'ACQ-02: submitting must forward the scope subset to the orchestrator');

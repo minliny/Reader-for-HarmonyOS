@@ -81,14 +81,12 @@ assert.equal(collapsedHistoryCount([500,30,30],100,8),3,'long chip is bounded to
 assert.equal(collapsedHistoryCount([48],0),0);
 for(const items of [0,61,122,427,3050]){const l=localImportResultLayout(500,62,68,76,items);assert.ok(l.height<=500&&l.listHeight>=0);if(items===61)assert.ok(l.height<300);}
 assert.equal(localImportResultLayout(140,62,68,76,300).compact,true);assert.equal(localImportResultLayout(0,62,68,76,300).listHeight,0);
-const Spinner=productionMotionMethods(path('features/search/SearchSpinner.ets'),['updateAnimation','stopAnimation']);
-const animations=[];const spin=Object.assign(new Spinner(),{mounted:true,active:true,foreground:true,reduceMotion:false,
- spinning:false,runningKey:-1,runKey:1,getUIContext:()=>({animateTo:(p,fn)=>{animations.push(p);fn();}})});
-// Native parameter construction only; compositor pixels are a separate gate.
-const oldCurve=globalThis.Curve;globalThis.Curve={Linear:'linear'};
-spin.updateAnimation();spin.updateAnimation();assert.equal(animations.length,1,'partial results retain the native clock');
-spin.runKey=2;spin.updateAnimation();assert.equal(animations.at(-1).duration,1000);assert.equal(animations.at(-1).curve,'linear');
-spin.foreground=false;spin.updateAnimation();assert.equal(spin.spinning,false);globalThis.Curve=oldCurve;
+const Spinner=productionMotionMethods(path('features/search/SearchSpinner.ets'),['shouldAnimate']);
+const spin=Object.assign(new Spinner(),{active:true,foreground:true,reduceMotion:false});
+assert.equal(spin.shouldAnimate(),true,'the restored platform indicator animates only while needed');
+spin.foreground=false;assert.equal(spin.shouldAnimate(),false);
+spin.foreground=true;spin.reduceMotion=true;assert.equal(spin.shouldAnimate(),false);
+spin.reduceMotion=false;spin.active=false;assert.equal(spin.shouldAnimate(),false);
 console.log('PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership');
 const ShelfMode=productionMotionMethods(path('features/bookshelf/BookshelfPage.ets'),['setViewMode','retryViewMode','loadViewMode','persistRequestedViewMode'],{ReaderThemeHost:{prepareUserChange:async()=>{}}});
 {

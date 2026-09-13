@@ -91,6 +91,7 @@ export struct SettingsShell {
           }
           .layoutWeight(1)
           .width('100%')
+          .align(Alignment.TopStart)
           .scrollBar(BarState.Off);
         }
       }

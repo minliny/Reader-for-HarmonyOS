@@ -860,4 +860,27 @@ for (const action of ['resume', 'close', 'stop']) {
   search.close();
 }
 
+// PH25: every eligible source is queried despite early fan-fiction matches; a
+// late exact title is retained with source identity even if another source fails.
+{
+  const sources = makeSources(7);
+  sources.push({ sourceId: 'disabled', name: '停用', enabled: false });
+  sources.push({ sourceId: 'audio', name: '音频', enabled: true, category: 'audio' });
+  const owner = fakeOwner({ sources, failFor: id => id === 'source-2',
+    delayForSource: id => id === 'source-6' ? 25 : 2,
+    resultsFor: id => [{ bookId: `/${id}`, title: id === 'source-6' ? '诡秘之主' : '诡秘之主同人',
+      author: id === 'source-6' ? '爱潜水的乌贼' : '同人作者' }] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner); search.open(); search.search('诡秘之主');
+  await settle(owner.state, 7);
+  assert.deepEqual(owner.state.calls.map(c => c.sourceId).sort(), makeSources(7).map(s => s.sourceId));
+  const final = last(presentations);
+  assert.equal(final.kind, 'results'); assert.equal(final.searching, false);
+  assert.equal(final.failedSourceCount, 1);
+  const exact = final.results.find(b => b.title === '诡秘之主');
+  assert.ok(exact); assert.equal(exact.sourceId, 'source-6'); assert.equal(exact.bookId, '/source-6');
+  assert.ok(exact.searchRequestId); assert.equal(final.results.length, 6);
+  search.close();
+}
+
 console.log('search orchestrator bounded concurrency and retained lifecycle: PASS');

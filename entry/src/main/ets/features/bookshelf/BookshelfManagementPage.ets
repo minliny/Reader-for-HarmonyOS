@@ -83,6 +83,7 @@ export struct BookshelfManagementPage {
       }
       .layoutWeight(1)
       .width('100%')
+      .align(Alignment.TopStart)
       .scrollBar(BarState.Off);
     }
     .width('100%')

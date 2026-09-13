@@ -110,14 +110,23 @@ check('two measured rows adapt to real width, long chips, tablet padding and lat
   assert.equal(long.owner.historyWidth, 220, 'tablet consumes 20vp on each side');
   assert.equal(long.owner.historyCollapsedCount, 2, 'long item is clamped to one row');
 });
+check('one or two complete rows have no collapse action', () => {
+  for (const count of [1, 2, 3, 4]) {
+    const f = fixture(Array.from({ length: count }, (_, i) => `书${i}`), { width: 160, measureVp: () => 30 });
+    assert.equal(f.owner.historyCollapsedCount, count);
+    assert.ok(!f.nodes().some(n => String(n.accessibilityText ?? '').includes('搜索历史')));
+  }
+});
 check('actual SDK action preserves matching expand and collapse intents', () => {
   const f = fixture(Array.from({ length: 8 }, (_, i) => `书${i}`), { width: 160, measureVp: () => 30 });
   const expand = f.nodes().find(n => n.accessibilityText === '展开其余 4 条搜索历史');
-  assert.ok(expand); expand.onClick();
+  assert.ok(expand); assert.ok(f.nodes().some(n => n.type === 'Text' && n.create === '展开'));
+  assert.ok(!f.nodes().some(n => n.type === 'Text' && /条更多/.test(String(n.create))));
+  expand.onClick();
   assert.equal(f.owner.historyExpanded, true); assert.equal(f.owner.viewState.historyExpanded, true);
   const expanded = fixture(Array.from({ length: 8 }, (_, i) => `书${i}`), { width: 160, expanded: true, measureVp: () => 30 });
   const collapse = expanded.nodes().find(n => n.accessibilityText === '收起搜索历史');
-  assert.ok(collapse); collapse.onClick();
+  assert.ok(collapse); assert.ok(expanded.nodes().some(n => n.type === 'Text' && n.create === '收起')); collapse.onClick();
   assert.equal(expanded.owner.historyExpanded, false); assert.equal(expanded.owner.viewState.historyExpanded, false);
 });
 

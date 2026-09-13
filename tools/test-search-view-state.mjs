@@ -1,3 +1,5 @@
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { searchResultRelevance } from '../entry/src/main/ets/features/search/SearchResultRelevance.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -87,3 +89,63 @@ assert.match(page, /@Prop group: SearchBookGroup/);
 assert.match(page, /maintainVisibleContentPosition\(true\)/);
 assert.match(page, /currentY - this\.restoreItemY/);
 console.log('search stable rows, enrichment and navigation state: PASS');
+
+// PH25: execute the real page grouping method over progressively arriving sources.
+const Page = productionMotionMethods(process.env.READER_SEARCH_RELEVANCE_SOURCE ?? new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url),
+  ['groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults'], { SearchBookGroup, searchResultRelevance });
+const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
+  viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
+const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
+const early = [book('fan1', '诡秘之主同人'), book('fan2', '我在诡秘之主'), book('other', '随笔')];
+assert.deepEqual(p.groupResults(early).map(g => g.book.sourceId), ['fan1', 'fan2', 'other']);
+const exact = book('original', '诡秘之主', '爱潜水的乌贼');
+const late = [...early, exact, book('other-copy', '诡秘之主', '爱潜水的乌贼')];
+const ranked = p.groupResults(late);
+assert.equal(ranked[0].book, exact, 'late exact title moves before first-arriving fan fiction');
+assert.equal(ranked[0].sourceCount, 2); assert.equal(ranked[0].variants.length, 2);
+assert.deepEqual(ranked.slice(1).map(g => g.book.sourceId), ['fan1', 'fan2', 'other']);
+assert.equal(p.groupResults(late), ranked, 'unchanged projection remains cached');
+p.presentation = { kind: 'results', keyword: '随笔' };
+assert.equal(p.groupResults(late)[0].book.sourceId, 'other', 'query participates in projection cache identity');
+p.presentation = { kind: 'results', keyword: '诡秘之主' };
+const local = book('local', '诡秘之主', '爱潜水的乌贼');
+p.selectedGroupName = '本地'; assert.deepEqual(p.groupResults([...late, local]).map(g => g.book.sourceId), ['local']);
+p.selectedGroupName = '在线'; assert.ok(p.groupResults([...late, local]).every(g => g.book.sourceId !== 'local'));
+p.selectedGroupName = '全部';
+const aliases = [book('alias', '诡秘之主小说', '爱潜水的乌贼', { groupKey: 'canonical-original' }),
+  book('alias-exact', '诡秘之主', '爱潜水的乌贼', { groupKey: 'canonical-original' })];
+assert.equal(p.groupResults(aliases)[0].book.sourceId, 'alias-exact', 'best matching variant represents a merged canonical group');
+assert.equal(p.groupResults(aliases)[0].variants.length, 2);
+console.log('search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS');
+
+// The precise old progressive-order guarantee applies within equal relevance.
+// Reversed later source buckets and enriched source counts must not shuffle ties.
+const t = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
+  viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部',
+  resultDataSource: new SearchResultDataSource(), measureHistory() {} });
+const tieA = book('tie-a', '诡秘之主·甲');
+const tieB = book('tie-b', '诡秘之主·乙');
+const ordered = t.groupResults([tieA, tieB]);
+t.resultDataSource.replace(ordered);
+const retainedB = t.resultDataSource.getData(1);
+t.viewState.anchorIndex = 1; t.viewState.anchorKey = t.resultGroupKey(tieB);
+t.resultScroller = { currentOffset: () => ({ yOffset: 137 }), getItemRect: () => ({ y: -23 }) };
+t.saveScrollAnchor();
+assert.equal(t.viewState.anchorOffset, 137); assert.equal(t.viewState.anchorItemY, -23);
+const anchorBefore = [t.viewState.anchorKey, t.viewState.anchorOffset, t.viewState.anchorItemY];
+const tieBCopy = { ...tieB, sourceId: 'tie-b-copy', bookId: '/tie-b-copy' };
+t.presentation = { kind: 'results', keyword: '诡秘之主', results: [tieB, tieA, tieBCopy, exact] };
+t.viewStateRevision = t.viewState.revision;
+t.scrollRestored = true;
+t.refreshVisibleResults();
+assert.deepEqual(t.visibleGroups.map(g => g.book.sourceId), ['original', 'tie-a', 'tie-b']);
+assert.equal(t.resultDataSource.getData(2), retainedB, 'rank insertion retains the observed anchored row');
+assert.equal(retainedB.sourceCount, 2, 'source enrichment keeps the same first-seen tie');
+assert.deepEqual([t.viewState.anchorKey, t.viewState.anchorOffset, t.viewState.anchorItemY], anchorBefore);
+assert.equal(t.scrollRestored, true, 'streaming refresh does not restart navigation restoration');
+// A genuine remount/revision applies the saved key plus actual item offset;
+// it does not substitute the old numerical index after relevance reordered rows.
+t.viewStateRevision = -1; t.refreshVisibleResults();
+assert.equal(t.restoreKey, anchorBefore[0]); assert.equal(t.restoreOffset, 137); assert.equal(t.restoreItemY, -23);
+assert.equal(t.scrollRestored, false);
+console.log('progressive relevance ties, retained row identity, measured anchor and remount restoration PASS');
