@@ -445,7 +445,7 @@ struct Index {
    * guarded request so Core position persistence settles before the route is
    * changed back to the bookshelf or explicit Book Detail entry.
    */
-  private readingExitRequest: (() => void) | undefined = undefined;
+  private readingExitRequest: ((intent?: 'navigation') => void) | undefined = undefined;
   /** A Back press during hidden first-page preparation still exits serially. */
   private exitToDetailOriginAfterReader: boolean = false;
   private bookInfoAfterReaderExit: string | undefined = undefined;
@@ -978,10 +978,11 @@ struct Index {
           chapterStartBookmarkCreationEnabled: true,
           sourceSwitchVisible: this.sourceSwitchVisible,
           sourceSwitchState: this.sourceSwitchState,
-          onExitRequestHandler: (requestExit: () => void): void => {
+          onExitRequestHandler: (requestExit: (intent?: 'navigation') => void): void => {
             this.readingExitRequest = requestExit;
           },
           onExit: (): void => this.onReaderExited(),
+          onExitCancelled: (): void => this.cancelReaderExitDestination(),
           onOpenBookInfo: (): void => this.requestReaderBookInfo(),
           onReadingReady: (chapterIndex: number): void => this.presentPreparedReading(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
@@ -3583,7 +3584,14 @@ struct Index {
     const requestExit = this.readingExitRequest;
     if (!this.readingSessionActive || book === undefined || requestExit === undefined) return;
     this.bookInfoAfterReaderExit = `${book.sourceId}\u0000${book.bookId}`;
-    requestExit();
+    requestExit('navigation');
+  }
+
+  private cancelReaderExitDestination(): void {
+    this.bookInfoAfterReaderExit = undefined;
+    this.pendingReadingFailureAction = undefined;
+    this.openRulesManagementAfterReaderExit = false;
+    this.exitToDetailOriginAfterReader = false;
   }
 
   private onReaderExited(): void {

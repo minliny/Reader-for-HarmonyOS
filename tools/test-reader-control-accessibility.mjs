@@ -114,7 +114,7 @@ for (const state of [makeHome(), makeQuick('directory'), session.expandReaderCon
   assert.equal(x.exits(), 1, 'top arrow enters durable reading exit immediately');
   assert.strictEqual(x.h.controlSession, original, 'top arrow does not navigate/collapse control layers');
 }
-assert.match(hostSource, /onExitRequestHandler\(\(\): void => this\.requestExit\(\)\)/,
+assert.match(hostSource, /onExitRequestHandler\(\(intent\?: 'navigation'\): void =>\s*intent === 'navigation' \? this\.beginExit\(\) : this\.requestExit\(\)\)/,
   'system Back retains its separate layered command');
 assert.match(panelSource, /@Prop temporaryLayerActive: boolean = false/);
 assert.match(panelSource, /this\.contentInputEnabled\(\) && !this\.temporaryLayerActive/,

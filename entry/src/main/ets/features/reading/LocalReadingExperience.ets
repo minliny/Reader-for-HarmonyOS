@@ -958,12 +958,15 @@ export struct ReadingExperience {
   /**
    * The host owns the system Back event. It receives this guarded request
    * function and must invoke it instead of changing the route directly.
+   * Explicit navigation bypasses control-layer Back, but shares the same
+   * serialized page/record persistence before returning route ownership.
    * `onExit` below is then called only after the current anchor commit has
    * settled (or there was no materialized page to commit).
    */
-  onExitRequestHandler: (requestExit: () => void) => void =
-    (_requestExit: () => void): void => {};
+  onExitRequestHandler: (requestExit: (intent?: 'navigation') => void) => void =
+    (_requestExit: (intent?: 'navigation') => void): void => {};
   onExit: () => void = (): void => {};
+  onExitCancelled: () => void = (): void => {};
   /**
    * The parent may expose the static Figma ReadingSurface only after this
    * first real page has been measured and written to Core.  This is a route
@@ -1373,6 +1376,7 @@ export struct ReadingExperience {
   @State private mounted: boolean = false;
   @State private exitRequested: boolean = false;
   private exitDelivered: boolean = false;
+  private exitAttemptGeneration: number = 0;
   private readingRecordActiveSinceMs: number = 0;
   private readingRecordPendingMillis: number = 0;
   private readingRecordTimer: number = -1;
@@ -1487,7 +1491,8 @@ export struct ReadingExperience {
     registerReaderFonts(this.getUIContext().getFont());
     this.didLayoutListener = (): void => this.captureMeasurementAfterLayout();
     this.getUIContext().getUIObserver().on('didLayout', this.didLayoutListener);
-    this.onExitRequestHandler((): void => this.requestExit());
+    this.onExitRequestHandler((intent?: 'navigation'): void =>
+      intent === 'navigation' ? this.beginExit() : this.requestExit());
     // The Detail/Directory parent keeps this first entry visually hidden until
     // `onReadingReady`, but its body work must still be bounded so a failed
     // chapter read or first Core commit cannot leave the reader session alive
@@ -4387,6 +4392,7 @@ export struct ReadingExperience {
       return;
     }
     this.exitRequested = true;
+    this.exitAttemptGeneration += 1;
     this.stopReaderTtsAudition();
     this.captureReadingRecordElapsed(false);
     this.finishSessionCapsuleMorph();
@@ -4399,6 +4405,7 @@ export struct ReadingExperience {
   }
 
   private async finishExit(lifecycleToken: number): Promise<void> {
+    const exitAttemptGeneration = this.exitAttemptGeneration;
     try {
       const coordinator = this.ttsCoordinator;
       if (coordinator !== undefined) await coordinator.stop('lifecycle');
@@ -4412,16 +4419,33 @@ export struct ReadingExperience {
         await this.commitVisiblePage(lifecycleToken);
       }
     } catch (error) {
-      if (!this.isMountedToken(lifecycleToken)) return;
+      if (!this.isMountedToken(lifecycleToken) || exitAttemptGeneration !== this.exitAttemptGeneration) return;
       this.exitRequested = false;
+      let decisionTaken = false;
+      const claimDecision = (): boolean => {
+        if (decisionTaken || !this.isMountedToken(lifecycleToken) ||
+          exitAttemptGeneration !== this.exitAttemptGeneration || this.exitRequested || this.exitDelivered) return false;
+        decisionTaken = true;
+        return true;
+      };
+      const continueReading = (): void => {
+        if (!claimDecision()) return;
+        // Cancelling this exit also cancels the Host's one-shot destination.
+        // Retry deliberately keeps it until the durable exit is delivered.
+        this.onExitCancelled();
+        this.beginReadingRecordClock(lifecycleToken);
+      };
       this.getUIContext().showAlertDialog({ title: '阅读进度尚未保存',
         message: '请重试保存后退出。当前阅读位置已保留。',
-        primaryButton: { value: '重试保存并退出', action: (): void => this.beginExit() },
-        secondaryButton: { value: '继续阅读', action: (): void => this.beginReadingRecordClock(lifecycleToken) },
+        primaryButton: { value: '重试保存并退出', action: (): void => {
+          if (claimDecision()) this.beginExit();
+        } },
+        secondaryButton: { value: '继续阅读', action: continueReading },
+        cancel: continueReading,
       });
       return;
     }
-    if (!this.isMountedToken(lifecycleToken) || this.exitDelivered) return;
+    if (!this.isMountedToken(lifecycleToken) || exitAttemptGeneration !== this.exitAttemptGeneration || this.exitDelivered) return;
     this.exitDelivered = true;
     this.onExit();
   }
