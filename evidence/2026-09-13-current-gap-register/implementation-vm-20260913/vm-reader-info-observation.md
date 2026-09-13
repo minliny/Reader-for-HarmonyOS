@@ -59,3 +59,11 @@
 处理仅修改该测试：把断言限定到 `beginExit` 方法内部，验证必要动作顺序，以及锁定退出到收集阅读时长之间不出现提前 return/await/异步 finishExit；允许同步代次更新。扫描其他同类退出相邻断言，`exitDelivered→onExit` 和后台记录收集链当前未被改动，不放松这些检查。生产代码不变。
 
 修后 `test-reading-record-accumulation.mjs` 与 `test-bookshelf-reading-entry.mjs` 均 exit 0；输出分别在 `vm-reader-info-record-contract.log`、`vm-reader-info-post-gate-integration.log`。本次不重复执行设备或完整构建，由 root 续行统一流水线。
+
+## 隔离 ArkTS 构建追加失败：遗漏 ReaderShell 透传
+
+`/private/tmp/reader-vm-followup-acceptance-r2.log:1199` 在本地 222 组通过后报错：Index 的 `ReaderShell` 参数包含未声明的 `onExitCancelled`。当前 Index 实际经 `features/shell/ReaderShell.ets` 组合到 `ReadingExperience`，本次修改遗漏 Shell 的取消事件声明/透传以及带 navigation 意图的退出注册签名。
+
+该错误由代码变更和测试覆盖不足造成；原组合测试直接把 Index 回调接到 LRE，未包含 Shell，不能再称完整生产装配链已覆盖。处理限定为 Shell 的事件声明和透传、对应测试；不改变退出业务和其他功能。新回归会执行 Index→Shell→LRE 的真实回调表达式，并用 SDK AST 核对实际组件调用参数是否在接收组件中声明。根因无需设备取证。
+
+已补 `ReaderShell.onExitCancelled` 声明/透传，`onExitRequestHandler` 两处同步为可选 navigation 意图签名。现有组合测试使用已安装 SDK AST 取出 Index 的 ReaderShell 参数及 Shell 的 ReadingExperience 参数，校验接收组件声明并执行其中原始四个回调表达式；不再手工直连 Index 与 LRE，也未增加通用测试框架。取消、重试、系统 Back、新请求/卸载失效的全部原用例现在经实际 Shell 回调链执行并通过。`test-reading-session-routing`、`test-reader-source-failure-p0` 同时通过，日志为 `vm-reader-info-shell-{integration,routing,source-failure}.log`。仅 Shell 与该既有测试、此证据变化，已冻结等待 root 重新运行完整隔离构建；编译通过仍以流水线结果为准。

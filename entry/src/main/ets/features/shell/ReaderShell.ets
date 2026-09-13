@@ -65,8 +65,9 @@ export struct ReaderShell {
   @Prop sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
 
   // 回调 (全部由 Index 提供, 透传到对应子组件)。
-  onExitRequestHandler: (requestExit: () => void) => void = (): void => {};
+  onExitRequestHandler: (requestExit: (intent?: 'navigation') => void) => void = (): void => {};
   onExit: () => void = (): void => {};
+  onExitCancelled: () => void = (): void => {};
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
   onReadingFailure: (sourceId: string, bookId: string, message: string,
@@ -131,8 +132,9 @@ export struct ReaderShell {
           controlObscured: this.route === 'directory',
           interactionBlocked: !this.visible || this.route !== 'reading' || this.sourceSwitchVisible,
           reduceMotion: this.reduceMotion,
-          onExitRequestHandler: (requestExit: () => void): void => this.onExitRequestHandler(requestExit),
+          onExitRequestHandler: (requestExit: (intent?: 'navigation') => void): void => this.onExitRequestHandler(requestExit),
           onExit: (): void => this.onExit(),
+          onExitCancelled: (): void => this.onExitCancelled(),
           onReadingReady: (chapterIndex: number): void => this.onReadingReady(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.onReadingCommitted(commit),
           onReadingFailure: (sourceId: string, bookId: string, message: string,

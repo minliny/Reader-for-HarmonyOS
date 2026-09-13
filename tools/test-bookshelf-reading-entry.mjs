@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as readerControlState from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
 import * as readerControlHost from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
@@ -216,7 +216,7 @@ console.log('bookshelf reading entry: PASS (local/remote, info/search, back, can
  assert.equal(h.remoteReadingSession,session);assert.equal(h.detailToc,toc,'information reuses exact admitted directory');
 }
 
-// Exercise the actual Panel -> LRE -> Index -> registered LRE exit closure ->
+// Exercise the actual Panel -> LRE -> ReaderShell -> Index -> registered LRE exit closure ->
 // durable save -> Index route chain. The former stub above could not detect an
 // explicit Info action being consumed as one layered system Back operation.
 const readingFile = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
@@ -227,8 +227,32 @@ const registerExit = new Function(`return function () { ${stripTypeScriptTypes(`
 const infoBinding = readingSource.match(/onOpenBookInfo: \(\): void => (this\.\w+\(\)),/);
 assert.ok(infoBinding, 'production More info callback');
 const invokeInfo = new Function(`return function () { ${infoBinding[1]}; };`)();
-const cancelBinding = source.match(/onExitCancelled: \(\): void => (this\.\w+\(\)),/);
-const notifyExitCancelled = cancelBinding ? new Function(`return function () { ${cancelBinding[1]}; };`)() : () => {};
+const shellSource = readFileSync(new URL('../entry/src/main/ets/features/shell/ReaderShell.ets', import.meta.url), 'utf8');
+const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require = createRequire(import.meta.url), ts = require(`${sdk}/node_modules/typescript`);
+const sdkOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+const parseComponent = text => ts.createSourceFile('/tmp/ReaderInfoAssembly.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, sdkOptions);
+const indexTree = parseComponent(source), shellTree = parseComponent(shellSource), readingTree = parseComponent(readingSource);
+const callbacks = ['onExitRequestHandler', 'onExit', 'onExitCancelled', 'onOpenBookInfo'];
+function exitCallbacksAt(tree, receiverTree, childName, owner) {
+  let call;
+  const visit = node => {
+    if (ts.isCallExpression(node) && node.expression.getText(tree) === childName) call = node;
+    ts.forEachChild(node, visit);
+  };
+  visit(tree); assert.ok(call, `actual ${childName} assembly`);
+  const receiver = receiverTree.statements.find(node => node.name?.getText(receiverTree) === childName);
+  assert.ok(receiver, `${childName} declaration`);
+  const properties = call.arguments[0].properties;
+  for (const property of properties) assert.ok(receiver.members.some(member => member.name?.getText(receiverTree) === property.name.getText(tree)),
+    `${childName} must declare actual supplied parameter ${property.name.getText(tree)}`);
+  return Object.fromEntries(callbacks.map(name => {
+    const property = properties.find(node => node.name?.getText(tree) === name);
+    assert.ok(property, `${childName} must forward ${name}`);
+    const factory = new Function(`return function () { return ${stripTypeScriptTypes(property.initializer.getText(tree))}; };`)();
+    return [name, factory.call(owner)];
+  }));
+}
 const Reading = productionMotionMethods(readingFile, ['requestExit', 'beginExit', 'finishExit', 'controlTiming'], {
   ...readerControlState, ...readerControlHost, ...readerControlKeyboard, ...readerTiming, ...readerRapid, ...readerAuto,
   ReaderWindowCoordinator: { metrics: () => ({ ready: true, keyboardInsets: { bottom: 0 } }) },
@@ -243,6 +267,11 @@ async function infoExitHarness(state) {
   index.openShelfBook(t.book); t.catalog.resolve(t.session); t.body.resolve('body'); await settle();
   index.route = 'reading';
   const calls = [], stop = deferred(), record = deferred(), progress = deferred();
+  const onExited = index.onReaderExited.bind(index), onCancelled = index.cancelReaderExitDestination.bind(index);
+  index.onReaderExited = () => { calls.push('route'); onExited(); };
+  index.cancelReaderExitDestination = () => { calls.push('exit-cancelled'); onCancelled(); };
+  const shell = exitCallbacksAt(indexTree, shellTree, 'ReaderShell', index);
+  const readingCallbacks = exitCallbacksAt(shellTree, readingTree, 'ReadingExperience', shell);
   const reading = Object.assign(new Reading(), {
     mounted: true, lifecycleToken: 9, exitRequested: false, exitDelivered: false, exitAttemptGeneration: 0, reduceMotion: false,
     latestControlVisualSession: state, controlSession: state, controlTemporaryLayer: false,
@@ -258,10 +287,7 @@ async function infoExitHarness(state) {
     ttsCoordinator: { stop: () => { calls.push('stop'); return stop.promise; } },
     flushReadingRecordForExit: () => { calls.push('record'); return record.promise; },
     commitVisiblePage: () => { calls.push('progress'); return progress.promise; },
-    onExitRequestHandler: request => { index.readingExitRequest = request; },
-    onOpenBookInfo: () => index.requestReaderBookInfo(),
-    onExit: () => { calls.push('route'); index.onReaderExited(); },
-    onExitCancelled: () => { calls.push('exit-cancelled'); notifyExitCancelled.call(index); },
+    ...readingCallbacks,
     beginReadingRecordClock: () => calls.push('resume-record'),
     getUIContext: () => ({ showAlertDialog: dialog => t.alerts.push(dialog) }),
   });
