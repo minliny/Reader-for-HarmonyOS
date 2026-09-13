@@ -34,6 +34,13 @@ export type RemoteReadingIdentity = {
   bookId: string;
 };
 
+export type RemoteReadingTocDiagnostic = {
+  sourceId: string;
+  bookId: string;
+  tocUrl: string;
+  returnedEntryCount: number;
+};
+
 /**
  * A typed feature-boundary failure. UI code may classify it, but must not
  * replace a blocked transport capability with a fake remote-reading result.
@@ -42,18 +49,21 @@ export class RemoteReadingGatewayError extends Error {
   readonly code: RemoteReadingErrorCode;
   readonly command: RemoteReadingCommand | undefined;
   readonly capability: RemoteReadingHostCapabilityId | undefined;
+  readonly diagnostic: RemoteReadingTocDiagnostic | undefined;
 
   constructor(
     code: RemoteReadingErrorCode,
     message: string,
     command: RemoteReadingCommand | undefined = undefined,
     capability: RemoteReadingHostCapabilityId | undefined = undefined,
+    diagnostic: RemoteReadingTocDiagnostic | undefined = undefined,
   ) {
     super(message);
     this.name = 'RemoteReadingGatewayError';
     this.code = code;
     this.command = command;
     this.capability = capability;
+    this.diagnostic = diagnostic;
   }
 }
 

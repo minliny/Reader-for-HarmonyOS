@@ -2279,7 +2279,13 @@ struct Index {
       seeds.push(seed);
       sourceNames.push(candidate.sourceName);
     }
-    this.openRemoteBookDetail(seeds[0], sourceNames[0], undefined, false, seeds.slice(1), sourceNames.slice(1));
+    // A search result that is already on the shelf has a durable Core
+    // snapshot. Pass it through so detail/TOC opens cache-first instead of
+    // issuing a second live detail+TOC sweep for the same identity.
+    const shelfSnapshot = this.shelfBooks.find((item: ShelfBook): boolean =>
+      item.sourceId === book.sourceId && item.bookId === book.bookId);
+    this.openRemoteBookDetail(seeds[0], sourceNames[0], shelfSnapshot, false,
+      seeds.slice(1), sourceNames.slice(1));
   }
 
   private openShelfBook(selection: ShelfBook): void {

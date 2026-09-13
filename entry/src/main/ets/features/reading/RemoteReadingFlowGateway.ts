@@ -12,6 +12,7 @@ import {
   encodeRemoteReadingVariables,
   mergeRemoteReadingVariables,
   RemoteReadingGatewayError,
+  type RemoteReadingTocDiagnostic,
   type RemoteReadingCommand,
   type RemoteReadingHostCapabilityId,
   type RemoteReadingIdentity,
@@ -218,7 +219,14 @@ export class RemoteReadingFlowGateway {
     this.assertIdentity(tocResult.data, identity, 'book.toc');
     const entries = this.decodeToc(tocResult.data['toc']);
     if (entries.length === 0) {
-      throw new RemoteReadingGatewayError('emptyToc', 'book.toc returned no readable chapters', 'book.toc');
+      const diagnostic: RemoteReadingTocDiagnostic = {
+        sourceId: identity.sourceId,
+        bookId: identity.bookId,
+        tocUrl,
+        returnedEntryCount: 0,
+      };
+      throw new RemoteReadingGatewayError(
+        'emptyToc', 'book.toc returned no readable chapters', 'book.toc', undefined, diagnostic);
     }
     return {
       acquisitionMode: 'online',
