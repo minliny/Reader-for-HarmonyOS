@@ -22,7 +22,9 @@ const moreActor = controlSource.match(/\/\/ MoreHitArea 34×42[\s\S]*?\.accessib
 assert.ok(moreActor, 'the Figma More actor must remain present');
 assert.doesNotMatch(moreActor[0], /\.opacity\(0\.4\)|\.enabled\(false\)/,
   'Figma `933:59` defines a normal More actor, not an invented disabled state');
-assert.match(experienceSource, /onMore:\s*\(\): void => \{\}/,
-  'the visible future entry must stay disconnected until a product capability is specified');
+assert.match(experienceSource, /onMore:\s*\(\): void => this\.toggleCurrentPageBookmark\(\)/,
+  'the reader More actor must toggle the current-page bookmark through the Host gate');
+assert.match(moreActor[0], /\.onClick\(\(\): void => this\.onMore\(\)\)/,
+  'the More actor must dispatch its product action');
 
 console.log('reader content business isolation: PASS');

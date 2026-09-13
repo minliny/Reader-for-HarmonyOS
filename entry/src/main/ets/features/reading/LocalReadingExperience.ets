@@ -1733,8 +1733,10 @@ export struct ReadingExperience {
           this.hideControl();
           this.onSwitchSource();
         },
-        // Generic future entry: no product capability is admitted here yet.
-        onMore: (): void => {},
+        // The top-bar More actor is the current-page bookmark toggle. The
+        // bookmark projection gate inside toggleCurrentPageBookmark keeps
+        // unknown Core state non-actionable.
+        onMore: (): void => this.toggleCurrentPageBookmark(),
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),

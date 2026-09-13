@@ -1225,9 +1225,11 @@ export struct ReaderControlPanel {
       .width(34)
       .height(42)
       // Figma `933:59` defines the normal 34×42 More actor with a 20px
-      // #332C25 icon. It does not define a disabled variant, menu, page, or
-      // prototype reaction, so keep the normal visual actor without inventing
-      // either a grey state or a destination.
+      // #332C25 icon. The product action is the current-page bookmark toggle;
+      // the Host owns Core admission and ignores the request while its
+      // bookmark projection is unknown.
+      .enabled(this.inputEnabled)
+      .onClick((): void => this.onMore())
       .accessibilityText('更多');
     }
     .width(this.layout.topBarWidth)
