@@ -115,9 +115,11 @@ for(const reduceMotion of [false,true]){
 
 const timing={flight:480,hold:120,expand:240,reveal:160,ghostStart:80,ghost:120,fadeStart:200,fade:120,handoffStart:320,handoff:120};
 const sample=t=>sampleReaderSessionMorphTimeline(t,timing,linear,linear,linear);
-for(const [t,phase] of [[0,'flight'],[479,'flight'],[480,'dotHold'],[599,'dotHold'],[600,'expand'],[840,'reveal'],[1000,'none']])assert.equal(sample(t).phase,phase);
+for(const [t,phase] of [[0,'flight'],[479,'flight'],[480,'dotHold'],[599,'dotHold'],[600,'expand'],[719,'expand'],[720,'reveal'],[840,'reveal'],[1000,'none']])assert.equal(sample(t).phase,phase);
 assert.equal(sample(200).ghostOpacity,.55);assert.equal(sample(440).shellOpacity,1);
 assert.equal(sample(600).expand,0);assert.equal(sample(840).expand,1);
+assert.ok(sample(800).reveal > 0 && sample(800).expand < 1,
+  'capsule content reveals while the shell is still expanding');
 const Capsule=productionMotionMethods(feature('reading/LocalReadingExperience.ets'),
  ['isSessionMorphOwner','scheduleSessionMorphFrame'],{readerMotionNowMs:()=>now,
   sampleReaderSessionMorphTimeline,ReaderUIFrameCallback:Callback});

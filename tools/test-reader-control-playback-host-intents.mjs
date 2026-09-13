@@ -75,6 +75,7 @@ function owner(Type = Host()) {
     ttsChapterRef: chapter => ({ sourceId: 'source', bookId: 'book', chapterIndex: chapter.chapterIndex }),
     ttsTimerDurationMs: () => 0,
     logTtsFailure() {},
+    applyWindowPolicyForChromeOwner() {},
     prepareControlPage() {}, invalidateControlBackdrop() {}, dismissControlTemporaryLayers() {},
     drainPageTurnPreparationQueue() {}, suspendAdjacentMeasurement() {},
     hideControl() { calls.hide++; this.closing = true; },
@@ -170,21 +171,21 @@ function captureOwner(Type = Host()) {
 async function captureSuccessAfterNavigation() {
   const test = captureOwner(); test.host.beginSessionCapsuleMorph(); showModule(test.host, 'search');
   test.capture.resolve(test.pixel); await settle();
-  assert.equal(test.releaseCount(), 1); assert.equal(test.calls.hide, 0);
+  assert.equal(test.releaseCount(), 1); assert.equal(test.calls.hide, 1);
   assert.equal(test.host.sessionMorphPhase, 'none', 'obsolete own capture must not leave the capsule stuck in capture');
   assert.equal(test.frames.length, 0);
 }
 async function captureFailureAfterNavigation() {
   const test = captureOwner(); test.host.beginSessionCapsuleMorph(); showModule(test.host, 'search');
   test.capture.reject(Error('snapshot unavailable')); await settle();
-  assert.equal(test.calls.hide, 0, 'late snapshot failure must not dismiss a newer Search');
+  assert.equal(test.calls.hide, 1, 'late snapshot failure must not dismiss a newer Search twice');
   assert.equal(test.host.sessionMorphPhase, 'none');
 }
 async function flightAfterNavigation() {
   const test = captureOwner(); test.host.beginSessionCapsuleMorph();
   test.capture.resolve(test.pixel); await settle(); assert.equal(test.frames.length, 1);
   showModule(test.host, 'search'); test.frames[0].onFrame(0);
-  assert.equal(test.calls.hide, 0, 'old first flight frame must not dismiss a newer control');
+  assert.equal(test.calls.hide, 1, 'old first flight frame must not dismiss a newer control twice');
   assert.equal(test.host.sessionMorphPhase, 'none'); assert.equal(test.releaseCount(), 1);
 }
 const cases = [
@@ -252,7 +253,8 @@ await assert.rejects(autoStopBarrierKeepsNewControl(Host(withoutPresentation)), 
   test.host.controlOpenRevision++; // A new opening can use exactly the same module/page.
   test.capture.resolve(test.pixel); await settle();
   assert.equal(test.releaseCount(), 1); assert.equal(test.frames.length, 0);
-  assert.equal(test.host.sessionMorphPhase, 'none'); assert.equal(test.calls.hide, 0);
+  assert.equal(test.host.sessionMorphPhase, 'none'); assert.equal(test.calls.hide, 1,
+    'stale capture must not issue a second hide after the immediate handoff');
 }
 {
   const test = captureOwner(); test.host.beginSessionCapsuleMorph();
@@ -284,7 +286,7 @@ for (const oldReply of ['resolve', 'reject']) {
   assert.equal(test.host.sessionMorphGeneration, generation);
   assert.equal(test.host.sessionMorphSourceImage, newerPixel);
   assert.equal(test.host.sessionMorphPhase, 'flight'); assert.equal(newerReleased, 0);
-  assert.equal(test.calls.hide, 0, 'obsolete cleanup cannot hide or dispose a newer capture');
+  assert.equal(test.calls.hide, 2, 'obsolete cleanup cannot hide or dispose a newer capture twice');
   assert.equal(test.releaseCount(), oldReply === 'resolve' ? 1 : 0);
   test.host.finishSessionCapsuleMorph(); assert.equal(newerReleased, 1);
 }
@@ -295,6 +297,6 @@ for (const oldReply of ['resolve', 'reject']) {
   const newerPixel = { release() { throw Error('old frame cannot release the new image'); } };
   test.host.sessionMorphPhase = 'flight'; test.host.sessionMorphSourceImage = newerPixel;
   staleFrame.onFrame(0);
-  assert.equal(test.calls.hide, 0); assert.equal(test.host.sessionMorphSourceImage, newerPixel);
+  assert.equal(test.calls.hide, 1); assert.equal(test.host.sessionMorphSourceImage, newerPixel);
 }
 console.log('Reader playback Host intent tests PASS; production-method execution, not device/audio acceptance');

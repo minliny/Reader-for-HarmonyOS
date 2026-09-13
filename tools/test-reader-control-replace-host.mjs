@@ -66,6 +66,7 @@ function owner(Type = Host()) {
     observedControlPage: 'quickReplace', observedControlModule: 'replace', observedControlCloseRevision: 0,
     searchGeneration: 0, quickSearchQuery: '', quickSearchState: { kind: 'idle' },
     reloadBookCalls: 0, loadCalls: 0,
+    applyWindowPolicyForChromeOwner() {},
     controlVisible() { return this.visible; }, controlPage() { return this.page; },
     isSessionActive(token) { return this.mounted && !this.exitRequested && this.lifecycleToken === token; },
     errorMessage(error) { return error.message; },

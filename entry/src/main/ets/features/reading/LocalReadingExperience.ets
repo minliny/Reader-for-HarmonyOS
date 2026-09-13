@@ -5906,7 +5906,10 @@ export struct ReadingExperience {
     const location = readerControlContentLocation(this.controlSession);
     return this.isSessionActive(presentation.lifecycleToken) &&
       presentation.sourceId === this.sourceId && presentation.bookId === this.bookId &&
-      this.controlVisible() && !this.controlShellExitArmed() &&
+      // During a capsule morph the control host is intentionally hidden at
+      // capture start; the morph generation itself owns presentation validity.
+      (this.controlVisible() || this.sessionMorphPhase !== 'none') &&
+      !(this.controlShellExitArmed() && this.sessionMorphPhase === 'none') &&
       presentation.openRevision === this.controlOpenRevision &&
       presentation.moduleVisitRevision === this.controlModuleVisitRevision &&
       presentation.module === module && location.level === 'secondary' && location.module === module;
@@ -7849,6 +7852,10 @@ export struct ReadingExperience {
     this.sessionMorphGeneration += 1;
     const generation = this.sessionMorphGeneration;
     this.sessionMorphPhase = 'capture';
+    // Release the control host immediately so the persistent capsule tree is
+    // mounted during capture. Snapshot acquisition may cross an async bridge;
+    // waiting for it before dismissing the host caused a visible dead frame.
+    this.hideControl();
     void this.getUIContext().getComponentSnapshot().get(source.actorId, {
       waitUntilRenderFinished: true,
     }).then((pixelMap: image.PixelMap): void => {
@@ -7886,9 +7893,10 @@ export struct ReadingExperience {
       );
     }).catch((_error: Error): void => {
       if (!this.isSessionMorphOwner(generation)) return;
-      const ownsPresentation = this.isControlPlaybackPresentationCurrent(presentation, presentation.module);
       this.finishSessionCapsuleMorph();
-      if (ownsPresentation) this.hideControl();
+      // The control host was handed off synchronously at morph start. A
+      // failed snapshot keeps the already-mounted capsule fallback and must
+      // not issue a second hide that could retrigger the transition.
     });
   }
 
@@ -7922,7 +7930,6 @@ export struct ReadingExperience {
       if (!this.isControlPlaybackPresentationCurrent(presentation, presentation.module)) {
         this.finishSessionCapsuleMorph(); return;
       }
-      this.hideControl();
       this.sessionMorphStartedMs = readerMotionNowMs();
       this.scheduleSessionMorphFrame(generation, dotCenterX, dotCenterY, capsuleWidth);
     }));
