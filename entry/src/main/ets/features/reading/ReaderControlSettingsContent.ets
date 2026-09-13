@@ -212,17 +212,23 @@ export struct ReaderControlSettingsContent {
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .clipShape(this.sharedClip(row, false));
     Stack({ alignContent: Alignment.TopStart }) {
-      ForEach(this.groupOptions(group), (option: string, index: number) => {
-        Text(this.optionLabel(group, option))
-          .borderRadius(6).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium)
-          .fontSize(9).textAlign(TextAlign.Center).maxLines(1)
-          .attributeModifier(this.optionModifier(group, row, index, option));
-      }, (option: string): string => `reader-control-settings-${group}-${option}`);
+      // 1692:3687/3692/3699 paint an 8vp rounded bar. The shared rectangle/path
+      // is a scroll visibility mask, not the bar silhouette. Keep that mask on
+      // the unpainted parent so it cannot square off this background's corners.
+      Stack({ alignContent: Alignment.TopStart }) {
+        ForEach(this.groupOptions(group), (option: string, index: number) => {
+          Text(this.optionLabel(group, option))
+            .borderRadius(6).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium)
+            .fontSize(9).textAlign(TextAlign.Center).maxLines(1)
+            .attributeModifier(this.optionModifier(group, row, index, option));
+        }, (option: string): string => `reader-control-settings-${group}-${option}`);
+      }
+      .width(this.bar(row).width).height(this.bar(row).height)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+      .borderRadius(8).clip(true).position({ x: 0, y: 0 });
     }
     .width(this.bar(row).width).height(this.bar(row).height)
-    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-    .borderRadius(8)
     .position({ x: this.bar(row).x, y: this.bar(row).y })
     .clipShape(this.sharedClip(row, true));
   }

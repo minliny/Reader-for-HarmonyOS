@@ -1,0 +1,125 @@
+{
+  "layers": [
+    {
+      "parent": {
+        "type": "Stack",
+        "id": 1,
+        "create": {
+          "alignContent": "Alignment.TopStart"
+        },
+        "width": 372,
+        "height": 31.5,
+        "position": {
+          "x": 2,
+          "y": 48
+        },
+        "clipShape": {
+          "path": "M0 0Z"
+        }
+      },
+      "paint": {
+        "type": "Stack",
+        "id": 2,
+        "create": {
+          "alignContent": "Alignment.TopStart"
+        },
+        "width": 372,
+        "height": 31.5,
+        "backgroundColor": "#A32C2824",
+        "border": {
+          "width": "TOK_BORDER_W",
+          "color": "#2EE2D1B9"
+        },
+        "borderRadius": 8,
+        "clip": true,
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "parent": {
+        "type": "Stack",
+        "id": 8,
+        "create": {
+          "alignContent": "Alignment.TopStart"
+        },
+        "width": 372,
+        "height": 31.5,
+        "position": {
+          "x": 2,
+          "y": 111
+        },
+        "clipShape": {
+          "path": "M0 106.9090909090909h1302v3.340909090909088h-1302Z "
+        }
+      },
+      "paint": {
+        "type": "Stack",
+        "id": 9,
+        "create": {
+          "alignContent": "Alignment.TopStart"
+        },
+        "width": 372,
+        "height": 31.5,
+        "backgroundColor": "#A32C2824",
+        "border": {
+          "width": "TOK_BORDER_W",
+          "color": "#2EE2D1B9"
+        },
+        "borderRadius": 8,
+        "clip": true,
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "parent": {
+        "type": "Stack",
+        "id": 17,
+        "create": {
+          "alignContent": "Alignment.TopStart"
+        },
+        "width": 372,
+        "height": 31.5,
+        "position": {
+          "x": 2,
+          "y": 174
+        },
+        "clipShape": {
+          "width": "100%",
+          "height": "100%"
+        }
+      },
+      "paint": {
+        "type": "Stack",
+        "id": 18,
+        "create": {
+          "alignContent": "Alignment.TopStart"
+        },
+        "width": 372,
+        "height": 31.5,
+        "backgroundColor": "#A32C2824",
+        "border": {
+          "width": "TOK_BORDER_W",
+          "color": "#2EE2D1B9"
+        },
+        "borderRadius": 8,
+        "clip": true,
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "counters": {
+    "paths": 4,
+    "rectangles": 1,
+    "nodes": 25
+  },
+  "sourceEvidence": "1692:3687/3692/3699 round8 + 1692:3148 quick0/full1"
+}
