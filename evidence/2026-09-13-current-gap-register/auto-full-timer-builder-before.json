@@ -1,0 +1,89 @@
+{
+  "initial": {
+    "width": 313.714285714,
+    "p": 1,
+    "card": {
+      "type": "Stack",
+      "id": 4,
+      "create": {
+        "alignContent": "Alignment.TopStart"
+      },
+      "width": 281.714285714,
+      "height": 138,
+      "backgroundColor": "#A3EEE6DB",
+      "border": {
+        "width": "TOK_BORDER_W",
+        "color": "#2E9B8466"
+      },
+      "borderRadius": 10,
+      "position": {
+        "x": 4,
+        "y": 33.39
+      }
+    },
+    "group": {
+      "type": "Stack",
+      "id": 9,
+      "create": {
+        "alignContent": "Alignment.TopStart"
+      },
+      "width": 176,
+      "height": 114,
+      "position": {
+        "x": 115,
+        "y": 12
+      }
+    },
+    "colon": {
+      "type": "Text",
+      "id": 12,
+      "create": ":",
+      "width": 8,
+      "height": 22,
+      "fontFamily": "ReaderInter",
+      "fontWeight": 800,
+      "fontSize": 18,
+      "lineHeight": 22,
+      "fontColor": "#FF2F6373",
+      "textAlign": "TextAlign.Center",
+      "position": {
+        "x": 84,
+        "y": 40.5
+      }
+    },
+    "placements": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 100,
+        "y": 0
+      }
+    ],
+    "minute": {
+      "value": 15,
+      "minimum": 0,
+      "maximum": 180,
+      "wheelWidth": 76,
+      "rowHeight": 34,
+      "neighbours": 1,
+      "selectedSize": 17,
+      "neighbourSize": 11,
+      "unit": "分",
+      "interactionEnabled": true
+    },
+    "second": {
+      "value": 0,
+      "minimum": 0,
+      "maximum": 59,
+      "wheelWidth": 76,
+      "rowHeight": 34,
+      "neighbours": 1,
+      "selectedSize": 17,
+      "neighbourSize": 11,
+      "unit": "秒",
+      "interactionEnabled": true
+    }
+  }
+}

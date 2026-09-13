@@ -374,16 +374,24 @@ export struct ReaderControlAutoPageContent {
       .position({ x: this.frame().stopLabel.x, y: this.frame().stopLabel.y }).hitTestBehavior(HitTestMode.None);
   }
 
+  private timerWheelWidth(): number {
+    // Figma's 306vp card: label ends at99, picker starts115, right inset15;
+    // the two wheels share the remaining space around the 24vp colon gap.
+    // Preserve 76vp at the design width and update the actual child paint on
+    // narrower hosts; keeping a fixed176vp group overflows the rounded card.
+    return Math.max(0, (this.sectionInnerWidth() - 115 - 15 - 24) / 2);
+  }
+
   @Builder
   private timerWheel(minutes: boolean) {
     ReaderControlTimerWheel({
       value: this.currentTimerValue(minutes),
       minimum: minutes ? READER_AUTO_PAGE_FULL_MIN_MINUTES : READER_AUTO_PAGE_FULL_MIN_SECONDS,
       maximum: minutes ? READER_AUTO_PAGE_FULL_MAX_MINUTES : READER_AUTO_PAGE_FULL_MAX_SECONDS,
-      wheelWidth: 76, rowHeight: 34, neighbours: 1, selectedSize: 17, neighbourSize: 11,
+      wheelWidth: this.timerWheelWidth(), rowHeight: 34, neighbours: 1, selectedSize: 17, neighbourSize: 11,
       unit: minutes ? '分' : '秒', interactionEnabled: this.fullInput(),
       onStep: (delta: number): void => this.commitTimerStep(minutes, delta),
-    }).position({ x: minutes ? 0 : 100, y: 0 });
+    }).position({ x: minutes ? 0 : this.timerWheelWidth() + 24, y: 0 });
   }
   @Builder
   private timerSection() {
@@ -449,10 +457,10 @@ export struct ReaderControlAutoPageContent {
             .lineHeight(22)
             .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
             .textAlign(TextAlign.Center)
-            .position({ x: 84, y: 40.5 });
+            .position({ x: this.timerWheelWidth() + 8, y: 40.5 });
           this.timerWheel(false);
         }
-        .width(176)
+        .width(this.timerWheelWidth() * 2 + 24)
         .height(114)
         .position({ x: 115, y: 12 });
       }
