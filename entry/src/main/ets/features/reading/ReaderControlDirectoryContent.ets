@@ -169,22 +169,28 @@ export struct ReaderControlDirectoryContent {
         const index = Math.floor(this.leadingRow);
         const height = this.rowHeight();
         const offset = this.leadingFraction * height;
-        let needsCorrection = true;
-        try {
-          const rect = this.scroller.getItemRect(index);
-          const tolerance = 0.5 / this.getUIContext().vp2px(1);
-          needsCorrection = !Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0 ||
-            Math.abs(rect.height - height) > tolerance || Math.abs(rect.y + offset) > tolerance;
-        } catch (_error) { /* An unmeasured/offscreen row still needs the original anchor correction. */ }
-        if (needsCorrection) {
+        if (!this.leadingAnchorIsAligned()) {
           this.scroller.scrollToIndex(index, false, ScrollAlign.START,
             { extraOffset: LengthMetrics.vp(offset) });
         }
       } catch (_error) { /* The next mounted frame can restore the anchor. */ }
-      if (this.interactionEnabled && (this.progress === 0 || this.progress === 1)) {
+      if (this.interactionEnabled && (this.progress === 0 || this.progress === 1) &&
+        this.leadingAnchorIsAligned()) {
         this.leadingRow = undefined; this.leadingKey = undefined;
       }
     }));
+  }
+
+  private leadingAnchorIsAligned(): boolean {
+    if (this.leadingRow === undefined) return false;
+    try {
+      const height = this.rowHeight();
+      const rect = this.scroller.getItemRect(Math.floor(this.leadingRow));
+      const tolerance = 0.5 / this.getUIContext().vp2px(1);
+      return Number.isFinite(rect.y) && Number.isFinite(rect.height) && rect.height > 0 &&
+        Math.abs(rect.height - height) <= tolerance &&
+        Math.abs(rect.y + this.leadingFraction * height) <= tolerance;
+    } catch (_error) { return false; }
   }
 
   private captureLeadingRow(): void {
@@ -215,7 +221,10 @@ export struct ReaderControlDirectoryContent {
       if (this.leadingRow === undefined) this.captureLeadingRow();
       // Native input is disabled and onWillScroll rejects inertia. Do not
       // round-trip an estimated absolute offset to "stop" the virtual List.
-    } else if (this.progress === 0 || this.progress === 1) {
+    } else if ((this.progress === 0 || this.progress === 1) && this.leadingAnchorIsAligned()) {
+      // A larger Full viewport can clamp the native List before the desired
+      // trailing row. Keep that semantic intent through the endpoint so a
+      // later collapse can restore it; real user scrolling still invalidates it.
       this.leadingRow = undefined; this.leadingKey = undefined;
     }
   }
