@@ -378,9 +378,13 @@ export struct LocalImportDialog {
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start);
         Stack({ alignContent: Alignment.Center }) {
+          // Figma 2657:818 keeps an 18vp slot; rotated Icon 2657:819 paints
+          // a 23.754vp bound. The 24px export already bakes in that rotation.
+          // Restore its paint scale without shrinking it twice or changing layout.
           Image((this.appThemeScheme === 'night' ? $r('app.media.import_refresh_theme_night') : $r('app.media.import_refresh')))
             .width(18)
-            .height(18);
+            .height(18)
+            .scale({ x: 23.754 / 18, y: 23.754 / 18 });
         }
         .width(18)
         .height(18);
