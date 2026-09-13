@@ -37,27 +37,26 @@ export class LocalBookImportGateway {
     this.runtimeOwner = runtimeOwner;
   }
 
-  async importFromSystemPicker(): Promise<LocalImportBatch> {
-    const selections = await this.runtimeOwner.selectLocalBookInputs();
+  async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
+    return this.runtimeOwner.selectLocalBookInputs();
+  }
+
+  async importPreparedSelections(selections: LocalBookPreparation[]): Promise<LocalImportBatch> {
     if (selections.length === 0) {
       return { state: 'cancelled', imported: 0, failed: 0, items: [] };
     }
-
     const items: LocalImportItem[] = [];
     let imported = 0;
     for (const selection of selections) {
       const item = await this.importPreparedSelection(selection);
       items.push(item);
-      if (item.state === 'success') {
-        imported += 1;
-      }
+      if (item.state === 'success') imported += 1;
     }
-    return {
-      state: 'completed',
-      imported,
-      failed: items.length - imported,
-      items,
-    };
+    return { state: 'completed', imported, failed: items.length - imported, items };
+  }
+
+  async importFromSystemPicker(): Promise<LocalImportBatch> {
+    return this.importPreparedSelections(await this.selectLocalBookInputs());
   }
 
   private async importPreparedSelection(selection: LocalBookPreparation): Promise<LocalImportItem> {

@@ -8,6 +8,7 @@ import {
   type LocalImportBatch,
   LocalBookImportGateway,
 } from './LocalBookImportGateway';
+import type { LocalBookPreparation } from '../../app/ReaderHostRegistry';
 
 /**
  * Plain page data only. `empty` and `populated` are the two mutually
@@ -67,7 +68,16 @@ export class BookshelfFlowGateway {
   }
 
   async importFromSystemPicker(): Promise<BookshelfImportOutcome> {
-    const batch = await this.localImport.importFromSystemPicker();
+    const selections = await this.localImport.selectLocalBookInputs();
+    return this.importPreparedSelections(selections);
+  }
+
+  async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
+    return this.localImport.selectLocalBookInputs();
+  }
+
+  async importPreparedSelections(selections: LocalBookPreparation[]): Promise<BookshelfImportOutcome> {
+    const batch = await this.localImport.importPreparedSelections(selections);
     // Always re-read after the picker returns. A completed batch can upsert an
     // existing book, and a cancelled batch must still expose the restored
     // Core-owned shelf instead of retaining a UI-side copy.

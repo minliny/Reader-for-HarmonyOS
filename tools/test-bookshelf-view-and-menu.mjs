@@ -5,6 +5,7 @@ const root = new URL('../entry/src/main/ets/features/', import.meta.url);
 const shelf = await readFile(new URL('bookshelf/BookshelfPage.ets', root), 'utf8');
 const emptyShelf = await readFile(new URL('bookshelf/BookshelfEmptyPage.ets', root), 'utf8');
 const actionSheet = await readFile(new URL('bookshelf/BookshelfBookActionSheet.ets', root), 'utf8');
+const importDialog = await readFile(new URL('bookshelf/LocalImportDialog.ets', root), 'utf8');
 const moreMenu = await readFile(new URL('bookshelf/BookshelfMoreMenu.ets', root), 'utf8');
 const multiSelect = await readFile(new URL('bookshelf/BookshelfMultiSelectPage.ets', root), 'utf8');
 const shelfGateway = await readFile(new URL('bookshelf/BookshelfFlowGateway.ts', root), 'utf8');
@@ -17,6 +18,12 @@ const moreSurface = await readFile(new URL('bookshelf_more_menu_surface.svg', me
 
 assert.match(shelf, /type BookshelfViewMode = 'cover' \| 'list'/);
 assert.match(shelf, /@State private viewMode: BookshelfViewMode = 'cover'/);
+assert.match(shelf, /@StorageLink\('readerBookshelfViewMode'\) private storedViewMode: string = 'cover'/,
+  'the selected bookshelf projection must survive route recreation');
+assert.match(shelf, /const restoredMode: BookshelfViewMode = this\.storedViewMode === 'list' \? 'list' : 'cover'/,
+  'bookshelf entry must restore the persisted projection before rebuilding rows');
+assert.match(shelf, /private setViewMode\(mode: BookshelfViewMode\): void \{[\s\S]*?this\.storedViewMode = mode;/,
+  'projection changes must be committed to app storage before the motion track');
 assert.match(shelf,
   /this\.sectionAction\('bookshelf_grid', \(\): void => \{[\s\S]*?this\.setViewMode\('cover'\)/,
   'the grid action must go through the single animated view-switch entry');
@@ -122,17 +129,17 @@ assert.match(emptyShelf, /Image\(this\.headerActionAsset\(asset\)\)/,
 assert.match(shelf, /private projectionListDetails\(book: ShelfBook, isTablet: boolean\)/,
   'the stable book actor must retain the real list-row content projection');
 assert.match(shelf, /const PHONE_LIST_COVER_WIDTH = 48/);
-assert.match(shelf, /const PHONE_LIST_COVER_HEIGHT = 72/);
+assert.match(shelf, /const PHONE_LIST_COVER_HEIGHT = 80/);
 assert.match(shelf, /const TABLET_LIST_COVER_WIDTH = 64/);
-assert.match(shelf, /const TABLET_LIST_COVER_HEIGHT = 96/);
+assert.match(shelf, /const TABLET_LIST_COVER_HEIGHT = 104/);
 assert.match(shelf, /private projectionBookCard\([\s\S]*?book: ShelfBook,[\s\S]*?index: number/);
 assert.match(shelf, /this\.onBookSelected\(book\)/);
 assert.match(shelf,
   /private sectionAction[\s\S]*?\.width\(34\)[\s\S]*?\.height\(34\)[\s\S]*?\.responseRegion\(\{ x: -5, y: -5, width: 44, height: 44 \}\)/,
   'the 34vp header actors must retain the Figma 44vp transparent hit target');
 assert.match(shelf,
-  /Row\(\{ space: 4 \}\)[\s\S]*?Text\(book\.author\)[\s\S]*?\.fontSize\(12\)[\s\S]*?Text\('·'\)[\s\S]*?\.fontSize\(11\)[\s\S]*?Text\(this\.listChapter\(book\)\)[\s\S]*?\.fontSize\(11\)/,
-  'list author, separator, and chapter must preserve their distinct Figma text roles');
+  /Text\(book\.author\)[\s\S]*?Text\(this\.listChapter\(book\)\)[\s\S]*?private listSourceLabel\(book: ShelfBook\)/,
+  'list projection must keep author, latest chapter, and source roles as separate rows');
 assert.match(shelf, /private listStatusPill[\s\S]*?\.width\(64\)[\s\S]*?\.height\(18\)/,
   'list status pills must keep the Figma 64×18 geometry');
 assert.match(shelf,
@@ -146,15 +153,15 @@ assert.doesNotMatch(shelf, /Blank\(\)\.height\(238\)/,
 
 assert.match(shelf, /@State private actionBook: ShelfBook \| undefined = undefined/);
 assert.match(shelf,
-  /\.bindSheet\(this\.actionBook !== undefined, this\.bookActionSheetContent,[\s\S]*?height: 224,[\s\S]*?preferType: SheetType\.BOTTOM,[\s\S]*?dragBar: false/,
-  'per-book actions must use the canonical bottom sheet instead of an invented popup menu');
+  /\.bindSheet\(this\.actionBook !== undefined, this\.bookActionSheetContent,[\s\S]*?height: 224,[\s\S]*?width: '75%',[\s\S]*?preferType: SheetType\.CENTER,[\s\S]*?backgroundColor: '#FFFCF8'/,
+  'per-book actions must use the requested opaque 75% floating panel');
 assert.equal((shelf.match(/LongPressGesture\(\{ fingers: 1, repeat: false, duration: 500 \}\)/g) ?? []).length, 1,
   'the persistent book actor must expose one long-press entry shared by both projections');
 assert.match(shelf,
   /accessibilityText\(`\$\{book\.title\}更多操作`\)[\s\S]*?\.onClick\(\(\): void => this\.presentBookActionSheet\(book\)\)/,
   'the per-book More actor must open the same Figma action sheet');
 
-assert.match(actionSheet, /Figma: `Library\/BookActionSheet` \(`2903:1737`\)/);
+assert.match(actionSheet, /Per-book action surface\./);
 assert.match(actionSheet,
   /Blank\(\)[\s\S]*?\.width\(42\)[\s\S]*?\.height\(4\)[\s\S]*?\.position\(\{ x: 0, y: 9 \}\)/,
   'the sheet grabber must preserve the Figma 42×4 at y=9 geometry');
@@ -164,13 +171,21 @@ assert.match(actionSheet, /this\.actionSlot\('多选', false, 70/);
 assert.match(actionSheet, /this\.actionSlot\('书籍信息', false, 116/);
 assert.match(actionSheet, /this\.actionSlot\('移除书架', true, 162/);
 assert.match(actionSheet,
-  /\.height\(BOOK_ACTION_SHEET_HEIGHT\)[\s\S]*?\.backgroundColor\(TOK_CARD_BG_HI\)[\s\S]*?\.border\(\{ width: 1, color: TOK_BORDER \}\)[\s\S]*?topLeft: 24[\s\S]*?radius: 46/,
-  'the sheet surface must preserve the Figma 224 height, 24 top radius, border, fill, and elevation');
+  /\.height\(BOOK_ACTION_SHEET_HEIGHT\)[\s\S]*?\.backgroundColor\(TOK_CARD_BG_HI\)[\s\S]*?\.border\(\{ width: 1, color: TOK_BORDER \}\)[\s\S]*?\.borderRadius\(24\)[\s\S]*?radius: 46/,
+  'the floating action surface must preserve height, opaque host fill, radius, border and elevation');
 assert.match(actionSheet,
   /\.height\(BOOK_ACTION_HEIGHT\)[\s\S]*?\.padding\(\{ left: 12 \}\)[\s\S]*?\.borderRadius\(12\)[\s\S]*?\.padding\(\{ left: BOOK_ACTION_INSET, right: BOOK_ACTION_INSET \}\)/,
   'each action must be 40vp high with 14vp sheet inset and 12vp text inset/radius');
 assert.match(index,
   /onBookMultiSelectRequested: \(book: ShelfBook\): void => this\.openBookshelfMultiSelect\(book\)/);
+assert.match(multiSelect, /@StorageLink\('readerBookshelfViewMode'\)/,
+  'batch management must inherit the persisted bookshelf projection');
+assert.match(multiSelect, /@StorageLink\('readerBookshelfSelectedGroup'\)/,
+  'batch management must inherit the active bookshelf filter');
+assert.match(multiSelect, /private selectionListCard\(book: ShelfBook\)/,
+  'batch management must render list rows when the bookshelf is in list mode');
+assert.match(multiSelect, /const columnCount = this\.isListMode\(\) \? 1 : 3/,
+  'batch rows must preserve the active projection ordering');
 assert.match(index, /onBookInfoRequested: \(book: ShelfBook\): void => this\.openShelfBookInfo\(book\)/);
 assert.match(index, /onBookRemoveRequested: \(book: ShelfBook\): void => this\.requestRemoveShelfBook\(book\)/);
 assert.match(index,
@@ -283,6 +298,24 @@ assert.match(directory,
 assert.match(directory,
   /Text\(this\.currentPosition\(\)\)[\s\S]*\.flexShrink\(0\)[\s\S]*\.maxLines\(1\)/,
   'the current/total counter must keep one intrinsic-width line');
+
+assert.match(shelf, /this\.filterRowVisible\s*\?\s*this\.canonicalFilterActiveAsset\(\)/,
+  'active filter must switch to the canonical active resource');
+const listProgressBody = shelf.match(/private listProgressLabel\(book: ShelfBook\): string \{([\s\S]*?)\n  \}/);
+assert.ok(listProgressBody);
+assert.doesNotMatch(listProgressBody[1], /unreadCount/,
+  'list reading progress must not be replaced by unread chapter count');
+assert.match(importDialog, /\.height\(this\.resultPanelHeight\(\)\)/,
+  'import result panel must size from its actual batch');
+assert.match(importDialog, /private resultItemsPanelHeight\(\): number/,
+  'long import results must use a bounded scroll region');
+assert.match(importDialog, /\.borderRadius\(14\)[\s\S]*?\.onClick\(\(\): void => this\.onSelectFiles\(\)\)/,
+  'the illustrated file drop zone must open the system picker');
+assert.match(index, /async beginImport\(\): Promise<void>/);
+assert.match(index, /const selections = await gateway\.selectLocalBookInputs\(\);[\s\S]*?writeImportPresentation\(new LocalImportPresentation\('importing'\)\)/,
+  'importing must begin only after the picker returns selected inputs');
+assert.match(index, /this\.route = 'bookshelfManagement';[\s\S]*?getBookshelfManagementOrchestrator\(\)\.open\(\)/,
+  'bookshelf management must be a reachable route');
 
 console.log('bookshelf view and directory footer contracts: PASS');
 

@@ -145,14 +145,17 @@ export struct LocalImportDialog {
         .alignItems(HorizontalAlign.Center)
         .backgroundColor(TOK_PAPER)
         .border({ width: 2, color: TOK_BORDER, style: BorderStyle.Dashed })
-        .borderRadius(14);
+        .borderRadius(14)
+        // The illustrated drop zone is itself the primary picker affordance;
+        // keep it equivalent to the explicit bottom action for touch users.
+        .onClick((): void => this.onSelectFiles());
 
         Row({ space: TOK_SPACE_XS }) {
           Image($r('app.media.import_info'))
             .width(13)
             .height(13)
             .margin({ top: 2 });
-          Text('支持从系统文件中多选 TXT 与 EPUB。解析、目录和正文均由 Rust Core 处理。')
+          Text('支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。解析、目录和正文均由 Rust Core 处理。')
             .layoutWeight(1)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
@@ -291,7 +294,7 @@ export struct LocalImportDialog {
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.panelFrame().width)
-    .height(636)
+    .height(this.resultPanelHeight())
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(TOK_SURFACE_SOLID)
     .borderRadius(20)
@@ -359,7 +362,7 @@ export struct LocalImportDialog {
         .width('100%');
       }
       .width('100%')
-      .height(410)
+      .height(this.resultItemsPanelHeight())
       .padding(1)
       .border({ width: TOK_BORDER_W, color: '#E8E2D9' })
       .borderRadius(12)
@@ -470,6 +473,17 @@ export struct LocalImportDialog {
 
   private resultButtonWidth(): number {
     return Math.min(201, Math.max(0, this.panelFrame().width - TOK_SPACE_MD * 2));
+  }
+
+  private resultItemsPanelHeight(): number {
+    const count = this.resultItems().length;
+    return Math.min(410, Math.max(61, count * 61));
+  }
+
+  private resultPanelHeight(): number {
+    // Header/summary/button occupy approximately 226vp in the Figma phone
+    // assembly; grow for short batches and cap the list region for long ones.
+    return Math.min(636, 226 + this.resultItemsPanelHeight());
   }
 
   private numericAreaLength(value: Length): number {

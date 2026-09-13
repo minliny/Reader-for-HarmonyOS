@@ -1005,7 +1005,7 @@ struct Index {
         LocalImportDialog({
           state: this.visibleImportDialogState(),
           batch: this.visibleImportBatch(),
-          onSelectFiles: (): void => this.beginImport(),
+          onSelectFiles: (): void => { void this.beginImport(); },
           onClose: (): void => this.closeImportDialog(),
         });
       }
@@ -5161,44 +5161,50 @@ struct Index {
     this.writeImportPresentation(undefined);
   }
 
-  private beginImport(): void {
+  private async beginImport(): Promise<void> {
     const presentation = this.currentImportPresentation();
     if (presentation !== undefined && presentation.state === 'importing') {
       return;
     }
     const importNavigationGeneration = this.navigationGeneration;
-    this.writeImportPresentation(new LocalImportPresentation('importing'));
     const owner = ReaderRuntimeOwner.current();
     const gateway = new BookshelfFlowGateway(owner);
-    gateway.importFromSystemPicker()
-      .then((outcome): void => {
+    try {
+      // Keep the file-selection surface mounted while the system picker is
+      // open. Importing begins only after a non-empty selection returns.
+      const selections = await gateway.selectLocalBookInputs();
+      const isStillOnBookshelf = this.route === 'bookshelf' &&
+        importNavigationGeneration === this.navigationGeneration;
+      if (selections.length === 0) {
+        if (isStillOnBookshelf) this.closeImportDialog();
+        return;
+      }
+      if (!isStillOnBookshelf) return;
+      this.writeImportPresentation(new LocalImportPresentation('importing'));
+      const outcome = await gateway.importPreparedSelections(selections);
         // Import writes a newer Core shelf snapshot than any in-flight shelf
         // refresh. Invalidate such reads even if the user has left Bookshelf;
         // the next entry will load the authoritative Core state.
         this.bookshelfLoadGeneration += 1;
-        const isStillOnBookshelf = this.route === 'bookshelf' &&
-          importNavigationGeneration === this.navigationGeneration;
-        if (outcome.batch.state === 'cancelled') {
-          if (isStillOnBookshelf) {
-            this.closeImportDialog();
-          }
-          return;
-        }
+      if (outcome.batch.state === 'cancelled') {
+        if (isStillOnBookshelf) this.closeImportDialog();
+        return;
+      }
         if (!isStillOnBookshelf) {
           return;
         }
         this.applyBookshelfState(outcome.shelf);
         this.writeImportPresentation(new LocalImportPresentation('result', outcome.batch));
-      })
-      .catch((error: Error): void => {
-        hilog.error(DOMAIN, 'Reader', 'Local import failed: %{private}s', error.message);
-        // `Import Result` only accepts per-file facts returned by Core.  An
-        // unexpected picker/runtime failure has no supplied Figma error
-        // surface, so do not fabricate a file name or a completed batch.
-        if (this.route === 'bookshelf' && importNavigationGeneration === this.navigationGeneration) {
-          this.writeImportPresentation(new LocalImportPresentation('fileSelection'));
-        }
-      });
+    } catch (error) {
+      const failure = error as Error;
+      hilog.error(DOMAIN, 'Reader', 'Local import failed: %{private}s', failure.message);
+      // `Import Result` only accepts per-file facts returned by Core.  An
+      // unexpected picker/runtime failure has no supplied Figma error
+      // surface, so do not fabricate a file name or a completed batch.
+      if (this.route === 'bookshelf' && importNavigationGeneration === this.navigationGeneration) {
+        this.writeImportPresentation(new LocalImportPresentation('fileSelection'));
+      }
+    }
   }
 
   private writeImportPresentation(presentation: LocalImportPresentation | undefined): void {
