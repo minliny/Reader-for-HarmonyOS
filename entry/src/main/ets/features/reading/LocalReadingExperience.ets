@@ -6972,7 +6972,10 @@ export struct ReadingExperience {
 
   private applyWindowPolicyForChromeOwner(): void {
     if (this.windowChromeActive) {
-      void this.applyReaderWindowPolicy(this.readerSettingsSnapshot)
+      // The control surface is an explicit system-chrome affordance. Keep the
+      // user's hide-status-bar preference persisted, but expose the status bar
+      // while controls are open so the top bar has a live safe-top boundary.
+      void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.controlVisible())
         .catch((_error: Error): void => {});
       return;
     }
@@ -6989,6 +6992,7 @@ export struct ReadingExperience {
     const chromeStyle = new ReaderWindowChromeStyle(
       themeStyle.paperStart,
       readerAppearanceChromeTone(this.appearanceSnapshot.activeTheme),
+      themeStyle.ink,
     );
     if (this.windowChromeOverlayActive) {
       ReaderWindowCoordinator.requestOverlayChrome(chromeStyle);
@@ -7293,7 +7297,7 @@ export struct ReadingExperience {
     this.readerSettingsLoaded = true;
     this.configureReaderScreenAwakeLease(snapshot);
     this.applyReaderSystemEventPolicy(snapshot);
-    void this.applyReaderWindowPolicy(snapshot)
+    void this.applyReaderWindowPolicy(snapshot, this.windowChromeActive)
       .then((): Promise<void> => {
         if (!this.isSessionActive(lifecycleToken) ||
           generation !== this.readerSettingsMutationGeneration) {
@@ -7311,7 +7315,8 @@ export struct ReadingExperience {
           this.readerSettingsSnapshot = previous;
           this.configureReaderScreenAwakeLease(previous);
           this.applyReaderSystemEventPolicy(previous);
-          void this.applyReaderWindowPolicy(previous).catch((_rollbackError: Error): void => {});
+          void this.applyReaderWindowPolicy(previous, this.windowChromeActive)
+            .catch((_rollbackError: Error): void => {});
           this.showReaderSettingsFailure('阅读设置保存失败，已恢复上次保存值', error);
         }
       });
@@ -7326,8 +7331,9 @@ export struct ReadingExperience {
     }
   }
 
-  private applyReaderWindowPolicy(snapshot: ReaderSettingsSnapshot): Promise<void> {
-    return ReaderWindowCoordinator.requestReaderWindowPolicy(this.windowPolicyFor(snapshot));
+  private applyReaderWindowPolicy(snapshot: ReaderSettingsSnapshot,
+    forceStatusBarVisible: boolean = false): Promise<void> {
+    return ReaderWindowCoordinator.requestReaderWindowPolicy(this.windowPolicyFor(snapshot, forceStatusBarVisible));
   }
 
   private configureReaderScreenAwakeLease(snapshot: ReaderSettingsSnapshot): void {
@@ -7340,7 +7346,7 @@ export struct ReadingExperience {
     if (!this.mounted) {
       return;
     }
-    void ReaderWindowCoordinator.requestReaderWindowPolicy(this.windowPolicyFor(this.readerSettingsSnapshot))
+    void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.windowChromeActive)
       .catch((_error: Error): void => {
         // A later foreground/settings application retries the same semantic
         // lease state through the serialized Window coordinator.
@@ -7368,11 +7374,12 @@ export struct ReadingExperience {
       .catch((error: Error): void => this.logTtsFailure('screen-off stop', error));
   }
 
-  private windowPolicyFor(snapshot: ReaderSettingsSnapshot): ReaderWindowPolicy {
+  private windowPolicyFor(snapshot: ReaderSettingsSnapshot,
+    forceStatusBarVisible: boolean = false): ReaderWindowPolicy {
     return new ReaderWindowPolicy(
       snapshot.screenDirection,
-      this.screenAwakeKeepScreenOn,
-      snapshot.hideStatusBar,
+      this.screenAwakeKeepScreenOn || this.ttsKeepScreenOn,
+      forceStatusBarVisible ? false : snapshot.hideStatusBar,
       snapshot.hideNavigationBar,
       snapshot.extendIntoCutout,
     );
@@ -8230,6 +8237,9 @@ export struct ReadingExperience {
     // Panel's sparse watcher runs.  This assignment does not participate in
     // build invalidation.
     this.latestControlVisualSession = copyReaderControlSessionState(this.controlSession);
+    // Status-bar visibility follows the control session rather than the
+    // mounted reader route, including the first collapse/open frame.
+    this.applyWindowPolicyForChromeOwner();
     if (this.controlVisible()) this.suspendAdjacentMeasurement();
     const page = this.controlPage();
     const previous = this.observedControlPage;

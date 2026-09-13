@@ -13,6 +13,10 @@ assert.match(coordinator,
 assert.match(coordinator,
   /statusBarColor: request\.style\.underlayColor,[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
   'one revision must atomically apply the paired underlay and content tone');
+assert.match(coordinator,
+  /contentColor: string;[\s\S]*constructor\(underlayColor: string, tone: ReaderWindowChromeTone, contentColor\?: string\)[\s\S]*this\.contentColor = contentColor \?\? /,
+  'chrome style must carry an explicit foreground color with a tone fallback');
+assert.doesNotMatch(coordinator, /#99000000/, 'system-bar content must not use translucent black');
 assert.doesNotMatch(coordinator, /requestOverlayChrome\(tone:/,
   'overlay chrome must not accept an independent tone-only request');
 assert.match(coordinator,
@@ -20,8 +24,8 @@ assert.match(coordinator,
   'overlay chrome must inherit the complete reader style');
 
 assert.match(experience,
-  /const themeStyle = readerAppearanceThemeStyle\(this\.appearanceSnapshot\.activeTheme\);[\s\S]*new ReaderWindowChromeStyle\([\s\S]*themeStyle\.paperStart,[\s\S]*readerAppearanceChromeTone\(this\.appearanceSnapshot\.activeTheme\)/,
-  'the active reading theme must provide both its exact top underlay and matching tone');
+  /const themeStyle = readerAppearanceThemeStyle\(this\.appearanceSnapshot\.activeTheme\);[\s\S]*new ReaderWindowChromeStyle\([\s\S]*themeStyle\.paperStart,[\s\S]*readerAppearanceChromeTone\(this\.appearanceSnapshot\.activeTheme\),[\s\S]*themeStyle\.ink/,
+  'the active reading theme must provide exact underlay, tone, and ink');
 assert.match(experience, /requestOverlayChrome\(chromeStyle\)/,
   'reader overlays must inherit the active paired style');
 

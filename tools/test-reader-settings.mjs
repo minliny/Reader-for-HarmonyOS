@@ -256,7 +256,7 @@ assert.match(experience,
   /private onWindowChromeActiveChanged\(\): void \{[\s\S]*?this\.applyWindowChrome\(\);[\s\S]*?this\.applyWindowPolicyForChromeOwner\(\)/,
   'the visible-reader transition must apply chrome and system-bar policy together');
 assert.match(experience,
-  /private applyWindowPolicyForChromeOwner\(\): void \{[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?this\.applyReaderWindowPolicy\(this\.readerSettingsSnapshot\)[\s\S]*?ReaderWindowCoordinator\.requestAppWindowPolicy\(\)/,
+  /private applyWindowPolicyForChromeOwner\(\): void \{[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?this\.applyReaderWindowPolicy\(this\.readerSettingsSnapshot, this\.controlVisible\(\)\)[\s\S]*?ReaderWindowCoordinator\.requestAppWindowPolicy\(\)/,
   'a hidden warm reader must preserve the app policy until it owns the screen');
 assert.match(experience,
   /safeWindowSettingsFallback\([\s\S]*?version: 4[\s\S]*?hideStatusBar: true/,

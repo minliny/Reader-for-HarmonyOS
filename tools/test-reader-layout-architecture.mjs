@@ -9,6 +9,7 @@ import {
 import {
   READER_FULL_PANEL_HEIGHT_PHONE,
   READER_FULL_PANEL_MAX_WIDTH_PHONE,
+  DEFAULT_READER_CONTENT_INSET_PROFILE,
   resolveReaderControlLayout,
   resolveReaderReadingLayout,
 } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
@@ -42,6 +43,15 @@ assert.equal(phoneReading.contentTop, 72, 'Figma top remains the minimum screen-
 assert.equal(phoneReading.contentLeft, 32);
 assert.equal(phoneReading.contentRight, 32);
 assert.equal(phoneReading.bodyWidth(), 326);
+const compactProfile = { compact: 24, expanded: 40 };
+const profiledReading = resolveReaderReadingLayout(390, 844, false, metrics(), false, compactProfile);
+assert.equal(profiledReading.contentLeft, 32,
+  'the authored profile cannot undercut the minimum Figma compact inset');
+const expandedProfile = { compact: 36, expanded: 52 };
+const profiledExpanded = resolveReaderReadingLayout(760, 960, true, metrics(), false, expandedProfile);
+assert.equal(profiledExpanded.contentLeft, 52,
+  'a configured expanded inset is shared by pagination and rendering');
+assert.equal(DEFAULT_READER_CONTENT_INSET_PROFILE.compact, 32);
 
 const scaledTitle = resolveReaderReadingLayout(390, 844, false, metrics({ systemFontScale: 1.2 }));
 assert.equal(scaledTitle.titleTrackHeightVp, 28.75 * 1.2 + 18);
@@ -75,12 +85,12 @@ const phoneControl = resolveReaderControlLayout(
   false,
   metrics({ systemTop: 48, gestureBottom: 24 }),
 );
-assert.equal(phoneControl.topBarTop, 56, 'top bar clears the visible system/cutout edge by 8vp');
+assert.equal(phoneControl.topBarTop, 58, 'top bar clears the visible system/cutout edge by 10vp');
 assert.equal(phoneControl.topBarWidth, 360);
 assert.equal(phoneControl.dockBottomGap, 24);
 assert.equal(phoneControl.dockWidth, READER_FULL_PANEL_MAX_WIDTH_PHONE);
-assert.equal(phoneControl.fullPanelHeight, 844 - 88 - 24,
-  'full panel height is capped by the live viewport and interactive bottom inset');
+assert.equal(phoneControl.fullPanelHeight, 844 - (58 + 54 + 8) - 24,
+  'full panel height clears the top bar and is capped by the live viewport and interactive bottom inset');
 assert.ok(phoneControl.fullPanelHeight < READER_FULL_PANEL_HEIGHT_PHONE);
 
 const narrowControl = resolveReaderControlLayout(320, 700, false, metrics());

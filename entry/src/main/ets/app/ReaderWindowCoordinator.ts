@@ -33,14 +33,19 @@ export class ReaderWindowPolicy {
   }
 }
 
-/** One atomic system-bar visual: the painted underlay and its matching icon tone. */
+/** One atomic system-bar visual: the painted underlay and matching foreground. */
 export class ReaderWindowChromeStyle {
   underlayColor: string;
   tone: ReaderWindowChromeTone;
+  /** Exact opaque foreground from the owning surface's semantic palette. */
+  contentColor: string;
 
-  constructor(underlayColor: string, tone: ReaderWindowChromeTone) {
+  constructor(underlayColor: string, tone: ReaderWindowChromeTone, contentColor?: string) {
     this.underlayColor = underlayColor;
     this.tone = tone;
+    // Keep tone as a compatibility fallback while reader-owned chrome passes
+    // the active theme's exact ink color.
+    this.contentColor = contentColor ?? (tone === 'light' ? '#FFFFFFFF' : '#FF000000');
   }
 }
 
@@ -54,7 +59,7 @@ class ReaderWindowChromeRequest {
   }
 }
 
-const APP_CHROME_STYLE = new ReaderWindowChromeStyle('#F8F4EC', 'dark');
+const APP_CHROME_STYLE = new ReaderWindowChromeStyle('#F8F4EC', 'dark', '#FF2B241D');
 
 /**
  * The single HarmonyOS window boundary for Reader.
@@ -406,6 +411,7 @@ export class ReaderWindowCoordinator {
     if (ReaderWindowCoordinator.desiredChrome.owner === request.owner &&
       ReaderWindowCoordinator.desiredChrome.style.underlayColor === request.style.underlayColor &&
       ReaderWindowCoordinator.desiredChrome.style.tone === request.style.tone &&
+      ReaderWindowCoordinator.desiredChrome.style.contentColor === request.style.contentColor &&
       ReaderWindowCoordinator.appliedChromeRevision === ReaderWindowCoordinator.desiredChromeRevision) {
       return;
     }
@@ -428,7 +434,10 @@ export class ReaderWindowCoordinator {
         const win = ReaderWindowCoordinator.mainWindow;
         const revision = ReaderWindowCoordinator.desiredChromeRevision;
         const request = ReaderWindowCoordinator.desiredChrome;
-        const contentColor = request.style.tone === 'light' ? '#FFFFFFFF' : '#99000000';
+        // Apply the exact opaque foreground paired with the underlay. Reader
+        // chrome supplies its theme ink; legacy callers use the constructor
+        // tone fallback above.
+        const contentColor = request.style.contentColor;
         await win.setWindowSystemBarProperties({
           statusBarColor: request.style.underlayColor,
           navigationBarColor: request.style.underlayColor,

@@ -29,8 +29,16 @@ export const READER_FULL_PANEL_HEIGHT_TABLET = 852;
 export const READER_FULL_PANEL_TOP = 88;
 export const READER_FULL_PANEL_BOTTOM_GAP = 20;
 export const READER_FULL_PANEL_INNER_INSET_X = 13;
+export type ReaderContentInsetProfile = {
+  compact: number;
+  expanded: number;
+};
+export const DEFAULT_READER_CONTENT_INSET_PROFILE: ReaderContentInsetProfile = {
+  compact: 32,
+  expanded: 44.44,
+};
 /** Optical clearance below a live status/cutout edge for the 54vp control top bar. */
-export const READER_CONTROL_SAFE_TOP_GAP = 8;
+export const READER_CONTROL_SAFE_TOP_GAP = 10;
 
 class ReaderDesignProfile {
   referenceWidth: number;
@@ -224,6 +232,7 @@ export function resolveReaderReadingLayout(
   expandedHint: boolean,
   metrics: ReaderWindowMetricsSnapshot,
   extendIntoCutout: boolean = false,
+  insetProfile: ReaderContentInsetProfile = DEFAULT_READER_CONTENT_INSET_PROFILE,
 ): ReaderReadingLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
@@ -239,7 +248,8 @@ export function resolveReaderReadingLayout(
   // Reading text is a centred optical track. A one-sided cutout or system
   // inset therefore expands both authored margins by the same amount instead
   // of shifting the body and making the two screen-edge gaps visibly uneven.
-  const contentHorizontal = Math.max(profile.contentHorizontal, safeHorizontal);
+  const configuredHorizontal = widthClass === 'expanded' ? insetProfile.expanded : insetProfile.compact;
+  const contentHorizontal = Math.max(profile.contentHorizontal, configuredHorizontal, safeHorizontal);
   const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop);
   const contentBottom = Math.max(
     metrics.systemInsets.bottom,
@@ -294,7 +304,11 @@ export function resolveReaderControlLayout(
     profile.fullPanelMaxWidth,
     Math.max(0, width - fullPanelLeftGap - fullPanelRightGap),
   );
-  const fullPanelTop = Math.max(READER_FULL_PANEL_TOP, safeTop);
+  const topBarTop = Math.max(profile.topBarTop, safeTop + READER_CONTROL_SAFE_TOP_GAP);
+  // Reserve the complete top-bar box plus a breathing gap before the full
+  // sheet. Previously the sheet's fixed 88vp anchor could overlap the 54vp
+  // top bar whenever a visible status/cutout inset was present.
+  const fullPanelTop = Math.max(READER_FULL_PANEL_TOP, topBarTop + 54 + 8);
   const fullPanelBottom = Math.max(READER_FULL_PANEL_BOTTOM_GAP, safeBottom);
   // This is the live height budget, not one panel's design height. Each full
   // panel clamps its own Figma height to this shared budget and scrolls its
@@ -304,7 +318,7 @@ export function resolveReaderControlLayout(
     widthClass,
     width,
     height,
-    Math.max(profile.topBarTop, safeTop + READER_CONTROL_SAFE_TOP_GAP),
+    topBarTop,
     topBarWidth,
     Math.max(profile.dockBottomGap, safeBottom),
     dockRightGap,
