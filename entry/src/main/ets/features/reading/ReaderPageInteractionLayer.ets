@@ -686,13 +686,26 @@ export struct ReaderPageInteractionLayer {
     const direction = this.gestureState.direction;
     if (this.activePointerId < 0 || !this.pointerRejected || this.tapOnlyPointer ||
       !this.interactionEnabled || direction === undefined || !this.canStartTurn(direction)) return;
-    // Readiness is not an input sample: retain the physical pointer, but start
-    // a new displacement origin at its latest point. No accumulated replay.
+    // Readiness is not an input sample. The pointer may have travelled a long
+    // way and then stopped while pagination was being prepared. Re-basing the
+    // origin to the latest point here discards that displacement and makes the
+    // page appear to start moving only after the next MOVE/UP. Keep the
+    // original DOWN origin and replay the latest already-recorded sample once
+    // into the presentation owner. This is a local state hand-off, not a
+    // synthetic physical event, so velocity remains zero until the next real
+    // MOVE and the eventual UP still consumes the same segment exactly once.
     this.pointerRejected = false;
-    this.coldPointerRebased = true;
     this.velocityX = 0; this.velocityY = 0;
-    this.gestureState = startReaderPagePan(this.viewportWidth, this.lastLocalX,
-      this.lastLocalY, this.lastSampleTimeMs, this.viewportHeight);
+    this.gestureState = updateReaderPagePanInPlace(
+      this.gestureState,
+      this.lastLocalX - this.gestureState.startLocalX,
+      this.lastLocalY - this.gestureState.startLocalY,
+      0,
+      this.lastLocalX,
+      this.lastLocalY,
+      0,
+      this.lastSampleTimeMs,
+    );
     this.onGestureStateChange(this.gestureState);
   }
 

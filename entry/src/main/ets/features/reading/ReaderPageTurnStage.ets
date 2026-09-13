@@ -294,7 +294,9 @@ export struct ReaderPageTurnStage {
         pageVisible: this.slotVisible('a'),
         layerOrder: this.slotLayer('a'),
         shadowStrength: this.slotShadow('a'),
-        compositorIsolation: this.hasLiveTurnWidth(),
+        // Keep idle pages in the parent stacking context so sibling controls
+        // can occlude them; isolate only while an active turn is presented.
+        compositorIsolation: this.hasActiveTurn(),
         ttsHighlightStart: this.currentPageSlot === 'a' ? this.ttsHighlightStart : undefined,
         ttsHighlightEnd: this.currentPageSlot === 'a' ? this.ttsHighlightEnd : undefined,
         autoPageHighlightStart: this.currentPageSlot === 'a' ? this.autoPageHighlightStart : undefined,
@@ -326,7 +328,7 @@ export struct ReaderPageTurnStage {
         pageVisible: this.slotVisible('b'),
         layerOrder: this.slotLayer('b'),
         shadowStrength: this.slotShadow('b'),
-        compositorIsolation: this.hasLiveTurnWidth(),
+        compositorIsolation: this.hasActiveTurn(),
         ttsHighlightStart: this.currentPageSlot === 'b' ? this.ttsHighlightStart : undefined,
         ttsHighlightEnd: this.currentPageSlot === 'b' ? this.ttsHighlightEnd : undefined,
         autoPageHighlightStart: this.currentPageSlot === 'b' ? this.autoPageHighlightStart : undefined,

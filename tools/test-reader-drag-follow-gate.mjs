@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const localReading = readFileSync(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
+const interaction = readFileSync(new URL('ReaderPageInteractionLayer.ets', readingDir), 'utf8');
 
 const failures = [];
 
@@ -64,6 +65,20 @@ contract('the tap path keeps its preparation queue fallback (asymmetry fixed fro
   const drainPending = methodSection(localReading, 'drainRapidPageTurn');
   assert.match(drainPending, /preparedPageTurn\(direction\) === undefined[\s\S]{0,120}queuePageTurnPreparation\(direction\)/,
     'the retained dynamic target must keep queueing a missing preparation');
+});
+
+contract('readiness hand-off preserves a held drag displacement', () => {
+  const readinessStart = interaction.indexOf('  private onReadinessChanged(): void {');
+  assert.ok(readinessStart >= 0, 'missing readiness callback');
+  const readinessEnd = interaction.indexOf('\n  private onInteractionModeChanged()', readinessStart);
+  const readiness = interaction.slice(readinessStart, readinessEnd < 0 ? undefined : readinessEnd);
+  assert.match(readiness, /this\.pointerRejected = false;/);
+  assert.match(readiness, /updateReaderPagePanInPlace\(/,
+    'readiness must replay the latest held physical sample into the live gesture state');
+  assert.match(readiness, /this\.lastLocalX - this\.gestureState\.startLocalX/,
+    'the original DOWN origin must be retained so a finger that stopped still shows its displacement');
+  assert.doesNotMatch(readiness, /startReaderPagePan\(this\.viewportWidth, this\.lastLocalX/,
+    'readiness must not rebase to the stopped finger and wait for another MOVE');
 });
 
 if (failures.length > 0) {

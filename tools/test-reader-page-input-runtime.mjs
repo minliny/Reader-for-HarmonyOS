@@ -162,8 +162,11 @@ console.log('reader page input production sequence regressions: PASS');
   assert.deepEqual(log.filter(x => x[0] === 'prepare'), [['prepare', 'next']]);
   p.canStartTurn = () => true;
   p.onReadinessChanged();
-  assert.equal(p.gestureState.startLocalX, 180);
-  assert.equal(p.gestureState.currentOffsetX, 0, 'readiness never replays held displacement');
+  assert.equal(p.gestureState.startLocalX, 300,
+    'readiness preserves the original DOWN origin');
+  assert.equal(p.gestureState.currentOffsetX, -120,
+    'readiness replays the held displacement immediately');
   p.finishRawPointer(event(180, 4050), { id: 7, x: 180, y: 200 });
-  assert.ok(!log.some(x => x[0] === 'turn' || x[0] === 'control'), 'rebased drag does not become a tap');
+  assert.ok(log.some(x => x[0] === 'turn'), 'held displacement commits as a page turn on UP');
+  assert.ok(!log.some(x => x[0] === 'control'), 'held displacement does not become a tap');
 }
