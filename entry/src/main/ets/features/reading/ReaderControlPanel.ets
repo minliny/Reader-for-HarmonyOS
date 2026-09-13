@@ -129,6 +129,7 @@ import {
   sampleReaderControlMotionComposition,
   type ReaderControlMotionFrame,
 } from './ReaderControlMotionGeometry';
+import { readerControlThemeStyle, type ReaderControlThemeStyle } from './ReaderControlThemeStyle';
 
 export type { ReaderControlPage } from './ReaderControlRouting';
 type ReaderQuickAction = 'search' | 'autoPage' | 'replace';
@@ -142,6 +143,7 @@ class ReaderControlFrameCallback extends FrameCallback {
 
 @Component
 export struct ReaderControlPanel {
+  @Prop controlThemeStyle: ReaderControlThemeStyle = readerControlThemeStyle('default');
   @Link @Watch('onControlSessionChanged') controlSession: ReaderControlSessionState;
   // Keep clock/gesture decisions local. Only the scalars used by an actor
   // invalidate its observers; a MOVE must not invalidate the module branch.

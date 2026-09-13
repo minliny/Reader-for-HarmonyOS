@@ -101,6 +101,7 @@ import {
 import { ReaderContinuousReadingStage } from './ReaderContinuousReadingStage';
 import { readerTextSelectionEnabled } from './ReaderTextSelectionPolicy';
 import { ReaderControlPanel, type ReaderControlPage } from './ReaderControlPanel';
+import { readerControlThemeStyle } from './ReaderControlThemeStyle';
 import {
   copyReaderControlSessionState, createReaderControlSessionState, dismissReaderControlSession, openReaderControlSession,
   expandReaderControlSession, readerControlContentLocation,
@@ -1655,6 +1656,7 @@ export struct ReadingExperience {
       // The Panel stays mounted, but only this Host's linked session owns
       // routes, held input, the transition and committed close revision.
       ReaderControlPanel({
+        controlThemeStyle: readerControlThemeStyle(this.appearanceSnapshot.activeTheme),
         bookTitle: this.bookTitle,
         chapterTitle: this.chapterTitle,
         sourceId: this.sourceId,
