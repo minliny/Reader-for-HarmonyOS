@@ -1,0 +1,23 @@
+(node:5156) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: later registry hydration cannot reintroduce URL/identity labels
++ actual - expected
+
++ 'www.reader.example'
+- '书源名称暂不可用'
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-bookshelf-source-name-durability.mjs:36:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'www.reader.example',
+  expected: '书源名称暂不可用',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

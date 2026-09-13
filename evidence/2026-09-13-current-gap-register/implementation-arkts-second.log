@@ -1,0 +1,669 @@
+> hvigor [32mTYPE CHECK SUCCESSFUL in 232 ms [39m
+> hvigor [33mWARN: Missing module info for local modules '@reader/core-harmony'. Check project-level build-profile.json5. [39m
+> hvigor [32mFinished :entry:default@PreBuild... after 99 ms [39m
+> hvigor [32mFinished :entry:default@CreateModuleInfo... after 1 ms [39m
+> hvigor [32mFinished :entry:default@MergeProfile... after 3 ms [39m
+> hvigor [32mFinished :entry:default@CreateBuildProfile... after 2 ms [39m
+> hvigor [32mFinished :entry:default@GeneratePkgContextInfo... after 7 ms [39m
+> hvigor [32mFinished :entry:default@ProcessProfile... after 64 ms [39m
+> hvigor [32mFinished :entry:default@ProcessRouterMap... after 2 ms [39m
+> hvigor [32mFinished :entry:default@ProcessShareConfig... after 1 ms [39m
+> hvigor [32mFinished :entry:default@ProcessStartupConfig... after 1 ms [39m
+> hvigor [32mFinished :entry:default@ProcessResource... after 3 ms [39m
+> hvigor [32mFinished :entry:default@GenerateLoaderJson... after 6 ms [39m
+> hvigor [32mFinished :entry:default@CompileResource... after 441 ms [39m
+> hvigor [91mERROR: Failed :entry:default@CompileArkTS... [39m
+> hvigor [33mWARN: 
+[33m1 WARN: [33m[33mArkTS:WARN: For details about ArkTS syntax errors, see FAQs[39m[39m
+[33m2 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/vendor/core-harmony/Index.ts:1:28
+ Currently module for 'libreader_core_napi.so' is not verified. If you're importing napi, its verification will be enabled in later SDK version. Please make sure the corresponding .d.ts file is provided and the napis are correctly declared.
+[39m[39m
+[33m3 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/CookieSessionStore.ts:1004:42
+ 'encode' has been deprecated.
+[39m[39m
+[33m4 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:608:22
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m5 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:627:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m6 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:657:12
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m7 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:658:10
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m8 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:694:30
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m9 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:807:52
+ 'encode' has been deprecated.
+[39m[39m
+[33m10 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:833:42
+ 'encode' has been deprecated.
+[39m[39m
+[33m11 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:933:21
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m12 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:934:22
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m13 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:1266:27
+ 'encode' has been deprecated.
+[39m[39m
+[33m14 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:228:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m15 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:234:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m16 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:236:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m17 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:254:38
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m18 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:255:35
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m19 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:330:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m20 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:174:18
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m21 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:174:64
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m22 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:347:59
+ 'encode' has been deprecated.
+[39m[39m
+[33m23 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:410:49
+ 'encode' has been deprecated.
+[39m[39m
+[33m24 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:425:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m25 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:433:31
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m26 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:439:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m27 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:441:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m28 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:456:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m29 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:466:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m30 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:604:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m31 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:609:29
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m32 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:616:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m33 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:618:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m34 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:620:31
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m35 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:627:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m36 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:636:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m37 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:640:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m38 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:650:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m39 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:652:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m40 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:654:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m41 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:655:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m42 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:671:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m43 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:676:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m44 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:678:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m45 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:682:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m46 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:694:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m47 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:697:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m48 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:702:29
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m49 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:706:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m50 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:721:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m51 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:733:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m52 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:737:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m53 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:750:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m54 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:754:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m55 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:767:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m56 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:770:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m57 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:796:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m58 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:799:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m59 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:865:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m60 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:868:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m61 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:872:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m62 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:880:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m63 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:982:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m64 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:1144:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m65 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:1147:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m66 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:139:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m67 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:143:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m68 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:154:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m69 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:312:12
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m70 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:334:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m71 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:335:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m72 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:336:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m73 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:344:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m74 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:345:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m75 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:346:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m76 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:117:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m77 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:121:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m78 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:131:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m79 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:154:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m80 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:479:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m81 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:480:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m82 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:481:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m83 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:489:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m84 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:490:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m85 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:491:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m86 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:37:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m87 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:60:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m88 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:61:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m89 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:62:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m90 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:63:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m91 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:64:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m92 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:70:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m93 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:86:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m94 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:87:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m95 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:88:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m96 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:89:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m97 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:90:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m98 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:91:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m99 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:93:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m100 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:427:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m101 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:433:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m102 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:460:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m103 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:461:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m104 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:462:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m105 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/LocalEpubResourceHost.ts:38:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m106 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/LocalEpubResourceHost.ts:41:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m107 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:24:12
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m108 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:91:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m109 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:94:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m110 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:99:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m111 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:196:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m112 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:271:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m113 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:272:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m114 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:273:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m115 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:374:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m116 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:380:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m117 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:387:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m118 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:388:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m119 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:393:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m120 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:396:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m121 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:399:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m122 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:400:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m123 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:403:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m124 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:406:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m125 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:410:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m126 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:417:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m127 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:56:18
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m128 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:57:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m129 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:58:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m130 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:197:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m131 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:199:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m132 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:201:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m133 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:204:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m134 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderAppearancePreferences.ts:21:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m135 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderAppearancePreferences.ts:32:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m136 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderAppearancePreferences.ts:33:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m137 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderAppearancePreferences.ts:38:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m138 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:111:46
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m139 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:112:47
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m140 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:113:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m141 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:117:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m142 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:305:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m143 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:307:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m144 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:309:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m145 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:311:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m146 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:313:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m147 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:318:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m148 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:320:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m149 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:322:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m150 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:324:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m151 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:326:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m152 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:344:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m153 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:349:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m154 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:122:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m155 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:123:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m156 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:124:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m157 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:139:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m158 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:140:29
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m159 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:141:32
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m160 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:149:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m161 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:150:18
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m162 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:151:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m163 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:210:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m164 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:317:42
+ 'encode' has been deprecated.
+[39m[39m
+[33m165 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/SyncGateway.ts:612:49
+ 'encode' has been deprecated.
+[39m[39m
+[33m166 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets:57:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m167 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderClipboardHost.ts:9:3
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m168 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSurface.ets:226:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m169 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/BookTurnPresentationSession.ets:2:28
+ Currently module for 'libreader_bookturn_napi.so' is not verified. If you're importing napi, its verification will be enabled in later SDK version. Please make sure the corresponding .d.ts file is provided and the napis are correctly declared.
+[39m[39m
+[33m170 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets:40:57
+ 'onDataChanged' has been deprecated.
+[39m[39m
+[33m171 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts:27:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m172 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts:47:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m173 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts:48:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m174 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts:57:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m175 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:64:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m176 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:76:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m177 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:81:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m178 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:84:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m179 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:86:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m180 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:101:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m181 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:102:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m182 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:104:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m183 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:108:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m184 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:113:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m185 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:116:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m186 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:121:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m187 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:162:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m188 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:168:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m189 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:175:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m190 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:176:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m191 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsGateway.ts:54:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m192 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsGateway.ts:55:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m193 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsGateway.ts:66:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m194 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsGateway.ts:93:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m195 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingRecordGateway.ts:69:30
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m196 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingRecordGateway.ts:74:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m197 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingRecordGateway.ts:75:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m198 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingRecordGateway.ts:83:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m199 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:773:10
+ 'onScroll' has been deprecated.
+[39m[39m
+[33m200 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:54:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m201 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:55:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m202 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:56:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m203 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:57:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m204 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:58:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m205 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:69:31
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m206 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:70:34
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m207 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:71:28
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m208 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:72:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m209 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:89:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m210 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1199:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m211 WARN: [33m[33mArkTS:WARN File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/ReaderRendererPilot.ets:16:53
+ 'replaceUrl' has been deprecated.
+[39m[39m[39m
+> hvigor [91mERROR: ArkTS Compiler Error
+[31m1 ERROR: [31m10605999 ArkTS Compiler Error
+Error Message: Object is possibly 'undefined'. At File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:8058:47
+[39m
+[39m
+[31m2 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: Argument of type '{ active: boolean; runKey: number; reduceMotion: boolean; size: number; }' is not assignable to parameter of type '{ appThemeScheme?: string; foreground?: boolean; active?: boolean; runKey?: number; reduceMotion?: boolean; diameter?: number; light?: boolean; angle?: number; mounted?: boolean; spinning?: boolean; runningKey?: number; }'.
+  Object literal may only specify known properties, and 'size' does not exist in type '{ appThemeScheme?: string; foreground?: boolean; active?: boolean; runKey?: number; reduceMotion?: boolean; diameter?: number; light?: boolean; angle?: number; mounted?: boolean; spinning?: boolean; runningKey?: number; }'. At File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:323:44
+[39m
+[39m
+[31m3 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: Argument of type '{ active: boolean; runKey: number; reduceMotion: boolean; size: number; light: true; }' is not assignable to parameter of type '{ appThemeScheme?: string; foreground?: boolean; active?: boolean; runKey?: number; reduceMotion?: boolean; diameter?: number; light?: boolean; angle?: number; mounted?: boolean; spinning?: boolean; runningKey?: number; }'.
+  Object literal may only specify known properties, and 'size' does not exist in type '{ appThemeScheme?: string; foreground?: boolean; active?: boolean; runKey?: number; reduceMotion?: boolean; diameter?: number; light?: boolean; angle?: number; mounted?: boolean; spinning?: boolean; runningKey?: number; }'. At File: /Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:435:48
+[39m
+[39m
+[31mCOMPILE RESULT:FAIL {ERROR:4 WARN:211}[39m
+
+[31m* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --debug option to get more log output.
+[39m
+> hvigor [91mERROR: BUILD FAILED in 25 s 453 ms [39m

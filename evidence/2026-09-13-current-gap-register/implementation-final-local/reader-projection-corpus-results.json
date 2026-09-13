@@ -1,0 +1,119 @@
+[
+  {
+    "file": "从红月开始_校对版_黑山老鬼_z_library_sk,_1lib_sk,_z_lib_sk.mobi",
+    "sha256": "96a6a97444428ff61fed1b5144ade91b45b66f5492dfaa4caa6a6a1a0fe0d0f3",
+    "elapsedMs": 4051,
+    "returncode": 0,
+    "stdout": "format=Mobi title=从红月开始 author=黑山老鬼 kind=Some(\"KF8\") chapters=918 chars=3281028 parser=libmobi-0.12/epub-spine-2/kf8 title_source=embedded author_source=embedded",
+    "stderr": "",
+    "before": "format=Mobi title=从红月开始 author=黑山老鬼 kind=Some(\"KF8\") chapters=918 chars=3281028 parser=libmobi-0.12/epub-spine-2/kf8 title_source=embedded author_source=embedded"
+  },
+  {
+    "file": "冠冕唐皇 (衣冠正伦) (Z-Library).epub",
+    "sha256": "3e274c8f99de8ca80729a12a62185fcff5c9d5aca5c962264d85f7c5dc09d9aa",
+    "elapsedMs": 3100,
+    "returncode": 0,
+    "stdout": "format=Epub title=冠冕唐皇 author=衣冠正伦 kind=Some(\"EPUB\") chapters=1067 chars=3951370 parser=epub-spine-2 title_source=embedded author_source=embedded",
+    "stderr": "",
+    "before": "format=Epub title=冠冕唐皇 author=衣冠正伦 kind=Some(\"EPUB\") chapters=1067 chars=3951370 parser=epub-spine-2 title_source=embedded author_source=embedded"
+  },
+  {
+    "file": "呢喃诗章north 2.0加料版 (咸鱼飞行家) (Z-Library).txt",
+    "sha256": "410f938bd50b2eba7c3e088e57167d242d5932285eb9358c4a6e675c7d39c86e",
+    "elapsedMs": 2084,
+    "returncode": 0,
+    "stdout": "format=Txt title=呢喃诗章north 2.0加料版 author=咸鱼飞行家 kind=Some(\"local\") chapters=2316 chars=8185549 parser=txt-2 title_source=filename author_source=filename",
+    "stderr": "",
+    "before": "format=Txt title=呢喃诗章north 2.0加料版 author=咸鱼飞行家 kind=Some(\"local\") chapters=2316 chars=8185549 parser=txt-2 title_source=filename author_source=filename"
+  },
+  {
+    "file": "大明望族 (雁九) (Z-Library).epub",
+    "sha256": "ed1fbf6f2fe5b6f155f946aed0af3bf5313a203ea7acdfc33ba603089ee9d326",
+    "elapsedMs": 1872,
+    "returncode": 0,
+    "stdout": "format=Epub title=大明望族 author=雁九 kind=Some(\"EPUB\") chapters=702 chars=3210784 parser=epub-spine-2 title_source=embedded author_source=embedded",
+    "stderr": "",
+    "before": "format=Epub title=大明望族 author=雁九 kind=Some(\"EPUB\") chapters=702 chars=3210784 parser=epub-spine-2 title_source=embedded author_source=embedded"
+  },
+  {
+    "file": "宰执天下 精校多看插图版  (Cuslaa) (Z-Library).epub",
+    "sha256": "157bb2f6fbebd3453af3308dde837c0333abfb66d931e696d2c859206eb0ba14",
+    "elapsedMs": 3912,
+    "returncode": 0,
+    "stdout": "format=Epub title=宰执天下 author=Cuslaa kind=Some(\"EPUB\") chapters=428 chars=7764653 parser=epub-spine-2 title_source=embedded author_source=embedded",
+    "stderr": "",
+    "before": "format=Epub title=宰执天下 author=Cuslaa kind=Some(\"EPUB\") chapters=428 chars=7764653 parser=epub-spine-2 title_source=embedded author_source=embedded"
+  },
+  {
+    "file": "我能看见状态栏.epub",
+    "sha256": "b683f138b4768ebfd0e1153f01c3b6347417fdbc4c27931ba8ce07693b3ed703",
+    "elapsedMs": 1163,
+    "returncode": 0,
+    "stdout": "format=Epub title=我能看见状态栏 author=罗三观.CS kind=Some(\"EPUB\") chapters=1254 chars=3201983 parser=epub-spine-2 title_source=embedded author_source=embedded",
+    "stderr": "",
+    "before": "format=Epub title=我能看见状态栏 author=罗三观.CS kind=Some(\"EPUB\") chapters=1254 chars=3201983 parser=epub-spine-2 title_source=embedded author_source=embedded"
+  },
+  {
+    "file": "晚唐浮生 (孤独麦客) (Z-Library).epub",
+    "sha256": "0daf3e0cd6ce10585f4e8da7cde7d0adc1fdc9d5b31f24abe53f686d20645a16",
+    "elapsedMs": 3024,
+    "returncode": 0,
+    "stdout": "format=Epub title=晚唐浮生 author=孤独麦客 kind=Some(\"EPUB\") chapters=1805 chars=6387236 parser=epub-spine-2 title_source=embedded author_source=filename",
+    "stderr": "",
+    "before": "format=Epub title=晚唐浮生 author=孤独麦客 kind=Some(\"EPUB\") chapters=1805 chars=6387236 parser=epub-spine-2 title_source=embedded author_source=filename"
+  },
+  {
+    "file": "晚明 (柯山梦) (Z-Library).epub",
+    "sha256": "a8f3b43dcd496822cd384ac8e9aa85f7dc374f8430f06c6f8321c26825093082",
+    "elapsedMs": 992,
+    "returncode": 0,
+    "stdout": "format=Epub title=晚明 author=柯山梦 kind=Some(\"EPUB\") chapters=587 chars=2390861 parser=epub-spine-2 title_source=embedded author_source=embedded",
+    "stderr": "",
+    "before": "format=Epub title=晚明 author=柯山梦 kind=Some(\"EPUB\") chapters=587 chars=2390861 parser=epub-spine-2 title_source=embedded author_source=embedded"
+  },
+  {
+    "file": "暴风城打工实录.epub",
+    "sha256": "3ef7efa603392d968836af28607dbd529d49d5ef372a0cccadb29d2e28818949",
+    "elapsedMs": 3161,
+    "returncode": 0,
+    "stdout": "format=Epub title=暴风城打工实录 author=又一个鱼雷 kind=Some(\"EPUB\") chapters=1884 chars=5522259 parser=epub-spine-2 title_source=embedded author_source=embedded",
+    "stderr": "",
+    "before": "format=Epub title=暴风城打工实录 author=又一个鱼雷 kind=Some(\"EPUB\") chapters=1884 chars=5522259 parser=epub-spine-2 title_source=embedded author_source=embedded"
+  },
+  {
+    "file": "朱门风流  校对版全本  (府天) (Z-Library).txt",
+    "sha256": "999135ba93fb6565bf9b83a157c102bb352784e3922c84b164a955a0a2cf3b02",
+    "elapsedMs": 291,
+    "returncode": 0,
+    "stdout": "format=Txt title=朱门风流 author=府天 kind=Some(\"local\") chapters=943 chars=3390939 parser=txt-2 title_source=filename author_source=filename",
+    "stderr": "",
+    "before": "format=Txt title=朱门风流 author=府天 kind=Some(\"local\") chapters=943 chars=3390939 parser=txt-2 title_source=filename author_source=filename"
+  },
+  {
+    "file": "道诡异仙 精校版  (狐尾的笔) (Z-Library).txt",
+    "sha256": "4d19c20e9ca6f6a162409e74241b2a775b67e9514ced24fe91b6ebf163cd5773",
+    "elapsedMs": 276,
+    "returncode": 0,
+    "stdout": "format=Txt title=道诡异仙 author=狐尾的笔 kind=Some(\"local\") chapters=1024 chars=2339222 parser=txt-2 title_source=filename author_source=filename",
+    "stderr": "",
+    "before": "format=Txt title=道诡异仙 author=狐尾的笔 kind=Some(\"local\") chapters=1024 chars=2339222 parser=txt-2 title_source=filename author_source=filename"
+  },
+  {
+    "file": "湛蓝权杖 (躺摆混) (Z-Library).txt",
+    "sha256": "ebe4b6535def1853e2d4d039f14981035fbfba8dcd6864fa6d0ecb2174e23952",
+    "elapsedMs": 82,
+    "returncode": 0,
+    "stdout": "format=Txt title=湛蓝权杖 author=躺摆混 kind=Some(\"local\") chapters=352 chars=1066896 parser=txt-2 title_source=filename author_source=filename",
+    "stderr": "",
+    "before": "format=Txt title=湛蓝权杖 author=躺摆混 kind=Some(\"local\") chapters=352 chars=1066896 parser=txt-2 title_source=filename author_source=filename"
+  },
+  {
+    "file": "覆汉_校对版全本_榴弹怕水_z_library_sk,_1lib_sk,_z_lib_sk.mobi",
+    "sha256": "a25dcde710240f9c2c03d7b7b98aa09277d83392f3dc0da9779f6bc78e7c0cef",
+    "elapsedMs": 4424,
+    "returncode": 0,
+    "stdout": "format=Mobi title=覆汉 author=榴弹怕水 kind=Some(\"MOBI\") chapters=560 chars=3282769 parser=libmobi-0.12/epub-spine-2/kf6 title_source=embedded author_source=embedded",
+    "stderr": "",
+    "before": "format=Mobi title=覆汉 author=榴弹怕水 kind=Some(\"MOBI\") chapters=560 chars=3282769 parser=libmobi-0.12/epub-spine-2/kf6 title_source=embedded author_source=embedded"
+  }
+]

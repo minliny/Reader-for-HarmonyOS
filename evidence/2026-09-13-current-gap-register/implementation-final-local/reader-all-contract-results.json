@@ -1,0 +1,1322 @@
+[
+  {
+    "name": "test-app-shell-safe-geometry.mjs",
+    "code": 0,
+    "ms": 173,
+    "output": "app shell safe geometry: PASS\n"
+  },
+  {
+    "name": "test-arkweb-network-policy.mjs",
+    "code": 0,
+    "ms": 581,
+    "output": "PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement\nPASS: ArkWeb queue and cookie capture retain their admitted session generation\nPASS: ArkWeb cookie capture keeps exact admitted host scope\n(node:963) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-book-acquisition-coordinator.mjs",
+    "code": 0,
+    "ms": 312,
+    "output": "shared book acquisition lifecycle, identities, and scheduling: PASS\n"
+  },
+  {
+    "name": "test-book-metadata-presentation.mjs",
+    "code": 0,
+    "ms": 363,
+    "output": "shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS\n(node:1023) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-book-source-import.mjs",
+    "code": 0,
+    "ms": 321,
+    "output": "book-source production import contract: PASS\n(node:1030) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-bookshelf-detail-removal.mjs",
+    "code": 0,
+    "ms": 130,
+    "output": "bookshelf detail removal: PASS\n"
+  },
+  {
+    "name": "test-bookshelf-management.mjs",
+    "code": 0,
+    "ms": 122,
+    "output": "bookshelf management Core ownership contract: PASS\n"
+  },
+  {
+    "name": "test-bookshelf-reading-entry.mjs",
+    "code": 0,
+    "ms": 178,
+    "output": "bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)\n(node:1061) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-bookshelf-source-name-durability.mjs",
+    "code": 0,
+    "ms": 1155,
+    "output": "PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection\n(node:1067) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-bookshelf-tablet-navigation.mjs",
+    "code": 0,
+    "ms": 130,
+    "output": "bookshelf tablet navigation contract: PASS\n"
+  },
+  {
+    "name": "test-bookshelf-view-and-menu.mjs",
+    "code": 0,
+    "ms": 1197,
+    "output": "PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership\nPASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, safe 75%, measured results and bounded animation\n(node:1128) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-bookshelf-viewport-return.mjs",
+    "code": 0,
+    "ms": 1327,
+    "output": "PASS bookshelf route return: identity+item offset, list/filter/group state, reordered books, late callback isolation\n(node:1174) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-build-provenance-manifest.mjs",
+    "code": 0,
+    "ms": 148,
+    "output": "build provenance embedded NAPI contract: PASS\n"
+  },
+  {
+    "name": "test-bundled-test-book-sources.mjs",
+    "code": 0,
+    "ms": 286,
+    "output": "bundled book-source import collection: PASS (1046 tested records, 919 unique identities)\n"
+  },
+  {
+    "name": "test-cookie-security-policy.mjs",
+    "code": 0,
+    "ms": 196,
+    "output": "cookie exact-host and HttpOnly script-isolation policy: PASS\n"
+  },
+  {
+    "name": "test-core-build-identity.mjs",
+    "code": 0,
+    "ms": 134,
+    "output": "core build identity startup contract: PASS\n"
+  },
+  {
+    "name": "test-demo-async-recovery.mjs",
+    "code": 0,
+    "ms": 368,
+    "output": "PASS: detail mutation settles after exit; stale window completion cannot load content\nPASS: cache winner retains one online refresh; startup preserves complete EPUB resources\nPASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry\nPASS: deterministic import.persist rejection discards staged input without recovery orphan\nPASS: lost bookshelf.add reply reconciles durable shelf truth before compensation\nPASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit\n(node:1332) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-discover-product-flow.mjs",
+    "code": 0,
+    "ms": 162,
+    "output": "discover source filter and pagination contract: PASS\n"
+  },
+  {
+    "name": "test-dynamic-list-refresh.mjs",
+    "code": 0,
+    "ms": 153,
+    "output": "dynamic ArkUI list refresh contracts: PASS\n"
+  },
+  {
+    "name": "test-error-message-conformance.mjs",
+    "code": 0,
+    "ms": 275,
+    "output": "error-message conformance: PASS (118 sources swept)\n(node:1359) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-hap-pipeline-contract.mjs",
+    "code": 0,
+    "ms": 438,
+    "output": "HarmonyOS HAP pipeline contract: PASS\n"
+  },
+  {
+    "name": "test-harmony-tts-host-router.mjs",
+    "code": 0,
+    "ms": 290,
+    "output": "Harmony HttpTTS credential URL encoding and expansion bounds: PASS\nHarmony TTS Host router and HttpTTS transport contract: PASS\n(node:1388) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-host-persistence-recovery.mjs",
+    "code": 0,
+    "ms": 422,
+    "output": "PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation\nPASS: DNS pins serialize concurrent leases and reject rebound private addresses\nPASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login\nPASS: HTTPS-only requests reject cleartext redirect downgrades\nPASS: same-origin comparison normalizes host case and default HTTPS port\nPASS: credential-bearing URL redirects stay on the same effective origin\nPASS: custom credential-header redirects stay on the same effective origin\n(node:1392) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-host-stage-recovery-retry.mjs",
+    "code": 0,
+    "ms": 233,
+    "output": "Host staging recovery retry: PASS\n(node:1419) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-http-transport-conformance.mjs",
+    "code": 0,
+    "ms": 253,
+    "output": "http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)\n(node:1423) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-icon-design-contract.mjs",
+    "code": 0,
+    "ms": 251,
+    "output": "icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)\n"
+  },
+  {
+    "name": "test-legado-product-logic.mjs",
+    "code": 0,
+    "ms": 205,
+    "output": "Legado product behavior contract: PASS\n"
+  },
+  {
+    "name": "test-local-book-format-entry.mjs",
+    "code": 0,
+    "ms": 212,
+    "output": "local book format picker contract: PASS\n"
+  },
+  {
+    "name": "test-local-configuration-reset.mjs",
+    "code": 0,
+    "ms": 1681,
+    "output": "PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.\n(node:1461) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-local-epub-resource-architecture.mjs",
+    "code": 0,
+    "ms": 142,
+    "output": "local EPUB resource architecture: PASS\n"
+  },
+  {
+    "name": "test-local-import-finalize-recovery.mjs",
+    "code": 0,
+    "ms": 199,
+    "output": "local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)\n(node:1531) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-log-privacy.mjs",
+    "code": 0,
+    "ms": 180,
+    "output": "log privacy: PASS (finite public error codes; reading details use private fields)\n"
+  },
+  {
+    "name": "test-navigation-performance.mjs",
+    "code": 0,
+    "ms": 134,
+    "output": "navigation performance static contract: PASS\n"
+  },
+  {
+    "name": "test-performance-regressions.mjs",
+    "code": 0,
+    "ms": 126,
+    "output": "performance regression contracts: PASS\n"
+  },
+  {
+    "name": "test-phone-layout-figma-regressions.mjs",
+    "code": 1,
+    "ms": 125,
+    "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: the lazy shelf list must occupy the viewport and stay top-aligned\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-phone-layout-figma-regressions.mjs:23:8\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: \"import { ReaderThemeHost } from '../../app/ReaderThemeHost';\\n\" +\n    \"import { readerAppColor } from '../common/ReaderThemeRegistry';\\n\" +\n    \"import { ShelfBookListDetails } from './ShelfBookListDetails';\\n\" +\n    \"import { ShelfBookPresentation } from './ShelfBookPresentation';\\n\" +\n    \"import { BookshelfViewState } from './BookshelfViewState';\\n\" +\n    \"import type { ShelfBook } from '../../app/ReaderCoreGateway';\\n\" +\n    \"import { FrameCallback } from '@kit.ArkUI';\\n\" +\n    \"import curves from '@ohos.curves';\\n\" +\n    \"import { readerMotionNowMs } from '../common/ReaderMotionClock';\\n\" +\n    \"import { motionSegment, ReversibleMotionTimeline } from '../common/MotionTimeline';\\n\" +\n    'import {\\n' +\n    '  TOK_BORDER,\\n' +\n    '  TOK_BORDER_W,\\n' +\n    '  TOK_CARD_BG,\\n' +\n    '  TOK_CONTENT_MAX_W_PHONE,\\n' +\n    '  TOK_CONTENT_RAIL_W_TABLET,\\n' +\n    '  TOK_GREEN,\\n' +\n    '  TOK_INK,\\n' +\n    '  TOK_MUTED,\\n' +\n    '  TOK_ON_PRIMARY,\\n' +\n    '  TOK_PRIMARY_DARK,\\n' +\n    '  TOK_PRIMARY_GRADIENT_START,\\n' +\n    '  TOK_PRIMARY_SOFT,\\n' +\n    '  TOK_RADIUS_MD,\\n' +\n    '  TOK_SCREEN_INSET,\\n' +\n    '  TOK_SPACE_CARD_PADDING,\\n' +\n    '  TOK_SPACE_CONTROL_INLINE,\\n' +\n    '  TOK_SPACE_MD,\\n' +\n    '  TOK_SPACE_XS,\\n' +\n    \"} from '../common/ReaderTokens';\\n\" +\n    '\\n' +\n    \"import { NoCoverCover } from './NoCoverCover';\\n\" +\n    \"import { MainTabShell } from '../shell/MainTabShell';\\n\" +\n    \"import { ReaderIconButton } from '../common/ReaderIconButton';\\n\" +\n    \"import { AppTopBar } from '../common/AppTopBar';\\n\" +\n    \"import { registerReaderFonts } from '../common/ReaderFonts';\\n\" +\n    \"import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';\\n\" +\n    \"import { BookshelfGroupSelector } from './BookshelfGroupSelector';\\n\" +\n    \"import { BookshelfMoreMenu } from './BookshelfMoreMenu';\\n\" +\n    \"import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';\\n\" +\n    'import {\\n' +\n    '  SurfaceHorizontalFrame,\\n' +\n    '  SurfaceWidthSpec,\\n' +\n    '  resolveHorizontalFrame,\\n' +\n    \"} from '../common/SurfaceHorizontalGeometry';\\n\" +\n    'import {\\n' +\n    '  readerInteractiveSafeLeft,\\n' +\n    '  readerVisualSafeLeft,\\n' +\n    '  readerVisualSafeRight,\\n' +\n    \"} from '../common/ReaderWindowMetrics';\\n\" +\n    \"import { isReaderProductSurfaceEnabled } from '../../app/ReaderProductScope';\\n\" +\n    \"import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';\\n\" +\n    'import {\\n' +\n    '  BookshelfViewMotionContract,\\n' +\n    '  bookshelfViewCoverDelayMs,\\n' +\n    '  bookshelfViewMotionContract,\\n' +\n    \"} from '../common/MotionSpec';\\n\" +\n    '\\n' +\n    'const PHONE_BOOK_WIDTH = 96.656;\\n' +\n    'const PHONE_BOOK_HEIGHT_RATIO = 145.443 / PHONE_BOOK_WIDTH;\\n' +\n    'const TABLET_BOOK_WIDTH = 186.672;\\n' +\n    'const TABLET_BOOK_HEIGHT_RATIO = 280 / TABLET_BOOK_WIDTH;\\n' +\n    'const PHONE_LIST_COVER_WIDTH = 48;\\n' +\n    'const PHONE_LIST_COVER_HEIGHT = 80;\\n' +\n    'const TABLET_LIST_COVER_WIDTH = 64;\\n' +\n    'const TABLET_LIST_COVER_HEIGHT = 104;\\n' +\n    'const BOOKSHELF_WIDE_BREAKPOINT = 600;\\n' +\n    'const TABLET_RAIL_WIDTH = 82;\\n' +\n    'const TABLET_RAIL_LEFT_GAP = 17;\\n' +\n    'const TABLET_RAIL_CONTENT_GAP = 20;\\n' +\n    'const TABLET_CONTENT_RIGHT_GAP = 21;\\n' +\n    '\\n' +\n    \"type BookshelfViewMode = 'cover' | 'list';\\n\" +\n    '\\n' +\n    'class BookshelfMotionFrameCallback extends FrameCallback {\\n' +\n    '  private readonly callback: () => void;\\n' +\n    '  constructor(callback: () => void) {\\n' +\n    '    super();\\n' +\n    '    this.callback = callback;\\n' +\n    '  }\\n' +\n    '  onFrame(_time: number): void { this.callback(); }\\n' +\n    '  onIdle(_remaining: number): void {}\\n' +\n    '}\\n' +\n    '\\n' +\n    'class BookshelfRowDataSource implements IDataSource {\\n' +\n    '  private items: ShelfBook[][] = [];\\n' +\n    '  private listeners: DataChangeListener[] = [];\\n' +\n    '\\n' +\n    '  totalCount(): number { return this.items.length; }\\n' +\n    '  getData(index: number): ShelfBook[] { return this.items[index]; }\\n' +\n    '  registerDataChangeListener(listener: DataChangeListener): void {\\n' +\n    '    if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);\\n' +\n    '  }\\n' +\n    '  unregisterDataChangeListener(listener: DataChangeListener): void {\\n' +\n    '    const index = this.listeners.indexOf(listener);\\n' +\n    '    if (index >= 0) this.listeners.splice(index, 1);\\n' +\n    '  }\\n' +\n    '  replace(items: ShelfBook[][]): void {\\n' +\n    '    this.items = items;\\n' +\n    '    for (const listener of this.listeners) listener.onDataReloaded();\\n' +\n    '  }\\n' +\n    '}\\n' +\n    '\\n' +\n    '/**\\n' +\n    ' * Figma-backed Bookshelf with the canonical Cover and List projections.\\n' +\n    ' *\\n' +\n    ' * Source: `23 · Pages · Final` `943:11` (Phone) and `943:437` (Tablet).\\n' +\n    ' * This component deliberately has no empty, no-cover, import, or motion\\n' +\n    ' * fallback: those states are not present in the corresponding Final pages.\\n' +\n    ' */\\n' +\n    '@Component\\n' +\n    'export struct BookshelfPage {\\n' +\n    '  viewState: BookshelfViewState = new BookshelfViewState();\\n' +\n    '  private readonly shelfScroller: Scroller = new Scroller();\\n' +\n    '  private viewportRestored: boolean = false;\\n' +\n    '  private viewportRestoreGeneration: number = 0;\\n' +\n    '  private firstVisibleItem: number = 0;\\n' +\n    \"  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';\\n\" +\n    '\\n' +\n    \"  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;\\n\" +\n    '  // The bookshelf page is rebuilt when leaving and returning from reading.\\n' +\n    \"  // Keep the user's projection choice in app storage so route recreation does\\n\" +\n    '  // not silently restore the cover projection.\\n' +\n    \"  @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';\\n\" +\n    \"  @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';\\n\" +\n    \"  @Prop @Watch('onBooksChanged') books: ShelfBook[];\\n\" +\n    '  @Prop continueReading: ShelfBook | undefined;\\n' +\n    \"  @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;\\n\" +\n    '  onImportRequested: () => void = (): void => {};\\n' +\n    '  onSearchRequested: () => void = (): void => {};\\n' +\n    '  onRssRequested: () => void = (): void => {};\\n' +\n    '  onSettingsRequested: () => void = (): void => {};\\n' +\n    '  onDiscoverRequested: () => void = (): void => {};\\n' +\n    '  onManageRequested: () => void = (): void => {};\\n' +\n    '  onBatchManageRequested: () => void = (): void => {};\\n' +\n    '  // Keep bookshelf settings separate from Core group/read-record management.\\n' +\n    '  // The host owns the settings route; this page only emits the semantic action.\\n' +\n    '  onBookshelfSettingsRequested: () => void = (): void => {};\\n' +\n    '  onBookSelected: (book: ShelfBook) => void = (_book: ShelfBook): void => {};\\n' +\n    '  onBookMultiSelectRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};\\n' +\n    '  onBookGroupRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};\\n' +\n    '  onBookInfoRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};\\n' +\n    '  onBookRemoveRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};\\n' +\n    '  // SHF-03: the host runs the foreground update queue; the page only emits\\n' +\n    '  // the intent and mirrors the sweep progress the host pushes back down.\\n' +\n    '  onCheckUpdatesRequested: () => void = (): void => {};\\n' +\n    '  @Prop updateRunning: boolean = false;\\n' +\n    '  @Prop updateProgressDone: number = 0;\\n' +\n    '  @Prop updateProgressTotal: number = 0;\\n' +\n    '  @State private viewportWidth: number = 0;\\n' +\n    \"  @State private viewMode: BookshelfViewMode = 'cover';\\n\" +\n    '  @State private viewSwitchRunning: boolean = false;\\n' +\n    '  @State private viewSwitchHeaderOpacity: number = 1;\\n' +\n    '  @State private viewSwitchGridContentOpacity: number = 1;\\n' +\n    '  @State private viewSwitchListContentOpacity: number = 0;\\n' +\n    '  @State private viewSwitchDestinationCoverOpacity: number = 1;\\n' +\n    '  @State private viewSwitchMorphCoverOpacity: number = 0;\\n' +\n    '  @State private filterRowVisible: boolean = false;\\n' +\n    '  @State private groupSelectorVisible: boolean = false;\\n' +\n    \"  @State private viewModeError: string = '';\\n\" +\n    '  private mounted: boolean = false;\\n' +\n    '  private viewModeRevision: number = 0;\\n' +\n    \"  private confirmedViewMode: BookshelfViewMode = 'cover';\\n\" +\n    \"  private requestedViewMode: BookshelfViewMode = 'cover';\\n\" +\n    '  private viewModeReadFailed: boolean = false;\\n' +\n    \"  @State private selectedGroup: string = '';\\n\" +\n    '  @State private actionBook: ShelfBook | undefined = undefined;\\n' +\n    '  @State private moreMenuVisible: boolean = false;\\n' +\n    '  @State private moreAnchorRight: number = 0;\\n' +\n    '  @State private moreAnchorBottom: number = 0;\\n' +\n    '  @State private overlayOriginX: number = 0;\\n' +\n    '  @State private overlayOriginY: number = 0;\\n' +\n    '  @State private projectedGroups: string[] = [];\\n' +\n    '  private readonly viewMotion: BookshelfViewMotionContract = bookshelfViewMotionContract();\\n' +\n    \"  private pendingViewMode: BookshelfViewMode = 'cover';\\n\" +\n    '  private viewSwitchToken: number = 0;\\n' +\n    '  @State private viewSwitchTimeMs: number = 0;\\n' +\n    \"  private viewSwitchSourceMode: BookshelfViewMode = 'cover';\\n\" +\n    \"  private viewSwitchDestinationMode: BookshelfViewMode = 'list';\\n\" +\n    '  private viewTimeline: ReversibleMotionTimeline = new ReversibleMotionTimeline(this.viewMotion.totalMs);\\n' +\n    '  private readonly viewFadeCurve = curves.cubicBezierCurve(0, 0, .58, 1);\\n' +\n    '  private readonly viewContentCurve = curves.cubicBezierCurve(.4, 0, .2, 1);\\n' +\n    '  private readonly viewMoveCurve = curves.cubicBezierCurve(.2, 0, 0, 1);\\n' +\n    '  private readonly viewScaleCurve = curves.cubicBezierCurve(.25, .1, 0, 1);\\n' +\n    '  private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource();\\n' +\n    '  private readonly webDavCredentials: WebDavCredentialStore = WebDavCredentialStore.instance;\\n' +\n    '\\n' +\n    '  aboutToAppear(): void {\\n' +\n    '    this.mounted = true;\\n' +\n    '    registerReaderFonts(this.getUIContext().getFont());\\n' +\n    \"    const restoredMode: BookshelfViewMode = this.storedViewMode === 'list' ? 'list' : 'cover';\\n\" +\n    '    this.viewMode = restoredMode;\\n' +\n    '    this.confirmedViewMode = restoredMode;\\n' +\n    '    this.selectedGroup = this.storedSelectedGroup;\\n' +\n    '    this.filterRowVisible = this.viewState.filterExpanded;\\n' +\n    '    this.groupSelectorVisible = this.viewState.groupExpanded;\\n' +\n    '    this.viewportRestored = false;\\n' +\n    '    this.setRestingProjectionOpacity(restoredMode);\\n' +\n    '    this.rebuildShelfProjection();\\n' +\n    '    this.loadViewMode();\\n' +\n    '  }\\n' +\n    '\\n' +\n    '  private retryViewMode(): void {\\n' +\n    '    if (this.viewModeReadFailed) this.loadViewMode();\\n' +\n    '    else this.setViewMode(this.requestedViewMode);\\n' +\n    '  }\\n' +\n    '\\n' +\n    '  private loadViewMode(): void {\\n' +\n    '    const revision = ++this.viewModeRevision;\\n' +\n    \"    this.viewModeError = '';\\n\" +\n    '    this.viewModeReadFailed = false;\\n' +\n    '    void this.webDavCredentials.loadBookshelfViewMode().then((mode): void => {\\n' +\n    '      if (!this.mounted || revision !== this.viewModeRevision) return;\\n' +\n    '      this.confirmedViewMode = mode;\\n' +\n    '      this.requestedViewMode = mode;\\n' +\n    '      this.storedViewMode = mode;\\n' +\n    '      this.resetViewSwitchMotion();\\n' +\n    '      this.viewMode = mode;\\n' +\n    '      this.setRestingProjectionOpacity(mode);\\n' +\n    '      this.rebuildShelfProjection();\\n' +\n    '    }).catch((): void => {\\n' +\n    '      if (!this.mounted || revision !== this.viewModeRevision) return;\\n' +\n    '      this.viewModeReadFailed = true;\\n' +\n    \"      this.viewModeError = '显示方式读取失败，点击重试';\\n\" +\n    '    });\\n' +\n    '  }\\n' +\n    '\\n' +\n    '  aboutToDisappear(): void {\\n' +\n    '    this.saveShelfViewpor'... 45138 more characters,\n  expected: /private bookshelfList\\(isTablet: boolean\\)[\\s\\S]*List\\(\\{ space: TOK_SPACE_CONTROL_INLINE \\}\\)[\\s\\S]*\\.height\\('100%'\\)/,\n  operator: 'match',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+  },
+  {
+    "name": "test-portable-json-import.mjs",
+    "code": 0,
+    "ms": 127,
+    "output": "portable JSON local/online import boundary: PASS\n"
+  },
+  {
+    "name": "test-reader-appearance-make.mjs",
+    "code": 0,
+    "ms": 829,
+    "output": "PASS Make V9 appearance: real selection handlers, stale menus, scroll/viewport placement, Quick/Full swatches and persisted theme identity. Native pixels remain separate.\n(node:1563) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-appearance-motion-driver.mjs",
+    "code": 0,
+    "ms": 234,
+    "output": "reader appearance Figma N per-actor driver: PASS\n"
+  },
+  {
+    "name": "test-reader-appearance-motion-fixture.mjs",
+    "code": 0,
+    "ms": 106,
+    "output": "reader appearance Figma N fixture: PASS\n"
+  },
+  {
+    "name": "test-reader-appearance-motion-gesture.mjs",
+    "code": 0,
+    "ms": 202,
+    "output": "reader appearance measured-screen gesture: PASS\n"
+  },
+  {
+    "name": "test-reader-appearance-motion-sampler.mjs",
+    "code": 0,
+    "ms": 220,
+    "output": "reader appearance Figma N sampler: PASS\n"
+  },
+  {
+    "name": "test-reader-appearance-motion-state.mjs",
+    "code": 0,
+    "ms": 215,
+    "output": "reader appearance master motion state: PASS\n"
+  },
+  {
+    "name": "test-reader-appearance-motion-tree.mjs",
+    "code": 0,
+    "ms": 131,
+    "output": "reader appearance unified production tree (structural only): PASS\n"
+  },
+  {
+    "name": "test-reader-appearance-store.mjs",
+    "code": 0,
+    "ms": 245,
+    "output": "reader appearance shared store, page races and persistence recovery: PASS\nappearance Preferences adapter migration and persistence compatibility: PASS\napplication appearance background flush and teardown isolation: PASS\n(node:1649) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-appearance-theme-extension.mjs",
+    "code": 0,
+    "ms": 797,
+    "output": "PASS appearance theme extension: 8 unchanged, 9/12/24 geometry, registry cache, quick/full scroll reversal, SDK selection\n(node:1659) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-appearance.mjs",
+    "code": 1,
+    "ms": 217,
+    "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'green' !== 'day'\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-appearance.mjs:81:8\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 'green',\n  expected: 'day',\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v26.0.0\n"
+  },
+  {
+    "name": "test-reader-auto-page-full.mjs",
+    "code": 0,
+    "ms": 177,
+    "output": "reader Full Auto Page pure/static contract: PASS\n"
+  },
+  {
+    "name": "test-reader-auto-page-state.mjs",
+    "code": 0,
+    "ms": 772,
+    "output": "reader auto-page pure state: PASS\nproduction automatic turn and stop durations use monotonic time; calendar access rejected: PASS\n(node:1696) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-book-turn-architecture.mjs",
+    "code": 0,
+    "ms": 147,
+    "output": "reader book-turn architecture contract: PASS\n"
+  },
+  {
+    "name": "test-reader-book-turn-event-dispatch.mjs",
+    "code": 0,
+    "ms": 2055,
+    "output": "event delivery: 22 checks, 0 failures\n"
+  },
+  {
+    "name": "test-reader-book-turn-host-runtime.mjs",
+    "code": 0,
+    "ms": 12620,
+    "output": "bookturn_motion_test: 538 checks, 0 failures\n373 checks, 0 failures\nscenario: successful next turn\nscenario: previous turn (reverse direction)\nscenario: stale confirmations rejected\nscenario: rollback clears after ArkUI restoration\nscenario: rapid consecutive turns, late stale release\nscenario: cross-chapter texture refresh during retention\nscenario: slow progress storage holds the terminal frame\nscenario: arkui presentation timeout keeps the terminal frame\nscenario: page exit (detach) and re-attach\nscenario: detach drops stale surface mailbox work\nscenario: window reflow during retention\n245 checks, 0 failures\n"
+  },
+  {
+    "name": "test-reader-book-turn-motion.mjs",
+    "code": 0,
+    "ms": 82,
+    "output": "reader book-turn motion state: PASS\n"
+  },
+  {
+    "name": "test-reader-book-turn-native-core.mjs",
+    "code": 0,
+    "ms": 1477,
+    "output": "T01 roll-radius PASS (390->42.9000, 200->28.0000, 1000->64.0000)\nT02 schedule bijection+boundaries PASS (worst roundtrip 1.79e-07 over 1001 samples)\nT03 INV-1 no-freeze PASS (next: least step 0.566vp, final fold 0.000vp; previous: least step 0.975vp, initial fold 0.000vp)\nT04 INV-2 no-commit-pop PASS (next tau=1: maxX 0.000vp <= 11.70, maxZ 0.000; prev commit maxX 390.000vp, maxZ 0.000; worst coverage step -1.089vp over tau 0.75..1)\nT05 INV-3 cancel-reversal PASS (worst |reverse-forward| 0.00e+00 vp over tau0 0.2/0.4/0.6/0.8)\nT06 previous semantics PASS (31 same-edge points worst schedule diff 0.00e+00; start maxX 0.000vp, commit maxX 390.000vp)\nT07 S3/S4 schedule deviation PASS (worst beta 0.00e+00 rad <= 8.73e-03, worst radius 2.60e-07 vp, worst |gripPhi-beta| 0.00e+00)\nT08 C1 seam at tau=0.5 PASS (worst |dAxis| 0.4605 vp (bounds 2/1/0.5), worst |phi-pi| 0.00e+00)\nT09 milestone phi=pi/2 + continuity PASS (crossing delta 14.868 vp vs 14.868 expected, edge.x 375.1; regular worst 0.0351 rad, S5 schedule worst 0.157 rad <= 0.2, onset worst 0.631 rad [documented scope])\nT10 developability PASS (a: A-grade cylinder worst 6.57e-05 <= 1e-3; b: strict phi<=pi/4 p95 6.104e-05 max 5.293e-04 vs 1e-3/5e-3; band p95 2.078e-02 max 2.082e-02 vs 2.5e-2 [2026-08-30 apex-law recalibration, pi*r'=0.0432])\nT11 binding-edge PASS (a: theta=0 worst x 0.00e+00, y 0.00e+00, z 0.00e+00; b: theta=54deg worst 0.000 vp at tau=0.00)\nT12 touch error (fit segment) PASS (worst screen-plane err 3.05e-05 vp <= 1.0; solver targetError incl. curl z up to 84.96 vp — scope note)\nT13 free-edge inside page (fit segment) PASS (min 0.000 >= -0.26, max 378.072 <= 390.26)\nT14 purity PASS (field-exact repeats, with and without previous)\nT15 stage boundaries PASS (FLAT@W, LIFT@x(0.09), FLIP@x(0.3), ROLL@x(0.6), SPINE@x(0.8), COLLAPSE@x(0.95))\nT16 tilt regressions PASS (cap 57.184 deg <= 60.0001, jitter 1.273 deg <= 2, sweep worst 0.00278 rad <= 0.02, zero-signbit +0/-0 honored)\nT17 verticalPrevious smoke PASS (edge.x W/200/0 all finite, tilt within cap)\nT18 strict three-branch PASS (anti-M second diff 6.866e-05 <= 1e-4; seam steps f 0.5000 z 0.5000 <= 0.501 at step 0.5)\n235 checks, 0 failures\n"
+  },
+  {
+    "name": "test-reader-book-turn-present-barrier.mjs",
+    "code": 0,
+    "ms": 6747,
+    "output": "scenario: successful next turn\nscenario: previous turn (reverse direction)\nscenario: stale confirmations rejected\nscenario: rollback clears after ArkUI restoration\nscenario: rapid consecutive turns, late stale release\nscenario: cross-chapter texture refresh during retention\nscenario: slow progress storage holds the terminal frame\nscenario: arkui presentation timeout keeps the terminal frame\nscenario: page exit (detach) and re-attach\nscenario: detach drops stale surface mailbox work\nscenario: window reflow during retention\n245 checks, 0 failures\n"
+  },
+  {
+    "name": "test-reader-book-turn-surface-recovery.mjs",
+    "code": 0,
+    "ms": 553,
+    "output": "Production Surface recovery: unwritten rollback, uncertain write retention, promoted completion, late failure PASS (7 scenarios)\n(node:2524) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-bookmark-panels.mjs",
+    "code": 0,
+    "ms": 87,
+    "output": "reader bookmark panels static contract: PASS\n"
+  },
+  {
+    "name": "test-reader-bookmark-projection.mjs",
+    "code": 0,
+    "ms": 141,
+    "output": "reader bookmark projection behavior: PASS\n"
+  },
+  {
+    "name": "test-reader-brightness-cancel-ui.mjs",
+    "code": 0,
+    "ms": 755,
+    "output": "PASS brightness cancel UI: issued ACK, preview retention, cancelled pending, newer intent, failed write convergence\n(node:2555) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-brightness-control.mjs",
+    "code": 0,
+    "ms": 212,
+    "output": "reader brightness control contract: PASS\n"
+  },
+  {
+    "name": "test-reader-brightness-writer.mjs",
+    "code": 0,
+    "ms": 328,
+    "output": "Reader brightness production writer: PASS (held MOVE, coalescing, ownership, restore, failure, cancel, microtask tail)\nPASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner\n"
+  },
+  {
+    "name": "test-reader-chinese-conversion.mjs",
+    "code": 0,
+    "ms": 159,
+    "output": "reader Chinese conversion gateway contract: PASS\n"
+  },
+  {
+    "name": "test-reader-cold-entry-recovery.mjs",
+    "code": 0,
+    "ms": 107,
+    "output": "reader cold-entry recovery contract: PASS\n"
+  },
+  {
+    "name": "test-reader-content-business.mjs",
+    "code": 0,
+    "ms": 106,
+    "output": "reader content business isolation: PASS\n"
+  },
+  {
+    "name": "test-reader-continuous-input-runtime.mjs",
+    "code": 0,
+    "ms": 833,
+    "output": "continuous production pointer, same-row anchor and trailing exit commit: PASS\nproduction batched image reflow preserves leading fragment fraction and concurrent scroll: PASS\ncontinuous mode change save/error/obsolete ownership and late stop receipt: PASS\nproduction continuous restore waits for layout and rejects stale frame callbacks: PASS\nproduction continuous cold-entry projection branch observes its reactive revision: PASS\ncontinuous scalar quantization: five positions, 100 repeat round trips each: PASS\ncontinuous restore suppresses premature stops and unknown-geometry progress writes: PASS\ncontinuous padded viewport: START, positive y and negative y round trips: PASS\nnative List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS\nproduction continuous image row identity: decoder admission replaces placeholder, unchanged siblings retained: PASS\ncontinuous short tap and stationary long UP share paged 500ms clock boundary: PASS\ncontinuous-to-paged anchor: warm/cold/partial/foreign layout, containing page only: PASS\nmeasured prefix whitespace gaps match complete canonical page identity: PASS\nnative List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS\n(node:2611) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-continuous-reading.mjs",
+    "code": 0,
+    "ms": 87,
+    "output": "reader continuous reading and canonical progress pipeline: PASS\n"
+  },
+  {
+    "name": "test-reader-control-accessibility.mjs",
+    "code": 0,
+    "ms": 509,
+    "output": "Control accessibility: actual Host close/Back + SDK virtual-node mounted observers PASS; NOT native screen-reader acceptance\n(node:2639) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-actor-geometry.mjs",
+    "code": 0,
+    "ms": 111,
+    "output": "Reader control shared actor geometry: production bidirectional/concurrent/pure sampling PASS\n"
+  },
+  {
+    "name": "test-reader-control-appearance-geometry.mjs",
+    "code": 0,
+    "ms": 145,
+    "output": "reader control appearance production geometry + independent source endpoints: PASS (810 ordered import drag cases)\n"
+  },
+  {
+    "name": "test-reader-control-backdrop-publication.mjs",
+    "code": 0,
+    "ms": 434,
+    "output": "Reader control backdrop publication: stable array/rect identity across motion PASS\n(node:2668) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-backdrop-touch.mjs",
+    "code": 0,
+    "ms": 113,
+    "output": "reader control backdrop DOWN ownership and one-shot raw tap: PASS\n"
+  },
+  {
+    "name": "test-reader-control-bookmark-content.mjs",
+    "code": 0,
+    "ms": 450,
+    "output": "Actual SDK nonempty bookmark row: mounted reversible actors, live metadata/identity and clip mutations PASS\nPASS bookmark production geometry, native row-height extent binding and same-open anchor continuation; NOT native visual acceptance\n(node:2695) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-bookmark-load.mjs",
+    "code": 0,
+    "ms": 136,
+    "output": "Reader control bookmarks: production merge/async ownership/failure retry PASS; wiring assertions are not native acceptance\n(node:2701) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-bookmark-mutation-recovery.mjs",
+    "code": 0,
+    "ms": 133,
+    "output": "Bookmark mutation recovery: actual Index CRUD/reload and Host error/retry functions PASS; not native acceptance\n(node:2703) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-content-surface.mjs",
+    "code": 0,
+    "ms": 113,
+    "output": "reader control independent FullContentSurface source geometry and single-background wiring: PASS\n"
+  },
+  {
+    "name": "test-reader-control-device-probe.mjs",
+    "code": 0,
+    "ms": 178,
+    "output": "Device probe actual runtime closures: ticket/dry-run/SHA/auth-denial/DOWN-based sampling/revocation PASS (mock transport only; no HDC/device/filesystem writes).\n"
+  },
+  {
+    "name": "test-reader-control-directory-content.mjs",
+    "code": 0,
+    "ms": 118,
+    "output": "reader control directory content: structural wiring passed (not runtime or visual evidence)\n"
+  },
+  {
+    "name": "test-reader-control-directory-model.mjs",
+    "code": 0,
+    "ms": 125,
+    "output": "Production directory model: late load, centering ownership, route/data independence PASS\nProduction Directory virtual-row capture, fraction, frame coalescing and late-user-input guards PASS\nProduction Directory rapid tab replacement, endpoint anchor release and user-scroll ownership PASS\n(node:2730) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-geometry.mjs",
+    "code": 0,
+    "ms": 123,
+    "output": "reader control geometry parameter contract: PASS\n"
+  },
+  {
+    "name": "test-reader-control-gesture-continuation.mjs",
+    "code": 0,
+    "ms": 129,
+    "output": "reader control bounded finger residue and distinct continuation timings: PASS\n"
+  },
+  {
+    "name": "test-reader-control-gesture-driver.mjs",
+    "code": 0,
+    "ms": 136,
+    "output": "reader control gesture production driver behavior: PASS\n"
+  },
+  {
+    "name": "test-reader-control-global-presentation.mjs",
+    "code": 1,
+    "ms": 535,
+    "output": "<anonymous_script>:25\n        const count = this.themeIds().length;\n                           ^\n\nTypeError: this.themeIds is not a function\n    at ReaderBuilderProbe.frame (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:115:21), <anonymous>:25:28)\n    at ReaderBuilderProbe.fontActor (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:115:21), <anonymous>:109:44)\n    at Array.eval (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:115:21), <anonymous>:133:30)\n    at ReaderBuilderProbe.runObserver (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:81:25)\n    at ReaderBuilderProbe.observeComponentCreation2 (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:77:12)\n    at ReaderBuilderProbe.fontCell (eval at createReaderBuilderProbe (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:115:21), <anonymous>:131:14)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-control-global-presentation.mjs:70:41\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n\nNode.js v26.0.0\n"
+  },
+  {
+    "name": "test-reader-control-header-content.mjs",
+    "code": 0,
+    "ms": 593,
+    "output": "reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS\n(node:2765) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-host-input.mjs",
+    "code": 0,
+    "ms": 484,
+    "output": "Reader control Host: actual SDK V1 member transform reproduces dropped accessor; ordinary-method input/backdrop gates PASS\nReader control Host input: actual production methods PASS (not device hit-testing/visual acceptance)\n(node:2771) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-host-keyboard.mjs",
+    "code": 0,
+    "ms": 143,
+    "output": "Reader control keyboard: production visibility/Back/hide failure cases PASS; structural Host wiring PASS (not native IME acceptance)\nReader control keyboard layout: actual Host methods/binding dependency and 414→700vp budget PASS (not native IME acceptance)\n(node:2796) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-host-session.mjs",
+    "code": 0,
+    "ms": 147,
+    "output": "Reader control Host session: production projection, command, close-commit and lifecycle cases PASS\nReader control Host wiring: structural checks PASS (not ArkUI execution or visual acceptance)\n"
+  },
+  {
+    "name": "test-reader-control-input-routing.mjs",
+    "code": 0,
+    "ms": 474,
+    "output": "Reader control input routing and collapse command: PASS (structure/runtime; native touch remains device evidence)\n(node:2801) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-integration-events.mjs",
+    "code": 0,
+    "ms": 137,
+    "output": "reader control integration event ownership, CANCEL, and exact mixed-path behavior: PASS\n"
+  },
+  {
+    "name": "test-reader-control-internal-selection.mjs",
+    "code": 0,
+    "ms": 245,
+    "output": "PASS internal/user selection ownership: actual Host methods, stale reopen, TTS/projection negative mutations and committed-close semantics; NOT device acceptance\n(node:2826) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-layout-rebase.mjs",
+    "code": 0,
+    "ms": 132,
+    "output": "reader control atomic layout rebase production policy: PASS (no Stage/runtime visual claim)\n"
+  },
+  {
+    "name": "test-reader-control-list-positioning.mjs",
+    "code": 0,
+    "ms": 104,
+    "output": "reader control list positioning: production policy tests passed\n"
+  },
+  {
+    "name": "test-reader-control-morph-scroll.mjs",
+    "code": 0,
+    "ms": 124,
+    "output": "PASS shared scroll lifecycle: 5 actual component adapters, latest-offset handoff, held endpoint reversals, delayed native reset, shared/full-only roles, new expansion top; NOT visual acceptance\n(node:2833) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-motion-geometry.mjs",
+    "code": 0,
+    "ms": 134,
+    "output": "MR1 archived show/hide capture absent; optional evidence checks skipped\nPASS reader control motion geometry (production functions; no runtime/visual claim)\n"
+  },
+  {
+    "name": "test-reader-control-motion-policy.mjs",
+    "code": 0,
+    "ms": 148,
+    "output": "PASS all control modules 320/260/200/220, initial opening 220, remaining-distance release, hold/regrab/reverse, monotone velocity continuation; device acceptance separate\n"
+  },
+  {
+    "name": "test-reader-control-motion-presentation.mjs",
+    "code": 0,
+    "ms": 485,
+    "output": "PASS TTS softened-content trial: nonzero middle fade, reversible content-only blur, Full details retain their original reveal, offscreen outlines, actual mounted SDK paint observers; NOT device visual acceptance\n(node:2859) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-narrow-widths.mjs",
+    "code": 0,
+    "ms": 123,
+    "output": "reader control narrow-width contract: PASS (10 viewport widths)\n"
+  },
+  {
+    "name": "test-reader-control-option-update.mjs",
+    "code": 0,
+    "ms": 164,
+    "output": "{\"result\":\"PASS\",\"layer\":\"real upstream 5.0 attribute diff + production modifier; not native layout or VM performance\",\"mountedNodes\":13,\"mountedCalls\":156,\"poses\":120,\"legacyAttributeCalls\":24960,\"patchedAttributeCalls\":7440,\"reductionPercent\":70.19,\"reverseResizeBusinessAndCallback\":\"PASS\"}\n(node:2865) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-p0.mjs",
+    "code": 0,
+    "ms": 89,
+    "output": "reader-control-p0 static contract: PASS\n"
+  },
+  {
+    "name": "test-reader-control-playback-content.mjs",
+    "code": 0,
+    "ms": 543,
+    "output": "Actual SDK Auto/TTS mounted Builder observers: reversible actor geometry + live strings/numbers/booleans/child Prop payloads PASS\nReader control playback: live-track geometry, child clipping/min-height, persistent content, actual measurement identity, SDK syntax and 5 mutations PASS\n(node:2870) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-playback-host-intents.mjs",
+    "code": 0,
+    "ms": 578,
+    "output": "Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 700/3500 ownership)\n(node:2895) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-replace-content.mjs",
+    "code": 0,
+    "ms": 594,
+    "output": "Replace actual SDK mounted rule font: fixed 12, preserved row tracks, parent-only clip, same rule identity and 4 mutations PASS\nPASS reader-control-replace-content: actual async production methods, confirmation/failure/retry, session and preview dismissal guards; NOT ArkUI pixel evidence\n(node:2920) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-replace-gateway.mjs",
+    "code": 0,
+    "ms": 151,
+    "output": "PASS reader-control-replace-gateway: real production requests, all rules, lossless partial CRUD, guards, receipts, preview and replace-only bundle\n"
+  },
+  {
+    "name": "test-reader-control-replace-geometry.mjs",
+    "code": 0,
+    "ms": 121,
+    "output": "archived replace motion capture absent; optional source-value checks skipped\nPASS reader-control-replace-geometry: production endpoint/midpoint sampling, widths and one-tree wiring; NOT native pixel acceptance\n"
+  },
+  {
+    "name": "test-reader-control-replace-host.mjs",
+    "code": 0,
+    "ms": 207,
+    "output": "PASS Replace Host actual methods: reopen/import canonical read, stale reads, write ownership, uncertainty and Promise rejection; NOT device acceptance\n(node:2939) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-replace-state.mjs",
+    "code": 0,
+    "ms": 191,
+    "output": "PASS reader-control-replace-state: canonical all rows, partial/full guards, uncertainty, import and stale sessions\n"
+  },
+  {
+    "name": "test-reader-control-resume-timing.mjs",
+    "code": 0,
+    "ms": 227,
+    "output": "reader control original-operation resume, MR1 timing and mixed restoration: PASS\n"
+  },
+  {
+    "name": "test-reader-control-runtime.mjs",
+    "code": 0,
+    "ms": 575,
+    "output": "Production control runtime: seven modules, frame revocation, regrab, close, lifecycle PASS\nProduction Panel scalar projection: seven modules x 101 frames retain route identity and current input state PASS\n(node:2977) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-search-scroll.mjs",
+    "code": 0,
+    "ms": 161,
+    "output": "PASS Search scroll: production row projection, source origin/end-padding, both-end reachability, guarded async rebase, clamp/user continuation, callback ownership and 9 mutations; NOT device acceptance\n(node:3002) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-search-settings-content.mjs",
+    "code": 0,
+    "ms": 710,
+    "output": "Actual SDK Results parent clip + child origin + native extent: same-instance roundtrip and 5 mutations PASS\nActual SDK Search/Settings mounted Builder observers: live payload/geometry/capability/switch changes PASS\nPASS Search/Settings real actor geometry + production callback methods; not native/visual acceptance\n(node:3004) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-selection-recovery.mjs",
+    "code": 0,
+    "ms": 146,
+    "output": "reader control selection production reconciliation: PASS\n"
+  },
+  {
+    "name": "test-reader-control-selection-transaction.mjs",
+    "code": 0,
+    "ms": 143,
+    "output": "reader control selection transaction: production ownership/commit policy passed\n"
+  },
+  {
+    "name": "test-reader-control-session-state.mjs",
+    "code": 0,
+    "ms": 135,
+    "output": "reader control session production state behavior: PASS\n"
+  },
+  {
+    "name": "test-reader-control-spatial-path.mjs",
+    "code": 0,
+    "ms": 162,
+    "output": "reader control shared spatial sampler and inverse production behavior: PASS\n"
+  },
+  {
+    "name": "test-reader-control-stage-composition.mjs",
+    "code": 0,
+    "ms": 98,
+    "output": "reader control Stage composition + diagnostic timing wiring: PASS (structure only; not pixels/touch)\n"
+  },
+  {
+    "name": "test-reader-control-stage-lifecycle.mjs",
+    "code": 0,
+    "ms": 216,
+    "output": "reader control Stage lifecycle: production adapter methods passed (mock frame queue; not native/touch/visual acceptance)\n(node:3040) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-touch-plan.mjs",
+    "code": 0,
+    "ms": 1010,
+    "output": "Native diagnostic production parser: 4 valid + 18 malformed plans, CLI and non-injecting host gates PASS; authorization/runtime cleanup not executed.\n"
+  },
+  {
+    "name": "test-reader-control-tts-make.mjs",
+    "code": 0,
+    "ms": 572,
+    "output": "PASS Make TTS: scroll-aware crossing occlusion, reverse poses, narrow layout, explicit timer modes, five-minute range and precise speed callbacks\n(node:3120) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-control-verification-launch.mjs",
+    "code": 0,
+    "ms": 153,
+    "output": "reader control diagnostic cold-start production admission + packaging wiring: PASS\n"
+  },
+  {
+    "name": "test-reader-directory-data-snapshot.mjs",
+    "code": 0,
+    "ms": 154,
+    "output": "reader directory business-value snapshot and no-op prop refresh: PASS (native scroll still separate)\n(node:3163) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-directory-extent.mjs",
+    "code": 0,
+    "ms": 150,
+    "output": "reader directory extent: production lifecycle + wiring passed (not native virtualization/anchor acceptance)\n(node:3167) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-directory-markers.mjs",
+    "code": 0,
+    "ms": 148,
+    "output": "reader-directory-markers static contract: PASS\n"
+  },
+  {
+    "name": "test-reader-directory-projection.mjs",
+    "code": 0,
+    "ms": 116,
+    "output": "reader directory projection behavior: PASS\n"
+  },
+  {
+    "name": "test-reader-drag-follow-gate.mjs",
+    "code": 0,
+    "ms": 79,
+    "output": "reader drag-follow gate contract: PASS\n"
+  },
+  {
+    "name": "test-reader-dynamic-highlight.mjs",
+    "code": 0,
+    "ms": 483,
+    "output": "dynamic highlight geometry/color/identity and static snapshot separation: PASS; pixels require runtime verification\n(node:3199) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-feedback-regressions.mjs",
+    "code": 0,
+    "ms": 141,
+    "output": "reader reported feedback regressions: PASS\n"
+  },
+  {
+    "name": "test-reader-first-page-sdk.mjs",
+    "code": 0,
+    "ms": 500,
+    "output": "actual SDK first-page admission: viewport/chapter order, stale selection and adjacent context PASS\n(node:3211) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-hdc-lease.mjs",
+    "code": 0,
+    "ms": 1391,
+    "output": "reader HDC target lease serialization: PASS\n"
+  },
+  {
+    "name": "test-reader-host-path-boundary.mjs",
+    "code": 0,
+    "ms": 131,
+    "output": "Reader Host staging/asset path boundary: PASS\n(node:3290) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-host-selection-boundary.mjs",
+    "code": 0,
+    "ms": 147,
+    "output": "Reader Host picker selection boundary: PASS\n(node:3293) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-http-tts-gateway.mjs",
+    "code": 0,
+    "ms": 154,
+    "output": "reader HttpTTS strict gateway: PASS\nreader HttpTTS profile, secret boundary and nullable playback: PASS\nreader HttpTTS URL credential placeholder boundary: PASS\nreader OnlineTTS profile validator and credential alias binding: PASS\n"
+  },
+  {
+    "name": "test-reader-indent-measurement.mjs",
+    "code": 0,
+    "ms": 217,
+    "output": "paragraph indent production measurement: Unicode offsets and continued fragments PASS (controlled metrics)\n(node:3316) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-layout-architecture.mjs",
+    "code": 0,
+    "ms": 257,
+    "output": "reader layout architecture contract: PASS\n"
+  },
+  {
+    "name": "test-reader-module-selection.mjs",
+    "code": 0,
+    "ms": 167,
+    "output": "reader module selection contract: PASS\n"
+  },
+  {
+    "name": "test-reader-motion-repair.mjs",
+    "code": 0,
+    "ms": 1239,
+    "output": "PASS production motion repair: first-frame clock, opening navigation/input, menu ownership/exactly-once, reduced motion, capsule lifecycle/timeline, shelf reversal and font sampled retarget. Device pixels remain separate.\n(node:3337) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-navigable-toc.mjs",
+    "code": 0,
+    "ms": 1326,
+    "output": "production canonical TOC headings, initial/previous/next/control guards and hot projection reuse: PASS\nPASS Index directory title projection and local/remote known-chapter guards preserve canonical headings\n(node:3391) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-page-bottom-justify.mjs",
+    "code": 0,
+    "ms": 186,
+    "output": "reader page-bottom justification: PASS\n"
+  },
+  {
+    "name": "test-reader-page-chrome.mjs",
+    "code": 0,
+    "ms": 926,
+    "output": "reader page chrome dynamic layout: PASS\npage chrome/native snapshot invalidation: PASS\npage chrome complete layout reuse and safe-area/session invalidation: PASS\nmounted slot revision delivery gates current/adjacent chrome capture: PASS\nproduction texture refresh cache matrix: no idle frame waits; requested direction first; expensive captures remain spread: PASS\n(node:3421) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-page-gesture-state.mjs",
+    "code": 0,
+    "ms": 178,
+    "output": "reader page-gesture pure state: PASS\n"
+  },
+  {
+    "name": "test-reader-page-input-runtime.mjs",
+    "code": 0,
+    "ms": 182,
+    "output": "reader page input production sequence regressions: PASS\n(node:3461) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-page-preparation-runtime.mjs",
+    "code": 0,
+    "ms": 1236,
+    "output": "production adjacent measurement isolation, cancellation and rejected admission: PASS\nproduction current snapshot remains bound to physical slot after promotion: PASS\nasync texture copy preserves lifetime and rejects superseded capture: PASS\nproduction evicted previous chapter: demand refill, coalescing, stale/failed replies and explicit retry: PASS\nproduction promotion preparation honors requested direction and stale callback guard: PASS\nproduction image snapshot admission: cold decode, no blank publication, bounded retry, stale/held cancellation and one disposal: PASS\nsingle offscreen snapshot tree: detach immediately, dispose once after outstanding capture: PASS\nsnapshot publication interruption: pointer retains exact pixels; new page/exit drops them; UP revalidates upload: PASS\n(node:3463) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-page-progress-runtime.mjs",
+    "code": 0,
+    "ms": 1373,
+    "output": "production page commit reply-loss reconciliation and unknown-result retention: PASS\n(node:3512) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-page-settlement-runtime.mjs",
+    "code": 0,
+    "ms": 1420,
+    "output": "production flat settle/regrab continuity and transaction boundary: PASS\nproduction simulation mode-switch teardown and capability recovery: PASS\nqueued tap cue and physical velocity settlement use independent durations: PASS\n(node:3541) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-page-turn-pipeline.mjs",
+    "code": 0,
+    "ms": 227,
+    "output": "reader page-turn pipeline contract: PASS\n"
+  },
+  {
+    "name": "test-reader-page-turn-stage.mjs",
+    "code": 0,
+    "ms": 339,
+    "output": "reader page-turn stable slot geometry and role transition: PASS\n(node:3607) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-paragraph-indent.mjs",
+    "code": 0,
+    "ms": 410,
+    "output": "reader paragraph indentation projection: PASS\n"
+  },
+  {
+    "name": "test-reader-presentation-recovery.mjs",
+    "code": 0,
+    "ms": 2196,
+    "output": "production target-revision and stale-generation release guards: PASS\nproduction dropped-native-ACK, unadmitted revision and stable 2D recovery: PASS\n(node:3638) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-product-scope.mjs",
+    "code": 0,
+    "ms": 217,
+    "output": "reader product scope contract: PASS\n"
+  },
+  {
+    "name": "test-reader-progress-observation.mjs",
+    "code": 0,
+    "ms": 1309,
+    "output": "production finite unknown observation, queued query expiry, late durable and continuous single drain: PASS\n(node:3729) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-rapid-page-turn-state.mjs",
+    "code": 0,
+    "ms": 212,
+    "output": "reader rapid page-turn dynamic target: PASS\n"
+  },
+  {
+    "name": "test-reader-render-work.mjs",
+    "code": 0,
+    "ms": 1153,
+    "output": "PASS rendering work: empty 24-fragment page 1 clear/0 id scans; active marks 1 frame; duplicate/lifecycle/resize guards; Unicode 700 scan steps; 120 settings poses 0 paths; directory no-op correction 0\n(node:3756) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-replace-quick.mjs",
+    "code": 0,
+    "ms": 276,
+    "output": "reader Quick Replace pure/static contract: PASS\n"
+  },
+  {
+    "name": "test-reader-runtime-owner-lifecycle.mjs",
+    "code": 0,
+    "ms": 197,
+    "output": "ReaderRuntimeOwner Ability lease lifecycle: PASS\n"
+  },
+  {
+    "name": "test-reader-screen-awake-lease.mjs",
+    "code": 0,
+    "ms": 318,
+    "output": "reader screen-awake lease: PASS\n"
+  },
+  {
+    "name": "test-reader-search-highlight.mjs",
+    "code": 0,
+    "ms": 210,
+    "output": "reader search highlight: PASS\n"
+  },
+  {
+    "name": "test-reader-selection-copy.mjs",
+    "code": 0,
+    "ms": 311,
+    "output": "reader copy: native selection maps to original UTF-16 text, synchronous INAPP write and failure recovery PASS\n(node:3873) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-session-capsule.mjs",
+    "code": 0,
+    "ms": 265,
+    "output": "reader session capsule projection: PASS\n"
+  },
+  {
+    "name": "test-reader-session-launch-recovery.mjs",
+    "code": 0,
+    "ms": 1107,
+    "output": "Reader session recovery: PASS (actual control pose rebase, source-ready generations, pure SDK source Builders, More actions)\n(node:3901) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-session-launch.mjs",
+    "code": 0,
+    "ms": 329,
+    "output": "reader session launch: PASS (48 archived Figma actors, 54000 property comparisons; ownership/ACK/release/Reduce Motion)\n"
+  },
+  {
+    "name": "test-reader-session-morph-state.mjs",
+    "code": 0,
+    "ms": 199,
+    "output": "reader session source identity: PASS\n"
+  },
+  {
+    "name": "test-reader-settings.mjs",
+    "code": 0,
+    "ms": 226,
+    "output": "reader settings pure/static contract: PASS\n"
+  },
+  {
+    "name": "test-reader-source-category.mjs",
+    "code": 0,
+    "ms": 324,
+    "output": "bundled category coverage: {\n  novel: 877,\n  comic: 107,\n  music: 22,\n  download: 25,\n  external: 14,\n  other: 1\n}\nreader source category isolation: PASS\n(node:4033) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-source-failure-p0.mjs",
+    "code": 0,
+    "ms": 147,
+    "output": "reader source-failure P0 route contract: PASS\n"
+  },
+  {
+    "name": "test-reader-status-measurement.mjs",
+    "code": 0,
+    "ms": 208,
+    "output": "PASS status height: hidden rotate, exact-window/split isolation, visible zero, replacement reset\n"
+  },
+  {
+    "name": "test-reader-system-event-host.mjs",
+    "code": 0,
+    "ms": 129,
+    "output": "reader physical-key and screen-off Host contract: PASS\n"
+  },
+  {
+    "name": "test-reader-text-selection-lifecycle.mjs",
+    "code": 0,
+    "ms": 182,
+    "output": "reader text-selection lifecycle contract: PASS\n"
+  },
+  {
+    "name": "test-reader-theme-host.mjs",
+    "code": 0,
+    "ms": 299,
+    "output": "PASS production theme host: same-scheme restart, system linkage, app chrome, restore barrier failure/retry ordering and stale owner isolation\n(node:4100) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-theme-selection.mjs",
+    "code": 0,
+    "ms": 220,
+    "output": "PASS theme truth table, migrations, sync fallback, atomic publication, old failure isolation and current failure durable rollback\nPASS removed local theme falls back to matching configured day/night default\n"
+  },
+  {
+    "name": "test-reader-tts-audition.mjs",
+    "code": 0,
+    "ms": 179,
+    "output": "PASS audition/formal mutual exclusion, no Core progress, synthesis-vs-audio completion, stale callbacks, candidate failure restoration, cancel and resume\nPASS missing native acceptance cannot block audition cancellation; invalid pitch fails before host mutation\n"
+  },
+  {
+    "name": "test-reader-tts-config-interaction.mjs",
+    "code": 0,
+    "ms": 558,
+    "output": "PASS TTS config interaction: real Builder callbacks, choices, empty states, input gates, slider commits, draft races, stale overlays and audio strategy adapter methods; VM/native audio remain separate.\n(node:4292) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-tts-gateway.mjs",
+    "code": 0,
+    "ms": 133,
+    "output": "reader TTS strict gateway: PASS\nreader TTS precise rate round trip: PASS\n"
+  },
+  {
+    "name": "test-reader-tts-launch-intent.mjs",
+    "code": 0,
+    "ms": 139,
+    "output": "PASS TTS launch intent at all 7 asynchronous preparation boundaries, readyPaused, resume, and two-click acknowledgement race\n"
+  },
+  {
+    "name": "test-reader-tts-preferences.mjs",
+    "code": 0,
+    "ms": 123,
+    "output": "reader TTS voice and persisted Host preferences: PASS\n"
+  },
+  {
+    "name": "test-reader-tts-product-surface.mjs",
+    "code": 0,
+    "ms": 89,
+    "output": "reader TTS system and HttpTTS product surface: PASS\n"
+  },
+  {
+    "name": "test-reader-tts-session-coordinator.mjs",
+    "code": 0,
+    "ms": 130,
+    "output": "reader TTS fake-host coordinator: PASS\n"
+  },
+  {
+    "name": "test-reader-tts-short-window.mjs",
+    "code": 0,
+    "ms": 452,
+    "output": "PASS TTS short window: 0–844vp budgets, whole-form scroll fallback, unchanged 44vp Save/Cancel SDK actions\n(node:4326) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-tts-state-machine.mjs",
+    "code": 0,
+    "ms": 203,
+    "output": "reader TTS state machine transactions and isolation: PASS\n[ReaderTTS] stage=probe code=OPERATION_FAILED\n[ReaderTTS] stage=start.failed code=OPERATION_FAILED\n[ReaderTTS] stage=start.failed code=OPERATION_FAILED\n[ReaderTTS] stage=start.failed code=OPERATION_FAILED\n[ReaderTTS] stage=start.failed code=OPERATION_FAILED\n[ReaderTTS] stage=start.failed code=OPERATION_FAILED\n[ReaderTTS] stage=startCallbackTimeout code=OPERATION_FAILED\n"
+  },
+  {
+    "name": "test-reader-tts-state.mjs",
+    "code": 0,
+    "ms": 108,
+    "output": "reader TTS pure state: PASS\n"
+  },
+  {
+    "name": "test-reader-tts-waveform.mjs",
+    "code": 0,
+    "ms": 443,
+    "output": "Make V17 24-bar CSS track parity, alternate/delay/transitions, shared frame clock and frozen source: PASS\n(node:4355) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-reader-typography-architecture.mjs",
+    "code": 0,
+    "ms": 82,
+    "output": "reader typography architecture contract: PASS\n"
+  },
+  {
+    "name": "test-reader-window-chrome-p0.mjs",
+    "code": 0,
+    "ms": 79,
+    "output": "reader window chrome P0 contract: PASS\n"
+  },
+  {
+    "name": "test-reading-chapter-window.mjs",
+    "code": 0,
+    "ms": 114,
+    "output": "reading chapter window: PASS\n"
+  },
+  {
+    "name": "test-reading-document-projection.mjs",
+    "code": 0,
+    "ms": 137,
+    "output": "reading document projection: PASS\n"
+  },
+  {
+    "name": "test-reading-offline-gateway.mjs",
+    "code": 0,
+    "ms": 159,
+    "output": "reading offline gateway deterministic runtime: PASS\noffline canonical volume projection, range guard, readable totals and lease rejection: PASS\nReadingOfflineGateway image materialization incomplete: OPERATION_FAILED\n"
+  },
+  {
+    "name": "test-reading-offline-image-cache.mjs",
+    "code": 0,
+    "ms": 81,
+    "output": "reading offline image cache architecture: PASS\n"
+  },
+  {
+    "name": "test-reading-pagination-index.mjs",
+    "code": 0,
+    "ms": 122,
+    "output": "reading pagination index: PASS\n"
+  },
+  {
+    "name": "test-reading-pagination-integration.mjs",
+    "code": 0,
+    "ms": 80,
+    "output": "reading pagination integration contract: PASS\n"
+  },
+  {
+    "name": "test-reading-phone-tablet-shared-architecture.mjs",
+    "code": 0,
+    "ms": 77,
+    "output": "reading Phone/TabletExpanded shared architecture contract: PASS\n"
+  },
+  {
+    "name": "test-reading-record-accumulation.mjs",
+    "code": 0,
+    "ms": 76,
+    "output": "reading record accumulation contract: PASS\n"
+  },
+  {
+    "name": "test-reading-session-routing.mjs",
+    "code": 0,
+    "ms": 85,
+    "output": "reading session local/remote routing contract: PASS\n"
+  },
+  {
+    "name": "test-reading-whole-book-progress.mjs",
+    "code": 0,
+    "ms": 132,
+    "output": "reading whole-book processed-scalar progress: PASS\n"
+  },
+  {
+    "name": "test-remote-content-admission.mjs",
+    "code": 0,
+    "ms": 139,
+    "output": "remote content admission contract: PASS\n"
+  },
+  {
+    "name": "test-remote-reading-flow-gateway.mjs",
+    "code": 0,
+    "ms": 126,
+    "output": "remote reading flow gateway contract: PASS\n"
+  },
+  {
+    "name": "test-remote-reading-flow-runtime.mjs",
+    "code": 0,
+    "ms": 166,
+    "output": "remote reading flow deterministic runtime: PASS\nreading image resolve failed: OPERATION_FAILED\n"
+  },
+  {
+    "name": "test-responsive-surface-widths.mjs",
+    "code": 0,
+    "ms": 87,
+    "output": "responsive surface width regression matrix: PASS\n"
+  },
+  {
+    "name": "test-rss-discover-responsive-layout.mjs",
+    "code": 0,
+    "ms": 81,
+    "output": "RSS and Discover responsive layout regressions: PASS\n"
+  },
+  {
+    "name": "test-rss-page-architecture.mjs",
+    "code": 0,
+    "ms": 167,
+    "output": "rss page architecture contract: PASS\n"
+  },
+  {
+    "name": "test-rss-subscription-management-page.mjs",
+    "code": 0,
+    "ms": 80,
+    "output": "rss subscription management page contract: PASS\n"
+  },
+  {
+    "name": "test-rule-entity-management.mjs",
+    "code": 0,
+    "ms": 80,
+    "output": "rule entity management Core ownership contract: PASS\n"
+  },
+  {
+    "name": "test-search-detail-cache-first.mjs",
+    "code": 0,
+    "ms": 81,
+    "output": "search detail shared cache admission wiring: PASS\n"
+  },
+  {
+    "name": "test-search-gateway.mjs",
+    "code": 0,
+    "ms": 741,
+    "output": "search gateway remote-result and canonical synchronization: PASS\nsearch gateway broad projection responsiveness: PASS\n(node:4437) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-search-orchestrator.mjs",
+    "code": 0,
+    "ms": 2332,
+    "output": "search orchestrator bounded concurrency and retained lifecycle: PASS\n(node:4463) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-search-publication-state.mjs",
+    "code": 0,
+    "ms": 53,
+    "output": "search publication identity contract: PASS\n"
+  },
+  {
+    "name": "test-search-view-state.mjs",
+    "code": 0,
+    "ms": 105,
+    "output": "search stable rows, enrichment and navigation state: PASS\n(node:4527) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-select-semantics.mjs",
+    "code": 0,
+    "ms": 114,
+    "output": "select semantic contract: PASS\n"
+  },
+  {
+    "name": "test-settings-cache-cleanup.mjs",
+    "code": 0,
+    "ms": 68,
+    "output": "settings cache cleanup contract: PASS checks=9\n"
+  },
+  {
+    "name": "test-settings-select-overlay.mjs",
+    "code": 0,
+    "ms": 132,
+    "output": "settings responsive select overlay contract: PASS\n"
+  },
+  {
+    "name": "test-source-check-progress.mjs",
+    "code": 0,
+    "ms": 158,
+    "output": "source check streaming progress contract: PASS\n(node:4555) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-source-product-tools.mjs",
+    "code": 0,
+    "ms": 83,
+    "output": "Source product tools static boundary: PASS\n"
+  },
+  {
+    "name": "test-source-supply-chain.mjs",
+    "code": 0,
+    "ms": 277,
+    "output": "source supply chain: PASS\n"
+  },
+  {
+    "name": "test-source-switch-gateway.mjs",
+    "code": 0,
+    "ms": 907,
+    "output": "source-switch gateway contract: PASS\n(node:4563) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-source-switch-transaction.mjs",
+    "code": 0,
+    "ms": 93,
+    "output": "source-switch post-commit transaction contract: PASS\n"
+  },
+  {
+    "name": "test-surface-horizontal-geometry.mjs",
+    "code": 0,
+    "ms": 121,
+    "output": "surface horizontal geometry: PASS (10 viewport widths)\n"
+  },
+  {
+    "name": "test-surface-repair.mjs",
+    "code": 0,
+    "ms": 536,
+    "output": "PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership\n(node:4617) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-surface-transition-p0.mjs",
+    "code": 0,
+    "ms": 142,
+    "output": "surface transition P0: PASS\n"
+  },
+  {
+    "name": "test-svg-provenance.mjs",
+    "code": 0,
+    "ms": 1046,
+    "output": "svg provenance: 337 assets verified\n"
+  },
+  {
+    "name": "test-sync-host-configuration.mjs",
+    "code": 0,
+    "ms": 574,
+    "output": "PASS WebDAV Host production recovery: durable choices, allow-list, compensated flush, journal ownership, crash boundary, old backup, lost apply/commit response and idempotent completion\n(node:4652) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-sync-webdav-product.mjs",
+    "code": 0,
+    "ms": 149,
+    "output": "WebDAV product boundary/static contract: PASS\n(node:4688) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-theme-local-consumers.mjs",
+    "code": 0,
+    "ms": 591,
+    "output": "PASS 76 local-color bindings / 46 roles: authored Day and alpha, reactive App scope, distinct production status states and action foregrounds.\n(node:4690) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-toc-repair-regressions.mjs",
+    "code": 0,
+    "ms": 210,
+    "output": "durable catalog admission, source isolation and protected failures: PASS\n"
+  },
+  {
+    "name": "test-webdav-credential-queue.mjs",
+    "code": 0,
+    "ms": 711,
+    "output": "PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership\n(node:4723) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "name": "test-window-flicker-dedup.mjs",
+    "code": 0,
+    "ms": 115,
+    "output": "window flicker dedup contracts: PASS\n"
+  }
+]

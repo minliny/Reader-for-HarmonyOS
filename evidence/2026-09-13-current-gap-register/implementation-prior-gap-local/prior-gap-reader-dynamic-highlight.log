@@ -1,0 +1,3 @@
+dynamic highlight geometry/color/identity and static snapshot separation: PASS; pixels require runtime verification
+(node:4704) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

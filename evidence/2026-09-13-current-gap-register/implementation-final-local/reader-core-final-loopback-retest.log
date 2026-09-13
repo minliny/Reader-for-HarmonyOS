@@ -1,0 +1,17 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling flate2 v1.1.9
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling zip v2.4.2
+   Compiling reader-local-book v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-local-book)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 12.96s
+────────────
+ Nextest run ID 4cccef04-dbb8-48b4-a4c7-2e764536bad2 with nextest profile: default
+    Starting 3 tests across 1 binary (624 tests skipped)
+        PASS [   0.021s] reader-runtime::runtime_integration webdav_e2e_smoke::webdav_restore_smoke
+        PASS [   0.021s] reader-runtime::runtime_integration webdav_e2e_smoke::webdav_upload_download_round_trip_smoke
+        PASS [   0.034s] reader-runtime::runtime_integration webdav_e2e_smoke::webdav_conflict_merge_smoke
+────────────
+     Summary [   0.035s] 3 tests run: 3 passed, 624 skipped

@@ -1,0 +1,48 @@
+{
+  "coreCommit": "952704bd57518af530a948dfd3408a119c20e276",
+  "hostPackageAdaptation": "Existing Index.ets to Index.ts extension and main/types mapping retained",
+  "files": [
+    {
+      "source": "Index.ets",
+      "destination": "entry/vendor/core-harmony/Index.ts",
+      "before": "9b6c6141a5e0989d5e5adc95f88ef77d2bf2aa17645b09fc9bb7e407acce7bc0",
+      "after": "9b6c6141a5e0989d5e5adc95f88ef77d2bf2aa17645b09fc9bb7e407acce7bc0",
+      "changed": false
+    },
+    {
+      "source": "README.md",
+      "destination": "entry/vendor/core-harmony/README.md",
+      "before": "bc38d17933de7f590a505b927643e0845ccc0832fcb9f85d42431149059034cf",
+      "after": "bc38d17933de7f590a505b927643e0845ccc0832fcb9f85d42431149059034cf",
+      "changed": false
+    },
+    {
+      "source": "STATUS.md",
+      "destination": "entry/vendor/core-harmony/STATUS.md",
+      "before": "da6e38be7e15c23a1e30da1a10150dafb7db9d0c8370b2bc3c8391592b78536c",
+      "after": "da6e38be7e15c23a1e30da1a10150dafb7db9d0c8370b2bc3c8391592b78536c",
+      "changed": false
+    },
+    {
+      "source": "sdk/reader_core.ts",
+      "destination": "entry/vendor/core-harmony/sdk/reader_core.ts",
+      "before": "6010196cead18c6a3bf2413267af39c8c2c2a999db3261766209e8dbbe1a8aa5",
+      "after": "6010196cead18c6a3bf2413267af39c8c2c2a999db3261766209e8dbbe1a8aa5",
+      "changed": false
+    },
+    {
+      "source": "sdk/smoke_report.ts",
+      "destination": "entry/vendor/core-harmony/sdk/smoke_report.ts",
+      "before": "a4988e8a5f15f5a7b82cdd9f6888f11c4cbfdf7404b22f9cedad3726943da957",
+      "after": "a4988e8a5f15f5a7b82cdd9f6888f11c4cbfdf7404b22f9cedad3726943da957",
+      "changed": false
+    },
+    {
+      "source": "libs/arm64-v8a/libreader_core_napi.so",
+      "destination": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "before": "e965c7a7e3505d443d386e984a3ff491e9ded22052422a1caeb5a6ef0e584535",
+      "after": "38fb4245cb8b98b694de59cd88abca0fb503b9d89ad01533db68b3baebcc95cf",
+      "changed": true
+    }
+  ]
+}

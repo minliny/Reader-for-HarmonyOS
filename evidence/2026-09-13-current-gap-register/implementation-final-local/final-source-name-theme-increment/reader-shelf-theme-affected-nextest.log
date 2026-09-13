@@ -1,0 +1,88 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-ffi v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-ffi)
+   Compiling reader-cli v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/tools/reader-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 27.99s
+────────────
+ Nextest run ID 5114afe3-7e73-4d3f-a565-eb2b89c17553 with nextest profile: default
+    Starting 73 tests across 91 binaries (3652 tests skipped)
+        PASS [   0.015s] reader-contract::remote_dto_round_trip bookshelf_book_update_data_round_trip
+        PASS [   0.015s] reader-contract::remote_dto_round_trip bookshelf_add_data_round_trip
+        PASS [   0.016s] reader-contract::remote_dto_round_trip bookshelf_entry_data_durable_source_name_round_trip
+        PASS [   0.016s] reader-contract::remote_dto_round_trip bookshelf_book_update_params_preserve_omitted_set_and_clear_states
+        PASS [   0.015s] reader-contract::remote_dto_round_trip bookshelf_entry_data_round_trip
+        PASS [   0.016s] reader-contract::remote_dto_round_trip bookshelf_add_params_round_trip
+        PASS [   0.020s] reader-contract tests::command_schema_binds_bookshelf_group_assign_to_strict_params
+        PASS [   0.021s] reader-contract tests::command_schema_binds_source_switch_transaction_commands
+        PASS [   0.024s] reader-contract tests::command_and_event_schema_bind_atomic_bookshelf_remove_batch_contract
+        PASS [   0.008s] reader-contract::remote_dto_round_trip bookshelf_get_data_round_trip
+        PASS [   0.008s] reader-contract::remote_dto_round_trip bookshelf_list_params_defaults_round_trip
+        PASS [   0.008s] reader-contract::remote_dto_round_trip bookshelf_list_data_round_trip
+        PASS [   0.009s] reader-contract::remote_dto_round_trip bookshelf_get_params_round_trip
+        PASS [   0.025s] reader-contract tests::command_and_event_schema_bind_bookshelf_book_update_contract
+        PASS [   0.010s] reader-contract::remote_dto_round_trip bookshelf_group_assign_params_round_trip
+        PASS [   0.010s] reader-contract::remote_dto_round_trip bookshelf_group_assign_data_round_trip
+        PASS [   0.009s] reader-contract::remote_dto_round_trip bookshelf_list_params_full_round_trip
+        PASS [   0.010s] reader-contract::remote_dto_round_trip bookshelf_list_params_false_progress_filter_round_trips
+        PASS [   0.009s] reader-contract::remote_dto_round_trip bookshelf_remove_batch_data_round_trip
+        PASS [   0.009s] reader-contract::remote_dto_round_trip bookshelf_remove_batch_params_reject_empty_or_malformed_targets
+        PASS [   0.009s] reader-contract::remote_dto_round_trip bookshelf_remove_batch_params_round_trip
+        PASS [   0.009s] reader-contract::remote_dto_round_trip bookshelf_remove_batch_target_round_trip
+        PASS [   0.009s] reader-contract::remote_dto_round_trip bookshelf_remove_data_round_trip
+        PASS [   0.009s] reader-contract::remote_dto_round_trip bookshelf_remove_params_round_trip
+        PASS [   0.028s] reader-runtime remote::webdav_legacy_theme_tests::legacy_theme_migration_preserves_strict_public_dto_and_exact_historical_ids
+        PASS [   0.028s] reader-runtime remote::webdav_legacy_theme_tests::legacy_theme_unknown_id_uses_explicit_observations_without_name_guessing
+        PASS [   0.026s] reader-runtime::runtime_integration bookshelf_group_assign_commands::group_assign_rejects_missing_required_group
+        PASS [   0.027s] reader-runtime::runtime_integration bookshelf_group_assign_commands::group_assign_requires_existing_composite_key_and_isolates_sources
+        PASS [   0.030s] reader-runtime::runtime_integration bookshelf_book_update_commands::local_book_update_writes_through_the_local_metadata_cache
+        PASS [   0.028s] reader-runtime::runtime_integration bookshelf_group_assign_commands::group_assign_preserves_metadata_and_explicit_clear
+        PASS [   0.029s] reader-runtime::runtime_integration bookshelf_book_update_commands::partial_update_preserves_shelf_state_and_updates_cached_metadata_and_highlights
+        PASS [   0.029s] reader-runtime::runtime_integration bookshelf_book_update_commands::update_rejects_empty_missing_or_invalid_title_and_supports_author_clear
+        PASS [   0.054s] reader-runtime remote::tests::cache_clear_preserves_bookshelf_catalog_product_state
+        PASS [   0.023s] reader-runtime::runtime_integration bookshelf_remove_batch_commands::remove_batch_is_exact_atomic_and_returns_ordered_idempotent_receipt
+        PASS [   0.024s] reader-runtime::runtime_integration bookshelf_list_commands::shelf_keeps_books_with_legacy_envelope_and_damaged_toc_caches
+        PASS [   0.025s] reader-runtime::runtime_integration bookshelf_list_commands::shelf_source_name_never_exposes_source_identity_or_url
+        PASS [   0.028s] reader-runtime::runtime_integration bookshelf_list_commands::bookshelf_list_has_reading_progress_filter_is_true_false_or_absent
+        PASS [   0.036s] reader-runtime::runtime_integration bookshelf_group_assign_commands::group_assign_survives_storage_snapshot_restore_and_is_write_through_mutator
+        PASS [   0.014s] reader-runtime::runtime_integration bookshelf_remove_batch_commands::remove_batch_is_persistence_mutator_not_a_client_side_sequence
+        PASS [   0.040s] reader-runtime::runtime_integration bookshelf_list_commands::shelf_source_name_survives_cold_sqlite_without_new_shelf_fields_and_tracks_rename_delete
+        PASS [   0.044s] reader-runtime::runtime_integration bookshelf_group_assign_commands::group_assign_write_through_payload_rehydrates_a_new_runtime
+        PASS [   0.021s] reader-runtime::runtime_integration host_boundary_protocols::bookshelf_add_upserts_existing_entry
+        PASS [   0.024s] reader-runtime::runtime_integration bookshelf_remove_batch_commands::remove_batch_rejects_malformed_payload_before_touching_any_selected_book
+        PASS [   0.025s] reader-runtime::runtime_integration host_boundary_protocols::bookshelf_add_creates_new_entry
+        PASS [   0.026s] reader-runtime::runtime_integration host_boundary_protocols::bookshelf_add_then_remove_then_add_works
+        PASS [   0.025s] reader-runtime::runtime_integration host_boundary_protocols::bookshelf_remove_deletes_existing_entry
+        PASS [   0.025s] reader-runtime::runtime_integration host_boundary_protocols::bookshelf_remove_is_idempotent_for_missing_entry
+        PASS [   0.028s] reader-runtime::runtime_integration reader_ui_source_switch_commands::commit_and_rollback_restore_exact_shelf_progress_and_history_state
+        PASS [   0.022s] reader-runtime::runtime_integration reader_ui_source_switch_commands::crash_window_before_commit_leaves_no_pending_transaction
+        PASS [   0.027s] reader-runtime::runtime_integration reader_ui_source_switch_commands::mutation_registry_includes_w3_but_unimplemented_w4_is_not_dispatched
+        PASS [   0.031s] reader-runtime::runtime_integration reader_ui_source_switch_commands::first_canonical_progress_atomically_finalizes_and_survives_recovery
+        PASS [   0.024s] reader-runtime::runtime_integration reader_ui_source_switch_commands::rollback_rejects_a_stale_token_without_overwriting_new_reader_progress
+        PASS [   0.040s] reader-runtime::runtime_integration reader_ui_source_switch_commands::crash_windows_after_commit_before_or_after_pagination_recover_exactly_once
+        PASS [   0.028s] reader-runtime::runtime_integration sync_webdav_product_commands::connection_test_needs_no_encryption_key_and_rejects_wrong_status
+        PASS [   0.025s] reader-runtime::runtime_integration sync_webdav_product_commands::product_webdav_rejects_cleartext_base_url_before_attaching_authorization
+        PASS [   0.068s] reader-runtime::runtime_integration reader_ui_source_switch_commands::commit_rejects_unknown_fields_empty_toc_negative_order_and_same_key
+        PASS [   0.021s] reader-runtime::runtime_integration sync_webdav_product_commands::restore_accepts_multistatus_hrefs_beneath_a_base_url_path
+        PASS [   0.012s] reader-storage tests::bookshelf_metadata_patch_is_atomic_and_preserves_shelf_only_state
+        PASS [   0.011s] reader-storage tests::commit_source_switch_normalizes_ms_updated_at
+        PASS [   0.012s] reader-storage tests::bookshelf_query_json_round_trips_and_denies_unknown_fields
+        PASS [   0.010s] reader-storage tests::source_switch_match_empty_toc_and_json_shape_match_legacy_boundary
+        PASS [   0.008s] reader-storage tests::source_switch_match_uses_fuzzy_normalization_then_fallback
+        PASS [   0.010s] reader-storage tests::source_switch_match_prefers_title_before_stale_order
+        PASS [   0.055s] reader-runtime::runtime_integration sync_webdav_product_commands::host_config_rejects_definitions_secrets_invalid_modes_and_oversized_ids
+        PASS [   0.010s] reader-storage tests::source_switch_progress_migration_fails_without_matched_chapter
+        PASS [   0.010s] reader-storage tests::source_switch_progress_migration_resets_matched_chapter_position
+        PASS [   0.010s] reader-storage tests::source_switch_progress_migration_validates_storage_progress_boundary
+        PASS [   0.300s] reader-runtime::runtime_integration bookshelf_list_commands::toc_then_shelf_list_preserves_unread_book
+        PASS [   7.610s] reader-runtime::runtime_integration sync_webdav_product_commands::abort_discards_the_pending_transaction
+        PASS [  15.517s] reader-runtime::runtime_integration sync_webdav_product_commands::restore_commit_succeeds_only_after_live_storage_matches_candidate
+        PASS [  23.496s] reader-runtime remote::webdav_legacy_theme_tests::authenticated_legacy_theme_backup_crosses_actual_decrypt_manifest_and_typed_boundary
+        PASS [  23.526s] reader-runtime::runtime_integration sync_webdav_product_commands::host_only_restore_conflict_is_manual_encrypted_and_requires_durable_receipt
+        PASS [  31.725s] reader-runtime::runtime_integration sync_webdav_product_commands::backup_restore_conflict_and_repeat_restore_stay_core_owned
+────────────
+     Summary [  31.861s] 73 tests run: 73 passed, 3652 skipped

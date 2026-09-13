@@ -1,0 +1,19 @@
+{
+  "token": "1dda8646-4ed0-4c38-95cd-ad190e69bb8b",
+  "pid": 38165,
+  "ppid": 37725,
+  "agentId": "unspecified",
+  "target": "127.0.0.1:5555",
+  "targetRef": "6460677a198b",
+  "hdc": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc",
+  "command": [
+    "-t",
+    "127.0.0.1:5555",
+    "shell",
+    "bm",
+    "dump",
+    "-n",
+    "io.reader.harmonyos"
+  ],
+  "startedAt": "2026-09-12T15:56:13.127Z"
+}

@@ -1,0 +1,55 @@
+2026-09-13 02:10:36.992 8400658816 [Info] [TraceTool.cpp(InitPipe:36)][TraceTool] connect successed
+2026-09-13 02:10:37.107 8400658816 [Info] [SnUtil.cpp(CheckLogin:176)]The user has logged in.
+2026-09-13 02:10:37.107 8400658816 [Info] [SnUtil.cpp(CheckWhitelist:187)]isUseWhitelist is false. The user is not restricted.
+2026-09-13 02:10:37.108 6130380800 [Info] [HiviewxClient.cpp(GetPortFromConfig:128)]HiviewxClient read port:  16556
+2026-09-13 02:10:37.109 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:88)]Enable Camera.
+2026-09-13 02:10:37.109 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:92)]Enable front and back cameras.
+2026-09-13 02:10:37.109 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:97)]Enable MultiDisplay Kernel Feature.
+2026-09-13 02:10:37.109 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:106)]Enable Express Multi Touch.
+2026-09-13 02:10:37.109 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:111)]Enable Sensor Configuration.
+2026-09-13 02:10:37.109 8400658816 [Info] [UiMain.cpp(void InitFeatureConfig:116)]Enable Bgra Configuration.
+2026-09-13 02:10:37.109 8400658816 [Info] [CheckImage.cpp(CheckAllSign:88)]start check image
+2026-09-13 02:10:37.109 8400658816 [Info] [Skin.cpp(InitByDeviceType:620)]Emulator screen  "notCustomize"
+2026-09-13 02:10:37.109 8400658816 [Info] [Skin.cpp(SetDefaultDisplayCutoutPath:1151)]DefaultDisplayCutoutPath =  "M464 38 L816 38 v 84 h -352 Z"
+2026-09-13 02:10:37.110 8400658816 [Info] [Skin.cpp(InitPhone:678)]Init Phone dpi =  560
+2026-09-13 02:10:37.135 6130954240 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "ramdisk.img"  result  0  cost  26
+2026-09-13 02:10:37.216 6130954240 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "Image"  result  0  cost  81
+2026-09-13 02:10:37.243 8400658816 [Info] [WidgetSettings.cpp(InitImageLanguageComboBox:247)]Init imge language to Index  0
+2026-09-13 02:10:37.278 8400658816 [Warning] [(:0)]Cannot open file ':/light/charging-off.svg', because: No such file or directory
+2026-09-13 02:10:37.278 8400658816 [Warning] [(:0)]Cannot open file ':/light/charging-off.svg', because: No such file or directory
+2026-09-13 02:10:37.278 8400658816 [Warning] [(:0)]Cannot open file ':/light/charging-on.svg', because: No such file or directory
+2026-09-13 02:10:37.278 8400658816 [Warning] [(:0)]Cannot open file ':/light/charging-on.svg', because: No such file or directory
+2026-09-13 02:10:37.335 8400658816 [Warning] [LogUtil.cpp(OutputPath:246)]can not find file :  "$USER_HOME$/Library/Application Support/Huawei/DevEcoStudio6.1/emulator/proxy.settings.pwd"
+2026-09-13 02:10:37.338 8400658816 [Info] [PlayerApiToolBar.cpp(UpdateOverflowButtonIcon:109)]":/light/overflow-default"
+2026-09-13 02:10:37.339 8400658816 [Info] [PlayerApiToolBar.cpp(UpdateOverflowButtonIcon:109)]":/light/overflow-hover"
+2026-09-13 02:10:37.350 8400658816 [Info] [ToolBarController.cpp(StackedActionAdder:231)]enable multi display
+2026-09-13 02:10:37.391 6131527680 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "vendor.img"  result  0  cost  282
+2026-09-13 02:10:37.530 8400658816 [Warning] [(:0)]Populating font family aliases took 79 ms. Replace uses of missing font family "HarmonyOS Sans SC Medium" with one that exists to avoid this cost. 
+2026-09-13 02:10:37.536 8400658816 [Info] [EmulatorWindowEvent.cpp(ShowBootAnimation:1306)]ShowBootAnimation.
+2026-09-13 02:10:37.543 8400658816 [Info] [CrashClient.cpp(StartCrashDetect:148)]StartCrash Detect.
+2026-09-13 02:10:37.543 8400658816 [Info] [CrashClient.cpp(StartCrashServer:404)]start crash server.
+2026-09-13 02:10:37.732 6404665344 [Info] [QemuManager.cpp(OnSystemReset:640)]System is reset
+2026-09-13 02:10:37.732 6404665344 [Info] [HdcClient.cpp(HdcDisConnect:555)]dicconnect hdc server
+2026-09-13 02:10:37.829 6131527680 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "userdata.img"  result  0  cost  437
+2026-09-13 02:10:41.031 6131527680 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "sys_prod.img"  result  0  cost  3202
+2026-09-13 02:10:55.001 6130954240 [Info] [CheckImage.cpp(CheckSign:127)]finish check image  "system.img"  result  0  cost  17784
+2026-09-13 02:10:59.385 6423752704 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!
+2026-09-13 02:10:59.386 8400658816 [Info] [EmulatorWindowEvent.cpp(StopBootAnimation:1317)]StopBootAnimation.
+2026-09-13 02:10:59.386 8400658816 [Info] [WidgetSettings.cpp(InitImageLanguageComboBox:236)]GuestOS Boot Complete! Enabling ImageLanguageComboBox
+2026-09-13 02:10:59.469 6404091904 [Info] [LambdaRepeatWorker.cpp(run:29)]current interval:  4000
+2026-09-13 02:10:59.502 6132674560 [Warning] [HdcClient.cpp(IsHdcConnected:110)]hdc is not connected, hdc not init
+2026-09-13 02:10:59.969 6130380800 [Info] [HiviewxClient.cpp(OnConnected:65)]HiviewxClient linked:  QHostAddress("127.0.0.1") 16556
+2026-09-13 02:10:59.970 6130380800 [Info] [HiviewxClient.cpp(SendCommand:162)]HiviewxStatus turn to on
+2026-09-13 02:11:01.308 6423752704 [Info] [QemuManager.cpp(OnClipboardPipeReady:730)]Clipboard Pipe is Ready
+2026-09-13 02:11:01.633 6406959104 [Warning] [HdcClient.cpp(IsHdcConnected:110)]hdc is not connected, hdc not init
+2026-09-13 02:11:59.469 6404091904 [Info] [LambdaRepeatWorker.cpp(run:29)]current interval:  1000
+2026-09-13 15:59:49.989 19555168256 [Warning] [QemuManager.cpp(CheckGuestStatus:483)]Time delta value is large, delta:  4
+2026-09-13 19:08:19.327 18205634560 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-13 20:10:39.296 18205634560 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-13 20:11:14.637 18205634560 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-13 20:11:16.131 18198458368 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-13 20:11:16.190 6404091904 [Warning] [CrashClient.cpp(AddHilogToDirectory:388)]excute hilog error
+2026-09-13 20:33:37.561 18205634560 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-13 20:33:42.832 6128087040 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-13 20:33:50.744 6128087040 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.
+2026-09-13 20:33:53.585 19424555008 [Warning] [MacTaskCall.mm(Call:49)]Task was force terminated due to timeout.

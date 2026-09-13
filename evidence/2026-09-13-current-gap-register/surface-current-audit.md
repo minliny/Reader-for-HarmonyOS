@@ -142,3 +142,76 @@
 亮度探针只在最后一次MOVE结束后写一次；精确墙钟受调度影响，核心判定是整个连续MOVE窗口没有任何写入。
 
 探针脚本：`/private/tmp/reader-surface-current-probe.mjs`。生产内容未修改。问题记录止于本文件，由root统一合入现有根审计和全量实施规格，不另建待办或日期方案。
+
+## 8. 本轮获授权后的实施与本地证据（补充前述只读审计）
+
+本节记录 2026-09-13 工作树的实际实施；上文 1—7 节保留的是实施前审计证据，不代表这些生产缺口仍未修改。没有在本节把源码、本地回归、ArkTS 编译、产物、VM/真机及用户验收合并为一个“通过”。本子任务未提交 Git、未运行设备操作；最终提交/正式构建由主任务统一执行。
+
+### 已落地的页面、状态与本机配置
+
+- **书架四行**：`ShelfBookListDetails.ets` 与 `ShelfBookPresentation.ts` 统一普通/批量列表；书名 15/18.3、作者 12/15、最新章节 11/13.75、标签/进度 10/12 延用原文字规格。最新章节不再退回当前章节。来源使用实际名称，缺失短标识不显示 URL；来源/进度是三个等权槽位中的左槽/中槽，第三槽留白以保持几何居中。分组过滤保持 Core 原顺序，不另排序。已删除旧未调用的来源/章节/进度重复实现。
+- **书架入口**：筛选行与轻量默认分组选择器独立展开；齿轮不再打开完整 CRUD；More 为批量管理、本地导入、书架设置。当前显示模式的批量视图复用同一列表行。单书菜单是不透明、按可用安全宽度的 75% 布局，编辑分组仅显式选择“默认”时写入，打开弹窗不改历史自定义分组。书架设置页与应用设置入口共享 `BookshelfSettingsPage`，自动检查更新与显示模式已接行为。
+- **永久模式**：`WebDavCredentialStore.ts` 以 Preferences 为唯一非秘密模式持久化来源；仅当地 key 真缺失且迁移 marker 缺失才读旧 Asset 模式。读/迁移/写共用队列；新版秘密 Asset 不再镜像模式。flush 失败撤回内存待写值；快速切换以最后确实落盘的 ACK 作为回退基线；初读失败的重试只重读，不把未知的旧选择覆盖为默认。书架/设置的用户写入先经过 `ReaderThemeHost.prepareUserChange()`，恢复后再读取 durable baseline，并检查页面 generation。
+- **导入**：`Index.beginImport` 从 pickerOpening 起绑定 attempt、navigation generation、runtime owner；每个 await 后重新验证。取消/关闭/离页/相同路由重开不会被旧结果覆盖；未使用的 picker 资源清理，已入库 Core 数据保留。结果基于真实回执区分 created/existing/失败/待处理，不合成成功数。成功图标、右侧刷新 SVG 的裁切、318@350 按钮、真实头/摘要/脚/行测量、短列表收紧和长列表滚动已接。小高度下非固定底部内容进入滚动，完成按钮保持可达。
+- **导入动效**：保留一个不透明外壳；旋转圆弧 1000 ms linear，背景/减弱动效不跑连续循环。经本轮授权实施的切换值为导入层 120 ms、外壳高度 220 ms、结果层延迟 80 ms 后 140 ms；这些值仍标注实施方案来源，不冒称历史 Figma 的原始参数。新测量值按剩余时长重定向，不等待动效才提交业务结果。
+- **搜索**：历史按实际字体测量和实际可用宽度保留两行，不固定四条；展开/收起动作在固定右侧槽位。上下两个 spinner 复用 Make 的 1000 ms linear native actor，保持同次请求 owner；底部 actor 锚定整体安全视口，结果行流入不将其挤动。Host 简介只处理显示空白；通用 HTML/实体净化由 TOC 子任务在 Core 既有 `intro` 返回投影使用上游标准实现，原始存储不改。
+- **目录/更多接线**：Index 用共享 acquisition coordinator 接入已缓存目录，去除先拦删源/停源与 catch-all 在线重取；安全错误摘要保留分类。卷标题保留 canonical index，remote map 与后续复制带 `navigable`，初始/换源候选跳过 URL 为空的条目。阅读“书籍信息”先走原串行退出，再复用既有 book/session/TOC 到详情，无重搜/重取目录。进一步发现的 `ReadingOfflineGateway` 卷标题离线投影/下载问题已交 TOC 子任务补齐，不把本 Index 接线当作其已验收证明。
+
+### WebDAV 主题与书架模式备份，以及可恢复的跨存储提交
+
+- 现有加密配置包内增加版本化 `hostConfig`，仅包括 bookshelfViewMode 和主题四类选择。Core 强类型白名单拒绝 RGB/主题定义/密码等扩展，Host 编码也只复制这组字段。缺 hostConfig 的旧包保留现有主题/模式；冲突仍必须手动选择。仅 Host 不同时即使 Core 一致也产生冲突。
+- Host `capture()` 使用 `ReaderThemeHost.durableBackup()`；Host decode 在 journal/Core apply 之前调用共同主题目录的纯 `restoreReaderThemeSelection`，拒绝已知 ID 伪造 scheme，未知 ID 使用相应默认主题回退。
+- 完整顺序：持久化只含 operationId/checksum 的 Host journal → Core 原子配置 apply（同一 SQLite 提交写入受保护 receipt）→ Host 模式/主题落盘 → 幂等 commit → 清 journal。operationId 复用已锁定 getrandom 提供 128 位随机值，避免进程重启后原递增计数器撞 ID。
+- `transaction.commit.queryOnly` 可在旧内存 transaction 消失后查询 durable receipt。receipt 存在则继续完成先前已确认的 Host 选择；缺失证明 Core apply 未发生，不写 Host 选择并清理未完成 intent。丢失 apply/commit 响应不重复套用旧快照。receipt 是有界单条业务凭据，复用既有 durable generic-cache 机制，用户清缓存保留，ConfigSnapshot 备份白名单排除它。
+- resolve 与最终 storage.apply 都按配置白名单合并到最新用户数据；最终 rebase 与替换覆盖 source publication guard，避免 Host journal 等待窗口把新阅读位置等用户数据替换成旧快照。重复 apply 收到同 operation receipt 时返回当前数据，不重放旧进度。
+- Core/Host/设置入口共享 owner 级恢复 Promise；中心恢复屏障防止“启动恢复失败后接受新主题，然后旧恢复覆盖新选择”。Store 另对未完成 journal 的模式写入校验 restore operation owner。
+
+### 原始本地回归与证据边界
+
+- `/private/tmp/reader-surface-final-contract-results.json`：17 个当前页面/旧合同迁移/导入/错误投影/同步生产探针子集全部通过。旧断言被替换为当前实际边界；包括零进度“未读”、非整百分比、canonical 7 且空 URL 卷标题、真实 Index 取消/失败/返回/信息入口。
+- `/private/tmp/reader-webdav-host-config-tests.log`：8 个 Core WebDAV 产品测试通过，包含 Host-only 手动冲突、加密内字段、旧备份、真实磁盘 SQLite 关闭/重开、重复 commit、错误 operation、cache-clear 后 receipt 保留和不进入配置备份。
+- `/private/tmp/reader-webdav-final-apply-rebase.log`：2 个 Core 单测通过；覆盖最终合并保留偏移 120、随后 180、重复 apply 不回退；同时验证随机 operation 形状和严格查询边界。
+- `/private/tmp/reader-webdav-runtime-storage-apply-tests.log`：既有 2 个 storage.apply 取消/关闭/坏载荷/Host CAS 失败回归通过。
+- `/private/tmp/reader-webdav-contract-tests.log`：reader-contract 本地测试通过；`/private/tmp/reader-webdav-host-config-clippy.log` 为该阶段 Clippy `-D warnings` 通过日志。主任务将在最终冻结源码上执行完整 Core 门禁，不能拿此前阶段日志替代最终产物证据。
+- 本子任务前半段 EPUB 标准语义单路径已完成，真实语料原始证据 `/private/tmp/reader-projection-corpus-results.json`、`reader-local-book-projection-regression.log`、`reader-local-book-projection-clippy.log`。13 文件校验/元数据位置检查与单本耗时均达当时本地目标；不扩大为视觉和设备验收。
+- **仍独立开放的证据层**：完整工作树最终 ArkTS/正式 HAP/NAPI、VM 的真实系统文件选择器和动画/小窗/大字体行为、真机表现与用户验收；这些由主任务继续收敛。本页静态 geometry 和 native animation 参数回归不能证明设备上每一帧效果。
+
+
+### 9. 最终可达界面局部颜色漏接修复（本轮源码）
+
+现象/定位：批量 App 主题迁移未覆盖文件顶层的局部色常量，导致设置分段控件、同步行/按钮、书源状态、发现筛选、RSS 表面、目录边缘淡出及书签动作仍保留固定 Day 色；书架设置另有一处 Color.White。全部为当前源码可直接定位，不申请设备取证。
+
+现已移除 45 个顶层固定色常量及 1 处 Color.White，在 canonical registry 新增 46 个 App 角色，76 处实际消费使用 readerAppScheme 响应式读取。逐项原始 Day、Night、alpha 与源位置已追加同目录 theme-consumer-bindings.json（originalConstant 字段）；无临时测试色表进入生产。原 Day 和 alpha 全保留；Night 表面/文字/边框采用已批准语义，绿色成功、红色错误和中性未验证状态仍分开，未用主色替换所有状态。
+
+| 当前文件（entry/src/main/ets 下） | 局部角色数 | 实际绑定数 |
+| --- | ---: | ---: |
+| `features/common/ReaderSegmentedControl.ets` | 6 | 6 |
+| `features/sync/SyncPage.ets` | 7 | 17 |
+| `features/source/SourceManagementPage.ets` | 8 | 12 |
+| `features/discover/DiscoverPage.ets` | 5 | 6 |
+| `features/rss/RssEntryDetailPage.ets` | 2 | 7 |
+| `features/rss/RssSourceFeedPage.ets` | 2 | 3 |
+| `features/rss/RssPage.ets` | 11 | 17 |
+| `features/reading/ReaderDirectoryModulePanel.ets` | 2 | 4 |
+| `features/reading/ReaderBookmarkRow.ets` | 1 | 2 |
+| `features/reading/ReaderBookmarkEmptyState.ets` | 1 | 1 |
+| `features/bookshelf/BookshelfSettingsPage.ets` | 1 | 1 |
+
+ReaderAppearanceSharedActors 的主题枚举、名称和色块也删除旧硬编码，直接调用现有 ReaderControlAppearanceStyle → ReaderThemeRegistry 读取；这仍是阅读主题预览，不改成 App 色块。该共享旧外观树的可达性与当前主控制树分开记账，不作为当前 UI 设备验收结论。
+
+本地证据：test-theme-local-consumers.mjs 执行实际 SourceManagementPage 状态颜色方法，扫描上述 76 处绑定并验证 46 个角色 Day/alpha/Night；日志 /private/tmp/reader-theme-local-final.log。test-reader-control-geometry、test-reader-appearance-make 均通过，分别检查上下边缘渐变和共享色块的真实方法。12 个修改 ETS 经 DevEco ETS AST 解析全部通过；generate-theme-registry --check 通过（559 个 App 角色×2、8 个阅读主题）；SVG provenance 337 资源通过，几何与路径未改。构建/VM/真机/视觉验收由根任务单独记录，本次未操作设备、未提交 Git。
+
+
+### 10. 最终交付复核发现的合同漏接与复位实现
+
+本轮代码复核确认原“恢复默认”行在 unimplementedSettings gate 下且没有事件；不是视觉待验。现仅解除该行门禁，保留其它未实现设置 gate，新增原生确认与真实 SettingsOrchestrator.restoreDefaults → LocalConfigurationReset 协调器。确认范围明确为通用四项、书架 cover、App system/默认 day/night 与当前系统对应 active、阅读排版/阅读设置、Host 朗读偏好；保留 Core 所有书籍/源/进度/书签、朗读服务配置/凭据、WebDAV 凭据、设备身份、导入字体文件。不触发 storage.clear、cache.clear 或删除数据；不是整机配置重置。
+
+协调器先经过既有 WebDAV receipt/journal 屏障，再持久化 reset intent，逐一用现有 Preferences 与 AppearanceStore 完成、最后确认清除 intent。失败/失联/重启保留前滚恢复记录；入口和手动配置变更先恢复，失效 owner 不能继续写后续域。Settings/ReaderSettings/TtsPrefs 队列改为同 context/owner 共享，防旧实例 flush 越过复位；非复位写和新页面读走统一屏障，内部 resetOwned bypass 防自等待。通用开关按 changedKey 在实际队列内重读确认快照合并，避免旧快照兄弟字段覆盖刚恢复的默认。Preferences flush 失败恢复缓存中的确认值。显式 request 与只读空 recover 竞态已有生产方法回归，空 probe 不能吞复位。
+
+新正式工具 test-local-configuration-reset.mjs 执行编译后的真实协调器/三个持久网关/ThemeHost/AppearanceStore，以及实际 SettingsPage 确认方法。覆盖 6 个写阶段失败、清除 intent 失败、owner 替换、模拟新进程续做、重复请求、空 probe 竞态、新用户主题/单开关意图排序、取消和失效确认。原始日志 /private/tmp/reader-local-reset-final.log。系统确认框的真实像素/原生点击仍需独立验收。
+
+主题旧四字段备份补齐：Reader-UI/theme/ReaderThemeSelection.ts 新增严格历史迁移，已知 ID 用历史精确分类；未知依固定 App → 实时系统 → 当前 effective，不能按名称含 night 猜，缺观察明确失败；新写始终 envelope v1 且无RGB/运行时观测。SyncHostConfiguration.decode 兼容确切旧形状、拒未知字段，保留 fallback reason。SyncGateway.start 将 ReaderThemeHost.observedSystemScheme() 作为 runtime-only systemScheme 传给 Core，结果 themeMigrationReason 仅进入 readerThemeRestoreFallback 诊断。Core 解密合同和旧包真实加密回归由 TOC agent 另行闭环；本段不以 Host 测试冒充 Core 包兼容通过。
+
+定向结果：test-reader-theme-selection、test-sync-host-configuration、test-reader-theme-host、test-reader-settings、test-reader-tts-preferences、test-sync-webdav-product、generate-theme-registry --check 均通过。对应日志依次 /private/tmp/reader-theme-selection-final.log、/private/tmp/reader-sync-host-final.log、/private/tmp/reader-theme-host-final.log、/private/tmp/reader-settings-final.log、/private/tmp/reader-tts-preferences-final.log、/private/tmp/reader-sync-webdav-product-final.log。根任务已接 EntryAbility 两处恢复屏障和 Index onRestoreDefaults；最终 ArkTS/全量测试/产物/设备均由根任务单独记录。
+
+同次只读发现已分派：源名冷恢复由 Core 当前 SQLite Source.name 可靠投影（TOC agent）；书架设置返回滚动/筛选展开由根任务；阅读主题数量 >8 的几何越界由胶囊 agent；未知本地夜主题 ID 回默认由根主题 owner。不得因仅完成本段把这些分派项称已验收。

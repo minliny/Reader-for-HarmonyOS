@@ -1,0 +1,30 @@
+{
+  "at": "2026-09-13T12:41:35.423550+00:00",
+  "args": [
+    "node",
+    "tools/reader-hdc-lease.mjs",
+    "--target",
+    "127.0.0.1:5555",
+    "--hdc",
+    "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc",
+    "--server-key",
+    "127.0.0.1:8710",
+    "--wait-ms",
+    "0",
+    "--agent-id",
+    "capsule-vm-preflight",
+    "--",
+    "-p",
+    "-s",
+    "::ffff:127.0.0.1:8710",
+    "-t",
+    "127.0.0.1:5555",
+    "shell",
+    "cat",
+    "/proc/1529/stat",
+    "/proc/uptime"
+  ],
+  "exit": 0,
+  "stdout": "1529 (ohos.sceneboard) S 135 0 0 0 -1 4194624 706671 0 74340 0 9278 4122 0 0 10 -10 44 0 1160 39456448512 103490 18446744073709551615 1 1 0 0 0 0 4096 4096 1073775866 0 0 0 17 2 0 0 214 0 0 0 0 0 0 0 0 0 0\n/bin/sh: cat: /proc/uptime: Permission denied\n",
+  "stderr": ""
+}

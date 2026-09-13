@@ -1,0 +1,14 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-ffi v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-ffi)
+   Compiling reader-cli v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/tools/reader-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 19.84s
+────────────
+ Nextest run ID b87a469d-6706-4438-8441-24896346803a with nextest profile: default
+    Starting 2 tests across 91 binaries (3724 tests skipped)
+        PASS [   0.011s] reader-contract::remote_dto_round_trip sync_theme_runtime_observation_and_migration_diagnostic_round_trip
+        PASS [  17.911s] reader-runtime remote::webdav_legacy_theme_tests::authenticated_legacy_theme_backup_crosses_actual_decrypt_manifest_and_typed_boundary
+────────────
+     Summary [  17.915s] 2 tests run: 2 passed, 3724 skipped

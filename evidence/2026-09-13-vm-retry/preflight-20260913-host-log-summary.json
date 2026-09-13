@@ -1,0 +1,52 @@
+{
+  "capturedAt": "2026-09-13T12:37:49.884626+00:00",
+  "sourceEmulatorLogSha256": "01645f4e0991ccab3f868bdf0fd21c9f110c5de5aa2702d00f25a92d07cacd1b",
+  "emulatorBootCompleted": "2026-09-13 02:10:59.385",
+  "postBootFatalMatches": [],
+  "hilog": [
+    {
+      "path": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro/Log/hilog_tmp_2026-09-13T021037/hilog.147.20260913-203144.gz",
+      "bytes": 354528,
+      "sha256": "0ef0530c7824d88d29f8594ecec27a2b9d56adcb90a4f587dedb1261a8912a3e",
+      "first": "09-13 20:31:36.255   471  1560 E C01651/DataProviderConfig: GetFromProxyData: Get bundleInfo failed! bundleName:com.huawei.hmsapp.totemweather, userId:100, visitedId:100, uri:******icIconInfo",
+      "last": "09-13 20:40:07.303   802  3248 W C01121/BMSQuery: GetBundleInfo failed -n com.huawei.hmsapp.totemweather -u 100",
+      "scene": [
+        "09-13 20:32:00.038   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:33:00.242   802  6727 I C01202/Unordered: Pid 1529 publish sceneboard.event.PUSH_AGENT to 100 end(1,1,0,0)",
+        "09-13 20:33:00.244   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:33:00.246   678   773 E C02908/PowerRunningLock: [a92ab597fc3bf22] try lock increase fail,N:push_manager_service_sceneboardPushAgentEventThread_82874,T:65,C:0",
+        "09-13 20:33:00.246   440  6988 I C05300/push60100022: [a92ab597fc3bf22] This is SceneboardPushAgentProcessor, code is 0",
+        "09-13 20:33:00.250   678   773 I C02908/PowerRunningLock: [a92ab597fc3bf22] UL N=push_manager_service_sceneboardPushAgentEventThread_82874",
+        "09-13 20:34:00.068   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:35:00.069   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:36:00.041   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:37:00.044   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:38:00.033   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:39:00.030   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:40:00.050   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9"
+      ],
+      "fatal": []
+    },
+    {
+      "path": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro/Log/hilog_tmp_2026-09-13T021037/hilog.148.20260913-204015.gz",
+      "bytes": 98979,
+      "sha256": "ef8b08c394f60508722f4cf52e719bd734aea00a0d624a8d5ad1d12ed3617627",
+      "first": "09-13 20:40:07.303   471  1561 E C01651/BundleMgrProxy: GetBundleInfoFromBMS: GetBundleInfo failed!bundleName is com.huawei.hmsapp.totemweather, userId is 100",
+      "last": "09-13 20:42:22.470   126   153 I C01800/SAMGR: NF SA:65962,887_145142",
+      "scene": [
+        "09-13 20:41:00.028   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9",
+        "09-13 20:42:00.152   791   892 I C01406/skia: RSSurfaceRenderNodeDrawable::OnDraw name:com.ohos.sceneboardEngineServiceAbility, the number of total processedNodes: 9"
+      ],
+      "fatal": []
+    }
+  ],
+  "deviceCommandsPerformed": [
+    "list targets -v",
+    "param get bootevent.boot.completed",
+    "ps -A",
+    "cat /proc/1529/stat /proc/uptime"
+  ],
+  "freshTransportStatus": "CONNECTED_AND_BOOT_TRUE",
+  "lastCheckedAt": "2026-09-13T12:42:27.705431+00:00",
+  "partialReadFailure": "/proc/uptime Permission denied; not retried; SceneBoard stat was readable"
+}

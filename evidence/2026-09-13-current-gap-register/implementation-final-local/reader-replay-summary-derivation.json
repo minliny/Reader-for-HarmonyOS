@@ -1,0 +1,133 @@
+[
+  {
+    "fixture": "request_session_search.json",
+    "step": "book.search",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 12,
+      "responseDigest": "dd8681e973bdf802edf26260297e68e24cdbd75c782c90bbaaaddd401df51090",
+      "finalUrlDigest": "bbb0b3011784b13e01f9f1bbe9bd4ea5316b5f16e8b8632acb0afca52b1dae8e"
+    }
+  },
+  {
+    "fixture": "remote_reading_e2e_suite.json",
+    "step": "book.search",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 114,
+      "responseDigest": "cd8f364b1743ba192a496d2d135ee4082ae3d9818f67d051932e6e6366b4e1e9",
+      "finalUrlDigest": "bbb0b3011784b13e01f9f1bbe9bd4ea5316b5f16e8b8632acb0afca52b1dae8e"
+    }
+  },
+  {
+    "fixture": "remote_reading_e2e_suite.json",
+    "step": "book.detail",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 139,
+      "responseDigest": "2de370bba641a7160aad45bf51a2bdb4a97532c881d9329fdac486aa241e2713",
+      "finalUrlDigest": "57ecc66ac5e23230e7349351d8592508947f0b471c36917c73e6257a8f381146"
+    }
+  },
+  {
+    "fixture": "remote_reading_e2e_suite.json",
+    "step": "book.toc",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 161,
+      "responseDigest": "a189f48786556438448d5486d5aa584eeb4124f929416e5dbd7c35b4abe1e1b8",
+      "finalUrlDigest": "02e3dbd9ebabb24e23e1dd58c0bef5f7a413cb86d907444cbd4739a638f3b6e7",
+      "firstResponseBytes": 161,
+      "firstResponseDigest": "a189f48786556438448d5486d5aa584eeb4124f929416e5dbd7c35b4abe1e1b8"
+    }
+  },
+  {
+    "fixture": "remote_reading_e2e_suite.json",
+    "step": "chapter.content",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 88,
+      "responseDigest": "98563f512c8e95ce5e66389fa5fc52bae3b7276236c21933a65c27f4ae0fb611",
+      "finalUrlDigest": "67647163b01cd0ad599c129c5fa6dfe70eab9cd21a217b9f22f1e2b04fbced1f"
+    }
+  },
+  {
+    "fixture": "legado_desensitized_corpus_suite.json",
+    "step": "legado.alpha.search.gbk.cookie",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 239,
+      "responseDigest": "57ae0db34a9a9954ad925b2bf9acf6cb197a86c20884d4a026d3b185b03ba952",
+      "finalUrlDigest": "7203c0865bff66ea53bcfd4b3d25564c501b394897a62826ef61aabc3ebdd91d"
+    }
+  },
+  {
+    "fixture": "legado_desensitized_corpus_suite.json",
+    "step": "legado.alpha.detail.redirect.session",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 262,
+      "responseDigest": "29ee720d79ea2046c78044859a8e31ea737a66835e16029249d306b8e1dbab19",
+      "finalUrlDigest": "1d2d501cadf3dfd262445e0184d5e9069eaec3628d4b85cdb106dfd37270a9b7"
+    }
+  },
+  {
+    "fixture": "legado_desensitized_corpus_suite.json",
+    "step": "legado.alpha.toc.gb18030.catalog",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 287,
+      "responseDigest": "0e9c41bfaa80c73fb6e08f148d1e4c4066ce4e6f0b0f140c107d2205a801e3ec",
+      "finalUrlDigest": "def8c2d086d23260353758ad1773decae52b8d442c7a96c05665debe0f7b7987",
+      "firstResponseBytes": 287,
+      "firstResponseDigest": "0e9c41bfaa80c73fb6e08f148d1e4c4066ce4e6f0b0f140c107d2205a801e3ec"
+    }
+  },
+  {
+    "fixture": "legado_desensitized_corpus_suite.json",
+    "step": "legado.alpha.chapter.redirect.raw-css",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 156,
+      "responseDigest": "16b5a81ccf188a55f0ccad01a9cfbf0e57fe6857e59b4fe7572eb4c440d00522",
+      "finalUrlDigest": "6114cb02666feefe283dd34c21c5d7a2c4491382112a70e1805084d9ae8f52d1"
+    }
+  },
+  {
+    "fixture": "legado_desensitized_corpus_suite.json",
+    "step": "legado.beta.search.html.raw-css",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 202,
+      "responseDigest": "40125c6aa2a0a2462bd31a6117321587cdebe74cf30892962ed6016b402536fa",
+      "finalUrlDigest": "264963259febab26935364f36fe625d5737207005143114d9ea6b329ef854f63"
+    }
+  },
+  {
+    "fixture": "legado_desensitized_corpus_suite.json",
+    "step": "legado.beta.detail.html.key-value",
+    "bodyEncoding": "utf-8",
+    "derivation": "Python hashlib from fixed hostResult.body/finalUrl, independent of Core result",
+    "expected": {
+      "responseBytes": 227,
+      "responseDigest": "c162a2b09a644a944842051fcd2771758d7c49eae262abfe281d60a90054efe7",
+      "finalUrlDigest": "b36b810ccb86aa2425ee8be02fc8bce0e65512f7e2776ecce0c4df6e9fc26cae"
+    }
+  },
+  {
+    "fixture": "/Users/minliny/Documents/Reader/Reader-Core-Native/protocol/fixtures/conformance/commands/valid-book-toc.json",
+    "derivation": "Python hashlib from exact tocResponse UTF-8",
+    "responseBytes": 61,
+    "responseDigest": "d4b7ca469e64935140bfa0ee99f0c684e5ffae16a379e80e109704341d7bc476"
+  }
+]

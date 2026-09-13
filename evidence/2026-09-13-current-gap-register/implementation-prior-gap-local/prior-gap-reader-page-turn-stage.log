@@ -1,0 +1,3 @@
+reader page-turn stable slot geometry and role transition: PASS
+(node:4660) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

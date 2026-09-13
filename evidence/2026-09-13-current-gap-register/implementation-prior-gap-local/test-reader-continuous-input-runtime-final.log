@@ -1,0 +1,16 @@
+continuous production pointer, same-row anchor and trailing exit commit: PASS
+production batched image reflow preserves leading fragment fraction and concurrent scroll: PASS
+(node:99236) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous mode change save/error/obsolete ownership and late stop receipt: PASS
+production continuous restore waits for layout and rejects stale frame callbacks: PASS
+production continuous cold-entry projection branch observes its reactive revision: PASS
+continuous scalar quantization: five positions, 100 repeat round trips each: PASS
+continuous restore suppresses premature stops and unknown-geometry progress writes: PASS
+continuous padded viewport: START, positive y and negative y round trips: PASS
+native List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS
+production continuous image row identity: decoder admission replaces placeholder, unchanged siblings retained: PASS
+continuous short tap and stationary long UP share paged 500ms clock boundary: PASS
+continuous-to-paged anchor: warm/cold/partial/foreign layout, containing page only: PASS
+measured prefix whitespace gaps match complete canonical page identity: PASS
+native List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS

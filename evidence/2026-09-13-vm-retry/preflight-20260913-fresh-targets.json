@@ -1,0 +1,27 @@
+{
+  "at": "2026-09-13T12:40:04.100621+00:00",
+  "args": [
+    "node",
+    "tools/reader-hdc-lease.mjs",
+    "--target",
+    "127.0.0.1:5555",
+    "--hdc",
+    "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc",
+    "--server-key",
+    "127.0.0.1:8710",
+    "--wait-ms",
+    "0",
+    "--agent-id",
+    "capsule-vm-preflight",
+    "--",
+    "-p",
+    "-s",
+    "::ffff:127.0.0.1:8710",
+    "list",
+    "targets",
+    "-v"
+  ],
+  "exit": 0,
+  "stdout": "127.0.0.1:5555\t\tTCP\tConnected\tlocalhost\n[physical:b1f20b88963d]\t\tUSB\tOffline\tlocalhost\n",
+  "stderr": ""
+}

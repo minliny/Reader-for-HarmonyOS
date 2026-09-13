@@ -1,0 +1,64 @@
+{
+  "scope": "Existing durable source-name projection + authenticated legacy theme backup migration + Index navigability regression",
+  "productionFrozen": true,
+  "productionPaths": {
+    "sourceName": [
+      "reader-storage/src/sqlite_backend.rs::source_names_for_ids",
+      "reader-runtime/src/remote.rs::entry_to_data/entries_to_data/shelf_source_display_name",
+      "reader-contract/src/remote.rs::BookshelfEntryData",
+      "reader-runtime/src/reader_ui_source_switch.rs optional constructor only",
+      "ReaderCoreGateway.ts"
+    ],
+    "legacyTheme": [
+      "reader-runtime/src/remote.rs::decode_webdav_host_configuration/decode_webdav_storage_backup/PendingWebDavTransaction",
+      "reader-contract/src/remote.rs::SyncWebDavTransactionStartParams/SyncWebDavTransactionData",
+      "protocol/reader-command.schema.json",
+      "protocol/reader-event.schema.json"
+    ]
+  },
+  "validation": {
+    "affectedNextest": 73,
+    "affectedNextestFailed": 0,
+    "latestEncryptedFullTransactionAndDto": 2,
+    "latestEncryptedFullTransactionAndDtoFailed": 0,
+    "sourceColdSqliteAndUnsafeNameFinal": 2,
+    "sourceScopedSqliteBatchWithActualListFailure": 1,
+    "bookshelfDtoTests": 20,
+    "hostNameFailureRenameDeleteIsolation": "PASS",
+    "indexNavigableProjection": "PASS",
+    "schemaFixtures": 269,
+    "schemaUnexpectedInvalid": 0,
+    "schemaUnexpectedValid": 0,
+    "workspaceAllTargetsClippy": "PASS",
+    "finalAffectedClippy": "PASS",
+    "fmt": "PASS",
+    "strictDrift": "PASS"
+  },
+  "constraints": [
+    "No new persisted bookshelf source-name field or cache system; existing SQLite Source.name remains authoritative",
+    "A missing source row is removed, a failed query remains an error; source.list failure does not become deletion",
+    "No URL/sourceId display; unsafe current name has explicit unavailable label",
+    "Legacy four-field theme shape is admitted only inside authenticated manifest-checked restore, public SyncHostConfig DTO remains canonical and strict",
+    "Current runtime systemScheme is never backed up; classification diagnostic is outside Host selection config",
+    "No Index production edits by this agent; root owns projection/labels and other agent owns SyncGateway fields",
+    "No device operation or git commit by this agent"
+  ],
+  "sha256": {
+    "reader-shelf-source-name-red.log": "a5ea9e20ff84e70b0439af41b96d06d24944fff2b97008667919c80d21c13643",
+    "reader-shelf-source-name-runtime.log": "c2ff6b52b0a2a053dfc8db9149a891d92c13c252b9dd875dcfe2fe2fe9567675",
+    "reader-shelf-source-name-final.log": "af4a1e9e3ba9713d8e6aa0a88839a8aa7b94eaa8cd72cf30acfc1ef5d21b66fc",
+    "reader-shelf-source-name-storage-sqlite.log": "25e100dd0b01c287cf4ccb353492b99446636b56d0b369a4fa7a56b652aac767",
+    "reader-shelf-source-name-dto.log": "2265370df0109071e07621dc8931e222d1f53a69c37b3aa7e0a2575496fe00e2",
+    "reader-shelf-source-name-host.log": "2d20e8cf4898af9fa1e0422a204158777ef1feb1db5b9694531ed598fe0358cf",
+    "reader-shelf-source-name-host-hydration-red.log": "ff30d25591d9dc2752da320966d0043934ee5931fc2b53b28243092c26fd977d",
+    "reader-navigable-toc-index-final.log": "33710cae90508ce3fde704dae2a03eed3c83c0512cad9c707b5a9f17b74c203b",
+    "reader-theme-legacy-runtime.log": "10ebda0494d833bb224a2790a94219c31410174e48b15bc2db6ce42a5f7b34f8",
+    "reader-theme-legacy-final-chain.log": "84c9e82fe87a4c7203afa9a42692945cf01d885a98c9d26c1ba43a5f4031e709",
+    "reader-shelf-theme-affected-nextest.log": "81bf94d09d0c4bdee97980c01b5497ce51b378bf339c6ce10067ce586b7bb536",
+    "reader-shelf-theme-clippy.log": "85d6ca92fb2bfc701622d086980b33a4991513ef9d2ed28cd58f50a7552d6116",
+    "reader-shelf-theme-final-clippy.log": "0da9cb7c184d8b2892796cc77b780ca1fadc69565a3589b27dec8fda9281c00b",
+    "reader-shelf-theme-fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reader-shelf-theme-schema-lint.json": "f5abbd71d121335c8e4eed9e791ebe43aaf40c516ae46ac78bfbb81b3d99a8c2",
+    "reader-shelf-theme-drift.log": "6266a3b5298a8808766d77ac62fe6fa2d6354e46de8b57b9dc98e85e08097f87"
+  }
+}

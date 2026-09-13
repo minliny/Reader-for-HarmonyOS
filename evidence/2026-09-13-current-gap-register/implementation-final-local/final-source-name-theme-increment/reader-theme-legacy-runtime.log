@@ -1,0 +1,17 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.16s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-4aaa4ad2ac3c4a10)
+
+running 3 tests
+test remote::webdav_legacy_theme_tests::legacy_theme_migration_preserves_strict_public_dto_and_exact_historical_ids ... ok
+test remote::webdav_legacy_theme_tests::legacy_theme_unknown_id_uses_explicit_observations_without_name_guessing ... ok
+test remote::webdav_legacy_theme_tests::authenticated_legacy_theme_backup_crosses_actual_decrypt_manifest_and_typed_boundary ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 351 filtered out; finished in 13.20s
+

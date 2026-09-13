@@ -1,0 +1,3 @@
+production canonical TOC headings, initial/previous/next/control guards and hot projection reuse: PASS
+(node:99234) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

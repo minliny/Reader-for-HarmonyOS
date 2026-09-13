@@ -1,0 +1,14 @@
+bookturn_motion_test: 538 checks, 0 failures
+373 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+245 checks, 0 failures

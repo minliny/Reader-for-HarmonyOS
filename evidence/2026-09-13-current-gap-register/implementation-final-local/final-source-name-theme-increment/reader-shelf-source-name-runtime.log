@@ -1,0 +1,19 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 11.28s
+     Running tests/runtime_integration.rs (target/check/debug/deps/runtime_integration-146dced0c996c0f5)
+
+running 5 tests
+test bookshelf_list_commands::shelf_keeps_books_with_legacy_envelope_and_damaged_toc_caches ... ok
+test bookshelf_list_commands::shelf_source_name_never_exposes_source_identity_or_url ... ok
+test bookshelf_list_commands::bookshelf_list_has_reading_progress_filter_is_true_false_or_absent ... ok
+test bookshelf_list_commands::shelf_source_name_survives_cold_sqlite_without_new_shelf_fields_and_tracks_rename_delete ... ok
+test bookshelf_list_commands::toc_then_shelf_list_preserves_unread_book ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 624 filtered out; finished in 0.19s
+

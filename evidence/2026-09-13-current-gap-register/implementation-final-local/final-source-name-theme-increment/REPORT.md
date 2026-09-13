@@ -1,0 +1,9 @@
+# 最终增量：持久书源名与旧主题备份
+
+Core直接从现有SQLite sources.source_json.name投影书架sourceName；批量按书架source ID读取，复用一把锁与一条prepared SQL，不载入整库规则。旧bookshelf缺字段不需要迁移，改名立即可见，删源明确“书源已移除”，暂时source.list失败不覆盖持久名称。来源本地只认sourceId=local；URL/identity不会用于显示。未改进度、书籍metadata所有权或书签。
+
+旧主题精准四字段仅在AES认证、包ID/manifest校验后的解密config边界迁移；新/外部typed DTO继续严格拒绝该旧形状与未知键。历史八ID精确确定类型；未知按固定应用模式→实际systemScheme→当前effective，完全无观测抛THEME_LEGACY_SCHEME_UNAVAILABLE。systemScheme仅事务内存；themeMigrationReason仅冲突/apply结果诊断，Host消费者已由对应owner接入，不入备份。实际加密包通过完整start/list/download/conflict/resolve链，错误密码和包ID仍拒绝。
+
+受影响73项nextest通过，追加加密全链与DTO2项通过，末轮源名2项通过，SQLite源表损坏隔离1项通过，书架DTO20项通过；Harmony实际生产方法覆盖source.list失败、rename/delete、跨source同book隔离、URI/www与title projection卷标题保护。schema269样例0异常，clippy/fmt/strict drift通过。见SUMMARY.json与原始日志；旧失败也保留。
+
+没有新增设备证据，也没有代替root统一产物/ArkTS集成与用户验收。

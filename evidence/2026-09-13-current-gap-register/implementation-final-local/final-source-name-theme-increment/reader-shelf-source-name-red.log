@@ -1,0 +1,28 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.62s
+     Running tests/runtime_integration.rs (target/check/debug/deps/runtime_integration-146dced0c996c0f5)
+
+running 2 tests
+
+thread 'bookshelf_list_commands::shelf_source_name_never_exposes_source_identity_or_url' (59693198) panicked at crates/reader-runtime/tests/bookshelf_list_commands.rs:235:9:
+assertion `left == right` failed
+  left: Null
+ right: "书源名称暂不可用"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bookshelf_list_commands::shelf_source_name_never_exposes_source_identity_or_url ... FAILED
+
+thread 'bookshelf_list_commands::shelf_source_name_survives_cold_sqlite_without_new_shelf_fields_and_tracks_rename_delete' (59693199) panicked at crates/reader-runtime/tests/bookshelf_list_commands.rs:212:125:
+called `Option::unwrap()` on a `None` value
+test bookshelf_list_commands::shelf_source_name_survives_cold_sqlite_without_new_shelf_fields_and_tracks_rename_delete ... FAILED
+
+failures:
+
+failures:
+    bookshelf_list_commands::shelf_source_name_never_exposes_source_identity_or_url
+    bookshelf_list_commands::shelf_source_name_survives_cold_sqlite_without_new_shelf_fields_and_tracks_rename_delete
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 627 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p reader-runtime --test runtime_integration`

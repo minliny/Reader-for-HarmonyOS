@@ -1,0 +1,9 @@
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.21s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_storage-515cd41ae3587b17)
+
+running 1 test
+test sqlite_backend::tests::shelf_source_name_projection_does_not_depend_on_full_source_list ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 143 filtered out; finished in 0.01s
+

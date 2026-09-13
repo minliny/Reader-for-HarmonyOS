@@ -1,0 +1,10 @@
+production adjacent measurement isolation, cancellation and rejected admission: PASS
+production current snapshot remains bound to physical slot after promotion: PASS
+async texture copy preserves lifetime and rejects superseded capture: PASS
+(node:4658) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production evicted previous chapter: demand refill, coalescing, stale/failed replies and explicit retry: PASS
+production promotion preparation honors requested direction and stale callback guard: PASS
+production image snapshot admission: cold decode, no blank publication, bounded retry, stale/held cancellation and one disposal: PASS
+single offscreen snapshot tree: detach immediately, dispose once after outstanding capture: PASS
+snapshot publication interruption: pointer retains exact pixels; new page/exit drops them; UP revalidates upload: PASS

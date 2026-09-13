@@ -1,0 +1,60 @@
+{
+  "scope": "Core complete local test gate; no artifact/device acceptance",
+  "nextest": {
+    "uniqueTests": 3718,
+    "initialPass": 3713,
+    "initialFailures": {
+      "staleAssertions": 2,
+      "sandboxLoopbackBindDenied": 3
+    },
+    "assertionRetest": {
+      "pass": 2,
+      "fail": 0
+    },
+    "localLoopbackRetestRequireEscalated": {
+      "pass": 3,
+      "fail": 0
+    },
+    "remainingFailures": 0,
+    "note": "Do not describe as a single all-green run. All 3718 unique cases have passing evidence; only failed cases rerun."
+  },
+  "cliConformance": {
+    "pass": 210,
+    "fail": 0
+  },
+  "contractDrift": {
+    "strict": true,
+    "status": "PASS",
+    "coreMethods": 185,
+    "structuralDrift": 0,
+    "releaseBlockers": 0
+  },
+  "ffiSmoke": {
+    "symbolCheck": "PASS",
+    "c": "PASS",
+    "cpp": "PASS",
+    "profile": "smoke"
+  },
+  "fmtCheck": "PASS",
+  "productionChangedInFinalGate": false,
+  "changedTestFiles": [
+    "tests/fixtures/host_replay/request_session_search.json",
+    "tests/fixtures/host_replay/remote_reading_e2e_suite.json",
+    "tests/fixtures/host_replay/legado_desensitized_corpus_suite.json",
+    "crates/reader-content/src/lib.rs (test only)",
+    "tools/reader-cli/src/conformance.rs (conformance assertion only)"
+  ],
+  "evidenceSha256": {
+    "reader-core-replay-gate.log": "596fa6fcdb7610e2be64ef06ba05314498d4a053f2d61afcfab3e33f44a4087f",
+    "reader-core-replay-fault-retest-attempt1.log": "1a64bf5dff60823a6e07663209ff88b81373f9547e51af9d423bccebe7d96f5d",
+    "reader-core-replay-fault-retest.log": "358aaf79328252efaf06a71274bc38915da151e7581b0e6d3b9626025012bc48",
+    "reader-core-final-loopback-retest.log": "c752d84e68bc8053e42964696b826a2a28695639a4a5c514870f6ce764e1d5f0",
+    "reader-core-final-cli-conformance.json": "edd83647104b4ceaca3e2f8fb29d8889939be64a869e2d56255b75d23bfa4616",
+    "reader-core-final-cli-conformance-attempt1.json": "ddda09be43a75e61bcc867afc9b5fb67310e52105fe82e2b31a3a3586ffc2bb3",
+    "reader-core-final-cli-conformance.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reader-core-final-contract-drift.log": "6266a3b5298a8808766d77ac62fe6fa2d6354e46de8b57b9dc98e85e08097f87",
+    "reader-core-final-ffi-smoke.log": "d5abbfd39af825e9c5e4f875608d6708ab5b0b7a7997d565c7f7d81e3dde23ac",
+    "reader-core-replay-fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reader-replay-summary-derivation.json": "439b7a9385694c7d97c1e66c5808cf1444c49cb320e3a3550bd276d2f78bc0dc"
+  }
+}

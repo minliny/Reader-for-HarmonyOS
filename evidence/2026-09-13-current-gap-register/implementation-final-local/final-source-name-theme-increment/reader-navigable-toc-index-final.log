@@ -1,0 +1,4 @@
+production canonical TOC headings, initial/previous/next/control guards and hot projection reuse: PASS
+PASS Index directory title projection and local/remote known-chapter guards preserve canonical headings
+(node:82360) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

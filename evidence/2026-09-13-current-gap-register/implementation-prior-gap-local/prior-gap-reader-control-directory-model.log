@@ -1,0 +1,5 @@
+Production directory model: late load, centering ownership, route/data independence PASS
+Production Directory virtual-row capture, fraction, frame coalescing and late-user-input guards PASS
+Production Directory rapid tab replacement, endpoint anchor release and user-scroll ownership PASS
+(node:4662) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
