@@ -1,0 +1,50 @@
+(node:88000) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: old cancellation cannot revive reading after retry success
++ actual - expected
+... Skipped lines
+
+  [
+    'capsule-finished',
+    'stop',
+    'record',
+    'progress',
+...
+    'route',
++   'resume-record'
+  ]
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-bookshelf-reading-entry.mjs:311:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'capsule-finished',
+    'stop',
+    'record',
+    'progress',
+    'capsule-finished',
+    'stop',
+    'record',
+    'route',
+    'resume-record'
+  ],
+  expected: [
+    'capsule-finished',
+    'stop',
+    'record',
+    'progress',
+    'capsule-finished',
+    'stop',
+    'record',
+    'route'
+  ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

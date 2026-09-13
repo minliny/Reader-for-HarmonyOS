@@ -1,0 +1,20 @@
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: empty authors must reserve the original 15vp second row
+
+undefined !== 15
+
+    at verifyAuthor (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-bookshelf-view-and-menu.mjs:43:9)
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-bookshelf-view-and-menu.mjs:49:1 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: undefined,
+  expected: 15,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

@@ -1,0 +1,21 @@
+(node:55402) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Info must enter durable exit immediately, not be consumed as control Back
+
+false !== true
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-bookshelf-reading-entry.mjs:278:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
