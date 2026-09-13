@@ -19,12 +19,11 @@ import {
 
 const initial = createDefaultReaderSettingsSnapshot();
 assert.deepEqual(initial, {
-  version: 4,
+  version: 5,
   screenDirection: 'system',
   navigationMode: 'paged',
   pageTransition: 'slide',
   screenTimeout: 'system',
-  hideStatusBar: true,
   hideNavigationBar: false,
   extendIntoCutout: false,
   justifyText: false,
@@ -52,7 +51,7 @@ const normalized = normalizeReaderSettingsSnapshot({
 assert.equal(normalized.screenDirection, 'landscape');
 assert.equal(readerPageTurnStyle(normalized), 'cover');
 assert.equal(normalized.screenTimeout, 'alwaysOn');
-assert.equal(normalized.hideStatusBar, false, 'V4 must preserve the explicit user choice');
+assert.equal('hideStatusBar' in normalized, false, 'V5 only persists the single cutout switch');
 assert.equal(normalized.hideNavigationBar, true);
 assert.equal(normalized.extendIntoCutout, true);
 assert.equal(normalized.volumeKeysTurnPage, true);
@@ -75,12 +74,12 @@ const migratedV1 = normalizeReaderSettingsSnapshot({
   stopTtsOnScreenOff: true,
   longPressSelectText: true,
 });
-assert.equal(migratedV1.version, 4);
+assert.equal(migratedV1.version, 5);
 assert.equal(migratedV1.navigationMode, 'continuous');
 assert.equal(migratedV1.pageTransition, 'slide');
 assert.equal(readerPageTurnStyle(migratedV1), 'scroll');
 assert.equal(migratedV1.justifyText, false, 'Appearance remains the only justification owner');
-assert.equal(migratedV1.hideStatusBar, true, 'legacy settings migrate to the immersive default');
+assert.equal(migratedV1.extendIntoCutout, false, 'explicit legacy cutout false wins');
 
 const migratedV2 = normalizeReaderSettingsSnapshot({
   version: 2,
@@ -97,9 +96,8 @@ const migratedV2 = normalizeReaderSettingsSnapshot({
   stopTtsOnScreenOff: false,
   longPressSelectText: false,
 });
-assert.equal(migratedV2.version, 4);
-assert.equal(migratedV2.hideStatusBar, true,
-  'V2 false was the old product default and must migrate once rather than override V3');
+assert.equal(migratedV2.version, 5);
+assert.equal(migratedV2.extendIntoCutout, false, 'legacy explicit cutout false is preserved');
 assert.equal(migratedV2.hideNavigationBar, true, 'unrelated legacy choices must survive migration');
 assert.equal(migratedV2.longPressSelectText, true,
   'legacy installs must receive the now-functional native text-selection path once');
@@ -109,7 +107,7 @@ const migratedV3 = normalizeReaderSettingsSnapshot({
   version: 3,
   longPressSelectText: false,
 });
-assert.equal(migratedV3.version, 4);
+assert.equal(migratedV3.version, 5);
 assert.equal(migratedV3.longPressSelectText, true,
   'the old disabled-by-default V3 value must migrate to enabled once');
 
@@ -130,7 +128,7 @@ assert.equal(setReaderSettingsToggle(initial, 'alignPageBottom', true).alignPage
 assert.equal(setReaderSettingsToggle(initial, 'longPressSelectText', true).longPressSelectText, true);
 assert.equal(setReaderSettingsToggle(initial, 'volumeKeysTurnPage', true).volumeKeysTurnPage, true);
 assert.equal(setReaderSettingsToggle(initial, 'stopTtsOnScreenOff', true).stopTtsOnScreenOff, true);
-assert.equal(setReaderSettingsToggle(initial, 'hideStatusBar', false).hideStatusBar, false);
+assert.throws(() => setReaderSettingsToggle(initial, 'hideStatusBar', false), /unavailable Reader Host/);
 assert.equal(setReaderSettingsToggle(initial, 'hideNavigationBar', true).hideNavigationBar, true);
 assert.equal(setReaderSettingsToggle(initial, 'extendIntoCutout', true).extendIntoCutout, true);
 assert.equal(setReaderScreenDirection(initial, 'portrait').screenDirection, 'portrait');
@@ -148,7 +146,7 @@ assert.equal(isReaderPageTurnStyleAvailable('scroll'), true);
 assert.equal(isReaderScreenTimeoutAvailable('system'), true);
 assert.equal(isReaderScreenTimeoutAvailable('alwaysOn'), true);
 assert.equal(isReaderScreenTimeoutAvailable('fiveMinutes'), true);
-assert.equal(isReaderSettingsToggleAvailable('hideStatusBar'), true);
+assert.equal(isReaderSettingsToggleAvailable('hideStatusBar'), false);
 assert.equal(isReaderSettingsToggleAvailable('hideNavigationBar'), true);
 assert.equal(isReaderSettingsToggleAvailable('extendIntoCutout'), true);
 assert.equal(isReaderSettingsToggleAvailable('justifyText'), false);
@@ -190,7 +188,7 @@ assert.match(fullPanel, /return Math\.max\(0, this\.sheetHeight\(\) - 70\)/);
 assert.equal((fullPanel.match(/return Math\.max\(0, this\.sheetWidth\(\) - 26\)/g) ?? []).length, 2,
   'settings header and viewport must both derive from the actual sheet width');
 assert.match(fullPanel, /return Math\.max\(0, this\.viewportWidth\(\) - 30\)/);
-assert.match(fullPanel, /Image\(\$r\('app\.media\.reader_settings_header'\)\)[\s\S]*?\.width\(20\)[\s\S]*?\.height\(20\)/,
+assert.match(fullPanel, /Image\([\s\S]*?\$r\('app\.media\.reader_settings_header'\)[\s\S]*?\)[\s\S]*?\.width\(20\)[\s\S]*?\.height\(20\)/,
   'the full settings header must use its dedicated 20px Figma outline glyph');
 assert.doesNotMatch(fullPanel, /\.fillColor\(/,
   'runtime tinting must not turn the outline settings glyph into a filled silhouette');
@@ -198,7 +196,7 @@ assert.match(fullPanel, /this\.sectionTitle\('屏幕样式', false\)/);
 assert.match(fullPanel, /this\.sectionTitle\('导航状态栏', true\)/);
 assert.match(fullPanel, /this\.sectionTitle\('排版', true\)/);
 assert.match(fullPanel, /this\.sectionTitle\('控制', true\)/);
-for (const label of ['隐藏状态栏', '隐藏导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
+for (const label of ['隐藏导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
   '底部对齐', '音量键翻页', '息屏终止朗读', '长按选择文本']) {
   assert.ok(fullPanel.includes(label), `missing Figma settings row: ${label}`);
 }
@@ -210,7 +208,7 @@ assert.match(fullPanel, /与阅读样式同步/);
 assert.match(gateway, /ReaderRuntimeOwner/);
 assert.match(gateway, /getUIAbilityContext\(\)/);
 assert.match(gateway, /reader_reading_settings_v1/);
-assert.match(gateway, /decoded\.version !== 4[\s\S]*?store\.put\(READER_SETTINGS_SNAPSHOT_KEY, JSON\.stringify\(normalized\)\)/,
+assert.match(gateway, /decoded\.version !== 5[\s\S]*?store\.put\(READER_SETTINGS_SNAPSHOT_KEY, JSON\.stringify\(normalized\)\)/,
   'legacy settings migration must be persisted so V4 owns subsequent explicit choices');
 assert.doesNotMatch(gateway, /\.request\(/,
   'Reader Settings must not misuse Reader Core or invent a Host command');
@@ -235,7 +233,7 @@ assert.match(settingsBinding, /onAppearanceAlignmentRequest\(this\.appearanceSna
 for (const callback of ['onPageTurnStyleChange', 'onScreenDirectionChange', 'onScreenTimeoutChange', 'onSettingsToggleChange']) {
   assert.ok(settingsBinding.includes(`this.${callback}(`), `actual Settings business callback lost: ${callback}`);
 }
-for (const label of ['隐藏状态栏', '隐藏导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
+for (const label of ['隐藏导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
   '底部对齐', '音量键翻页', '息屏终止朗读', '长按选择文本']) {
   assert.ok(sharedContent.includes(label), `active Settings row lost: ${label}`);
 }
@@ -256,10 +254,10 @@ assert.match(experience,
   /private onWindowChromeActiveChanged\(\): void \{[\s\S]*?this\.applyWindowChrome\(\);[\s\S]*?this\.applyWindowPolicyForChromeOwner\(\)/,
   'the visible-reader transition must apply chrome and system-bar policy together');
 assert.match(experience,
-  /private applyWindowPolicyForChromeOwner\(\): void \{[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?this\.applyReaderWindowPolicy\(this\.readerSettingsSnapshot, this\.controlVisible\(\)\)[\s\S]*?ReaderWindowCoordinator\.requestAppWindowPolicy\(\)/,
+  /private applyWindowPolicyForChromeOwner\(\): void \{[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?this\.applyReaderWindowPolicy\(this\.readerSettingsSnapshot, this\.controlsPresentedForWindow\(\)\)[\s\S]*?ReaderWindowCoordinator\.requestAppWindowPolicy\(\)/,
   'a hidden warm reader must preserve the app policy until it owns the screen');
 assert.match(experience,
-  /safeWindowSettingsFallback\([\s\S]*?version: 4[\s\S]*?hideStatusBar: true/,
+  /safeWindowSettingsFallback\([\s\S]*?version: 5[\s\S]*?extendIntoCutout: false/,
   'a Host failure must keep the requested immersive status-bar default');
 assert.match(experience, /ReaderScreenAwakeLease/);
 assert.match(experience, /this\.screenAwakeLease\?\.configure\(snapshot\.screenTimeout, this\.appForeground\)/);
@@ -272,3 +270,14 @@ assert.match(coordinator, /AUTO_ROTATION_UNSPECIFIED/,
   'follow-system orientation must respect the user rotation-lock policy');
 
 console.log('reader settings pure/static contract: PASS');
+
+for (const version of [1,2,3,4,5]) for (const hide of [false,true]) for (const extend of [false,true]) {
+  const migrated=normalizeReaderSettingsSnapshot({...initial,version,hideStatusBar:hide,extendIntoCutout:extend});
+  assert.equal(migrated.extendIntoCutout,extend);assert.equal('hideStatusBar' in migrated,false);
+}
+for (const version of [1,2,3,4]) for (const hide of [false,true]) {
+  const raw={...initial,version,hideStatusBar:hide};delete raw.extendIntoCutout;
+  assert.equal(normalizeReaderSettingsSnapshot(raw).extendIntoCutout,version>=3?hide:false);
+}
+assert.doesNotMatch(sharedContent,/隐藏状态栏|snapshot\.hideStatusBar/);
+assert.doesNotMatch(fullPanel,/隐藏状态栏|snapshot\.hideStatusBar/);

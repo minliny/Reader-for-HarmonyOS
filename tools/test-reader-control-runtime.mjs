@@ -126,14 +126,14 @@ for (const terminalTimestamp of [4990e6, NaN, -1, 0]) {
 // routing object must stay identical across 100 visual updates, while actor
 // geometry and input admission continue to follow every runtime sample.
 const Panel = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url),
-  ['acceptRuntime', 'rememberVisibleContentLocation', 'contentLocation', 'frame', 'contentInputEnabled'], sessionPolicy);
+  ['acceptRuntime', 'rememberVisibleContentLocation', 'contentLocation', 'frame', 'contentInputEnabled', 'controlPanelHeight', 'confirmLaunchSourceReady'], sessionPolicy);
 for (const module of modules) {
   const owner = Object.assign(new Panel(), {
     runtimeMounted: true, visualSession: createReaderControlSessionState(),
     lastVisibleContentLocation: {level:'home',module:'directory',directoryTab:'directory',form:'quick'},
     inputEnabled: true, controlObscured: false,
     layout: {fullPanelWidth:390,fullPanelHeight:750,dockBottomGap:20},
-    controlQuickHeight: () => 330, dockLeft: () => 0, dockTop: () => 0,
+    isExpanded: () => false, controlQuickHeight: () => 330, dockLeft: () => 0, dockTop: () => 0,
     rootScreenX: 0, rootScreenY: 0, onVisualSessionChange() {}, commitVisualSession() {},
     dockRect: {x:0,y:0,width:0,height:0}, backdropRegions: [],
     reportBackdropRegions() {}, scheduleRuntimeFrame() {},

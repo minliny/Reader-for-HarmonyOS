@@ -24,7 +24,7 @@ assert.match(reader, /this\.phase = 'ready';\s*this\.beginReadingRecordClock\(li
 assert.match(reader, /const READING_RECORD_FLUSH_INTERVAL_MS = 30000/);
 assert.match(reader, /private readingRecordFlushTail: Promise<void> = Promise\.resolve\(\)/);
 assert.match(reader, /if \(!this\.appForeground\) \{[\s\S]*?this\.captureReadingRecordElapsed\(false\);\s*this\.clearReadingRecordTimer\(\);\s*void this\.flushReadingRecord\(\);/);
-assert.match(reader, /this\.exitRequested = true;\s*this\.captureReadingRecordElapsed\(false\);/);
+assert.match(reader, /this\.exitRequested = true;\s*this\.stopReaderTtsAudition\(\);\s*this\.captureReadingRecordElapsed\(false\);/);
 assert.match(reader, /await this\.flushReadingRecordForExit\(\);[\s\S]*await this\.commitVisiblePage\(lifecycleToken\);/);
 assert.match(reader, /this\.exitDelivered = true;\s*this\.onExit\(\);/);
 

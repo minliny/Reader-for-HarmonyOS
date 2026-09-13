@@ -93,7 +93,7 @@ assert.match(readingSurface, /\.fontSize\(this\.appearance\.fontSize\)/,
   'body text must remain driven by Reader Appearance instead of a global UI role');
 assert.match(readingSurface, /\.lineHeight\(readerAppearanceLineHeight\(this\.appearance\)\)/);
 
-assert.match(entryAbility, /onConfigurationUpdate\(_newConfig: Configuration\)[\s\S]*ReaderWindowCoordinator\.refreshConfiguration\(\)/);
+assert.match(entryAbility, /onConfigurationUpdate\(newConfig: Configuration\)[\s\S]*ReaderWindowCoordinator\.refreshConfiguration\(\)/);
 assert.match(windowCoordinator,
   /static refreshConfiguration\(\): void \{\s*ReaderWindowCoordinator\.refreshMetrics\(\);\s*\}/,
   'system font-scale changes must advance the same metrics revision consumed by pagination');

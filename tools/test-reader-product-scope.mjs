@@ -43,8 +43,9 @@ assert.match(settings,
   /if \(isReaderProductSurfaceEnabled\('sync'\)\) \{[\s\S]*this\.navRow\('同步与备份'/,
   'Settings must not expose Sync outside its admitted product profile');
 assert.match(settings,
-  /if \(isReaderProductSurfaceEnabled\('unimplementedSettings'\)\) \{[\s\S]*this\.navRow\('书架与搜索设置'[\s\S]*this\.navRow\('关于与反馈'/,
+  /if \(isReaderProductSurfaceEnabled\('unimplementedSettings'\)\) \{[\s\S]*this\.navRow\('关于与反馈'/,
   'empty Settings destinations must remain outside L0');
+assert.match(settings, /this\.navRow\('书架设置'[\s\S]*?this\.onOpenBookshelfSettings\)/, 'implemented shelf settings has a real destination');
 
 const generalBuilder = settings.match(/private buildGeneral\(\) \{([\s\S]*?)\n  \}\n\n  @Builder/);
 assert.ok(generalBuilder);

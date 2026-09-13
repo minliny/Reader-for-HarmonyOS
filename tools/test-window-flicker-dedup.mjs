@@ -60,7 +60,7 @@ assert.match(coordinator,
   'policy equality must cover all five semantic fields');
 // Callers must keep awaiting the deduped promise (persistence continues).
 assert.match(experience,
-  /private applyReaderWindowPolicy\(snapshot: ReaderSettingsSnapshot,\s*forceStatusBarVisible: boolean = false\): Promise<void> \{\s*return ReaderWindowCoordinator\.requestReaderWindowPolicy\(this\.windowPolicyFor\(snapshot, forceStatusBarVisible\)\);/,
+  /private applyReaderWindowPolicy\(snapshot: ReaderSettingsSnapshot,\s*forceStatusBarVisible: boolean = this\.controlsPresentedForWindow\(\)\): Promise<void> \{\s*return ReaderWindowCoordinator\.requestReaderWindowPolicy\(this\.windowPolicyFor\(snapshot, forceStatusBarVisible\)\);/,
   'the settings commit path must keep awaiting the coordinator promise');
 
 // Fix 2: a refresh-only shelf read that transiently reports empty must not

@@ -57,9 +57,11 @@ assert.match(managementPage, /readerSourceCategoryLabel\(source\.category\)/,
   '管理页必须展示每个书源的类别');
 assert.match(managementPage, /matchesQuery && matchesGroup && matchesCategory && this.matchesStatus/);
 const index = read('entry/src/main/ets/pages/Index.ets');
-assert.match(index, /sessionAdmission: Promise<RemoteDetailAdmission> = new SourceGateway\(owner\).loadSources\(\)/);
-assert.match(index, /if \(!readerSourceCategoryIsText\(selectedSource.category\)\)/);
-assert.match(index, /openSearchSessionCacheFirst\(gateway, novelSeeds, isCurrent\)/);
+assert.match(index, /owner\.bookAcquisitions\(\)[\s\S]*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/);
+const coordinator = read('entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+assert.match(coordinator, /if \(!isRemoteReadingCacheRecoveryEligible\(classified\)\) throw classified/,
+  'only recoverable cache states may pass into live source admission; stopped sources remain offline-readable');
+assert.match(coordinator, /if \(version === undefined\)[\s\S]*gateway\.openSession\(actual, \{ isCurrent \}\)/);
 
 const collection = JSON.parse(read('entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'));
 const rows = Array.isArray(collection) ? collection : collection.sources;

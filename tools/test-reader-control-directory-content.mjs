@@ -1,9 +1,10 @@
+import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 // Structural wiring checks only. These do not claim ArkTS compilation, touch,
 // first-frame ordering, or visual parity; production policy executes separately.
-const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const read = (path) => themeDayDesignSource(fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'));
 const content = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
 const panel = read('entry/src/main/ets/features/reading/ReaderControlPanel.ets');
 

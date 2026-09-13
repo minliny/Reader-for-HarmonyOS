@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 
 import {
   ReaderControlGeometry,
@@ -118,11 +119,15 @@ const directoryList = await readFile(new URL('ReaderDirectoryList.ets', readingD
 assert.match(directory, /\.height\(READER_DIRECTORY_VIEWPORT_HEIGHT\)\s*\.clip\(true\)/);
 assert.match(directoryList, /\.height\('100%'\)/);
 assert.match(directory, /return readerDirectoryScrollY\(entries\.length, currentIndex\)/);
-assert.match(directory, /DIRECTORY_EDGE_FADE_COLOR = '#D9FFFCF8'/);
-assert.match(directory, /DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR = '#00FFFCF8'/);
+assert.equal(readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR', 'day'), '#D9FFFCF8');
+assert.equal(readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR', 'day'), '#00FFFCF8');
+assert.equal(readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR', 'night'), '#D92A2622');
+assert.equal(readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR', 'night'), '#002A2622');
 assert.match(directory, /return readerDirectoryIsScrollable\(this\.projectedEntries\.length\)/);
-assert.match(directory, /direction: GradientDirection\.Bottom,[\s\S]*colors: \[\[DIRECTORY_EDGE_FADE_COLOR, 0\], \[DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR, 1\]\]/);
-assert.match(directory, /direction: GradientDirection\.Top,[\s\S]*colors: \[\[DIRECTORY_EDGE_FADE_COLOR, 0\], \[DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR, 1\]\]/);
+for (const direction of ['Bottom', 'Top']) {
+  assert.ok(directory.includes(`direction: GradientDirection.${direction}`));
+}
+assert.equal(directory.split("colors: [[readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_COLOR', this.appThemeScheme), 0], [readerAppColor('app.ReaderDirectoryModulePanel.DIRECTORY_EDGE_FADE_TRANSPARENT_COLOR', this.appThemeScheme), 1]]").length - 1, 2);
 assert.equal((directory.match(/\.height\(READER_DIRECTORY_EDGE_FADE_HEIGHT\)/g) ?? []).length, 2,
   'the directory viewport must own one 18vp fade at each edge');
 assert.match(directory, /\.height\(READER_DIRECTORY_VIEWPORT_HEIGHT\)[\s\S]*\.hitTestBehavior\(HitTestMode\.Transparent\)/);
@@ -135,7 +140,7 @@ assert.match(controlPanel, /@Prop @Watch\('onLayoutChanged'\) layout: ReaderCont
   'all reader-control states must consume one owner-resolved layout snapshot');
 assert.match(controlPanel, /readerControlMotionBounds\(this\.layout\.fullPanelWidth/);
 assert.match(controlPanel,
-  /private dockTop\(\): number\s*\{\s*return this\.layout\.viewportHeight\s*-\s*this\.layout\.dockBottomGap\s*-\s*this\.layout\.fullPanelHeight/);
+  /private dockTop\(\): number\s*\{\s*return this\.layout\.viewportHeight\s*-\s*this\.layout\.dockBottomGap\s*-\s*this\.controlPanelHeight\(\)/);
 assert.match(controlPanel, /this\.layout\.fullPanelRightGap/);
 assert.doesNotMatch(controlPanel, /READER_CONTROL_MODULE_NAV_MAX_WIDTH/);
 

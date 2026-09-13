@@ -12,7 +12,7 @@ const remoteGateway = read('entry/src/main/ets/features/reading/RemoteReadingFlo
 
 assert.match(index, /private onSearchResultSelected\(book: SearchBook, variants: SearchBook\[\] = \[\]\): void \{/,
   'a live remote search result enters the remote open transaction with same-book variants ordered behind it');
-assert.match(index, /gateway\.openSession\(seed, \{ isCurrent \}\)/,
+assert.match(index, /\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'remote detail and TOC must retain the route-generation cancellation guard');
 assert.match(index, /void bookshelf\.loadShelfBook\(session\.identity\.sourceId, session\.identity\.bookId\)/,
   'shelf reconciliation must reuse the existing composite entry without resetting Core metadata');
@@ -24,7 +24,7 @@ assert.match(index, /private addDetailBook\(\): void \{[\s\S]*new ReaderCoreGate
 assert.match(index, /new SourceGateway\(owner\)\.loadSources\(\)[\s\S]*source\.sourceId !== session\.identity\.sourceId/,
   'a persisted shelf book must resolve its display name from the existing Core source registry');
 const remoteOpen = index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private openReading('));
-assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('gateway.openSession(seed, { isCurrent })'),
+assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
   'remote navigation must publish the chosen shelf or detail entry before Core/network admission');
 assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.bookshelfRemovalActiveKey\.length === 0/,
   'source browsing remains available even when the current source catalog failed');

@@ -39,19 +39,19 @@ function metrics({
 
 const phoneReading = resolveReaderReadingLayout(390, 844, false, metrics({ systemTop: 48 }));
 assert.equal(phoneReading.widthClass, 'compact');
-assert.equal(phoneReading.contentTop, 72, 'Figma top remains the minimum screen-origin anchor');
-assert.equal(phoneReading.contentLeft, 32);
-assert.equal(phoneReading.contentRight, 32);
-assert.equal(phoneReading.bodyWidth(), 326);
+assert.equal(phoneReading.contentTop, 104, 'status area and equal-height information lane are reserved once before body text');
+assert.equal(phoneReading.contentLeft, 24);
+assert.equal(phoneReading.contentRight, 24);
+assert.equal(phoneReading.bodyWidth(), 342);
 const compactProfile = { compact: 24, expanded: 40 };
 const profiledReading = resolveReaderReadingLayout(390, 844, false, metrics(), false, compactProfile);
-assert.equal(profiledReading.contentLeft, 32,
-  'the authored profile cannot undercut the minimum Figma compact inset');
+assert.equal(profiledReading.contentLeft, 24,
+  'explicit insets are not silently clamped to the former hard-coded 32');
 const expandedProfile = { compact: 36, expanded: 52 };
 const profiledExpanded = resolveReaderReadingLayout(760, 960, true, metrics(), false, expandedProfile);
 assert.equal(profiledExpanded.contentLeft, 52,
   'a configured expanded inset is shared by pagination and rendering');
-assert.equal(DEFAULT_READER_CONTENT_INSET_PROFILE.compact, 32);
+assert.equal(DEFAULT_READER_CONTENT_INSET_PROFILE.compact, 24);
 
 const scaledTitle = resolveReaderReadingLayout(390, 844, false, metrics({ systemFontScale: 1.2 }));
 assert.equal(scaledTitle.titleTrackHeightVp, 28.75 * 1.2 + 18);
@@ -76,8 +76,8 @@ assert.equal(cutoutReading.bodyWidth(), 310,
   'pagination and rendering must consume the same symmetrically narrowed body width');
 const extendedCutoutReading = resolveReaderReadingLayout(390, 844, false,
   metrics({ cutoutLeft: 40 }), true);
-assert.equal(extendedCutoutReading.contentLeft, 32,
-  'extend-into-cutout removes only the cutout constraint while preserving the authored content inset');
+assert.equal(extendedCutoutReading.contentLeft, 40,
+  'extending the top information lane must not put body text beneath a lateral cutout');
 
 const phoneControl = resolveReaderControlLayout(
   390,
@@ -163,3 +163,22 @@ assert.doesNotMatch(control, /@Prop availableWidth|@Prop isTablet/,
   'control composition must not receive redundant raw width and physical-form parameters');
 
 console.log('reader layout architecture contract: PASS');
+
+for (const width of [320,360,390,430,599,600,760,1100]) {
+  const layout=resolveReaderReadingLayout(width,844,false,metrics());
+  const base=width<600?Math.max(16,Math.min(28,24*width/390)):Math.max(44.44,(width-720)/2);
+  assert.equal(layout.contentLeft,base);assert.equal(layout.contentRight,base);
+  assert.ok(Math.abs(layout.bodyWidth()-(width-2*base))<0.00001);
+}
+const retained=metrics();retained.statusBarHeight=48;
+const immersive=resolveReaderReadingLayout(390,844,false,retained,true);
+assert.equal(immersive.pageChromeTopRegionHeight,48);assert.equal(immersive.pageChromeVisualSafeTop,0);
+assert.ok(immersive.contentTop>=48+8);
+const visible=resolveReaderReadingLayout(390,844,false,retained,false);
+assert.equal(visible.pageChromeVisualSafeTop,48);assert.ok(visible.contentTop>=96+8);
+
+const keyboardFull = resolveReaderControlLayout(390, 844, false, metrics({ keyboardBottom: 300 }));
+const keyboardResized = resolveReaderControlLayout(390, 544, false, metrics({ keyboardBottom: 300 }));
+assert.equal(keyboardFull.fullPanelHeight, 844 - keyboardFull.fullPanelTop - 300);
+assert.equal(keyboardResized.fullPanelHeight, 544 - keyboardResized.fullPanelTop - 20,
+  'an already resized viewport does not subtract the same 300vp keyboard again');

@@ -1,302 +1,120 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
 import * as autoPolicy from '../entry/src/main/ets/features/reading/ReaderAutoPageState.ts';
-import { readerTtsSessionBlocksAutoPageStart } from
-  '../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts';
-import { createReaderSessionMorphGeometry, readerSessionMorphSourceKindForPage } from
-  '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
-import { copyReaderControlSessionState } from
-  '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
-  import.meta.url), 'utf8');
-function method(name, required = true) {
-  const start = source.indexOf(`  private ${name}(`);
-  if (start < 0 && !required) return '';
-  assert.ok(start >= 0, 'real Host method ' + name);
-  const open = source.indexOf('{', start); let depth = 1, end = open + 1;
-  while (depth > 0 && end < source.length) {
-    if (source[end] === '{') depth++;
-    if (source[end] === '}') depth--;
-    end++;
-  }
-  assert.equal(depth, 0);
-  return source.slice(start, end);
+import { readerTtsSessionBlocksAutoPageStart } from '../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts';
+import { buildReaderSessionLaunchGeometry } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts';
+import { ReaderSessionLaunchController } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts';
+import { ReaderSessionMorphSourceMeasurement, readerSessionMorphSourceKindForPage } from '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
+import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
+import { copyReaderControlSessionState, createReaderControlSessionState } from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+import { ReaderPageChromeMeasurements } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url).pathname;
+const names=['toggleTts','stopTts','toggleAutoPage','startAutoPageSession','stopAutoPage','cancelPendingAutoPageStart',
+  'nextAutoPageStartGeneration','cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent',
+  'captureControlPlaybackPresentation','isControlPlaybackPresentationCurrent','toggleSessionCapsule'];
+const Host=productionMotionMethods(file,names,{...autoPolicy,readerTtsSessionBlocksAutoPageStart,
+  readerControlContentLocation:s=>s.location});
+function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};}
+async function drain(){for(let i=0;i<10;i++)await Promise.resolve();}
+function owner(){
+ const host=new Host(),availability=deferred(),calls=[];
+ Object.assign(host,{mounted:true,appForeground:true,exitRequested:false,lifecycleToken:1,sourceId:'src',bookId:'book',
+  chapterSelectionToken:1,phase:'ready',chapter:{content:'正文',chapterIndex:4},visiblePage:{startScalar:20},materializedContentVersion:'v1',
+  ttsAvailabilityResolved:true,ttsPlayIntentGeneration:0,ttsState:{status:'idle',rate:1},ttsLanguage:'zh-CN',ttsPerson:0,
+  ttsPauseOnInterruption:true,ttsAllowMixing:false,ttsFailurePolicy:'stop',autoPageState:autoPolicy.createReaderAutoPageState(8),
+  autoPageStartGeneration:0,autoPageStartPending:false,controlOpenRevision:1,controlModuleVisitRevision:1,
+  controlSession:{location:{level:'secondary',module:'tts',form:'quick'}},visible:true,sessionLaunch:undefined,
+  isSessionActive(t){return this.mounted&&!this.exitRequested&&this.lifecycleToken===t;},
+  controlVisible(){return this.visible;},controlShellExitArmed:()=>false,
+  initializeTtsSession:()=>availability.promise,ttsChapterRef:c=>({sourceId:'src',bookId:'book',chapterIndex:c.chapterIndex}),
+  ttsTimerDurationMs:()=>0,logTtsFailure:(s)=>calls.push(`error:${s}`),
+  beginSessionCapsuleMorph(type){calls.push(`visual:${type}`);this.sessionLaunch={generation:1,geometry:{type},ownership:'stage',businessStatus:'preparing',desiredPlaying:true};return true;},
+  cancelSessionLaunch(reason){calls.push(`cancel:${reason}`);this.sessionLaunch=undefined;},
+  hideControl:()=>calls.push('hide'),onSessionLaunchTtsState:()=>calls.push('ack'),
+  armAutoPageTimer:()=>calls.push('autoTimer'),armAutoPageSessionTimer:()=>{},clearAutoPageTimer:()=>{},clearAutoPageSessionTimer:()=>{},resetAutoPageSessionDuration:()=>{},
+  pauseAutoPage(reason){this.autoPageState=autoPolicy.pauseReaderAutoPage(this.autoPageState,reason);},
+  pageTurnInputPhase:()=> 'idle',sessionCapsuleSnapshot:()=>undefined,
+  getUIContext:()=>({getPromptAction:()=>({showToast:()=>{}})}),
+ });
+ host.sessionLaunchController={mayStartBusiness:()=>host.sessionLaunch?.desiredPlaying===true,
+  acknowledgeBusiness:(_g,s)=>{host.sessionLaunch.businessStatus=s;},snapshot:()=>host.sessionLaunch,
+  setDesiredPlaying:(_g,v)=>{host.sessionLaunch.desiredPlaying=v;}};
+ host.ttsCoordinator={setDesiredPlaying:v=>calls.push(`desired:${v}`),
+  start:async(_input,desired)=>{calls.push(`start:${desired}`);host.ttsState={status:'preparing',rate:1};},
+  pause:async()=>{calls.push('pause');host.ttsState.status='paused';},resume:async()=>{calls.push('resume');},
+  stop:async()=>{calls.push('stop');host.ttsState.status='idle';}};
+ return {host,calls,availability};
 }
-const names = ['toggleTts', 'stopTts', 'toggleAutoPage', 'startAutoPageSession', 'stopAutoPage',
-  'cancelPendingAutoPageStart', 'nextAutoPageStartGeneration', 'beginSessionCapsuleMorph',
-  'beginSessionCapsuleMorphFlight', 'isSessionMorphOwner', 'finishSessionCapsuleMorph', 'onControlSessionChanged'];
-const helpers = ['cancelPendingTtsPlay', 'createTtsPlayIntent', 'isTtsPlayIntentCurrent',
-  'captureControlPlaybackPresentation', 'isControlPlaybackPresentationCurrent'];
-const dependencies = { ...autoPolicy, copyReaderControlSessionState, readerTtsSessionBlocksAutoPageStart,
-  readerMotionNowMs: () => 1000,
-  createReaderSessionMorphGeometry, readerSessionMorphSourceKindForPage,
-  ReaderUIFrameCallback: class { constructor(callback) { this.onFrame = callback; } },
-  motionAnimateParam: (_key, finish) => ({ onFinish: finish }),
-  readerControlContentLocation: session => session.location,
-  readerControlHostCloseCommitted: (session, revision) => session.closeRevision > revision,
-  ReaderWindowCoordinator: { metrics: () => ({}) }, readerControlKeyboardVisible: () => false,
-  createHiddenReaderReplaceQuickState: () => ({ kind: 'hidden' }) };
-function Host(mutate = code => code) {
-  const code = mutate([...names.map(name => method(name)), ...helpers.map(name => method(name, false))].join('\n'));
-  return new Function(...Object.keys(dependencies), stripTypeScriptTypes(
-    'class PlaybackIntentHost {' + code + '}') + '; return PlaybackIntentHost;')(...Object.values(dependencies));
+for(const availabilityDelay of [false,true]){
+ const {host,calls,availability}=owner();host.ttsAvailabilityResolved=!availabilityDelay;
+ host.toggleTts();assert.equal(calls[0],'visual:tts','launch occurs synchronously before service preparation');
+ if(availabilityDelay){assert.equal(calls.some(c=>c.startsWith('start:')),false);host.ttsAvailabilityResolved=true;availability.resolve(true);}
+ await drain();assert.equal(calls.filter(c=>c.startsWith('visual:')).length,1);assert.equal(calls.filter(c=>c.startsWith('start:')).length,1);
+ assert.equal(calls.includes('hide'),false,'business ACK cannot start an independent control hide clock');
 }
-function deferred() {
-  let resolve, reject;
-  const promise = new Promise((a, b) => { resolve = a; reject = b; });
-  return { promise, resolve, reject };
+{
+ const {host,calls,availability}=owner();host.ttsAvailabilityResolved=false;host.toggleTts();
+ host.toggleSessionCapsule();assert.equal(host.sessionLaunch.desiredPlaying,false);assert.equal(host.sessionLaunch.businessStatus,'preparing');
+ host.ttsAvailabilityResolved=true;availability.resolve(true);await drain();
+ assert.ok(calls.includes('start:false'),'pause during availability is carried into start, never overwritten');
 }
-async function settle() { for (let n = 0; n < 8; n++) await Promise.resolve(); }
-function owner(Type = Host()) {
-  const host = new Type();
-  const availability = deferred(), audible = deferred();
-  const calls = { start: 0, pause: 0, stop: 0, hide: 0, autoTimer: 0 };
-  Object.assign(host, {
-    mounted: true, appForeground: true, exitRequested: false, sourceId: 'source', bookId: 'book', lifecycleToken: 1,
-    chapterSelectionToken: 3, phase: 'ready', chapter: { content: '正文', chapterIndex: 4 },
-    visiblePage: { startScalar: 20 }, materializedContentVersion: 'v1',
-    ttsAvailabilityResolved: true, ttsPlayIntentGeneration: 0,
-    ttsState: { status: 'idle', rate: 1 }, ttsLanguage: 'zh-CN', ttsPerson: 0,
-    ttsPauseOnInterruption: true, ttsAllowMixing: false, ttsFailurePolicy: 'stop',
-    autoPageState: autoPolicy.createReaderAutoPageState(8),
-    autoPageStartGeneration: 0, autoPageStartPending: false,
-    controlOpenRevision: 7, controlModuleVisitRevision: 2,
-    controlSession: { closeRevision: 0, location: { level: 'secondary', module: 'tts' } },
-    observedControlCloseRevision: 0, observedControlModule: 'tts', observedControlPage: 'moduleTts',
-    searchGeneration: 0, replacePanelGeneration: 0,
-    page: 'moduleTts', visible: true, closing: false, reduceMotion: true,
-    controlObscured: false, sessionMorphPhase: 'none', sessionMorphGeneration: 0,
-    isSessionActive(token) { return this.mounted && !this.exitRequested && this.lifecycleToken === token; },
-    controlVisible() { return this.visible; }, controlPage() { return this.page; },
-    controlShellExitArmed() { return this.closing; },
-    initializeTtsSession: () => availability.promise,
-    ttsChapterRef: chapter => ({ sourceId: 'source', bookId: 'book', chapterIndex: chapter.chapterIndex }),
-    ttsTimerDurationMs: () => 0,
-    logTtsFailure() {},
-    applyWindowPolicyForChromeOwner() {},
-    prepareControlPage() {}, invalidateControlBackdrop() {}, dismissControlTemporaryLayers() {},
-    drainPageTurnPreparationQueue() {}, suspendAdjacentMeasurement() {},
-    hideControl() { calls.hide++; this.closing = true; },
-    armAutoPageTimer() { calls.autoTimer++; }, armAutoPageSessionTimer() {},
-    clearAutoPageTimer() {}, clearAutoPageSessionTimer() {}, resetAutoPageSessionDuration() {},
-    pauseAutoPage(reason) { this.autoPageState = autoPolicy.pauseReaderAutoPage(this.autoPageState, reason); },
-    ttsCoordinator: {
-      start: async () => { calls.start++; host.ttsState.status = 'preparing'; },
-      whenStarted: () => audible.promise,
-      pause: async () => { calls.pause++; host.ttsState.status = 'paused'; },
-      resume: async () => { host.ttsState.status = 'preparing'; },
-      stop: async () => { calls.stop++; host.ttsState.status = 'idle'; },
-    },
-  });
-  return { host, calls, availability, audible };
+{
+ const {host,calls}=owner(),stop=deferred();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
+ host.ttsCoordinator.stop=()=>{calls.push('stop');return stop.promise;};host.toggleAutoPage();
+ assert.deepEqual(calls.slice(0,2),['visual:autoPage','stop']);assert.equal(host.autoPageState.status,'stopped');
+ host.toggleSessionCapsule();stop.resolve();await drain();assert.equal(host.autoPageState.status,'paused');
+ assert.equal(calls.includes('autoTimer'),false,'preparing pause cannot arm the first automatic turn');
 }
-function showModule(host, module) {
-  host.controlSession.location = { level: 'secondary', module };
-  host.page = module === 'tts' ? 'moduleTts' : module === 'autoPage' ? 'quickAutoPage' : 'quickSearch';
-  host.visible = true; host.closing = false;
-  host.onControlSessionChanged();
+{
+ const {host,calls}=owner(),stop=deferred();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
+ host.ttsCoordinator.stop=()=>stop.promise;host.toggleAutoPage();stop.reject(Error('transport stop failed'));await drain();
+ assert.equal(host.autoPageState.status,'stopped');assert.equal(host.ttsState.status,'playing');assert.ok(calls.includes('cancel:stopBarrierFailure'));
 }
-async function resolveAvailability(test) {
-  test.host.ttsAvailabilityResolved = true;
-  test.availability.resolve(true);
-  await settle();
+for(const invalidate of [h=>h.stopTts(),h=>{h.mounted=false;},h=>{h.lifecycleToken++;},h=>{h.bookId='new';},h=>{h.chapterSelectionToken++;}]){
+ const {host,calls,availability}=owner();host.ttsAvailabilityResolved=false;host.toggleTts();invalidate(host);
+ host.ttsAvailabilityResolved=true;availability.resolve(true);await drain();assert.equal(calls.some(c=>c.startsWith('start:')),false);
+}
+{
+ const {host,calls,availability}=owner();host.ttsAvailabilityResolved=false;host.toggleTts();
+ host.controlSession.location.module='autoPage';host.sessionLaunch=undefined;host.toggleAutoPage();
+ host.ttsAvailabilityResolved=true;availability.resolve(true);await drain();
+ assert.equal(host.autoPageState.status,'running');assert.equal(calls.some(c=>c.startsWith('start:')),false);
 }
 
-// Actual production callback ordering, not a copied reducer or source regex.
-async function newerAutoWins(Type = Host()) {
-  const test = owner(Type); test.host.ttsAvailabilityResolved = false;
-  test.host.toggleTts();
-  showModule(test.host, 'autoPage'); test.host.toggleAutoPage();
-  assert.equal(test.host.autoPageState.status, 'running');
-  await resolveAvailability(test);
-  assert.equal(test.calls.start, 0, 'late TTS availability must not override a newer Auto choice');
-  assert.equal(test.host.autoPageState.status, 'running');
+// Run the actual Host visual methods with the real ownership controller. This
+// verifies first-frame publication / 700ms semantic close / 3500ms persistence.
+let now=10000;const storage=new Map();const frames=[];
+class Callback{constructor(callback){this.onFrame=callback;}}
+const Visual=productionMotionMethods(file,['beginSessionCapsuleMorph','scheduleSessionLaunchFrame'],{
+ readerSessionMorphSourceKindForPage,buildReaderSessionLaunchGeometry,ReaderPageChromeMeasurements,ReaderPageChromeSnapshot,
+ copyReaderControlSessionState,readerSessionCapsuleMinimumWidth:type=>type==='tts'?94:96,
+ readerMotionNowMs:()=>now,ReaderUIFrameCallback:Callback,resolveReaderPageChromeLayout:()=>({sessionX:250,sessionY:760}),
+ AppStorage:{setOrCreate:(k,v)=>storage.set(k,v)},hilog:{warn:()=>{}},
+});
+const c=p=>p,controller=new ReaderSessionLaunchController({flight:c,expand:c,easeIn:c,easeOut:c,easeInOut:c});
+const source=new ReaderSessionMorphSourceMeasurement('quickAutoPage','source',25,524,286,196,1);
+const visual=Object.assign(new Visual(),{mounted:true,appForeground:true,exitRequested:false,controlObscured:false,
+ lifecycleToken:1,sourceId:'src',bookId:'book',controlOpenRevision:1,controlModuleVisitRevision:1,readerWindowMetricsRevision:1,
+ sharedAppearanceRevision:1,appearanceMutationGeneration:1,measurementEpoch:1,reduceMotion:false,
+ sessionLaunchController:controller,sessionLaunchSourceContexts:new Map([['quickAutoPage','measured']]),
+ sessionLaunchTopExit:73,sessionLaunchDockExit:349,sessionLaunchExitGeneration:0,pageTurnRenderRevision:0,
+ controlVisible:()=>true,controlPage:()=> 'quickAutoPage',sessionMorphSourceMeasurement:()=>source,
+ sessionLaunchMeasurementKey:()=> 'measured',sessionLaunchLayoutKey:()=> 'layout',readingLayout:()=>({}),
+ currentChapterIndex:()=>4,visiblePage:{startScalar:20},pageChromeClockText:'10:00',
+ latestControlVisualSession:createReaderControlSessionState(),currentPageTurnRenderPage:()=>({chromeTopStartText:'book',chromeTopEndText:'10:00',chromeBottomStartText:'1%',chromeBottomEndText:'1/50'}),
+ ttsState:{status:'idle'},autoPageState:autoPolicy.createReaderAutoPageState(8),
+ invalidateControlBackdrop:()=>{},windowCalls:0,hiddenCalls:0,
+ applyWindowPolicyForChromeOwner(){this.windowCalls++;},commitSessionLaunchControlHidden(){this.hiddenCalls++;},
+ getUIContext:()=>({postFrameCallback:f=>frames.push(f)}),cancelSessionLaunch:()=>{throw Error('unexpected invalidation');},
+});
+assert.equal(visual.beginSessionCapsuleMorph('autoPage'),true);assert.equal(visual.sessionLaunch.sample.timeMs,0);
+assert.equal(visual.sessionLaunch.sample.sharpOpacity,1);assert.equal(visual.hiddenCalls,0);assert.equal(frames.length,1);
+for(const elapsed of [699,700,1400,1700,2300,3500]){
+ now=10000+elapsed;frames.shift().onFrame(now*1e6);
+ assert.equal(visual.sessionLaunch.sample.timeMs,elapsed);
+ assert.equal(visual.hiddenCalls,elapsed>=700?1:0);
 }
-async function stopBeforeAvailability(Type = Host()) {
-  const test = owner(Type); test.host.ttsAvailabilityResolved = false;
-  test.host.toggleTts(); test.host.stopTts(); await resolveAvailability(test);
-  assert.equal(test.calls.start, 0, 'explicit Stop must cancel an unresolved TTS play intent');
-}
-async function lateAudibleKeepsNewControl(Type = Host(), reopen = false) {
-  const test = owner(Type); test.host.toggleTts(); await settle();
-  assert.equal(test.calls.start, 1);
-  if (reopen) { test.host.controlOpenRevision++; showModule(test.host, 'tts'); }
-  else showModule(test.host, 'search');
-  test.host.ttsState.status = 'playing'; test.audible.resolve(true); await settle();
-  assert.equal(test.calls.hide, 0, 'late audible start must not close a newer control presentation');
-  assert.equal(test.host.ttsState.status, 'playing', 'navigation does not stop the business session');
-}
-async function autoStopBarrierKeepsNewControl(Type = Host()) {
-  const test = owner(Type), stopped = deferred();
-  test.host.ttsState.status = 'playing';
-  test.host.ttsCoordinator.stop = () => { test.host.ttsState.status = 'stopping'; return stopped.promise; };
-  showModule(test.host, 'autoPage'); test.host.toggleAutoPage();
-  assert.equal(test.host.autoPageState.status, 'stopped', 'TTS teardown is a real start barrier');
-  showModule(test.host, 'search');
-  test.host.ttsState.status = 'idle'; stopped.resolve(); await settle();
-  assert.equal(test.host.autoPageState.status, 'running', 'current Auto intent still starts after the barrier');
-  assert.equal(test.calls.hide, 0, 'delayed Auto start must not close a newer Search presentation');
-}
-async function currentPlaySurvivesMorph() {
-  const test = owner(); test.host.toggleTts(); await settle();
-  const revision = test.host.controlModuleVisitRevision;
-  const state = test.host.ttsState;
-  test.host.page = 'fullTts'; test.host.onControlSessionChanged();
-  test.host.page = 'moduleTts'; test.host.onControlSessionChanged();
-  assert.equal(test.host.controlModuleVisitRevision, revision, 'Quick/Full is not a new module visit');
-  assert.equal(test.host.ttsState, state, 'morph observation never resets playback state');
-  test.host.ttsState.status = 'playing'; test.audible.resolve(true); await settle();
-  assert.equal(test.calls.start, 1); assert.equal(test.calls.pause, 0);
-  assert.equal(test.calls.hide, 1, 'current audible start retains the intended original control handoff');
-}
-function captureOwner(Type = Host()) {
-  const test = owner(Type), capture = deferred(), frames = [];
-  let released = 0;
-  const pixel = { release() { released++; } };
-  Object.assign(test.host, { reduceMotion: false,
-    activeSessionCapsuleWidth: () => 94,
-    sessionCapsuleLayout: () => ({ sessionX: 200, sessionY: 700 }),
-    sessionMorphSourceMeasurement: () => ({ actorId: 'tts-actor', left: 20, top: 500, width: 100, height: 30 }),
-    getUIContext: () => ({
-      getComponentSnapshot: () => ({ get: () => capture.promise }),
-      postFrameCallback: frame => frames.push(frame),
-      animateTo: (_options, action) => action(),
-    }),
-    scheduleSessionMorphFrame() {},
-  });
-  return { ...test, capture, frames, pixel, releaseCount: () => released };
-}
-async function captureSuccessAfterNavigation() {
-  const test = captureOwner(); test.host.beginSessionCapsuleMorph(); showModule(test.host, 'search');
-  test.capture.resolve(test.pixel); await settle();
-  assert.equal(test.releaseCount(), 1); assert.equal(test.calls.hide, 1);
-  assert.equal(test.host.sessionMorphPhase, 'none', 'obsolete own capture must not leave the capsule stuck in capture');
-  assert.equal(test.frames.length, 0);
-}
-async function captureFailureAfterNavigation() {
-  const test = captureOwner(); test.host.beginSessionCapsuleMorph(); showModule(test.host, 'search');
-  test.capture.reject(Error('snapshot unavailable')); await settle();
-  assert.equal(test.calls.hide, 1, 'late snapshot failure must not dismiss a newer Search twice');
-  assert.equal(test.host.sessionMorphPhase, 'none');
-}
-async function flightAfterNavigation() {
-  const test = captureOwner(); test.host.beginSessionCapsuleMorph();
-  test.capture.resolve(test.pixel); await settle(); assert.equal(test.frames.length, 1);
-  showModule(test.host, 'search'); test.frames[0].onFrame(0);
-  assert.equal(test.calls.hide, 1, 'old first flight frame must not dismiss a newer control twice');
-  assert.equal(test.host.sessionMorphPhase, 'none'); assert.equal(test.releaseCount(), 1);
-}
-const cases = [
-  ['newer Auto intent wins', () => newerAutoWins()],
-  ['Stop cancels availability continuation', () => stopBeforeAvailability()],
-  ['Search survives late audible start', () => lateAudibleKeepsNewControl()],
-  ['reopened TTS survives old audible start', () => lateAudibleKeepsNewControl(Host(), true)],
-  ['Auto stop barrier preserves newer control', () => autoStopBarrierKeepsNewControl()],
-  ['latest TTS request survives Quick/Full morph', () => currentPlaySurvivesMorph()],
-  ['stale snapshot success releases its phase', () => captureSuccessAfterNavigation()],
-  ['stale snapshot failure preserves new control', () => captureFailureAfterNavigation()],
-  ['first flight frame preserves new control', () => flightAfterNavigation()],
-];
-const failures = [];
-for (const [name, test] of cases) {
-  try { await test(); console.log('PASS ' + name); }
-  catch (error) { failures.push(name + ': ' + error.message); console.error('FAIL ' + name + ': ' + error.message); }
-}
-assert.deepEqual(failures, [], 'production Host asynchronous playback ownership');
-
-// Positive and cancellation boundaries: no guard may swallow the newest play.
-{
-  const test = owner(); test.host.ttsAvailabilityResolved = false;
-  test.host.toggleTts(); test.host.stopTts(); test.host.toggleTts();
-  await resolveAvailability(test);
-  assert.equal(test.calls.start, 1, 'a new explicit play after Stop is admitted once');
-}
-{
-  const test = owner(); test.host.ttsAvailabilityResolved = false;
-  test.host.toggleTts(); test.host.toggleTts(); await resolveAvailability(test);
-  assert.equal(test.calls.start, 1); assert.equal(test.calls.pause, 0,
-    'two unresolved taps cannot fan out into start immediately followed by pause');
-}
-for (const invalidate of [host => { host.mounted = false; }, host => { host.exitRequested = true; },
-  host => { host.lifecycleToken++; }, host => { host.chapterSelectionToken++; },
-  host => { host.sourceId = 'other'; }, host => { host.bookId = 'other'; }]) {
-  const test = owner(); test.host.ttsAvailabilityResolved = false;
-  test.host.toggleTts(); invalidate(test.host); await resolveAvailability(test);
-  assert.equal(test.calls.start, 0, 'old availability cannot target a new reading owner');
-}
-{
-  const test = owner(); test.host.toggleTts(); await settle();
-  test.host.toggleTts(); test.audible.resolve(true); await settle();
-  assert.equal(test.calls.pause, 1); assert.equal(test.calls.hide, 0,
-    'Pause cancels an already queued audible-start presentation');
-}
-{
-  const test = owner(); showModule(test.host, 'autoPage'); test.host.toggleAutoPage();
-  assert.equal(test.host.autoPageState.status, 'running'); assert.equal(test.calls.hide, 1);
-  const state = test.host.autoPageState;
-  test.host.closing = false; test.host.page = 'fullAutoPage'; test.host.onControlSessionChanged();
-  assert.equal(test.host.autoPageState, state, 'shape changes do not stop/reset Auto');
-}
-// Negative mutations reinject each missing protection without editing production.
-const withoutIntent = code => code.replace(method('cancelPendingTtsPlay'), '  private cancelPendingTtsPlay(): void {}');
-await assert.rejects(newerAutoWins(Host(withoutIntent)), /late TTS availability/);
-const withoutPresentation = code => code.replace(method('isControlPlaybackPresentationCurrent'),
-  '  private isControlPlaybackPresentationCurrent(): boolean { return true; }');
-await assert.rejects(lateAudibleKeepsNewControl(Host(withoutPresentation)), /late audible start/);
-await assert.rejects(autoStopBarrierKeepsNewControl(Host(withoutPresentation)), /delayed Auto start/);
-
-// Snapshot/first-frame continuations own only their own image and generation.
-{
-  const test = captureOwner(); test.host.beginSessionCapsuleMorph();
-  test.host.controlOpenRevision++; // A new opening can use exactly the same module/page.
-  test.capture.resolve(test.pixel); await settle();
-  assert.equal(test.releaseCount(), 1); assert.equal(test.frames.length, 0);
-  assert.equal(test.host.sessionMorphPhase, 'none'); assert.equal(test.calls.hide, 1,
-    'stale capture must not issue a second hide after the immediate handoff');
-}
-{
-  const test = captureOwner(); test.host.beginSessionCapsuleMorph();
-  test.capture.reject(Error('current capture failed')); await settle();
-  assert.equal(test.host.sessionMorphPhase, 'none'); assert.equal(test.calls.hide, 1,
-    'a current capture failure retains the existing safe capsule fallback');
-}
-{
-  const test = captureOwner(); test.host.beginSessionCapsuleMorph();
-  test.capture.resolve(test.pixel); await settle(); test.frames[0].onFrame(0);
-  assert.equal(test.calls.hide, 1, 'a current first flight frame still admits the original handoff');
-  assert.equal(test.host.sessionMorphPhase, 'flight'); assert.equal(test.releaseCount(), 0);
-  test.host.finishSessionCapsuleMorph(); assert.equal(test.releaseCount(), 1);
-}
-for (const oldReply of ['resolve', 'reject']) {
-  const test = captureOwner(), newer = deferred(); let newerReleased = 0;
-  const newerPixel = { release() { newerReleased++; } };
-  const captures = [test.capture, newer];
-  test.host.getUIContext = () => ({
-    getComponentSnapshot: () => ({ get: () => captures.shift().promise }),
-    postFrameCallback: frame => test.frames.push(frame),
-  });
-  test.host.beginSessionCapsuleMorph(); test.host.finishSessionCapsuleMorph();
-  test.host.beginSessionCapsuleMorph(); newer.resolve(newerPixel); await settle();
-  const generation = test.host.sessionMorphGeneration;
-  if (oldReply === 'resolve') test.capture.resolve(test.pixel);
-  else test.capture.reject(Error('obsolete capture failure'));
-  await settle();
-  assert.equal(test.host.sessionMorphGeneration, generation);
-  assert.equal(test.host.sessionMorphSourceImage, newerPixel);
-  assert.equal(test.host.sessionMorphPhase, 'flight'); assert.equal(newerReleased, 0);
-  assert.equal(test.calls.hide, 2, 'obsolete cleanup cannot hide or dispose a newer capture twice');
-  assert.equal(test.releaseCount(), oldReply === 'resolve' ? 1 : 0);
-  test.host.finishSessionCapsuleMorph(); assert.equal(newerReleased, 1);
-}
-{
-  const test = captureOwner(); test.host.beginSessionCapsuleMorph();
-  test.capture.resolve(test.pixel); await settle();
-  const staleFrame = test.frames[0]; test.host.finishSessionCapsuleMorph();
-  const newerPixel = { release() { throw Error('old frame cannot release the new image'); } };
-  test.host.sessionMorphPhase = 'flight'; test.host.sessionMorphSourceImage = newerPixel;
-  staleFrame.onFrame(0);
-  assert.equal(test.calls.hide, 1); assert.equal(test.host.sessionMorphSourceImage, newerPixel);
-}
-console.log('Reader playback Host intent tests PASS; production-method execution, not device/audio acceptance');
+assert.equal(visual.sessionLaunch.sample.finished,true);assert.equal(visual.sessionLaunch.ownership,'stage');
+assert.equal(frames.length,0);assert.equal(storage.get('readerSessionChromeOverlayActive'),false);
+assert.equal(visual.pageTurnRenderRevision,2,'only ownership boundaries invalidate page presentation, not frames');
+console.log('Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 700/3500 ownership)');

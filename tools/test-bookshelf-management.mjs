@@ -32,17 +32,17 @@ assert.match(orchestrator, /await this\.gateway\.assignGroup\(book, group\)/);
 assert.match(orchestrator, /groups: source\.data\.groups\.slice\(\)/);
 assert.doesNotMatch(gateway, /preferences|relationalStore|fileIo/);
 assert.match(page, /export struct BookshelfManagementPage/);
-// The group manager is now reachable from the shelf controls.
+// Historical CRUD remains preserved; current shelf control is the lightweight default selector.
 assert.match(page, /在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
-// The shelf tool enters the shared group manager route.
+// Opening the selector must not route to or mutate historical custom groups.
 assert.match(shelfPage,
-  /this\.sectionAction\('bookshelf_settings', \(\): void => this\.onManageRequested\(\)\)/,
+  /this\.sectionAction\('bookshelf_settings', \(\): void => \{\s*this\.groupSelectorVisible = !this\.groupSelectorVisible;/,
   'the shelf tool must open the shared group selector');
 assert.doesNotMatch(shelfPage, /this\.sectionAction\('bookshelf_search'/,
   'the shelf section must not duplicate the AppTopBar search entry');
 assert.match(index,
-  /onBookshelfSettingsRequested: \(\): void => this\.openSettings\(\)/,
+  /onBookshelfSettingsRequested: \(\): void => this\.openBookshelfSettings\(\)/,
   'the more-menu shelf settings entry still enters the settings flow');
 assert.match(index, /'bookshelfManagement'/);
 assert.match(index, /this\.route = 'bookshelfManagement';[\s\S]*?getBookshelfManagementOrchestrator\(\)\.open\(\)/);

@@ -30,9 +30,9 @@ assert.match(remoteDetail,
   /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
   'only an exact shelf identity may reuse the already admitted remote session');
 assert.match(remoteDetail,
-  /const sessionAdmission: Promise<RemoteDetailAdmission> = new SourceGateway\(owner\).loadSources\(\)[\s\S]*?return reusableRemoteSession !== undefined \?[\s\S]*?Promise\.resolve\(new RemoteDetailAdmission\(reusableRemoteSession\)\) : shelfSnapshot !== undefined \?[\s\S]*?gateway\.openCachedCatalogSession\(seed, isCurrent\)[\s\S]*?gateway\.openSession\(seed, \{ isCurrent \}\)/,
+  /const sessionAdmission: Promise<RemoteDetailAdmission> = owner\.bookAcquisitions\(\)[\s\S]*?\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'shelf re-entry must reuse a live session or admit the durable Core catalog before any network refresh');
-assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('gateway.openCachedCatalogSession(seed, isCurrent)'),
+assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
   'remote detail must project its inert shell before network/session admission');
 assert.match(remoteDetail, /let suppliedShelfBook = shelfSnapshot\?\.sourceId === session\.identity\.sourceId/);
 assert.doesNotMatch(remoteDetail, /await bookshelf\.loadShelfBook/,
@@ -40,7 +40,7 @@ assert.doesNotMatch(remoteDetail, /await bookshelf\.loadShelfBook/,
 assert.ok(remoteDetail.indexOf('this.detailToc = session.entries.map') <
   remoteDetail.indexOf('void bookshelf.loadShelfBook'),
   'the admitted session and TOC must publish before shelf membership reconciliation');
-assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('new SourceGateway(owner).loadSources'),
+assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
   'mandatory category admission must not delay the inert detail shell');
 assert.ok(remoteDetail.indexOf('this.detailToc = session.entries.map') < remoteDetail.indexOf('void this.resolveRemoteDetailSourceName'),
   'optional source-name lookup remains after session publication');

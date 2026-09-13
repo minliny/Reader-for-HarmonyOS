@@ -5,7 +5,6 @@ import * as S from '../entry/src/main/ets/features/reading/ReaderControlSessionS
 import { ReaderControlRuntime } from '../entry/src/main/ets/features/reading/ReaderControlRuntime.ts';
 import { ReversibleMotionTimeline, motionSegment } from '../entry/src/main/ets/features/common/MotionTimeline.ts';
 import { MotionPointTrack } from '../entry/src/main/ets/features/common/MotionPointTrack.ts';
-import { sampleReaderSessionMorphTimeline } from '../entry/src/main/ets/features/reading/ReaderSessionMorphTimeline.ts';
 
 const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const linear = p => p;
@@ -42,7 +41,7 @@ assert.equal(entered.transition.elapsedMs,50,'navigation retains opening clock')
 assert.equal(S.readerControlContentLocation(entered).module,'appearance');
 
 const Panel = productionMotionMethods(feature('reading/ReaderControlPanel.ets'),
-  ['contentInputEnabled','acceptRuntime','rememberVisibleContentLocation'], S);
+  ['contentInputEnabled','acceptRuntime','rememberVisibleContentLocation','confirmLaunchSourceReady'], S);
 const panel = Object.assign(new Panel(),{inputEnabled:true,controlObscured:false,visualSession:opening,
   runtimeMounted:true,lastVisibleContentLocation:{level:'home',module:'directory',directoryTab:'directory',form:'quick'},
   onVisualSessionChange(){},commitVisualSession(){},reportBackdropRegions(){},scheduleRuntimeFrame(){},
@@ -113,28 +112,8 @@ for(const reduceMotion of [false,true]){
   finish();assert.equal(host.bookmarkPageOffsetY,45,'old rollback cannot clear new gesture');}
 }
 
-const timing={flight:480,hold:120,expand:240,reveal:160,ghostStart:80,ghost:120,fadeStart:200,fade:120,handoffStart:320,handoff:120};
-const sample=t=>sampleReaderSessionMorphTimeline(t,timing,linear,linear,linear);
-for(const [t,phase] of [[0,'flight'],[479,'flight'],[480,'dotHold'],[599,'dotHold'],[600,'expand'],[719,'expand'],[720,'reveal'],[840,'reveal'],[1000,'none']])assert.equal(sample(t).phase,phase);
-assert.equal(sample(200).ghostOpacity,.55);assert.equal(sample(440).shellOpacity,1);
-assert.equal(sample(600).expand,0);assert.equal(sample(840).expand,1);
-assert.ok(sample(800).reveal > 0 && sample(800).expand < 1,
-  'capsule content reveals while the shell is still expanding');
-const Capsule=productionMotionMethods(feature('reading/LocalReadingExperience.ets'),
- ['isSessionMorphOwner','scheduleSessionMorphFrame'],{readerMotionNowMs:()=>now,
-  sampleReaderSessionMorphTimeline,ReaderUIFrameCallback:Callback});
-let finished=0;
-const capsule=Object.assign(new Capsule(),{mounted:true,appForeground:true,exitRequested:false,
- sessionMorphGeneration:1,sessionMorphStartedMs:now,sessionMorphPhase:'flight',reduceMotion:false,
- sessionMorphTiming:()=>timing,sessionMorphFlightCurve:curve,sessionMorphExpandCurve:curve,sessionMorphFadeCurve:curve,
- sessionMorphSourceLeft:0,sessionMorphSourceTop:0,sessionMorphSourceWidth:120,sessionMorphSourceHeight:60,
- liveSessionCapsuleSnapshot:ignore=>{assert.equal(ignore,true);return {type:'tts'};},
- finishSessionCapsuleMorph:()=>{finished++;},getUIContext:()=>UI});
-frames=[];capsule.scheduleSessionMorphFrame(1,200,400,96);now+=16;frames.shift()();
-assert.equal(capsule.sessionMorphPhase,'flight');assert.ok(capsule.sessionMorphProxyWidth<120);
-capsule.appForeground=false;frames.shift()();assert.equal(frames.length,0,'background callback cannot schedule another frame');
-capsule.appForeground=true;capsule.sessionMorphGeneration=2;
-capsule.scheduleSessionMorphFrame(1,200,400,96);frames.shift()();assert.equal(frames.length,0);
+// Capsule C/D/E/F behavior is covered by test-reader-session-launch.mjs
+// against the archived design, including callback invalidation and handoff.
 
 const shelfFile=feature('bookshelf/BookshelfPage.ets');
 const shelfNames=['setViewMode','onReduceMotionChanged','startViewSwitch','scheduleViewSwitchFrame',
@@ -146,6 +125,7 @@ const viewMotion={totalMs:1000,layoutCommitMs:150,outgoingDurationMs:120,headerI
  movingCoverFadeStartMs:690,movingCoverFadeDurationMs:30,coverMoveDurationMs:420,coverScaleDurationMs:250};
 for(const at of [80,300,680,900]){
  frames=[];const shelf=Object.assign(new Shelf(),{viewMode:'cover',reduceMotion:false,viewSwitchRunning:false,viewSwitchToken:0,
+  webDavCredentials:{saveBookshelfViewMode:async()=>{}},persistRequestedViewMode:async()=>true,viewModeRevision:0,confirmedViewMode:'cover',mounted:true,
   viewMotion,viewFadeCurve:curve,viewContentCurve:curve,viewMoveCurve:curve,viewScaleCurve:curve,getUIContext:()=>UI});
  shelf.setViewMode('list');now+=at;frames.shift()();
  const before=[shelf.projectionListProgress(1),shelf.viewSwitchGridContentOpacity,shelf.viewSwitchListContentOpacity,

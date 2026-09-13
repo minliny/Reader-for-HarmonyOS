@@ -23,7 +23,7 @@ for (const declaration of [
 
 assert.match(index, /private openShelfBook\([\s\S]*openRemoteBookDetail\([\s\S]*selection, true\);/,
   'a shelf tap must resume instead of stopping at detail');
-assert.match(index, /gateway\.openCachedCatalogSession\(seed, isCurrent\)[\s\S]*\.catch\(\(\): Promise<RemoteReadingSession> => gateway\.openSession/,
+assert.match(index, /owner\.bookAcquisitions\(\)[\s\S]*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'a shelf cold start must admit the durable TOC before online recovery');
 assert.match(index, /private addDetailBook\([\s\S]*\.upsertBook\([\s\S]*void this\.prefetchReadingWindow\(session\)/,
   'an explicit shelf join must immediately start the rolling cache window');
@@ -65,8 +65,8 @@ assert.match(sourceSwitchRow, /acquisitionState === 'catalogReady'/);
 assert.match(sourceSwitchRow, /acquisitionState === 'readable'/,
   'a discovered source must not be labeled readable');
 
-assert.match(remote, /async openCachedCatalogSession\([\s\S]*acquisitionMode: 'online'/,
-  'a cached catalog must retain online body fallback semantics');
+assert.match(remote, /async openCachedCatalogSession\([\s\S]*acquisitionMode: contextIsCurrent && !cached\.requiresContextRefresh \? 'online' : 'offline'/,
+  'only current continuation context enables online fallback; stale or deleted source remains offline-readable');
 assert.match(search, /this\.normalizedBookKey\(book\.title, book\.author\)/,
   'search results must group the same title and author across origins');
 assert.match(search, /this\.viewState\.rank\(this\.resultGroupKey\(left\.book\)\)/,
@@ -100,8 +100,8 @@ assert.doesNotMatch(shelf, /bookDataSource/,
   'SHF-02: cover/list switching must not duplicate the lazy data source');
 assert.match(shelf, /private rebuildShelfProjection\(\)/,
   'SHF-02: group filtering and row projection must be rebuilt once per input change');
-assert.match(shelf, /const seenGroups: Set<string>/,
-  'SHF-02: group chips must derive from Core books without repeated linear scans');
+assert.match(shelf, /ShelfBookPresentation\.visible\(this\.books, this\.selectedGroup\)/,
+  'SHF-02 revised: default-group filtering shares the Core-ordered projection');
 assert.match(shelf, /检查更新/,
   'SHF-03: the tools row must present a manual shelf-wide update entry');
 assert.match(shelf, /onCheckUpdatesRequested/,
@@ -112,10 +112,10 @@ assert.match(index, /onProgress\(completed, books\.length\)/,
   'SHF-03: the sweep must report chunk progress for the page');
 assert.match(index, /bookshelfBackgroundRefreshRunning \|\| this\.bookshelfUpdateRunning/,
   'SHF-03: manual and background sweeps must stay mutually exclusive');
-assert.match(shelf, /onManageGroups/,
-  'SHF-02: the shelf more-menu must reach group management');
-assert.match(shelfMoreMenu, /分组管理/,
-  'SHF-02: the more-menu must present the group management entry');
+assert.match(shelf, /onBookGroupRequested/,
+  'explicit per-book grouping is isolated from opening the shelf tool');
+assert.doesNotMatch(shelfMoreMenu, /分组管理/,
+  'the settled three-item More menu does not expose the legacy group editor');
 
 assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
 assert.match(shelf, /Text\(this\.gridProgressLabel\(book\)\)/,

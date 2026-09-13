@@ -135,7 +135,6 @@ for (const field of [
   'bookTurnSurfaceGeneration',
   'bookmarkPreviewChanged',
   'autoPageSessionRemainingSeconds',
-  'sessionMorphHoldProgress',
   'failureCode',
 ]) {
   assert.doesNotMatch(local,

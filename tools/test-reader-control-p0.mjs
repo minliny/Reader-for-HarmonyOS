@@ -31,8 +31,8 @@ assert.match(control, /\.width\(72\)\.height\(28\)/);
 for (const component of ['ReaderControlDirectoryContent', 'ReaderControlAppearanceContent',
   'ReaderControlSearchContent', 'ReaderControlSettingsContent', 'ReaderControlTtsContent',
   'ReaderControlAutoPageContent', 'ReaderControlReplaceContent']) {
-  assert.equal((control.match(new RegExp(component + '\\(\\{', 'g')) ?? []).length, 1,
-    component + ' must keep one content instance under the common Stage');
+  assert.equal((control.match(new RegExp(component + '\\(\\{', 'g')) ?? []).length, component === 'ReaderControlTtsContent' || component === 'ReaderControlAutoPageContent' ? 2 : 1,
+    component + ' keeps one business instance; playback also exposes a pure visual-source factory');
 }
 assert.match(control, /tab: this\.contentLocation\(\)\.directoryTab/,
   'Directory keeps the last visible location through the hidden endpoint');
@@ -100,7 +100,7 @@ assert.match(experience, /this\.enqueueReaderBrightness\(normalized, 'manual'\)/
 assert.match(experience, /this\.enqueueReaderBrightness\(-1, 'automatic'\)/);
 assert.match(experience, /private brightnessMutationQueue: Promise<void> = Promise\.resolve\(\)/,
   'brightness side effects must be serialized so the last user intent wins');
-assert.match(experience, /return readerWindow\.setWindowBrightness\(target\)/);
+assert.match(experience, /ReaderWindowCoordinator\.brightness\(\)\.request\(owner, target\)/);
 assert.match(experience, /private restoreInitialWindowBrightness\(\): void/,
   'the reader must restore the pre-reader window brightness policy on exit');
 assert.match(experience, /ReaderPageInteractionLayer\(\{/);
@@ -263,7 +263,7 @@ assert.match(fullDirectoryPanel, /this\.listScroller\.scrollEdge\(Edge\.Bottom\)
 assert.match(fullDirectoryPanel, /this\.activeTab === 'bookmarks'/);
 assert.match(fullDirectoryPanel, /ReaderSearchField\(\{[\s\S]*variant: 'readerDirectory'/);
 assert.match(fullDirectoryPanel, /private controlButtonLabel\(kind: string\): string/);
-assert.match(fullDirectoryPanel, /\.accessibilityText\(`打开章节：\$\{repeatItem\.item\.title\}`\)/);
+assert.match(fullDirectoryPanel, /\.accessibilityText\(repeatItem\.item\.navigable === false \? `卷标题：\$\{repeatItem\.item\.title\}` : `打开章节：\$\{repeatItem\.item\.title\}`\)/);
 assert.match(fullDirectoryPanel, /this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/);
 
 const entryAbility = read('entry/src/main/ets/entryability/EntryAbility.ets');

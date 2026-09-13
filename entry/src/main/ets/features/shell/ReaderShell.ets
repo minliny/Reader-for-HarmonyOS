@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReadingExperience, ReadingCommit, ReaderBookmarkAnchorRequest } from '../reading/LocalReadingExperience';
 import { ReaderFullDirectory } from '../reading/ReaderFullDirectory';
 import { SourceSwitchPanel, SourceSwitchPanelState } from '../reading/SourceSwitchPanel';
@@ -29,6 +30,8 @@ type PreparedReaderRoute = 'reading' | 'directory';
 
 @Component
 export struct ReaderShell {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   // 阅读内容。
   @Prop bookId: string = '';
   @Prop bookTitle: string = '';
@@ -91,6 +94,7 @@ export struct ReaderShell {
     (_request: ReaderPageBookmarkToggleRequest): void => {};
   onCloseDirectory: () => void = (): void => {};
   onOpenDirectory: () => void = (): void => {};
+  onOpenBookInfo: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
   onOpenRulesManagement: () => void = (): void => {};
   onCloseSourceSwitch: () => void = (): void => {};
@@ -137,6 +141,7 @@ export struct ReaderShell {
           onChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
             this.onChapterCommitted(chapterIndex, chapterTitle),
           onOpenDirectory: (): void => this.onOpenDirectory(),
+          onOpenBookInfo: (): void => this.onOpenBookInfo(),
           onSwitchSource: (): void => this.onSwitchSource(),
           onOpenRulesManagement: (): void => this.onOpenRulesManagement(),
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
@@ -191,7 +196,7 @@ export struct ReaderShell {
           Stack()
             .width('100%')
             .height('100%')
-            .backgroundColor('#40FFFFFF')
+            .backgroundColor(readerAppColor('app.ReaderShell.build.backgroundColor.40FFFFFF', this.appThemeScheme))
             .onClick((): void => this.onCloseSourceSwitch());
           SourceSwitchPanel({
             state: this.sourceSwitchState,

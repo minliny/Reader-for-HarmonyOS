@@ -12,7 +12,7 @@ function method(name) {
 const methods = [
   'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
   'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
-  'returnFromDetail(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
+  'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'retryCurrentReadingSource(', 'runReadingFailureActionAfterExit(', 'openDetailSourceSwitch(',
 ].map(method).join('\n');
@@ -31,7 +31,7 @@ function create(remote = false) {
     sourceId: remote ? 'source' : 'local', bookId: 'book', title: 'Test book', author: 'Author',
     currentChapterIndex: 7, coverUrl: 'cover',
   };
-  const entries = [{ index: 7, title: 'Chapter seven' }];
+  const entries = [...(remote ? [{ index: 5, title: '卷一', url: '' }] : []), { index: 7, title: 'Chapter seven', url: 'chapter-7' }];
   const session = { identity: book, book, entries, acquisitionMode: 'cache' };
   const probes = [];
   const Harness = new Function(
@@ -39,10 +39,10 @@ function create(remote = false) {
     'ReadingOfflineGateway', 'ReaderCoreGateway', 'SourceGateway', 'RemoteDetailAdmission',
     'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel',
     'remoteReadingFailureKindOf', 'verdictForFailureKind', 'isRemoteSourceFailureKind',
-    'remoteSourceFailureSummary',
+    'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord',
     `${harnessCode}; return Harness;`,
   )(
-    'local', { current: () => ({ bookAcquisitions: () => ({ endSearch() {} }) }) },
+    'local', { current: () => ({ bookAcquisitions: () => ({ endSearch() {}, acquireBookWithBackgroundRefresh: () => catalog.promise.then(session => ({ session })), recentFailures: () => [] }) }) },
     class { loadToc() { return toc.promise; } loadDirectoryProjection() { return Promise.resolve(entries); } },
     class {
       openCachedCatalogSession() { return catalog.promise; }
@@ -54,7 +54,7 @@ function create(remote = false) {
     class { constructor(value) { this.session = value; } },
     { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',
     error => error.kind ?? 'NETWORK_FAILED', () => 'networkFailed',
-    kind => kind === 'NETWORK_FAILED', () => '网络请求失败',
+    kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}),
   );
   const h = new Harness(), routes = [], alerts = [];
   let route = 'bookshelf';
@@ -199,3 +199,11 @@ for (const remote of [false, true]) {
 }
 
 console.log('bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)');
+
+{
+ const t=create(true),h=t.h;h.openShelfBook(t.book);t.catalog.resolve(t.session);t.body.resolve('body');await settle();
+ const session=h.remoteReadingSession,toc=h.detailToc;let exits=0;h.readingExitRequest=()=>{exits++;};
+ h.requestReaderBookInfo();assert.equal(exits,1);assert.equal(h.readingSessionActive,true,'information waits for normal serialized exit');
+ h.onReaderExited();assert.equal(h.route,'detail');assert.equal(h.detailReturnRoute,'bookshelf');
+ assert.equal(h.remoteReadingSession,session);assert.equal(h.detailToc,toc,'information reuses exact admitted directory');
+}

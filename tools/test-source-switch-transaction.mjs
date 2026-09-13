@@ -30,7 +30,7 @@ assert.doesNotMatch(index, /rollbackToken|SourceSwitchRollbackToken/,
 
 assert.match(index, /pending\.targetSourceId === session\.identity\.sourceId[\s\S]*this\.openReading\(pending\.targetChapterIndex\)/,
   'target admission must enter the normal physical reader at Core matched chapter');
-assert.match(index, /Remote Book Detail state failed to load:[\s\S]*this\.rollbackPendingSourceSwitch\(error\.message\)/);
+assert.match(index, /Remote detail failure:[\s\S]*this\.rollbackPendingSourceSwitch\(error\.message\)/);
 assert.match(index, /private onReadingFailure\([\s\S]*this\.rollbackPendingSourceSwitch\(message\)/);
 assert.match(index, /private onReadingFailure\([\s\S]*isRemoteSourceFailureKind\(kind\)/,
   'reading failures must be classified before the visible failure surface');

@@ -7,7 +7,7 @@ const source=readFileSync(file,'utf8');
 const events=Object.fromEntries(['SURFACE_READY','TEXTURE_READY','VISUAL_COMMIT_ENDPOINT','ROLLBACK_COMPLETE',
   'SURFACE_LOST','RENDER_FAILURE','SLOTS_COMMITTED','TERMINAL_RELEASED','FRAME_PRESENTED']
   .map((name,i)=>[`BOOK_TURN_EVENT_${name}`,i+1]));
-const methods=['onBookTurnNativeEvent','failBookTurnRuntime','finishSuccessfulPageTurnPresentation','finishPageTurnRollback'];
+const methods=['onBookTurnNativeEvent','failBookTurnRuntime','finishSuccessfulPageTurnPresentation','finishPageTurnRollback', 'requestBookTurn2DFallback', 'completeBookTurn2DFallback'];
 if(source.includes('private recoverBookTurnSurfaceIfIdle('))methods.push('recoverBookTurnSurfaceIfIdle');
 const Owner=productionMotionMethods(file,methods,{...events,cancelReaderPagePan,completeReaderPageGestureSettlement});
 const noop=()=>{};
@@ -15,12 +15,12 @@ function owner(){
  const stats={committed:0,rollback:0,refresh:0,native:0};
  const value=Object.assign(new Owner(),{mounted:true,lifecycleToken:1,bookTurnSurfaceRecoveryPending:false,
   bookTurnRuntimeFailed:false,pageTurnSettlementGeneration:7,bookTurnSurfaceGeneration:7,
-  pageTurnSettlementActive:true,pageTurnPresentationPhase:'settling',bookTurnMotion:{generation:7},
+  pageTurnRenderRevision:9,bookTurnArkUIReadyRevision:9,pageTurnSettlementActive:true,pageTurnPresentationPhase:'settling',bookTurnMotion:{generation:7},
   pageTurnGestureState:{phase:'settling',owner:'horizontalPage',direction:'next'},pageTurnInputOwned:true,
   pageTurnAnimationFinished:true,pageTurnCommitStarted:false,pageTurnCommitFinished:false,pageTurnCommitSucceeded:false,
   bookTurnSurfaceOpacity:1,pageTurnDirection:'next',autoPageState:{status:'stopped'},viewportWidth:390,viewportHeight:780,
   shouldMountBookTurnSurface:()=>true,usesBookTurnSimulation(){return !this.bookTurnRuntimeFailed;},
-  bookTurnSession:{configure:noop,retainedTerminalGeneration:()=>0,commitSlots(){stats.native++;return false;}},
+  bookTurnSession:{configure:noop,releaseTerminalFrame:noop,clearSurface:noop,retainedTerminalGeneration:()=>0,commitSlots(){stats.native++;return false;}},
   clearBookTurnCapturedIdentities:noop,clearPageTurnProjection:noop,cancelPageTurnSettlementDeadline:noop,
   finishPageTurnPerf:kind=>stats[kind]++,flushDeferredPageChromeState:noop,retryRapidPageTurnTransaction:noop,
   completeRapidPageTurnTransaction:noop,resumeDeferredPageTurnWork:noop,drainRapidPageTurn:noop,
@@ -69,4 +69,16 @@ scenario('a later render failure cancels a pending capability recovery',()=>{
  value.finishSuccessfulPageTurnPresentation(7);assert.equal(value.bookTurnRuntimeFailed,true);assert.equal(stats.refresh,0);
 });
 assert.deepEqual(failures,[]);
+{
+ const {value,stats}=owner();
+ Object.assign(value,{pageTurnCommitStarted:true,pageTurnCommitFinished:true,pageTurnCommitSucceeded:true,
+   pageTurnSettlingPrepared:undefined,bookTurnAwaitingSlotCommit:true});
+ value.onBookTurnNativeEvent({event:events.BOOK_TURN_EVENT_SURFACE_LOST});
+ assert.equal(stats.committed,1);
+ value.onBookTurnNativeEvent({event:events.BOOK_TURN_EVENT_TERMINAL_RELEASED,generation:7});
+ assert.equal(stats.committed,1,'late terminal ACK cannot complete an already released 2D transaction twice');
+ value.pageTurnSettlementActive=true;value.bookTurnSurfaceGeneration=8;
+ value.onBookTurnNativeEvent({event:events.BOOK_TURN_EVENT_ROLLBACK_COMPLETE,generation:7});
+ assert.equal(stats.rollback,0,'late rollback of A cannot reset a new tracking surface B');
+}
 console.log('Production Surface recovery: unwritten rollback, uncertain write retention, promoted completion, late failure PASS (7 scenarios)');

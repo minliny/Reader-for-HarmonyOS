@@ -1,3 +1,4 @@
+import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 
@@ -34,10 +35,11 @@ import {
 
 const initial = createDefaultReaderAppearanceSnapshot();
 assert.deepEqual(initial, {
-  version: 3,
-  activeTheme: 'paper',
-  dayTheme: 'paper',
-  nightTheme: 'paperNight',
+  version: 4,
+  appThemeMode: 'system',
+  activeTheme: 'day',
+  dayTheme: 'day',
+  nightTheme: 'night',
   font: 'serif',
   customFont: undefined,
   fontOrder: ['system', 'serif', 'sans', 'kai', 'fangSong', 'mono', 'sourceHanSerif', 'lxgwWenKai', 'import'],
@@ -76,7 +78,7 @@ const normalized = normalizeReaderAppearanceSnapshot({
   fontSize: Number.NaN,
   pageTurn: 'slide',
 });
-assert.equal(normalized.activeTheme, 'paper');
+assert.equal(normalized.activeTheme, 'green', 'unknown active ID returns to the configured matching default');
 assert.equal(normalized.dayTheme, 'green');
 assert.equal(normalized.font, 'serif', 'unbundled fonts must fail closed to the bundled Serif slot');
 assert.equal(normalized.fontSize, 18);
@@ -101,9 +103,12 @@ assert.equal(normalizeReaderAppearanceSnapshot({ ...customSnapshot, customFont: 
 
 let next = setReaderAppearanceTheme(initial, 'greenNight');
 assert.equal(next.activeTheme, 'greenNight');
-assert.equal(initial.activeTheme, 'paper', 'pure transitions must not mutate their input');
+assert.equal(initial.activeTheme, 'day', 'pure transitions must not mutate their input');
+next = setReaderAppearanceTheme(next, 'warm');
 next = setReaderAppearanceDayTheme(next, 'warm');
+next = setReaderAppearanceTheme(next, 'night');
 next = setReaderAppearanceNightTheme(next, 'night');
+next = setReaderAppearanceTheme(next, 'greenNight');
 next = setReaderAppearanceFont(next, 'sans');
 next = setReaderAppearanceIndent(next, 'single');
 next = setReaderAppearanceAlignment(next, 'start');
@@ -146,16 +151,16 @@ assert.equal(setReaderAppearanceMetric(next, 'letterSpacing', -99).letterSpacing
 assert.equal(readerAppearanceCanStep({ ...initial, fontSize: 12 }, 'fontSize', -1), false);
 assert.equal(readerAppearanceCanStep({ ...initial, fontSize: 40 }, 'fontSize', 1), false);
 assert.deepEqual(readerAppearanceThemeStyle('paper'), {
-  paperStart: '#FBF4E9',
-  paperEnd: '#EFE2D0',
-  ink: '#2B241D',
+  paperStart: '#FFFBF4E9',
+  paperEnd: '#FFEFE2D0',
+  ink: '#FF2B241D',
   paperTexture: true,
   sourcePaperLighting: true,
 });
 assert.deepEqual(readerAppearanceThemeStyle('paperNight'), {
-  paperStart: '#302B26',
-  paperEnd: '#211F1C',
-  ink: '#E9DECE',
+  paperStart: '#FF302B26',
+  paperEnd: '#FF211F1C',
+  ink: '#FFE9DECE',
   paperTexture: true,
   sourcePaperLighting: false,
 });
@@ -217,15 +222,15 @@ for (const [name, minimumBytes] of [
 }
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const quickPanel = await readFile(new URL('ReaderAppearanceModulePanel.ets', readingDir), 'utf8');
-const fullPanel = await readFile(new URL('ReaderAppearanceFullPanel.ets', readingDir), 'utf8');
-const gateway = await readFile(new URL('ReaderAppearanceGateway.ts', readingDir), 'utf8');
-const customFontHost = await readFile(new URL('../../app/ReaderCustomFontHost.ts', readingDir), 'utf8');
-const conversionGateway = await readFile(new URL('ReaderChineseConversionGateway.ts', readingDir), 'utf8');
-const controlPanel = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
-const readingSurface = await readFile(new URL('ReadingSurface.ets', readingDir), 'utf8');
-const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
-const motion = await readFile(new URL('../common/MotionSpec.ets', readingDir), 'utf8');
+const quickPanel = themeDayDesignSource(await readFile(new URL('ReaderAppearanceModulePanel.ets', readingDir), 'utf8'));
+const fullPanel = themeDayDesignSource(await readFile(new URL('ReaderAppearanceFullPanel.ets', readingDir), 'utf8'));
+const gateway = themeDayDesignSource(await readFile(new URL('ReaderAppearanceGateway.ts', readingDir), 'utf8'));
+const customFontHost = themeDayDesignSource(await readFile(new URL('../../app/ReaderCustomFontHost.ts', readingDir), 'utf8'));
+const conversionGateway = themeDayDesignSource(await readFile(new URL('ReaderChineseConversionGateway.ts', readingDir), 'utf8'));
+const controlPanel = themeDayDesignSource(await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8'));
+const readingSurface = themeDayDesignSource(await readFile(new URL('ReadingSurface.ets', readingDir), 'utf8'));
+const experience = themeDayDesignSource(await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8'));
+const motion = themeDayDesignSource(await readFile(new URL('../common/MotionSpec.ets', readingDir), 'utf8'));
 
 assert.match(quickPanel, /Phone `942:66`, Tablet `942:68`/);
 assert.match(quickPanel, /return this\.isTablet \? 262 : 286/);
@@ -285,7 +290,7 @@ assert.match(fullPanel,
 assert.match(fullPanel,
   /\.width\(this\.stepperPanelWidth\(\)\)\s*\.height\(140\)\s*\.borderRadius\(8\)/,
   'the metric rows must not invent an enclosing fill or border absent from Figma');
-assert.match(fullPanel, /Image\(\$r\('app\.media\.reader_appearance_header'\)\)/,
+assert.match(fullPanel, /app\.media\.reader_appearance_header/,
   'the full page must use its dark Figma-derived header icon, not the blue quick-navigation asset');
 assert.match(fullPanel, /return this\.pageTurnStyle === 'none' \? '无动画' : '平移'/);
 assert.match(fullPanel, /kind === 'alignment' \|\| kind === 'language'/,
@@ -352,7 +357,7 @@ assert.doesNotMatch(fullPanel, /enabled\(value !== 'single'\)/,
 assert.match(gateway, /ReaderRuntimeOwner/);
 assert.match(gateway, /getUIAbilityContext\(\)/);
 assert.match(gateway, /runtimeOwner\.getAppearanceStore\(\)/);
-const appearancePreferences = await readFile(new URL('../../app/ReaderAppearancePreferences.ts', readingDir), 'utf8');
+const appearancePreferences = themeDayDesignSource(await readFile(new URL('../../app/ReaderAppearancePreferences.ts', readingDir), 'utf8'));
 assert.match(appearancePreferences, /reader_appearance_v1/);
 assert.match(appearancePreferences, /store\.put\('snapshot'/);
 assert.match(gateway, /ReaderCustomFontHost/);
@@ -401,7 +406,7 @@ assert.match(experience, /private prepareControlPage\(page: ReaderControlPage\)[
 assert.match(experience, /if \(module !== this\.observedControlModule\) \{\s*this\.controlModuleVisitRevision \+= 1;\s*this\.observedControlModule = module;\s*this\.prepareControlPage\(page\);/,
   'only a new module visit increments presentation ownership and loads entry data; Quick/Full frames do neither');
 assert.match(experience, /reloadCurrentChapterAfterContentProjectionChange/);
-assert.match(experience, /this\.appearanceGateway\.update\(change\)/);
+assert.match(experience, /this\.appearanceGateway\.update\(change,/);
 assert.match(experience, /setReaderAppearanceFontOrder\(current, requestedOrder\)/,
   'dragged font order must enter the existing versioned appearance persistence path');
 assert.match(experience, /this\.appearanceGateway\.registerCustomFont/);

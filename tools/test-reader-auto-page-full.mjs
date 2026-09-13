@@ -1,3 +1,4 @@
+import { readerDayResourceBranches } from './lib/reader-resource-branch-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -83,45 +84,45 @@ const panel = await readFile(new URL('ets/features/reading/ReaderAutoPageFullPan
 const quickPanel = await readFile(new URL('ets/features/reading/ReaderAutoPagePanel.ets', root), 'utf8');
 const content = await readFile(new URL('ets/features/reading/ReaderControlAutoPageContent.ets', root), 'utf8');
 
-assert.match(quickPanel,
+assert.match(readerDayResourceBranches(quickPanel),
   /this\.status === 'running' \?\s*'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_play'/,
   'quick auto-page control must replace play with pause while running');
-assert.match(panel,
+assert.match(readerDayResourceBranches(panel),
   /this\.status === 'running' \?\s*'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/,
   'full auto-page control must replace play with pause while running');
 
-assert.match(panel, /Phone final page `1771:10277`/);
-assert.match(panel, /Full panel instance `1771:10280`/);
-assert.match(panel, /Content master `1764:10223`/);
-assert.match(panel, /Motion sources `1938:6245` and `1979:21744`/);
-assert.match(panel, /if \(!this\.isTablet\) \{[\s\S]*this\.phonePanel\(\)/,
+assert.match(readerDayResourceBranches(panel), /Phone final page `1771:10277`/);
+assert.match(readerDayResourceBranches(panel), /Full panel instance `1771:10280`/);
+assert.match(readerDayResourceBranches(panel), /Content master `1764:10223`/);
+assert.match(readerDayResourceBranches(panel), /Motion sources `1938:6245` and `1979:21744`/);
+assert.match(readerDayResourceBranches(panel), /if \(!this\.isTablet\) \{[\s\S]*this\.phonePanel\(\)/,
   'Tablet must not render a scaled Phone Full panel');
-assert.match(panel, /@Prop availableWidth: number = 0/);
-assert.match(panel, /@Prop availableHeight: number = 0/);
-assert.match(panel, /\.width\(this\.panelWidth\(\)\)[\s\S]*\.height\(this\.panelHeight\(\)\)/);
-assert.match(panel, /Scroll\(\) \{[\s\S]*\.width\(this\.bodyWidth\(\)\)[\s\S]*\.height\(READER_AUTO_PAGE_FULL_BODY_HEIGHT\)/);
-assert.match(panel, /\.height\(this\.bodyViewportHeight\(\)\)[\s\S]*READER_AUTO_PAGE_FULL_BODY_Y/,
+assert.match(readerDayResourceBranches(panel), /@Prop availableWidth: number = 0/);
+assert.match(readerDayResourceBranches(panel), /@Prop availableHeight: number = 0/);
+assert.match(readerDayResourceBranches(panel), /\.width\(this\.panelWidth\(\)\)[\s\S]*\.height\(this\.panelHeight\(\)\)/);
+assert.match(readerDayResourceBranches(panel), /Scroll\(\) \{[\s\S]*\.width\(this\.bodyWidth\(\)\)[\s\S]*\.height\(READER_AUTO_PAGE_FULL_BODY_HEIGHT\)/);
+assert.match(readerDayResourceBranches(panel), /\.height\(this\.bodyViewportHeight\(\)\)[\s\S]*READER_AUTO_PAGE_FULL_BODY_Y/,
   'the fixed header must own a bounded scroll viewport on short phones');
-assert.match(panel,
+assert.match(readerDayResourceBranches(panel),
   /private bodyViewportHeight\(\): number \{[\s\S]*this\.panelHeight\(\) - READER_AUTO_PAGE_FULL_BODY_Y - 13/);
-assert.match(panel, /READER_AUTO_PAGE_FULL_CONTENT_Y - READER_AUTO_PAGE_FULL_BODY_Y/,
+assert.match(readerDayResourceBranches(panel), /READER_AUTO_PAGE_FULL_CONTENT_Y - READER_AUTO_PAGE_FULL_BODY_Y/,
   'the full-height endpoint must preserve the original global actor coordinates');
-assert.match(panel, /private panelWidth\(\): number \{[\s\S]*Math\.min\(READER_AUTO_PAGE_FULL_WIDTH, this\.availableWidth\)/,
+assert.match(readerDayResourceBranches(panel), /private panelWidth\(\): number \{[\s\S]*Math\.min\(READER_AUTO_PAGE_FULL_WIDTH, this\.availableWidth\)/,
   'the phone-only motion surface must clamp its outer actor to the physical viewport');
-assert.match(panel, /Text\('自动翻页控制'\)/);
-assert.match(panel, /Text\('定时'\)/);
-assert.match(panel, /Text\('自动停止'\)/);
-assert.match(panel, /Text\('详细配置'\)/);
-assert.match(panel, /Text\('跟随高亮'\)/);
-assert.match(panel, /onFollowHighlightChange\(!this\.followHighlight\)/);
-assert.match(panel, /\.enabled\(this\.interactionEnabled && this\.status === 'stopped'\)/,
+assert.match(readerDayResourceBranches(panel), /Text\('自动翻页控制'\)/);
+assert.match(readerDayResourceBranches(panel), /Text\('定时'\)/);
+assert.match(readerDayResourceBranches(panel), /Text\('自动停止'\)/);
+assert.match(readerDayResourceBranches(panel), /Text\('详细配置'\)/);
+assert.match(readerDayResourceBranches(panel), /Text\('跟随高亮'\)/);
+assert.match(readerDayResourceBranches(panel), /onFollowHighlightChange\(!this\.followHighlight\)/);
+assert.match(readerDayResourceBranches(panel), /\.enabled\(this\.interactionEnabled && this\.status === 'stopped'\)/,
   'follow highlight is editable only before an automatic-page session starts');
-assert.match(panel, /\.fontFamily\('ReaderInter'\)/);
-assert.match(panel, /collapsedBackActor\(\)[\s\S]*ReaderNotoSansSC/,
+assert.match(readerDayResourceBranches(panel), /\.fontFamily\('ReaderInter'\)/);
+assert.match(readerDayResourceBranches(panel), /collapsedBackActor\(\)[\s\S]*ReaderNotoSansSC/,
   'the outgoing Quick Back actor retains the Quick endpoint font');
-assert.match(panel, /min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS/);
-assert.match(panel, /max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS/);
-assert.match(panel, /\.opacity\(0\.001\)/,
+assert.match(readerDayResourceBranches(panel), /min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS/);
+assert.match(readerDayResourceBranches(panel), /max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS/);
+assert.match(readerDayResourceBranches(panel), /\.opacity\(0\.001\)/,
   'the empty Figma speed frame must not gain an invented visible slider');
 assert.doesNotMatch(panel, /animateTo|animation\(/,
   'the panel must expose actor endpoints while the owner keeps production timing');
@@ -130,10 +131,10 @@ assert.equal(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X, -33.106);
 assert.equal(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X, -5.45);
 assert.equal(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y, -208.623);
 assert.equal(READER_AUTO_PAGE_COLLAPSED_BACK_TRANSLATE_Y, 14);
-assert.match(panel, /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X\)/);
-assert.match(panel, /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X\)/);
-assert.match(panel, /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X\)/);
-assert.match(panel, /persistentActorTranslateY\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y\)/);
+assert.match(readerDayResourceBranches(panel), /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_PLAY_LABEL_TRANSLATE_X\)/);
+assert.match(readerDayResourceBranches(panel), /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_STOP_TRANSLATE_X\)/);
+assert.match(readerDayResourceBranches(panel), /persistentActorTranslateX\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_X\)/);
+assert.match(readerDayResourceBranches(panel), /persistentActorTranslateY\(READER_AUTO_PAGE_PERSISTENT_SPEED_TRANSLATE_Y\)/);
 
 const control = await readFile(new URL('ets/features/reading/ReaderControlPanel.ets', root), 'utf8');
 // Legacy standalone geometry above remains compatibility coverage. Production
@@ -141,11 +142,11 @@ const control = await readFile(new URL('ets/features/reading/ReaderControlPanel.
 // test-reader-control-playback-content.mjs, not the old Full-sheet adapter.
 assert.match(control, /this\.contentLocation\(\)\.module === 'autoPage'/,
   'automatic-page content remains in one semantic route across Quick/Full');
-assert.equal((control.match(/ReaderControlAutoPageContent\(\{/g) ?? []).length, 1);
+assert.equal((control.match(/ReaderControlAutoPageContent\(\{/g) ?? []).length, 2, 'one interactive content plus the shared pure-source factory');
 assert.equal((control.match(/new ReaderControlRuntime\(/g) ?? []).length, 1);
 assert.doesNotMatch(control, /ReaderAutoPage(?:Full)?Panel\(\{|autoPageActorHold|autoPageActorExpanded|autoPageActorTransitioning/);
 assert.doesNotMatch(control, /autoPageStatus !== 'stopped'/);
-const autoBinding = control.match(/ReaderControlAutoPageContent\(\{([\s\S]*?)\n\s*\}\);/)?.[1];
+const autoBinding = control.slice(control.indexOf('private autoPageModuleContent()')).match(/ReaderControlAutoPageContent\(\{([\s\S]*?)\n\s*\}\);/)?.[1];
 assert.ok(autoBinding, 'actual AutoPage content binding must exist');
 assert.match(autoBinding, /motionProgress: this\.contentMotionProgress/);
 assert.match(autoBinding, /form: this\.contentLocation\(\)\.form/);
@@ -158,21 +159,21 @@ assert.match(autoBinding, /onBack: \(\): void => this\.requestPage\('home'\)/);
 assert.match(autoBinding, /this\.reportSessionMorphSource\(kind, left, top, width, height\)/,
   'the source identity reported by the actual form must not be hard-coded to Full');
 assert.doesNotMatch(autoBinding, /motionExpanded|embeddedInUnifiedSurface|content\.(?:width|height) \+/);
-assert.match(content, /this\.status === 'running' \? '运行中' :[\s\S]*this\.status === 'paused' \? '已暂停' : '未开始'/);
+assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? '运行中' :[\s\S]*this\.status === 'paused' \? '已暂停' : '未开始'/);
 assert.doesNotMatch(content, /this\.quickBack\(\);/, 'compact endpoint must not render an in-panel Back control');
-assert.match(content, /backgroundColor\(TOK_SURFACE_PANEL_SOFT\)[\s\S]*border\(\{ width: TOK_BORDER_W, color: TOK_LINE \}\)[\s\S]*borderRadius\(8\)/,
+assert.match(readerDayResourceBranches(content), /backgroundColor\(this\.sourceOnly === 'full' \? Color\.Transparent : readerAppColor\('TOK_SURFACE_PANEL_SOFT', this\.appScheme\)\)[\s\S]*border\(\{ width: this\.sourceOnly === 'full' \? 0 : TOK_BORDER_W, color: readerAppColor\('TOK_LINE', this\.appScheme\) \}\)[\s\S]*borderRadius\(8\)/,
   'automatic-page playback control keeps the compact card border and radius');
-assert.match(content, /Text\('−'\)[\s\S]*onSpeedChange\(Math\.max/,
+assert.match(readerDayResourceBranches(content), /Text\('−'\)[\s\S]*onSpeedChange\(Math\.max/,
   'compact endpoint exposes a shared-state speed decrement');
-assert.match(content, /Text\('\+'\)[\s\S]*onSpeedChange\(Math\.min/,
+assert.match(readerDayResourceBranches(content), /Text\('\+'\)[\s\S]*onSpeedChange\(Math\.min/,
   'compact endpoint exposes a shared-state speed increment');
-assert.match(content, /this\.status === 'running' \? 'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/);
-assert.match(content, /this\.status === 'running' \? '暂停自动翻页'[\s\S]*this\.status === 'paused' \? '继续自动翻页' : '开始自动翻页'/);
-assert.match(content, /\.enabled\(this\.fullInput\(\) && this\.status === 'stopped'\)/,
+assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? 'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/);
+assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? '暂停自动翻页'[\s\S]*this\.status === 'paused' \? '继续自动翻页' : '开始自动翻页'/);
+assert.match(readerDayResourceBranches(content), /\.enabled\(this\.fullInput\(\) && this\.status === 'stopped'\)/,
   'the current FollowHighlight input retains its pre-session-only business gate');
-assert.match(content, /this\.sharedInput\(\) && this\.status !== 'stopped'/,
+assert.match(readerDayResourceBranches(content), /this\.sharedInput\(\) && this\.status !== 'stopped'/,
   'stopped sessions must not dispatch stop');
-assert.match(content, /if \(!this\.sharedInput\(\)\) \{ this\.speedPreviewSeconds = -1; return; \}/,
+assert.match(readerDayResourceBranches(content), /if \(!this\.sharedInput\(\)\) \{ this\.speedPreviewSeconds = -1; return; \}/,
   'late native slider callbacks must not commit after input revocation');
 for (const callback of ['onAutoPageToggle', 'onAutoPageStop', 'onPreviousChapter', 'onNextChapter',
   'onAutoPageFullTimerChange', 'onAutoPageFullSpeedChange', 'onAutoPageFollowHighlightChange']) {

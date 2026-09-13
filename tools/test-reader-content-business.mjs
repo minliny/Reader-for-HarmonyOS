@@ -23,8 +23,8 @@ assert.ok(moreActor, 'the Figma More actor must remain present');
 assert.doesNotMatch(moreActor[0], /\.opacity\(0\.4\)|\.enabled\(false\)/,
   'Figma `933:59` defines a normal More actor, not an invented disabled state');
 assert.match(experienceSource, /onMore:\s*\(\): void => this\.toggleCurrentPageBookmark\(\)/,
-  'the reader More actor must toggle the current-page bookmark through the Host gate');
-assert.match(moreActor[0], /\.onClick\(\(\): void => this\.onMore\(\)\)/,
-  'the More actor must dispatch its product action');
+  'the bookmark menu action still uses the Host admission gate');
+assert.match(moreActor[0], /\.onClick\(\(\): void => this\.setMoreMenuVisible\(!this\.moreMenuVisible\)\)/,
+  'the More actor opens its real menu; it cannot mutate a bookmark directly');
 
 console.log('reader content business isolation: PASS');

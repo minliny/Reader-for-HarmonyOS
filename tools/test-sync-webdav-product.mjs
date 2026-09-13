@@ -17,15 +17,15 @@ const ability = read('entry/src/main/ets/entryability/EntryAbility.ets');
 assert.match(store, /import asset from '@ohos\.security\.asset'/);
 assert.match(store, /backupPassword:\s*string/);
 assert.match(store, /bookshelfViewMode\?:\s*'cover' \| 'list'/,
-  'the bookshelf projection must live in the secure WebDAV configuration');
+  'legacy Asset mode remains readable only for one-time migration');
 assert.match(store, /loadBookshelfViewMode\(\)/);
-assert.match(store, /saveBookshelfViewMode\(mode: 'cover' \| 'list'\)/);
+assert.match(store, /saveBookshelfViewMode\(mode: 'cover' \| 'list', restoreOperationId\?: string\)/);
 assert.match(store, /ensureLocalPreferences\(\)/,
-  'bookshelf mode must have a durable local preference fallback');
-assert.match(store, /if \(existing === null\)[\s\S]*local\n\s+\/\/ preference/,
-  'missing WebDAV config must not manufacture a credential record');
-assert.match(store, /await this\.save\(\{ \.\.\.existing, bookshelfViewMode: mode \}\)/,
-  'projection writes must preserve every existing WebDAV field');
+  'bookshelf mode must have one durable local Preferences authority');
+assert.match(store, /localModeWriteTail[\s\S]*readOrMigrateViewMode\(\)/,
+  'all local mode reads and writes must share the serialized Preferences authority');
+assert.doesNotMatch(store, /await this\.save\(\{ \.\.\.existing, bookshelfViewMode/,
+  'mode must never be mirrored into a racing credential write');
 assert.match(store, /ASSET_ALIAS\s*=\s*'reader\.webdav\.config\.v2'/);
 assert.match(store, /FORMAT_VERSION\s*=\s*2/);
 assert.match(store, /asset\.Tag\.SECRET/);
@@ -144,8 +144,8 @@ assert.match(index, /this\.getSyncOrchestrator\(\)\.open\(\)/);
 assert.match(index, /onSyncSaveConfig/);
 assert.match(index, /onSyncRestoreLatest/);
 assert.match(index, /onSyncResolveRestore/);
-assert.match(index, /book\.sourceName === undefined[\s\S]*book\.sourceName = this\.sourceDisplayName\(book\.sourceId\)/,
-  'bookshelf rows must use the actual source registry label');
+assert.match(index, /this\.shelfBooks = state\.shelf\.books\.map[\s\S]*copyShelfBookWithSourceName\(book, name\)/,
+  'source display names must be an immutable projection of the Core shelf');
 assert.match(ability, /loadBookshelfViewMode\(\)[\s\S]*AppStorage\.setOrCreate\('readerBookshelfViewMode', mode\)/,
   'cold start must hydrate the projection before the first page is mounted');
 

@@ -1,3 +1,4 @@
+import { readerDayResourceBranches } from './lib/reader-resource-branch-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -19,11 +20,11 @@ const runtimeOwner = await readFile(
   'utf8',
 );
 
-assert.match(fullPanel, /@Prop @Watch\('onEngineChanged'\) engine: string = 'system'/);
-assert.match(fullPanel, /@Prop httpEngines: ReaderTtsEngineOption\[\] = \[\]/);
-assert.match(fullPanel, /private onlineServiceInfoRow\(\)[\s\S]*?this\.openConfiguration\('manage'\)/,
+assert.match(readerDayResourceBranches(fullPanel), /@Prop @Watch\('onEngineChanged'\) engine: string = 'system'/);
+assert.match(readerDayResourceBranches(fullPanel), /@Prop httpEngines: ReaderTtsEngineOption\[\] = \[\]/);
+assert.match(readerDayResourceBranches(fullPanel), /private onlineServiceInfoRow\(\)[\s\S]*?this\.openConfiguration\('manage'\)/,
   'online TTS must expose configuration management even when no service exists');
-assert.match(fullPanel, /this\.onSeek\(index\)/);
+assert.match(readerDayResourceBranches(fullPanel), /this\.onSeek\(index\)/);
 assert.match(quickPanel, /TTS_MODULE_RATE_SLIDER_WIDTH = 116/);
 assert.match(quickPanel, /TTS_MODULE_RATE_TRACK_HEIGHT = 2/);
 assert.match(quickPanel, /TTS_MODULE_RATE_THUMB_SIZE = 18/);
@@ -31,16 +32,16 @@ assert.match(quickPanel, /Text\(this\.playbackLabel\(\)\)/);
 assert.match(quickPanel,
   /if \(this\.isActivelySpeaking\(\)\) \{[\s\S]*?Row\(\)\.width\(3\)\.height\(13\)[\s\S]*?reader_tts_play/,
   'quick TTS control must replace play with pause bars while speaking');
-assert.match(fullPanel,
+assert.match(readerDayResourceBranches(fullPanel),
   /this\.isActivelySpeaking\(\) \? 'app\.media\.reader_tts_make_pause' : 'app\.media\.reader_tts_make_play'/,
   'the persistent TTS control must replace play with its pause glyph while speaking');
-assert.match(fullPanel, /this\.quickLabel\('playback'\)/);
-assert.match(fullPanel, /private quickLabel\(kind:[\s\S]*?Text\(this\.playbackLabel\(\)\)/,
+assert.match(readerDayResourceBranches(fullPanel), /this\.quickLabel\('playback'\)/);
+assert.match(readerDayResourceBranches(fullPanel), /private quickLabel\(kind:[\s\S]*?Text\(this\.playbackLabel\(\)\)/,
   'the actual Quick label must project current state instead of a hard-coded idle label');
-assert.match(fullPanel, /this\.state\.status === 'error' \|\| this\.state\.status === 'failed'\) return '失败·重试'/,
+assert.match(readerDayResourceBranches(fullPanel), /this\.state\.status === 'error' \|\| this\.state\.status === 'failed'\) return '失败·重试'/,
   'the actual Quick failure must remain visible and retryable');
-assert.match(fullPanel, /this\.state\.status === 'unavailable'\) return '不可用'/);
-assert.match(fullPanel, /this\.state\.status === 'preparing' \|\| this\.state\.status === 'resuming'\) return '准备中'/);
+assert.match(readerDayResourceBranches(fullPanel), /this\.state\.status === 'unavailable'\) return '不可用'/);
+assert.match(readerDayResourceBranches(fullPanel), /this\.state\.status === 'preparing' \|\| this\.state\.status === 'resuming'\) return '准备中'/);
 assert.match(quickPanel, /this\.state\.status === 'error'.*return '失败·重试'/,
   'quick TTS must expose a retryable failure instead of continuing to look idle');
 assert.match(quickPanel,
@@ -57,49 +58,49 @@ assert.doesNotMatch(quickPanel,
   'a closed timer field must not display an expanded-state up chevron');
 assert.doesNotMatch(fullPanel, /ReaderHttpTtsManagerPanel\(\{/,
   'configuration management lives in a temporary layer and does not resize the motion actor');
-assert.match(fullPanel,
+assert.match(readerDayResourceBranches(fullPanel),
   /this\.playback\(\);[\s\S]*?this\.timer\(\);[\s\S]*?this\.speed\(\);[\s\S]*?this\.detailSection\(\);[\s\S]*?this\.systemSection\(\);/,
   'the persistent TTS tree must preserve playback, timer, rate, detail and TTS-config actor order');
-assert.match(fullPanel,
+assert.match(readerDayResourceBranches(fullPanel),
   /private ttsServiceTypeTabs\(\)[\s\S]*?this\.ttsServiceTypeTab\(false\)[\s\S]*?this\.ttsServiceTypeTab\(true\)[\s\S]*?\.height\(87\)/,
   'Make Full TTS uses the measured 87vp service cards');
-assert.match(fullPanel,
+assert.match(readerDayResourceBranches(fullPanel),
   /private ttsClosedConfigPanel\(\)[\s\S]*?onlineServiceInfoRow\(\)[\s\S]*?ttsClosedConfigRow\('engine'\)[\s\S]*?ttsClosedConfigRow\('language'\)[\s\S]*?\.height\(this\.onlineServicePage\(\) \? 48 : 96\)/,
   'System shows two selection rows; Online shows its separate service-information entry');
-assert.match(fullPanel, /private detailSection\(\)[\s\S]*?toggleRow\('allowMixing'\)[\s\S]*?ttsClosedConfigRow\('failure'\)/,
+assert.match(readerDayResourceBranches(fullPanel), /private detailSection\(\)[\s\S]*?toggleRow\('allowMixing'\)[\s\S]*?ttsClosedConfigRow\('failure'\)/,
   'mixing and failure policy stay reachable in playback configuration');
-assert.match(fullPanel, /toggleRow\('backgroundPlayback'\)[\s\S]*?toggleRow\('keepScreenOn'\)/,
+assert.match(readerDayResourceBranches(fullPanel), /toggleRow\('backgroundPlayback'\)[\s\S]*?toggleRow\('keepScreenOn'\)/,
   'Make playback options expose background playback and keep-screen-on controls');
-assert.match(fullPanel,
+assert.match(readerDayResourceBranches(fullPanel),
   /private fieldLabel\(kind:[\s\S]*?'语音引擎'[\s\S]*?'朗读语言'[\s\S]*?'音频会话'[\s\S]*?'不可用处理'/,
   'static field identities must retain their original user-facing labels');
 const closedConfig = fullPanel.match(/private ttsClosedConfigPanel\(\)[\s\S]*?private ttsClosedConfigRow[\s\S]*?\n  \}/)?.[0] ?? '';
 assert.ok(closedConfig.length > 0, 'closed TTS config builders must remain present');
-assert.match(fullPanel,
+assert.match(readerDayResourceBranches(fullPanel),
   /private voiceSelectorRow\(\)[\s\S]*?this\.ttsSelectValueField\('voice'\)/,
   'the voice field must use the shared clean value-and-chevron field');
-assert.match(fullPanel, /private fieldWidth\(kind:[\s\S]*?Math\.min\(170, this\.frame\(\)\.config\.width/);
+assert.match(readerDayResourceBranches(fullPanel), /private fieldWidth\(kind:[\s\S]*?Math\.min\(170, this\.frame\(\)\.config\.width/);
 assert.match(closedConfig,
   /this\.ttsSelectValueField\(kind\)/,
   'all four TTS configuration fields must reuse the same value-field presentation');
 assert.doesNotMatch(fullPanel, /暂不可展开|selectNextVoice/,
   'user-authorized TTS settings must offer visible choices rather than read-only or cycling controls');
-assert.match(fullPanel, /private ttsSelectValueField[\s\S]*?Text\(this\.fieldValue\(kind\)\)[\s\S]*?app\.media\.reader_appearance_make_chevron[\s\S]*?TOK_TTS_FIELD[\s\S]*?this\.openConfiguration\(kind\)/);
+assert.match(readerDayResourceBranches(fullPanel), /private ttsSelectValueField[\s\S]*?Text\(this\.fieldValue\(kind\)\)[\s\S]*?app\.media\.reader_appearance_make_chevron[\s\S]*?TOK_TTS_FIELD[\s\S]*?this\.openConfiguration\(kind\)/);
 const configuration = await readFile(new URL('ReaderTtsConfigOverlay.ets', readingDir), 'utf8');
 assert.match(configuration, /this\.managerForm\(\)/);
-assert.match(fullPanel, /ReaderTtsConfigOverlay\(\{/);
+assert.match(readerDayResourceBranches(fullPanel), /ReaderTtsConfigOverlay\(\{/);
 assert.doesNotMatch(fullPanel, /ttsDropdownPortGradient|153\.435|206\.565/,
   'a chevron artwork layer must not be stretched into a hard-stop gradient across TTS fields');
 assert.match(manager, /private managerForm\(\)/,
   'the HTTP CRUD capability remains available through the temporary configuration overlay');
-assert.match(fullPanel, /this\.state\.status === 'failed'\) return '播放失败'/);
-assert.match(fullPanel, /this\.state\.status === 'unavailable'\) return '当前引擎不可用'/);
-assert.match(fullPanel, /this\.state\.errorMessage/);
+assert.match(readerDayResourceBranches(fullPanel), /this\.state\.status === 'failed'\) return '播放失败'/);
+assert.match(readerDayResourceBranches(fullPanel), /this\.state\.status === 'unavailable'\) return '当前引擎不可用'/);
+assert.match(readerDayResourceBranches(fullPanel), /this\.state\.errorMessage/);
 assert.match(controls, /onTtsEngineChange: \(engine: string\)/);
 assert.match(controls, /onTtsSeek: \(sliceIndex: number\)/);
-assert.equal((controls.match(/ReaderControlTtsContent\(\{/g) ?? []).length, 1);
+assert.equal((controls.match(/ReaderControlTtsContent\(\{/g) ?? []).length, 2, 'one interactive content plus the shared pure-source factory');
 assert.doesNotMatch(controls, /ReaderTts(?:Full|Module)Panel\(\{/);
-const ttsBinding = controls.match(/ReaderControlTtsContent\(\{([\s\S]*?)\n\s*\}\);/)?.[1];
+const ttsBinding = controls.slice(controls.indexOf('private ttsModuleContent()')).match(/ReaderControlTtsContent\(\{([\s\S]*?)\n\s*\}\);/)?.[1];
 assert.ok(ttsBinding, 'actual persistent TTS binding exists');
 assert.match(ttsBinding, /motionProgress: this\.contentMotionProgress/);
 assert.match(ttsBinding, /form: this\.contentLocation\(\)\.form/);

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const InputClock = productionMotionMethods(new URL('ReaderPageInputClock.ts', reading), ['sample']);
@@ -34,8 +35,8 @@ assert.deepEqual(reports, [[0, 0, .1], [0, 0, .6]], 'same-row scrolling refreshe
 
 class CoreReadingAnchor { constructor(chapterIndex, chapterOffset, chapterProgress) { Object.assign(this, { chapterIndex, chapterOffset, chapterProgress }); } }
 const Owner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
-  ['commitContinuousProgress', 'drainContinuousProgress', 'persistContinuousProgress'],
-  { CoreReadingAnchor, hilog: { error() {} } });
+  ['commitContinuousProgress', 'drainContinuousProgress', 'persistContinuousProgress', 'reconcileContinuousUnknownProgress'],
+  { CoreReadingAnchor, observeReaderProgressOperation, reconcileReaderControlSelectionProgress, hilog: { error() {} } });
 let completeFirst;
 const firstWrite = new Promise(resolve => { completeFirst = resolve; });
 const writes = [];

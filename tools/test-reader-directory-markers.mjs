@@ -28,14 +28,14 @@ assert.doesNotMatch(modulePanel, /Scroll\(this\.listScroller\)[\s\S]*ForEach\(/,
   'module directory must not eagerly materialize every chapter row');
 assert.match(modulePanel, /private downloadMarkerHitTarget\(entry: LocalReadingTocEntry\)/);
 assert.match(modulePanel, /chapterDownloadEnabled: boolean = false/);
-assert.match(modulePanel, /\.enabled\(this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
+assert.match(modulePanel, /\.enabled\(entry\.navigable !== false && this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
 assert.match(directoryList, /reader-directory-row-\$\{entry\.index\}/,
   'module rows must use stable chapter identity');
 assert.doesNotMatch(directoryList, /reader-directory-row-\$\{entry\.index\}-\$\{entry\.downloadState\}/,
   'mutable download state must not become virtual-list identity');
 assert.match(modulePanel, /else if \(this\.chapterDownloadEnabled\) \{\s*this\.downloadMarkerHitTarget\(entry\);/,
   'local sessions may keep read markers but must not render download markers');
-assert.match(modulePanel, /\.onClick\(\(\): void => this\.onDownloadChapter\(entry\.index\)\)/);
+assert.match(modulePanel, /\.onClick\(\(\): void => \{ if \(entry\.navigable !== false\) this\.onDownloadChapter\(entry\.index\); \}\)/);
 assert.match(modulePanel, /entry\.downloadState === 'missing' \|\| entry\.downloadState === 'cached'/);
 assert.match(modulePanel, /private bookmarkMarkerHitTarget\(entry: LocalReadingTocEntry\)/);
 assert.match(modulePanel, /onDeleteBookmarks: \(bookmarkTimes: number\[\]\) => void/);
@@ -44,7 +44,7 @@ assert.match(modulePanel, /chapterStartBookmarkCreationEnabled: boolean = false/
 assert.match(modulePanel, /markerState\.kind === 'bookmarked'[\s\S]*this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/);
 assert.match(modulePanel, /markerState\.kind === 'empty' && this\.chapterStartBookmarkCreationEnabled[\s\S]*this\.onCreateChapterStartBookmark\(markerState\.createRequest\)/);
 assert.doesNotMatch(modulePanel, /添加书签尚未接线/);
-assert.match(modulePanel, /\.accessibilityText\(`打开章节：\$\{repeatItem\.item\.title\}`\)\s*\.onClick\(\(\): void => this\.onSelectChapter\(repeatItem\.item\.index\)\)/);
+assert.match(modulePanel, /\.accessibilityText\(repeatItem\.item\.navigable === false \? `卷标题：[\s\S]*?\.enabled\(repeatItem\.item\.navigable !== false\)\s*\.onClick\(\(\): void => \{ if \(repeatItem\.item\.navigable !== false\) this\.onSelectChapter\(repeatItem\.item\.index\); \}\)/);
 
 const fullPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
 const bookmarkList = read('entry/src/main/ets/features/reading/ReaderBookmarkList.ets');
@@ -82,17 +82,17 @@ assert.match(fullPanel, /this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/)
 assert.match(fullPanel, /this\.onCreateChapterStartBookmark\(markerState\.createRequest\)/);
 assert.doesNotMatch(fullPanel, /添加书签尚未接线/);
 assert.match(fullPanel, /chapterDownloadEnabled: boolean = false/);
-assert.match(fullPanel, /\.enabled\(this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
+assert.match(fullPanel, /\.enabled\(entry\.navigable !== false && this\.chapterDownloadEnabled && this\.downloadMarkerEnabled\(entry\)\)/);
 // Full-directory chapter identity now lives in the shared ReaderDirectoryList
 // key (asserted above); lock out the mutable-state suffix here.
 assert.doesNotMatch(directoryList, /reader-directory-row-\$\{entry\.index\}-\$\{entry\.downloadState\}/,
   'mutable download state must not become virtual-list identity');
-assert.match(fullPanel, /if \(this\.chapterDownloadEnabled && repeatItem\.item\.downloadState !== 'unknown'\)/,
+assert.match(fullPanel, /if \(repeatItem\.item\.navigable !== false && this\.chapterDownloadEnabled && repeatItem\.item\.downloadState !== 'unknown'\)/,
   'the full local directory must not render download markers');
-assert.match(fullPanel, /\.onClick\(\(\): void => this\.onDownloadChapter\(entry\.index\)\)/);
-assert.match(fullPanel, /\.accessibilityText\(`打开章节：\$\{repeatItem\.item\.title\}`\)\s*\.onClick\(\(\): void => this\.onSelectChapter\(repeatItem\.item\.index\)\)/);
+assert.match(fullPanel, /\.onClick\(\(\): void => \{ if \(entry\.navigable !== false\) this\.onDownloadChapter\(entry\.index\); \}\)/);
+assert.match(fullPanel, /\.accessibilityText\(repeatItem\.item\.navigable === false \? `卷标题：[\s\S]*?\.enabled\(repeatItem\.item\.navigable !== false\)\s*\.onClick\(\(\): void => \{ if \(repeatItem\.item\.navigable !== false\) this\.onSelectChapter\(repeatItem\.item\.index\); \}\)/);
 assert.match(fullPanel,
-  /if \(this\.ascending\) \{\s*Image\(\$r\('app\.media\.reader_directory_sort_ascending'\)\)[\s\S]*?\} else \{\s*Image\(\$r\('app\.media\.reader_directory_sort_descending'\)\)/,
+  /if \(this\.ascending\) \{\s*Image\([\s\S]*?reader_directory_sort_ascending[\s\S]*?\} else \{\s*Image\([\s\S]*?reader_directory_sort_descending/,
   'ascending and descending must render two explicit icon resources');
 assert.doesNotMatch(fullPanel, /reader_directory_sort[\s\S]*?\.rotate\(/,
   'sort direction must not be synthesized by rotating one icon');

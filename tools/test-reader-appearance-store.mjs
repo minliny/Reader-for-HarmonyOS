@@ -134,9 +134,9 @@ function method(name) {
 const methods = ['loadAppearanceSnapshot', 'sameAppearanceFont', 'commitAppearanceChange',
   'observeAppearanceSave', 'changeAppearanceIndent', 'stepAppearanceMetric', 'stepAppearanceSnapshotMetric',
   'roundAppearanceMetric', 'toggleAppearanceAlignment'];
-const Page = new Function(...Object.keys(state), stripTypeScriptTypes(
+const Page = new Function('ReaderThemeHost', ...Object.keys(state), stripTypeScriptTypes(
   `${source.match(/^const READER_APPEARANCE_\w+_STEP = .*;$/gm).join('\n')}
-  class Page { ${methods.map(method).join('\n')} }`) + ';return Page;')(...Object.values(state));
+  class Page { ${methods.map(method).join('\n')} }`) + ';return Page;')({prepareUserChange: async()=>{}}, ...Object.values(state));
 function page(store, registration = async () => true) {
   const value = new Page();
   Object.assign(value, {
@@ -223,7 +223,7 @@ console.log('reader appearance shared store, page races and persistence recovery
     ';return ReaderAppearancePreferences;')(preferences, ...Object.values(state));
   const disk = new Preferences({ id: 'test-context' });
   assert.equal((await disk.load()).indent, 'single');
-  assert.equal((await disk.load()).version, 3);
+  assert.equal((await disk.load()).version, 4);
   raw = '{bad json'; assert.deepEqual(await disk.load(), initial);
   await disk.save(state.setReaderAppearanceIndent(initial, 'firstLine'));
   assert.deepEqual(records, ['put', 'flush']);

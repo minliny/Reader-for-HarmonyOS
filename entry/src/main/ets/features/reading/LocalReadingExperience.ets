@@ -1,3 +1,11 @@
+import { ReaderThemeHost } from '../../app/ReaderThemeHost';
+import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
+import { buildReaderSessionLaunchGeometry, sampleReaderSessionLaunch, type ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
+import { READER_SESSION_LAUNCH_CURVES } from './ReaderSessionLaunchCurves';
+import { ReaderSessionLaunchController, type ReaderSessionLaunchTransaction,
+  type ReaderSessionLaunchIdentity, type ReaderSessionLaunchCancelReason } from './ReaderSessionLaunchController';
+import { ReaderPageChrome } from './ReaderPageChrome';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { BusinessError } from '@kit.BasicServicesKit';
 import { readerNativeHighlightValues, type ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
 import { ReaderPageSettlementTimeline } from './ReaderPageSettlementTimeline';
@@ -7,9 +15,6 @@ import { errorMessageOf } from '../../app/ErrorMessage';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../common/ProductMotionTiming';
-import { sampleReaderSessionMorphTimeline, type ReaderSessionMorphTiming } from './ReaderSessionMorphTimeline';
-import { SESSION_MORPH_GHOST_START_MS, SESSION_MORPH_FADE_START_MS,
-  SESSION_MORPH_HANDOFF_START_MS } from '../common/MotionSpec';
 import {
   type LocalReadingAnchor,
   type LocalReadingContentMetrics,
@@ -104,7 +109,7 @@ import { ReaderControlPanel, type ReaderControlPage } from './ReaderControlPanel
 import { readerControlThemeStyle } from './ReaderControlThemeStyle';
 import {
   copyReaderControlSessionState, createReaderControlSessionState, dismissReaderControlSession, openReaderControlSession,
-  expandReaderControlSession, readerControlContentLocation,
+  expandReaderControlSession, readerControlContentLocation, advanceReaderControlSession, resumeReaderControlSessionTarget,
   type ReaderControlSessionState,
 } from './ReaderControlSessionState';
 import {
@@ -126,6 +131,7 @@ import {
   readerControlSelectionOwnsReading,
   readerControlSelectionRecoveryAction,
   reconcileReaderControlSelectionProgress,
+  observeReaderProgressOperation,
   type ReaderControlSelectionDisplayAnchor,
   type ReaderControlSelectionOwner,
   type ReaderControlSelectionStoredProgress,
@@ -133,7 +139,6 @@ import {
 } from './ReaderControlSelectionTransaction';
 import {
   READER_SESSION_CAPSULE_HEIGHT,
-  READER_SESSION_CAPSULE_SHADOW,
   ReaderSessionCapsule,
   readerSessionCapsuleMinimumWidth,
 } from './ReaderSessionCapsule';
@@ -142,6 +147,7 @@ import {
   readerTtsSessionBlocksAutoPageStart,
   type ReaderSessionCapsuleSnapshot,
   type ReaderSessionCapsuleType,
+  type ReaderSessionCapsuleState,
 } from './ReaderSessionCapsuleModel';
 import {
   ReaderPageChromeSnapshot,
@@ -236,9 +242,7 @@ import {
 import { ComponentContent, FrameCallback, window } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import {
-  createReaderSessionMorphGeometry,
   readerSessionMorphSourceKindForPage,
-  type ReaderSessionMorphPhase,
   type ReaderSessionMorphSourceKind,
   ReaderSessionMorphSourceMeasurement,
 } from './ReaderSessionMorphState';
@@ -362,6 +366,7 @@ export class ReadingCommit {
   chapterOffset: number;
   chapterProgress: number;
   locationRevision: string | undefined;
+  updatedAt: number;
 
   constructor(
     sourceId: string,
@@ -370,6 +375,7 @@ export class ReadingCommit {
     chapterOffset: number,
     chapterProgress: number,
     locationRevision: string | undefined,
+    updatedAt: number = 0,
   ) {
     this.sourceId = sourceId;
     this.bookId = bookId;
@@ -377,6 +383,7 @@ export class ReadingCommit {
     this.chapterOffset = chapterOffset;
     this.chapterProgress = chapterProgress;
     this.locationRevision = locationRevision;
+    this.updatedAt = updatedAt;
   }
 }
 
@@ -926,6 +933,8 @@ const READER_CONTENT_SEARCH_PAGE_SIZE = 50;
  */
 @Component
 export struct ReadingExperience {
+  @StorageLink('readerAppScheme') private readerAppScheme: string = 'day';
+  @StorageLink('readerAppearanceRevision') @Watch('onSharedAppearanceChanged') private sharedAppearanceRevision: number = 0;
   @StorageLink('readerAppForeground') @Watch('onAppForegroundChanged') appForeground: boolean = true;
   @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsRevisionChanged')
   readerWindowMetricsRevision: number = 0;
@@ -945,7 +954,7 @@ export struct ReadingExperience {
   @Prop @Watch('onDeviceFormChanged') isTablet: boolean;
   @Prop @Watch('onWindowChromeActiveChanged') windowChromeActive: boolean = false;
   @Prop @Watch('onWindowChromeActiveChanged') windowChromeOverlayActive: boolean = false;
-  @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onSessionLaunchReduceMotionChanged') reduceMotion: boolean = false;
   /**
    * The host owns the system Back event. It receives this guarded request
    * function and must invoke it instead of changing the route directly.
@@ -975,6 +984,7 @@ export struct ReadingExperience {
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onOpenDirectory: () => void = (): void => {};
+  onOpenBookInfo: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
   onOpenRulesManagement: () => void = (): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
@@ -1019,6 +1029,9 @@ export struct ReadingExperience {
   @State private pageTurnCurrentSlot: ReaderPageTurnSlot = 'a';
   /** Native/settle protocol phase; no build node consumes this marker. */
   private pageTurnPresentationPhase: ReaderPagePresentationPhase = 'idle';
+  private pageTurnPersistenceState: 'idle' | 'queued' | 'writing' | 'unknown' | 'durable' | 'originConfirmed' = 'idle';
+  private pageTurnUnknownNotifiedGeneration: number = -1;
+  private pageTurnReconciliationPending: boolean = false;
   @State private pageTurnSettlementActive: boolean = false;
   @State private bookmarkPageOffsetY: number = 0;
   private bookmarkRollbackGeneration: number = 0;
@@ -1032,6 +1045,8 @@ export struct ReadingExperience {
   private bookTurnSurfaceGeneration: number = 0;
   /** Revision delivered to the mounted current slot before a snapshot request. */
   private bookTurnArkUIContentRevision: number = -1;
+  private bookTurnArkUIReadyRevision: number = -1;
+  private bookTurn2DFallbackPending: boolean = false;
   /** One reactive ownership bit; MOVE geometry itself remains non-reactive. */
   @State private pageTurnInputOwned: boolean = false;
   @State private pageTurnInputRevision: number = 0;
@@ -1082,6 +1097,7 @@ export struct ReadingExperience {
   @State private quickSearchState: ReaderQuickSearchState = { kind: 'idle' };
   @State private brightnessPercent: number = 100;
   @State private brightnessAutomatic: boolean = true;
+  @State private brightnessRevision: number = 0;
   @State private autoPageState: ReaderAutoPageState = createReaderAutoPageState(8);
   @State private autoPageFullConfiguration: ReaderAutoPageFullConfiguration =
     createDefaultReaderAutoPageFullConfiguration();
@@ -1112,32 +1128,28 @@ export struct ReadingExperience {
   @State private pageChromeClockText: string = formatReaderPageClock(Date.now());
   @State private sessionCapsuleMeasuredWidth: number = 0;
   @State private sessionCapsuleMeasuredHeight: number = READER_SESSION_CAPSULE_HEIGHT;
-  // Figma Review C/D/E/F capsule morph state machine. The flight proxy and
-  // the expand/reveal shell overrides live in the host so the capsule
-  // component itself stays a static actor (no transition/animation inside it).
-  @State private sessionMorphPhase: ReaderSessionMorphPhase = 'none';
-  @State private sessionMorphProxyCenterX: number = 0;
-  @State private sessionMorphProxyCenterY: number = 0;
-  @State private sessionMorphProxyWidth: number = 0;
-  @State private sessionMorphProxyHeight: number = 0;
-  @State private sessionMorphSourceContentScale: number = 1;
-  @State private sessionMorphSourceContentOpacity: number = 1;
-  @State private sessionMorphGhostOpacity: number = 0;
-  @State private sessionMorphCanonicalShellOpacity: number = 0;
-  /** Legacy hold marker has no current visual consumer; keep it non-reactive. */
-  private sessionMorphHoldProgress: number = 0;
-  @State private sessionMorphSourceImage: image.PixelMap | undefined = undefined;
-  @State private sessionMorphShellWidth: number = 0;
-  @State private sessionMorphContentOffsetX: number = 0;
-  private sessionMorphGeneration: number = 0;
-  private sessionMorphStartedMs: number = 0;
-  private readonly sessionMorphFlightCurve = curves.cubicBezierCurve(.4, 0, .2, 1);
-  private readonly sessionMorphExpandCurve = curves.cubicBezierCurve(.2, 0, 0, 1);
-  private readonly sessionMorphFadeCurve = curves.cubicBezierCurve(0, 0, .58, 1);
-  private sessionMorphSourceLeft: number = 0;
-  private sessionMorphSourceTop: number = 0;
-  private sessionMorphSourceWidth: number = 0;
-  private sessionMorphSourceHeight: number = 0;
+  // One presentation transaction and immutable sample own every launch actor.
+  @State private sessionLaunch: ReaderSessionLaunchTransaction | undefined = undefined;
+  @State private sessionLaunchStageOpacity: number = 1;
+  @State private sessionLaunchFooterExiting: boolean = false;
+  @State private sessionLaunchFooterOffset: number = 0;
+  @State private sessionLaunchFooterExitProgress: number = 0;
+  @State private sessionLaunchFooterOpacity: number = 1;
+  private readonly sessionLaunchController: ReaderSessionLaunchController =
+    new ReaderSessionLaunchController(READER_SESSION_LAUNCH_CURVES);
+  private sessionLaunchSourceTtsState: ReaderTtsState = createReaderTtsState(false);
+  private sessionLaunchSourceAutoStatus: ReaderAutoPageStatus = 'stopped';
+  private sessionLaunchSourceControl: ReaderControlSessionState = createReaderControlSessionState();
+  private sessionLaunchChromeAnchor: string = '';
+  private sessionLaunchSourceLayoutKey: string = '';
+  private sessionLaunchChrome: ReaderPageChromeSnapshot = new ReaderPageChromeSnapshot('', '', '', '', true, 96, 24);
+  private sessionLaunchSourceContexts: Map<ReaderSessionMorphSourceKind, string> = new Map<ReaderSessionMorphSourceKind, string>();
+  private sessionLaunchTopExit: number = 0;
+  private sessionLaunchDockExit: number = 0;
+  private sessionLaunchFramePending: boolean = false;
+  private pendingSessionLaunchGeneration: number = 0;
+  private sessionLaunchExitGeneration: number = 0;
+  private appearanceLoaded: boolean = false;
   private quickAutoPageMorphSource: ReaderSessionMorphSourceMeasurement | undefined = undefined;
   private quickTtsMorphSource: ReaderSessionMorphSourceMeasurement | undefined = undefined;
   private fullAutoPageMorphSource: ReaderSessionMorphSourceMeasurement | undefined = undefined;
@@ -1183,6 +1195,8 @@ export struct ReadingExperience {
   private pageTurnTransactionSerial: number = 0;
   private continuousCommitPending: boolean = false;
   private continuousCommitPromise: Promise<void> | undefined = undefined;
+  private continuousUnknownTarget: CoreReadingAnchor | undefined = undefined;
+  private continuousUnknownOrigin: LocalReadingProgress | undefined = undefined;
   private continuousAnchorSampler: (() => void) | undefined = undefined;
   private continuousUserInteractionActive: boolean = false;
   private readonly continuousImageResolutions: Set<number> = new Set<number>();
@@ -1253,8 +1267,7 @@ export struct ReadingExperience {
   private materializedContentVersion: string = '';
   private brightnessRequestGeneration: number = 0;
   private brightnessMutationQueue: Promise<void> = Promise.resolve();
-  private initialWindowBrightness: number | undefined = undefined;
-  private brightnessPolicyTouched: boolean = false;
+  private brightnessOwner: number = 0;
   private autoPageTimer: number = -1;
   private autoPageDeadlineMs: number = 0;
   private autoPageTimerGeneration: number = -1;
@@ -1299,6 +1312,8 @@ export struct ReadingExperience {
   private previousChapterMeasurement: PreviousChapterMeasurement | undefined = undefined;
   private restoredProgress: LocalReadingProgressState | undefined = undefined;
   @State private tocEntries: LocalReadingTocEntry[] = [];
+  private readingTocSource: LocalReadingTocEntry[] | undefined = undefined;
+  private readingTocProjection: LocalReadingTocEntry[] = [];
   @State private contentMetrics: LocalReadingContentMetrics | undefined = undefined;
   /** Normalize a continuous viewport to a chapter-head page before publishing paged mode. */
   private canonicalModeAnchor: number = -1;
@@ -1637,6 +1652,7 @@ export struct ReadingExperience {
           longPressSelectText: this.readerTextSelectionEnabled(),
           translateY: this.bookmarkPageOffsetY,
           onCurrentPagePresented: (revision: number): void => this.onBookTurnArkUIFramePresented(revision),
+          onCurrentPageContentReady: (revision: number): void => this.onBookTurnArkUIContentReady(revision),
           onDynamicHighlights: (identity: string, rects: ReaderDynamicHighlightRect[]): void =>
             this.onPageDynamicHighlights(identity, rects),
         });
@@ -1656,7 +1672,24 @@ export struct ReadingExperience {
       // The Panel stays mounted, but only this Host's linked session owns
       // routes, held input, the transition and committed close revision.
       ReaderControlPanel({
-        controlThemeStyle: readerControlThemeStyle(this.appearanceSnapshot.activeTheme),
+        controlThemeStyle: readerControlThemeStyle(this.readerAppScheme),
+        launchSample: this.sessionLaunch?.sample,
+        launchGeneration: this.sessionLaunch?.generation ?? 0,
+        launchSourceKind: this.sessionLaunch?.geometry.kind ?? 'quickAutoPage',
+        launchBusinessStatus: this.sessionLaunchBusinessStatus(),
+        launchDesiredPlaying: this.sessionLaunch?.desiredPlaying ?? true,
+        launchStageOpacity: this.sessionLaunchStageOpacity,
+        launchOwnsControls: this.sessionLaunch?.ownership === 'stage',
+        launchRecovering: this.sessionLaunch?.ownership === 'handoffPending',
+        onLaunchSourceReady: (generation: number): void => this.onSessionLaunchSourceReady(generation),
+        launchInteractionEnabled: !this.pageTurnInputOwned && this.sessionLaunch?.ownership === 'stage',
+        launchSourceTtsState: this.sessionLaunchSourceTtsState,
+        launchSourceAutoStatus: this.sessionLaunchSourceAutoStatus,
+        launchCountdown: this.autoPageState.remainingSeconds,
+        onLaunchToggle: (): void => this.toggleSessionCapsule(),
+        onSessionLaunchShellMeasured: (topExit: number, dockExit: number): void => {
+          this.sessionLaunchTopExit = topExit; this.sessionLaunchDockExit = dockExit;
+        },
         bookTitle: this.bookTitle,
         chapterTitle: this.chapterTitle,
         sourceId: this.sourceId,
@@ -1665,7 +1698,7 @@ export struct ReadingExperience {
         totalChapters: this.totalChapters,
         layout: this.controlLayout(this.readerWindowMetricsRevision),
         controlSession: $controlSession,
-        inputEnabled: this.isControlInputEnabled(),
+        inputEnabled: this.isControlInputEnabled() && (this.sessionLaunch === undefined || this.sessionLaunch.ownership === 'released'),
         controlObscured: this.controlObscured,
         controlOpenRevision: this.controlOpenRevision,
         dismissTemporaryRevision: this.dismissControlTemporaryRevision,
@@ -1673,7 +1706,9 @@ export struct ReadingExperience {
         onVisualSessionChange: (state: ReaderControlSessionState): void => {
           // This assignment is deliberately non-reactive.  It is a decision
           // snapshot for Back/close only; the Panel owns the visual @State.
+          const wasPresented = this.controlsPresentedForWindow();
           this.latestControlVisualSession = copyReaderControlSessionState(state);
+          if (wasPresented !== this.controlsPresentedForWindow()) this.applyWindowPolicyForChromeOwner();
         },
         onTemporaryLayerChange: (active: boolean): void => { this.controlTemporaryLayer = active; },
         onInputActivity: (): void => this.invalidateControlBackdrop(),
@@ -1698,6 +1733,7 @@ export struct ReadingExperience {
         searchState: this.quickSearchState,
         brightnessPercent: this.brightnessPercent,
         brightnessAutomatic: this.brightnessAutomatic,
+        brightnessRevision: this.brightnessRevision,
         autoPageStatus: this.autoPageState.status,
         autoPageSpeedSeconds: this.autoPageState.speedSeconds,
         autoPageTimerMinutes: this.autoPageFullConfiguration.timerMinutes,
@@ -1735,10 +1771,10 @@ export struct ReadingExperience {
           this.hideControl();
           this.onSwitchSource();
         },
-        // The top-bar More actor is the current-page bookmark toggle. The
-        // bookmark projection gate inside toggleCurrentPageBookmark keeps
-        // unknown Core state non-actionable.
         onMore: (): void => this.toggleCurrentPageBookmark(),
+        onOpenBookInfo: (): void => this.onOpenBookInfo(),
+        currentPageBookmarkReady: this.currentPageBookmarkStatus() !== 'unknown',
+        currentPageBookmarked: this.currentPageBookmarkStatus() === 'bookmarked',
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),
@@ -1754,6 +1790,7 @@ export struct ReadingExperience {
         onProgressChange: (percent: number): void => this.seekControlProgress(percent),
         onBrightnessChange: (percent: number): void => this.setReaderBrightness(percent),
         onBrightnessAuto: (): void => this.setReaderAutomaticBrightness(),
+        onBrightnessCancel: (): void => this.cancelReaderBrightness(),
         onExpandDirectory: (): void => this.expandControlDirectory(),
         onSearchQueryChange: (query: string): void => this.updateQuickSearchQuery(query),
         onSearch: (): void => this.runQuickSearch(),
@@ -1823,6 +1860,8 @@ export struct ReadingExperience {
         onTtsKeepScreenOnChange: (enabled: boolean): void => this.changeTtsKeepScreenOn(enabled),
         onTtsFailurePolicyChange: (policy: 'skip' | 'stop'): void => this.changeTtsFailurePolicy(policy),
         onTtsVoiceChange: (language: string, person: number): void => this.changeTtsVoice(language, person),
+        onTtsVoiceAudition: (language: string, person: number): Promise<void> => this.auditionReaderTtsVoice(language, person),
+        onTtsAuditionStop: (): void => this.stopReaderTtsAudition(),
         onTtsEngineChange: (engine: string): Promise<void> => this.changeTtsEngine(engine),
         onTtsHttpEnginePut: (config: ReaderTtsEngineOption): Promise<void> => this.saveHttpTtsEngine(config),
         onTtsHttpEngineDelete: (id: number): Promise<void> => this.deleteHttpTtsEngine(id),
@@ -1876,97 +1915,34 @@ export struct ReadingExperience {
           onGestureDecision: (decision: ReaderPageGestureDecision): ReaderPageGestureDecision =>
             this.onReaderPageGestureDecision(decision),
       });
-      if (this.shouldShowSessionCapsule()) {
+      if (this.sessionLaunch === undefined && this.shouldShowSessionCapsule()) {
         ReaderSessionCapsule({
-          type: this.sessionCapsuleType(),
-          sessionState: this.sessionCapsuleState(),
-          countdown: this.sessionCapsuleCountdown(),
-          surfaceColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart,
-          textColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
+          type: this.sessionCapsuleType(), sessionState: this.sessionCapsuleState(), countdown: this.sessionCapsuleCountdown(),
+          surfaceColor: readerAppColor('TOK_READ_SURFACE', this.readerAppScheme),
+          surfaceBorderColor: readerAppColor('TOK_LINE', this.readerAppScheme),
+          textColor: readerAppColor('TOK_READ_INK', this.readerAppScheme),
+          primaryColor: readerAppColor('TOK_READ_PRIMARY', this.readerAppScheme),
+          onPrimaryColor: readerAppColor('app.control.onPrimary', this.readerAppScheme),
+          themeScheme: this.readerAppScheme,
           interactionEnabled: !this.pageTurnInputOwned,
-          morphShellWidth: this.sessionCapsuleMorphShellWidth(),
-          morphContentOffsetX: this.sessionCapsuleMorphContentOffsetX(),
           onToggle: (): void => this.toggleSessionCapsule(),
-          onMeasured: (width: number, height: number): void =>
-            this.onSessionCapsuleMeasured(this.sessionCapsuleType(), width, height),
-        })
-          .position({
-            x: this.sessionCapsuleLayout().sessionX + this.sessionCapsuleMorphLeftAdjust(),
-            y: this.sessionCapsuleLayout().sessionY,
-          })
-          .zIndex(8)
-          // Reader-UI tokens: capsuleEnter 160ms / sessionReturn 200ms. Fade
-          // only — countdown and state updates mutate the mounted node and
-          // must never replay this transition. While the host-owned morph
-          // timeline runs, the flight-proxy handoff must stay seamless, so
-          // the fade is suppressed until the morph window closes.
-          .transition(this.sessionMorphPhase !== 'none' || this.reduceMotion ?
-          TransitionEffect.IDENTITY :
-          TransitionEffect.asymmetric(
-            TransitionEffect.OPACITY.animation(motionAnimateParam('reader.session.capsule.enter')),
-            TransitionEffect.OPACITY.animation(motionAnimateParam('reader.session.capsule.exit')),
-          ));
+          onMeasured: (width: number, height: number): void => this.onSessionCapsuleMeasured(this.sessionCapsuleType(), width, height),
+        }).position({ x: this.sessionCapsuleLayout().sessionX, y: this.sessionCapsuleLayout().sessionY }).zIndex(8);
       }
-      if (this.sessionMorphPhase === 'flight' && this.sessionMorphSourceImage !== undefined) {
-        // Figma Review C/D/E/F: fly a captured copy of the exact source actor,
-        // not an invented blank rectangle. The duplicate blur image is the
-        // authored motion-blur ghost; the canonical shell cross-fades in at
-        // the 24vp handoff so the following expansion is pixel-continuous.
-        Stack({ alignContent: Alignment.Center }) {
-          Image(this.sessionMorphSourceImage)
-            .width(this.sessionMorphSourceWidth)
-            .height(this.sessionMorphSourceHeight)
-            .objectFit(ImageFit.Fill)
-            .scale({
-              x: this.sessionMorphSourceContentScale,
-              y: this.sessionMorphSourceContentScale,
-            })
-            .opacity(this.sessionMorphSourceContentOpacity);
-          Image(this.sessionMorphSourceImage)
-            .width(this.sessionMorphSourceWidth)
-            .height(this.sessionMorphSourceHeight)
-            .objectFit(ImageFit.Fill)
-            .scale({
-              x: this.sessionMorphSourceContentScale,
-              y: this.sessionMorphSourceContentScale,
-            })
-            .blur(12)
-            .opacity(this.sessionMorphGhostOpacity);
-          Row()
-            .width('100%')
-            .height('100%')
-            .backgroundColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart)
-            .border({ width: 1, color: TOK_LINE })
-            .borderRadius(12)
-            .shadow(READER_SESSION_CAPSULE_SHADOW)
-            .opacity(this.sessionMorphCanonicalShellOpacity);
-        }
-          .width(this.sessionMorphProxyWidth)
-          .height(this.sessionMorphProxyHeight)
-          .borderRadius(12)
-          .clip(true)
-          .position({
-            x: this.sessionMorphProxyCenterX - this.sessionMorphProxyWidth / 2,
-            y: this.sessionMorphProxyCenterY - this.sessionMorphProxyHeight / 2,
-          })
-          .zIndex(9)
-          .hitTestBehavior(HitTestMode.None);
+      if (this.sessionLaunch !== undefined && (!this.sessionLaunch.sample.finished || this.sessionLaunch.ownership !== 'stage')) {
+        ReaderPageChrome({
+          isSessionOverlay: true, topStartText: this.sessionLaunchChrome.topStartText,
+          topEndText: this.sessionLaunchChrome.topEndText, bottomStartText: this.sessionLaunchChrome.bottomStartText,
+          bottomEndText: this.sessionLaunchChrome.bottomEndText, sessionVisible: true,
+          sessionWidth: this.sessionLaunch.geometry.capsuleWidth, sessionHeight: 24,
+          layout: this.readingLayout(), appearance: this.appearanceSnapshot,
+          incomingOpacity: this.sessionLaunch.sample.immersiveOpacity,
+          footerOpacity: this.sessionLaunchFooterExiting ? this.sessionLaunchFooterOpacity : this.sessionLaunch.sample.footerOpacity,
+          footerTranslateX: this.sessionLaunchFooterExiting ? this.sessionLaunchFooterOffset : this.sessionLaunch.sample.footerTranslateX,
+          sessionExitProgress: this.sessionLaunchFooterExitProgress,
+        }).opacity(this.sessionLaunchFooterExiting ? 1 : this.sessionLaunchStageOpacity).zIndex(8).hitTestBehavior(HitTestMode.None);
       }
-      if (this.sessionMorphPhase === 'handoff' || this.sessionMorphPhase === 'dotHold') {
-        Row()
-          .width(24)
-          .height(24)
-          .backgroundColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart)
-          .border({ width: 1, color: TOK_LINE })
-          .borderRadius(12)
-          .shadow(READER_SESSION_CAPSULE_SHADOW)
-          .position({
-            x: this.sessionMorphProxyCenterX - 12,
-            y: this.sessionMorphProxyCenterY - 12,
-          })
-          .zIndex(9)
-          .hitTestBehavior(HitTestMode.None);
-      }
+
     }
     .width('100%')
     .height('100%')
@@ -2127,7 +2103,8 @@ export struct ReadingExperience {
       return;
     }
     if (event.event === BOOK_TURN_EVENT_VISUAL_COMMIT_ENDPOINT) {
-      if (event.generation !== this.pageTurnSettlementGeneration) return;
+      if (!this.pageTurnSettlementActive || event.generation !== this.pageTurnSettlementGeneration ||
+        event.generation !== this.bookTurnSurfaceGeneration) return;
       this.pageTurnAnimationFinished = true;
       const prepared = this.pageTurnSettlingPrepared;
       if (prepared !== undefined && !this.pageTurnCommitStarted) {
@@ -2137,6 +2114,7 @@ export struct ReadingExperience {
       return;
     }
     if (event.event === BOOK_TURN_EVENT_ROLLBACK_COMPLETE) {
+      if (!this.pageTurnSettlementActive || event.generation !== this.bookTurnSurfaceGeneration) return;
       this.finishPageTurnRollback(event.generation);
       return;
     }
@@ -2161,7 +2139,8 @@ export struct ReadingExperience {
       return;
     }
     if (event.event === BOOK_TURN_EVENT_TERMINAL_RELEASED) {
-      if (event.generation === this.pageTurnSettlementGeneration) {
+      if (this.pageTurnSettlementActive && event.generation === this.pageTurnSettlementGeneration &&
+        event.generation === this.bookTurnSurfaceGeneration) {
         this.pageTurnPresentationPhase = 'released';
         if (this.pageTurnCommitSucceeded) this.finishSuccessfulPageTurnPresentation(event.generation);
         else this.finishPageTurnRollback(event.generation);
@@ -2203,7 +2182,7 @@ export struct ReadingExperience {
       // Once the authoritative page is promoted, lost Native slots have no
       // remaining decision to make. Do not retry their old generation forever.
       if (this.pageTurnCommitFinished && this.pageTurnCommitSucceeded && this.pageTurnSettlingPrepared === undefined) {
-        this.finishSuccessfulPageTurnPresentation(this.pageTurnSettlementGeneration);
+        this.requestBookTurn2DFallback(this.pageTurnSettlementGeneration);
       }
       return;
     }
@@ -2820,6 +2799,7 @@ export struct ReadingExperience {
       chrome.sessionVisible.toString(),
       chrome.sessionWidth.toString(),
       chrome.sessionHeight.toString(),
+      (this.sessionLaunch !== undefined && !this.sessionLaunch.sample.finished) ? 'session-overlay' : 'page-chrome',
     ].join('|');
   }
 
@@ -2927,7 +2907,7 @@ export struct ReadingExperience {
       this.chapterWindow.configure(
         this.sourceId,
         this.bookId,
-        toc.entries.map((entry: LocalReadingTocEntry): number => entry.index),
+        this.readingTocEntries().map((entry: LocalReadingTocEntry): number => entry.index),
       );
       const requested = this.normalizedRequestedChapter();
       const restored = progress.kind === 'restored' ? progress.progress : undefined;
@@ -4407,6 +4387,7 @@ export struct ReadingExperience {
       return;
     }
     this.exitRequested = true;
+    this.stopReaderTtsAudition();
     this.captureReadingRecordElapsed(false);
     this.finishSessionCapsuleMorph();
     this.clearReadingRecordTimer();
@@ -4511,15 +4492,19 @@ export struct ReadingExperience {
       this.continuousCommitInFlight = true;
       const operation = this.drainContinuousProgress(lifecycleToken);
       this.continuousCommitPromise = operation;
-      try { await operation; } finally {
+      // Retain the one real drain even if a UI observer times out. A delayed
+      // writer must never overlap a second drain or be reported saved early.
+      const finish = (): void => {
         if (this.continuousCommitPromise === operation) {
           this.continuousCommitPromise = undefined;
           this.continuousCommitInFlight = false;
         }
-        this.drainRapidPageTurn();
-      }
-    } else {
-      await this.continuousCommitPromise;
+        if (this.isMountedToken(lifecycleToken)) this.drainRapidPageTurn();
+      };
+      void operation.then(finish, finish);
+    }
+    if (await observeReaderProgressOperation(this.continuousCommitPromise) === 'unknown') {
+      throw new Error('READING_CONTINUOUS_PROGRESS_UNKNOWN');
     }
   }
 
@@ -4537,10 +4522,18 @@ export struct ReadingExperience {
     const scalarCount = this.chapterLayoutMap.scalarCount();
     const scalar = Math.max(0, Math.min(scalarCount, this.continuousVisibleScalar));
     const revision = this.continuousProgressRevision;
-    const isCurrent = (): boolean => this.isMountedToken(lifecycleToken) && this.phase === 'ready' &&
+    const isOwner = (): boolean => this.isMountedToken(lifecycleToken) && this.phase === 'ready' &&
       this.readerSettingsSnapshot.navigationMode === 'continuous' && this.chapter === chapter &&
-      this.chapterSelectionToken === selectionToken && this.materializedChapterSelectionToken === selectionToken &&
-      this.continuousProgressRevision === revision && this.continuousVisibleScalar === scalar;
+      this.chapterSelectionToken === selectionToken && this.materializedChapterSelectionToken === selectionToken;
+    const isCurrent = (): boolean => isOwner() && this.continuousProgressRevision === revision &&
+      this.continuousVisibleScalar === scalar;
+    // A retry after an ambiguous result is a read first, even if scrolling has
+    // since selected a newer scalar. Never overwrite an unclassified foreign
+    // row or repeat the unknown write merely because a new sample arrived.
+    if (this.continuousUnknownTarget !== undefined) {
+      await this.reconcileContinuousUnknownProgress(isCurrent);
+      if (!isCurrent()) return;
+    }
     if (this.lastCommittedProgress?.sourceId === this.sourceId &&
       this.lastCommittedProgress.bookId === this.bookId &&
       this.lastCommittedProgress.chapterIndex === chapter.chapterIndex &&
@@ -4569,22 +4562,49 @@ export struct ReadingExperience {
       });
     } catch (error) {
       hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience continuous progress commit failed: ${this.errorMessage(error as Error)}`);
-      if (!isCurrent()) return;
-      let verified = false;
-      await this.activeGateway().runProgressCommitSerial(async (): Promise<void> => {
-        const state = await this.activeGateway().loadProgress(this.bookId, isCurrent);
-        if (!isCurrent()) return;
-        if (state.kind === 'restored' && state.progress.chapterIndex === chapter.chapterIndex &&
-          state.progress.chapterOffset === scalar) {
-          this.admitCommittedProgress(state.progress);
-          verified = true;
-        }
-      });
-      if (isCurrent() && !verified) throw new Error(this.errorMessage(error as Error));
+      if (!isOwner()) return;
+      this.continuousUnknownTarget = new CoreReadingAnchor(chapter.chapterIndex, scalar,
+        scalarCount === 0 ? 0 : scalar / scalarCount);
+      this.continuousUnknownOrigin = this.lastCommittedProgress;
+      const confirmedTarget = await this.reconcileContinuousUnknownProgress(isOwner);
+      if (isCurrent() && confirmedTarget) {
+        this.onAutoPagePageCommitted();
+      } else if (isCurrent()) {
+        throw new Error('READING_CONTINUOUS_PROGRESS_UNKNOWN');
+      }
+
     } finally {
       if (this.isMountedToken(lifecycleToken) && this.chapter === chapter &&
         this.continuousProgressRevision !== revision) this.continuousCommitPending = true;
     }
+  }
+
+  private async reconcileContinuousUnknownProgress(isCurrent: () => boolean): Promise<boolean> {
+    const target = this.continuousUnknownTarget;
+    if (target === undefined) return false;
+    const gateway = this.activeGateway();
+    const result = await reconcileReaderControlSelectionProgress({ isCurrent,
+      runSerial: (operation: () => Promise<void>): Promise<void> => gateway.runProgressCommitSerial(operation),
+      readProgress: async (): Promise<LocalReadingProgress | undefined> => {
+        const state = await gateway.loadProgress(this.bookId, isCurrent);
+        return state.kind === 'restored' ? state.progress : undefined;
+      },
+    });
+    if (!isCurrent()) return false;
+    const stored = result.progress;
+    if (result.kind !== 'verified' || stored === undefined || stored.bookId !== this.bookId) {
+      throw new Error('READING_CONTINUOUS_PROGRESS_UNKNOWN');
+    }
+    const targetConfirmed = stored.chapterIndex === target.chapterIndex && stored.chapterOffset === target.chapterOffset;
+    const origin = this.continuousUnknownOrigin;
+    const originConfirmed = origin !== undefined && stored.chapterIndex === origin.chapterIndex &&
+      stored.chapterOffset === origin.chapterOffset && stored.updatedAt === origin.updatedAt &&
+      stored.locationRevision === origin.locationRevision;
+    if (!targetConfirmed && !originConfirmed) throw new Error('READING_CONTINUOUS_PROGRESS_FOREIGN');
+    this.continuousUnknownTarget = undefined;
+    this.continuousUnknownOrigin = undefined;
+    if (targetConfirmed) this.admitCommittedProgress(stored);
+    return targetConfirmed;
   }
 
   private admitCommittedProgress(stored: LocalReadingProgress): void {
@@ -4595,6 +4615,7 @@ export struct ReadingExperience {
       stored.chapterOffset,
       stored.chapterProgress,
       stored.locationRevision,
+      stored.updatedAt,
     );
     this.lastCommittedProgress = commit;
     try {
@@ -5212,11 +5233,11 @@ export struct ReadingExperience {
   }
 
   private requireKnownChapter(requested: number | undefined): number {
-    if (this.tocEntries.length === 0) {
+    if (this.readingTocEntries().length === 0) {
       throw new Error('LOCAL_TOC_EMPTY');
     }
     if (requested === undefined) {
-      return this.tocEntries[0].index;
+      return this.readingTocEntries()[0].index;
     }
     if (this.chapterWindow.contains(requested)) {
       return requested;
@@ -5387,8 +5408,9 @@ export struct ReadingExperience {
       if (this.bookTurnAwaitingSlotCommit) {
         if (this.bookTurnSession.committedSlotsGeneration() === generation) {
           this.onBookTurnNativeEvent(new BookTurnNativeEvent(BOOK_TURN_EVENT_SLOTS_COMMITTED, generation, 0));
-        } else if (this.pageTurnDirection !== undefined) {
-          this.bookTurnSession.commitSlots(generation, this.pageTurnDirection);
+        } else {
+          this.requestBookTurn2DFallback(generation);
+          return;
         }
         this.armPageTurnSettlementDeadline(generation);
         return;
@@ -5396,7 +5418,11 @@ export struct ReadingExperience {
       if (this.pageTurnPresentationPhase === 'surfaceHidden') {
         this.bookTurnSession.releaseTerminalFrame(generation);
         this.bookTurnSession.clearSurface(generation);
-        this.armPageTurnSettlementDeadline(generation);
+        this.requestBookTurn2DFallback(generation);
+        return;
+      }
+      if (this.pageTurnPresentationPhase === 'logicalPromoted') {
+        this.requestBookTurn2DFallback(generation);
         return;
       }
       if (this.pageTurnSettlingPrepared !== undefined) {
@@ -5559,7 +5585,7 @@ export struct ReadingExperience {
         this.desiredChapterOffset,
       );
     }
-    const count = this.tocEntries.length;
+    const count = this.readingTocEntries().length;
     if (count === 0) {
       return 0;
     }
@@ -5643,14 +5669,14 @@ export struct ReadingExperience {
     if (this.contentMetrics !== undefined) {
       return this.contentMetricIndex.percent(this.contentMetrics, chapterIndex, pageStartScalar);
     }
-    const count = this.tocEntries.length;
+    const count = this.readingTocEntries().length;
     if (count === 0) {
       return 0;
     }
     let position = this.chapterWindow.position(chapterIndex);
     if (position < 0) {
-      for (let index = 0; index < this.tocEntries.length; index += 1) {
-        if (this.tocEntries[index].index === chapterIndex) {
+      for (let index = 0; index < this.readingTocEntries().length; index += 1) {
+        if (this.readingTocEntries()[index].index === chapterIndex) {
           position = index;
           break;
         }
@@ -5718,6 +5744,7 @@ export struct ReadingExperience {
       (state: ReaderTtsState): void => {
         if (this.isMountedToken(lifecycleToken) && this.ttsCoordinator === coordinator) {
           this.ttsState = state;
+          this.onSessionLaunchTtsState(state);
         }
       },
       async (chapter: ReaderTtsChapterRef): Promise<ReaderTtsChapterAdvanceInput | undefined> =>
@@ -5910,8 +5937,8 @@ export struct ReadingExperience {
       presentation.sourceId === this.sourceId && presentation.bookId === this.bookId &&
       // During a capsule morph the control host is intentionally hidden at
       // capture start; the morph generation itself owns presentation validity.
-      (this.controlVisible() || this.sessionMorphPhase !== 'none') &&
-      !(this.controlShellExitArmed() && this.sessionMorphPhase === 'none') &&
+      (this.controlVisible() || this.sessionLaunch !== undefined) &&
+      !(this.controlShellExitArmed() && this.sessionLaunch === undefined) &&
       presentation.openRevision === this.controlOpenRevision &&
       presentation.moduleVisitRevision === this.controlModuleVisitRevision &&
       presentation.module === module && location.level === 'secondary' && location.module === module;
@@ -5937,17 +5964,22 @@ export struct ReadingExperience {
     // preceding TTS stop barrier. Its continuation may still resolve, but its
     // generation can no longer start a second runtime.
     this.cancelPendingAutoPageStart();
+    const startingNew = this.ttsState.status !== 'playing' && this.ttsState.status !== 'preparing' &&
+      this.ttsState.status !== 'paused' && this.ttsState.status !== 'interrupted' && this.ttsState.status !== 'stopping';
+    if (pendingIntent === undefined && startingNew && this.phase === 'ready' && this.chapter !== undefined && this.visiblePage !== undefined) {
+      this.beginSessionCapsuleMorph('tts');
+    }
     if (!this.ttsAvailabilityResolved) {
       const lifecycleToken = this.lifecycleToken;
       void this.initializeTtsSession(lifecycleToken).then((available: boolean): void => {
         if (available && this.isTtsPlayIntentCurrent(intent)) {
           this.toggleTts(intent);
-        }
-      });
+        } else if (this.isTtsPlayIntentCurrent(intent)) this.cancelSessionLaunch('failure');
+      }).catch((error: Error): void => { this.logTtsFailure('initialize', error); this.cancelSessionLaunch('failure'); });
       return;
     }
     const coordinator = this.ttsCoordinator;
-    if (coordinator === undefined || this.ttsState.status === 'unavailable') return;
+    if (coordinator === undefined || this.ttsState.status === 'unavailable') { this.cancelSessionLaunch('failure'); return; }
     // `resuming` is kept in the state union for compatibility but is no
     // longer emitted by the coordinator, so the pause branch excludes it.
     if (this.ttsState.status === 'playing' || this.ttsState.status === 'preparing') {
@@ -5965,6 +5997,7 @@ export struct ReadingExperience {
     if (!this.mounted || this.phase !== 'ready' || chapter === undefined || page === undefined ||
       this.materializedContentVersion.length === 0) return;
     this.stopAutoPage();
+    coordinator.setDesiredPlaying(this.sessionLaunch?.geometry.type === 'tts' ? this.sessionLaunch.desiredPlaying : true);
     void coordinator.start({
       chapter: this.ttsChapterRef(chapter),
       content: chapter.content,
@@ -5979,12 +6012,15 @@ export struct ReadingExperience {
       backgroundPlayback: this.ttsBackgroundPlayback,
       failurePolicy: this.ttsFailurePolicy,
       timerDurationMs: this.ttsTimerDurationMs(),
-    }).then((): Promise<boolean> => coordinator.whenStarted()).then((started: boolean): void => {
-      if (started && this.isTtsPlayIntentCurrent(intent) && this.ttsCoordinator === coordinator &&
-        this.isControlPlaybackPresentationCurrent(intent.presentation, 'tts')) {
-        this.beginSessionCapsuleMorph();
-      }
-    }).catch((error: Error): void => this.logTtsFailure('start', error));
+    }, this.sessionLaunch?.geometry.type === 'tts' ? this.sessionLaunch.desiredPlaying : true).then((): void => {
+      if (!this.isTtsPlayIntentCurrent(intent) || this.ttsCoordinator !== coordinator) return;
+      // Native onStart/paused ACK owns truth. No successful business completion
+      // starts, resets or replays a presentation timeline.
+      this.onSessionLaunchTtsState(this.ttsState);
+    }).catch((error: Error): void => {
+      if (!this.isTtsPlayIntentCurrent(intent)) return;
+      this.logTtsFailure('start', error); this.cancelSessionLaunch('failure');
+    });
   }
 
   private async loadNextTtsChapter(
@@ -6014,7 +6050,25 @@ export struct ReadingExperience {
     };
   }
 
+  private async auditionReaderTtsVoice(language: string, person: number): Promise<void> {
+    const coordinator = this.ttsCoordinator;
+    const lifecycle = this.lifecycleToken;
+    if (!this.isSessionActive(lifecycle) || coordinator === undefined || !this.controlVisible()) return;
+    this.pauseAutoPage('manual');
+    await coordinator.auditionVoice({ engine: this.ttsEngine, language, person, rate: this.ttsState.rate, pitch: 1 });
+    if (!this.isSessionActive(lifecycle) && this.ttsCoordinator === coordinator) await coordinator.stopAudition();
+  }
+
+  private stopReaderTtsAudition(): void {
+    const coordinator = this.ttsCoordinator;
+    if (coordinator === undefined) return;
+    void coordinator.stopAudition().catch((error: Error): void => {
+      hilog.warn(0x0000, 'ReaderTtsAudition', 'stop audition failed: %{public}s', error.message);
+    });
+  }
+
   private stopTts(): void {
+    if (this.sessionLaunch?.geometry.type === 'tts') this.cancelSessionLaunch('stop');
     this.cancelPendingTtsPlay();
     const coordinator = this.ttsCoordinator;
     if (coordinator !== undefined) {
@@ -6140,7 +6194,7 @@ export struct ReadingExperience {
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.keepScreenOn = enabled;
     this.ttsKeepScreenOn = enabled;
-    void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.windowChromeActive)
+    void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.controlsPresentedForWindow())
       .then((): Promise<void> => this.persistTtsPreferencesSnapshot(candidate))
       .catch((error: Error): void => {
         if (generation !== this.ttsPreferenceMutationGeneration) return;
@@ -6543,6 +6597,7 @@ export struct ReadingExperience {
       return;
     }
     if (this.autoPageStartPending) return;
+    this.beginSessionCapsuleMorph('autoPage');
     const coordinator = this.ttsCoordinator;
     if (readerTtsSessionBlocksAutoPageStart(this.ttsState.status)) {
       if (coordinator === undefined) return;
@@ -6563,6 +6618,8 @@ export struct ReadingExperience {
           if (generation !== this.autoPageStartGeneration) return;
           this.autoPageStartPending = false;
           this.logTtsFailure('stop before auto-page', error);
+          this.cancelSessionLaunch('stopBarrierFailure');
+          this.getUIContext().getPromptAction().showToast({ message: '朗读未能停止，自动翻页尚未启动，请重试' });
         });
       return;
     }
@@ -6575,14 +6632,23 @@ export struct ReadingExperience {
       return;
     }
     this.autoPageState = startReaderAutoPage(this.autoPageState);
-    if (this.isControlPlaybackPresentationCurrent(presentation, 'autoPage')) {
-      this.beginSessionCapsuleMorph();
+    const launch = this.sessionLaunch;
+    if (launch !== undefined && launch.geometry.type === 'autoPage' && launch.ownership === 'stage') {
+      if (!this.sessionLaunchController.mayStartBusiness(launch.generation)) {
+        this.pauseAutoPage('manual');
+        this.sessionLaunchController.acknowledgeBusiness(launch.generation, 'paused');
+        this.sessionLaunch = this.sessionLaunchController.snapshot();
+        return;
+      }
+      this.sessionLaunchController.acknowledgeBusiness(launch.generation, 'playing');
+      this.sessionLaunch = this.sessionLaunchController.snapshot();
     }
     this.armAutoPageTimer(true);
     this.armAutoPageSessionTimer(true);
   }
 
   private stopAutoPage(): void {
+    if (this.sessionLaunch?.geometry.type === 'autoPage') this.cancelSessionLaunch('stop');
     this.cancelPendingAutoPageStart();
     this.autoPageTurnPending = false;
     this.autoPageState = stopReaderAutoPage(this.autoPageState, 'manual');
@@ -6863,6 +6929,7 @@ export struct ReadingExperience {
   private onAppForegroundChanged(): void {
     this.onControlInputBoundaryChanged();
     if (!this.appForeground) {
+      this.stopReaderTtsAudition();
       this.finishSessionCapsuleMorph();
       this.finishBookmarkRollback(this.bookmarkRollbackGeneration);
       this.bookmarkRollbackGeneration += 1;
@@ -6977,12 +7044,19 @@ export struct ReadingExperience {
     this.applyWindowPolicyForChromeOwner();
   }
 
+  private controlsPresentedForWindow(): boolean {
+    return this.sessionLaunch?.ownership === 'stage' ? this.sessionLaunch.sample.controlsPresented :
+      readerControlHostVisible(this.latestControlVisualSession);
+  }
+
   private applyWindowPolicyForChromeOwner(): void {
+    AppStorage.setOrCreate<boolean>('readerTopInfoSuppressed',
+      this.windowChromeActive && this.controlsPresentedForWindow());
     if (this.windowChromeActive) {
       // The control surface is an explicit system-chrome affordance. Keep the
       // user's hide-status-bar preference persisted, but expose the status bar
       // while controls are open so the top bar has a live safe-top boundary.
-      void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.controlVisible())
+      void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.controlsPresentedForWindow())
         .catch((_error: Error): void => {});
       return;
     }
@@ -7009,6 +7083,7 @@ export struct ReadingExperience {
   }
 
   private setControlPage(page: ReaderControlPage): void {
+    if (this.sessionLaunch !== undefined) this.cancelSessionLaunch('sourceChanged');
     if (!this.isControlInputEnabled()) return;
     this.invalidateControlBackdrop();
     this.controlSession = setReaderControlHostPage(this.latestControlVisualSession, page, this.controlTiming());
@@ -7119,6 +7194,7 @@ export struct ReadingExperience {
     const mutationGeneration = this.appearanceMutationGeneration;
     try {
       await this.appearanceGateway.load();
+      this.appearanceLoaded = true;
       while (this.isSessionActive(lifecycleToken) && mutationGeneration === this.appearanceMutationGeneration) {
         const snapshot = this.appearanceGateway.current();
         if (snapshot.font !== 'custom') {
@@ -7258,7 +7334,7 @@ export struct ReadingExperience {
 
   private changeReaderSetting(key: ReaderSettingsToggleKey, value: boolean): void {
     const snapshot = setReaderSettingsToggle(this.readerSettingsSnapshot, key, value);
-    if (key === 'hideStatusBar' || key === 'hideNavigationBar' || key === 'extendIntoCutout') {
+    if (key === 'hideNavigationBar' || key === 'extendIntoCutout') {
       this.commitReaderWindowSettings(snapshot);
       return;
     }
@@ -7304,7 +7380,7 @@ export struct ReadingExperience {
     this.readerSettingsLoaded = true;
     this.configureReaderScreenAwakeLease(snapshot);
     this.applyReaderSystemEventPolicy(snapshot);
-    void this.applyReaderWindowPolicy(snapshot, this.windowChromeActive)
+    void this.applyReaderWindowPolicy(snapshot, this.controlsPresentedForWindow())
       .then((): Promise<void> => {
         if (!this.isSessionActive(lifecycleToken) ||
           generation !== this.readerSettingsMutationGeneration) {
@@ -7322,7 +7398,7 @@ export struct ReadingExperience {
           this.readerSettingsSnapshot = previous;
           this.configureReaderScreenAwakeLease(previous);
           this.applyReaderSystemEventPolicy(previous);
-          void this.applyReaderWindowPolicy(previous, this.windowChromeActive)
+          void this.applyReaderWindowPolicy(previous, this.controlsPresentedForWindow())
             .catch((_rollbackError: Error): void => {});
           this.showReaderSettingsFailure('阅读设置保存失败，已恢复上次保存值', error);
         }
@@ -7339,7 +7415,7 @@ export struct ReadingExperience {
   }
 
   private applyReaderWindowPolicy(snapshot: ReaderSettingsSnapshot,
-    forceStatusBarVisible: boolean = false): Promise<void> {
+    forceStatusBarVisible: boolean = this.controlsPresentedForWindow()): Promise<void> {
     return ReaderWindowCoordinator.requestReaderWindowPolicy(this.windowPolicyFor(snapshot, forceStatusBarVisible));
   }
 
@@ -7353,7 +7429,7 @@ export struct ReadingExperience {
     if (!this.mounted) {
       return;
     }
-    void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.windowChromeActive)
+    void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.controlsPresentedForWindow())
       .catch((_error: Error): void => {
         // A later foreground/settings application retries the same semantic
         // lease state through the serialized Window coordinator.
@@ -7386,7 +7462,7 @@ export struct ReadingExperience {
     return new ReaderWindowPolicy(
       snapshot.screenDirection,
       this.screenAwakeKeepScreenOn || this.ttsKeepScreenOn,
-      forceStatusBarVisible ? false : snapshot.hideStatusBar,
+      forceStatusBarVisible ? false : snapshot.extendIntoCutout,
       snapshot.hideNavigationBar,
       snapshot.extendIntoCutout,
     );
@@ -7394,12 +7470,11 @@ export struct ReadingExperience {
 
   private safeWindowSettingsFallback(snapshot: ReaderSettingsSnapshot): ReaderSettingsSnapshot {
     return normalizeReaderSettingsSnapshot({
-      version: 4,
+      version: 5,
       screenDirection: 'system',
       navigationMode: snapshot.navigationMode,
       pageTransition: snapshot.pageTransition,
       screenTimeout: 'system',
-      hideStatusBar: true,
       hideNavigationBar: false,
       extendIntoCutout: false,
       justifyText: snapshot.justifyText,
@@ -7492,7 +7567,7 @@ export struct ReadingExperience {
   }
 
   private changeAppearanceTheme(theme: ReaderAppearanceTheme): void {
-    this.commitAppearanceChange((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot => setReaderAppearanceTheme(current, theme));
+    this.commitAppearanceChange((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot => setReaderAppearanceTheme(current, theme, AppStorage.get<string>('readerSystemScheme') === 'night' ? 'night' : 'day'));
   }
 
   private changeAppearanceDayTheme(theme: ReaderAppearanceTheme): void {
@@ -7582,7 +7657,10 @@ export struct ReadingExperience {
       1 : this.appearanceMutationGeneration + 1;
     const generation = this.appearanceMutationGeneration;
     const lifecycleToken = this.lifecycleToken;
-    void this.appearanceGateway.update(change).then((commit: ReaderAppearanceCommit | undefined): void => {
+    void ReaderThemeHost.prepareUserChange().then((): Promise<ReaderAppearanceCommit | undefined> => {
+      if (!this.isSessionActive(lifecycleToken)) return Promise.resolve(undefined);
+      return this.appearanceGateway.update(change, (): boolean => this.isSessionActive(lifecycleToken));
+    }).then((commit: ReaderAppearanceCommit | undefined): void => {
       if (commit === undefined) return;
       // Keep every accepted change, but only the current page admits the latest view.
       if (this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration) {
@@ -7666,21 +7744,25 @@ export struct ReadingExperience {
   }
 
   private shouldShowSessionCapsule(): boolean {
-    // The flight proxy owns the capsule anchor until it lands; the real
-    // capsule mounts at the expand beat and stays through reveal.
-    if (this.sessionMorphPhase === 'capture' || this.sessionMorphPhase === 'flight' ||
-      this.sessionMorphPhase === 'handoff' || this.sessionMorphPhase === 'dotHold') {
-      return false;
-    }
-    return this.sessionCapsuleSnapshot() !== undefined;
+    return this.sessionLaunch !== undefined || this.sessionCapsuleSnapshot() !== undefined;
   }
 
   private sessionCapsuleType(): ReaderSessionCapsuleType {
-    return this.sessionCapsuleSnapshot()?.type ?? 'autoPage';
+    return this.sessionLaunch?.geometry.type ?? this.sessionCapsuleSnapshot()?.type ?? 'autoPage';
   }
 
-  private sessionCapsuleState(): 'playing' | 'paused' {
-    return this.sessionCapsuleSnapshot()?.sessionState ?? 'paused';
+  private sessionCapsuleState(): ReaderSessionCapsuleState {
+    return this.sessionLaunch !== undefined ? this.sessionLaunchBusinessStatus() :
+      this.sessionCapsuleSnapshot()?.sessionState ?? 'paused';
+  }
+
+  private sessionLaunchBusinessStatus(): ReaderSessionCapsuleState {
+    const launch = this.sessionLaunch;
+    if (launch === undefined) return 'paused';
+    if (launch.businessStatus === 'preparing') return 'preparing';
+    if (launch.geometry.type === 'autoPage') return this.autoPageState.status === 'running' ? 'playing' : 'paused';
+    return this.ttsState.status === 'playing' ? 'playing' :
+      this.ttsState.status === 'preparing' || this.ttsState.status === 'resuming' ? 'preparing' : 'paused';
   }
 
   private sessionCapsuleCountdown(): number {
@@ -7709,15 +7791,27 @@ export struct ReadingExperience {
   }
 
   private toggleSessionCapsule(): void {
-    // Business input is immediate; the existing visual sample keeps settling.
     if (this.pageTurnInputPhase() !== 'idle') return;
-    const snapshot = this.sessionCapsuleSnapshot();
-    if (snapshot === undefined) return;
-    if (snapshot.type === 'autoPage') {
-      this.toggleAutoPage();
+    const launch = this.sessionLaunch;
+    if (launch !== undefined) {
+      if (launch.ownership !== 'stage') return;
+      const desired = launch.businessStatus === 'preparing' ? !launch.desiredPlaying : this.sessionLaunchBusinessStatus() !== 'playing';
+      this.sessionLaunchController.setDesiredPlaying(launch.generation, desired);
+      this.sessionLaunch = this.sessionLaunchController.snapshot();
+      if (launch.geometry.type === 'tts') this.ttsCoordinator?.setDesiredPlaying(desired);
+      if (launch.businessStatus === 'preparing') return;
+      if (launch.geometry.type === 'autoPage') {
+        if (desired && this.autoPageState.status === 'paused') this.toggleAutoPage();
+        else if (!desired && this.autoPageState.status === 'running') this.pauseAutoPage('manual');
+      } else {
+        if (desired && (this.ttsState.status === 'paused' || this.ttsState.status === 'interrupted')) this.toggleTts();
+        else if (!desired && this.ttsState.status === 'playing') this.toggleTts();
+      }
       return;
     }
-    this.toggleTts();
+    const snapshot = this.sessionCapsuleSnapshot();
+    if (snapshot?.type === 'autoPage') this.toggleAutoPage();
+    else if (snapshot?.type === 'tts') this.toggleTts();
   }
 
   private activeSessionCapsuleWidth(): number {
@@ -7773,7 +7867,7 @@ export struct ReadingExperience {
   ): void {
     // Morph frames report transient shell widths; they must not overwrite
     // the settled measurement that anchors the capsule layout.
-    if (this.sessionMorphPhase !== 'none') {
+    if (this.sessionLaunch !== undefined) {
       return;
     }
     if (this.measuredSessionCapsuleType === type &&
@@ -7787,201 +7881,224 @@ export struct ReadingExperience {
     this.pageTurnRenderRevision += 1;
   }
 
-  private sessionCapsuleMorphShellWidth(): number {
-    return this.sessionMorphPhase === 'expand' || this.sessionMorphPhase === 'reveal' ?
-      this.sessionMorphShellWidth : 0;
+  private sessionLaunchLayoutKey(): string {
+    return `${this.lifecycleToken}|${this.sourceId}|${this.bookId}|${this.viewportWidth}|${this.viewportHeight}|` +
+      `${this.paginationLayoutSignature()}|${this.readerAppScheme}|${this.appearanceSnapshot.activeTheme}`;
   }
 
-  private sessionCapsuleMorphContentOffsetX(): number {
-    return this.sessionMorphPhase === 'expand' || this.sessionMorphPhase === 'reveal' ?
-      this.sessionMorphContentOffsetX : 0;
-  }
-
-  // Right-edge anchoring (Figma expand beat): the shell's right edge stays
-  // on the capsule anchor while the width reopens from the 24vp dot.
-  private sessionCapsuleMorphLeftAdjust(): number {
-    if (this.sessionMorphPhase !== 'expand' && this.sessionMorphPhase !== 'reveal') {
-      return 0;
-    }
-    return this.activeSessionCapsuleWidth() - this.sessionMorphShellWidth;
+  private sessionLaunchMeasurementKey(): string {
+    const layout = this.controlLayout(this.readerWindowMetricsRevision);
+    return `${this.sessionLaunchLayoutKey()}|${this.controlOpenRevision}|${this.controlModuleVisitRevision}|` +
+      `${layout.fullPanelWidth}|${layout.fullPanelHeight}|${layout.topBarTop}|${layout.dockBottomGap}`;
   }
 
   private admitSessionMorphSourceMeasurement(measurement: ReaderSessionMorphSourceMeasurement): void {
+    if (this.sessionLaunch?.ownership === 'stage') return;
     if (measurement.kind === 'quickAutoPage') this.quickAutoPageMorphSource = measurement;
     else if (measurement.kind === 'quickTts') this.quickTtsMorphSource = measurement;
     else if (measurement.kind === 'fullAutoPagePlayback') this.fullAutoPageMorphSource = measurement;
     else this.fullTtsMorphSource = measurement;
+    this.sessionLaunchSourceContexts.set(measurement.kind, this.sessionLaunchMeasurementKey());
   }
 
-  private sessionMorphSourceMeasurement(
-    kind: ReaderSessionMorphSourceKind,
-  ): ReaderSessionMorphSourceMeasurement | undefined {
+  private sessionMorphSourceMeasurement(kind: ReaderSessionMorphSourceKind): ReaderSessionMorphSourceMeasurement | undefined {
     if (kind === 'quickAutoPage') return this.quickAutoPageMorphSource;
     if (kind === 'quickTts') return this.quickTtsMorphSource;
     if (kind === 'fullAutoPagePlayback') return this.fullAutoPageMorphSource;
     return this.fullTtsMorphSource;
   }
 
-  /**
-   * Figma Review C/D/E/F: a session start morphs the control actor into the
-   * session capsule (flight -> shell expand -> content reveal). Runs only
-   * when the control layer is actually on screen and motion is allowed;
-   * otherwise the capsule keeps its registered fade enter.
-   */
-  private beginSessionCapsuleMorph(): void {
-    if (!this.mounted || !this.appForeground || this.exitRequested) return;
-    if (this.reduceMotion || this.sessionMorphPhase !== 'none' ||
-      !this.controlVisible() || this.controlObscured) {
-      this.hideControl();
-      return;
+  /** Synchronous intent feedback; no screenshot or business Promise can gate it. */
+  private beginSessionCapsuleMorph(type: ReaderSessionCapsuleType): boolean {
+    if (this.sessionLaunch !== undefined) return this.sessionLaunch.geometry.type === type;
+    if (!this.mounted || !this.appForeground || this.exitRequested || !this.controlVisible() || this.controlObscured) return false;
+    const kind = readerSessionMorphSourceKindForPage(this.controlPage());
+    if (kind === undefined || (type === 'tts') !== (kind === 'quickTts' || kind === 'fullTtsPlayback')) return false;
+    const source = this.sessionMorphSourceMeasurement(kind);
+    if (source === undefined || this.sessionLaunchSourceContexts.get(kind) !== this.sessionLaunchMeasurementKey()) {
+      // Retain the visible source. A missing/stale measured actor must never
+      // cause a blank capture state or a fabricated flight from a stale rect.
+      hilog.warn(0x0000, 'ReaderSessionLaunch', 'session launch retained source: measurement not current');
+      return false;
     }
-    const presentation = this.captureControlPlaybackPresentation();
-    const sourceKind = readerSessionMorphSourceKindForPage(this.controlPage());
-    const source = sourceKind === undefined ? undefined : this.sessionMorphSourceMeasurement(sourceKind);
-    const capsuleWidth = this.activeSessionCapsuleWidth();
-    if (capsuleWidth <= 0 || sourceKind === undefined || source === undefined) {
-      this.hideControl();
-      return;
-    }
-    const capsuleLayout = this.sessionCapsuleLayout();
-    const dotCenterX = capsuleLayout.sessionX + capsuleWidth - 12;
-    const dotCenterY = capsuleLayout.sessionY + 12;
-    const geometry = createReaderSessionMorphGeometry(source, dotCenterX, dotCenterY, capsuleWidth);
-    if (geometry === undefined) {
-      this.hideControl();
-      return;
-    }
-    this.sessionMorphGeneration += 1;
-    const generation = this.sessionMorphGeneration;
-    this.sessionMorphPhase = 'capture';
-    // Release the control host immediately so the persistent capsule tree is
-    // mounted during capture. Snapshot acquisition may cross an async bridge;
-    // waiting for it before dismissing the host caused a visible dead frame.
-    this.hideControl();
-    void this.getUIContext().getComponentSnapshot().get(source.actorId, {
-      waitUntilRenderFinished: true,
-    }).then((pixelMap: image.PixelMap): void => {
-      if (!this.isSessionMorphOwner(generation) || this.sessionMorphPhase !== 'capture') {
-        pixelMap.release();
-        return;
-      }
-      if (!this.isControlPlaybackPresentationCurrent(presentation, presentation.module) ||
-        readerSessionMorphSourceKindForPage(this.controlPage()) !== sourceKind) {
-        pixelMap.release();
-        // Only this generation owns the phase. Never reset a newer capture.
-        this.finishSessionCapsuleMorph();
-        return;
-      }
-      this.sessionMorphSourceLeft = geometry.sourceLeft;
-      this.sessionMorphSourceTop = geometry.sourceTop;
-      this.sessionMorphSourceWidth = geometry.sourceWidth;
-      this.sessionMorphSourceHeight = geometry.sourceHeight;
-      this.sessionMorphProxyCenterX = geometry.sourceCenterX;
-      this.sessionMorphProxyCenterY = geometry.sourceCenterY;
-      this.sessionMorphProxyWidth = geometry.sourceWidth;
-      this.sessionMorphProxyHeight = geometry.sourceHeight;
-      this.sessionMorphSourceContentScale = 1;
-      this.sessionMorphSourceContentOpacity = 1;
-      this.sessionMorphGhostOpacity = 0;
-      this.sessionMorphCanonicalShellOpacity = 0;
-      this.sessionMorphSourceImage = pixelMap;
-      this.sessionMorphPhase = 'flight';
-      this.beginSessionCapsuleMorphFlight(
-        generation,
-        geometry.dotCenterX,
-        geometry.dotCenterY,
-        geometry.capsuleWidth,
-        presentation,
-      );
-    }).catch((_error: Error): void => {
-      if (!this.isSessionMorphOwner(generation)) return;
-      this.finishSessionCapsuleMorph();
-      // The control host was handed off synchronously at morph start. A
-      // failed snapshot keeps the already-mounted capsule fallback and must
-      // not issue a second hide that could retrigger the transition.
-    });
-  }
-
-  private isSessionMorphOwner(generation: number): boolean {
-    return generation === this.sessionMorphGeneration && this.mounted && this.appForeground && !this.exitRequested;
-  }
-
-  private sessionMorphTiming(): ReaderSessionMorphTiming {
-    return {
-      flight: motionSpecGet('reader.session.capsule.morph.flight')!.durationMs,
-      hold: motionSpecGet('reader.session.capsule.morph.dot.hold')!.durationMs,
-      expand: motionSpecGet('reader.session.capsule.morph.expand')!.durationMs,
-      reveal: motionSpecGet('reader.session.capsule.morph.reveal')!.durationMs,
-      ghostStart: SESSION_MORPH_GHOST_START_MS,
-      ghost: motionSpecGet('reader.session.capsule.morph.ghost.in')!.durationMs,
-      fadeStart: SESSION_MORPH_FADE_START_MS,
-      fade: motionSpecGet('reader.session.capsule.morph.source.fade')!.durationMs,
-      handoffStart: SESSION_MORPH_HANDOFF_START_MS,
-      handoff: motionSpecGet('reader.session.capsule.morph.shell.handoff')!.durationMs,
+    const width = this.measuredSessionCapsuleType === type && this.sessionCapsuleMeasuredWidth > 0 ?
+      this.sessionCapsuleMeasuredWidth : readerSessionCapsuleMinimumWidth(type);
+    const target = resolveReaderPageChromeLayout(this.readingLayout(), new ReaderPageChromeMeasurements(
+      0, 0, 0, 0, 0, 0, 0, 0, true, width, 24));
+    const geometry = buildReaderSessionLaunchGeometry({ source, targetLeft: target.sessionX, targetTop: target.sessionY,
+      capsuleWidth: width, topBarExitDistance: this.sessionLaunchTopExit, dockExitDistance: this.sessionLaunchDockExit });
+    if (geometry === undefined || this.sessionLaunchTopExit <= 0 || this.sessionLaunchDockExit <= 0) return false;
+    const identity: ReaderSessionLaunchIdentity = {
+      lifecycle: this.lifecycleToken, bookIdentity: `${this.sourceId}:${this.bookId}`,
+      moduleVisit: this.controlModuleVisitRevision, viewportRevision: this.readerWindowMetricsRevision,
+      scrollRevision: source.revision, layoutRevision: this.measurementEpoch,
+      paletteRevision: this.sharedAppearanceRevision, fontRevision: this.appearanceMutationGeneration,
+      sourceRevision: source.revision, sourceActorId: source.actorId,
     };
+    const page = this.currentPageTurnRenderPage();
+    this.sessionLaunchChrome = new ReaderPageChromeSnapshot(page.chromeTopStartText, page.chromeTopEndText,
+      page.chromeBottomStartText, page.chromeBottomEndText, true, width, 24);
+    this.sessionLaunchSourceTtsState = this.ttsState;
+    this.sessionLaunchSourceAutoStatus = this.autoPageState.status;
+    this.sessionLaunchSourceControl = copyReaderControlSessionState(this.latestControlVisualSession);
+    this.sessionLaunchSourceLayoutKey = this.sessionLaunchLayoutKey();
+    this.sessionLaunchStageOpacity = 1;
+    this.sessionLaunchExitGeneration += 1;
+    this.sessionLaunch = this.sessionLaunchController.begin(identity, geometry, readerMotionNowMs(), this.reduceMotion);
+    if (this.sessionLaunch === undefined) return false;
+    this.invalidateControlBackdrop();
+    AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', !this.sessionLaunch.sample.finished);
+    this.pageTurnRenderRevision += 1;
+    if (!this.sessionLaunch.sample.controlsPresented) this.commitSessionLaunchControlHidden();
+    this.applyWindowPolicyForChromeOwner();
+    this.scheduleSessionLaunchFrame(this.sessionLaunch.generation);
+    return true;
   }
 
-  private beginSessionCapsuleMorphFlight(
-    generation: number, dotCenterX: number, dotCenterY: number, capsuleWidth: number,
-    presentation: ReaderControlPlaybackPresentation,
-  ): void {
-    // Keep the required initial proxy presentation handoff. Later beats share
-    // one clock; none inserts an extra start-frame or chains a phase timer.
+  private scheduleSessionLaunchFrame(generation: number): void {
+    if ((this.sessionLaunchFramePending && this.pendingSessionLaunchGeneration === generation) ||
+      !this.sessionLaunchController.isCurrent(generation) || this.sessionLaunch?.sample.finished) return;
+    this.sessionLaunchFramePending = true;
+    this.pendingSessionLaunchGeneration = generation;
     this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-      if (!this.isSessionMorphOwner(generation) || this.sessionMorphPhase !== 'flight') return;
-      if (!this.isControlPlaybackPresentationCurrent(presentation, presentation.module)) {
-        this.finishSessionCapsuleMorph(); return;
+      if (this.pendingSessionLaunchGeneration !== generation) return;
+      this.sessionLaunchFramePending = false;
+      if (!this.mounted || !this.appForeground || this.exitRequested || !this.sessionLaunchController.isCurrent(generation)) return;
+      if (this.sessionLaunchSourceLayoutKey !== this.sessionLaunchLayoutKey()) {
+        this.cancelSessionLaunch('sourceChanged'); return;
       }
-      this.sessionMorphStartedMs = readerMotionNowMs();
-      this.scheduleSessionMorphFrame(generation, dotCenterX, dotCenterY, capsuleWidth);
+      const previous = this.sessionLaunch;
+      const next = this.sessionLaunchController.advance(generation, readerMotionNowMs());
+      if (next === undefined) return;
+      this.sessionLaunch = next;
+      const anchor = `${this.currentChapterIndex()}|${this.visiblePage?.startScalar}|${this.pageChromeClockText}`;
+      if (anchor !== this.sessionLaunchChromeAnchor) {
+        this.sessionLaunchChromeAnchor = anchor;
+        const page = this.currentPageTurnRenderPage();
+        this.sessionLaunchChrome = new ReaderPageChromeSnapshot(page.chromeTopStartText, page.chromeTopEndText,
+          page.chromeBottomStartText, page.chromeBottomEndText, true, next.geometry.capsuleWidth, 24);
+      }
+      if (previous?.sample.controlsPresented && !next.sample.controlsPresented) {
+        this.commitSessionLaunchControlHidden();
+        this.applyWindowPolicyForChromeOwner();
+      }
+      if (next.sample.finished) {
+        AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', false);
+        this.pageTurnRenderRevision += 1;
+      } else this.scheduleSessionLaunchFrame(generation);
     }));
   }
 
-  private scheduleSessionMorphFrame(generation: number, x: number, y: number, width: number): void {
-    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-      if (!this.isSessionMorphOwner(generation)) return;
-      if (this.reduceMotion || this.liveSessionCapsuleSnapshot(true) === undefined) {
-        this.finishSessionCapsuleMorph(); return;
+  private commitSessionLaunchControlHidden(): void {
+    // No ordinary 320ms dismiss clock: this is only the semantic 700ms endpoint.
+    this.controlSession = dismissReaderControlSession(this.controlSession, 0);
+    this.latestControlVisualSession = copyReaderControlSessionState(this.controlSession);
+  }
+
+  private onSessionLaunchReduceMotionChanged(): void {
+    if (!this.reduceMotion || this.sessionLaunch === undefined) return;
+    this.sessionLaunch = this.sessionLaunchController.setReduceMotion(true);
+    this.commitSessionLaunchControlHidden();
+    AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', false);
+    this.pageTurnRenderRevision += 1;
+    this.applyWindowPolicyForChromeOwner();
+  }
+
+  private onSessionLaunchTtsState(state: ReaderTtsState): void {
+    const launch = this.sessionLaunch;
+    if (launch === undefined || launch.geometry.type !== 'tts' || launch.ownership !== 'stage') return;
+    if (state.status === 'error' || state.status === 'failed' || state.status === 'unavailable') {
+      this.cancelSessionLaunch('failure'); return;
+    }
+    if (state.status === 'playing') this.sessionLaunchController.acknowledgeBusiness(launch.generation, 'playing');
+    else if (state.status === 'paused' || state.status === 'interrupted') this.sessionLaunchController.acknowledgeBusiness(launch.generation, 'paused');
+    else if (state.status === 'completed' || (state.status === 'idle' && launch.businessStatus !== 'preparing')) { this.cancelSessionLaunch('stop'); return; }
+    this.sessionLaunch = this.sessionLaunchController.snapshot();
+  }
+
+  private cancelSessionLaunch(reason: ReaderSessionLaunchCancelReason): void {
+    if (this.sessionLaunch === undefined || this.sessionLaunch.ownership !== 'stage') return;
+    const launch = this.sessionLaunchController.cancel(reason);
+    if (launch === undefined) return;
+    this.sessionLaunch = launch;
+    if (reason === 'stop' || reason === 'failure') {
+      if (launch.geometry.type === 'tts') this.cancelPendingTtsPlay();
+      else this.cancelPendingAutoPageStart();
+    }
+    if (launch.ownership === 'released') { this.finishSessionCapsuleMorph(); return; }
+    if (reason === 'stop') {
+      this.sessionLaunchFooterExiting = true;
+      this.sessionLaunchFooterOffset = launch.sample.footerTranslateX;
+      this.sessionLaunchFooterOpacity = launch.sample.footerOpacity;
+      this.sessionLaunchFooterExitProgress = 0;
+      if (launch.sample.finished) {
+        AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', true);
+        this.pageTurnRenderRevision += 1;
       }
-      const sample = sampleReaderSessionMorphTimeline(readerMotionNowMs() - this.sessionMorphStartedMs,
-        this.sessionMorphTiming(), (p: number): number => this.sessionMorphFlightCurve.interpolate(p),
-        (p: number): number => this.sessionMorphExpandCurve.interpolate(p),
-        (p: number): number => this.sessionMorphFadeCurve.interpolate(p));
-      if (sample.phase === 'none') { this.finishSessionCapsuleMorph(); return; }
-      const sourceX = this.sessionMorphSourceLeft + this.sessionMorphSourceWidth / 2;
-      const sourceY = this.sessionMorphSourceTop + this.sessionMorphSourceHeight / 2;
-      this.sessionMorphProxyCenterX = sourceX + (x - sourceX) * sample.flight;
-      this.sessionMorphProxyCenterY = sourceY + (y - sourceY) * sample.flight;
-      this.sessionMorphProxyWidth = this.sessionMorphSourceWidth + (24 - this.sessionMorphSourceWidth) * sample.flight;
-      this.sessionMorphProxyHeight = this.sessionMorphSourceHeight + (24 - this.sessionMorphSourceHeight) * sample.flight;
-      const finalScale = Math.max(24 / this.sessionMorphSourceWidth, .05);
-      this.sessionMorphSourceContentScale = 1 + (finalScale - 1) * sample.flight;
-      this.sessionMorphSourceContentOpacity = sample.sourceOpacity;
-      this.sessionMorphGhostOpacity = sample.ghostOpacity;
-      this.sessionMorphCanonicalShellOpacity = sample.shellOpacity;
-      this.sessionMorphShellWidth = 24 + (width - 24) * sample.expand;
-      this.sessionMorphContentOffsetX = -(width - 24) * (1 - sample.reveal);
-      this.sessionMorphPhase = sample.phase;
-      this.scheduleSessionMorphFrame(generation, x, y, width);
-    }));
+    }
+    if (launch.ownership === 'handoffPending') {
+      // Source module and its Scroll remained mounted. Restore that exact
+      // semantic location; the old proxy holds its current rect until the new
+      // owner has presented a frame, then takes the existing exit fade.
+      const hidden = dismissReaderControlSession(this.sessionLaunchSourceControl, 0);
+      const restored = resumeReaderControlSessionTarget(hidden,
+        readerControlContentLocation(this.sessionLaunchSourceControl), this.reduceMotion ? 0 : READER_CONTROL_OPEN_MS);
+      // This is an owner return, not Quick→Full expansion. The panel retains
+      // the captured module pose and uses the existing OPEN clock for offsets.
+      if (restored.transition !== undefined) {
+        restored.transition.kind = 'open'; restored.transition.intent = 'forward';
+      }
+      this.controlSession = restored;
+      this.latestControlVisualSession = copyReaderControlSessionState(restored);
+      this.applyWindowPolicyForChromeOwner();
+    } else this.fadeSessionLaunchExit(launch.generation);
+  }
+
+  private onSessionLaunchSourceReady(generation: number): void {
+    if (!this.mounted || this.sessionLaunch?.generation !== generation ||
+      !this.sessionLaunchController.confirmHandoffReady(generation)) return;
+    this.sessionLaunch = this.sessionLaunchController.snapshot();
+    this.fadeSessionLaunchExit(generation);
+  }
+
+  private fadeSessionLaunchExit(generation: number): void {
+    const exit = ++this.sessionLaunchExitGeneration;
+    const finish = (): void => {
+      if (exit !== this.sessionLaunchExitGeneration || this.sessionLaunch === undefined || this.sessionLaunch.generation !== generation) return;
+      this.sessionLaunchController.finishExit(generation);
+      this.finishSessionCapsuleMorph();
+    };
+    if (this.reduceMotion) { finish(); return; }
+    this.getUIContext().animateTo({ duration: motionSpecGet('reader.session.capsule.exit')?.durationMs ?? 200,
+      curve: Curve.EaseOut, onFinish: finish }, (): void => {
+        this.sessionLaunchStageOpacity = 0;
+        if (this.sessionLaunchFooterExiting) {
+          this.sessionLaunchFooterOffset = 0; this.sessionLaunchFooterExitProgress = 1;
+          this.sessionLaunchFooterOpacity = 1;
+        }
+      });
   }
 
   private finishSessionCapsuleMorph(): void {
-    // Also invalidates any still-pending morph frame callback.
-    this.sessionMorphGeneration += 1;
-    this.sessionMorphPhase = 'none';
-    this.sessionMorphSourceImage?.release();
-    this.sessionMorphSourceImage = undefined;
-    this.sessionMorphProxyWidth = 0;
-    this.sessionMorphProxyHeight = 0;
-    this.sessionMorphSourceContentScale = 1;
-    this.sessionMorphSourceContentOpacity = 1;
-    this.sessionMorphGhostOpacity = 0;
-    this.sessionMorphCanonicalShellOpacity = 0;
-    this.sessionMorphHoldProgress = 0;
-    this.sessionMorphShellWidth = 0;
-    this.sessionMorphContentOffsetX = 0;
+    const hadLaunch = this.sessionLaunch !== undefined;
+    this.sessionLaunchExitGeneration += 1;
+    this.sessionLaunchController.dispose();
+    this.sessionLaunch = undefined;
+    this.sessionLaunchFramePending = false;
+    this.sessionLaunchStageOpacity = 1;
+    this.sessionLaunchFooterExiting = false;
+    this.sessionLaunchFooterExitProgress = 0;
+    AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', false);
+    if (hadLaunch) this.pageTurnRenderRevision += 1;
+    if (this.mounted && !this.exitRequested) this.applyWindowPolicyForChromeOwner();
   }
+
+  private onSharedAppearanceChanged(): void {
+    if (this.mounted && !this.exitRequested && this.appearanceLoaded) {
+      this.admitAppearanceSnapshot(this.appearanceGateway.current());
+    }
+  }
+
 
   private refreshPageChromeClock(lifecycleToken: number): void {
     if (!this.isSessionActive(lifecycleToken)) {
@@ -8136,6 +8253,7 @@ export struct ReadingExperience {
   }
 
   private openReaderControl(): void {
+    if (this.sessionLaunch !== undefined) { this.cancelSessionLaunch('openControl'); return; }
     if (!this.isControlInputEnabled() || !this.isReaderPageInteractionEnabled() || this.pageTurnOwnsReaderInput()) {
       return;
     }
@@ -8690,25 +8808,24 @@ export struct ReadingExperience {
     this.selectChapterAnchor(chapter.chapterIndex, page.startScalar, false, true, undefined, -1);
   }
 
-  private refreshReaderBrightness(): void {
-    const hostContext = this.getUIContext().getHostContext();
-    if (hostContext === undefined) {
-      return;
+  private claimReaderBrightness(): number {
+    if (this.brightnessOwner === 0) {
+      this.brightnessOwner = ReaderWindowCoordinator.brightness().claim();
     }
-    const generation = this.brightnessRequestGeneration + 1;
-    this.brightnessRequestGeneration = generation;
-    void window.getLastWindow(hostContext)
-      .then((readerWindow: window.Window): void => {
-        if (!this.mounted || generation !== this.brightnessRequestGeneration) {
-          return;
-        }
-        const brightness = readerWindow.getWindowProperties().brightness;
-        this.rememberInitialWindowBrightness(brightness);
-        this.admitReaderBrightness(brightness);
-      })
-      .catch((error: Error): void => {
-        hilog.error(0x5244, 'Reader', '%{private}s', `Reader brightness read failed: ${error.message}`);
-      });
+    return this.brightnessOwner;
+  }
+
+  private refreshReaderBrightness(): void {
+    const generation = ++this.brightnessRequestGeneration;
+    const owner = this.claimReaderBrightness();
+    void ReaderWindowCoordinator.brightness().read(owner).then((result): void => {
+      if (result.applied && this.mounted && generation === this.brightnessRequestGeneration) {
+        this.admitReaderBrightness(result.value);
+        this.brightnessRevision += 1;
+      }
+    }).catch((error: Error): void => {
+      hilog.error(0x5244, 'Reader', '%{private}s', `Reader brightness read failed: ${error.message}`);
+    });
   }
 
   private setReaderBrightness(percent: number): void {
@@ -8721,45 +8838,38 @@ export struct ReadingExperience {
     this.enqueueReaderBrightness(-1, 'automatic');
   }
 
-  /**
-   * Window brightness writes are serialized. Generation checks suppress work
-   * that has not started; a write already in flight is always followed by the
-   * newest queued intent, so an older Promise cannot become the final device
-   * state after a rapid manual/automatic switch.
-   */
-  private enqueueReaderBrightness(target: number, mode: 'manual' | 'automatic'): void {
-    const hostContext = this.getUIContext().getHostContext();
-    if (hostContext === undefined) {
-      return;
-    }
-    const generation = this.brightnessRequestGeneration + 1;
-    this.brightnessRequestGeneration = generation;
-    this.brightnessPolicyTouched = true;
-    this.brightnessMutationQueue = this.brightnessMutationQueue
-      .catch((_error: Error): void => {})
-      .then((): Promise<void> => {
-        if (!this.mounted || generation !== this.brightnessRequestGeneration) {
-          return Promise.resolve();
+  private cancelReaderBrightness(): void {
+    const generation = ++this.brightnessRequestGeneration;
+    const owner = this.brightnessOwner;
+    if (owner === 0) return;
+    // Cancel removes only unsent pointer samples. The shared writer must first
+    // account for an issued native call before the preview admits its final ACK.
+    this.brightnessMutationQueue = ReaderWindowCoordinator.brightness().cancelAndSettle(owner)
+      .then((result): void => {
+        if (result.applied && this.mounted && generation === this.brightnessRequestGeneration) {
+          this.admitReaderBrightness(result.value);
+          this.brightnessRevision += 1;
         }
-        return window.getLastWindow(hostContext)
-          .then((readerWindow: window.Window): Promise<void> => {
-            if (!this.mounted || generation !== this.brightnessRequestGeneration) {
-              return Promise.resolve();
-            }
-            this.rememberInitialWindowBrightness(readerWindow.getWindowProperties().brightness);
-            return readerWindow.setWindowBrightness(target)
-              .then((): void => {
-                if (!this.mounted || generation !== this.brightnessRequestGeneration) {
-                  return;
-                }
-                this.admitReaderBrightness(readerWindow.getWindowProperties().brightness);
-                console.info(mode === 'automatic' ?
-                  'Reader brightness restored to system automatic' :
-                  `Reader brightness applied: ${target.toFixed(2)}`);
-              });
-          });
-      })
-      .catch((error: Error): void => {
+      }).catch((error: Error): void => {
+        if (this.mounted && generation === this.brightnessRequestGeneration) {
+          hilog.error(0x5244, 'Reader', '%{private}s', `Reader brightness cancel failed: ${error.message}`);
+          this.refreshReaderBrightness();
+        }
+      });
+  }
+
+  private enqueueReaderBrightness(target: number, mode: 'manual' | 'automatic'): void {
+    const generation = ++this.brightnessRequestGeneration;
+    const owner = this.claimReaderBrightness();
+    // The window-wide writer merges pending samples while retaining an active
+    // lookup/write. Request IDs only guard UI acknowledgements, not native work.
+    this.brightnessMutationQueue = ReaderWindowCoordinator.brightness().request(owner, target)
+      .then((result): void => {
+        if (result.applied && this.mounted && generation === this.brightnessRequestGeneration) {
+          this.admitReaderBrightness(result.value);
+          this.brightnessRevision += 1;
+        }
+      }).catch((error: Error): void => {
         if (this.mounted && generation === this.brightnessRequestGeneration) {
           hilog.error(0x5244, 'Reader', '%{private}s', `Reader brightness ${mode} failed: ${error.message}`);
           this.refreshReaderBrightness();
@@ -8767,46 +8877,22 @@ export struct ReadingExperience {
       });
   }
 
-  private rememberInitialWindowBrightness(brightness: number): void {
-    if (this.initialWindowBrightness === undefined && Number.isFinite(brightness)) {
-      this.initialWindowBrightness = brightness;
-    }
-  }
-
   private admitReaderBrightness(brightness: number): void {
-    if (!Number.isFinite(brightness)) {
-      return;
-    }
+    if (!Number.isFinite(brightness)) return;
     this.brightnessAutomatic = brightness < 0;
     if (brightness >= 0) {
       this.brightnessPercent = Math.max(READER_CONTROL_BRIGHTNESS_MIN,
-        Math.min(READER_CONTROL_BRIGHTNESS_MAX,
-          Math.round(brightness * READER_CONTROL_BRIGHTNESS_MAX)));
+        Math.min(READER_CONTROL_BRIGHTNESS_MAX, Math.round(brightness * READER_CONTROL_BRIGHTNESS_MAX)));
     }
   }
 
-  /** Restore the window policy that existed before this reader owned it. */
   private restoreInitialWindowBrightness(): void {
-    const generation = this.brightnessRequestGeneration + 1;
-    this.brightnessRequestGeneration = generation;
-    if (!this.brightnessPolicyTouched) {
-      return;
-    }
-    const hostContext = this.getUIContext().getHostContext();
-    if (hostContext === undefined) {
-      return;
-    }
-    this.brightnessMutationQueue = this.brightnessMutationQueue
-      .catch((_error: Error): void => {})
-      .then((): Promise<void> => window.getLastWindow(hostContext)
-        .then((readerWindow: window.Window): Promise<void> => {
-          if (generation !== this.brightnessRequestGeneration) {
-            return Promise.resolve();
-          }
-          const restoreTarget = this.initialWindowBrightness === undefined ? -1 : this.initialWindowBrightness;
-          return readerWindow.setWindowBrightness(restoreTarget);
-        }))
-      .catch((error: Error): void => {
+    this.brightnessRequestGeneration += 1;
+    const owner = this.brightnessOwner;
+    this.brightnessOwner = 0;
+    if (owner === 0) return;
+    this.brightnessMutationQueue = ReaderWindowCoordinator.brightness().release(owner)
+      .then((): void => {}).catch((error: Error): void => {
         hilog.error(0x5244, 'Reader', '%{private}s', `Reader brightness exit restore failed: ${error.message}`);
       });
   }
@@ -8930,6 +9016,7 @@ export struct ReadingExperience {
   }
 
   private selectControlChapter(chapterIndex: number): void {
+    if (!this.isKnownControlChapter(chapterIndex)) return;
     const origin = this.captureControlSelectionOrigin();
     if (this.pendingControlSelection === undefined && origin !== undefined &&
       chapterIndex === origin.committedProgress.chapterIndex) {
@@ -8963,15 +9050,15 @@ export struct ReadingExperience {
       }
       return;
     }
-    if (this.tocEntries.length === 0 || !Number.isFinite(percent)) {
+    if (this.readingTocEntries().length === 0 || !Number.isFinite(percent)) {
       return;
     }
     const normalized = Math.max(0, Math.min(1, percent / 100));
-    const scaled = normalized >= 1 ? this.tocEntries.length : normalized * this.tocEntries.length;
-    const position = Math.min(this.tocEntries.length - 1, Math.floor(scaled));
+    const scaled = normalized >= 1 ? this.readingTocEntries().length : normalized * this.readingTocEntries().length;
+    const position = Math.min(this.readingTocEntries().length - 1, Math.floor(scaled));
     const chapterProgress = normalized >= 1 ? 1 : scaled - position;
     this.clearTtsChapterEndTimer();
-    this.selectChapterAnchor(this.tocEntries[position].index, 0, false, true, chapterProgress);
+    this.selectChapterAnchor(this.readingTocEntries()[position].index, 0, false, true, chapterProgress);
   }
 
   private selectChapterAnchor(
@@ -9394,6 +9481,9 @@ export struct ReadingExperience {
     this.pageTurnSettlementLayout = undefined;
     this.pageTurnSettlementActive = false;
     this.pageTurnPresentationPhase = 'idle';
+    this.pageTurnPersistenceState = 'idle';
+    this.pageTurnUnknownNotifiedGeneration = -1;
+    this.bookTurn2DFallbackPending = false;
     this.cancelPageTurnSettlementDeadline();
     this.pageTurnPresentationWidth = 0;
     this.pageTurnOffsetX = 0;
@@ -10047,6 +10137,20 @@ export struct ReadingExperience {
     if (this.appForeground && !this.exitRequested) this.drainPageTurnPreparationQueue();
   }
 
+  private currentPageBookmarkStatus(): 'unknown' | 'empty' | 'bookmarked' {
+    const page = this.visiblePage;
+    if (page === undefined) return 'unknown';
+    const entry = this.controlDirectoryEntries().find((candidate: LocalReadingTocEntry): boolean =>
+      candidate.index === this.currentChapterIndex());
+    if (entry?.bookmarks === undefined) return 'unknown';
+    for (const bookmark of entry.bookmarks) {
+      if (page.endScalar > page.startScalar ?
+        bookmark.chapterOffset >= page.startScalar && bookmark.chapterOffset < page.endScalar :
+        bookmark.chapterOffset === page.startScalar) return 'bookmarked';
+    }
+    return 'empty';
+  }
+
   private toggleCurrentPageBookmark(): void {
     const page = this.visiblePage;
     const chapterIndex = this.currentChapterIndex();
@@ -10192,27 +10296,8 @@ export struct ReadingExperience {
   private scheduleBookTurnRollbackSurfaceClear(generation: number): void {
     if (!this.mounted || this.exitRequested || !this.usesBookTurnSimulation() ||
       generation !== this.pageTurnSettlementGeneration || generation !== this.bookTurnSurfaceGeneration) return;
-    const surfaceGeneration = this.bookTurnSurfaceGeneration;
-    // Confirm the restored ArkUI page, hide the native surface, then clear its
-    // resources on the next frame. A stale generation cannot clear a newer
-    // gesture's terminal frame.
-    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-      this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-        if (!this.mounted || this.exitRequested || surfaceGeneration !== this.bookTurnSurfaceGeneration) return;
-        this.bookTurnSurfaceOpacity = 0;
-        this.pageTurnPresentationPhase = 'surfaceHidden';
-        this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-          if (!this.mounted || this.exitRequested || surfaceGeneration !== this.bookTurnSurfaceGeneration ||
-            this.bookTurnSurfaceOpacity !== 0) return;
-          // Rollback may retain its terminal frame as well; release is
-          // generation-gated and harmless when no retain was installed.
-          this.bookTurnSession.releaseTerminalFrame(generation);
-          this.bookTurnSession.clearSurface(generation);
-          // TERMINAL_RELEASED is emitted after clearSurface completes; the
-          // event handler closes this phase and returns to idle.
-        }));
-      }));
-    }));
+    this.armPageTurnSettlementDeadline(generation);
+    this.scheduleBookTurnSurfaceRelease(generation);
   }
 
   private startPreparedPageTurnSettlement(
@@ -10280,30 +10365,46 @@ export struct ReadingExperience {
   ): void {
     if (this.pageTurnCommitStarted || settlementGeneration !== this.pageTurnSettlementGeneration) return;
     this.pageTurnCommitStarted = true;
-    void this.persistPreparedPageTurn(prepared, lifecycleToken, settlementGeneration)
+    this.pageTurnPersistenceState = 'queued';
+    const operation = this.persistPreparedPageTurn(prepared, lifecycleToken, settlementGeneration)
       .then((succeeded: boolean | undefined): void => {
         this.admitPageTurnPersistenceOutcome(prepared, lifecycleToken, settlementGeneration, succeeded);
       });
+    // UI observation has a deadline; the actual operation and serialized lane
+    // retain ownership until they settle. A late success still admits once.
+    void observeReaderProgressOperation(operation).then((result: 'completed' | 'unknown'): void => {
+      if (result === 'unknown') this.admitPageTurnPersistenceOutcome(prepared, lifecycleToken, settlementGeneration, undefined);
+    }).catch((): void => {
+      this.admitPageTurnPersistenceOutcome(prepared, lifecycleToken, settlementGeneration, undefined);
+    });
   }
 
   private admitPageTurnPersistenceOutcome(prepared: PreparedReaderPageTurn, lifecycle: number,
     generation: number, succeeded: boolean | undefined): void {
     if (!this.isPreparedPageTurnCommitCurrent(prepared, lifecycle, generation)) return;
     if (succeeded === undefined) {
+      this.pageTurnPersistenceState = 'unknown';
+      this.cancelPageTurnSettlementDeadline();
+      if (this.pageTurnUnknownNotifiedGeneration === generation) return;
+      this.pageTurnUnknownNotifiedGeneration = generation;
       this.getUIContext().showAlertDialog({ title: '正在确认阅读进度',
         message: '暂时无法确认保存结果。页面已保留，确认完成后继续翻页。',
         autoCancel: false,
         primaryButton: { value: '重新确认', action: (): void => {
+          if (this.pageTurnReconciliationPending || !this.isPreparedPageTurnCommitCurrent(prepared, lifecycle, generation)) return;
+          this.pageTurnReconciliationPending = true;
+          this.pageTurnUnknownNotifiedGeneration = -1;
           void this.reconcilePreparedPageTurn(prepared, lifecycle, generation)
             .then((result: boolean | undefined): void => {
               this.admitPageTurnPersistenceOutcome(prepared, lifecycle, generation, result);
-            });
+            }).finally((): void => { this.pageTurnReconciliationPending = false; });
         } },
       });
       return;
     }
     this.pageTurnCommitFinished = true;
     this.pageTurnCommitSucceeded = succeeded;
+    this.pageTurnPersistenceState = succeeded ? 'durable' : 'originConfirmed';
     this.finishPreparedPageTurnSettlement(generation);
   }
 
@@ -10318,7 +10419,8 @@ export struct ReadingExperience {
         return state.kind === 'restored' ? state.progress : undefined;
       },
     });
-    if (!isCurrent() || result.kind !== 'verified' || result.progress === undefined) return undefined;
+    if (!isCurrent() || result.kind !== 'verified' || result.progress === undefined ||
+      result.progress.bookId !== this.bookId) return undefined;
     const stored = result.progress;
     if (stored.chapterIndex === prepared.context.chapter.chapterIndex &&
       stored.chapterOffset === prepared.page.startScalar) {
@@ -10327,7 +10429,8 @@ export struct ReadingExperience {
     }
     const origin = this.lastCommittedProgress;
     return origin !== undefined && stored.chapterIndex === origin.chapterIndex &&
-      stored.chapterOffset === origin.chapterOffset ? false : undefined;
+      stored.chapterOffset === origin.chapterOffset && stored.updatedAt === origin.updatedAt &&
+      stored.locationRevision === origin.locationRevision ? false : undefined;
   }
 
   private animatePreparedPageTurnSlide(targetOffset: number, settlementGeneration: number): void {
@@ -10376,6 +10479,7 @@ export struct ReadingExperience {
           return;
         }
         const scalarCount = prepared.context.layoutMap.scalarCount();
+        this.pageTurnPersistenceState = 'writing';
         const chapterProgress = scalarCount === 0 ? 0 : prepared.page.startScalar / scalarCount;
         const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
@@ -10462,7 +10566,10 @@ export struct ReadingExperience {
   private confirmBookTurnPresented(settlementGeneration: number): void {
     if (!this.mounted || this.exitRequested) return;
     if (settlementGeneration !== this.pageTurnSettlementGeneration ||
-      settlementGeneration !== this.bookTurnSurfaceGeneration) return;
+      settlementGeneration !== this.bookTurnSurfaceGeneration || this.bookTurnAwaitingSlotCommit ||
+      this.bookTurnArkUIReadyRevision !== this.pageTurnRenderRevision ||
+      this.bookTurnArkUIContentRevision !== this.pageTurnRenderRevision ||
+      (this.pageTurnPresentationPhase !== 'logicalPromoted' && this.pageTurnPresentationPhase !== 'rollback')) return;
     this.pageTurnPresentationPhase = 'arkuiPresented';
     // Hide through opacity without rebuilding the XComponent or submitting
     // a transparent Native buffer. Release follows a scheduled frame callback;
@@ -10494,7 +10601,8 @@ export struct ReadingExperience {
       this.bookTurnArkUIContentRevision = revision;
       if (this.pageTurnInputPhase() === 'idle') this.scheduleBookTurnTextureRefresh();
     }
-    if (this.bookTurnAwaitingSlotCommit || this.pageTurnPresentationPhase !== 'logicalPromoted') return;
+    if (this.bookTurnAwaitingSlotCommit || (this.pageTurnPresentationPhase !== 'logicalPromoted' &&
+      this.pageTurnPresentationPhase !== 'rollback')) return;
     this.confirmBookTurnPresented(this.pageTurnSettlementGeneration);
   }
 
@@ -10502,18 +10610,58 @@ export struct ReadingExperience {
     if (!this.mounted || this.exitRequested || !this.usesBookTurnSimulation() ||
       settlementGeneration !== this.pageTurnSettlementGeneration ||
       settlementGeneration !== this.bookTurnSurfaceGeneration) return;
-    // Allow ArkUI to reconcile the promoted revision before hiding the native
-    // terminal. Scheduling callbacks do not prove display scanout; retain that
-    // evidence distinction in runtime diagnostics and acceptance.
-    const generation = this.bookTurnSurfaceGeneration;
+    // The resident target's exact revision and its scheduling acknowledgement
+    // are both required. Elapsed frames never stand in for content admission.
     this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-      this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
-        if (generation !== this.bookTurnSurfaceGeneration || !this.mounted || this.exitRequested ||
-          this.pageTurnPresentationPhase === 'surfaceHidden' || this.pageTurnPresentationPhase === 'released') return;
-        this.pageTurnPresentationPhase = 'arkuiPresented';
-        this.confirmBookTurnPresented(settlementGeneration);
-      }));
+      this.confirmBookTurnPresented(settlementGeneration);
     }));
+  }
+
+  private onBookTurnArkUIContentReady(revision: number): void {
+    if (!this.mounted || this.exitRequested || revision !== this.pageTurnRenderRevision) return;
+    this.bookTurnArkUIReadyRevision = revision;
+    if (this.bookTurn2DFallbackPending) this.completeBookTurn2DFallback(this.pageTurnSettlementGeneration);
+  }
+
+  private requestBookTurn2DFallback(generation: number): void {
+    if (!this.mounted || this.exitRequested || !this.pageTurnSettlementActive ||
+      generation !== this.pageTurnSettlementGeneration) return;
+    this.bookTurn2DFallbackPending = true;
+    if (this.completeBookTurn2DFallback(generation)) return;
+    // Re-deliver target content once. Keep the opaque terminal when its target
+    // has not reached the resident slot; a disconnected callback cannot cause
+    // infinite native retries, nor can it justify exposing an unadmitted page.
+    this.pageTurnRenderRevision += 1;
+    this.cancelPageTurnSettlementDeadline();
+    this.getUIContext().showAlertDialog({ title: '正在恢复页面',
+      message: '阅读位置已保留，可以重新显示当前页面。', autoCancel: false,
+      primaryButton: { value: '重新显示', action: (): void => {
+        if (generation !== this.pageTurnSettlementGeneration || !this.mounted) return;
+        if (!this.completeBookTurn2DFallback(generation)) this.pageTurnRenderRevision += 1;
+      } },
+    });
+  }
+
+  private completeBookTurn2DFallback(generation: number): boolean {
+    if (!this.mounted || this.exitRequested || !this.pageTurnSettlementActive || !this.bookTurn2DFallbackPending ||
+      generation !== this.pageTurnSettlementGeneration ||
+      generation !== this.bookTurnSurfaceGeneration ||
+      this.bookTurnArkUIReadyRevision !== this.pageTurnRenderRevision ||
+      this.pageTurnSettlingPrepared !== undefined) return false;
+    this.bookTurn2DFallbackPending = false;
+    this.bookTurnRuntimeFailed = true;
+    this.bookTurnSurfaceOpacity = 0;
+    this.bookTurnAwaitingSlotCommit = false;
+    this.clearBookTurnCapturedIdentities();
+    // No transparent swap. Best-effort cleanup remains generation/epoch gated;
+    // UI ownership no longer depends on a lost native completion notification.
+    this.bookTurnSession.releaseTerminalFrame(generation);
+    this.bookTurnSession.clearSurface(generation);
+    this.pageTurnPresentationPhase = 'released';
+    if (this.pageTurnCommitSucceeded) this.finishSuccessfulPageTurnPresentation(generation);
+    else this.finishPageTurnRollback(generation);
+    this.pageTurnPresentationPhase = 'idle';
+    return true;
   }
 
   private finishSuccessfulPageTurnPresentation(settlementGeneration: number): void {
@@ -11073,6 +11221,14 @@ export struct ReadingExperience {
     this.armFirstPageReadyDeadline(lifecycleToken, selectionToken);
     void this.openChapter(chapterIndex, false, lifecycleToken, selectionToken, chapterOffset);
     return true;
+  }
+
+  private readingTocEntries(): LocalReadingTocEntry[] {
+    if (this.readingTocSource !== this.tocEntries) {
+      this.readingTocSource = this.tocEntries;
+      this.readingTocProjection = this.tocEntries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false);
+    }
+    return this.readingTocProjection;
   }
 
   private adjacentChapterIndex(chapterIndex: number, delta: number): number | undefined {

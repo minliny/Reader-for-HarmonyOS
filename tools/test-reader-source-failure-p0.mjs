@@ -51,7 +51,7 @@ assert.match(probeBlock,
   /preferredChapterIndex\?: number[\s\S]*entry\.index === preferredChapterIndex/,
   'shelf resume admission must probe the exact persisted chapter when available');
 assert.match(probeBlock,
-  /await gateway\.loadChapter[\s\S]*this\.remoteContentVerdict = 'readable'[\s\S]*return session\.entries\[attempt\]\.index/,
+  /await gateway\.loadChapter[\s\S]*this\.remoteContentVerdict = 'readable'[\s\S]*return readableEntries\[attempt\]\.index/,
   'only an admitted chapter body may release the reader route');
 assert.match(reader,
   /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode, failureKind\)[\s\S]*this\.beginExit\(\)/,

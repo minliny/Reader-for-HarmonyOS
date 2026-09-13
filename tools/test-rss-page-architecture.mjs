@@ -1,10 +1,11 @@
+import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (path) => readFileSync(resolve(repo, path), 'utf8');
+const read = (path) => themeDayDesignSource(readFileSync(resolve(repo, path), 'utf8'));
 
 const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
 const sourceFeed = read('entry/src/main/ets/features/rss/RssSourceFeedPage.ets');

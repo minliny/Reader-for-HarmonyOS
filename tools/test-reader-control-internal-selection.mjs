@@ -25,7 +25,7 @@ function method(name) {
 const deferredClass = balanced(source.indexOf('class ReaderDeferredChapterSelection {'));
 const names = ['loadNextTtsChapter', 'clearTtsChapterEndTimer', 'reloadCurrentChapterAfterContentProjectionChange', 'selectChapterAnchor',
   'onRequestedBookmarkAnchorChanged', 'selectSearchResult', 'selectBookmarkAnchor', 'selectControlChapter',
-  'stepControlChapter', 'seekControlProgress', 'controlSelectionOwner', 'completeControlSelectionAfterCommit',
+  'stepControlChapter', 'readingTocEntries', 'seekControlProgress', 'controlSelectionOwner', 'completeControlSelectionAfterCommit',
   'resumeDeferredPageTurnWork', 'clearDeferredPageTurnWork'];
 function Host(mutate = code => code) {
   const deps = { ...selectionPolicy, wholeBookAnchorForPercent };
