@@ -26,6 +26,8 @@ export class ReaderAppearanceCommit {
 export class ReaderAppearanceStore {
   private readonly persistence: ReaderAppearancePersistence;
   private snapshot: ReaderAppearanceSnapshot | undefined = undefined;
+  private durableSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
+  private readonly listeners: Set<(snapshot: ReaderAppearanceSnapshot, revision: number) => void> = new Set();
   private loading: Promise<void> | undefined = undefined;
   private revision: number = 0;
   private savedRevision: number = 0;
@@ -48,6 +50,18 @@ export class ReaderAppearanceStore {
   current(): ReaderAppearanceSnapshot {
     if (this.snapshot === undefined) throw new Error('APPEARANCE_NOT_LOADED');
     return copyReaderAppearanceSnapshot(this.snapshot);
+  }
+
+  subscribe(listener: (snapshot: ReaderAppearanceSnapshot, revision: number) => void): () => void {
+    this.listeners.add(listener);
+    if (this.snapshot !== undefined) listener(this.current(), this.revision);
+    return (): void => { this.listeners.delete(listener); };
+  }
+
+  private publish(): void {
+    this.listeners.forEach((listener: (snapshot: ReaderAppearanceSnapshot, revision: number) => void): void => {
+      listener(this.current(), this.revision);
+    });
   }
 
   currentRevision(): number {
@@ -73,7 +87,10 @@ export class ReaderAppearanceStore {
       }
       this.snapshot = next;
       this.revision += 1;
-      return new ReaderAppearanceCommit(this.revision, this.enqueueSave());
+      const themeChanged = current.appThemeMode !== next.appThemeMode || current.activeTheme !== next.activeTheme ||
+        current.dayTheme !== next.dayTheme || current.nightTheme !== next.nightTheme;
+      this.publish();
+      return new ReaderAppearanceCommit(this.revision, this.enqueueSave(themeChanged));
     });
     this.changeTail = applied.then((): void => {}, (): void => {});
     return applied;
@@ -98,6 +115,8 @@ export class ReaderAppearanceStore {
     if (this.loading === undefined) {
       this.loading = this.persistence.load().then((snapshot: ReaderAppearanceSnapshot): void => {
         this.snapshot = normalizeReaderAppearanceSnapshot(snapshot);
+        this.durableSnapshot = this.current();
+        this.publish();
       });
     }
     const loading = this.loading;
@@ -108,12 +127,29 @@ export class ReaderAppearanceStore {
     }
   }
 
-  private enqueueSave(): Promise<void> {
+  private enqueueSave(rollbackThemeOnFailure: boolean = false): Promise<void> {
     const snapshot = this.current();
     const revision = this.revision;
     this.pendingWrites += 1;
     const save = this.writeTail.then((): Promise<void> => this.persistence.save(snapshot))
-      .then((): void => { this.savedRevision = revision; })
+      .then((): void => {
+        this.savedRevision = revision;
+        this.durableSnapshot = copyReaderAppearanceSnapshot(snapshot);
+      })
+      .catch((error: Error): never => {
+        if (rollbackThemeOnFailure && revision === this.revision && this.durableSnapshot !== undefined) {
+          // An older failed write cannot undo a newer intent. Roll back both scopes
+          // together to the last durable snapshot and compensate a possible put/flush split.
+          this.snapshot = copyReaderAppearanceSnapshot(this.durableSnapshot);
+          this.revision += 1;
+          const rollbackRevision = this.revision;
+          this.publish();
+          void Promise.resolve().then((): void => {
+            if (this.revision === rollbackRevision) void this.enqueueSave().catch((): void => {});
+          });
+        }
+        throw error;
+      })
       .finally((): void => { this.pendingWrites -= 1; });
     // Failure belongs to this commit; it cannot poison later user writes.
     this.writeTail = save.catch((): void => {});

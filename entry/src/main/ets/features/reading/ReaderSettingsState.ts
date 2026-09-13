@@ -18,7 +18,6 @@ export type ReaderPageTurnStyle = 'simulation' | 'cover' | 'slide' | 'scroll' | 
 export type ReaderScreenTimeout = 'system' | 'oneMinute' | 'fiveMinutes' | 'tenMinutes' | 'alwaysOn';
 
 export type ReaderSettingsToggleKey =
-  | 'hideStatusBar'
   | 'hideNavigationBar'
   | 'extendIntoCutout'
   | 'justifyText'
@@ -28,6 +27,23 @@ export type ReaderSettingsToggleKey =
   | 'longPressSelectText';
 
 export type ReaderSettingsSnapshot = {
+  version: 5;
+  screenDirection: ReaderScreenDirection;
+  navigationMode: ReaderNavigationMode;
+  pageTransition: ReaderPageTransition;
+  screenTimeout: ReaderScreenTimeout;
+  hideNavigationBar: boolean;
+  extendIntoCutout: boolean;
+  /** Compatibility field only; ReaderAppearance remains the single owner. */
+  justifyText: boolean;
+  alignPageBottom: boolean;
+  volumeKeysTurnPage: boolean;
+  stopTtsOnScreenOff: boolean;
+  longPressSelectText: boolean;
+};
+
+/** Raw V4 migration input; never written again. */
+export type ReaderSettingsSnapshotV4 = {
   version: 4;
   screenDirection: ReaderScreenDirection;
   navigationMode: ReaderNavigationMode;
@@ -106,12 +122,11 @@ class ReaderPageTurnContract {
 
 export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
   return {
-    version: 4,
+    version: 5,
     screenDirection: 'system',
     navigationMode: 'paged',
     pageTransition: 'slide',
     screenTimeout: 'system',
-    hideStatusBar: true,
     hideNavigationBar: false,
     extendIntoCutout: false,
     justifyText: false,
@@ -132,7 +147,7 @@ export function createDefaultReaderSettingsSnapshot(): ReaderSettingsSnapshot {
  * installs; subsequent explicit V4 choices remain stable.
  */
 export function normalizeReaderSettingsSnapshot(
-  candidate: ReaderSettingsSnapshot | ReaderSettingsSnapshotV3 | ReaderSettingsSnapshotV2 |
+  candidate: ReaderSettingsSnapshot | ReaderSettingsSnapshotV4 | ReaderSettingsSnapshotV3 | ReaderSettingsSnapshotV2 |
     ReaderSettingsSnapshotV1 | undefined | null,
 ): ReaderSettingsSnapshot {
   const fallback = createDefaultReaderSettingsSnapshot();
@@ -146,22 +161,24 @@ export function normalizeReaderSettingsSnapshot(
       isReaderPageTransition(candidate.pageTransition) ? candidate.pageTransition : fallback.pageTransition,
     );
   return {
-    version: 4,
+    version: 5,
     screenDirection: candidate.screenDirection === 'portrait' || candidate.screenDirection === 'landscape' ?
       candidate.screenDirection : 'system',
     navigationMode: pageTurn.navigationMode,
     pageTransition: pageTurn.pageTransition,
     screenTimeout: isReaderScreenTimeout(candidate.screenTimeout) ? candidate.screenTimeout : fallback.screenTimeout,
-    hideStatusBar: candidate.version === 3 || candidate.version === 4 ? candidate.hideStatusBar === true : true,
     hideNavigationBar: candidate.hideNavigationBar === true,
-    extendIntoCutout: candidate.extendIntoCutout === true,
+    // Read raw fields before adding defaults: an explicitly stored extend
+    // value wins. Only V3/V4 missing that field migrate their old hide value.
+    extendIntoCutout: typeof candidate.extendIntoCutout === 'boolean' ? candidate.extendIntoCutout :
+      (candidate.version === 3 || candidate.version === 4) ? candidate.hideStatusBar === true : false,
     // ReaderAppearance owns justification; never recreate a second truth from
     // a stale V1 settings value.
     justifyText: false,
     alignPageBottom: candidate.alignPageBottom === true,
     volumeKeysTurnPage: candidate.volumeKeysTurnPage === true,
     stopTtsOnScreenOff: candidate.stopTtsOnScreenOff === true,
-    longPressSelectText: candidate.version === 4 ? candidate.longPressSelectText === true : true,
+    longPressSelectText: candidate.version === 4 || candidate.version === 5 ? candidate.longPressSelectText === true : true,
   };
 }
 
@@ -233,7 +250,6 @@ export function setReaderSettingsToggle(
   const current = copyReaderSettingsSnapshot(snapshot);
   return normalizeReaderSettingsSnapshot({
     ...current,
-    hideStatusBar: key === 'hideStatusBar' ? value : current.hideStatusBar,
     hideNavigationBar: key === 'hideNavigationBar' ? value : current.hideNavigationBar,
     extendIntoCutout: key === 'extendIntoCutout' ? value : current.extendIntoCutout,
     alignPageBottom: key === 'alignPageBottom' ? value : current.alignPageBottom,
@@ -258,7 +274,8 @@ export function isReaderScreenTimeoutAvailable(timeout: ReaderScreenTimeout): bo
 export function isReaderSettingsToggleAvailable(key: ReaderSettingsToggleKey): boolean {
   // Justification is exposed through ReaderAppearance and deliberately remains
   // unavailable here so settings cannot become a second owner.
-  return key !== 'justifyText';
+  return key === 'hideNavigationBar' || key === 'extendIntoCutout' || key === 'alignPageBottom' ||
+    key === 'volumeKeysTurnPage' || key === 'stopTtsOnScreenOff' || key === 'longPressSelectText';
 }
 
 function pageTurnContractFor(style: ReaderPageTurnStyle): ReaderPageTurnContract {

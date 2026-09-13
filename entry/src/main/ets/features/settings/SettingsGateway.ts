@@ -1,5 +1,6 @@
 import preferences from '@ohos.data.preferences';
 import { common } from '@kit.AbilityKit';
+import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 
 const SETTINGS_PREFERENCES_NAME = 'reader_settings_v1';
 
@@ -17,6 +18,10 @@ const DEFAULT_SNAPSHOT: SettingsSnapshot = {
   crashLog: true,
 };
 
+export function createDefaultSettingsSnapshot(): SettingsSnapshot {
+  return { autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true };
+}
+
 export class SettingsGateway {
   private readonly context: common.UIAbilityContext;
   private store: preferences.Preferences | undefined;
@@ -24,44 +29,78 @@ export class SettingsGateway {
   // flush. Keep those sequences ordered so overlapping page intents cannot
   // persist a mixed snapshot. The tail is always resolved in `finally`: a
   // rejected write must not prevent a later, independent update from running.
-  private updateTail: Promise<void> = Promise.resolve();
+  private static updateTails: Map<common.UIAbilityContext, Promise<void>> = new Map();
 
   constructor(context: common.UIAbilityContext) {
     this.context = context;
   }
 
   async load(): Promise<SettingsSnapshot> {
+    await ReaderThemeHost.prepareUserChange();
     // Do not expose a half-written four-key snapshot while an update is in
     // flight. `update` always releases this tail, including its error path.
-    await this.updateTail;
-    const store = await this.ensureStore();
-    return this.readSnapshot(store);
+    const previous = SettingsGateway.updateTails.get(this.context);
+    let release: (() => void) | undefined = undefined;
+    const tail = new Promise<void>((resolve: () => void): void => { release = resolve; });
+    SettingsGateway.updateTails.set(this.context, tail);
+    await previous;
+    try { return await this.readSnapshot(await this.ensureStore()); }
+    finally {
+      release?.();
+      if (SettingsGateway.updateTails.get(this.context) === tail) SettingsGateway.updateTails.delete(this.context);
+    }
   }
 
-  async update(snapshot: SettingsSnapshot): Promise<SettingsSnapshot> {
+  async update(snapshot: SettingsSnapshot, resetOwned: boolean = false,
+    changedKey?: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog'): Promise<SettingsSnapshot> {
     // A caller can retain and mutate its state object while this update waits
     // behind another write. Capture the full requested snapshot at call time.
-    const requestedSnapshot = this.copySnapshot(snapshot);
-    const previousUpdate = this.updateTail;
+    let requestedSnapshot = this.copySnapshot(snapshot);
+    if (!resetOwned) await ReaderThemeHost.prepareUserChange();
+    const previousUpdate = SettingsGateway.updateTails.get(this.context);
     let releaseUpdate: (() => void) | undefined = undefined;
-    this.updateTail = new Promise<void>((resolve: () => void): void => {
+    const nextUpdate = new Promise<void>((resolve: () => void): void => {
       releaseUpdate = resolve;
     });
+    SettingsGateway.updateTails.set(this.context, nextUpdate);
     await previousUpdate;
 
     try {
       const store = await this.ensureStore();
-      await store.put('autoCheckUpdate', requestedSnapshot.autoCheckUpdate);
-      await store.put('tapBottomScrollTop', requestedSnapshot.tapBottomScrollTop);
-      await store.put('reduceMotion', requestedSnapshot.reduceMotion);
-      await store.put('crashLog', requestedSnapshot.crashLog);
-      await store.flush();
-      return this.readSnapshot(store);
+      const previous = await this.readSnapshot(store);
+      if (changedKey !== undefined) {
+        // A user toggle admitted after recovery changes only its own field.
+        // Never replay its pre-recovery siblings over the restored defaults.
+        requestedSnapshot = {
+          autoCheckUpdate: changedKey === 'autoCheckUpdate' ? requestedSnapshot.autoCheckUpdate : previous.autoCheckUpdate,
+          tapBottomScrollTop: changedKey === 'tapBottomScrollTop' ? requestedSnapshot.tapBottomScrollTop : previous.tapBottomScrollTop,
+          reduceMotion: changedKey === 'reduceMotion' ? requestedSnapshot.reduceMotion : previous.reduceMotion,
+          crashLog: changedKey === 'crashLog' ? requestedSnapshot.crashLog : previous.crashLog,
+        };
+      }
+      try {
+        await this.writeSnapshot(store, requestedSnapshot);
+        await store.flush();
+      } catch (error) {
+        // A failed flush must not leave unconfirmed values readable from the
+        // Preferences in-memory cache. A durable reset intent remains retryable.
+        await this.writeSnapshot(store, previous);
+        throw error;
+      }
+      return this.copySnapshot(requestedSnapshot);
     } finally {
       if (releaseUpdate !== undefined) {
         releaseUpdate();
       }
+      if (SettingsGateway.updateTails.get(this.context) === nextUpdate) SettingsGateway.updateTails.delete(this.context);
     }
+  }
+
+  private async writeSnapshot(store: preferences.Preferences, snapshot: SettingsSnapshot): Promise<void> {
+    await store.put('autoCheckUpdate', snapshot.autoCheckUpdate);
+    await store.put('tapBottomScrollTop', snapshot.tapBottomScrollTop);
+    await store.put('reduceMotion', snapshot.reduceMotion);
+    await store.put('crashLog', snapshot.crashLog);
   }
 
   private async readSnapshot(store: preferences.Preferences): Promise<SettingsSnapshot> {

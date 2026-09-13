@@ -120,7 +120,7 @@ export class SyncOrchestrator {
     if (!this.beginOperation()) {
       return;
     }
-    this.emit(this.withStatus(overwriteLocal ? '正在原子恢复备份…' : '已取消恢复'));
+    this.emit(this.withStatus(overwriteLocal ? '正在恢复备份…' : '已取消恢复'));
     this.gateway.resolveRestore(overwriteLocal)
       .then((outcome: SyncRestoreResult): void => {
         this.operationInFlight = false;
@@ -140,7 +140,7 @@ export class SyncOrchestrator {
       return;
     }
     if (outcome.ok && outcome.applied) {
-      this.emit(this.withStatus('恢复已原子提交；重新进入页面后读取新状态', true));
+      this.emit(this.withStatus('恢复已完成；重新进入页面后读取新状态', true));
     } else if (outcome.ok && !outcome.cancelled) {
       this.emit(this.withStatus('本机数据与最新备份一致，无需重复写入', true));
     } else if (outcome.ok && outcome.cancelled) {

@@ -1,3 +1,5 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 // Settings General — rebuilt 2026-08-05 against live Figma nodes
 // 943:2897 (Phone 390×844) / 943:3369 (Tablet 760×960).
 // Batch 3: 设置/偏好/行为/权限四个区块收敛到 CategorySection(Card+Heading+rows)，
@@ -49,6 +51,8 @@ export interface SettingsSnapshot {
 
 @Component
 export struct SettingsPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @State private activeSection: 'home' | 'general' = 'home';
 
   @Prop @Watch('onSnapshotChanged') snapshot: SettingsSnapshot = {
@@ -58,7 +62,7 @@ export struct SettingsPage {
     crashLog: true,
   };
   @Prop isTablet: boolean;
-  @State private themeValue: string = SEG_OPTIONS[0];
+  @StorageLink('readerAppThemeMode') private appThemeMode: string = 'system';
   @State private languageValue: string = '简体中文';
   @State private startupValue: string = '书架';
   @State private animationValue: string = '标准';
@@ -68,6 +72,10 @@ export struct SettingsPage {
   @State private crashLogValue: boolean = true;
   @State private cacheActionLabel: string = '清理文字缓存';
   @State private cacheCleanupInFlight: boolean = false;
+  @State private resetInFlight: boolean = false;
+  @State private resetMessage: string = '';
+  private mounted: boolean = false;
+  private resetRevision: number = 0;
   @State private openSelect: SettingsSelectField | '' = '';
   // 展开面板锚点: 触发条全局坐标减去宿主 Stack 原点, 得面板相对宿主 Stack 的位置。
   // selectAnchors 为普通 map(非 @State): 逐行 onAreaChange 写入, 打开时读入 anchorX/Y。
@@ -78,18 +86,23 @@ export struct SettingsPage {
   private selectAnchors: Record<string, SettingsSelectAnchor> = {};
   onBack: () => void = (): void => {};
   onOpenSourceManagement: () => void = (): void => {};
+  onOpenBookshelfSettings: () => void = (): void => {};
   onOpenRulesManagement: () => void = (): void => {};
   onOpenSync: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
   onClearCache: () => Promise<boolean> = async (): Promise<boolean> => false;
+  onRestoreDefaults: () => Promise<boolean> = async (): Promise<boolean> => false;
   onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog', value: boolean) => void =
     (_key: string, _value: boolean): void => {};
 
   aboutToAppear(): void {
+    this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.syncSnapshotValues();
   }
+
+  aboutToDisappear(): void { this.mounted = false; this.resetRevision += 1; }
 
   build() {
     SettingsShell({
@@ -114,58 +127,62 @@ export struct SettingsPage {
       homeContent: (): void => { this.buildHome(); },
       generalContent: (): void => { this.buildGeneral(); },
       overlayContent: (): void => { this.buildOverlay(); },
-    });
+    }).enabled(!this.resetInFlight);
   }
 
   @Builder
   private buildHome() {
     CategorySection({ title: '设置' }) {
-      this.navRow('通用设置', $r('app.media.settings_row_general'), (): void => {
+      this.navRow('通用设置', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_general_theme_night') : $r('app.media.settings_row_general')), (): void => {
         this.activeSection = 'general';
       });
-      this.navRow('书源管理', $r('app.media.settings_row_source'), (): void => this.onOpenSourceManagement());
+      this.navRow('书源管理', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_source_theme_night') : $r('app.media.settings_row_source')), (): void => this.onOpenSourceManagement());
       if (isReaderProductSurfaceEnabled('sync')) {
-        this.navRow('同步与备份', $r('app.media.settings_row_sync'), (): void => this.onOpenSync());
+        this.navRow('同步与备份', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_sync_theme_night') : $r('app.media.settings_row_sync')), (): void => this.onOpenSync());
       }
+      this.navRow('书架设置', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_shelf_search_theme_night') : $r('app.media.settings_row_shelf_search')), this.onOpenBookshelfSettings);
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-        this.navRow('书架与搜索设置', $r('app.media.settings_row_shelf_search'), (): void => {});
-        this.navRow('关于与反馈', $r('app.media.settings_row_about'), (): void => {});
+        this.navRow('关于与反馈', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_about_theme_night') : $r('app.media.settings_row_about')), (): void => {});
       }
     }
   }
 
   @Builder
   private buildGeneral() {
-    if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-      this.preferenceCard();
-    }
+    this.preferenceCard();
     this.behaviorCard();
     if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
       this.permissionCard();
-      this.dangerRow();
+    }
+    this.dangerRow();
+    if (this.resetMessage.length > 0) {
+      Text(this.resetMessage).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .width('100%').padding(12);
     }
   }
 
   @Builder
   private preferenceCard() {
     CategorySection({ title: '基础偏好' }) {
-      this.segmentRow('App主题', $r('app.media.settings_gen_theme'));
-      this.selectRow('语言', $r('app.media.settings_gen_language'), 'language',
+      this.segmentRow('App主题', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_theme_theme_night') : $r('app.media.settings_gen_theme')));
+      if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
+      this.selectRow('语言', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_language_theme_night') : $r('app.media.settings_gen_language')), 'language',
         ['简体中文', '繁體中文', 'English', '日本語', '한국어']);
-      this.selectRow('启动时打开', $r('app.media.settings_gen_startup'), 'startup',
+      this.selectRow('启动时打开', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_startup_theme_night') : $r('app.media.settings_gen_startup')), 'startup',
         ['书架', '发现', 'RSS', '设置']);
+      }
     }
   }
 
   @Builder
   private behaviorCard() {
     CategorySection({ title: '行为与反馈' }) {
-      this.switchRow('自动检查更新', $r('app.media.settings_gen_update'), 'autoCheckUpdate');
-      this.switchRow('减少动态效果', $r('app.media.settings_gen_motion'), 'reduceMotion');
+      this.switchRow('自动检查更新', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_update_theme_night') : $r('app.media.settings_gen_update')), 'autoCheckUpdate');
+      this.switchRow('减少动态效果', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_motion_theme_night') : $r('app.media.settings_gen_motion')), 'reduceMotion');
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-        this.switchRow('点击当前底栏回顶部', $r('app.media.settings_gen_tap_top'), 'tapBottomScrollTop');
-        this.switchRow('崩溃日志', $r('app.media.settings_gen_crash'), 'crashLog');
-        this.selectRow('动画效果', $r('app.media.settings_gen_animation'), 'animation', ['标准', '减弱', '关闭']);
+        this.switchRow('点击当前底栏回顶部', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_tap_top_theme_night') : $r('app.media.settings_gen_tap_top')), 'tapBottomScrollTop');
+        this.switchRow('崩溃日志', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
+        this.selectRow('动画效果', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'animation', ['标准', '减弱', '关闭']);
       }
       this.cacheActionRow();
     }
@@ -174,9 +191,9 @@ export struct SettingsPage {
   @Builder
   private permissionCard() {
     CategorySection({ title: '系统权限' }) {
-      this.permissionRow('文件访问', $r('app.media.settings_gen_file'), '#212B895C', '#28704E');
-      this.permissionRow('通知权限', $r('app.media.settings_gen_notification'), '#24B0661D', '#8C521D');
-      this.permissionRow('电池优化', $r('app.media.settings_gen_battery'), '#212379A4', TOK_GREEN);
+      this.permissionRow('文件访问', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_file_theme_night') : $r('app.media.settings_gen_file')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212B895C', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF28704E', this.appThemeScheme));
+      this.permissionRow('通知权限', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.24B0661D', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF8C521D', this.appThemeScheme));
+      this.permissionRow('电池优化', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_battery_theme_night') : $r('app.media.settings_gen_battery')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212379A4', this.appThemeScheme), readerAppColor('TOK_GREEN', this.appThemeScheme));
     }
   }
 
@@ -184,7 +201,7 @@ export struct SettingsPage {
   @Builder
   private navRow(label: string, icon: Resource, action: () => void) {
     CategoryRow({ icon: icon, label: label, onRowClick: action }) {
-      Image($r('app.media.reader_chevron_right')).width(14).height(14);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))).width(14).height(14);
     }
   }
 
@@ -285,7 +302,7 @@ export struct SettingsPage {
     .height(SELECT_ROW_H)
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_ROW_DIVIDER });
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
   }
 
   // 分段控件行 (App主题): labelColumn + ReaderSegmentedControl, 垂直居中。
@@ -298,7 +315,8 @@ export struct SettingsPage {
         options: SEG_OPTIONS,
         selectedIndex: this.themeIndex(),
         onSelect: (index: number): void => {
-          this.themeValue = SEG_OPTIONS[index];
+          void ReaderThemeHost.selectApp(index === 0 ? 'system' : index === 1 ? 'day' : 'night')
+            .catch((): void => { this.getUIContext().getPromptAction().showToast({ message: '主题保存失败，已恢复原配置' }); });
         },
       });
     }
@@ -306,7 +324,7 @@ export struct SettingsPage {
     .constraintSize({ minHeight: SELECT_ROW_H })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_ROW_DIVIDER });
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
   }
 
   // 行内左列: icon 盒 + label, 间距统一 12 (与 CategoryRow 同构)。
@@ -320,7 +338,7 @@ export struct SettingsPage {
         .fontWeight(800)
         .fontSize(13)
         .lineHeight(15.34)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -332,7 +350,7 @@ export struct SettingsPage {
   @Builder
   private cacheActionRow() {
     CategoryRow({
-      icon: $r('app.media.settings_gen_cache'),
+      icon: (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_cache_theme_night') : $r('app.media.settings_gen_cache')),
       label: '缓存清理',
       onRowClick: (): void => this.clearTextCache(),
     }) {
@@ -344,12 +362,12 @@ export struct SettingsPage {
           .fontFamily('ReaderInter')
           .fontWeight(800)
           .fontSize(11)
-          .fontColor(TOK_GREEN);
+          .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
       }
       .width(66)
       .height(34)
       .borderRadius(6)
-      .backgroundColor(TOK_SETTING_ACTION_BG);
+      .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
     }
   }
 
@@ -379,7 +397,7 @@ export struct SettingsPage {
         this.statusBadge(badgeBg, badgeDot);
         this.inlineAction('去设置', 55);
         Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.reader_chevron_right')).width(14).height(14);
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))).width(14).height(14);
         }
         .width(16)
         .height(16);
@@ -396,11 +414,11 @@ export struct SettingsPage {
     .width(28)
     .height(28)
     .borderRadius(14)
-    .backgroundColor(TOK_SETTING_ICON_BG);
+    .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
   }
 
   private themeIndex(): number {
-    const i = SEG_OPTIONS.indexOf(this.themeValue);
+    const i = SEG_OPTIONS.indexOf((this.appThemeMode === 'system' ? SEG_OPTIONS[0] : this.appThemeMode === 'day' ? SEG_OPTIONS[1] : SEG_OPTIONS[2]));
     return i >= 0 ? i : 0;
   }
 
@@ -465,12 +483,12 @@ export struct SettingsPage {
         .fontFamily('ReaderInter')
         .fontWeight(800)
         .fontSize(11)
-        .fontColor(TOK_GREEN);
+        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
     }
     .width(width)
     .height(34)
     .borderRadius(6)
-    .backgroundColor(TOK_SETTING_ACTION_BG);
+    .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
   }
 
   @Builder
@@ -479,16 +497,44 @@ export struct SettingsPage {
   }
 
   // 危险行是独立卡片(白底红字 chevron), 不属分类区块, 保留页私有。
+  private requestRestoreDefaults(): void {
+    if (this.resetInFlight) return;
+    const revision = this.resetRevision;
+    this.getUIContext().showAlertDialog({
+      title: '恢复界面与阅读设置',
+      message: '恢复通用偏好、书架封面模式、默认日夜阅读主题、跟随系统、阅读排版与朗读偏好。保留书籍、书源、进度、书签、导入字体文件及同步和朗读服务凭据。',
+      primaryButton: { value: '取消', action: (): void => {} },
+      secondaryButton: { value: '恢复默认', fontColor: readerAppColor('TOK_DANGER', this.appThemeScheme),
+        action: (): void => { if (this.mounted && revision === this.resetRevision) void this.performRestoreDefaults(); } },
+    });
+  }
+
+  private async performRestoreDefaults(): Promise<void> {
+    if (this.resetInFlight) return;
+    this.resetInFlight = true;
+    const revision = ++this.resetRevision;
+    this.resetMessage = '';
+    try {
+      const done = await this.onRestoreDefaults();
+      if (!this.mounted || revision !== this.resetRevision) return;
+      this.resetMessage = done ? '已恢复界面与阅读设置' : '恢复未完成，请重试';
+    } catch (_) {
+      if (this.mounted && revision === this.resetRevision) this.resetMessage = '恢复未完成，已保留恢复记录；点击恢复默认重试';
+    } finally {
+      if (this.mounted && revision === this.resetRevision) this.resetInFlight = false;
+    }
+  }
+
   @Builder
   private dangerRow() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.settings_gen_refresh')).width(15).height(15);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh'))).width(15).height(15);
       }
       .width(28)
       .height(28)
       .borderRadius(14)
-      .backgroundColor(TOK_SETTING_ICON_BG);
+      .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
 
       Text('恢复默认')
         .layoutWeight(1)
@@ -496,17 +542,18 @@ export struct SettingsPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(16)
         .lineHeight(19.2)
-        .fontColor(TOK_DANGER)
+        .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme))
         .maxLines(1);
 
-      Image($r('app.media.reader_chevron_right')).width(14).height(14);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))).width(14).height(14);
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })
     .padding({ left: 13, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor('#E0FFFFFF')
-    .borderRadius(8);
+    .backgroundColor(readerAppColor('app.SettingsPage.dangerRow.backgroundColor.E0FFFFFF', this.appThemeScheme))
+    .borderRadius(8)
+    .onClick((): void => this.requestRestoreDefaults());
   }
 
 }

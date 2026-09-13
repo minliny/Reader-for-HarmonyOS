@@ -1,3 +1,5 @@
+import { SyncHostConfigurationGateway } from './SyncHostConfiguration';
+import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import util from '@ohos.util';
@@ -64,6 +66,7 @@ type CoreWebDavTransaction = {
   phase: string;
   requests: JsonObject[];
   storageApply?: JsonObject;
+  hostConfig?: JsonObject;
   conflict?: JsonObject;
   backupId?: string;
   remotePath?: string;
@@ -93,9 +96,11 @@ export const DEFAULT_SYNC_SNAPSHOT: SyncSnapshot = {
  * descriptor through the standard runtime command.
  */
 export class SyncGateway {
+  private readonly hostConfiguration: SyncHostConfigurationGateway = new SyncHostConfigurationGateway();
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private readonly credentials: WebDavCredentialStore;
   private pendingRestoreTransactionId: string = '';
+  private static restoreRecoveries: Map<ReaderRuntimeOwner, Promise<boolean>> = new Map();
 
   constructor(
     runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
@@ -105,7 +110,50 @@ export class SyncGateway {
     this.credentials = credentials;
   }
 
+  /** Runs before presenting the app and before any new sync. The durable
+   * Core receipt proves whether the atomic Core apply happened, independently
+   * of the old process's transient WebDAV transaction or lost response. */
+  recoverInterruptedRestore(): Promise<boolean> {
+    const existing = SyncGateway.restoreRecoveries.get(this.runtimeOwner);
+    if (existing !== undefined) return existing;
+    const recovery = this.recoverRestoreJournal();
+    SyncGateway.restoreRecoveries.set(this.runtimeOwner, recovery);
+    void recovery.finally((): void => {
+      if (SyncGateway.restoreRecoveries.get(this.runtimeOwner) === recovery) SyncGateway.restoreRecoveries.delete(this.runtimeOwner);
+    }).catch((): void => {});
+    return recovery;
+  }
+
+  private async recoverRestoreJournal(): Promise<boolean> {
+    const journal = await this.credentials.loadRestoreJournal();
+    if (journal === undefined) return false;
+    const queried = await this.runtimeOwner.request('sync.webdav.transaction.commit', {
+      transactionId: journal.operationId, appliedChecksum: journal.checksum, queryOnly: true,
+    });
+    const receipt = this.decodeTransaction(queried.data);
+    this.assertTransactionIdentity(journal.operationId, receipt.transactionId, 'WebDAV restore receipt');
+    if (receipt.phase === 'restoreReceiptMissing') {
+      // Core config and receipt are one atomic SQLite replacement. With no
+      // receipt, no Host choice has been applied: discard only the intent.
+      await this.abortBestEffort(journal.operationId);
+      await this.credentials.clearRestoreJournal(journal.operationId);
+      return false;
+    }
+    if (receipt.phase !== 'restoreReceiptPresent') throw new Error('Core 恢复记录状态无效');
+    if (receipt.hostConfig !== undefined) await this.hostConfiguration.apply(this.hostConfiguration.decode(receipt.hostConfig), journal.operationId);
+    const committed = await this.runtimeOwner.request('sync.webdav.transaction.commit', {
+      transactionId: journal.operationId, appliedChecksum: journal.checksum,
+      hostConfigApplied: receipt.hostConfig !== undefined,
+    });
+    const completed = this.decodeTransaction(committed.data);
+    this.assertTransactionIdentity(journal.operationId, completed.transactionId, 'WebDAV restore receipt commit');
+    if (completed.status !== 'completed' || completed.phase !== 'restoreCompleted') throw new Error('Core 未确认恢复完成');
+    await this.credentials.clearRestoreJournal(journal.operationId);
+    return true;
+  }
+
   async loadSnapshot(): Promise<SyncSnapshot> {
+    await this.recoverInterruptedRestore();
     const config = await this.credentials.load();
     if (config === null) {
       return this.copySnapshot(DEFAULT_SYNC_SNAPSHOT);
@@ -140,9 +188,6 @@ export class SyncGateway {
         password,
         backupPassword,
         directory: this.requireDirectory(directoryValue),
-        // Saving WebDAV credentials must never reset the local bookshelf
-        // projection stored in the same secure configuration record.
-        bookshelfViewMode: existing?.bookshelfViewMode,
       };
       this.requireCredentialPair(config);
       if (config.backupPassword.length === 0) {
@@ -285,12 +330,18 @@ export class SyncGateway {
     config: StoredWebDavConfig,
     includeEncryption: boolean,
   ): Promise<CoreWebDavTransaction> {
+    if (operation !== 'connectionTest') await ReaderThemeHost.prepareUserChange();
+    if (operation !== 'connectionTest') await this.recoverInterruptedRestore();
     const params: JsonObject = {
       operation,
       baseUrl: config.url,
       directory: config.directory,
       maxBackups: 5,
     };
+    if (operation === 'backup' || operation === 'restore') {
+      params['hostConfig'] = this.hostConfiguration.encode(await this.hostConfiguration.capture());
+      params['systemScheme'] = ReaderThemeHost.observedSystemScheme();
+    }
     const authorization = this.authorization(config);
     if (authorization !== undefined) {
       params['auth'] = authorization;
@@ -331,20 +382,37 @@ export class SyncGateway {
         if (storageApply === undefined) {
           throw new Error('Core WebDAV 恢复事务缺少 storage apply 描述符');
         }
-        const applied = await this.runtimeOwner.request('runtime.storage.apply', storageApply, { timeoutMs: 30000 });
-        await this.runtimeOwner.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
-        const manifest = this.requireObject(applied.data['manifest'], 'runtime.storage.apply manifest');
-        const checksum = manifest['checksum'];
-        if (typeof checksum !== 'string') {
-          throw new Error('runtime.storage.apply 未返回 checksum');
+        const decodedHost = current.hostConfig === undefined ? undefined : this.hostConfiguration.decode(current.hostConfig);
+        const expectedManifest = this.requireObject(storageApply['manifest'], 'WebDAV restore manifest');
+        const checksum = expectedManifest['checksum'];
+        if (typeof checksum !== 'string' || !/^[0-9a-f]{64}$/.test(checksum)) throw new Error('Core 恢复校验值无效');
+        // Persist only identity/checksum. Config credentials and full snapshots
+        // never enter Host Preferences. No Host theme changes precede Core apply.
+        await this.credentials.saveRestoreJournal({ version: 1, operationId: current.transactionId, checksum });
+        let completed: CoreWebDavTransaction;
+        try {
+          const applied = await this.runtimeOwner.request('runtime.storage.apply', storageApply, { timeoutMs: 30000 });
+          await this.runtimeOwner.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
+          const manifest = this.requireObject(applied.data['manifest'], 'runtime.storage.apply manifest');
+          if (typeof manifest['checksum'] !== 'string' || !/^[0-9a-f]{64}$/.test(manifest['checksum'] as string)) {
+            throw new Error('Core 恢复结果校验值无效');
+          }
+          // Core may rebase approved configuration onto newer live progress.
+          // The operation receipt binds the original descriptor checksum.
+          if (decodedHost !== undefined) await this.hostConfiguration.apply(decodedHost, current.transactionId);
+          const committed = await this.runtimeOwner.request('sync.webdav.transaction.commit', {
+            transactionId: current.transactionId, appliedChecksum: checksum,
+            hostConfigApplied: current.hostConfig !== undefined,
+          });
+          completed = this.decodeTransaction(committed.data);
+          this.assertTransactionIdentity(current.transactionId, completed.transactionId, 'sync.webdav.transaction.commit');
+          await this.credentials.clearRestoreJournal(current.transactionId);
+        } catch (error) {
+          // A response failure is not evidence that SQLite failed to commit.
+          // Query its operation receipt before touching either prior or next data.
+          if (!await this.recoverInterruptedRestore()) throw error;
+          completed = { ...current, status: 'completed', phase: 'restoreCompleted', requests: [], hostConfig: undefined, storageApply: undefined };
         }
-        const committed = await this.runtimeOwner.request('sync.webdav.transaction.commit', {
-          transactionId: current.transactionId,
-          appliedChecksum: checksum,
-        });
-        const completed = this.decodeTransaction(committed.data);
-        this.assertTransactionIdentity(current.transactionId, completed.transactionId,
-          'sync.webdav.transaction.commit');
         current = completed;
         continue;
       }
@@ -384,8 +452,22 @@ export class SyncGateway {
       }
     }
     const transaction: CoreWebDavTransaction = { transactionId, status, phase, requests };
+    const migrationReason = data['themeMigrationReason'];
+    if (migrationReason !== undefined) {
+      if (typeof migrationReason !== 'string' || migrationReason.length > 256 || /[\u0000-\u001f\u007f]/.test(migrationReason)) {
+        throw new Error('Core 主题迁移诊断无效');
+      }
+      if (migrationReason.length > 0) AppStorage.setOrCreate('readerThemeRestoreFallback', migrationReason);
+    }
     if (data['storageApply'] !== undefined) {
       transaction.storageApply = this.requireObject(data['storageApply'], 'Core WebDAV storageApply');
+    }
+    if (data['hostConfig'] !== undefined) {
+      if (status !== 'applyRequired' && !(status === 'completed' && phase === 'restoreReceiptPresent')) {
+        throw new Error('未经手动确认不能应用本机配置');
+      }
+      transaction.hostConfig = this.requireObject(data['hostConfig'], 'Core WebDAV hostConfig');
+      this.hostConfiguration.decode(transaction.hostConfig);
     }
     if (data['conflict'] !== undefined) {
       transaction.conflict = this.requireObject(data['conflict'], 'Core WebDAV conflict');

@@ -4,6 +4,8 @@ import {
 } from './SettingsGateway';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { LocalConfigurationReset } from './LocalConfigurationReset';
 
 const DOMAIN = 0x5244;
 
@@ -26,6 +28,7 @@ export class SettingsOrchestrator {
   private isCurrent: () => boolean;
   private session: number = 0;
   private writeGeneration: number = 0;
+  private resetting: boolean = false;
 
   constructor(
     emit: (snapshot: SettingsSnapshot) => void,
@@ -63,13 +66,14 @@ export class SettingsOrchestrator {
 
   /** Optimistically flip one switch; persist async, roll back on failure. */
   toggle(key: SettingsKey, value: boolean): void {
+    if (this.resetting) return;
     // Optimistic in-page update; persist asynchronously to the Host
     // preferences store (app-level settings, not Core-owned).
     const intent = this.withSetting(key, value);
     const writeGeneration = this.writeGeneration + 1;
     this.writeGeneration = writeGeneration;
     this.emit(intent);
-    this.gateway.update(intent)
+    this.gateway.update(intent, false, key)
       .then((snapshot: SettingsSnapshot): void => {
         if (writeGeneration !== this.writeGeneration || !this.isCurrent()) {
           return;
@@ -94,6 +98,22 @@ export class SettingsOrchestrator {
             hilog.error(DOMAIN, 'Reader', 'Settings recovery load failed: %{private}s', reloadError.message);
           });
       });
+  }
+
+  async restoreDefaults(): Promise<boolean> {
+    if (this.resetting) return false;
+    this.resetting = true;
+    const session = this.session;
+    const generation = ++this.writeGeneration;
+    try {
+      await LocalConfigurationReset.request(ReaderRuntimeOwner.current());
+      const snapshot = await this.gateway.load();
+      if (this.isCurrentSession(session, generation)) this.emit(snapshot);
+      return true;
+    } catch (error) {
+      hilog.error(DOMAIN, 'Reader', 'Configuration reset remains retryable: %{private}s', (error as Error).message);
+      throw error as Error;
+    } finally { this.resetting = false; }
   }
 
   private isCurrentSession(session: number, expectedWrite: number): boolean {

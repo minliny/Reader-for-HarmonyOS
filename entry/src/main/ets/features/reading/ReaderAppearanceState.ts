@@ -5,15 +5,9 @@
  * fonts carry a Host-validated app-private descriptor; navigation mode and
  * page transition live exclusively in ReaderSettingsSnapshot.
  */
-export type ReaderAppearanceTheme =
-  | 'day'
-  | 'warm'
-  | 'night'
-  | 'warmNight'
-  | 'paper'
-  | 'green'
-  | 'paperNight'
-  | 'greenNight';
+import { findReaderTheme, type ReaderThemeId, type ReaderAppThemeMode, type ReaderThemeScheme } from '../common/ReaderThemeRegistry.ts';
+import { reduceReaderThemeSelection, validDefaultReaderTheme, type ReaderThemeSelection, type ReaderThemeIntent } from '../common/ReaderThemeSelection.ts';
+export type ReaderAppearanceTheme = ReaderThemeId;
 
 /**
  * All eight built-in slots in Figma are real selectable reader fonts. The
@@ -96,6 +90,24 @@ export const READER_APPEARANCE_PARAGRAPH_SPACING_RANGE = new ReaderAppearanceMet
 export const READER_APPEARANCE_LETTER_SPACING_RANGE = new ReaderAppearanceMetricRange(-2, 4);
 
 export type ReaderAppearanceSnapshot = {
+  version: 4;
+  appThemeMode: ReaderAppThemeMode;
+  activeTheme: ReaderAppearanceTheme;
+  dayTheme: ReaderAppearanceTheme;
+  nightTheme: ReaderAppearanceTheme;
+  font: ReaderAppearanceFont;
+  customFont: ReaderCustomFontDescriptor | undefined;
+  fontOrder: ReaderAppearanceFontSlot[];
+  fontSize: number;
+  lineHeightMultiplier: number;
+  paragraphSpacing: number;
+  letterSpacing: number;
+  indent: ReaderAppearanceIndent;
+  alignment: ReaderAppearanceAlignment;
+};
+
+/** Migration only: existing v3 choices and typography are preserved. */
+export type ReaderAppearanceSnapshotV3 = {
   version: 3;
   activeTheme: ReaderAppearanceTheme;
   dayTheme: ReaderAppearanceTheme;
@@ -145,10 +157,11 @@ export type ReaderAppearanceSnapshotV1 = {
 
 export function createDefaultReaderAppearanceSnapshot(): ReaderAppearanceSnapshot {
   return {
-    version: 3,
-    activeTheme: 'paper',
-    dayTheme: 'paper',
-    nightTheme: 'paperNight',
+    version: 4,
+    appThemeMode: 'system',
+    activeTheme: 'day',
+    dayTheme: 'day',
+    nightTheme: 'night',
     font: 'serif',
     customFont: undefined,
     fontOrder: READER_APPEARANCE_DEFAULT_FONT_ORDER.slice(),
@@ -167,21 +180,28 @@ export function createDefaultReaderAppearanceSnapshot(): ReaderAppearanceSnapsho
  * Serif slot. A legacy v1 pageTurn value is intentionally discarded.
  */
 export function normalizeReaderAppearanceSnapshot(
-  candidate: ReaderAppearanceSnapshot | ReaderAppearanceSnapshotV2 | ReaderAppearanceSnapshotV1,
+  candidate: ReaderAppearanceSnapshot | ReaderAppearanceSnapshotV3 | ReaderAppearanceSnapshotV2 | ReaderAppearanceSnapshotV1,
 ): ReaderAppearanceSnapshot {
   const fallback = createDefaultReaderAppearanceSnapshot();
-  const customFont = candidate.version === 2 || candidate.version === 3 ?
+  const customFont = candidate.version === 2 || candidate.version === 3 || candidate.version === 4 ?
     normalizeReaderCustomFontDescriptor(candidate.customFont) : undefined;
   const font = isReaderAppearanceFont(candidate.font) && (candidate.font !== 'custom' || customFont !== undefined) ?
     candidate.font : fallback.font;
+  const appThemeMode = candidate.version === 4 && (candidate.appThemeMode === 'day' ||
+    candidate.appThemeMode === 'night' || candidate.appThemeMode === 'system') ? candidate.appThemeMode :
+    (findReaderTheme(candidate.activeTheme)?.scheme ?? 'system');
+  const dayTheme = validDefaultReaderTheme(candidate.dayTheme, 'day');
+  const nightTheme = validDefaultReaderTheme(candidate.nightTheme, 'night');
   return {
-    version: 3,
-    activeTheme: isReaderAppearanceTheme(candidate.activeTheme) ? candidate.activeTheme : fallback.activeTheme,
-    dayTheme: isReaderAppearanceTheme(candidate.dayTheme) ? candidate.dayTheme : fallback.dayTheme,
-    nightTheme: isReaderAppearanceTheme(candidate.nightTheme) ? candidate.nightTheme : fallback.nightTheme,
+    version: 4,
+    appThemeMode,
+    activeTheme: isReaderAppearanceTheme(candidate.activeTheme) ? candidate.activeTheme :
+      (appThemeMode === 'night' ? nightTheme : dayTheme),
+    dayTheme,
+    nightTheme,
     font,
     customFont,
-    fontOrder: candidate.version === 3 ? normalizeReaderAppearanceFontOrder(candidate.fontOrder) :
+    fontOrder: candidate.version === 3 || candidate.version === 4 ? normalizeReaderAppearanceFontOrder(candidate.fontOrder) :
       fallback.fontOrder,
     fontSize: isPositiveFinite(candidate.fontSize) ?
       clampReaderAppearanceMetric('fontSize', candidate.fontSize) : fallback.fontSize,
@@ -201,28 +221,29 @@ export function copyReaderAppearanceSnapshot(snapshot: ReaderAppearanceSnapshot)
   return normalizeReaderAppearanceSnapshot(snapshot);
 }
 
-export function setReaderAppearanceTheme(
-  snapshot: ReaderAppearanceSnapshot,
-  theme: ReaderAppearanceTheme,
-): ReaderAppearanceSnapshot {
-  return copyWith(snapshot, theme, snapshot.dayTheme, snapshot.nightTheme, snapshot.font, snapshot.indent,
-    snapshot.alignment, undefined, undefined);
+export function appearanceThemeSelection(snapshot: ReaderAppearanceSnapshot): ReaderThemeSelection {
+  return { appThemeMode: snapshot.appThemeMode, readerThemeId: snapshot.activeTheme,
+    defaultDayReaderThemeId: snapshot.dayTheme, defaultNightReaderThemeId: snapshot.nightTheme };
 }
-
-export function setReaderAppearanceDayTheme(
-  snapshot: ReaderAppearanceSnapshot,
-  theme: ReaderAppearanceTheme,
-): ReaderAppearanceSnapshot {
-  return copyWith(snapshot, snapshot.activeTheme, theme, snapshot.nightTheme, snapshot.font, snapshot.indent,
-    snapshot.alignment, undefined, undefined);
+export function applyAppearanceThemeSelection(snapshot: ReaderAppearanceSnapshot, value: ReaderThemeSelection): ReaderAppearanceSnapshot {
+  return normalizeReaderAppearanceSnapshot({ ...snapshot, appThemeMode: value.appThemeMode,
+    activeTheme: value.readerThemeId, dayTheme: value.defaultDayReaderThemeId, nightTheme: value.defaultNightReaderThemeId });
 }
-
-export function setReaderAppearanceNightTheme(
-  snapshot: ReaderAppearanceSnapshot,
-  theme: ReaderAppearanceTheme,
-): ReaderAppearanceSnapshot {
-  return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, theme, snapshot.font, snapshot.indent,
-    snapshot.alignment, undefined, undefined);
+export function changeAppearanceThemeSelection(snapshot: ReaderAppearanceSnapshot, intent: ReaderThemeIntent,
+  value: string, systemScheme: ReaderThemeScheme): ReaderAppearanceSnapshot {
+  return applyAppearanceThemeSelection(snapshot, reduceReaderThemeSelection(appearanceThemeSelection(snapshot), intent, value, systemScheme));
+}
+export function setReaderAppearanceTheme(snapshot: ReaderAppearanceSnapshot, theme: ReaderAppearanceTheme,
+  systemScheme: ReaderThemeScheme = 'day'): ReaderAppearanceSnapshot {
+  return changeAppearanceThemeSelection(snapshot, 'reader', theme, systemScheme);
+}
+export function setReaderAppearanceDayTheme(snapshot: ReaderAppearanceSnapshot, theme: ReaderAppearanceTheme): ReaderAppearanceSnapshot {
+  if (theme !== snapshot.activeTheme || findReaderTheme(theme)?.scheme !== 'day') return copyReaderAppearanceSnapshot(snapshot);
+  return changeAppearanceThemeSelection(snapshot, 'default', theme, 'day');
+}
+export function setReaderAppearanceNightTheme(snapshot: ReaderAppearanceSnapshot, theme: ReaderAppearanceTheme): ReaderAppearanceSnapshot {
+  if (theme !== snapshot.activeTheme || findReaderTheme(theme)?.scheme !== 'night') return copyReaderAppearanceSnapshot(snapshot);
+  return changeAppearanceThemeSelection(snapshot, 'default', theme, 'night');
 }
 
 export function setReaderAppearanceFont(
@@ -343,8 +364,7 @@ export function readerAppearanceCanStep(
 }
 
 export function isReaderAppearanceTheme(value: string): value is ReaderAppearanceTheme {
-  return value === 'day' || value === 'warm' || value === 'night' || value === 'warmNight' ||
-    value === 'paper' || value === 'green' || value === 'paperNight' || value === 'greenNight';
+  return findReaderTheme(value) !== undefined;
 }
 
 export function isReaderAppearanceFont(value: string): value is ReaderAppearanceFont {
@@ -447,7 +467,8 @@ function copyWith(
   metricValue: number | undefined,
 ): ReaderAppearanceSnapshot {
   const next: ReaderAppearanceSnapshot = {
-    version: 3,
+    version: 4,
+    appThemeMode: snapshot.appThemeMode,
     activeTheme,
     dayTheme,
     nightTheme,

@@ -10,6 +10,15 @@ const MAX_CONFIG_BYTES = 64 * 1024;
 const MAX_FIELD_LENGTH = 4096;
 const LOCAL_PREFERENCES_NAME = 'reader_webdav_local_v1';
 const LOCAL_VIEW_MODE_KEY = 'bookshelfViewMode';
+const LOCAL_MIGRATION_KEY = 'bookshelfConfigVersion';
+const LOCAL_CONFIG_VERSION = 1;
+const LOCAL_RESTORE_JOURNAL_KEY = 'webdavRestoreJournal';
+
+export interface WebDavRestoreJournal {
+  version: number;
+  operationId: string;
+  checksum: string;
+}
 
 export type StoredWebDavConfig = {
   url: string;
@@ -17,7 +26,7 @@ export type StoredWebDavConfig = {
   password: string;
   backupPassword: string;
   directory: string;
-  /** Local bookshelf projection; kept beside the WebDAV credentials. */
+  /** Legacy migration input only. New Asset records never contain this field. */
   bookshelfViewMode?: 'cover' | 'list';
 };
 
@@ -42,9 +51,12 @@ export class WebDavCredentialStore {
   private localModeWriteTail: Promise<void> = Promise.resolve();
   private context: common.UIAbilityContext | undefined;
   private localPreferences: preferences.Preferences | undefined;
+  private contextGeneration: number = 0;
 
   /** Attach the ability context for non-secret WebDAV-adjacent preferences. */
   attachContext(context: common.UIAbilityContext): void {
+    if (this.context === context) return;
+    this.contextGeneration += 1;
     this.context = context;
     this.localPreferences = undefined;
   }
@@ -85,53 +97,137 @@ export class WebDavCredentialStore {
       password: envelope.config.password,
       backupPassword: envelope.config.backupPassword,
       directory: envelope.config.directory,
-      bookshelfViewMode: envelope.config.bookshelfViewMode ?? 'cover',
+      bookshelfViewMode: envelope.config.bookshelfViewMode,
     };
   }
 
-  async loadBookshelfViewMode(): Promise<'cover' | 'list' | null> {
-    const config = await this.load();
-    if (config?.bookshelfViewMode !== undefined) return config.bookshelfViewMode;
-    const store = await this.ensureLocalPreferences();
-    if (store === undefined) return null;
-    const mode = await store.get(LOCAL_VIEW_MODE_KEY, '') as string;
-    return mode === 'list' || mode === 'cover' ? mode : null;
+  loadBookshelfViewMode(): Promise<'cover' | 'list'> {
+    const next = this.localModeWriteTail.then((): Promise<'cover' | 'list'> => this.readOrMigrateViewMode());
+    this.localModeWriteTail = next.then((): void => {}, (): void => {});
+    return next;
   }
 
-  /** Update only the local projection while preserving every WebDAV field. */
-  async saveBookshelfViewMode(mode: 'cover' | 'list'): Promise<void> {
-    const previous = this.localModeWriteTail;
-    let release: (() => void) | undefined;
-    this.localModeWriteTail = new Promise<void>((resolve: () => void): void => { release = resolve; });
-    await previous;
-    try {
+  /** One serialized non-secret authority; credential edits never mirror mode. */
+  saveBookshelfViewMode(mode: 'cover' | 'list', restoreOperationId?: string): Promise<void> {
+    const next = this.localModeWriteTail.then(async (): Promise<void> => {
+      await this.readOrMigrateViewMode();
       const store = await this.ensureLocalPreferences();
-      if (store !== undefined) {
-        await store.put(LOCAL_VIEW_MODE_KEY, mode);
-        await store.flush();
+      const raw = await store.get(LOCAL_RESTORE_JOURNAL_KEY, '');
+      if (raw !== '') {
+        if (typeof raw !== 'string') throw new Error('BOOKSHELF_RESTORE_PENDING');
+        const journal = JSON.parse(raw) as WebDavRestoreJournal;
+        this.validateRestoreJournal(journal);
+        if (journal.operationId !== restoreOperationId) throw new Error('BOOKSHELF_RESTORE_PENDING');
       }
-    } finally {
-      if (release !== undefined) release();
-    }
-    const existing = await this.load();
-    if (existing === null) {
-      // Keep credentials absent when WebDAV is not configured. The local
-      // preference above still makes the bookshelf choice survive a restart.
-      return;
-    }
-    await this.save({ ...existing, bookshelfViewMode: mode });
+      await this.writeLocalViewMode(store, mode);
+    });
+    this.localModeWriteTail = next.catch((): void => {});
+    return next;
   }
 
-  private async ensureLocalPreferences(): Promise<preferences.Preferences | undefined> {
+  private async readOrMigrateViewMode(): Promise<'cover' | 'list'> {
+    const store = await this.ensureLocalPreferences();
+    const present = await store.has(LOCAL_VIEW_MODE_KEY);
+    const stored = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
+    const version = await store.get(LOCAL_MIGRATION_KEY, 0);
+    if (present) {
+      const mode = stored === 'list' ? 'list' : 'cover';
+      if (version !== LOCAL_CONFIG_VERSION) await this.writeLocalViewMode(store, mode);
+      return mode;
+    }
+    // Only a truly absent local key may consult the legacy raw Asset field.
+    // Never interpret load()'s former synthetic cover as a prior user choice.
+    const legacy = version === LOCAL_CONFIG_VERSION ? null : await this.load();
+    const mode = legacy?.bookshelfViewMode === 'list' ? 'list' : 'cover';
+    await this.writeLocalViewMode(store, mode);
+    return mode;
+  }
+
+  private async writeLocalViewMode(store: preferences.Preferences, mode: 'cover' | 'list'): Promise<void> {
+    const hadMode = await store.has(LOCAL_VIEW_MODE_KEY);
+    const priorMode = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
+    const priorVersion = await store.get(LOCAL_MIGRATION_KEY, 0);
+    try {
+      await store.put(LOCAL_VIEW_MODE_KEY, mode);
+      await store.put(LOCAL_MIGRATION_KEY, LOCAL_CONFIG_VERSION);
+      await store.flush();
+    } catch (error) {
+      // Preferences keeps pending values in memory after a failed flush. Undo
+      // those values so a later read cannot acknowledge an uncommitted choice.
+      if (hadMode) await store.put(LOCAL_VIEW_MODE_KEY, priorMode);
+      else await store.delete(LOCAL_VIEW_MODE_KEY);
+      await store.put(LOCAL_MIGRATION_KEY, priorVersion);
+      throw error;
+    }
+  }
+
+  loadRestoreJournal(): Promise<WebDavRestoreJournal | undefined> {
+    const next = this.localModeWriteTail.then(async (): Promise<WebDavRestoreJournal | undefined> => {
+      const store = await this.ensureLocalPreferences();
+      const raw = await store.get(LOCAL_RESTORE_JOURNAL_KEY, '');
+      if (raw === '') return undefined;
+      if (typeof raw !== 'string' || raw.length > 1024) throw new Error('恢复记录无效，请保留当前数据');
+      const value = JSON.parse(raw) as WebDavRestoreJournal;
+      this.validateRestoreJournal(value);
+      return value;
+    });
+    this.localModeWriteTail = next.then((): void => {}, (): void => {});
+    return next;
+  }
+
+  saveRestoreJournal(value: WebDavRestoreJournal): Promise<void> {
+    this.validateRestoreJournal(value);
+    const next = this.localModeWriteTail.then(async (): Promise<void> => {
+      const store = await this.ensureLocalPreferences();
+      const prior = await store.get(LOCAL_RESTORE_JOURNAL_KEY, '');
+      const encoded = JSON.stringify(value);
+      if (prior !== '' && prior !== encoded) throw new Error('上一次恢复尚未完成');
+      try { await store.put(LOCAL_RESTORE_JOURNAL_KEY, encoded); await store.flush(); }
+      catch (error) { await store.put(LOCAL_RESTORE_JOURNAL_KEY, prior); throw error; }
+    });
+    this.localModeWriteTail = next.catch((): void => {});
+    return next;
+  }
+
+  clearRestoreJournal(operationId: string): Promise<void> {
+    const next = this.localModeWriteTail.then(async (): Promise<void> => {
+      const store = await this.ensureLocalPreferences();
+      const raw = await store.get(LOCAL_RESTORE_JOURNAL_KEY, '');
+      if (raw === '') return;
+      if (typeof raw !== 'string') throw new Error('恢复记录无效');
+      const prior = JSON.parse(raw) as WebDavRestoreJournal;
+      this.validateRestoreJournal(prior);
+      if (prior.operationId !== operationId) throw new Error('恢复记录已被替换');
+      try { await store.delete(LOCAL_RESTORE_JOURNAL_KEY); await store.flush(); }
+      catch (error) { await store.put(LOCAL_RESTORE_JOURNAL_KEY, raw); throw error; }
+    });
+    this.localModeWriteTail = next.catch((): void => {});
+    return next;
+  }
+
+  private validateRestoreJournal(value: WebDavRestoreJournal): void {
+    if (value.version !== 1 || typeof value.operationId !== 'string' || value.operationId.length === 0 ||
+      value.operationId.length > 128 || /[\u0000-\u001f\u007f]/.test(value.operationId) ||
+      typeof value.checksum !== 'string' || !/^[0-9a-f]{64}$/.test(value.checksum)) throw new Error('恢复记录无效');
+  }
+
+  private async ensureLocalPreferences(): Promise<preferences.Preferences> {
     if (this.localPreferences !== undefined) return this.localPreferences;
-    if (this.context === undefined) return undefined;
-    this.localPreferences = await preferences.getPreferences(this.context, LOCAL_PREFERENCES_NAME);
+    if (this.context === undefined) throw new Error('本机配置尚未就绪，请重试');
+    const generation = this.contextGeneration;
+    const store = await preferences.getPreferences(this.context, LOCAL_PREFERENCES_NAME);
+    if (generation !== this.contextGeneration) throw new Error('本机配置所属窗口已变化，请重试');
+    this.localPreferences = store;
     return this.localPreferences;
   }
 
   save(config: StoredWebDavConfig): Promise<void> {
     const normalized = this.normalize(config);
-    const next = this.writeTail.catch((): void => {}).then((): Promise<void> => this.persist(normalized));
+    const next = this.writeTail.catch((): void => {}).then(async (): Promise<void> => {
+      // Migrate before removing the legacy field from the next secure record.
+      await this.loadBookshelfViewMode();
+      await this.persist(normalized);
+    });
     // Preserve the error for this caller, but do not let one transient
     // AssetStore failure poison every later save/clear in this process.
     this.writeTail = next.catch((): void => {});
@@ -139,7 +235,10 @@ export class WebDavCredentialStore {
   }
 
   clear(): Promise<void> {
-    const next = this.writeTail.catch((): void => {}).then((): Promise<void> => this.remove());
+    const next = this.writeTail.catch((): void => {}).then(async (): Promise<void> => {
+      await this.loadBookshelfViewMode();
+      await this.remove();
+    });
     this.writeTail = next.catch((): void => {});
     return next;
   }
@@ -180,7 +279,6 @@ export class WebDavCredentialStore {
       password: this.field(config.password, 'password', true, false),
       backupPassword: this.field(config.backupPassword, 'backup password', false, false),
       directory: this.field(config.directory, 'directory'),
-      bookshelfViewMode: config.bookshelfViewMode === 'list' ? 'list' : 'cover',
     };
     if ((normalized.user.length === 0) !== (normalized.password.length === 0)) {
       throw new Error('WebDAV user and password must either both be set or both be empty');

@@ -1,5 +1,6 @@
 import preferences from '@ohos.data.preferences';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import {
   copyReaderSettingsSnapshot,
   createDefaultReaderSettingsSnapshot,
@@ -8,6 +9,7 @@ import {
   type ReaderSettingsSnapshotV1,
   type ReaderSettingsSnapshotV2,
   type ReaderSettingsSnapshotV3,
+  type ReaderSettingsSnapshotV4,
 } from './ReaderSettingsState';
 
 const READER_SETTINGS_PREFERENCES_NAME = 'reader_reading_settings_v1';
@@ -24,25 +26,28 @@ const READER_SETTINGS_SNAPSHOT_KEY = 'snapshot';
 export class ReaderSettingsGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private store: preferences.Preferences | undefined = undefined;
-  private updateTail: Promise<void> = Promise.resolve();
+  private static updateTails: Map<ReaderRuntimeOwner, Promise<void>> = new Map();
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
   }
 
   async load(): Promise<ReaderSettingsSnapshot> {
-    await this.updateTail;
+    await ReaderThemeHost.prepareUserChange();
+    await ReaderSettingsGateway.updateTails.get(this.runtimeOwner);
     const store = await this.ensureStore();
     return this.readSnapshot(store);
   }
 
-  async update(snapshot: ReaderSettingsSnapshot): Promise<ReaderSettingsSnapshot> {
+  async update(snapshot: ReaderSettingsSnapshot, resetOwned: boolean = false): Promise<ReaderSettingsSnapshot> {
     const requestedSnapshot = normalizeReaderSettingsSnapshot(snapshot);
-    const previousUpdate = this.updateTail;
+    if (!resetOwned) await ReaderThemeHost.prepareUserChange();
+    const previousUpdate = ReaderSettingsGateway.updateTails.get(this.runtimeOwner) ?? Promise.resolve();
     let releaseUpdate: (() => void) | undefined = undefined;
-    this.updateTail = new Promise<void>((resolve: () => void): void => {
+    const nextUpdate = new Promise<void>((resolve: () => void): void => {
       releaseUpdate = resolve;
     });
+    ReaderSettingsGateway.updateTails.set(this.runtimeOwner, nextUpdate);
     // A failed flush must not poison every later retry in this process. Each
     // caller receives its own I/O error, while the serialized tail continues
     // from a settled point.
@@ -50,13 +55,20 @@ export class ReaderSettingsGateway {
 
     try {
       const store = await this.ensureStore();
-      await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(requestedSnapshot));
-      await store.flush();
+      const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
+      try {
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(requestedSnapshot));
+        await store.flush();
+      } catch (error) {
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, previous);
+        throw error;
+      }
       return copyReaderSettingsSnapshot(requestedSnapshot);
     } finally {
       if (releaseUpdate !== undefined) {
         releaseUpdate();
       }
+      if (ReaderSettingsGateway.updateTails.get(this.runtimeOwner) === nextUpdate) ReaderSettingsGateway.updateTails.delete(this.runtimeOwner);
     }
   }
 
@@ -68,9 +80,9 @@ export class ReaderSettingsGateway {
     }
     try {
       const decoded = JSON.parse(raw) as
-        ReaderSettingsSnapshot | ReaderSettingsSnapshotV3 | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1;
+        ReaderSettingsSnapshot | ReaderSettingsSnapshotV4 | ReaderSettingsSnapshotV3 | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1;
       const normalized = normalizeReaderSettingsSnapshot(decoded);
-      if (decoded.version !== 4) {
+      if (decoded.version !== 5) {
         try {
           await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(normalized));
           await store.flush();

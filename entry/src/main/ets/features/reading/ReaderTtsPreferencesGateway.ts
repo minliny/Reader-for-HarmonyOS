@@ -1,5 +1,6 @@
 import preferences from '@ohos.data.preferences';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import {
   copyReaderTtsPreferencesSnapshot,
   createDefaultReaderTtsPreferencesSnapshot,
@@ -14,14 +15,15 @@ const READER_TTS_SNAPSHOT_KEY = 'snapshot';
 export class ReaderTtsPreferencesGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private store: preferences.Preferences | undefined = undefined;
-  private updateTail: Promise<void> = Promise.resolve();
+  private static updateTails: Map<ReaderRuntimeOwner, Promise<void>> = new Map();
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
   }
 
   async load(): Promise<ReaderTtsPreferencesSnapshot> {
-    await this.updateTail;
+    await ReaderThemeHost.prepareUserChange();
+    await ReaderTtsPreferencesGateway.updateTails.get(this.runtimeOwner);
     const store = await this.ensureStore();
     const fallback = createDefaultReaderTtsPreferencesSnapshot();
     const raw = (await store.get(READER_TTS_SNAPSHOT_KEY, '')) as string;
@@ -33,22 +35,31 @@ export class ReaderTtsPreferencesGateway {
     }
   }
 
-  async update(snapshot: ReaderTtsPreferencesSnapshot): Promise<ReaderTtsPreferencesSnapshot> {
+  async update(snapshot: ReaderTtsPreferencesSnapshot, resetOwned: boolean = false): Promise<ReaderTtsPreferencesSnapshot> {
     const requested = normalizeReaderTtsPreferencesSnapshot(snapshot);
-    const previousUpdate = this.updateTail;
+    if (!resetOwned) await ReaderThemeHost.prepareUserChange();
+    const previousUpdate = ReaderTtsPreferencesGateway.updateTails.get(this.runtimeOwner) ?? Promise.resolve();
     let releaseUpdate: (() => void) | undefined = undefined;
-    this.updateTail = new Promise<void>((resolve: () => void): void => {
+    const nextUpdate = new Promise<void>((resolve: () => void): void => {
       releaseUpdate = resolve;
     });
+    ReaderTtsPreferencesGateway.updateTails.set(this.runtimeOwner, nextUpdate);
     // Keep retries independent after a transient preferences/flush failure.
     await previousUpdate.catch((): void => {});
     try {
       const store = await this.ensureStore();
-      await store.put(READER_TTS_SNAPSHOT_KEY, JSON.stringify(requested));
-      await store.flush();
+      const previous = await store.get(READER_TTS_SNAPSHOT_KEY, '');
+      try {
+        await store.put(READER_TTS_SNAPSHOT_KEY, JSON.stringify(requested));
+        await store.flush();
+      } catch (error) {
+        await store.put(READER_TTS_SNAPSHOT_KEY, previous);
+        throw error;
+      }
       return copyReaderTtsPreferencesSnapshot(requested);
     } finally {
       releaseUpdate?.();
+      if (ReaderTtsPreferencesGateway.updateTails.get(this.runtimeOwner) === nextUpdate) ReaderTtsPreferencesGateway.updateTails.delete(this.runtimeOwner);
     }
   }
 
