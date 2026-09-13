@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 import './test-surface-repair.mjs';
 const read=f=>readFileSync(new URL(`../entry/src/main/ets/${f}`,import.meta.url),'utf8');
 const shelf=read('features/bookshelf/BookshelfPage.ets');
@@ -25,6 +27,28 @@ for(const [size,lineHeight] of [[15,18.3],[12,15],[11,13.75],[10,12]]) {
 assert.match(list,/textAlign\(primary \? TextAlign.Center : TextAlign.Start\)/);
 assert.match(list,/Blank\(\).layoutWeight\(1\)/,'right third balances source, progress stays centered');
 assert.match(list,/maxLines\(1\).textOverflow\(\{ overflow: TextOverflow.Ellipsis \}\)/);
+// Compile the exact production body with the SDK, then inspect its native
+// layout attributes. Empty Text does not acquire a glyph line from lineHeight.
+// Rename only the entry method so the existing Builder probe can invoke it.
+const probeSource=list.replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
+const Blank=new Proxy({name:'Blank'},{get:(target,key)=>key==='name'?target.name:()=>{}});
+const {owner:details}=createReaderBuilderProbe(probeSource,['shelfDetails','statusPill'],{ShelfBookPresentation,Blank});
+details.appThemeScheme='day';
+details.book={sourceId:'local',bookId:'empty-author',title:'书名',author:'',lastChapter:'最新章节',readProgress:0};
+details.shelfDetails();
+const textNodes=()=>[...details.nodes.values()].filter(n=>n.type==='Text');
+const verifyAuthor=expected=>{
+ const texts=textNodes();
+ assert.equal(texts[1].create,expected,'the actual author field stays empty without invented metadata');
+ assert.equal(texts[1].constraintSize?.minHeight,15,'empty authors must reserve the original 15vp second row');
+ assert.equal(texts[1].fontSize,12);assert.equal(texts[1].lineHeight,15);
+ assert.equal(texts[1].fontFamily,'ReaderNotoSansSC');
+ assert.equal(texts[2].create,'最新章节');
+ assert.equal(texts[2].lineHeight,13.75);
+};
+verifyAuthor('');
+details.book={...details.book,author:'Reader test'};details.replay();verifyAuthor('Reader test');
+details.book={...details.book,author:''};details.replay();verifyAuthor('');
 assert.match(shelf,/PHONE_LIST_COVER_WIDTH = 48/);assert.match(shelf,/PHONE_LIST_COVER_HEIGHT = 80/);
 assert.match(shelf,/TABLET_LIST_COVER_WIDTH = 64/);assert.match(shelf,/TABLET_LIST_COVER_HEIGHT = 104/);
 assert.match(shelf,/\.bindSheet\(this.actionBook !== undefined[\s\S]*?width: this.bookActionWidth\(\)/);

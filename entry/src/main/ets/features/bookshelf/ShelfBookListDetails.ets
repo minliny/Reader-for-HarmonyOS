@@ -15,7 +15,7 @@ export struct ShelfBookListDetails {
       Text(this.book.title).width('100%').fontFamily('ReaderNotoSerifSCBold')
         .fontWeight(FontWeight.Bold).fontSize(15).lineHeight(18.3).fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      Text(this.book.author).width('100%').fontFamily('ReaderNotoSansSC')
+      Text(this.book.author).width('100%').constraintSize({ minHeight: 15 }).fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Regular).fontSize(12).lineHeight(15).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       Text(ShelfBookPresentation.latestChapter(this.book)).width('100%').fontFamily('ReaderNotoSansSC')
