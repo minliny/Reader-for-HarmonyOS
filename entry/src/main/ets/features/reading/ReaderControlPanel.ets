@@ -869,10 +869,10 @@ export struct ReaderControlPanel {
           .width(this.frame().header.width).height(this.frame().header.height)
           .position({ x: this.frame().header.x, y: this.frame().header.y })
           .opacity((this.contentLocation().module === 'replace') ? 1 : this.frame().header.opacity)
-          // Header controls must win over the visual shell and content slot
-          // at the same coordinates while keeping the authored actor mounted.
+          // Default admits the child collapse action and masks lower siblings.
+          // Block here would skip every child, leaving a visible but dead button.
           .zIndex(2)
-          .hitTestBehavior(HitTestMode.Block)
+          .hitTestBehavior(HitTestMode.Default)
           .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0);
         Stack({ alignContent: Alignment.TopStart }) { this.brightnessRail(); }
           .width(this.frame().brightness.width).height(this.frame().brightness.height)
