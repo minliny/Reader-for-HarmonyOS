@@ -126,12 +126,16 @@ export class ReaderBrightnessWriter {
   private async drain(): Promise<void> {
     while (this.pending !== undefined) {
       const epoch = this.windowEpoch;
+      const lookupOwner = this.owner;
       // Leave pending replaceable during lookup. Take the newest sample only
       // once a window is available, so continuous input cannot starve writes.
       let win: ReaderBrightnessWindow;
       try {
         win = await this.getWindow();
       } catch (error) {
+        // A replaced Window or reader lease may have queued a new value while
+        // this lookup was pending. Only its own owner can consume that failure.
+        if (epoch !== this.windowEpoch || lookupOwner !== this.owner) continue;
         const failed = this.pending;
         this.pending = undefined;
         failed?.reject(error as Error);
@@ -145,12 +149,14 @@ export class ReaderBrightnessWriter {
         task.resolve(new ReaderBrightnessResult(false, this.confirmed));
         continue;
       }
-      this.remember(win.getWindowProperties().brightness);
-      const target = task.restore ? (this.baseline ?? task.value) : task.value;
       let settle: () => void = (): void => {};
       const issued = new Promise<void>((resolve): void => { settle = resolve; });
       this.inFlight = issued;
       try {
+        // A Window can be destroyed after lookup. Property reads are native
+        // calls too: their synchronous failure must settle this dequeued task.
+        this.remember(win.getWindowProperties().brightness);
+        const target = task.restore ? (this.baseline ?? task.value) : task.value;
         await win.setWindowBrightness(target);
         if (epoch === this.windowEpoch) this.confirmed = target;
         const applied = epoch === this.windowEpoch && this.isCurrent(task.owner);

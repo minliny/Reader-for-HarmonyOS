@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { ReaderBrightnessWriter } from '../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+const deferred = () => { let resolve, reject; const promise = new Promise((r,j) => { resolve = r; reject = j; }); return { promise, resolve, reject }; };
 
 // Production regression: a 24ms lookup under continuous 16ms MOVE must keep
 // writing before UP, and the last held sample must reach the window unaided.
@@ -83,3 +83,48 @@ const cancelOwner=isolated.claim(); const inflight=isolated.request(cancelOwner,
 const settled=isolated.cancelAndSettle(cancelOwner); isolated.reset(); cancelGate.resolve();
 await inflight; assert.equal((await settled).applied,false);
 console.log('PASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner');
+
+// Lookup failure belongs to its captured Window AND reader owner. A newer
+// lease may already have pending input while the old lookup is settling.
+for (const replaceWindow of [false, true]) {
+  const oldLookup=deferred(); let lookups=0; const values=[];
+  const currentWindow={getWindowProperties:()=>({brightness:.5}),async setWindowBrightness(value){values.push(value);}};
+  const isolated=new ReaderBrightnessWriter(()=>++lookups===1?oldLookup.promise:Promise.resolve(currentWindow));
+  const oldOwner=isolated.claim(); const oldRequest=isolated.request(oldOwner,.2);
+  if(replaceWindow) isolated.reset();
+  const newOwner=isolated.claim(); const newRequest=isolated.request(newOwner,.8);
+  oldLookup.reject(Error('obsolete window lookup'));
+  assert.equal((await oldRequest).applied,false);
+  assert.equal((await newRequest).applied,true,'obsolete lookup failure cannot reject a new owner pending request');
+  assert.deepEqual(values,[.8]); assert.equal(lookups,2);
+}
+
+// A current lookup failure rejects that owner's newest sample without
+// poisoning later work or retrying a permanently failing lookup forever.
+{
+  const lookup=deferred(); let calls=0; const values=[];
+  const healthy={getWindowProperties:()=>({brightness:.5}),async setWindowBrightness(value){values.push(value);}};
+  const writer=new ReaderBrightnessWriter(()=>++calls===1?lookup.promise:Promise.resolve(healthy));
+  const owner=writer.claim(); const replaced=writer.request(owner,.1);
+  const newest=writer.request(owner,.3);
+  const rejected=assert.rejects(newest,/current lookup failed/);
+  lookup.reject(Error('current lookup failed')); await rejected;
+  assert.equal((await replaced).applied,false);
+  await writer.request(owner,.6); assert.deepEqual(values,[.6]);
+}
+
+// Native properties can synchronously throw after the Window was acquired.
+// The dequeued request still settles, allowing a caller to await/retry it.
+{
+  let reads=0; const values=[];
+  const writer=new ReaderBrightnessWriter(async()=>({
+    getWindowProperties(){if(++reads===1)throw Error('window properties unavailable');return {brightness:.45};},
+    async setWindowBrightness(value){values.push(value);},
+  }));
+  const owner=writer.claim();
+  await assert.rejects(writer.request(owner,.25),/window properties unavailable/);
+  assert.equal((await writer.request(owner,.75)).applied,true);
+  await writer.release(owner);
+  assert.deepEqual(values,[.75,.45],'failed property read neither writes nor consumes the valid restore baseline');
+}
+console.log('PASS brightness failure boundaries: stale Window/owner lookup, current rejection, synchronous properties failure and subsequent drain');
