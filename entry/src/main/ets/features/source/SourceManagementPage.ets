@@ -432,16 +432,24 @@ export struct SourceManagementPage {
   private sourceRow(source: BookSource) {
     Row({ space: TOK_SPACE_XS }) {
       Column({ space: TOK_SPACE_XS }) {
-        Text(source.name)
-          .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
-          .lineHeight(15.34)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(this.sourceMeta(source))
+        Row({ space: 6 }) {
+          Text(source.name)
+            .constraintSize({ minWidth: 0 }).flexShrink(1)
+            .fontFamily('ReaderNotoSansSC')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(13)
+            .lineHeight(15.34)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+          Text(readerSourceCategoryLabel(source.category))
+            .flexShrink(0)
+            .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular)
+            .fontSize(10).lineHeight(12.5)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1);
+        }.width('100%').alignItems(VerticalAlign.Center);
+        Text(source.baseUrl)
           .width('100%')
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Regular)
@@ -450,9 +458,21 @@ export struct SourceManagementPage {
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
+        if (source.checkMessage !== undefined && source.checkMessage.trim().length > 0 &&
+          source.checkState !== undefined && source.checkState !== 'unchecked') {
+          Text(source.checkMessage)
+            .width('100%').fontFamily('ReaderNotoSansSC').fontSize(10).lineHeight(12.5)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
       }
       .layoutWeight(1)
+      .constraintSize({ minWidth: 0 })
       .alignItems(HorizontalAlign.Start);
+
+      if (source.loginUrl !== undefined && source.loginUrl.trim().length > 0) {
+        this.loginButton(source);
+      }
 
       this.detectButton(source);
 
@@ -463,9 +483,6 @@ export struct SourceManagementPage {
 
       this.sourceSwitch(source.enabled, (): void => this.onToggleSource(source.sourceId, !source.enabled));
 
-      if (source.loginUrl !== undefined) {
-        this.loginButton(source);
-      }
     }
     .width(this.contentFrame().width)
     .height(70)
@@ -567,18 +584,6 @@ export struct SourceManagementPage {
     .height(44)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_SM, bottom: TOK_SPACE_MD });
-  }
-
-  private sourceMeta(source: BookSource): string {
-    const category = readerSourceCategoryLabel(source.category);
-    if (source.checkState !== undefined && source.checkState !== 'unchecked' &&
-      source.checkMessage !== undefined && source.checkMessage.length > 0) {
-      return `${category} · ${source.checkMessage}`;
-    }
-    if (source.baseUrl.length > 0) {
-      return `${category} · ${source.baseUrl}`;
-    }
-    return `${category} · ${source.enabled ? '已启用' : '已禁用'}`;
   }
 
   private sourceRenderKey(source: BookSource): string {

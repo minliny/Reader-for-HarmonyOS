@@ -21,6 +21,8 @@ export struct AppTopBar {
 
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   title: string = '';
+  /** Visible boundary for a fixed header, requested by the bookshelf review. */
+  divider: boolean = false;
   /** 可选尾部槽 (图标钮簇);未传时不渲染。 */
   @BuilderParam trailing?: () => void;
 
@@ -43,7 +45,10 @@ export struct AppTopBar {
     .width('100%')
     .height(58)
     .padding({ left: this.leftInset(), right: this.rightInset(), top: 6 })
-    .alignItems(VerticalAlign.Center);
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(this.divider ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
+    .border({ width: { bottom: this.divider ? 1 : 0 },
+      color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });
   }
 
   private leftInset(): number {

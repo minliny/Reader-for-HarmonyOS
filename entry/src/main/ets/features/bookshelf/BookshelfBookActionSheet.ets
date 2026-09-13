@@ -17,7 +17,7 @@ const BOOK_ACTION_HEIGHT = 40;
  * opaque floating panel so its outline remains visible on every device.
  *
  * The action contents retain the Figma typography and spacing; the host-level
- * presentation intentionally follows the product's new 75% width requirement.
+ * presentation follows the same horizontal inset as the shelf covers.
  */
 @Component
 export struct BookshelfBookActionSheet {
@@ -60,7 +60,7 @@ export struct BookshelfBookActionSheet {
     .height(BOOK_ACTION_SHEET_HEIGHT)
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
     .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(24)
+    .borderRadius({ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 })
     .shadow({ radius: 46, color: readerAppColor('app.BookshelfBookActionSheet.build.color.29594632', this.appThemeScheme), offsetX: 0, offsetY: 18 })
     .clip(true);
   }

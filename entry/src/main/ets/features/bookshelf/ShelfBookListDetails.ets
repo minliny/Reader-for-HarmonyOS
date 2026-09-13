@@ -21,10 +21,9 @@ export struct ShelfBookListDetails {
       Text(ShelfBookPresentation.latestChapter(this.book)).width('100%').fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Regular).fontSize(11).lineHeight(13.75).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      Row() {
+      Row({ space: 8 }) {
         this.statusPill(ShelfBookPresentation.source(this.book), false);
         this.statusPill(ShelfBookPresentation.progress(this.book), true);
-        Blank().layoutWeight(1);
       }
       .width('100%').height(18);
     }
@@ -33,7 +32,8 @@ export struct ShelfBookListDetails {
 
   @Builder
   private statusPill(label: string, primary: boolean) {
-    Text(label).layoutWeight(1).constraintSize({ minWidth: 0 }).height(18)
+    Text(label).layoutWeight(primary ? 0 : 1).flexShrink(primary ? 0 : 1)
+      .constraintSize({ minWidth: 0 }).height(18)
       .padding({ left: 6, right: 6 }).backgroundColor(primary ? readerAppColor('app.ShelfBookListDetails.statusPill.backgroundColor.FFF5ECE6', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
       .borderRadius(999).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular)
       .fontSize(10).lineHeight(12).fontColor(primary ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))

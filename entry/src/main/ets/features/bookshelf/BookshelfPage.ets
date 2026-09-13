@@ -306,6 +306,7 @@ export struct BookshelfPage {
       dragBar: false,
       showClose: false,
       backgroundColor: readerAppColor('app.BookshelfPage.bookshelfTabContent.bindSheet.FFFFFCF8', this.appThemeScheme),
+      radius: { topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 },
       maskColor: readerAppColor('app.BookshelfPage.bookshelfTabContent.bindSheet.52000000', this.appThemeScheme),
       enableOutsideInteractive: false,
       onDisappear: (): void => {
@@ -326,7 +327,7 @@ export struct BookshelfPage {
 
   @Builder
   private topBar() {
-    AppTopBar({ title: '书架' }) {
+    AppTopBar({ title: '书架', divider: true }) {
       Row({ space: 18 }) {
         ReaderIconButton({
           icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
@@ -889,11 +890,11 @@ export struct BookshelfPage {
         .layoutWeight(1).constraintSize({ minWidth: 0 });
 
       Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(20).height(20);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(44).height(44);
       }
-      .width(isTablet ? 44 : 34)
-      .height(isTablet ? 44 : 34)
-      .borderRadius(isTablet ? 22 : 17)
+      .width(44)
+      .height(44)
+      .borderRadius(22)
       .accessibilityText(`${book.title}更多操作`)
       .onClick((): void => this.presentBookActionSheet(book));
     }
@@ -921,10 +922,8 @@ export struct BookshelfPage {
   }
 
   private bookActionWidth(): number {
-    const metrics = ReaderWindowCoordinator.metrics();
-    const available = Math.max(0, this.effectiveViewportWidth() -
-      readerVisualSafeLeft(metrics) - readerVisualSafeRight(metrics));
-    return Math.min(available, available * .75);
+    // Same live horizontal frame as the outside edges of the shelf covers.
+    return this.shelfContentWidth(this.isWideViewport());
   }
 
   private phoneContentWidth(): number {

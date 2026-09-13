@@ -163,7 +163,7 @@ export struct LocalBookDetail {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Text(this.book.author)
+        Text(`作者：${this.book.author}`)
           .width('100%')
           .margin({ top: TOK_SPACE_XS })
           .fontFamily('ReaderInter')
@@ -174,36 +174,22 @@ export struct LocalBookDetail {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Row({ space: 5 }) {
-          Text('最新')
-            .width(37)
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(11)
-            .lineHeight(16.188)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .maxLines(1);
-          Text(this.book.lastChapter ?? '')
-            .layoutWeight(1)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(16.188)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-        }
-        .width('100%')
-        .height(16.188)
-        .margin({ top: TOK_SPACE_CONTROL_INLINE });
+        Text(`最新：${this.book.lastChapter?.trim() || '暂无最新章节'}`)
+          .width('100%').height(18)
+          .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
+          .fontSize(12).lineHeight(15)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: TOK_SPACE_XS });
 
         // Figma `2260:1432`/`2260:1433`: the Hero's 4th row — source label +
         // 更换书源 pill. The geometry stays shared, while the label is the
         // source identity admitted by the local or remote reading session.
         Row({ space: TOK_SPACE_XS }) {
           Text(`书源：${this.book.sourceName}`)
-            .width(72)
-            .height(15)
+            .constraintSize({ minWidth: 0 })
+            .flexShrink(1)
+            .height(18)
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Bold)
             .fontSize(12)
@@ -214,16 +200,19 @@ export struct LocalBookDetail {
 
           Stack({ alignContent: Alignment.Center }) {
             Text('更换书源')
+              .width('100%')
+              .height('100%')
               .fontFamily('ReaderInter')
               .fontWeight(900)
               .fontSize(9)
               .lineHeight(18)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .textAlign(TextAlign.Center)
-              .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS });
+              .maxLines(1);
           }
           .width(52)
           .height(18)
+          .flexShrink(0)
           .borderRadius(999)
           .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme))
           .opacity(this.sourceSwitchEnabled ? 1 : 0.4)
@@ -239,15 +228,18 @@ export struct LocalBookDetail {
         .height(18)
         .margin({ top: TOK_SPACE_XS });
         Text('分组：默认')
+          .width('100%').height(18)
+          .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
           .fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).lineHeight(15)
-          .margin({ top: 4 });
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: TOK_SPACE_XS });
       }
       .layoutWeight(1)
-      .constraintSize({ minHeight: 142 })
+      .constraintSize({ minWidth: 0 })
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.contentWidth())
-    .height(152)
+    .constraintSize({ minHeight: 152 })
     .padding(15)
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -268,10 +260,8 @@ export struct LocalBookDetail {
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
 
-      // Core may legitimately omit EPUB/TXT description metadata.  Do not
-      // manufacture replacement copy; the local route still keeps the Figma
-      // card geometry and shows only Core-owned text when available.
-      Text(this.displayIntro())
+      // A display placeholder never becomes book metadata or a fake chapter.
+      Text(this.displayIntro().length > 0 ? this.displayIntro() : '暂无简介')
         .width('100%')
         .height(this.summaryTextHeight())
         .fontFamily('ReaderInter')
@@ -335,6 +325,14 @@ export struct LocalBookDetail {
         ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
           this.chapterRow(entry);
         }, (entry: LocalReadingTocEntry): string => `book-detail-toc-${entry.index}`);
+        if (this.toc.length === 0) {
+          Text(this.chapterEmptyMessage())
+            .width('100%')
+            .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING, top: TOK_SPACE_XS })
+            .fontFamily('ReaderInter').fontSize(13).lineHeight(21.45)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
       }
       .width('100%')
       .height('100%')
@@ -462,6 +460,12 @@ export struct LocalBookDetail {
 
   private displayIntro(): string {
     return bookIntroText(this.book.intro);
+  }
+
+  private chapterEmptyMessage(): string {
+    if (this.loadingMessage.trim().length > 0) return this.loadingMessage;
+    if (!this.readingEnabled && this.readingBlockedReason.trim().length > 0) return this.readingBlockedReason;
+    return '暂无章节信息';
   }
 
   private contentWidth(): number {

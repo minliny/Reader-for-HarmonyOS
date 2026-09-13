@@ -89,8 +89,8 @@ assert.equal(ShelfBookPresentation.progress({ readProgress: 8765 }), '已读 87%
 
 // --- Detail intro: HTML line breaks become real breaks, edges trimmed. ------
 const detailSource = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
-assert.ok(detailSource.includes("Text(this.displayIntro())"),
-  'detail summary renders through the intro cleaner');
+assert.ok(detailSource.includes("Text(this.displayIntro().length > 0 ? this.displayIntro() : '暂无简介')"),
+  'detail summary retains the intro cleaner and distinguishes absent metadata');
 assert.ok(detailSource.includes('bookIntroText(this.book.intro)'),
   'detail uses the same display-only synopsis projection as search');
 

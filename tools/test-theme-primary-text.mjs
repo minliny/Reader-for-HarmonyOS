@@ -8,9 +8,9 @@ import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeR
 const root=path.resolve(import.meta.dirname,'..'), ets=path.join(root,'entry/src/main/ets');
 const source=file=>readFileSync(path.join(ets,'features',file),'utf8');
 const output={layer:'Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels',builder:[],consumers:[]};
-const {owner:detail}=createReaderBuilderProbe(source('bookshelf/LocalBookDetail.ets'),['chapterSection','chapterRow'],{
+const {owner:detail}=createReaderBuilderProbe(source('bookshelf/LocalBookDetail.ets'),['chapterSection','chapterRow','chapterEmptyMessage'],{
   CHAPTER_SECTION_HEIGHT:282,ButtonType:{Normal:'Normal'}});
-Object.assign(detail,{appThemeScheme:'day',visibleToc:()=>[],contentWidth:()=>338,readingActionsReady:()=>true});
+Object.assign(detail,{appThemeScheme:'day',toc:[],loadingMessage:'',readingEnabled:true,visibleToc:()=>[],contentWidth:()=>338,readingActionsReady:()=>true});
 detail.chapterSection();
 for(const scheme of ['day','night','day']){
   detail.appThemeScheme=scheme;detail.replay();

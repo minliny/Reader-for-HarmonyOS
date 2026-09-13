@@ -4,7 +4,10 @@ import type { ShelfBook } from '../../app/ReaderCoreGateway';
 export class ShelfBookPresentation {
   static source(book: ShelfBook): string {
     if (book.sourceId === 'local') {
-      return book.kind?.trim() ? `本地 ${book.kind}` : '本地书';
+      const kind = book.kind?.trim() ?? '';
+      // Core's legacy local kind identifies imported plain text, not a format label.
+      if (kind.toLowerCase() === 'local' || kind.toLowerCase() === 'txt') return '本地 TXT';
+      return kind.length > 0 ? `本地 ${kind.toUpperCase()}` : '本地书';
     }
     const name = book.sourceName?.trim() ?? '';
     return name.length > 0 && name !== book.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)
@@ -24,7 +27,7 @@ export class ShelfBookPresentation {
   static visible(books: ShelfBook[], selectedGroup: string): ShelfBook[] {
     return books.filter((book: ShelfBook): boolean => {
       const group = book.group?.trim() ?? '';
-      return selectedGroup === '' || (selectedGroup === '默认' ? group === '' : group === selectedGroup);
+      return selectedGroup === '' || (selectedGroup === '默认' ? group === '' || group === '默认' : group === selectedGroup);
     });
   }
 }

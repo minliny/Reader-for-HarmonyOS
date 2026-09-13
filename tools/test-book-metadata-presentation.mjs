@@ -148,5 +148,5 @@ assert.equal(bookIntroText(longIntro), '正文 & '.repeat(10000).trim(), 'large 
 assert.equal(bookIntroText(`<span ${' '.repeat(100000)}`), '<span', 'an unfinished tag remains text without nested whitespace backtracking');
 assert.match(page.slice(cardStart), /if \(this\.displayIntro\(\)\.length > 0\)/, 'markup-only search summaries must not reserve a blank row');
 assert.match(page.slice(cardStart), /Text\(this\.displayIntro\(\)\)/);
-assert.match(detail, /Text\(this\.displayIntro\(\)\)/);
+assert.match(detail, /Text\(this\.displayIntro\(\)\.length > 0 \? this\.displayIntro\(\) : '暂无简介'\)/);
 console.log('shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS');

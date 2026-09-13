@@ -25,7 +25,7 @@ for(const [size,lineHeight] of [[15,18.3],[12,15],[11,13.75],[10,12]]) {
  assert.match(list,new RegExp(`fontSize\\(${size}\\)[\\s\\S]*?lineHeight\\(${lineHeight}\\)`));
 }
 assert.match(list,/textAlign\(primary \? TextAlign.Center : TextAlign.Start\)/);
-assert.match(list,/Blank\(\).layoutWeight\(1\)/,'right third balances source, progress stays centered');
+assert.match(list,/layoutWeight\(primary \? 0 : 1\).flexShrink\(primary \? 0 : 1\)/,'the trailing progress retains intrinsic width while source takes the remaining space');
 assert.match(list,/maxLines\(1\).textOverflow\(\{ overflow: TextOverflow.Ellipsis \}\)/);
 // Compile the exact production body with the SDK, then inspect its native
 // layout attributes. Empty Text does not acquire a glyph line from lineHeight.
@@ -52,9 +52,9 @@ details.book={...details.book,author:''};details.replay();verifyAuthor('');
 assert.match(shelf,/PHONE_LIST_COVER_WIDTH = 48/);assert.match(shelf,/PHONE_LIST_COVER_HEIGHT = 80/);
 assert.match(shelf,/TABLET_LIST_COVER_WIDTH = 64/);assert.match(shelf,/TABLET_LIST_COVER_HEIGHT = 104/);
 assert.match(shelf,/\.bindSheet\(this.actionBook !== undefined[\s\S]*?width: this.bookActionWidth\(\)/);
-assert.match(shelf,/available \* .75/);assert.match(shelf,/readerVisualSafeLeft\(metrics\).*readerVisualSafeRight\(metrics\)/);
+assert.match(shelf,/return this.shelfContentWidth\(this.isWideViewport\(\)\)/,'single-book sheet uses the same frame as the cover outside edges');
 assert.match(action,/BOOK_ACTION_SHEET_HEIGHT = 270/);assert.match(action,/'编辑分组'.*onEditGroup/);
-assert.match(action,/borderRadius\(24\)/);assert.match(action,/TOK_CARD_BG_HI/);
+assert.match(action,/borderRadius\(\{ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 \}\)/);assert.match(action,/TOK_CARD_BG_HI/);
 for(const [name,value] of [['MENU_WIDTH',176],['POINTER_HEIGHT',12],['ACTION_HEIGHT',50],['ACTION_COUNT',3],['MENU_TRAILING_EXTENSION',11],['MENU_ANCHOR_OVERLAP',5]])assert.match(menu,new RegExp(`const ${name} = ${value}`));
 assert.equal((menu.match(/this.action\(/g)??[]).length,3);
 assert.doesNotMatch(menu,/'分组管理'/);for(const label of ['批量管理','本地导入','书架设置'])assert.ok(menu.includes(label));
@@ -68,4 +68,4 @@ assert.match(dialog,/localImportResultLayout\(/);assert.match(dialog,/summaryIco
 assert.match(dialog,/duration: 1000, curve: Curve.Linear, iterations: -1/);
 assert.match(dialog,/duration: 220/);assert.match(dialog,/delay: 80, duration: 140/);
 assert.match(index,/presentation.state !== 'fileSelection' \|\| this.importBusyAttempt !== 0/);
-console.log('PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, safe 75%, measured results and bounded animation');
+console.log('PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation');
