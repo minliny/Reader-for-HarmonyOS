@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import {
@@ -35,6 +36,8 @@ const READER_SEARCH_FULL_ACTION_SIZE = 32;
  */
 @Component
 export struct ReaderSearchFullPanel {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
   @Prop query: string = '';
@@ -54,7 +57,7 @@ export struct ReaderSearchFullPanel {
       Row()
         .width(42)
         .height(4)
-        .backgroundColor(TOK_READ_HANDLE)
+        .backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
         .borderRadius(999)
         .position({ x: this.handleX(), y: 9 });
 
@@ -66,8 +69,8 @@ export struct ReaderSearchFullPanel {
       }
       .width(this.viewportWidth())
       .height(this.viewportHeight())
-      .backgroundColor(TOK_SURFACE_PANEL)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .borderRadius(12)
       .clip(true)
       .position({ x: READER_SEARCH_FULL_INSET, y: READER_SEARCH_FULL_VIEWPORT_Y });
@@ -82,7 +85,7 @@ export struct ReaderSearchFullPanel {
   @Builder
   private header() {
     Row() {
-      Image($r('app.media.rc_search'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.rc_search_theme_night') : $r('app.media.rc_search')))
         .width(16)
         .height(16);
       Text('内容搜索')
@@ -90,18 +93,18 @@ export struct ReaderSearchFullPanel {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(14)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1);
       Blank();
       Text('收起')
         .width(40)
         .height(26)
-        .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
         .borderRadius(8)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
-        .fontColor(TOK_READ_PRIMARY)
+        .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .accessibilityText('收起内容搜索')
         .onClick((): void => this.onCollapse());
@@ -128,14 +131,14 @@ export struct ReaderSearchFullPanel {
         .layoutWeight(1);
 
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.reader_directory_input_search'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search')))
           .width(16)
           .height(16);
       }
       .width(READER_SEARCH_FULL_ACTION_SIZE)
       .height(READER_SEARCH_FULL_ACTION_SIZE)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .borderRadius(8)
       .opacity(this.canSearch() ? 1 : 0.4)
       .accessibilityText('搜索正文')
@@ -149,7 +152,7 @@ export struct ReaderSearchFullPanel {
     .height(READER_SEARCH_FULL_SEARCH_ROW_HEIGHT)
     .padding({ left: READER_SEARCH_FULL_SEARCH_PADDING_X, right: READER_SEARCH_FULL_SEARCH_PADDING_X })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE });
+    .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) });
   }
 
   @Builder
@@ -176,7 +179,7 @@ export struct ReaderSearchFullPanel {
             .fontFamily('ReaderNotoSansSC')
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
-            .fontColor(TOK_READ_MUTED)
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center)
             .maxLines(3);
         }
@@ -197,7 +200,7 @@ export struct ReaderSearchFullPanel {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       this.resultSnippet(result);
@@ -206,7 +209,7 @@ export struct ReaderSearchFullPanel {
     .height(READER_SEARCH_FULL_RESULT_ROW_HEIGHT)
     .padding({ left: 12, right: 12, top: 10, bottom: 8 })
     .alignItems(HorizontalAlign.Start)
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE })
+    .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .accessibilityText(`${this.resultTitle(result)}，搜索结果`)
     .onClick((): void => this.onSelectResult(result));
   }
@@ -220,7 +223,7 @@ export struct ReaderSearchFullPanel {
           result.chapterOffset, result.matchLength).prefix)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Regular)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       if (splitReaderSearchSnippet(result.snippet, result.snippetStart,
         result.chapterOffset, result.matchLength).match.length > 0) {
@@ -228,7 +231,7 @@ export struct ReaderSearchFullPanel {
           result.chapterOffset, result.matchLength).match)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
-          .fontColor(TOK_READ_INK);
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       if (splitReaderSearchSnippet(result.snippet, result.snippetStart,
         result.chapterOffset, result.matchLength).suffix.length > 0) {
@@ -236,7 +239,7 @@ export struct ReaderSearchFullPanel {
           result.chapterOffset, result.matchLength).suffix)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Regular)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
     }
     .width('100%')
@@ -244,7 +247,7 @@ export struct ReaderSearchFullPanel {
     .fontWeight(FontWeight.Regular)
     .fontSize(10)
     .lineHeight(14)
-    .fontColor(TOK_READ_MUTED)
+    .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
     .maxLines(2)
     .textOverflow({ overflow: TextOverflow.Ellipsis });
   }

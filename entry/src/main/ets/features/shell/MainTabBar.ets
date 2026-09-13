@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
@@ -48,6 +49,8 @@ export const MAIN_TABS: MainTabDef[] = ALL_MAIN_TABS.filter(
 
 @Component
 export struct MainTabBar {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop current: string = 'bookshelf';
   @Prop vertical: boolean = false;
@@ -75,8 +78,8 @@ export struct MainTabBar {
     .width(this.bottomBarFrame().width)
     .height(68)
     .padding(TOK_SPACE_XS)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(24)
     .margin({ bottom: Math.max(15, this.interactiveBottom()) })
     .translate({ x: this.bottomBarTranslateX() });
@@ -94,8 +97,8 @@ export struct MainTabBar {
     .padding(TOK_SPACE_XS)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(24);
   }
 
@@ -113,13 +116,13 @@ export struct MainTabBar {
         .fontWeight(TYPE_MAIN_TAB_LABEL.fontWeight)
         .fontSize(TYPE_MAIN_TAB_LABEL.fontSizeFp)
         .lineHeight(TYPE_MAIN_TAB_LABEL.lineHeightFp as number)
-        .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED);
+        .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .layoutWeight(1)
     .height(54)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(active ? TOK_PRIMARY_DARK : Color.Transparent)
+    .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
     .borderRadius(24)
     .onClick((): void => {
       if (!active) {
@@ -142,13 +145,13 @@ export struct MainTabBar {
         .fontWeight(TYPE_MAIN_TAB_LABEL.fontWeight)
         .fontSize(TYPE_MAIN_TAB_LABEL.fontSizeFp)
         .lineHeight(TYPE_MAIN_TAB_LABEL.lineHeightFp as number)
-        .fontColor(active ? TOK_ON_PRIMARY : TOK_MUTED);
+        .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width(66)
     .height(58)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(active ? TOK_PRIMARY_DARK : Color.Transparent)
+    .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
     .borderRadius(24)
     .onClick((): void => {
       if (!active) {

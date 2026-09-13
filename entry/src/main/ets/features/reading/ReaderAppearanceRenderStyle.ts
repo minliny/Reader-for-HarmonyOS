@@ -1,3 +1,4 @@
+import { readerThemeDefinition } from '../common/ReaderThemeRegistry.ts';
 import type {
   ReaderAppearanceAlignment,
   ReaderAppearanceFont,
@@ -35,33 +36,12 @@ export type ReaderAppearanceThemeStyle = {
 };
 
 export function readerAppearanceThemeStyle(theme: ReaderAppearanceTheme): ReaderAppearanceThemeStyle {
-  if (theme === 'warm') {
-    return themeStyle('#FFF6E9', '#FFF6E9', '#2C241D', false, false);
-  }
-  if (theme === 'warmNight') {
-    return themeStyle('#27231F', '#27231F', '#E7D8C8', false, false);
-  }
-  if (theme === 'paper') {
-    return themeStyle('#FBF4E9', '#EFE2D0', '#2B241D', true, true);
-  }
-  if (theme === 'green') {
-    return themeStyle('#EEF5E8', '#EEF5E8', '#263423', false, false);
-  }
-  if (theme === 'paperNight') {
-    return themeStyle('#302B26', '#211F1C', '#E9DECE', true, false);
-  }
-  if (theme === 'greenNight') {
-    return themeStyle('#202B26', '#202B26', '#D8E2D2', false, false);
-  }
-  if (theme === 'night') {
-    return themeStyle('#26231F', '#26231F', '#E9DECE', false, false);
-  }
-  return themeStyle('#FFFFFF', '#FFFFFF', '#2B241D', false, false);
+  const value = readerThemeDefinition(theme);
+  return themeStyle(value.paperStart, value.paperEnd, value.ink, value.paperTexture, value.sourcePaperLighting);
 }
 
 export function readerAppearanceChromeTone(theme: ReaderAppearanceTheme): 'light' | 'dark' {
-  return theme === 'night' || theme === 'warmNight' || theme === 'paperNight' || theme === 'greenNight' ?
-    'light' : 'dark';
+  return readerThemeDefinition(theme).scheme === 'night' ? 'light' : 'dark';
 }
 
 export function readerAppearanceFontFamily(font: ReaderAppearanceFont): string {

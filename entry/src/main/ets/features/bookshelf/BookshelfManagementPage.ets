@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -34,6 +35,8 @@ import {
 
 @Component
 export struct BookshelfManagementPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   onBack: () => void = (): void => {};
@@ -68,7 +71,7 @@ export struct BookshelfManagementPage {
             .fontFamily('ReaderNotoSansSC')
             .fontSize(10)
             .lineHeight(16)
-            .fontColor(TOK_MUTED);
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         }
         .width('100%')
         .padding({
@@ -84,7 +87,7 @@ export struct BookshelfManagementPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -94,10 +97,10 @@ export struct BookshelfManagementPage {
       .fontFamily('ReaderNotoSansSC')
       .fontSize(12)
       .lineHeight(18)
-      .fontColor(this.snapshot.busy ? TOK_PRIMARY_DARK : TOK_MUTED)
+      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8);
   }
 
@@ -106,14 +109,14 @@ export struct BookshelfManagementPage {
     Column({ space: TOK_SPACE_XS }) {
       this.heading('阅读统计');
       Text(`书架 ${this.snapshot.data.books.length} 本 · 分组 ${this.snapshot.data.groups.length} 个 · 阅读记录 ${this.snapshot.data.records.length} 条`)
-        .fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_INK);
+        .fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       Text(`累计 ${this.formatDuration(this.snapshot.data.totalReadTime)} · 最近 ${this.formatTimestamp(this.snapshot.data.latestReadAt)}`)
-        .fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(TOK_MUTED);
+        .fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width('100%')
     .padding(TOK_SPACE_MD)
-    .backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(10)
     .alignItems(HorizontalAlign.Start);
   }
@@ -135,8 +138,8 @@ export struct BookshelfManagementPage {
       }
       .width('100%');
     }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
+    .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
     .alignItems(HorizontalAlign.Start);
   }
 
@@ -145,7 +148,7 @@ export struct BookshelfManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading('Core 分组');
       if (this.snapshot.data.groups.length === 0) {
-        Text('暂无分组').fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_MUTED);
+        Text('暂无分组').fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       } else {
         List({ space: TOK_SPACE_XS }) {
           Repeat(this.snapshot.data.groups)
@@ -162,8 +165,8 @@ export struct BookshelfManagementPage {
         .scrollBar(BarState.Off);
       }
     }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
+    .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
     .alignItems(HorizontalAlign.Start);
   }
 
@@ -173,12 +176,12 @@ export struct BookshelfManagementPage {
             Row() {
               Column({ space: 2 }) {
                 Text(group.groupName).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-                  .fontSize(13).fontColor(TOK_INK);
+                  .fontSize(13).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
                 Text(`id ${group.groupId} · 顺序 ${group.order} · ${group.show ? '显示' : '隐藏'}`)
-                  .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(TOK_MUTED);
+                  .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
               }
               .layoutWeight(1).alignItems(HorizontalAlign.Start);
-              Text('编辑').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(TOK_PRIMARY_DARK)
+              Text('编辑').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
                 .padding(8).onClick((): void => this.onSelectGroup(group.groupId));
             }
             .width('100%');
@@ -187,7 +190,7 @@ export struct BookshelfManagementPage {
               this.smallAction('删除实体', (): void => this.onDeleteGroup(group.groupId));
             }
           }
-          .width('100%').padding(TOK_SPACE_SM).backgroundColor(TOK_SURFACE_PANEL_SOFT).borderRadius(8);
+          .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8);
   }
 
   @Builder
@@ -221,8 +224,8 @@ export struct BookshelfManagementPage {
       .scrollBar(BarState.Off);
       this.actionButton('应用到所选书籍', true, (): void => this.onAssignBook());
     }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
+    .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
     .alignItems(HorizontalAlign.Start);
   }
 
@@ -230,19 +233,19 @@ export struct BookshelfManagementPage {
   private assignmentBookRow(book: ShelfBook) {
         Row() {
           Column({ space: 2 }) {
-            Text(book.title).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(12).fontColor(TOK_INK);
+            Text(book.title).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
             Text(`${book.author} · ${book.group ?? '未分组'}`)
-              .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(TOK_MUTED);
+              .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           }
           .layoutWeight(1).alignItems(HorizontalAlign.Start);
           Text(this.isSelectedBook(book) ? '已选择' : '选择')
             .fontFamily('ReaderNotoSansSC').fontSize(11)
-            .fontColor(this.isSelectedBook(book) ? TOK_ON_PRIMARY : TOK_PRIMARY_DARK)
-            .backgroundColor(this.isSelectedBook(book) ? TOK_PRIMARY_DARK : TOK_SURFACE_PANEL_SOFT)
+            .fontColor(this.isSelectedBook(book) ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+            .backgroundColor(this.isSelectedBook(book) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
             .padding(8).borderRadius(8)
             .onClick((): void => this.onSelectBook(book.sourceId, book.bookId));
         }
-        .width('100%').padding(TOK_SPACE_SM).border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(8);
+        .width('100%').padding(TOK_SPACE_SM).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8);
   }
 
   @Builder
@@ -250,7 +253,7 @@ export struct BookshelfManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading('Core 阅读记录');
       if (this.snapshot.data.records.length === 0) {
-        Text('暂无阅读记录').fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_MUTED);
+        Text('暂无阅读记录').fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       } else {
         List() {
           Repeat(this.snapshot.data.records)
@@ -268,17 +271,17 @@ export struct BookshelfManagementPage {
         .scrollBar(BarState.Off);
       }
     }
-    .width('100%').padding(TOK_SPACE_MD).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10)
+    .width('100%').padding(TOK_SPACE_MD).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10)
     .alignItems(HorizontalAlign.Start);
   }
 
   @Builder
   private recordRow(record: ShelfReadRecord) {
           Row() {
-            Text(record.bookName).layoutWeight(1).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_INK);
+            Text(record.bookName).layoutWeight(1).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
             Text(`${this.formatDuration(record.readTime)} · ${this.formatTimestamp(record.lastRead)}`)
-              .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(TOK_MUTED);
+              .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           }
           .width('100%').height(44);
   }
@@ -286,24 +289,24 @@ export struct BookshelfManagementPage {
   @Builder
   private heading(label: string) {
     Text(label).width('100%').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
-      .fontSize(16).fontColor(TOK_INK);
+      .fontSize(16).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
   @Builder
   private actionButton(label: string, primary: boolean, action: () => void) {
     Text(label).layoutWeight(1).height(44).textAlign(TextAlign.Center)
       .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(12)
-      .fontColor(primary ? TOK_ON_PRIMARY : TOK_PRIMARY_DARK)
-      .backgroundColor(primary ? TOK_PRIMARY_DARK : TOK_SURFACE_PANEL_SOFT)
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(8).opacity(this.snapshot.busy ? 0.62 : 1)
       .onClick((): void => { if (!this.snapshot.busy) action(); });
   }
 
   @Builder
   private smallAction(label: string, action: () => void) {
-    Text(label).fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(TOK_PRIMARY_DARK)
+    Text(label).fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
       .padding({ left: 9, right: 9, top: 7, bottom: 7 })
-      .backgroundColor(TOK_SURFACE_SOLID).border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8).onClick(action);
   }
 

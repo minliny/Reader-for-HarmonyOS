@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_LINE } from '../common/ReaderTokens';
 
 
@@ -6,9 +7,11 @@ import { TOK_LINE } from '../common/ReaderTokens';
 // 纯展示组件, 不持有业务状态。
 @Component
 export struct LatencyBar {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop fillWidth: number = 0;
-  @Prop fillColor: string = '#C08020';
-  @Prop trackColor: string = TOK_LINE;
+  @Prop fillColor: string = '';
+  @Prop trackColor: string = '';
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -16,13 +19,13 @@ export struct LatencyBar {
         .width(36)
         .height(3)
         .borderRadius(1.5)
-        .backgroundColor(this.trackColor);
+        .backgroundColor((this.trackColor === '' ? readerAppColor('TOK_LINE', this.appThemeScheme) : this.trackColor));
       if (this.fillWidth > 0) {
         Text('')
           .width(this.fillWidth)
           .height(3)
           .borderRadius(1.5)
-          .backgroundColor(this.fillColor);
+          .backgroundColor((this.fillColor === '' ? readerAppColor('app.LatencyBar.fillColor.default.FFC08020', this.appThemeScheme) : this.fillColor));
       }
     }
     .width(36)

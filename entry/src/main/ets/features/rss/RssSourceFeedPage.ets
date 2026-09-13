@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   type RssItem,
   type RssSubscription,
@@ -33,8 +34,6 @@ import {
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
 
-const CARD_BORDER = '#4DB4A697';
-const ACTION_BG = '#D6EEE8DF';
 
 /**
  * True RSS child route: one subscription's Core-owned cached feed. It has a
@@ -42,6 +41,8 @@ const ACTION_BG = '#D6EEE8DF';
  */
 @Component
 export struct RssSourceFeedPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop subscription: RssSubscription;
   @Prop items: RssItem[];
@@ -85,7 +86,7 @@ export struct RssSourceFeedPage {
     .width('100%')
     .height('100%')
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(TOK_PAPER)
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = this.numericAreaLength(newValue.width);
       if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
@@ -98,11 +99,11 @@ export struct RssSourceFeedPage {
   private sourceCard() {
     Row({ space: TOK_SPACE_XS }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.rss_source')).width(20).height(20);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_source_theme_night') : $r('app.media.rss_source'))).width(20).height(20);
       }
       .width(32)
       .height(32)
-      .backgroundColor(TOK_PRIMARY_BG)
+      .backgroundColor(readerAppColor('TOK_PRIMARY_BG', this.appThemeScheme))
       .borderRadius(16);
 
       Column({ space: 3 }) {
@@ -111,7 +112,7 @@ export struct RssSourceFeedPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.sourceSubtitle())
@@ -119,7 +120,7 @@ export struct RssSourceFeedPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(10)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -129,7 +130,7 @@ export struct RssSourceFeedPage {
       Text('')
         .width(7)
         .height(7)
-        .backgroundColor(this.subscription.enabled ? TOK_GREEN : TOK_MUTED)
+        .backgroundColor(this.subscription.enabled ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
         .borderRadius(3.5)
         .margin({ left: TOK_SPACE_XS, right: 3 });
     }
@@ -137,16 +138,16 @@ export struct RssSourceFeedPage {
     .height(64)
     .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(TOK_CARD_BG_HI)
-    .border({ width: TOK_BORDER_W, color: CARD_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssSourceFeedPage.CARD_BORDER', this.appThemeScheme) })
     .borderRadius(8);
   }
 
   @Builder
   private sourceActions() {
     Row({ space: 2 }) {
-      this.actionTarget('刷新', $r('app.media.rss_refresh'), (): void => this.onRefresh());
-      this.actionTarget('编辑源', $r('app.media.rss_edit'), (): void => this.onEditSource());
+      this.actionTarget('刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')), (): void => this.onRefresh());
+      this.actionTarget('编辑源', (this.appThemeScheme === 'night' ? $r('app.media.rss_edit_theme_night') : $r('app.media.rss_edit')), (): void => this.onEditSource());
     }
     .width('100%')
     .height(44)
@@ -162,13 +163,13 @@ export struct RssSourceFeedPage {
           .fontFamily('ReaderInter')
           .fontWeight(800)
           .fontSize(11)
-          .fontColor('#3F372F')
+          .fontColor(readerAppColor('app.RssSourceFeedPage.actionTarget.fontColor.FF3F372F', this.appThemeScheme))
           .maxLines(1);
       }
       .height(32)
       .padding({ left: 9, right: 9 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(ACTION_BG)
+      .backgroundColor(readerAppColor('app.RssSourceFeedPage.ACTION_BG', this.appThemeScheme))
       .borderRadius(999);
     }
     .height(44)
@@ -183,21 +184,21 @@ export struct RssSourceFeedPage {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(15)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
       Row({ space: 5 }) {
-        Image($r('app.media.rss_manage')).width(16).height(16);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage'))).width(16).height(16);
         Text('源操作')
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(11)
-          .fontColor(TOK_PRIMARY_DARK)
+          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
           .maxLines(1);
       }
       .height(30)
       .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(TOK_PRIMARY_SOFT)
+      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(999)
       .responseRegion({ x: 0, y: -7, width: '100%', height: 44 })
       .onClick((): void => this.onSourceOperations());
@@ -224,8 +225,8 @@ export struct RssSourceFeedPage {
     .width('100%')
     .height(Math.min(480, this.items.length * 72))
     .scrollBar(BarState.Off)
-    .backgroundColor(TOK_CARD_BG_HI)
-    .border({ width: TOK_BORDER_W, color: CARD_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssSourceFeedPage.CARD_BORDER', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -235,7 +236,7 @@ export struct RssSourceFeedPage {
       Text('')
         .width(7)
         .height(7)
-        .backgroundColor(item.read ? '#A9A39A' : TOK_GREEN)
+        .backgroundColor(item.read ? readerAppColor('app.RssSourceFeedPage.entryRow.backgroundColor.FFA9A39A', this.appThemeScheme) : readerAppColor('app.action.fill', this.appThemeScheme))
         .borderRadius(3.5)
         .margin({ top: 25 });
 
@@ -246,7 +247,7 @@ export struct RssSourceFeedPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
           .lineHeight(16.25)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.itemMeta(item))
@@ -254,7 +255,7 @@ export struct RssSourceFeedPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(10)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (item.description !== undefined && item.description.trim().length > 0) {
@@ -264,7 +265,7 @@ export struct RssSourceFeedPage {
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
             .lineHeight(15.95)
-            .fontColor('#6F655D')
+            .fontColor(readerAppColor('app.RssSourceFeedPage.entryRow.fontColor.FF6F655D', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -275,7 +276,7 @@ export struct RssSourceFeedPage {
     .width('100%')
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: TOK_ROW_DIVIDER })
+    .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
     .onClick((): void => this.onSelectItem(item));
   }
 

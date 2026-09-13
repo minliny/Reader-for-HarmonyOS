@@ -1,3 +1,4 @@
+import { readerAppColor } from './ReaderThemeRegistry';
 import {
   TOK_HOME_TOP_BAR_INSET,
   TOK_INK,
@@ -16,6 +17,8 @@ import { TYPE_APP_HOME_TITLE } from './ReaderTypography';
 // 故 RssPage 保留页私有实现 (见该页注释)。
 @Component
 export struct AppTopBar {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   title: string = '';
   /** 可选尾部槽 (图标钮簇);未传时不渲染。 */
@@ -31,7 +34,7 @@ export struct AppTopBar {
         .fontWeight(TYPE_APP_HOME_TITLE.fontWeight)
         .fontSize(TYPE_APP_HOME_TITLE.fontSizeFp)
         .lineHeight(TYPE_APP_HOME_TITLE.lineHeightFp as number)
-        .fontColor(TOK_INK);
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
 
       if (this.trailing !== undefined) {
         this.trailing();

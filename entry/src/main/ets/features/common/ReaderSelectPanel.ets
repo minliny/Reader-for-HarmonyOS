@@ -1,3 +1,4 @@
+import { readerAppColor } from './ReaderThemeRegistry';
 import { registerReaderFonts } from './ReaderFonts';
 import {
   TOK_BORDER,
@@ -46,6 +47,8 @@ export interface SelectAnchor {
 
 @Component
 export struct ReaderSelectPanel {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop value: string = '';
   @Prop options: string[] = [];
   @Prop x: number = 0;
@@ -113,7 +116,7 @@ export struct ReaderSelectPanel {
     })
     .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? 8 : 6))
     .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
-      color: this.variant === 'appearanceLibrary' ? '#474B3A26' : Color.Transparent, offsetY: 8 })
+      color: this.variant === 'appearanceLibrary' ? readerAppColor('app.ReaderSelectPanel.build.color.474B3A26', this.appThemeScheme) : Color.Transparent, offsetY: 8 })
     .clip(true)
     .onAppear((): void => this.expandPanel());
   }
@@ -123,10 +126,10 @@ export struct ReaderSelectPanel {
     Row({ space: 10 }) {
       Text(opt).layoutWeight(1).fontFamily(opt === this.renderedValue() ? 'ReaderNotoSansSCUIBold' : 'ReaderNotoSansSCUIRegular').fontSize(11).lineHeight(13)
         .fontWeight(opt === this.renderedValue() ? FontWeight.Bold : FontWeight.Regular, { enableVariableFontWeight: true })
-        .fontColor(opt === this.renderedValue() ? '#2F6373' : '#41484C').maxLines(1)
+        .fontColor(opt === this.renderedValue() ? readerAppColor('app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF2F6373', this.appThemeScheme) : readerAppColor('app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF41484C', this.appThemeScheme)).maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       if (opt === this.renderedValue()) {
-        Image($r('app.media.reader_appearance_make_check')).width(11).height(9);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check'))).width(11).height(9);
       }
     }.width('100%').height(APPEARANCE_SELECT_OPTION_HEIGHT).padding({ left: 9, right: 9 })
       .borderRadius(6).backgroundColor(opt === this.renderedValue() ? APPEARANCE_SELECT_SELECTED : Color.Transparent)
@@ -156,11 +159,11 @@ export struct ReaderSelectPanel {
         .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
         .lineHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp as number)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 14, y: 10 });
-      Image($r('app.media.source_group_chevron'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron')))
         .width(12)
         .height(12)
         .rotate({ angle: this.chevronAngle })
@@ -168,7 +171,7 @@ export struct ReaderSelectPanel {
     }
     .width('100%')
     .height(OPTION_H)
-    .backgroundColor('#FFFCF8')
+    .backgroundColor(readerAppColor('app.ReaderSelectPanel.sourceGroupSelectedRow.backgroundColor.FFFFFCF8', this.appThemeScheme))
     .onClick((): void => this.selectAndCollapse(this.renderedValue()));
   }
 
@@ -182,11 +185,11 @@ export struct ReaderSelectPanel {
         .fontWeight(TYPE_SELECT_APPEARANCE_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_APPEARANCE_VALUE.fontSizeFp)
         .lineHeight(TYPE_SELECT_APPEARANCE_VALUE.lineHeightFp as number)
-        .fontColor(TOK_PRIMARY_DARK)
+        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 10, y: 11 });
-      Image($r('app.media.reader_chevron_down'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
         .width(8)
         .height(4)
         .rotate({ angle: this.chevronAngle })
@@ -194,7 +197,7 @@ export struct ReaderSelectPanel {
     }
     .width('100%')
     .height(OPTION_H)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .onClick((): void => this.selectAndCollapse(this.renderedValue()));
   }
 
@@ -206,17 +209,17 @@ export struct ReaderSelectPanel {
         .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily)
         .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
-        .fontColor(TOK_PRIMARY_DARK)
+        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
         .textAlign(TextAlign.Start)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
-      Image($r('app.media.reader_chevron_down')).width(CHEVRON_W).height(CHEVRON_H)
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))).width(CHEVRON_W).height(CHEVRON_H)
         .rotate({ angle: this.chevronAngle });
     }
     .width('100%')
     .height(OPTION_H)
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .alignItems(VerticalAlign.Center)
     .onClick((): void => this.selectAndCollapse(this.renderedValue()));
   }
@@ -230,7 +233,7 @@ export struct ReaderSelectPanel {
         .fontWeight(this.optionTextStyle().fontWeight)
         .fontSize(this.optionTextStyle().fontSizeFp)
         .lineHeight(this.optionTextStyle().lineHeightFp as number)
-        .fontColor(this.variant === 'sourceGroup' ? TOK_INK : TOK_CONTROL_INK)
+        .fontColor(this.variant === 'sourceGroup' ? readerAppColor('TOK_INK', this.appThemeScheme) : readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
         .textAlign(TextAlign.Start)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -277,23 +280,23 @@ export struct ReaderSelectPanel {
   private panelBackgroundColor(): ResourceColor {
     if (this.variant === 'appearanceLibrary') return APPEARANCE_SELECT_SURFACE;
     if (this.variant === 'appearanceCompact') {
-      return '#D1FFF8EF';
+      return readerAppColor('app.ReaderSelectPanel.panelBackgroundColor.paint.D1FFF8EF', this.appThemeScheme);
     }
     if (this.variant === 'sourceGroup') {
-      return '#FFFCF8';
+      return readerAppColor('app.ReaderSelectPanel.panelBackgroundColor.paint.FFFFFCF8', this.appThemeScheme);
     }
-    return TOK_FIELD_SURFACE;
+    return readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme);
   }
 
   private panelBorderColor(): ResourceColor {
     if (this.variant === 'appearanceLibrary') return APPEARANCE_SELECT_BORDER;
     if (this.variant === 'appearanceCompact') {
-      return '#C1C7CD';
+      return readerAppColor('app.ReaderSelectPanel.panelBorderColor.paint.FFC1C7CD', this.appThemeScheme);
     }
     if (this.variant === 'sourceGroup') {
-      return '#85B4A697';
+      return readerAppColor('app.ReaderSelectPanel.panelBorderColor.paint.85B4A697', this.appThemeScheme);
     }
-    return TOK_BORDER;
+    return readerAppColor('TOK_BORDER', this.appThemeScheme);
   }
 
   private optionTextStyle() {

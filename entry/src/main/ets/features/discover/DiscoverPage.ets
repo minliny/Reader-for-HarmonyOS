@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Discover main page — rebuilt 2026-08-06 against live Figma node 376:2
 // (Reference/Discover/Phone · 390×844).
 // Data honesty: source.explore results do not exist in the app yet, so the
@@ -44,14 +45,11 @@ import {
   type DiscoverPresentation,
 } from './DiscoverOrchestrator';
 
-const CURRENT_SOURCE_BORDER = '#5CB4A697'; // rgba(180,166,151,0.36)
-const ICON_BOX_BG = '#1A2D4A3E';         // rgba(45,74,62,0.10)
-const CHIP_BG = '#D1EEE8DF';             // rgba(238,232,223,0.82)
-const FILTER_BORDER = '#7AB4A697';       // rgba(180,166,151,0.48)
-const APPLY_BORDER = '#C72D5D76';        // rgba(45,93,118,0.78)
 
 @Component
 export struct DiscoverPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @Prop isTablet: boolean;
@@ -91,7 +89,7 @@ export struct DiscoverPage {
   private homeTopBar() {
     AppTopBar({ title: '发现' }) {
       ReaderIconButton({
-        icon: $r('app.media.discover_refresh'),
+        icon: (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')),
         boxSize: 44,
         iconSize: 24,
         radius: 22,
@@ -125,12 +123,12 @@ export struct DiscoverPage {
   private currentSourceCard() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.discover_source_stack')).width(20).height(20);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_source_stack_theme_night') : $r('app.media.discover_source_stack'))).width(20).height(20);
       }
       .width(34)
       .height(34)
       .borderRadius(17)
-      .backgroundColor(ICON_BOX_BG);
+      .backgroundColor(readerAppColor('app.DiscoverPage.ICON_BOX_BG', this.appThemeScheme));
 
       Column({ space: 3 }) {
         Text(this.currentSourceName())
@@ -139,7 +137,7 @@ export struct DiscoverPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
           .lineHeight(18)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -151,21 +149,21 @@ export struct DiscoverPage {
           .fontWeight(600)
           .fontSize(11)
           .lineHeight(13.2)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
 
-      Image($r('app.media.discover_source_chevron')).width(20).height(20);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.discover_source_chevron_theme_night') : $r('app.media.discover_source_chevron'))).width(20).height(20);
     }
     .width('100%')
     .height(58)
     .padding({ left: TOK_SPACE_SM, right: 13.1 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(TOK_CARD_BG_HI)
-    .border({ width: TOK_BORDER_W, color: CURRENT_SOURCE_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.CURRENT_SOURCE_BORDER', this.appThemeScheme) })
     .borderRadius(8)
     .onClick((): void => this.onCycleSource());
   }
@@ -181,12 +179,12 @@ export struct DiscoverPage {
               .fontWeight(800)
               .fontSize(12)
               .lineHeight(15.6)
-              .fontColor(this.presentation.activeKindIndex === index ? TOK_ON_PRIMARY : '#3F372F')
+              .fontColor(this.presentation.activeKindIndex === index ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('app.DiscoverPage.categoryChips.fontColor.FF3F372F', this.appThemeScheme))
               .maxLines(1);
           }
           .height(32)
           .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-          .backgroundColor(this.presentation.activeKindIndex === index ? TOK_GREEN : CHIP_BG)
+          .backgroundColor(this.presentation.activeKindIndex === index ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.DiscoverPage.CHIP_BG', this.appThemeScheme))
           .borderRadius(999)
           .onClick((): void => {
             this.onSelectKind(index);
@@ -207,13 +205,13 @@ export struct DiscoverPage {
   private filterRow() {
     Row({ space: 7 }) {
       Row() {
-        Image($r('app.media.discover_filter')).width(20).height(20);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_theme_night') : $r('app.media.discover_filter'))).width(20).height(20);
         Text('筛选')
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
           .lineHeight(15.6)
-          .fontColor('#3F372F')
+          .fontColor(readerAppColor('app.DiscoverPage.filterRow.fontColor.FF3F372F', this.appThemeScheme))
           .maxLines(1)
           .margin({ left: 3 });
         Text(this.currentFilterText())
@@ -222,19 +220,19 @@ export struct DiscoverPage {
           .fontWeight(800)
           .fontSize(11)
           .lineHeight(15.56)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.RIGHT)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .padding({ left: 7 });
-        Image($r('app.media.discover_filter_chevron')).width(20).height(20);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_chevron_theme_night') : $r('app.media.discover_filter_chevron'))).width(20).height(20);
       }
       .layoutWeight(1)
       .height(34)
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: 5 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(TOK_CARD_BG)
-      .border({ width: TOK_BORDER_W, color: FILTER_BORDER })
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.FILTER_BORDER', this.appThemeScheme) })
       .borderRadius(8);
 
       Row() {
@@ -244,7 +242,7 @@ export struct DiscoverPage {
           .fontWeight(900)
           .fontSize(12)
           .lineHeight(15.6)
-          .fontColor(TOK_ON_PRIMARY)
+          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
           .maxLines(1)
           .margin({ left: TOK_SPACE_ROW_BLOCK });
       }
@@ -254,9 +252,9 @@ export struct DiscoverPage {
       .alignItems(VerticalAlign.Center)
       .linearGradient({
         angle: 270,
-        colors: [['#436F88', 0], ['#315F78', 1]],
+        colors: [[readerAppColor('app.DiscoverPage.filterRow.linearGradient.FF436F88', this.appThemeScheme), 0], [readerAppColor('app.DiscoverPage.filterRow.linearGradient.FF315F78', this.appThemeScheme), 1]],
       })
-      .border({ width: TOK_BORDER_W, color: APPLY_BORDER })
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.APPLY_BORDER', this.appThemeScheme) })
       .borderRadius(8)
       .onClick((): void => this.onRefresh());
     }
@@ -273,7 +271,7 @@ export struct DiscoverPage {
       .fontWeight(FontWeight.Bold)
       .fontSize(15)
       .lineHeight(18.75)
-      .fontColor(TOK_INK)
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
       .maxLines(1)
       .padding({ left: 2, right: 2 });
   }
@@ -289,14 +287,14 @@ export struct DiscoverPage {
               .fontWeight(800)
               .fontSize(14)
               .lineHeight(18)
-              .fontColor(TOK_MUTED)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1);
             Text(this.presentation.statusMessage)
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Regular)
               .fontSize(12)
               .lineHeight(15)
-              .fontColor('#A19A91')
+              .fontColor(readerAppColor('app.DiscoverPage.resultList.fontColor.FFA19A91', this.appThemeScheme))
               .maxLines(1);
           }
           .alignItems(HorizontalAlign.Center);
@@ -311,8 +309,8 @@ export struct DiscoverPage {
       this.paginationRow();
     }
     .width('100%')
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true);
   }
@@ -327,14 +325,14 @@ export struct DiscoverPage {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
-        .fontColor(TOK_INK);
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       this.pageAction('下一页', this.presentation.hasNext, (): void => this.onNextPage());
     }
     .width('100%')
     .height(48)
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE_STRONG });
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });
   }
 
   @Builder
@@ -343,8 +341,8 @@ export struct DiscoverPage {
       .fontFamily('ReaderInter')
       .fontWeight(FontWeight.Bold)
       .fontSize(11)
-      .fontColor(enabled ? TOK_ON_PRIMARY : TOK_MUTED)
-      .backgroundColor(enabled ? TOK_GREEN : CHIP_BG)
+      .fontColor(enabled ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .backgroundColor(enabled ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.DiscoverPage.CHIP_BG', this.appThemeScheme))
       .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 8, bottom: 8 })
       .borderRadius(999)
       .opacity(this.presentation.loading ? 0.6 : 1)
@@ -368,7 +366,7 @@ export struct DiscoverPage {
             .width(52)
             .height(74)
             .borderRadius(4)
-            .backgroundColor('#E4E0D8');
+            .backgroundColor(readerAppColor('app.DiscoverPage.resultRow.backgroundColor.FFE4E0D8', this.appThemeScheme));
         }
       }
 
@@ -379,7 +377,7 @@ export struct DiscoverPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(15)
           .lineHeight(18.75)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (book.author !== '') {
@@ -389,7 +387,7 @@ export struct DiscoverPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(11)
             .lineHeight(15.56)
-            .fontColor(TOK_MUTED)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -400,7 +398,7 @@ export struct DiscoverPage {
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
             .lineHeight(17.4)
-            .fontColor('#5C554D')
+            .fontColor(readerAppColor('app.DiscoverPage.resultRow.fontColor.FF5C554D', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -412,7 +410,7 @@ export struct DiscoverPage {
     .height(98)
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE_STRONG });
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });
   }
 
   private onMainTab(key: string): void {

@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER,
@@ -19,6 +20,8 @@ import {
  */
 @Component
 export struct BookshelfEmptyCard {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop cardWidth: number = 352;
   onImportRequested: () => void = (): void => {};
   onSearchRequested: () => void = (): void => {};
@@ -34,8 +37,8 @@ export struct BookshelfEmptyCard {
         Text('')
           .width(72)
           .height(52)
-          .backgroundColor(TOK_CARD_BG_HI)
-          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+          .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
           .borderRadius(8)
           .rotate({ angle: 8 });
       }
@@ -48,8 +51,8 @@ export struct BookshelfEmptyCard {
         Text('')
           .width(72)
           .height(52)
-          .backgroundColor(TOK_CARD_BG_HI)
-          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+          .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
           .borderRadius(8)
           .rotate({ angle: -8 });
       }
@@ -59,12 +62,12 @@ export struct BookshelfEmptyCard {
 
       // Library icon frame: Figma 286:35 (green primary-soft, r16, 32 icon)
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_empty_library')).width(32).height(32);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_empty_library_theme_night') : $r('app.media.bookshelf_empty_library'))).width(32).height(32);
       }
       .width(62)
       .height(62)
-      .backgroundColor(TOK_PRIMARY_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_GREEN })
+      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
       .borderRadius(16)
       .position({ x: this.cardCenterX() - 32, y: 35 });
 
@@ -73,7 +76,7 @@ export struct BookshelfEmptyCard {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(19)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .position({ x: 0, y: 137 });
 
@@ -82,7 +85,7 @@ export struct BookshelfEmptyCard {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
-        .fontColor(TOK_MUTED)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .position({ x: 0, y: 173 });
 
@@ -92,12 +95,12 @@ export struct BookshelfEmptyCard {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
-          .fontColor(TOK_CARD_BG_HI)
+          .fontColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
           .margin({ left: TOK_SPACE_CARD_PADDING });
       }
       .width(this.actionWidth())
       .height(52)
-      .backgroundColor(TOK_GREEN)
+      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
       .borderRadius(12)
       .position({ x: 17, y: 219 })
       .onClick((): void => this.onImportRequested());
@@ -108,21 +111,21 @@ export struct BookshelfEmptyCard {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
-          .fontColor(TOK_PRIMARY_DARK)
+          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
           .margin({ left: 13 });
       }
       .width(this.actionWidth())
       .height(52)
-      .backgroundColor(TOK_PRIMARY_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_GREEN })
+      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
       .borderRadius(12)
       .position({ x: 17, y: 281 })
       .onClick((): void => this.onSearchRequested());
     }
     .width(this.cardWidth)
     .height(350)
-    .backgroundColor(TOK_CARD_BG_HI)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(12);
   }
 

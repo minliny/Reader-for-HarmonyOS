@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderToggle } from '../common/ReaderToggle';
@@ -34,6 +35,8 @@ import {
 
 @Component
 export struct RssSubscriptionEditorPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   onBack: () => void = (): void => {};
@@ -62,10 +65,10 @@ export struct RssSubscriptionEditorPage {
             .fontFamily('ReaderNotoSansSC')
             .fontSize(12)
             .lineHeight(18)
-            .fontColor(this.snapshot.busy ? TOK_PRIMARY_DARK : TOK_MUTED)
+            .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
             .padding(TOK_SPACE_SM)
-            .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+            .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+            .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
             .borderRadius(8);
           Column({ space: TOK_SPACE_MD }) {
             this.editorField('订阅名称', this.snapshot.title, '留空时由 Core 回退为 Feed URL',
@@ -85,11 +88,11 @@ export struct RssSubscriptionEditorPage {
                   .fontFamily('ReaderNotoSansSC')
                   .fontWeight(FontWeight.Bold)
                   .fontSize(13)
-                  .fontColor(TOK_INK);
+                  .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
                 Text('刷新、解析、未读统计均由 Core 维护')
                   .fontFamily('ReaderNotoSansSC')
                   .fontSize(11)
-                  .fontColor(TOK_MUTED);
+                  .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Start);
@@ -107,11 +110,11 @@ export struct RssSubscriptionEditorPage {
                   .fontFamily('ReaderNotoSansSC')
                   .fontWeight(FontWeight.Bold)
                   .fontSize(13)
-                  .fontColor(TOK_INK);
+                  .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
                 Text('由 Host 隔离存储；导出不包含 Cookie 明文')
                   .fontFamily('ReaderNotoSansSC')
                   .fontSize(11)
-                  .fontColor(TOK_MUTED);
+                  .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
               }
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Start);
@@ -149,8 +152,8 @@ export struct RssSubscriptionEditorPage {
               .fontFamily('ReaderNotoSansSC')
               .fontWeight(FontWeight.Bold)
               .fontSize(13)
-              .fontColor(TOK_ON_PRIMARY)
-              .backgroundColor(TOK_PRIMARY_DARK)
+              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
+              .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
               .borderRadius(8)
               .opacity(this.snapshot.busy ? 0.62 : 1)
               .onClick((): void => {
@@ -161,15 +164,15 @@ export struct RssSubscriptionEditorPage {
           }
           .width('100%')
           .padding(TOK_SPACE_MD)
-          .backgroundColor(TOK_SURFACE_SOLID)
-          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+          .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
           .borderRadius(10);
           Text('完整来源配置由 Core 归一化并持久化；XML/Atom 与静态 HTML 规则共用同一订阅身份。')
             .width('100%')
             .fontFamily('ReaderNotoSansSC')
             .fontSize(10)
             .lineHeight(16)
-            .fontColor(TOK_MUTED);
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         }
         .width('100%')
         .padding({
@@ -185,7 +188,7 @@ export struct RssSubscriptionEditorPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -195,7 +198,7 @@ export struct RssSubscriptionEditorPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(14)
-      .fontColor(TOK_PRIMARY_DARK)
+      .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
       .margin({ top: TOK_SPACE_XS });
   }
 
@@ -207,15 +210,15 @@ export struct RssSubscriptionEditorPage {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
-        .fontColor(TOK_INK);
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       TextInput({ text: value, placeholder })
         .width('100%')
         .height(44)
         .fontFamily('ReaderNotoSansSC')
         .fontSize(12)
-        .fontColor(TOK_INK)
-        .backgroundColor(TOK_PAPER)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
         .borderRadius(8)
         .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
         .onChange(onChange);

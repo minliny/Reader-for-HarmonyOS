@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   TOK_BORDER_W,
   TOK_INK,
@@ -14,7 +15,9 @@ import {
 
 @Component
 export struct CategoryRow {
-  @Prop icon: Resource = $r('app.media.reader_chevron_right');
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
+  @Prop icon: Resource = (this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'));
   @Prop label: string = '';
   onRowClick: () => void = (): void => {};
   @BuilderParam content: () => void;
@@ -27,7 +30,7 @@ export struct CategoryRow {
       .width(28)
       .height(28)
       .borderRadius(14)
-      .backgroundColor(TOK_SETTING_ICON_BG);
+      .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
 
       Text(this.label)
         .layoutWeight(1)
@@ -35,7 +38,7 @@ export struct CategoryRow {
         .fontWeight(800)
         .fontSize(13)
         .lineHeight(15.34)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -45,7 +48,7 @@ export struct CategoryRow {
     .constraintSize({ minHeight: 58 })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_ROW_DIVIDER })
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
     .onClick((): void => this.onRowClick());
   }
 }

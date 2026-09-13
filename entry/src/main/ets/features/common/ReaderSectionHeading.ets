@@ -1,3 +1,4 @@
+import { readerAppColor } from './ReaderThemeRegistry';
 import {
   TOK_INK,
   TOK_SPACE_SM,
@@ -7,6 +8,8 @@ import { TYPE_SECTION_HEADING } from './ReaderTypography';
 // Settings 各节与 Sync 分节共用。
 @Component
 export struct ReaderSectionHeading {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop title: string = '';
 
   build() {
@@ -17,7 +20,7 @@ export struct ReaderSectionHeading {
       .fontWeight(TYPE_SECTION_HEADING.fontWeight)
       .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
       .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
-      .fontColor(TOK_INK)
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
       .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis });

@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { MainTabBar } from './MainTabBar';
 import { TOK_PAPER } from '../common/ReaderTokens';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -14,6 +15,8 @@ import {
 // 与安全区仍由 Index 根 Stack 统一处理，避免双 padding。
 @Component
 export struct MainTabShell {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop activeTab: string = 'bookshelf';
   @Prop showBottomNav: boolean = true;
@@ -39,7 +42,7 @@ export struct MainTabShell {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(TOK_PAPER);
+      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
     } else {
       Column() {
         Stack({ alignContent: Alignment.TopStart }) {
@@ -54,7 +57,7 @@ export struct MainTabShell {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(TOK_PAPER);
+      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
     }
   }
 

@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { ReadingBookDetail } from '../reading/ReadingBookDetail';
 import { bookIntroText } from '../common/BookIntroText';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -58,6 +59,8 @@ const CHAPTER_ROW_HEIGHT = 58;
  */
 @Component
 export struct LocalBookDetail {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop book: ReadingBookDetail;
   @Prop toc: LocalReadingTocEntry[] = [];
@@ -103,7 +106,7 @@ export struct LocalBookDetail {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -111,7 +114,7 @@ export struct LocalBookDetail {
     // Current Figma maps the former Songti title role to Noto Serif SC Bold.
     PageBackBar({
       title: '书籍详情',
-      backIcon: $r('app.media.book_detail_back'),
+      backIcon: (this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back')),
       onBack: (): void => this.onBack(),
     });
   }
@@ -156,7 +159,7 @@ export struct LocalBookDetail {
           .fontWeight(FontWeight.Bold)
           .fontSize(22)
           .lineHeight(25.96)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -167,7 +170,7 @@ export struct LocalBookDetail {
           .fontWeight(FontWeight.Regular)
           .fontSize(13)
           .lineHeight(17.55)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -178,7 +181,7 @@ export struct LocalBookDetail {
             .fontWeight(800)
             .fontSize(11)
             .lineHeight(16.188)
-            .fontColor(TOK_MUTED)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1);
           Text(this.book.lastChapter ?? '')
             .layoutWeight(1)
@@ -186,7 +189,7 @@ export struct LocalBookDetail {
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
             .lineHeight(16.188)
-            .fontColor(TOK_INK)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -205,7 +208,7 @@ export struct LocalBookDetail {
             .fontWeight(FontWeight.Bold)
             .fontSize(12)
             .lineHeight(15)
-            .fontColor(TOK_MUTED)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
@@ -215,14 +218,14 @@ export struct LocalBookDetail {
               .fontWeight(900)
               .fontSize(9)
               .lineHeight(18)
-              .fontColor(TOK_GREEN)
+              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS });
           }
           .width(52)
           .height(18)
           .borderRadius(999)
-          .backgroundColor(TOK_SETTING_ACTION_BG)
+          .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme))
           .opacity(this.sourceSwitchEnabled ? 1 : 0.4)
           .enabled(this.sourceSwitchEnabled)
           .accessibilityText(this.sourceSwitchEnabled ? '更换书源' : '本地书籍暂不支持更换书源')
@@ -236,7 +239,7 @@ export struct LocalBookDetail {
         .height(18)
         .margin({ top: TOK_SPACE_XS });
         Text('分组：默认')
-          .fontSize(12).fontColor(TOK_MUTED).lineHeight(15)
+          .fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).lineHeight(15)
           .margin({ top: 4 });
       }
       .layoutWeight(1)
@@ -246,8 +249,8 @@ export struct LocalBookDetail {
     .width(this.contentWidth())
     .height(152)
     .padding(15)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(8)
     .alignItems(VerticalAlign.Top);
   }
@@ -262,7 +265,7 @@ export struct LocalBookDetail {
         .fontWeight(FontWeight.Bold)
         .fontSize(15)
         .lineHeight(18)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
 
       // Core may legitimately omit EPUB/TXT description metadata.  Do not
@@ -275,15 +278,15 @@ export struct LocalBookDetail {
         .fontWeight(FontWeight.Regular)
         .fontSize(13)
         .lineHeight(21.45)
-        .fontColor(TOK_MUTED)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(this.usesWideContent() ? 2 : 3)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
     .width(this.contentWidth())
     .height(this.summaryHeight())
     .padding(15)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(8)
     .alignItems(HorizontalAlign.Start);
   }
@@ -299,28 +302,28 @@ export struct LocalBookDetail {
             .fontWeight(FontWeight.Bold)
             .fontSize(15)
             .lineHeight(18)
-            .fontColor(TOK_INK)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1);
 
           // This is the 94 × 30 painted capsule from the Final component.
           // Its 94 × 44 prototype target is a separate Figma RECTANGLE
           // layered below, not an enlarged replacement for this visual.
           Row({ space: TOK_SPACE_XS }) {
-            Image($r('app.media.book_detail_directory'))
+            Image((this.appThemeScheme === 'night' ? $r('app.media.book_detail_directory_theme_night') : $r('app.media.book_detail_directory')))
               .width(20)
               .height(20);
             Text('完整目录')
               .fontFamily('ReaderInter')
               .fontWeight(900)
               .fontSize(12)
-              .fontColor(TOK_PRIMARY_DARK)
+              .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
               .maxLines(1);
           }
           .width(94)
           .height(30)
           .padding({ left: 11, right: 11 })
-          .backgroundColor('#A3FFFCF8')
-          .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+          .backgroundColor(readerAppColor('app.LocalBookDetail.chapterSection.backgroundColor.A3FFFCF8', this.appThemeScheme))
+          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
           .borderRadius(999)
           .alignItems(VerticalAlign.Center);
         }
@@ -367,8 +370,8 @@ export struct LocalBookDetail {
     .width(this.contentWidth())
     .height(CHAPTER_SECTION_HEIGHT)
     .padding(1)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true);
   }
@@ -381,14 +384,14 @@ export struct LocalBookDetail {
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
         .fontSize(14)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
       .width('100%')
       .height(CHAPTER_ROW_HEIGHT)
       .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
-      .border({ width: { top: TOK_BORDER_W }, color: { top: TOK_CHAPTER_DIVIDER } })
+      .border({ width: { top: TOK_BORDER_W }, color: { top: readerAppColor('TOK_CHAPTER_DIVIDER', this.appThemeScheme) } })
       .alignItems(VerticalAlign.Center)
       .onClick((): void => this.onSelectChapter(entry.index));
   }
@@ -402,12 +405,12 @@ export struct LocalBookDetail {
           .fontWeight(900)
           .fontSize(13)
           .lineHeight(14.3)
-          .fontColor(TOK_ON_PRIMARY);
+          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
       }
       .width(this.actionButtonWidth())
       .height(46)
-      .backgroundColor(TOK_PRIMARY_DARK)
-      .border({ width: TOK_BORDER_W, color: TOK_PRIMARY_DARK })
+      .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) })
       .borderRadius(999)
       .opacity(this.readingActionsReady() && !this.removing && this.readingEnabled ? 1 : 0.5)
       .enabled(this.readingActionsReady() && !this.removing && this.readingEnabled)
@@ -424,12 +427,12 @@ export struct LocalBookDetail {
           .fontWeight(900)
           .fontSize(13)
           .lineHeight(14.3)
-          .fontColor(this.inBookshelf ? TOK_DANGER : TOK_GREEN);
+          .fontColor(this.inBookshelf ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme));
       }
       .width(this.actionButtonWidth())
       .height(46)
-      .backgroundColor(TOK_CARD_BG_HI)
-      .border({ width: TOK_BORDER_W, color: TOK_ACTION_DIVIDER })
+      .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_ACTION_DIVIDER', this.appThemeScheme) })
       .borderRadius(999)
       .enabled(this.removalEnabled && !this.removing)
       .opacity(this.removalEnabled && !this.removing ? 1 : 0.4)
@@ -450,9 +453,9 @@ export struct LocalBookDetail {
     .linearGradient({
       direction: GradientDirection.Bottom,
       colors: [
-        ['#00F9F0E6', 0.0],
-        ['#F5F9F0E6', 0.42],
-        ['#FFF9F0E6', 1.0],
+        [readerAppColor('app.LocalBookDetail.actionArea.linearGradient.00F9F0E6', this.appThemeScheme), 0.0],
+        [readerAppColor('app.LocalBookDetail.actionArea.linearGradient.F5F9F0E6', this.appThemeScheme), 0.42],
+        [readerAppColor('app.LocalBookDetail.actionArea.linearGradient.FFF9F0E6', this.appThemeScheme), 1.0],
       ],
     });
   }

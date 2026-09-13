@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   TOK_INK,
   TOK_META_BG,
@@ -10,6 +11,8 @@ import {
  */
 @Component
 export struct NoCoverCover {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop coverWidth: number;
   @Prop coverHeight: number;
 
@@ -18,7 +21,7 @@ export struct NoCoverCover {
       Text('')
         .width(this.ruleWidth())
         .height(1)
-        .backgroundColor('#2E41484C')
+        .backgroundColor(readerAppColor('app.NoCoverCover.build.backgroundColor.2E41484C', this.appThemeScheme))
         .borderRadius(0.5)
         .position({ x: (this.coverWidth - this.ruleWidth()) / 2, y: 52 / 145.44 * this.coverHeight });
 
@@ -28,7 +31,7 @@ export struct NoCoverCover {
         .fontWeight(FontWeight.Bold)
         .fontSize(15 * this.coverWidth / 96.96)
         .lineHeight(18.3 * this.coverWidth / 96.96)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .position({ x: (this.coverWidth - this.labelWidth()) / 2, y: 63.57 / 145.44 * this.coverHeight })
         .maxLines(1);
@@ -36,13 +39,13 @@ export struct NoCoverCover {
       Text('')
         .width(this.ruleWidth())
         .height(1)
-        .backgroundColor('#2E41484C')
+        .backgroundColor(readerAppColor('app.NoCoverCover.build.backgroundColor.2E41484C', this.appThemeScheme))
         .borderRadius(0.5)
         .position({ x: (this.coverWidth - this.ruleWidth()) / 2, y: 92.44 / 145.44 * this.coverHeight });
     }
     .width(this.coverWidth)
     .height(this.coverHeight)
-    .backgroundColor(TOK_META_BG)
+    .backgroundColor(readerAppColor('TOK_META_BG', this.appThemeScheme))
     .borderRadius(8)
     .clip(true);
   }

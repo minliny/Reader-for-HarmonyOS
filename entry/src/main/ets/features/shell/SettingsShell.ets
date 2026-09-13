@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { MainTabBar } from './MainTabBar';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
@@ -30,6 +31,8 @@ import {
 // onOverlayOriginChange 上报宿主 Stack 全局坐标, 供页面换算触发条相对位置。
 @Component
 export struct SettingsShell {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop activeSection: 'home' | 'general' = 'home';
   @Prop showOverlay: boolean = false;
@@ -93,7 +96,7 @@ export struct SettingsShell {
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(TOK_PAPER)
+      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
         this.onOverlayOriginChange(

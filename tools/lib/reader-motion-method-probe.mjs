@@ -1,3 +1,4 @@
+import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -9,6 +10,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 /** Execute unmodified ordinary production methods, not a rewritten algorithm.
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
+  dependencies = { readerAppColor, readerThemeDefinition, ...dependencies };
   const source = readFileSync(file, 'utf8');
   const tree = ts.createSourceFile('/tmp/ReaderMotionProbe.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${file}: ETS parses`);

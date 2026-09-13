@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
@@ -44,6 +45,8 @@ import type {
 
 @Component
 export struct RulesManagementPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   onBack: () => void = (): void => {};
@@ -119,7 +122,7 @@ export struct RulesManagementPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -130,10 +133,10 @@ export struct RulesManagementPage {
       .fontFamily('ReaderNotoSansSC')
       .fontSize(12)
       .lineHeight(18)
-      .fontColor(this.snapshot.busy ? TOK_PRIMARY_DARK : TOK_MUTED)
+      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8);
   }
 
@@ -142,14 +145,14 @@ export struct RulesManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading('可携带规则包');
       Text('Core schema v1 包含替换、字典、TXT 目录和规则订阅；导入默认合并且同主键覆盖。')
-        .width('100%').fontSize(11).lineHeight(17).fontColor(TOK_MUTED);
+        .width('100%').fontSize(11).lineHeight(17).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Row({ space: TOK_SPACE_XS }) {
         this.actionButton('导入并合并', false, (): void => this.onImportBundle());
         this.actionButton('导出全部', true, (): void => this.onExportBundle());
       }.width('100%');
     }
-    .width('100%').padding(TOK_SPACE_SM).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10);
+    .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10);
   }
 
   @Builder
@@ -181,8 +184,8 @@ export struct RulesManagementPage {
           (): void => this.onDeleteReplace(rule.id));
       }, (rule: ManagedReplaceRule): string => `managed-replace-${rule.id}`);
     }
-    .width('100%').padding(TOK_SPACE_SM).backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10);
+    .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10);
   }
 
   @Builder
@@ -190,7 +193,7 @@ export struct RulesManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading(`TXT 目录规则（${this.snapshot.txtTocRules.length}）`);
       Text('启用的规则会在下一次 TXT 导入时由 Core 用于切分章节。')
-        .width('100%').fontSize(11).lineHeight(17).fontColor(TOK_MUTED);
+        .width('100%').fontSize(11).lineHeight(17).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       this.input(this.txtName, '名称', (value: string): void => { this.txtName = value; });
       this.input(this.txtRule, '章节标题正则', (value: string): void => { this.txtRule = value; });
       this.input(this.txtExample, '示例标题', (value: string): void => { this.txtExample = value; });
@@ -212,8 +215,8 @@ export struct RulesManagementPage {
           (): void => this.onDeleteTxtToc(rule.id));
       }, (rule: ManagedTxtTocRule): string => `managed-txt-${rule.id}`);
     }
-    .width('100%').padding(TOK_SPACE_SM).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10);
+    .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10);
   }
 
   @Builder
@@ -237,8 +240,8 @@ export struct RulesManagementPage {
           (): void => this.onDeleteDict(rule.name));
       }, (rule: ManagedDictRule): string => `managed-dict-${rule.name}`);
     }
-    .width('100%').padding(TOK_SPACE_SM).backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10);
+    .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10);
   }
 
   @Builder
@@ -268,33 +271,33 @@ export struct RulesManagementPage {
         this.onSaveSubscription(draft);
       });
       Text('“拉取”会按类型复用书源、RSS 或替换规则的 Core 导入；自动更新仅保存标记，不启动后台调度。')
-        .width('100%').fontSize(10).lineHeight(16).fontColor(TOK_MUTED);
+        .width('100%').fontSize(10).lineHeight(16).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       ForEach(this.snapshot.subscriptions, (rule: ManagedRuleSubscription) => {
         this.subscriptionRow(rule);
       }, (rule: ManagedRuleSubscription): string => `managed-sub-${rule.id}`);
     }
-    .width('100%').padding(TOK_SPACE_SM).backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(10);
+    .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(10);
   }
 
   @Builder
   private heading(value: string) {
     Text(value).width('100%').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-      .fontSize(14).fontColor(TOK_INK);
+      .fontSize(14).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
   @Builder
   private input(value: string, placeholder: string, changed: (value: string) => void) {
     TextInput({ text: value, placeholder })
-      .width('100%').height(40).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(TOK_INK)
-      .backgroundColor(TOK_PAPER).border({ width: TOK_BORDER_W, color: TOK_BORDER }).borderRadius(8)
+      .width('100%').height(40).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
       .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM }).onChange(changed);
   }
 
   @Builder
   private booleanField(label: string, value: boolean, action: () => void) {
     Row() {
-      Text(label).layoutWeight(1).fontSize(12).fontColor(TOK_INK);
+      Text(label).layoutWeight(1).fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       ReaderToggle({ value, onToggle: action });
     }.layoutWeight(1).height(40);
   }
@@ -302,9 +305,9 @@ export struct RulesManagementPage {
   @Builder
   private actionButton(label: string, primary: boolean, action: () => void) {
     Text(label).layoutWeight(1).height(40).textAlign(TextAlign.Center).fontWeight(FontWeight.Bold)
-      .fontSize(12).fontColor(primary ? TOK_ON_PRIMARY : TOK_PRIMARY_DARK)
-      .backgroundColor(primary ? TOK_PRIMARY_DARK : TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: primary ? TOK_PRIMARY_DARK : TOK_BORDER }).borderRadius(8)
+      .fontSize(12).fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
       .opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
         if (!this.snapshot.busy) action();
       });
@@ -315,15 +318,15 @@ export struct RulesManagementPage {
     Row({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
         Text(title.length > 0 ? title : '未命名').width('100%').fontSize(12).fontWeight(FontWeight.Bold)
-          .fontColor(TOK_INK).maxLines(1);
-        Text(detail).width('100%').fontSize(10).fontColor(TOK_MUTED).maxLines(1)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
+        Text(detail).width('100%').fontSize(10).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
       this.smallButton('编辑', edit);
       this.smallButton('删除', remove);
     }
     .width('100%').height(56).padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_BORDER });
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
 
   @Builder
@@ -331,23 +334,23 @@ export struct RulesManagementPage {
     Row({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
         Text(rule.name.length > 0 ? rule.name : '未命名').width('100%').fontSize(12)
-          .fontWeight(FontWeight.Bold).fontColor(TOK_INK).maxLines(1);
+          .fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
         Text(`${this.subscriptionTypeLabel(rule.type)} · ${rule.url}`).width('100%').fontSize(10)
-          .fontColor(TOK_MUTED).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
       this.smallButton('编辑', (): void => this.editSubscription(rule));
       this.smallButton('拉取', (): void => this.onRefreshSubscription(rule));
       this.smallButton('删除', (): void => this.onDeleteSubscription(rule.id));
     }
     .width('100%').height(60).padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_BORDER });
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
 
   @Builder
   private smallButton(label: string, action: () => void) {
     Text(label).height(30).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-      .textAlign(TextAlign.Center).fontSize(11).fontWeight(FontWeight.Bold).fontColor(TOK_PRIMARY_DARK)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT).border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .textAlign(TextAlign.Center).fontSize(11).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(7).opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
         if (!this.snapshot.busy) action();
       });

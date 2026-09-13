@@ -1,3 +1,4 @@
+import { readerThemeDefinition } from '../common/ReaderThemeRegistry';
 import { readerHighlightCanvasColor, readerDynamicHighlightRectsEqual, ReaderHighlightTextCache,
   type ReaderHighlightTextSlice, type ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
 import { FrameCallback } from '@kit.ArkUI';
@@ -136,7 +137,7 @@ export struct ReaderReadingTextFragment {
             .decoration({ type: TextDecorationType.Underline, color: this.themeStyle().ink });
         } else {
           Span(this.highlightBody())
-            .textBackgroundStyle({ color: '#33594632', radius: 2 });
+            .textBackgroundStyle({ color: readerThemeDefinition(this.appearance.activeTheme).selection, radius: 2 });
         }
       }
       if (this.highlightSuffix().length > 0) {
@@ -155,7 +156,7 @@ export struct ReaderReadingTextFragment {
         onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> => items,
         onMenuItemClick: (item: TextMenuItem, range: TextRange): boolean => this.onTextMenuItemClick(item, range),
       })
-      .selectedBackgroundColor('#33594632')
+      .selectedBackgroundColor(readerThemeDefinition(this.appearance.activeTheme).selection)
       .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start)
       .onAreaChange((_old: Area, area: Area): void => {
         this.highlightGlobalX = Number.parseFloat(`${area.globalPosition.x}`);
@@ -197,7 +198,7 @@ export struct ReaderReadingTextFragment {
           rects.push({ left: this.highlightGlobalX + context.px2vp(rect.left),
             top: underline ? bottom - 1.5 : this.highlightGlobalY + context.px2vp(rect.top),
             right: this.highlightGlobalX + context.px2vp(rect.right), bottom,
-            color: underline ? this.themeStyle().ink : '#33594632', multiply: !underline });
+            color: underline ? this.themeStyle().ink : readerThemeDefinition(this.appearance.activeTheme).selection, multiply: !underline });
         }
       } catch (_error) { /* The next layout callback supplies exact glyph bounds. */ }
     }

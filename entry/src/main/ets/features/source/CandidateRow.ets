@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { LatencyBar } from './LatencyBar';
 import {
   TOK_BORDER_W,
@@ -19,6 +20,8 @@ type SourceSwitchRowKind = 'current' | 'available' | 'offline' | 'timeout';
 
 @Component
 export struct CandidateRow {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop acquisitionState: string | undefined = undefined;
   @Prop acquisitionMessage: string | undefined = undefined;
   @Prop sourceId: string = '';
@@ -85,7 +88,7 @@ export struct CandidateRow {
     .height(28)
     .alignItems(VerticalAlign.Center)
     .backgroundColor(this.rowBackground())
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_LINE })
+    .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .onClick((): void => {
       if (this.kind() === 'available') {
         this.onSelect();
@@ -107,27 +110,27 @@ export struct CandidateRow {
   }
 
   private rowBackground(): string {
-    return this.kind() === 'current' ? '#142D4A3E' : '#00000000';
+    return this.kind() === 'current' ? readerAppColor('app.CandidateRow.rowBackground.paint.142D4A3E', this.appThemeScheme) : readerAppColor('app.CandidateRow.rowBackground.paint.00000000', this.appThemeScheme);
   }
 
   private nameColor(): string {
     // Figma: only the current row is green; every other row (available /
     // offline / timeout) uses the ink #2B241D.
-    return this.kind() === 'current' ? '#2A7A5A' : TOK_READ_BODY_INK;
+    return this.kind() === 'current' ? readerAppColor('app.CandidateRow.nameColor.paint.FF2A7A5A', this.appThemeScheme) : readerAppColor('app.control.itemInk', this.appThemeScheme);
   }
 
   private dotColor(): string {
     const kind = this.kind();
     if (kind === 'current') {
-      return '#2A7A5A';
+      return readerAppColor('app.CandidateRow.dotColor.paint.FF2A7A5A', this.appThemeScheme);
     }
     if (kind === 'offline') {
-      return '#C8BFB5';
+      return readerAppColor('app.CandidateRow.dotColor.paint.FFC8BFB5', this.appThemeScheme);
     }
     if (kind === 'timeout') {
-      return '#B04020';
+      return readerAppColor('app.CandidateRow.dotColor.paint.FFB04020', this.appThemeScheme);
     }
-    return '#C08020';
+    return readerAppColor('app.CandidateRow.dotColor.paint.FFC08020', this.appThemeScheme);
   }
 
   private latencyText(): string {
@@ -144,15 +147,15 @@ export struct CandidateRow {
   private latencyColor(): string {
     const kind = this.kind();
     if (kind === 'current') {
-      return '#2A7A5A';
+      return readerAppColor('app.CandidateRow.latencyColor.paint.FF2A7A5A', this.appThemeScheme);
     }
     if (kind === 'offline') {
-      return '#C8BFB5';
+      return readerAppColor('app.CandidateRow.latencyColor.paint.FFC8BFB5', this.appThemeScheme);
     }
     if (kind === 'timeout') {
-      return '#C05030';
+      return readerAppColor('app.CandidateRow.latencyColor.paint.FFC05030', this.appThemeScheme);
     }
-    return '#C08020';
+    return readerAppColor('app.CandidateRow.latencyColor.paint.FFC08020', this.appThemeScheme);
   }
 
   private latencyBarFillWidth(): number {
@@ -180,11 +183,11 @@ export struct CandidateRow {
   private chapterColor(): string {
     const kind = this.kind();
     if (kind === 'offline') {
-      return '#C8BFB5';
+      return readerAppColor('app.CandidateRow.chapterColor.paint.FFC8BFB5', this.appThemeScheme);
     }
     if (kind === 'timeout') {
-      return TOK_READ_HANDLE;
+      return readerAppColor('TOK_READ_HANDLE', this.appThemeScheme);
     }
-    return TOK_READ_MUTED;
+    return readerAppColor('TOK_READ_MUTED', this.appThemeScheme);
   }
 }

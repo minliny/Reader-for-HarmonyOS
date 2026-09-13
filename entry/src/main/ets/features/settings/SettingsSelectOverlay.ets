@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 
 export type SettingsSelectField = 'language' | 'startup' | 'animation';
@@ -26,6 +27,8 @@ const TABLET_ANCHOR_GAP = 6;
  */
 @Component
 export struct SettingsSelectOverlay {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop isTablet: boolean = false;
   @Prop field: SettingsSelectField = 'language';
   @Prop value: string = '';
@@ -44,7 +47,7 @@ export struct SettingsSelectOverlay {
       Row()
         .width('100%')
         .height('100%')
-        .backgroundColor(this.isTablet ? Color.Transparent : '#521F1B17')
+        .backgroundColor(this.isTablet ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
         .hitTestBehavior(HitTestMode.Default)
         .onClick((): void => this.onDismiss());
 
@@ -72,7 +75,7 @@ export struct SettingsSelectOverlay {
           .width(36)
           .height(4)
           .borderRadius(2)
-          .backgroundColor('#381F1B17');
+          .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.381F1B17', this.appThemeScheme));
       }
       .width('100%')
       .height(24)
@@ -86,7 +89,7 @@ export struct SettingsSelectOverlay {
           .fontSize(12)
           .lineHeight(14.4)
           .letterSpacing(0.48)
-          .fontColor('#1F1B17');
+          .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF1F1B17', this.appThemeScheme));
       }
       .width('100%')
       .height(26)
@@ -99,8 +102,8 @@ export struct SettingsSelectOverlay {
         }, (option: string): string => `settings-phone-option-${this.field}-${option}`);
       }
       .width('100%')
-      .backgroundColor('#FFFCF8')
-      .border({ width: 1, color: '#C1C7CD' })
+      .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
       .borderRadius(PHONE_RADIUS)
       .clip(true);
 
@@ -112,12 +115,12 @@ export struct SettingsSelectOverlay {
           .fontWeight(FontWeight.Regular)
           .fontSize(15)
           .lineHeight(18)
-          .fontColor('#41484C');
+          .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF41484C', this.appThemeScheme));
       }
       .width('100%')
       .height(PHONE_OPTION_HEIGHT)
-      .backgroundColor('#FFFCF8')
-      .border({ width: 1, color: '#C1C7CD' })
+      .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
       .borderRadius(PHONE_RADIUS)
       .onClick((): void => this.onDismiss());
     }
@@ -129,10 +132,10 @@ export struct SettingsSelectOverlay {
     })
     .linearGradient({
       angle: 180,
-      colors: [['#FAF7F2', 0], ['#F5F0E8', 1]],
+      colors: [[readerAppColor('app.SettingsSelectOverlay.phoneSheet.linearGradient.FFFAF7F2', this.appThemeScheme), 0], [readerAppColor('app.SettingsSelectOverlay.phoneSheet.linearGradient.FFF5F0E8', this.appThemeScheme), 1]],
     })
     .borderRadius({ topLeft: 18, topRight: 18 })
-    .shadow({ radius: 40, color: '#1F1B171F', offsetX: 0, offsetY: -8 });
+    .shadow({ radius: 40, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.1F1B171F', this.appThemeScheme), offsetX: 0, offsetY: -8 });
   }
 
   @Builder
@@ -145,10 +148,10 @@ export struct SettingsSelectOverlay {
           .fontWeight(this.isSelected(option) ? FontWeight.Bold : FontWeight.Regular)
           .fontSize(15)
           .lineHeight(18)
-          .fontColor(this.isSelected(option) ? '#2D4A3E' : '#1F1B17')
+          .fontColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.phoneOption.fontColor.FF2D4A3E', this.appThemeScheme) : readerAppColor('app.SettingsSelectOverlay.phoneOption.fontColor.FF1F1B17', this.appThemeScheme))
           .maxLines(1);
         if (this.isSelected(option)) {
-          Image($r('app.media.settings_select_check'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.settings_select_check_theme_night') : $r('app.media.settings_select_check')))
             .width(16)
             .height(16);
         }
@@ -157,7 +160,7 @@ export struct SettingsSelectOverlay {
       .height(index < this.options.length - 1 ? PHONE_OPTION_HEIGHT - 1 : PHONE_OPTION_HEIGHT)
       .padding({ left: 16, right: 16 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(this.isSelected(option) ? '#0D2D4A3E' : Color.Transparent)
+      .backgroundColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.phoneOption.backgroundColor.0D2D4A3E', this.appThemeScheme) : Color.Transparent)
       .onClick((): void => this.onSelect(option));
 
       if (index < this.options.length - 1) {
@@ -165,7 +168,7 @@ export struct SettingsSelectOverlay {
           Blank()
             .layoutWeight(1)
             .height(1)
-            .backgroundColor('#C1C7CD');
+            .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneOption.backgroundColor.FFC1C7CD', this.appThemeScheme));
         }
           .width('100%')
           .height(1)
@@ -184,11 +187,11 @@ export struct SettingsSelectOverlay {
       }, (option: string): string => `settings-tablet-option-${this.field}-${option}`);
     }
     .width(TABLET_PANEL_WIDTH)
-    .backgroundColor('#FAF7F2')
-    .border({ width: 1, color: '#C1C7CD' })
+    .backgroundColor(readerAppColor('app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2', this.appThemeScheme))
+    .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD', this.appThemeScheme) })
     .borderRadius(10)
     .clip(true)
-    .shadow({ radius: 24, color: '#1F1B171F', offsetX: 0, offsetY: 8 })
+    .shadow({ radius: 24, color: readerAppColor('app.SettingsSelectOverlay.tabletPanel.color.1F1B171F', this.appThemeScheme), offsetX: 0, offsetY: 8 })
     .position({
       x: this.anchorRight - TABLET_PANEL_WIDTH,
       y: this.anchorBottom + TABLET_ANCHOR_GAP,
@@ -205,10 +208,10 @@ export struct SettingsSelectOverlay {
           .fontWeight(this.isSelected(option) ? FontWeight.Bold : FontWeight.Regular)
           .fontSize(14)
           .lineHeight(16.8)
-          .fontColor(this.isSelected(option) ? '#2D4A3E' : '#1F1B17')
+          .fontColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.tabletOption.fontColor.FF2D4A3E', this.appThemeScheme) : readerAppColor('app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17', this.appThemeScheme))
           .maxLines(1);
         if (this.isSelected(option)) {
-          Image($r('app.media.settings_select_check'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.settings_select_check_theme_night') : $r('app.media.settings_select_check')))
             .width(14)
             .height(14);
         }
@@ -217,7 +220,7 @@ export struct SettingsSelectOverlay {
       .height(index < this.options.length - 1 ? TABLET_OPTION_HEIGHT - 1 : TABLET_OPTION_HEIGHT)
       .padding({ left: 14, right: 14 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(this.isSelected(option) ? '#0F2D4A3E' : Color.Transparent)
+      .backgroundColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.tabletOption.backgroundColor.0F2D4A3E', this.appThemeScheme) : Color.Transparent)
       .onClick((): void => this.onSelect(option));
 
       if (index < this.options.length - 1) {
@@ -225,7 +228,7 @@ export struct SettingsSelectOverlay {
           Blank()
             .layoutWeight(1)
             .height(1)
-            .backgroundColor('#C1C7CD');
+            .backgroundColor(readerAppColor('app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD', this.appThemeScheme));
         }
           .width('100%')
           .height(1)

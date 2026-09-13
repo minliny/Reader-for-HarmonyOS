@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 /**
  * Empty shelf, rebuilt 2026-08-06 against live Figma node `State/BookshelfEmpty`
  * (`286:31`, icon `Icon/Bookshelf` `271:96`). The 352×350 card replaces the old
@@ -31,6 +32,8 @@ import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 
 @Component
 export struct BookshelfEmptyPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop reduceMotion: boolean = false;
   onImportRequested: () => void = (): void => {};
@@ -131,7 +134,7 @@ export struct BookshelfEmptyPage {
         .layoutWeight(1);
 
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_search')).width(24).height(24);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search'))).width(24).height(24);
       }
       .width(44)
       .height(44)
@@ -139,7 +142,7 @@ export struct BookshelfEmptyPage {
       .onClick((): void => this.onSearchRequested());
 
       Stack({ alignContent: Alignment.Center }) {
-        Image($r('app.media.bookshelf_more')).width(24).height(24);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(24).height(24);
       }
       .width(44)
       .height(44)
@@ -167,7 +170,7 @@ export struct BookshelfEmptyPage {
         .fontWeight(700)
         .fontSize(15)
         .lineHeight(18)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .layoutWeight(1);
 
       Row({ space: TOK_SPACE_XS }) {
@@ -187,15 +190,15 @@ export struct BookshelfEmptyPage {
   // @Builder get mis-diffed and whole actions can vanish from the tree.
   private headerActionAsset(asset: string): Resource {
     if (asset === 'bookshelf_grid') {
-      return $r('app.media.bookshelf_grid_outline');
+      return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_grid_outline_theme_night') : $r('app.media.bookshelf_grid_outline'));
     }
     if (asset === 'bookshelf_list') {
-      return $r('app.media.bookshelf_list');
+      return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_list_theme_night') : $r('app.media.bookshelf_list'));
     }
     if (asset === 'bookshelf_filter') {
-      return $r('app.media.bookshelf_filter');
+      return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_theme_night') : $r('app.media.bookshelf_filter'));
     }
-    return $r('app.media.bookshelf_settings');
+    return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_settings_theme_night') : $r('app.media.bookshelf_settings'));
   }
 
   @Builder

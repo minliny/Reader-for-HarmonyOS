@@ -1,28 +1,34 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 /** Figma Make DEu3TuYhaJPLMEdSxorhwE, version 17, 2026-09-11.
  * Scoped to the TTS content: shared shell/navigation and other modules keep
  * their own tokens. All alpha colors use ArkUI's #AARRGGBB order. */
-export const TOK_TTS_INK = '#332C25';
-export const TOK_TTS_MUTED = '#8A7D6F';
-export const TOK_TTS_TEAL = '#2F6373';
-export const TOK_TTS_TEAL_SOFT = '#1C2F6373';
-export const TOK_TTS_TEAL_LINE = '#382F6373';
-export const TOK_TTS_PLAY_START = '#357487';
-export const TOK_TTS_PLAY_END = '#244F5C';
-export const TOK_TTS_CLAY = '#A8543A';
-export const TOK_TTS_CLAY_SOFT = '#1CA8543A';
-export const TOK_TTS_CLAY_LINE = '#5CA8543A';
-export const TOK_TTS_PAPER = '#FFFCF8';
-export const TOK_TTS_PAPER_START = '#FFFCF7';
-export const TOK_TTS_PAPER_END = '#F6F0E6';
-export const TOK_TTS_CARD = '#EBFFFCF8';
-export const TOK_TTS_QUICK_CARD = '#B8FFFCF8';
-export const TOK_TTS_LINE = '#57B4A697';
-export const TOK_TTS_FIELD = '#24B4A697';
-export const TOK_TTS_TRACK = '#47B4A697';
+export const TOK_TTS_INK = readerAppColor('TOK_TTS_INK', 'day');
+export const TOK_TTS_MUTED = readerAppColor('TOK_TTS_MUTED', 'day');
+export const TOK_TTS_TEAL = readerAppColor('TOK_TTS_TEAL', 'day');
+export const TOK_TTS_TEAL_SOFT = readerAppColor('TOK_TTS_TEAL_SOFT', 'day');
+export const TOK_TTS_TEAL_LINE = readerAppColor('TOK_TTS_TEAL_LINE', 'day');
+export const TOK_TTS_PLAY_START = readerAppColor('TOK_TTS_PLAY_START', 'day');
+export const TOK_TTS_PLAY_END = readerAppColor('TOK_TTS_PLAY_END', 'day');
+export const TOK_TTS_CLAY = readerAppColor('TOK_TTS_CLAY', 'day');
+export const TOK_TTS_CLAY_SOFT = readerAppColor('TOK_TTS_CLAY_SOFT', 'day');
+export const TOK_TTS_CLAY_LINE = readerAppColor('TOK_TTS_CLAY_LINE', 'day');
+export const TOK_TTS_PAPER = readerAppColor('TOK_TTS_PAPER', 'day');
+export const TOK_TTS_PAPER_START = readerAppColor('TOK_TTS_PAPER_START', 'day');
+export const TOK_TTS_PAPER_END = readerAppColor('TOK_TTS_PAPER_END', 'day');
+export const TOK_TTS_CARD = readerAppColor('TOK_TTS_CARD', 'day');
+export const TOK_TTS_QUICK_CARD = readerAppColor('TOK_TTS_QUICK_CARD', 'day');
+export const TOK_TTS_LINE = readerAppColor('TOK_TTS_LINE', 'day');
+export const TOK_TTS_FIELD = readerAppColor('TOK_TTS_FIELD', 'day');
+export const TOK_TTS_TRACK = readerAppColor('TOK_TTS_TRACK', 'day');
 
 /** Make uses #357487 in Quick and #2f6373 in Full; sample the same shared p. */
-export function readerTtsPlayGradientStart(progress: number): string {
+export function readerTtsPlayGradientStart(progress: number, appScheme: string = 'day'): string {
   const p = Math.max(0, Math.min(1, progress));
-  return '#' + [53 + (47 - 53) * p, 116 + (99 - 116) * p, 135 + (115 - 135) * p]
-    .map((value: number): string => Math.round(value).toString(16).padStart(2, '0')).join('');
+  const start = readerAppColor('TOK_TTS_PLAY_START', appScheme);
+  const end = readerAppColor('TOK_TTS_TEAL', appScheme);
+  return '#' + [3, 5, 7].map((offset: number): string => {
+    const a = Number.parseInt(start.slice(offset, offset + 2), 16);
+    const b = Number.parseInt(end.slice(offset, offset + 2), 16);
+    return Math.round(a + (b - a) * p).toString(16).padStart(2, '0');
+  }).join('');
 }

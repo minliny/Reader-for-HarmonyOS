@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
@@ -153,6 +154,8 @@ class SourceDebugLogDataSource implements IDataSource {
 
 @Component
 export struct SourceToolsPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   onBack: () => void = (): void => {};
@@ -235,7 +238,7 @@ export struct SourceToolsPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(TOK_PAPER);
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -277,12 +280,12 @@ export struct SourceToolsPage {
         .fontFamily('ReaderNotoSansSC')
         .fontSize(10)
         .lineHeight(16)
-        .fontColor(TOK_MUTED);
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
-    .backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(10);
   }
 
@@ -296,24 +299,24 @@ export struct SourceToolsPage {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(14)
-          .fontColor(TOK_INK);
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         Text(this.batchCheckPhaseLabel(this.snapshot.batchCheck))
           .fontFamily('ReaderNotoSansSC')
           .fontSize(11)
           .fontWeight(FontWeight.Bold)
-          .fontColor(this.snapshot.batchCheck.phase === 'failed' ? '#A8584D' : TOK_PRIMARY_DARK);
+          .fontColor(this.snapshot.batchCheck.phase === 'failed' ? readerAppColor('app.SourceToolsPage.batchCheckCard.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
       }
       .width('100%');
       Row() {
         Row()
           .width(`${this.batchCheckPercent(this.snapshot.batchCheck)}%`)
           .height(8)
-          .backgroundColor(TOK_PRIMARY_DARK)
+          .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
           .borderRadius(4);
       }
       .width('100%')
       .height(8)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(4);
       if (this.snapshot.batchCheck.currentSourceName.length > 0) {
         Text(`当前 ${this.snapshot.batchCheck.currentIndex}/${this.snapshot.batchCheck.total}：` +
@@ -322,16 +325,16 @@ export struct SourceToolsPage {
           .fontFamily('ReaderNotoSansSC')
           .fontSize(11)
           .lineHeight(17)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
       Row({ space: TOK_SPACE_XS }) {
-        this.batchCounter(`可用 ${this.snapshot.batchCheck.passed}`, TOK_PRIMARY_DARK);
-        this.batchCounter(`不可用 ${this.snapshot.batchCheck.failed}`, '#A8584D');
-        this.batchCounter(`检测错误 ${this.snapshot.batchCheck.errors}`, '#9A6A1F');
+        this.batchCounter(`可用 ${this.snapshot.batchCheck.passed}`, readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
+        this.batchCounter(`不可用 ${this.snapshot.batchCheck.failed}`, readerAppColor('app.SourceToolsPage.batchCheckCard.batchCounter.FFA8584D', this.appThemeScheme));
+        this.batchCounter(`检测错误 ${this.snapshot.batchCheck.errors}`, readerAppColor('app.SourceToolsPage.batchCheckCard.batchCounter.FF9A6A1F', this.appThemeScheme));
         this.batchCounter(`剩余 ${Math.max(0,
-          this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, TOK_MUTED);
+          this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, readerAppColor('TOK_MUTED', this.appThemeScheme));
       }
       .width('100%');
       if (this.snapshot.batchCheck.results.length === 0) {
@@ -339,14 +342,14 @@ export struct SourceToolsPage {
           .width('100%')
           .fontFamily('ReaderNotoSansSC')
           .fontSize(11)
-          .fontColor(TOK_MUTED);
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       } else {
         Text('实时结果（最新在前）')
           .width('100%')
           .fontFamily('ReaderNotoSansSC')
           .fontSize(11)
           .fontWeight(FontWeight.Bold)
-          .fontColor(TOK_INK);
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         List() {
           LazyForEach(this.batchResultDataSource, (result: SourceBatchCheckResult) => {
             ListItem() {
@@ -362,8 +365,8 @@ export struct SourceToolsPage {
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(10);
   }
 
@@ -377,7 +380,7 @@ export struct SourceToolsPage {
       .fontSize(11)
       .fontWeight(FontWeight.Bold)
       .fontColor(color)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(7);
   }
 
@@ -390,14 +393,14 @@ export struct SourceToolsPage {
           .fontFamily('ReaderNotoSansSC')
           .fontSize(12)
           .fontWeight(FontWeight.Bold)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(result.message)
           .width('100%')
           .fontFamily('ReaderNotoSansSC')
           .fontSize(10)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -407,13 +410,13 @@ export struct SourceToolsPage {
         .fontFamily('ReaderNotoSansSC')
         .fontSize(11)
         .fontWeight(FontWeight.Bold)
-        .fontColor(result.state === 'passed' ? TOK_PRIMARY_DARK :
-          (result.state === 'failed' ? '#A8584D' : '#9A6A1F'));
+        .fontColor(result.state === 'passed' ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) :
+          (result.state === 'failed' ? readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FF9A6A1F', this.appThemeScheme)));
     }
     .width('100%')
     .height(58)
     .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-    .border({ width: { bottom: TOK_BORDER_W }, color: TOK_BORDER });
+    .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
 
   @Builder
@@ -423,10 +426,10 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontSize(12)
       .lineHeight(18)
-      .fontColor(this.snapshot.busy ? TOK_PRIMARY_DARK : TOK_MUTED)
+      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8);
   }
 
@@ -439,14 +442,14 @@ export struct SourceToolsPage {
         .fontFamily('ReaderNotoSansSC')
         .fontSize(11)
         .lineHeight(17)
-        .fontColor(TOK_MUTED);
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       this.fullWidthActionButton('导出全部书源', true,
         (): void => this.confirmExportThen((): void => this.onExportAll()));
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
-    .backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(10);
   }
 
@@ -468,8 +471,8 @@ export struct SourceToolsPage {
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(10);
   }
 
@@ -482,14 +485,14 @@ export struct SourceToolsPage {
               .fontFamily('ReaderNotoSansSC')
               .fontSize(12)
               .fontWeight(FontWeight.Bold)
-              .fontColor(TOK_INK)
+              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
             Text(row.source.baseUrl)
               .width('100%')
               .fontFamily('ReaderInter')
               .fontSize(10)
-              .fontColor(TOK_MUTED)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
@@ -503,7 +506,7 @@ export struct SourceToolsPage {
         .width('100%')
         .height(58)
         .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-        .border({ width: { bottom: TOK_BORDER_W }, color: TOK_BORDER });
+        .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
 
   @Builder
@@ -515,15 +518,15 @@ export struct SourceToolsPage {
         .fontFamily('ReaderNotoSansSC')
         .fontSize(11)
         .lineHeight(17)
-        .fontColor(TOK_MUTED);
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       TextArea({ text: this.snapshot.editorText, placeholder: 'BookSource JSON' })
         .width('100%')
         .height(320)
         .fontFamily('monospace')
         .fontSize(11)
-        .fontColor(TOK_INK)
-        .backgroundColor(TOK_PAPER)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
         .borderRadius(8)
         .padding(TOK_SPACE_XS)
         .onChange((value: string): void => this.onEditorDraftChanged(value));
@@ -535,8 +538,8 @@ export struct SourceToolsPage {
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
-    .backgroundColor(TOK_SURFACE_SOLID)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(10);
   }
 
@@ -549,9 +552,9 @@ export struct SourceToolsPage {
         .height(40)
         .fontFamily('ReaderNotoSansSC')
         .fontSize(12)
-        .fontColor(TOK_INK)
-        .backgroundColor(TOK_PAPER)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
         .borderRadius(8)
         .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
         .onChange((value: string): void => this.onDebugKeyChanged(value));
@@ -560,7 +563,7 @@ export struct SourceToolsPage {
           .width('100%')
           .fontFamily('ReaderInter')
           .fontSize(11)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -579,8 +582,8 @@ export struct SourceToolsPage {
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
-    .backgroundColor(TOK_CARD_BG)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(10);
   }
 
@@ -591,7 +594,7 @@ export struct SourceToolsPage {
           .fontFamily('monospace')
           .fontSize(10)
           .lineHeight(16)
-          .fontColor(log.state === -1 ? '#A8584D' : TOK_INK);
+          .fontColor(log.state === -1 ? readerAppColor('app.SourceToolsPage.debugLogRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
   @Builder
@@ -601,7 +604,7 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(14)
-      .fontColor(TOK_INK);
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
   @Builder
@@ -613,9 +616,9 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(11)
-      .fontColor(TOK_PRIMARY_DARK)
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(7)
       .opacity(enabled ? 1 : 0.62)
       .onClick((): void => {
@@ -634,9 +637,9 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(12)
-      .fontColor(primary ? TOK_ON_PRIMARY : TOK_PRIMARY_DARK)
-      .backgroundColor(primary ? TOK_PRIMARY_DARK : TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: primary ? TOK_PRIMARY_DARK : TOK_BORDER })
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8)
       .opacity(enabled ? 1 : 0.62)
       .onClick((): void => {
@@ -655,9 +658,9 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(12)
-      .fontColor(primary ? TOK_ON_PRIMARY : TOK_PRIMARY_DARK)
-      .backgroundColor(primary ? TOK_PRIMARY_DARK : TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: primary ? TOK_PRIMARY_DARK : TOK_BORDER })
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8)
       .opacity(this.snapshot.busy ? 0.62 : 1)
       .onClick((): void => {

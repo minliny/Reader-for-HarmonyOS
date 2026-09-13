@@ -1,3 +1,9 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
+import {
+  READER_CONTROL_APPEARANCE_THEMES,
+  readerControlAppearanceThemeLabel,
+  readerControlAppearanceThemeSwatch,
+} from './ReaderControlAppearanceStyle';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER_W,
@@ -46,6 +52,8 @@ interface ReaderAppearanceActorPosition {
  */
 @Component
 export struct ReaderAppearanceSharedActors {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   /** Same primitive progress coordinate as the surface and gesture owner. */
   @Prop motionProgress: number = 0;
   @Prop fullHeight: number = READER_APPEARANCE_FULL_HEIGHT;
@@ -114,7 +122,7 @@ export struct ReaderAppearanceSharedActors {
         .fontWeight(FontWeight.Bold)
         .fontSize(9)
         .lineHeight(9.9)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .position({ x: 0, y: 0 });
       Text(this.themeSummary())
         .width(88)
@@ -123,7 +131,7 @@ export struct ReaderAppearanceSharedActors {
         .fontWeight(FontWeight.Medium)
         .fontSize(7.5)
         .lineHeight(8)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.End)
         .maxLines(1)
         .position({ x: 174, y: 3.95 });
@@ -148,7 +156,7 @@ export struct ReaderAppearanceSharedActors {
         .backgroundColor(this.themeColor(theme))
         .border({
           width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
-          color: this.snapshot.activeTheme === theme ? TOK_READ_PRIMARY : '#1F5B5046',
+          color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('app.ReaderAppearanceSharedActors.sharedThemeCard.color.1F5B5046', this.appThemeScheme),
         })
         .borderRadius(6)
         .position({ x: 8.25, y: 2 });
@@ -174,7 +182,7 @@ export struct ReaderAppearanceSharedActors {
     Row()
       .width(this.currentFrame().quickDivider.width)
       .height(this.currentFrame().quickDivider.height)
-      .backgroundColor(TOK_LINE)
+      .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
       .position(this.localPosition(this.currentFrame().quickDivider))
       .translate({
         x: this.currentFrame().quickDivider.translateX,
@@ -193,7 +201,7 @@ export struct ReaderAppearanceSharedActors {
       .fontWeight(FontWeight.Bold)
       .fontSize(9)
       .lineHeight(9.9)
-      .fontColor(TOK_READ_INK)
+      .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
       .position(this.localPosition(this.currentFrame().fontHeader))
       .translate({
         x: this.currentFrame().fontHeader.translateX,
@@ -209,8 +217,8 @@ export struct ReaderAppearanceSharedActors {
       Row()
         .width(55)
         .height(22)
-        .backgroundColor(this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_SURFACE_PANEL)
-        .border({ width: TOK_BORDER_W, color: TOK_LINE })
+        .backgroundColor(this.isActiveFont(fontId) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
         .borderRadius(11)
         .position({ x: 4, y: 3 });
       Text(readerAppearanceFontSlotLabel(this.snapshot, fontId))
@@ -220,7 +228,7 @@ export struct ReaderAppearanceSharedActors {
         .fontWeight(FontWeight.Regular)
         .fontSize(8)
         .lineHeight(10)
-        .fontColor(this.isActiveFont(fontId) ? '#FFFAF4' : TOK_READ_INK)
+        .fontColor(this.isActiveFont(fontId) ? readerAppColor('app.ReaderAppearanceSharedActors.sharedFontCell.fontColor.FFFFFAF4', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -238,7 +246,7 @@ export struct ReaderAppearanceSharedActors {
         y: this.draggedFontId === fontId ? 1.035 : 1,
       })
       .shadow(this.draggedFontId === fontId ?
-        { radius: 12, color: '#2B332C25', offsetX: 0, offsetY: 5 } :
+        { radius: 12, color: readerAppColor('app.ReaderAppearanceSharedActors.sharedFontCell.color.2B332C25', this.appThemeScheme), offsetX: 0, offsetY: 5 } :
         { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
       .opacity((this.draggedFontId === fontId ? 0.96 : 1) * this.fontActorFrame(fontId).opacity)
       .blur(this.fontActorFrame(fontId).blurVp)
@@ -272,8 +280,8 @@ export struct ReaderAppearanceSharedActors {
     Row()
       .width(this.fontSlotWidth())
       .height(this.fontSlotHeight())
-      .backgroundColor(TOK_READ_ACTIVE_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY, style: BorderStyle.Dashed })
+      .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme), style: BorderStyle.Dashed })
       .borderRadius(6)
       .opacity(0.58)
       .position({
@@ -571,7 +579,7 @@ export struct ReaderAppearanceSharedActors {
   }
 
   private themeIds(): ReaderAppearanceTheme[] {
-    return ['day', 'warm', 'night', 'warmNight', 'paper', 'green', 'paperNight', 'greenNight'];
+    return READER_CONTROL_APPEARANCE_THEMES;
   }
 
   private isActiveFont(fontId: string): boolean {
@@ -587,52 +595,10 @@ export struct ReaderAppearanceSharedActors {
   }
 
   private themeLabel(theme: ReaderAppearanceTheme): string {
-    if (theme === 'day') {
-      return '日间';
-    }
-    if (theme === 'warm') {
-      return '暖白';
-    }
-    if (theme === 'night') {
-      return '夜间';
-    }
-    if (theme === 'warmNight') {
-      return '暖夜';
-    }
-    if (theme === 'paper') {
-      return '纸纹';
-    }
-    if (theme === 'green') {
-      return '青叶纹';
-    }
-    if (theme === 'paperNight') {
-      return '夜纹';
-    }
-    return '林夜纹';
+    return readerControlAppearanceThemeLabel(theme);
   }
 
   private themeColor(theme: ReaderAppearanceTheme): string {
-    if (theme === 'day') {
-      return '#FFFFFF';
-    }
-    if (theme === 'warm') {
-      return '#FBF0DF';
-    }
-    if (theme === 'night') {
-      return '#26231F';
-    }
-    if (theme === 'warmNight') {
-      return '#302922';
-    }
-    if (theme === 'paper') {
-      return '#F5EAD8';
-    }
-    if (theme === 'green') {
-      return '#E7F0E2';
-    }
-    if (theme === 'paperNight') {
-      return '#34302B';
-    }
-    return '#263129';
+    return readerControlAppearanceThemeSwatch(theme);
   }
 }

@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   READER_TTS_RATE_MAX,
   READER_TTS_RATE_MIN,
@@ -42,6 +43,8 @@ const TTS_MODULE_RATE_VALUE_WIDTH_TABLET = 30;
 /** Figma quick TTS panel: Phone `942:62`, Tablet `942:64`. */
 @Component
 export struct ReaderTtsModulePanel {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop morphActorId: string = 'reader-session-morph-quickTts';
   @Prop isTablet: boolean = false;
   @Prop state: ReaderTtsState;
@@ -71,8 +74,8 @@ export struct ReaderTtsModulePanel {
       bottom: TTS_MODULE_PANEL_PADDING_Y,
     })
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true)
     .id(this.morphActorId)
@@ -90,7 +93,7 @@ export struct ReaderTtsModulePanel {
   private playbackRow() {
     Row() {
       Row({ space: 8 }) {
-        Image($r('app.media.reader_tts_headphones'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_headphones_theme_night') : $r('app.media.reader_tts_headphones')))
           .width(20)
           .height(20);
         Text(this.playbackLabel())
@@ -99,7 +102,7 @@ export struct ReaderTtsModulePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_READ_INK)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1);
       }
       .layoutWeight(1)
@@ -120,14 +123,14 @@ export struct ReaderTtsModulePanel {
     .height(TTS_MODULE_PLAYBACK_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(6);
   }
 
   @Builder
   private previousButton() {
     Stack({ alignContent: Alignment.Center }) {
-      Image($r('app.media.reader_tts_previous'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_previous_theme_night') : $r('app.media.reader_tts_previous')))
         .width(20)
         .height(16);
     }
@@ -145,18 +148,18 @@ export struct ReaderTtsModulePanel {
     Stack({ alignContent: Alignment.Center }) {
       if (this.isActivelySpeaking()) {
         Row({ space: 4 }) {
-          Row().width(3).height(13).backgroundColor(TOK_ON_PRIMARY).borderRadius(1);
-          Row().width(3).height(13).backgroundColor(TOK_ON_PRIMARY).borderRadius(1);
+          Row().width(3).height(13).backgroundColor(readerAppColor('app.control.onPrimary', this.appThemeScheme)).borderRadius(1);
+          Row().width(3).height(13).backgroundColor(readerAppColor('app.control.onPrimary', this.appThemeScheme)).borderRadius(1);
         }
       } else {
-        Image($r('app.media.reader_tts_play'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_play_theme_night') : $r('app.media.reader_tts_play')))
           .width(21)
           .height(21);
       }
     }
     .width(24)
     .height(24)
-    .backgroundColor(TOK_READ_PRIMARY)
+    .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
     .borderRadius(12)
     .position({ x: 36, y: 4 })
     .enabled(this.state.status !== 'unavailable' && this.state.status !== 'stopping')
@@ -178,13 +181,13 @@ export struct ReaderTtsModulePanel {
   @Builder
   private stopButton() {
     Stack({ alignContent: Alignment.Center }) {
-      Image($r('app.media.reader_tts_stop'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_stop_theme_night') : $r('app.media.reader_tts_stop')))
         .width(26)
         .height(26);
     }
     .width(22)
     .height(22)
-    .backgroundColor('#D7473E')
+    .backgroundColor(readerAppColor('app.ReaderTtsModulePanel.stopButton.backgroundColor.FFD7473E', this.appThemeScheme))
     .borderRadius(11)
     .position({ x: 69, y: 5 })
     .enabled(this.hasActiveQueue())
@@ -196,7 +199,7 @@ export struct ReaderTtsModulePanel {
   @Builder
   private nextButton() {
     Stack({ alignContent: Alignment.Center }) {
-      Image($r('app.media.reader_tts_next'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_next_theme_night') : $r('app.media.reader_tts_next')))
         .width(20)
         .height(16);
     }
@@ -214,7 +217,7 @@ export struct ReaderTtsModulePanel {
   private timerRow() {
     Row() {
       Row({ space: 8 }) {
-        Image($r('app.media.reader_tts_clock'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_clock_theme_night') : $r('app.media.reader_tts_clock')))
           .width(20)
           .height(20);
         Text('定时')
@@ -222,7 +225,7 @@ export struct ReaderTtsModulePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .layoutWeight(1)
       .alignItems(VerticalAlign.Center);
@@ -233,8 +236,8 @@ export struct ReaderTtsModulePanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor('#41484C');
-        Image($r('app.media.reader_chevron_down'))
+          .fontColor(readerAppColor('app.ReaderTtsModulePanel.timerRow.fontColor.FF41484C', this.appThemeScheme));
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
           .width(12)
           .height(12);
       }
@@ -242,8 +245,8 @@ export struct ReaderTtsModulePanel {
       .height(30)
       .padding({ left: 9, right: 5 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(TOK_FIELD_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(6)
       // Figma has only the closed SelectSmall trigger (`750:1053`) and its
       // 86×44 hit target. No expanded options/reaction exists, so the trigger
@@ -255,7 +258,7 @@ export struct ReaderTtsModulePanel {
     .height(TTS_MODULE_TIMER_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(6);
   }
 
@@ -263,7 +266,7 @@ export struct ReaderTtsModulePanel {
   private rateRow() {
     Row() {
       Row({ space: 8 }) {
-        Image($r('app.media.reader_tts_rate'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_rate_theme_night') : $r('app.media.reader_tts_rate')))
           .width(20)
           .height(20);
         Text('语速')
@@ -271,7 +274,7 @@ export struct ReaderTtsModulePanel {
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
           .lineHeight(12)
-          .fontColor(TOK_READ_INK);
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .width(TTS_MODULE_RATE_LABEL_WIDTH)
       .alignItems(VerticalAlign.Center);
@@ -284,14 +287,14 @@ export struct ReaderTtsModulePanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(12)
-        .fontColor(TOK_READ_PRIMARY)
+        .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.End);
     }
     .width('100%')
     .height(TTS_MODULE_RATE_HEIGHT)
     .padding({ left: 11, right: 11 })
     .alignItems(VerticalAlign.Center)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(6);
   }
 
@@ -302,16 +305,16 @@ export struct ReaderTtsModulePanel {
       Row()
         .width(TTS_MODULE_RATE_SLIDER_WIDTH)
         .height(TTS_MODULE_RATE_TRACK_HEIGHT)
-        .backgroundColor(TOK_BORDER)
+        .backgroundColor(readerAppColor('TOK_BORDER', this.appThemeScheme))
         .borderRadius(999)
         .position({ x: 0, y: 15 });
       Row()
         .width(this.rateFillWidth())
         .height(TTS_MODULE_RATE_TRACK_HEIGHT)
-        .backgroundColor(TOK_READ_PRIMARY)
+        .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .borderRadius(999)
         .position({ x: 0, y: 15 });
-      Image($r('app.media.reader_tts_speed_thumb'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_speed_thumb_theme_night') : $r('app.media.reader_tts_speed_thumb')))
         .width(TTS_MODULE_RATE_THUMB_SIZE)
         .height(TTS_MODULE_RATE_THUMB_SIZE)
         .position({ x: this.rateThumbX(), y: 7 });

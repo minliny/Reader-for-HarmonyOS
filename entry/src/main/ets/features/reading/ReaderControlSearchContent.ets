@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
   readerControlMotionVisibleRect, type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
@@ -22,6 +23,8 @@ import { createReaderControlSearchScroll, resetReaderControlSearchScroll, sample
  * fixed-height ReaderSearchField variants cannot represent 24->32 geometry. */
 @Component
 export struct ReaderControlSearchContent {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop @Watch('onResultLayoutChanged') motionProgress: number = 0;
   @Prop @Watch('onResultLayoutChanged') availableWidth: number = 286;
   @Prop @Watch('onResultLayoutChanged') availableHeight: number = 190;
@@ -271,7 +274,7 @@ export struct ReaderControlSearchContent {
       // Static Query border under the same source parent, not an invented
       // animated separator or a mask hiding the recovered trajectories.
       Row().height(this.frame().queryDivider.height).width(this.frame().queryDivider.width)
-        .backgroundColor(TOK_LINE)
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: this.frame().queryDivider.x, y: this.frame().queryDivider.y });
       this.searchField();
       this.searchAction();
@@ -279,23 +282,23 @@ export struct ReaderControlSearchContent {
       this.quickBack();
     }
     .width(this.availableWidth).height(this.availableHeight)
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE }).borderRadius(12)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) }).borderRadius(12)
     .clip(true).enabled(this.interactionEnabled);
   }
 
   @Builder
   private searchField() {
     Row({ space: 5 }) {
-      Image($r('app.media.reader_directory_input_search')).width(16).height(16).margin({ right: 2 });
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'))).width(16).height(16).margin({ right: 2 });
       TextInput({ placeholder: '搜索正文内容', text: this.query, controller: this.inputController })
         // This is a 14vp text line inside the authored 24->32vp field. Clear
         // native vertical content insets explicitly; horizontal-only padding
         // leaves the platform's TextInput top/bottom defaults unspecified.
         .layoutWeight(1).height(14).padding({ left: 2, right: 2, top: 0, bottom: 0 })
         .fontFamily('ReaderNotoSansSC').fontSize(10).fontWeight(FontWeight.Regular)
-        .fontColor(TOK_READ_INK).backgroundColor(Color.Transparent)
-        .caretColor(TOK_READ_INK).placeholderColor(TOK_READ_MUTED)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).backgroundColor(Color.Transparent)
+        .caretColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).placeholderColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .placeholderFont({ size: 10, family: 'ReaderNotoSansSC' })
         .maxLines(1).enterKeyType(EnterKeyType.Search)
         .accessibilityText('搜索正文内容')
@@ -305,7 +308,7 @@ export struct ReaderControlSearchContent {
     }
     .width(this.frame().field.width).height(this.frame().field.height)
     .padding({ left: 9, right: 9 }).alignItems(VerticalAlign.Center)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT).borderRadius(8)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
     .position({ x: this.frame().field.x, y: this.frame().field.y })
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
   }
@@ -313,10 +316,10 @@ export struct ReaderControlSearchContent {
   @Builder
   private searchAction() {
     Stack({ alignContent: Alignment.Center }) {
-      Image($r('app.media.reader_directory_input_search')).width(16).height(16);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'))).width(16).height(16);
     }
     .width(this.frame().action.width).height(this.frame().action.height)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT).borderRadius(8)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
     .position({ x: this.frame().action.x, y: this.frame().action.y })
     .opacity((this.canSearch() ? 1 : .4) * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     .enabled(this.canSearch())
@@ -326,13 +329,13 @@ export struct ReaderControlSearchContent {
   @Builder
   private quickBack() {
     Row({ space: 4 }) {
-      Image($r('app.media.reader_quick_back')).width(11).height(11);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_quick_back_theme_night') : $r('app.media.reader_quick_back'))).width(11).height(11);
       Text('返回').fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
-        .fontSize(10).fontColor(TOK_READ_PRIMARY);
+        .fontSize(10).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
     }
     .width(this.frame().back.width).height(this.frame().back.height)
     .padding({ left: 8 }).alignItems(VerticalAlign.Center)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT).borderRadius(8)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
     .position({ x: this.frame().back.x, y: this.frame().back.y })
     .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     // Keep the actor mounted while p changes; toggling Visibility at the
@@ -375,7 +378,7 @@ export struct ReaderControlSearchContent {
       } else {
         Stack({ alignContent: Alignment.Center }) {
           Text(this.statusText()).width('100%').padding({ left: 12, right: 12 })
-            .fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(TOK_READ_MUTED)
+            .fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center).maxLines(3);
         }.width('100%').height('100%')
           .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
@@ -395,13 +398,13 @@ export struct ReaderControlSearchContent {
       Stack({ alignContent: Alignment.Center }) {
         Text(this.state.loadingMore === true ? '正在加载…' :
           (this.state.loadMoreError === undefined ? '加载更多结果' : '加载失败，重试'))
-          .fontFamily('ReaderNotoSansSC').fontSize(9).fontColor(TOK_READ_PRIMARY)
+          .fontFamily('ReaderNotoSansSC').fontSize(9).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .maxLines(1);
       }
       .width(112).height(26)
       .position({ x: Math.max(0, this.frame().results.width - 120),
         y: Math.max(0, this.frame().results.height - 30) })
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT).borderRadius(8)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .enabled(this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1) &&
         this.state.loadingMore !== true)
@@ -420,7 +423,7 @@ export struct ReaderControlSearchContent {
       Text(this.resultTitle(this.currentResult(chapterIndex, chapterOffset)))
         .width(Math.max(0, this.frame().firstResult.width - 18)).height(13)
         .fontFamily('ReaderNotoSansSC').fontSize(11).lineHeight(13.2)
-        .fontWeight(FontWeight.Medium).fontColor(TOK_READ_INK)
+        .fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 9, y: 9.09375 });
       this.resultSnippet(chapterIndex, chapterOffset);
@@ -437,14 +440,14 @@ export struct ReaderControlSearchContent {
   private resultSnippet(chapterIndex: number, chapterOffset: number) {
     Text() {
       Span(this.currentSnippet(chapterIndex, chapterOffset).prefix)
-        .fontColor(TOK_READ_MUTED).fontWeight(FontWeight.Regular);
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontWeight(FontWeight.Regular);
       Span(this.currentSnippet(chapterIndex, chapterOffset).match)
-        .fontColor(TOK_DANGER).fontWeight(FontWeight.Bold);
+        .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme)).fontWeight(FontWeight.Bold);
       Span(this.currentSnippet(chapterIndex, chapterOffset).suffix)
-        .fontColor(TOK_READ_MUTED).fontWeight(FontWeight.Regular);
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontWeight(FontWeight.Regular);
     }
     .width(Math.max(0, this.frame().firstResult.width - 18)).height(28)
-    .padding({ left: 11 }).border({ width: { left: TOK_BORDER_W }, color: TOK_LINE_STRONG })
+    .padding({ left: 11 }).border({ width: { left: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .fontFamily('ReaderNotoSansSC').fontSize(9).lineHeight(13.95)
     .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
     .position({ x: 9, y: 31.09375 });

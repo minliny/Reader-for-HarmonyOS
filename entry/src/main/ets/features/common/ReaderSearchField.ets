@@ -1,3 +1,4 @@
+import { readerAppColor } from './ReaderThemeRegistry';
 import {
   ReaderTextStyle,
   TYPE_SEARCH_BOOK_INPUT,
@@ -37,6 +38,8 @@ export type ReaderSearchFieldMode = 'submit' | 'live' | 'passive';
  */
 @Component
 export struct ReaderSearchField {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop variant: ReaderSearchFieldVariant = 'bookPage';
   @Prop mode: ReaderSearchFieldMode = 'submit';
   @Prop text: string = '';
@@ -73,10 +76,10 @@ export struct ReaderSearchField {
         .fontSize(TYPE_SEARCH_BOOK_INPUT.fontSizeFp)
         .lineHeight(TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number)
         .maxLines(1)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .backgroundColor(Color.Transparent)
-        .caretColor(TOK_INK)
-        .placeholderColor('#801F1B17')
+        .caretColor(readerAppColor('TOK_INK', this.appThemeScheme))
+        .placeholderColor(readerAppColor('app.ReaderSearchField.fixedLineHeightField.placeholderColor.801F1B17', this.appThemeScheme))
         .placeholderFont({
           size: TYPE_SEARCH_BOOK_INPUT.fontSizeFp,
           family: TYPE_SEARCH_BOOK_INPUT.fontFamily,
@@ -86,7 +89,7 @@ export struct ReaderSearchField {
         .enterKeyType(EnterKeyType.Search)
         .onSubmit((_enterKey: EnterKeyType): void => this.submit());
       if (this.clearable && this.text.length > 0) {
-        Image($r('app.media.search_clear'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear')))
           .width(14)
           .height(14)
           .accessibilityText('清空搜索内容')
@@ -148,7 +151,7 @@ export struct ReaderSearchField {
         .fontFamily(TYPE_SEARCH_RSS_HINT.fontFamily)
         .fontWeight(TYPE_SEARCH_RSS_HINT.fontWeight)
         .fontSize(TYPE_SEARCH_RSS_HINT.fontSizeFp)
-        .fontColor('#817A72')
+        .fontColor(readerAppColor('app.ReaderSearchField.passiveField.fontColor.FF817A72', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }
@@ -181,12 +184,12 @@ export struct ReaderSearchField {
 
   private searchIcon(): Resource {
     if (this.variant === 'readerDirectory') {
-      return $r('app.media.reader_directory_input_search');
+      return (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'));
     }
     if (this.variant === 'readerQuick') {
-      return $r('app.media.reader_quick_search');
+      return (this.appThemeScheme === 'night' ? $r('app.media.reader_quick_search_theme_night') : $r('app.media.reader_quick_search'));
     }
-    return $r('app.media.search_mag');
+    return (this.appThemeScheme === 'night' ? $r('app.media.search_mag_theme_night') : $r('app.media.search_mag'));
   }
 
   private fieldHeight(): number {
@@ -262,15 +265,15 @@ export struct ReaderSearchField {
 
   private fieldBackgroundColor(): string {
     if (this.variant === 'bookPage') {
-      return '#121F1B17';
+      return readerAppColor('app.ReaderSearchField.fieldBackgroundColor.paint.121F1B17', this.appThemeScheme);
     }
     if (this.variant === 'sourceManagement') {
-      return '#D1FFFCF8';
+      return readerAppColor('app.ReaderSearchField.fieldBackgroundColor.paint.D1FFFCF8', this.appThemeScheme);
     }
     if (this.variant === 'rssPassive') {
-      return '#94FFFFFF';
+      return readerAppColor('app.ReaderSearchField.fieldBackgroundColor.paint.94FFFFFF', this.appThemeScheme);
     }
-    return TOK_SURFACE_PANEL_SOFT;
+    return readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme);
   }
 
   private fieldBorderWidth(): number {
@@ -278,7 +281,7 @@ export struct ReaderSearchField {
   }
 
   private fieldBorderColor(): string {
-    return this.variant === 'sourceManagement' ? '#75B4A697' : TOK_BORDER;
+    return this.variant === 'sourceManagement' ? readerAppColor('app.ReaderSearchField.fieldBorderColor.paint.75B4A697', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme);
   }
 
   private cornerRadius(): number {
@@ -286,24 +289,24 @@ export struct ReaderSearchField {
   }
 
   private inputColor(): string {
-    return this.variant === 'sourceManagement' ? TOK_INK : TOK_READ_INK;
+    return this.variant === 'sourceManagement' ? readerAppColor('TOK_INK', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme);
   }
 
   private caretColor(): string {
     if (this.variant === 'sourceManagement') {
-      return TOK_PRIMARY_DARK;
+      return readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme);
     }
-    return TOK_READ_PRIMARY;
+    return readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme);
   }
 
   private placeholderColor(): string {
     if (this.variant === 'sourceManagement') {
-      return TOK_MUTED;
+      return readerAppColor('TOK_MUTED', this.appThemeScheme);
     }
     if (this.variant === 'readerDirectory') {
-      return '#757575';
+      return readerAppColor('app.ReaderSearchField.placeholderColor.paint.FF757575', this.appThemeScheme);
     }
-    return TOK_READ_MUTED;
+    return readerAppColor('TOK_READ_MUTED', this.appThemeScheme);
   }
 
   private resolvedAccessibilityLabel(): string {

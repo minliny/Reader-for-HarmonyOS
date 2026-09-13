@@ -1,3 +1,4 @@
+import { readerAppColor } from './ReaderThemeRegistry';
 import {
   TOK_INK,
   TOK_SPACE_CONTROL_INLINE,
@@ -13,12 +14,14 @@ import { TYPE_PAGE_TITLE } from './ReaderTypography';
 // 曾被 Settings/SourceManagement/Sync/Rss/LocalBookDetail 各自复制实现。
 @Component
 export struct PageBackBar {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   title: string = '';
   /** 默认 `search_back`;详情页等可传其他返回图标。 */
   backIcon?: Resource;
   /** 标题颜色,默认 ink #1F1B17;个别页(Sync)用更深 #1A1612。 */
-  titleColor: string = TOK_INK;
+  titleColor: string = readerAppColor('TOK_INK', this.appThemeScheme);
   onBack: () => void = (): void => {};
   /** 可选尾部槽 (如 SourceManagement 的 44×44 more 钮); 未传时不渲染。 */
   @BuilderParam trailing?: () => void;
@@ -26,7 +29,7 @@ export struct PageBackBar {
   build() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image(this.backIcon !== undefined ? this.backIcon : $r('app.media.search_back'))
+        Image(this.backIcon !== undefined ? this.backIcon : (this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back')))
           .width(24)
           .height(24);
       }

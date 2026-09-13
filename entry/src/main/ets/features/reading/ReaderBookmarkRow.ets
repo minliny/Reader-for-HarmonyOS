@@ -1,9 +1,9 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_LINE, TOK_READ_INK, TOK_READ_MUTED } from '../common/ReaderTokens';
 import type { ReaderBookmarkRowModel } from './ReaderBookmarkProjection';
 import { sampleReaderControlBookmark, type ReaderControlBookmarkFrame } from './ReaderControlBookmarkGeometry';
 
 export const BOOKMARK_ROW_HEIGHT = 74;
-const BOOKMARK_EXCERPT_ACCENT = '#8C9B8466';
 const BOOKMARK_PENDING_LABEL = '待确认';
 
 /**
@@ -13,6 +13,8 @@ const BOOKMARK_PENDING_LABEL = '待确认';
  */
 @Component
 export struct ReaderBookmarkRow {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop embeddedInControl: boolean = false;
   @Prop motionProgress: number = 1;
   @Prop availableWidth: number = 316;
@@ -47,26 +49,26 @@ export struct ReaderBookmarkRow {
       Row({ space: 4 }) {
         Text(this.row.chapterTitle).layoutWeight(1).constraintSize({ minWidth: 0 })
           .fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).lineHeight(14)
-          .fontColor(TOK_READ_INK).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         if (this.row.identityStatus === 'pendingConfirmation') {
-          Text(BOOKMARK_PENDING_LABEL).fontSize(8).fontColor(TOK_READ_MUTED).flexShrink(0);
+          Text(BOOKMARK_PENDING_LABEL).fontSize(8).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).flexShrink(0);
         }
-        Text(this.row.positionLabel).fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED)
+        Text(this.row.positionLabel).fontFamily('ReaderInter').fontSize(9).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1).constraintSize({ maxWidth: 50 }).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(this.row.timeLabel).fontFamily('ReaderInter').fontSize(9).fontColor(TOK_READ_MUTED)
+        Text(this.row.timeLabel).fontFamily('ReaderInter').fontSize(9).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1).constraintSize({ maxWidth: 64 }).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.width(this.frame().title.width).height(this.frame().title.height)
         .position({ x: this.frame().title.x, y: this.frame().title.y });
       Text('').width(this.frame().accent.width).height(this.frame().accent.height)
-        .backgroundColor(BOOKMARK_EXCERPT_ACCENT).borderRadius(1)
+        .backgroundColor(readerAppColor('app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT', this.appThemeScheme)).borderRadius(1)
         .position({ x: this.frame().accent.x, y: this.frame().accent.y });
       Text(this.row.excerpt).width(this.frame().excerpt.width).height(this.frame().excerpt.height)
         .fontFamily('ReaderNotoSerifSCRegular').fontWeight(FontWeight.Regular)
-        .fontSize(9).lineHeight(14).fontColor(TOK_READ_MUTED).maxLines(2)
+        .fontSize(9).lineHeight(14).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: this.frame().excerpt.x, y: this.frame().excerpt.y });
       Text('').width(this.frame().divider.width).height(this.frame().divider.height)
-        .backgroundColor(TOK_LINE)
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: this.frame().divider.x, y: this.frame().divider.y });
     }.width(this.frame().card.width).height(this.frame().card.height).clip(true)
       .accessibilityText(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel} ${this.row.timeLabel}` +
@@ -78,7 +80,7 @@ export struct ReaderBookmarkRow {
   private legacyBody() {
     Column({ space: 0 }) {
       Row({ space: 6 }) {
-        Image($r('app.media.reader_directory_marker_bookmark_active'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')))
           .width(12)
           .height(12);
         Text(this.row.chapterTitle)
@@ -88,7 +90,7 @@ export struct ReaderBookmarkRow {
           .fontWeight(500)
           .fontSize(11)
           .lineHeight(14)
-          .fontColor(TOK_READ_INK)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (this.row.identityStatus === 'pendingConfirmation') {
@@ -96,19 +98,19 @@ export struct ReaderBookmarkRow {
             .flexShrink(0)
             .fontFamily('ReaderInter')
             .fontSize(8)
-            .fontColor(TOK_READ_MUTED);
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
         }
         Text(this.row.positionLabel)
           .flexShrink(0)
           .fontFamily('ReaderInter')
           .fontSize(9)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1);
         Text(this.row.timeLabel)
           .flexShrink(0)
           .fontFamily('ReaderInter')
           .fontSize(9)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1);
       }
       .width('100%')
@@ -120,7 +122,7 @@ export struct ReaderBookmarkRow {
         Text('')
           .width(1)
           .height(26)
-          .backgroundColor(BOOKMARK_EXCERPT_ACCENT)
+          .backgroundColor(readerAppColor('app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT', this.appThemeScheme))
           .borderRadius(1);
         Text(this.row.excerpt)
           .layoutWeight(1)
@@ -129,7 +131,7 @@ export struct ReaderBookmarkRow {
           .fontWeight(FontWeight.Regular)
           .fontSize(9)
           .lineHeight(13)
-          .fontColor(TOK_READ_MUTED)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
@@ -142,7 +144,7 @@ export struct ReaderBookmarkRow {
         .width('100%')
         .height(1)
         .margin({ top: 13 })
-        .backgroundColor(TOK_LINE);
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
     }
     .width('100%')
     .height(BOOKMARK_ROW_HEIGHT)

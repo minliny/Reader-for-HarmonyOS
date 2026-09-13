@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderToggle } from '../common/ReaderToggle';
@@ -47,6 +48,8 @@ export interface RssSubscriptionManagementItem {
  */
 @Component
 export struct RssSubscriptionManagementPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop items: RssSubscriptionManagementItem[];
   @Prop isTablet: boolean;
@@ -98,7 +101,7 @@ export struct RssSubscriptionManagementPage {
     .width('100%')
     .height('100%')
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(TOK_PAPER);
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   @Builder
@@ -108,21 +111,21 @@ export struct RssSubscriptionManagementPage {
       onBack: (): void => this.onBack(),
     }) {
       Row({ space: 3 }) {
-        Image($r('app.media.rss_add'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_add_theme_night') : $r('app.media.rss_add')))
           .width(14)
           .height(14);
         Text('添加')
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
-          .fontColor(TOK_PRIMARY_DARK)
+          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
           .maxLines(1);
       }
       .width(60)
       .height(32)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(TOK_PRIMARY_SOFT)
+      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(999)
       .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
       .onClick((): void => this.onAdd());
@@ -138,7 +141,7 @@ export struct RssSubscriptionManagementPage {
         .fontWeight(FontWeight.Regular)
         .fontSize(10)
         .lineHeight(12.5)
-        .fontColor(TOK_MUTED)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Row({ space: TOK_SPACE_XS }) {
@@ -160,8 +163,8 @@ export struct RssSubscriptionManagementPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(11)
-      .fontColor(TOK_PRIMARY_DARK)
-      .backgroundColor(TOK_PRIMARY_SOFT)
+      .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(8)
       .onClick((): void => action());
   }
@@ -182,8 +185,8 @@ export struct RssSubscriptionManagementPage {
     .height(Math.min(520, Math.max(72, this.items.length * 92)))
     .scrollBar(BarState.Off)
     .margin({ top: TOK_SPACE_CONTROL_INLINE })
-    .backgroundColor(TOK_CARD_BG_HI)
-    .border({ width: TOK_BORDER_W, color: TOK_ROW_DIVIDER })
+    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true);
   }
@@ -193,14 +196,14 @@ export struct RssSubscriptionManagementPage {
     Column() {
       Row() {
         Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.rss_source'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.rss_source_theme_night') : $r('app.media.rss_source')))
             .width(20)
             .height(20);
         }
         .width(32)
         .height(32)
         .margin({ left: TOK_SPACE_CONTROL_INLINE })
-        .backgroundColor(TOK_PRIMARY_BG)
+        .backgroundColor(readerAppColor('TOK_PRIMARY_BG', this.appThemeScheme))
         .borderRadius(16)
         .opacity(item.enabled ? 1 : 0.58);
 
@@ -211,7 +214,7 @@ export struct RssSubscriptionManagementPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(13)
             .lineHeight(15.34)
-            .fontColor(TOK_INK)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(item.meta)
@@ -220,7 +223,7 @@ export struct RssSubscriptionManagementPage {
             .fontWeight(FontWeight.Regular)
             .fontSize(10)
             .lineHeight(12.5)
-            .fontColor(TOK_MUTED)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -240,7 +243,7 @@ export struct RssSubscriptionManagementPage {
         .height(44);
 
         Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.rss_filter_chevron'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.rss_filter_chevron_theme_night') : $r('app.media.rss_filter_chevron')))
             .width(20)
             .height(20)
             .rotate({ angle: this.isExpanded(item.subscriptionId) ? 180 : 0 });
@@ -252,7 +255,7 @@ export struct RssSubscriptionManagementPage {
       .width('100%')
       .height(56)
       .alignItems(VerticalAlign.Center)
-      .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: TOK_ROW_DIVIDER });
+      .border({ width: { top: index > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
 
       if (this.isExpanded(item.subscriptionId)) {
         this.actionBar(item.subscriptionId);
@@ -265,11 +268,11 @@ export struct RssSubscriptionManagementPage {
   @Builder
   private actionBar(subscriptionId: string) {
     Row() {
-      this.actionTarget('查看文章', $r('app.media.rss_manage_view_all'), false, false,
+      this.actionTarget('查看文章', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_view_all_theme_night') : $r('app.media.rss_manage_view_all')), false, false,
         (): void => this.onViewArticles(subscriptionId));
-      this.actionTarget('编辑来源', $r('app.media.rss_manage_edit'), false, true,
+      this.actionTarget('编辑来源', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_edit_theme_night') : $r('app.media.rss_manage_edit')), false, true,
         (): void => this.onEditSource(subscriptionId));
-      this.actionTarget('立即刷新', $r('app.media.rss_manage_refresh'), false, true,
+      this.actionTarget('立即刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_refresh_theme_night') : $r('app.media.rss_manage_refresh')), false, true,
         (): void => this.onRefresh(subscriptionId));
       this.actionTarget('删除', $r('app.media.rss_manage_delete'), true, true,
         (): void => this.onDelete(subscriptionId));
@@ -277,8 +280,8 @@ export struct RssSubscriptionManagementPage {
     .width('100%')
     .height(44)
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_ROW_DIVIDER });
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
   }
 
   @Builder
@@ -297,14 +300,14 @@ export struct RssSubscriptionManagementPage {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
-        .fontColor(danger ? TOK_DANGER : TOK_INK)
+        .fontColor(danger ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
     }
     .layoutWeight(1)
     .height(44)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
-    .border({ width: { left: divider ? TOK_BORDER_W : 0 }, color: TOK_ROW_DIVIDER })
+    .border({ width: { left: divider ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
     .onClick((): void => action());
   }
 

@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { FrameCallback } from '@kit.ArkUI';
 import {
   TOK_BORDER_W,
@@ -90,6 +91,8 @@ class ReaderAppearanceStageFrameCallback extends FrameCallback {
  */
 @Component
 export struct ReaderAppearanceMotionStage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   /** Stable route endpoint. It changes only after `onEndpointChange`. */
   @Prop @Watch('onRequestedEndpointChanged') expanded: boolean = false;
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
@@ -211,8 +214,8 @@ export struct ReaderAppearanceMotionStage {
       .width(this.stageWidth())
       .height(this.renderFrame.shellHeight)
       .position({ x: 0, y: this.renderFrame.shellTranslateY })
-      .backgroundColor(TOK_READ_SURFACE)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+      .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .borderRadius(TOK_RADIUS_XL)
       .clip(true)
       .hitTestBehavior(HitTestMode.None)
@@ -319,7 +322,7 @@ export struct ReaderAppearanceMotionStage {
         .width(READER_APPEARANCE_MOTION_GRABBER_WIDTH)
         .height(READER_APPEARANCE_MOTION_GRABBER_HEIGHT)
         .margin({ top: READER_APPEARANCE_MOTION_GRABBER_TOP })
-        .backgroundColor(TOK_READ_HANDLE)
+        .backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
         .borderRadius(999)
         .hitTestBehavior(HitTestMode.None);
     }

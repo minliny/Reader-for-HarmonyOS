@@ -8,7 +8,9 @@
       "figma-make-dom-export",
       "figma-make-source-export",
       "figma-node-adapted",
-      "figma-css-primitive"
+      "figma-css-primitive",
+      "figma-node-platform-adapted",
+      "theme-palette-derived"
     ],
     "unknownAllowed": false,
     "manualPathMutationAllowed": false
@@ -35,6 +37,31 @@
       "sha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba"
     },
     {
+      "file": "book_detail_back_theme_night.svg",
+      "semanticRole": "book_detail_back night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:37",
+      "componentName": "Icon/Back",
+      "upstreamName": "Back",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Back.svg",
+      "sourceSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.book_detail_back.1F1B17"
+        ]
+      },
+      "baseAsset": "book_detail_back.svg",
+      "baseSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f237e69ae5dd2d97b4771042cc6a3c9b54adba6ed16cb4da76194a97263625cc"
+    },
+    {
       "file": "book_detail_directory.svg",
       "semanticRole": "book detail directory",
       "originType": "figma-component-derived",
@@ -53,6 +80,31 @@
         "rotationDegrees": 0
       },
       "sha256": "3b09f1beff55699da076451ed8a7e641aa2c23c28930ba332ccc9275f4266412"
+    },
+    {
+      "file": "book_detail_directory_theme_night.svg",
+      "semanticRole": "book_detail_directory night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:183",
+      "componentName": "Icon/Directory",
+      "upstreamName": "Directory",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Directory.svg",
+      "sourceSha256": "ddfae776ec2b76eb84e4fcf6432f9ee7f430277d2a4132774dfbeb9bc56bbad6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.book_detail_directory.1F3528"
+        ]
+      },
+      "baseAsset": "book_detail_directory.svg",
+      "baseSha256": "3b09f1beff55699da076451ed8a7e641aa2c23c28930ba332ccc9275f4266412",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "bc21705247b03f5d85f0edab5389541814a96167ddd2332249b4c5d864142fd5"
     },
     {
       "file": "bookshelf_compass.svg",
@@ -115,6 +167,31 @@
       "sha256": "9e59b9adf2a1872af3051d10af318ba3969bc987e8ab876cd7996e3b0f171a6f"
     },
     {
+      "file": "bookshelf_compass_theme_night.svg",
+      "semanticRole": "bookshelf_compass night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:189",
+      "componentName": "Icon/Discover",
+      "upstreamName": "Discover",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Discover.svg",
+      "sourceSha256": "89f397f4a1d6b44b4225ae451aef5adb08cc3de1403961743637b62c9321d6e6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_compass.756F69"
+        ]
+      },
+      "baseAsset": "bookshelf_compass.svg",
+      "baseSha256": "9e59b9adf2a1872af3051d10af318ba3969bc987e8ab876cd7996e3b0f171a6f",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "b466b39f6e9c4dce48ad4c1a1e7037e13b28d1922c5c8b7c7d80a300c5d75513"
+    },
+    {
       "file": "bookshelf_empty_library.svg",
       "semanticRole": "empty bookshelf library",
       "originType": "figma-component-derived",
@@ -133,6 +210,31 @@
         "rotationDegrees": 0
       },
       "sha256": "9765a88fdb5eab6ee68a5728482e5a00b1058940dfbf6e10b4eff50f0c2792d9"
+    },
+    {
+      "file": "bookshelf_empty_library_theme_night.svg",
+      "semanticRole": "bookshelf_empty_library night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:96",
+      "componentName": "Icon/Bookshelf",
+      "upstreamName": "Bookshelf",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookshelf.svg",
+      "sourceSha256": "9765a88fdb5eab6ee68a5728482e5a00b1058940dfbf6e10b4eff50f0c2792d9",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_empty_library.1F1B17"
+        ]
+      },
+      "baseAsset": "bookshelf_empty_library.svg",
+      "baseSha256": "9765a88fdb5eab6ee68a5728482e5a00b1058940dfbf6e10b4eff50f0c2792d9",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c96b752a2190654b7c90f9aad535ea35bbb9e6fa1a3afeced38b2e56d8694c18"
     },
     {
       "file": "bookshelf_filter.svg",
@@ -175,6 +277,56 @@
       "sha256": "282874c97032b2c4f844df29077945c179341974aba5c6454a3776d662ef8581"
     },
     {
+      "file": "bookshelf_filter_active_theme_night.svg",
+      "semanticRole": "bookshelf_filter_active night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:220",
+      "componentName": "Icon/Filter",
+      "upstreamName": "Filter",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filter.svg",
+      "sourceSha256": "f2f6af86ab878e9e759e36d4b2bb96a18a81db4ef314a445094a8a40fba2fa3c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_filter_active.2D4A3E"
+        ]
+      },
+      "baseAsset": "bookshelf_filter_active.svg",
+      "baseSha256": "282874c97032b2c4f844df29077945c179341974aba5c6454a3776d662ef8581",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "6b831c05080c29e35436ad58788bb0a1603276799ee4846ba2c2042fabb4950a"
+    },
+    {
+      "file": "bookshelf_filter_theme_night.svg",
+      "semanticRole": "bookshelf_filter night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:220",
+      "componentName": "Icon/Filter",
+      "upstreamName": "Filter",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filter.svg",
+      "sourceSha256": "f2f6af86ab878e9e759e36d4b2bb96a18a81db4ef314a445094a8a40fba2fa3c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_filter.756F69"
+        ]
+      },
+      "baseAsset": "bookshelf_filter.svg",
+      "baseSha256": "7a6aa2f19feea44e685b21a209894622018e9e19045d75e9689af4d939315362",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "e41e6854472083498b0695a806f903b835ccc043d0091825e0cb2db55c83e042"
+    },
+    {
       "file": "bookshelf_grid.svg",
       "semanticRole": "bookshelf grid mode active",
       "originType": "figma-component-derived",
@@ -213,6 +365,56 @@
         "rotationDegrees": 0
       },
       "sha256": "cacb654b88613941e104bf28758237b47e5c25f15aa8b84514998d5449441dcc"
+    },
+    {
+      "file": "bookshelf_grid_outline_theme_night.svg",
+      "semanticRole": "bookshelf_grid_outline night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:262",
+      "componentName": "Icon/Grid",
+      "upstreamName": "Grid",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Grid.svg",
+      "sourceSha256": "3e94dcb069fe6943e297e8fc3f949feea4c6c5376a13239f60b24607025ccb00",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_grid_outline.756F69"
+        ]
+      },
+      "baseAsset": "bookshelf_grid_outline.svg",
+      "baseSha256": "cacb654b88613941e104bf28758237b47e5c25f15aa8b84514998d5449441dcc",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "68dc862f34d9017778c1af41582435b36a173cc0a20f91414847b682e11c65e2"
+    },
+    {
+      "file": "bookshelf_grid_theme_night.svg",
+      "semanticRole": "bookshelf_grid night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:262",
+      "componentName": "Icon/Grid",
+      "upstreamName": "Grid",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Grid.svg",
+      "sourceSha256": "3e94dcb069fe6943e297e8fc3f949feea4c6c5376a13239f60b24607025ccb00",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_grid.2D4A3E"
+        ]
+      },
+      "baseAsset": "bookshelf_grid.svg",
+      "baseSha256": "610f694acb03c1fc7633aff02ef51351474d29d71f66fec46e98ffcbd25165c1",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "3aa71c92325492eaccec91bca1cae451012c8d174198d33a164591cb09120416"
     },
     {
       "file": "bookshelf_library.svg",
@@ -315,6 +517,56 @@
       "sha256": "39ef610830c5ffe72f2682a40899841c4f0c7ff7ea7ddb4fd263bc97bec5b8ac"
     },
     {
+      "file": "bookshelf_list_active_theme_night.svg",
+      "semanticRole": "bookshelf_list_active night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:303",
+      "componentName": "Icon/List",
+      "upstreamName": "List",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__List.svg",
+      "sourceSha256": "b79f8493de8051ae9cacd8f1f41a8cbad64385bb6f37c284bb422b42594abce9",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_list_active.2D4A3E"
+        ]
+      },
+      "baseAsset": "bookshelf_list_active.svg",
+      "baseSha256": "39ef610830c5ffe72f2682a40899841c4f0c7ff7ea7ddb4fd263bc97bec5b8ac",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "0892b2094fe1422d4c2576e506500e08efaad82227fa20512c1d59d142773a31"
+    },
+    {
+      "file": "bookshelf_list_theme_night.svg",
+      "semanticRole": "bookshelf_list night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:303",
+      "componentName": "Icon/List",
+      "upstreamName": "List",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__List.svg",
+      "sourceSha256": "b79f8493de8051ae9cacd8f1f41a8cbad64385bb6f37c284bb422b42594abce9",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_list.756F69"
+        ]
+      },
+      "baseAsset": "bookshelf_list.svg",
+      "baseSha256": "f02bf267147e6ccc706c8795e6384b43bbb47a24504c6d079cbe7c97df4b7658",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f5508dd45e65d1af18c7d8610df090d931f86e8213a9b8493820869005833033"
+    },
+    {
       "file": "bookshelf_more.svg",
       "semanticRole": "bookshelf more vertical override",
       "originType": "figma-node-export",
@@ -343,24 +595,25 @@
       "sha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e"
     },
     {
-      "file": "bookshelf_more_group.svg",
-      "semanticRole": "bookshelf more group",
-      "originType": "figma-component-derived",
+      "file": "bookshelf_more_batch_theme_night.svg",
+      "semanticRole": "bookshelf_more_batch night app palette",
+      "originType": "theme-palette-derived",
       "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
-      "figmaPageNodeId": "259:4",
-      "figmaNodeId": "271:226",
-      "componentName": "Icon/Folder",
-      "upstreamName": "Folder",
-      "upstreamVersion": "3.44.0",
-      "license": "MIT",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Folder.svg",
-      "sourceSha256": "5f04f21524f6b7117273c7b1407fdb85a2f7818a66b6f287016cbb587c2a7dd5",
+      "figmaNodeId": "4575:5",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/bookshelf_more_batch.svg",
+      "sourceSha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
       "transform": {
-        "pathMutation": "fill-none-on-stroke-paths",
-        "recolor": "#1F1B17",
-        "rotationDegrees": 0
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_more_batch.1F1B17"
+        ]
       },
-      "sha256": "69a9fd1ecdd1129f0546102fe01c70a58275e9c60f8740bab93418cbcd27558c"
+      "baseAsset": "bookshelf_more_batch.svg",
+      "baseSha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c9a62b60d238462e9062c9cec1958dbe3dad589a6e1326943b5285b3eab4818c"
     },
     {
       "file": "bookshelf_more_import.svg",
@@ -377,20 +630,25 @@
       "sha256": "c268570c99df72ac82cd222fe94fd58322d8f4529db4a654fceb4093a69bd02f"
     },
     {
-      "file": "bookshelf_more_menu_surface.svg",
-      "semanticRole": "bookshelf more integrated pointer surface",
-      "originType": "figma-node-adapted",
+      "file": "bookshelf_more_import_theme_night.svg",
+      "semanticRole": "bookshelf_more_import night app palette",
+      "originType": "theme-palette-derived",
       "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
-      "figmaNodeId": "4582:2",
+      "figmaNodeId": "4575:14",
       "license": "Reader project design",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/bookshelf_more_menu_surface_reference.svg",
-      "sourceSha256": "56f1590a9fdca020acf3b9eecff36cdd65617ef80f284b98522a92d6442981c5",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/bookshelf_more_import.svg",
+      "sourceSha256": "c268570c99df72ac82cd222fe94fd58322d8f4529db4a654fceb4093a69bd02f",
       "transform": {
-        "pathMutation": "extend-straight-body-only",
-        "bodyExtensionVp": 50,
-        "pointerAndCornerGeometry": "preserved"
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_more_import.1F1B17"
+        ]
       },
-      "sha256": "11f97ddcedd2e8aea46ffab32e7dfb2689be5ad6303907163982273135d88df4"
+      "baseAsset": "bookshelf_more_import.svg",
+      "baseSha256": "c268570c99df72ac82cd222fe94fd58322d8f4529db4a654fceb4093a69bd02f",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f662db28c1995188b3a05c549130881f906385442912fc4a3bd63b53df1966ff"
     },
     {
       "file": "bookshelf_more_settings.svg",
@@ -405,6 +663,49 @@
         "pathMutation": "none"
       },
       "sha256": "28a64e0209009f9f83a3f6c454537afb97c8abce6561de5d6922ab1151162bfd"
+    },
+    {
+      "file": "bookshelf_more_settings_theme_night.svg",
+      "semanticRole": "bookshelf_more_settings night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "4575:24",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/bookshelf_more_settings.svg",
+      "sourceSha256": "28a64e0209009f9f83a3f6c454537afb97c8abce6561de5d6922ab1151162bfd",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_more_settings.1F1B17"
+        ]
+      },
+      "baseAsset": "bookshelf_more_settings.svg",
+      "baseSha256": "28a64e0209009f9f83a3f6c454537afb97c8abce6561de5d6922ab1151162bfd",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "6aef20339f8654453d7a3556f50564bc35458d239617c56eb84ec04c7c05f588"
+    },
+    {
+      "file": "bookshelf_more_theme_night.svg",
+      "semanticRole": "bookshelf_more night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "4578:583",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/bookshelf_more.svg",
+      "sourceSha256": "579508df8257c11fe5d458753773f58a0237e39908eef767b8f396de237d6147",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_more.F8F4EC",
+          "app.icon.bookshelf_more.1F1B17"
+        ]
+      },
+      "baseAsset": "bookshelf_more.svg",
+      "baseSha256": "579508df8257c11fe5d458753773f58a0237e39908eef767b8f396de237d6147",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ecb1861bf700e66c2a0fb0e8d42ae4698b409db64ef1dd7850fbe4a4f9f12c36"
     },
     {
       "file": "bookshelf_multiselect_trash.svg",
@@ -487,6 +788,31 @@
       "sha256": "14e15a15fddff35f31985153812d74ab73b1c9a5901132756f9ff3b1c3bc23e2"
     },
     {
+      "file": "bookshelf_rss_theme_night.svg",
+      "semanticRole": "bookshelf_rss night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:460",
+      "componentName": "Icon/Rss",
+      "upstreamName": "Rss",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Rss.svg",
+      "sourceSha256": "0fa09ac5b9ce8c01eb40a3a98a8a641ea45cdd4e063680a24e6d0fb975b41fb0",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_rss.756F69"
+        ]
+      },
+      "baseAsset": "bookshelf_rss.svg",
+      "baseSha256": "14e15a15fddff35f31985153812d74ab73b1c9a5901132756f9ff3b1c3bc23e2",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "77d81e7bdbd6b1c2b9dd803269193717d96dd63e3c37ec4da5232e3b4b24b0b7"
+    },
+    {
       "file": "bookshelf_search.svg",
       "semanticRole": "bookshelf search",
       "originType": "figma-component-derived",
@@ -505,6 +831,31 @@
         "rotationDegrees": 0
       },
       "sha256": "4f01cd169355eb9e5729efc05f0024671e1a9446e30f330fc9bd9dc6b5be7e72"
+    },
+    {
+      "file": "bookshelf_search_theme_night.svg",
+      "semanticRole": "bookshelf_search night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:466",
+      "componentName": "Icon/Search",
+      "upstreamName": "Search",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Search.svg",
+      "sourceSha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_search.1F1B17"
+        ]
+      },
+      "baseAsset": "bookshelf_search.svg",
+      "baseSha256": "4f01cd169355eb9e5729efc05f0024671e1a9446e30f330fc9bd9dc6b5be7e72",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a8b685bccb41bf32df39417fb43478d46ff87a006f975a91df7755d3271f3596"
     },
     {
       "file": "bookshelf_settings.svg",
@@ -567,6 +918,31 @@
       "sha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5"
     },
     {
+      "file": "bookshelf_settings_theme_night.svg",
+      "semanticRole": "bookshelf_settings night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:472",
+      "componentName": "Icon/Settings",
+      "upstreamName": "Settings",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Settings.svg",
+      "sourceSha256": "991b85162a8e75bda30a062835181fe2c01ba5259744b3c97465796d5148fc90",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_settings.756F69"
+        ]
+      },
+      "baseAsset": "bookshelf_settings.svg",
+      "baseSha256": "27f938028ce41beac8a6ba5c2f87a3178efba2f6f36a96f44a08a079ef553b38",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "e66277d147181057327954a815d0dec5fa0990ee9349431f46a9c84602eab2a9"
+    },
+    {
       "file": "discover_apply.svg",
       "semanticRole": "discover apply filters",
       "originType": "figma-component-derived",
@@ -627,6 +1003,56 @@
       "sha256": "5811f25cf017a1012511e49e21cbb947fc28680d39ec55d35a1e27e18a448684"
     },
     {
+      "file": "discover_filter_chevron_theme_night.svg",
+      "semanticRole": "discover_filter_chevron night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "362:15",
+      "componentName": "Icon/ChevronRight",
+      "upstreamName": "ChevronRight",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronRight.svg",
+      "sourceSha256": "651bef1c49216b39349268c9b3b9a24c150d188327576b8f7872eb15ee807f5c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.discover_filter_chevron.3F372F"
+        ]
+      },
+      "baseAsset": "discover_filter_chevron.svg",
+      "baseSha256": "5811f25cf017a1012511e49e21cbb947fc28680d39ec55d35a1e27e18a448684",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "bd5a350fb1b6f07b6a4550e36a0303901ee4743413dbe7560869fac79bee19e3"
+    },
+    {
+      "file": "discover_filter_theme_night.svg",
+      "semanticRole": "discover_filter night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:220",
+      "componentName": "Icon/Filter",
+      "upstreamName": "Filter",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filter.svg",
+      "sourceSha256": "f2f6af86ab878e9e759e36d4b2bb96a18a81db4ef314a445094a8a40fba2fa3c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.discover_filter.3F372F"
+        ]
+      },
+      "baseAsset": "discover_filter.svg",
+      "baseSha256": "16afdc68f29688aa7adadf9dc02a2b6bf1b4addbe7fce9712a3aaff1a130034a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c7b95b51cc3ae18f5d7a32c3649fbb983dc3c4dd81f6ccf8cf2d4c2c3ae21e26"
+    },
+    {
       "file": "discover_refresh.svg",
       "semanticRole": "discover refresh",
       "originType": "figma-component-derived",
@@ -645,6 +1071,31 @@
         "rotationDegrees": 0
       },
       "sha256": "95a0d6901bd018d614b05db3f43bbae303b8168481c388b49020e7674a5dfe11"
+    },
+    {
+      "file": "discover_refresh_theme_night.svg",
+      "semanticRole": "discover_refresh night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:404",
+      "componentName": "Icon/Refresh",
+      "upstreamName": "Refresh",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Refresh.svg",
+      "sourceSha256": "54f29b2d36ac7dc4fb856d05fed78fb138933c03222df7b72c6c9bc581c6ab6d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.discover_refresh.1F1B17"
+        ]
+      },
+      "baseAsset": "discover_refresh.svg",
+      "baseSha256": "95a0d6901bd018d614b05db3f43bbae303b8168481c388b49020e7674a5dfe11",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "32c4c0067be770fdcf134a4acf6397390c75263424efb6c68f2143592d6fbdff"
     },
     {
       "file": "discover_source_chevron.svg",
@@ -667,6 +1118,31 @@
       "sha256": "9d8fc0d92fa8d6b8c1f2da89227e1ef9bdec3bf0345bff5d97f22abf0e1b94aa"
     },
     {
+      "file": "discover_source_chevron_theme_night.svg",
+      "semanticRole": "discover_source_chevron night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "362:15",
+      "componentName": "Icon/ChevronRight",
+      "upstreamName": "ChevronRight",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronRight.svg",
+      "sourceSha256": "651bef1c49216b39349268c9b3b9a24c150d188327576b8f7872eb15ee807f5c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.discover_source_chevron.1F1B17"
+        ]
+      },
+      "baseAsset": "discover_source_chevron.svg",
+      "baseSha256": "9d8fc0d92fa8d6b8c1f2da89227e1ef9bdec3bf0345bff5d97f22abf0e1b94aa",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "bd5a350fb1b6f07b6a4550e36a0303901ee4743413dbe7560869fac79bee19e3"
+    },
+    {
       "file": "discover_source_stack.svg",
       "semanticRole": "discover current source",
       "originType": "figma-component-derived",
@@ -687,6 +1163,31 @@
       "sha256": "7c1896acd1002494438690d4b2dda5d797860ad409bbff31a6fa29d558b8a94a"
     },
     {
+      "file": "discover_source_stack_theme_night.svg",
+      "semanticRole": "discover_source_stack night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:524",
+      "componentName": "Icon/SourceStack",
+      "upstreamName": "SourceStack",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__SourceStack.svg",
+      "sourceSha256": "892c453a17f33868fdff142be9d39f5521daf7803655603b13fab692a2e69728",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.discover_source_stack.1F3528"
+        ]
+      },
+      "baseAsset": "discover_source_stack.svg",
+      "baseSha256": "7c1896acd1002494438690d4b2dda5d797860ad409bbff31a6fa29d558b8a94a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d08b9e6d3baf9b3fcde2065656c107665bb9180ccdd902a252e9d9463d0438c5"
+    },
+    {
       "file": "import_cancel.svg",
       "semanticRole": "local import cancel",
       "originType": "figma-node-export",
@@ -699,6 +1200,27 @@
         "pathMutation": "none"
       },
       "sha256": "e9f0fa1ae5412e4879bc9365dcd11dd62a84a1d600c4f188b3a1f1b3ed05b4f1"
+    },
+    {
+      "file": "import_cancel_theme_night.svg",
+      "semanticRole": "import_cancel night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2657:797",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_cancel.svg",
+      "sourceSha256": "e9f0fa1ae5412e4879bc9365dcd11dd62a84a1d600c4f188b3a1f1b3ed05b4f1",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.import_cancel.756F69"
+        ]
+      },
+      "baseAsset": "import_cancel.svg",
+      "baseSha256": "e9f0fa1ae5412e4879bc9365dcd11dd62a84a1d600c4f188b3a1f1b3ed05b4f1",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "97020261d7611501c03791f271c25f4a7d7fbdb697808414a92c1ca0feafbef0"
     },
     {
       "file": "import_choose_file.svg",
@@ -727,6 +1249,27 @@
         "pathMutation": "none"
       },
       "sha256": "e351c249dea65aebc346eb4138b9b7208800b70c8d5130bbd292d330a4edd16a"
+    },
+    {
+      "file": "import_doc_theme_night.svg",
+      "semanticRole": "import_doc night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2657:825",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_doc.svg",
+      "sourceSha256": "e351c249dea65aebc346eb4138b9b7208800b70c8d5130bbd292d330a4edd16a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.import_doc.756F69"
+        ]
+      },
+      "baseAsset": "import_doc.svg",
+      "baseSha256": "e351c249dea65aebc346eb4138b9b7208800b70c8d5130bbd292d330a4edd16a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "4313e6daf0398a222c20d965232e6d5ee7f73b79b1a4054896a6311d58e43872"
     },
     {
       "file": "import_done.svg",
@@ -771,18 +1314,62 @@
       "sha256": "6b92bea8325f585ac113eefc934c29fd27efe9680ed19deecb66d1efc1db8b11"
     },
     {
+      "file": "import_info_theme_night.svg",
+      "semanticRole": "import_info night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2657:785",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_info.svg",
+      "sourceSha256": "6b92bea8325f585ac113eefc934c29fd27efe9680ed19deecb66d1efc1db8b11",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.import_info.756F69"
+        ]
+      },
+      "baseAsset": "import_info.svg",
+      "baseSha256": "6b92bea8325f585ac113eefc934c29fd27efe9680ed19deecb66d1efc1db8b11",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ef8e8e6cb54b03e1f11e129c018ca0dfb8efd525c81fb1cf538b696e56a1ddf7"
+    },
+    {
       "file": "import_refresh.svg",
       "semanticRole": "local import refresh",
-      "originType": "figma-node-export",
+      "originType": "figma-node-platform-adapted",
       "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
       "figmaNodeId": "2657:819",
       "license": "Reader project design",
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_refresh.svg",
       "sourceSha256": "a8a686586b905ec6131260c535ba68d9896f3afda9816e338178164e4877ff5a",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "exportClipRemoval": "clip0_2657_819",
+        "viewBox": "preserved"
       },
-      "sha256": "a8a686586b905ec6131260c535ba68d9896f3afda9816e338178164e4877ff5a"
+      "sha256": "abe815c37f0a926ea4a53ab03ef6dbc2c71de55e3db9143cbd546353601cbbb5"
+    },
+    {
+      "file": "import_refresh_theme_night.svg",
+      "semanticRole": "import_refresh night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2657:819",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_refresh.svg",
+      "sourceSha256": "a8a686586b905ec6131260c535ba68d9896f3afda9816e338178164e4877ff5a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.import_refresh.2D4A3E"
+        ]
+      },
+      "baseAsset": "import_refresh.svg",
+      "baseSha256": "abe815c37f0a926ea4a53ab03ef6dbc2c71de55e3db9143cbd546353601cbbb5",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "134c189b1a1022e609adb9c5732342cfa5888e0b4f81bb4f1ee7514fb07b0ddf"
     },
     {
       "file": "import_select_system.svg",
@@ -799,6 +1386,27 @@
       "sha256": "28bb531728cc73a41c2243517a5b96350f3b3ec09256dfe4d1cf656a862ef98d"
     },
     {
+      "file": "import_select_system_theme_night.svg",
+      "semanticRole": "import_select_system night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2657:765",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_select_system.svg",
+      "sourceSha256": "28bb531728cc73a41c2243517a5b96350f3b3ec09256dfe4d1cf656a862ef98d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.import_select_system.2D4A3E"
+        ]
+      },
+      "baseAsset": "import_select_system.svg",
+      "baseSha256": "28bb531728cc73a41c2243517a5b96350f3b3ec09256dfe4d1cf656a862ef98d",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a122bad5354f834ce66d526a77ac94abf1d7f98dc0fb1c23eaeeed367938906c"
+    },
+    {
       "file": "import_success.svg",
       "semanticRole": "local import success",
       "originType": "figma-node-export",
@@ -811,6 +1419,27 @@
         "pathMutation": "none"
       },
       "sha256": "954b63570c2f0caa76ae597813072b7c5e72d85494579d3e69e2dadc197052e0"
+    },
+    {
+      "file": "import_success_theme_night.svg",
+      "semanticRole": "import_success night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2657:839",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_success.svg",
+      "sourceSha256": "954b63570c2f0caa76ae597813072b7c5e72d85494579d3e69e2dadc197052e0",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.import_success.2D4A3E"
+        ]
+      },
+      "baseAsset": "import_success.svg",
+      "baseSha256": "954b63570c2f0caa76ae597813072b7c5e72d85494579d3e69e2dadc197052e0",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "0a43138ea328f8824eedc8730b5755596e288a8b8c7ffa89f4d3edd18a6f542b"
     },
     {
       "file": "import_summary.svg",
@@ -841,6 +1470,28 @@
       "sha256": "45102bd170a724090a716a0bebf7d4bd755170a4b5a0662fefa79a06a215158f"
     },
     {
+      "file": "importing_halo_theme_night.svg",
+      "semanticRole": "importing_halo night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2899:59038",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/importing_halo.svg",
+      "sourceSha256": "45102bd170a724090a716a0bebf7d4bd755170a4b5a0662fefa79a06a215158f",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.importing_halo.F8F4EC",
+          "app.icon.importing_halo.E8E2D9"
+        ]
+      },
+      "baseAsset": "importing_halo.svg",
+      "baseSha256": "45102bd170a724090a716a0bebf7d4bd755170a4b5a0662fefa79a06a215158f",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "3707c5b5331ad825c3c555ea20bdb50bd82884b6de3644af957d48a8fb190497"
+    },
+    {
       "file": "importing_spinner_arc.svg",
       "semanticRole": "local import progress arc",
       "originType": "figma-node-export",
@@ -855,6 +1506,27 @@
       "sha256": "bd669eb03d29cdb8bc7613cfd5ba7a137c4e5069b172911e9397316594bc7180"
     },
     {
+      "file": "importing_spinner_arc_theme_night.svg",
+      "semanticRole": "importing_spinner_arc night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2899:59040",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/importing_spinner_arc.svg",
+      "sourceSha256": "bd669eb03d29cdb8bc7613cfd5ba7a137c4e5069b172911e9397316594bc7180",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.importing_spinner_arc.2D4A3E"
+        ]
+      },
+      "baseAsset": "importing_spinner_arc.svg",
+      "baseSha256": "bd669eb03d29cdb8bc7613cfd5ba7a137c4e5069b172911e9397316594bc7180",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d00e5d3bbc19de37676af124c1b817ef2b4f9f1162f6034194dd7781e84c9dc7"
+    },
+    {
       "file": "importing_spinner_track.svg",
       "semanticRole": "local import progress track",
       "originType": "figma-node-export",
@@ -867,6 +1539,27 @@
         "pathMutation": "none"
       },
       "sha256": "153c2bc0af08b25871b6bfbd30455daadf0ffc6983da8b8920b357c20e7848e7"
+    },
+    {
+      "file": "importing_spinner_track_theme_night.svg",
+      "semanticRole": "importing_spinner_track night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2899:59039",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/importing_spinner_track.svg",
+      "sourceSha256": "153c2bc0af08b25871b6bfbd30455daadf0ffc6983da8b8920b357c20e7848e7",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.importing_spinner_track.E8E2D9"
+        ]
+      },
+      "baseAsset": "importing_spinner_track.svg",
+      "baseSha256": "153c2bc0af08b25871b6bfbd30455daadf0ffc6983da8b8920b357c20e7848e7",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "b504d770e17e4598f58113a034dfaa825cee35df1ac3771f403f6066b0f28817"
     },
     {
       "file": "rc_arrow_left.svg",
@@ -887,6 +1580,31 @@
         "rotationDegrees": 0
       },
       "sha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba"
+    },
+    {
+      "file": "rc_arrow_left_theme_night.svg",
+      "semanticRole": "rc_arrow_left night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:37",
+      "componentName": "Icon/Back",
+      "upstreamName": "Back",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Back.svg",
+      "sourceSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rc_arrow_left.1F1B17"
+        ]
+      },
+      "baseAsset": "rc_arrow_left.svg",
+      "baseSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f237e69ae5dd2d97b4771042cc6a3c9b54adba6ed16cb4da76194a97263625cc"
     },
     {
       "file": "rc_autopage.svg",
@@ -929,6 +1647,31 @@
       "sha256": "f96ff27ce760c035013a56d92dbd961f54682fc7078d2c0a379f283e4f506e80"
     },
     {
+      "file": "rc_chevron_left_theme_night.svg",
+      "semanticRole": "rc_chevron_left night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:124",
+      "componentName": "Icon/ChevronLeft",
+      "upstreamName": "ChevronLeft",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronLeft.svg",
+      "sourceSha256": "9f24d27fd1df5559af07875598096b0656b0dbed42db8b3eda72577fca26150a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rc_chevron_left.4D463F"
+        ]
+      },
+      "baseAsset": "rc_chevron_left.svg",
+      "baseSha256": "f96ff27ce760c035013a56d92dbd961f54682fc7078d2c0a379f283e4f506e80",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "2beb173c5a5ba8b04b248c7c00a10a8c62ebad8f70c1d71ceb000d18d8d12307"
+    },
+    {
       "file": "rc_chevron_right.svg",
       "semanticRole": "reader next chapter",
       "originType": "figma-component-derived",
@@ -949,6 +1692,31 @@
       "sha256": "1486523612711e092ce951ce6bf4a6b80e459337137b44964218f07cf125b17b"
     },
     {
+      "file": "rc_chevron_right_theme_night.svg",
+      "semanticRole": "rc_chevron_right night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "362:15",
+      "componentName": "Icon/ChevronRight",
+      "upstreamName": "ChevronRight",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronRight.svg",
+      "sourceSha256": "651bef1c49216b39349268c9b3b9a24c150d188327576b8f7872eb15ee807f5c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rc_chevron_right.4D463F"
+        ]
+      },
+      "baseAsset": "rc_chevron_right.svg",
+      "baseSha256": "1486523612711e092ce951ce6bf4a6b80e459337137b44964218f07cf125b17b",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "9a9f46c777d97ccea090a19dcc7b5c40fad7621a8330085a531e01f1cd54f104"
+    },
+    {
       "file": "rc_dots.svg",
       "semanticRole": "reader control more",
       "originType": "figma-component-derived",
@@ -967,6 +1735,31 @@
         "rotationDegrees": 0
       },
       "sha256": "406c682a44490397f6e6f48b93880cf932b6a6caf735a4449447475e7636555e"
+    },
+    {
+      "file": "rc_dots_theme_night.svg",
+      "semanticRole": "rc_dots night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:333",
+      "componentName": "Icon/More",
+      "upstreamName": "More",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__More.svg",
+      "sourceSha256": "406c682a44490397f6e6f48b93880cf932b6a6caf735a4449447475e7636555e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rc_dots.1F1B17"
+        ]
+      },
+      "baseAsset": "rc_dots.svg",
+      "baseSha256": "406c682a44490397f6e6f48b93880cf932b6a6caf735a4449447475e7636555e",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "141a6d501b38df93d361ffbb2cf4abb1f3ce99df64e986fb60da90671348deb8"
     },
     {
       "file": "rc_headphones.svg",
@@ -1007,6 +1800,31 @@
         "rotationDegrees": 0
       },
       "sha256": "f27bb46d8852b782423d65e6d0071e130126bbb8003d0d072af69b98ce97e79a"
+    },
+    {
+      "file": "rc_list_theme_night.svg",
+      "semanticRole": "rc_list night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:436",
+      "componentName": "Icon/ReaderModuleDirectory",
+      "upstreamName": "ReaderModuleDirectory",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ReaderModuleDirectory.svg",
+      "sourceSha256": "b7eda9b4a3324814755693cf48e80600305999185395da412310e14de56f9e45",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rc_list.2F6373"
+        ]
+      },
+      "baseAsset": "rc_list.svg",
+      "baseSha256": "f27bb46d8852b782423d65e6d0071e130126bbb8003d0d072af69b98ce97e79a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "9a3638e9a5438f73b76570c88100788c1e5f22265a3cc228f57870e10cf183be"
     },
     {
       "file": "rc_palette.svg",
@@ -1069,6 +1887,31 @@
       "sha256": "67273222c2560cc3259eaef1655153cd73078aa9b77b2525d1c47216fc9f687a"
     },
     {
+      "file": "rc_search_theme_night.svg",
+      "semanticRole": "rc_search night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:430",
+      "componentName": "Icon/ReaderContentSearch",
+      "upstreamName": "ReaderContentSearch",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ReaderContentSearch.svg",
+      "sourceSha256": "038cea148939f8441fd4c0f52884b6f89ce62270c27b751908cf649aefbf543a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rc_search.332C25"
+        ]
+      },
+      "baseAsset": "rc_search.svg",
+      "baseSha256": "67273222c2560cc3259eaef1655153cd73078aa9b77b2525d1c47216fc9f687a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "80afd24cef01ed8d4bd4e18c61346d84a8f05a22870d31104d822c07353293c5"
+    },
+    {
       "file": "rc_settings.svg",
       "semanticRole": "reader settings module inactive",
       "originType": "figma-component-derived",
@@ -1109,6 +1952,31 @@
       "sha256": "d5b33dadda3748f9e47af26a3176c89ae96a3e2528359a2f201e96518fc99e82"
     },
     {
+      "file": "rc_sun_theme_night.svg",
+      "semanticRole": "rc_sun night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:555",
+      "componentName": "Icon/Sun",
+      "upstreamName": "Sun",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Sun.svg",
+      "sourceSha256": "ebd1da293707725ecf65cb3243e747c3febfbb2f632b33a4fb6b665efe1a6d9e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rc_sun.2F6373"
+        ]
+      },
+      "baseAsset": "rc_sun.svg",
+      "baseSha256": "d5b33dadda3748f9e47af26a3176c89ae96a3e2528359a2f201e96518fc99e82",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "620956b69899fea0392f9bab1162ef5e952496b745c97382231ad14e2c2d732d"
+    },
+    {
       "file": "rc_switch_horizontal.svg",
       "semanticRole": "reader source switch",
       "originType": "figma-component-derived",
@@ -1127,6 +1995,31 @@
         "rotationDegrees": 0
       },
       "sha256": "32cfebe3d3e8cd7d6a1a1341923f6be8c2d848c43db66cbd405427636166b7c4"
+    },
+    {
+      "file": "rc_switch_horizontal_theme_night.svg",
+      "semanticRole": "rc_switch_horizontal night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:532",
+      "componentName": "Icon/SourceSwitch",
+      "upstreamName": "SourceSwitch",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__SourceSwitch.svg",
+      "sourceSha256": "32cfebe3d3e8cd7d6a1a1341923f6be8c2d848c43db66cbd405427636166b7c4",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rc_switch_horizontal.1F1B17"
+        ]
+      },
+      "baseAsset": "rc_switch_horizontal.svg",
+      "baseSha256": "32cfebe3d3e8cd7d6a1a1341923f6be8c2d848c43db66cbd405427636166b7c4",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c8ab125e72a7f6da10e3d593f82f0e3cd0ada2095ee0596ce9cea49bdfcbb36d"
     },
     {
       "file": "reader_appearance_header.svg",
@@ -1149,6 +2042,31 @@
       "sha256": "920e1ee8bd3e2672107979ccfd199da7e604f598c49568ccb05d1089a5960f24"
     },
     {
+      "file": "reader_appearance_header_theme_night.svg",
+      "semanticRole": "reader_appearance_header night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:448",
+      "componentName": "Icon/ReaderModuleAppearance",
+      "upstreamName": "ReaderModuleAppearance",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ReaderModuleAppearance.svg",
+      "sourceSha256": "63c863ec8192a937c4e714c4193aaa20f8923670c56663b8446d2f55f87f0a75",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_appearance_header.332C25"
+        ]
+      },
+      "baseAsset": "reader_appearance_header.svg",
+      "baseSha256": "920e1ee8bd3e2672107979ccfd199da7e604f598c49568ccb05d1089a5960f24",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ee57559284f18b02ceb63e1bd9358b40f27709644c93c2e88be46f1edd3d349d"
+    },
+    {
       "file": "reader_appearance_make_check.svg",
       "semanticRole": "reader appearance check",
       "originType": "figma-make-dom-export",
@@ -1164,6 +2082,28 @@
       "sha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993"
     },
     {
+      "file": "reader_appearance_make_check_theme_night.svg",
+      "semanticRole": "reader_appearance_make_check night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "LOYUJr93KwespD5j7N6icw",
+      "sourceSelector": "button svg:has(path[d=\"M1.25 4.75L4 7.5L9.75 1.25\"])",
+      "sourceVersion": 9,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_appearance_make_check.svg",
+      "sourceSha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_appearance_make_check.2F6373"
+        ]
+      },
+      "baseAsset": "reader_appearance_make_check.svg",
+      "baseSha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "17a083f7574dd2321768b9c7eeb345f7263b333b8ff69d9ee58819f135508beb"
+    },
+    {
       "file": "reader_appearance_make_chevron.svg",
       "semanticRole": "reader appearance chevron",
       "originType": "figma-make-dom-export",
@@ -1177,6 +2117,28 @@
         "pathMutation": "none"
       },
       "sha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17"
+    },
+    {
+      "file": "reader_appearance_make_chevron_theme_night.svg",
+      "semanticRole": "reader_appearance_make_chevron night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "LOYUJr93KwespD5j7N6icw",
+      "sourceSelector": "button svg:has(path[d=\"M4.5 3L7.5 6L4.5 9\"])",
+      "sourceVersion": 9,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_appearance_make_chevron.svg",
+      "sourceSha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_appearance_make_chevron.857C70"
+        ]
+      },
+      "baseAsset": "reader_appearance_make_chevron.svg",
+      "baseSha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "6a7f6c0975410b2c6cf5a4e1d3cd34635bedc3375021519642e27069d44c19a0"
     },
     {
       "file": "reader_appearance_nav_active.svg",
@@ -1219,6 +2181,31 @@
       "sha256": "d12ab61e6425ab88de180785967eb47a3b70572b535eec260e4c89b7c2ccfe89"
     },
     {
+      "file": "reader_auto_full_chevron_left_theme_night.svg",
+      "semanticRole": "reader_auto_full_chevron_left night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:124",
+      "componentName": "Icon/ChevronLeft",
+      "upstreamName": "ChevronLeft",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronLeft.svg",
+      "sourceSha256": "9f24d27fd1df5559af07875598096b0656b0dbed42db8b3eda72577fca26150a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_auto_full_chevron_left.2F6373"
+        ]
+      },
+      "baseAsset": "reader_auto_full_chevron_left.svg",
+      "baseSha256": "d12ab61e6425ab88de180785967eb47a3b70572b535eec260e4c89b7c2ccfe89",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a619046a9bbf30fe023fe1ec84235a4a8f58c0d06aef47dacf2cef9953670b85"
+    },
+    {
       "file": "reader_auto_full_chevron_right.svg",
       "semanticRole": "full auto page next",
       "originType": "figma-component-derived",
@@ -1237,6 +2224,31 @@
         "rotationDegrees": 0
       },
       "sha256": "df5e60a86066f29ab4ce23fece883053a5e67ee29b46998cd7f4615cdb349eeb"
+    },
+    {
+      "file": "reader_auto_full_chevron_right_theme_night.svg",
+      "semanticRole": "reader_auto_full_chevron_right night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "362:15",
+      "componentName": "Icon/ChevronRight",
+      "upstreamName": "ChevronRight",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronRight.svg",
+      "sourceSha256": "651bef1c49216b39349268c9b3b9a24c150d188327576b8f7872eb15ee807f5c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_auto_full_chevron_right.2F6373"
+        ]
+      },
+      "baseAsset": "reader_auto_full_chevron_right.svg",
+      "baseSha256": "df5e60a86066f29ab4ce23fece883053a5e67ee29b46998cd7f4615cdb349eeb",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "8396104522acb6c67c7986255fd83f97561bc54d442b5b6495e56fc8712e41c4"
     },
     {
       "file": "reader_auto_full_clock.svg",
@@ -1259,6 +2271,31 @@
       "sha256": "a72fd4bef969498320c75491607011060792a487da0585cf71851634f5a64d11"
     },
     {
+      "file": "reader_auto_full_clock_theme_night.svg",
+      "semanticRole": "reader_auto_full_clock night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:136",
+      "componentName": "Icon/Clock",
+      "upstreamName": "Clock",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Clock.svg",
+      "sourceSha256": "a72fd4bef969498320c75491607011060792a487da0585cf71851634f5a64d11",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_auto_full_clock.1F1B17"
+        ]
+      },
+      "baseAsset": "reader_auto_full_clock.svg",
+      "baseSha256": "a72fd4bef969498320c75491607011060792a487da0585cf71851634f5a64d11",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "489fe6c4028f76f762c62814b1035f1a1341601e48dd8f7cdf4c939e5da8dbf6"
+    },
+    {
       "file": "reader_auto_full_header.svg",
       "semanticRole": "full auto page header",
       "originType": "figma-component-derived",
@@ -1277,6 +2314,31 @@
         "rotationDegrees": 0
       },
       "sha256": "834c50b29798e1110d2ce210535b458ee4bd10707430561499f14de79e83bdc6"
+    },
+    {
+      "file": "reader_auto_full_header_theme_night.svg",
+      "semanticRole": "reader_auto_full_header night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:418",
+      "componentName": "Icon/ReaderAutoPage",
+      "upstreamName": "ReaderAutoPage",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ReaderAutoPage.svg",
+      "sourceSha256": "eeb974ab5e41ea5e383dcc368c1bf74f84f21416dafa09fc730f6d877f5b127a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_auto_full_header.332C25"
+        ]
+      },
+      "baseAsset": "reader_auto_full_header.svg",
+      "baseSha256": "834c50b29798e1110d2ce210535b458ee4bd10707430561499f14de79e83bdc6",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d024ef6a414d103b689e98503e59ac5e88877db9493e2e75b397ce3c00ec006b"
     },
     {
       "file": "reader_auto_full_play.svg",
@@ -1299,6 +2361,31 @@
       "sha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f"
     },
     {
+      "file": "reader_auto_full_play_theme_night.svg",
+      "semanticRole": "reader_auto_full_play night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:392",
+      "componentName": "Icon/Play",
+      "upstreamName": "Play",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Play.svg",
+      "sourceSha256": "ada2d95be0abd121062f8d7360351bdd536410a8e6e3f6666d7b9ccf7559bd33",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_auto_full_play.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_auto_full_play.svg",
+      "baseSha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c7aaffed76a5b07a4602f68990f08ee3acbd0fd804e566889be08a95a5a4af69"
+    },
+    {
       "file": "reader_auto_full_stop.svg",
       "semanticRole": "full auto page stop",
       "originType": "figma-component-derived",
@@ -1319,6 +2406,31 @@
       "sha256": "e4f34ac2ab6662e72aed962c19aaf0e7da59e6974578f8bcbdddec4bbfb23b6a"
     },
     {
+      "file": "reader_auto_full_stop_theme_night.svg",
+      "semanticRole": "reader_auto_full_stop night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:542",
+      "componentName": "Icon/Stop",
+      "upstreamName": "Stop",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Stop.svg",
+      "sourceSha256": "00eaee4d8fa348a26d5149687dcdc0468b3aad6f7c486a202a8242b0e24f0a77",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_auto_full_stop.2F6373"
+        ]
+      },
+      "baseAsset": "reader_auto_full_stop.svg",
+      "baseSha256": "e4f34ac2ab6662e72aed962c19aaf0e7da59e6974578f8bcbdddec4bbfb23b6a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "91280af9d5c5b2f90a838cfeef420b43cfa1c30238baadbd5749b511d5358e21"
+    },
+    {
       "file": "reader_auto_play.svg",
       "semanticRole": "quick auto page play",
       "originType": "figma-component-derived",
@@ -1337,6 +2449,31 @@
         "rotationDegrees": 0
       },
       "sha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f"
+    },
+    {
+      "file": "reader_auto_play_theme_night.svg",
+      "semanticRole": "reader_auto_play night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:392",
+      "componentName": "Icon/Play",
+      "upstreamName": "Play",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Play.svg",
+      "sourceSha256": "ada2d95be0abd121062f8d7360351bdd536410a8e6e3f6666d7b9ccf7559bd33",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_auto_play.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_auto_play.svg",
+      "baseSha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c7aaffed76a5b07a4602f68990f08ee3acbd0fd804e566889be08a95a5a4af69"
     },
     {
       "file": "reader_auto_stop.svg",
@@ -1399,6 +2536,56 @@
       "sha256": "0ca8ac80a299d9307d5c189f0fb23c25f6d0cbee9d7b0e53f157dc0c665ec823"
     },
     {
+      "file": "reader_chevron_down_primary_theme_night.svg",
+      "semanticRole": "reader_chevron_down_primary night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:119",
+      "componentName": "Icon/Chevron",
+      "upstreamName": "Chevron",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Chevron.svg",
+      "sourceSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_chevron_down_primary.2F6373"
+        ]
+      },
+      "baseAsset": "reader_chevron_down_primary.svg",
+      "baseSha256": "0ca8ac80a299d9307d5c189f0fb23c25f6d0cbee9d7b0e53f157dc0c665ec823",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "795a9561a0679d1d93768e9c71fd75886088b53783bb3a22a01ff0b181cfd76b"
+    },
+    {
+      "file": "reader_chevron_down_theme_night.svg",
+      "semanticRole": "reader_chevron_down night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:119",
+      "componentName": "Icon/Chevron",
+      "upstreamName": "Chevron",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Chevron.svg",
+      "sourceSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_chevron_down.41484C"
+        ]
+      },
+      "baseAsset": "reader_chevron_down.svg",
+      "baseSha256": "64648167da5824e0e5ebf78e44e3861b68625e87cd52b82eaf4d9d56519a512d",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "447b31bfd4257aa696adfe70334ede321d4a332b477d9fbb27662e7e020dcc3f"
+    },
+    {
       "file": "reader_chevron_right.svg",
       "semanticRole": "disclosure chevron",
       "originType": "figma-component-derived",
@@ -1417,6 +2604,31 @@
         "rotationDegrees": 0
       },
       "sha256": "509312c3bd25d8a9fdd64c3c066a842df6eb2f4240a61cfb6547b080db50fbc3"
+    },
+    {
+      "file": "reader_chevron_right_theme_night.svg",
+      "semanticRole": "reader_chevron_right night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:119",
+      "componentName": "Icon/Chevron",
+      "upstreamName": "Chevron",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Chevron.svg",
+      "sourceSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_chevron_right.756F69"
+        ]
+      },
+      "baseAsset": "reader_chevron_right.svg",
+      "baseSha256": "509312c3bd25d8a9fdd64c3c066a842df6eb2f4240a61cfb6547b080db50fbc3",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "2a4f1ade04e2c7feb193fa14287922a6773bac063fb925b7f057aeda9589c0f3"
     },
     {
       "file": "reader_control_replace_add.svg",
@@ -1447,6 +2659,27 @@
       "sha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5"
     },
     {
+      "file": "reader_control_replace_back_theme_night.svg",
+      "semanticRole": "reader_control_replace_back night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "I1938:12631;411:72",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_back.svg",
+      "sourceSha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_control_replace_back.2F6373"
+        ]
+      },
+      "baseAsset": "reader_control_replace_back.svg",
+      "baseSha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d7d9d3b8be0637b22cf55a2eb621a8dff9aff74eb2fb9d7a0ff5a393f42fbdcc"
+    },
+    {
       "file": "reader_control_replace_delete.svg",
       "semanticRole": "restored in-reader replace delete rule",
       "originType": "figma-node-export",
@@ -1459,6 +2692,27 @@
         "pathMutation": "none"
       },
       "sha256": "b9ebce1a2d92f814cd27e27c89c002650f48ba89a5922676f3fdfb671ca94c68"
+    },
+    {
+      "file": "reader_control_replace_delete_theme_night.svg",
+      "semanticRole": "reader_control_replace_delete night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1939:1261",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_delete.svg",
+      "sourceSha256": "b9ebce1a2d92f814cd27e27c89c002650f48ba89a5922676f3fdfb671ca94c68",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_control_replace_delete.332C25"
+        ]
+      },
+      "baseAsset": "reader_control_replace_delete.svg",
+      "baseSha256": "b9ebce1a2d92f814cd27e27c89c002650f48ba89a5922676f3fdfb671ca94c68",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "4f84a363a9520c97104767d3042e96e1e753f4465eeffa5d2d7ca33f80f9a1ce"
     },
     {
       "file": "reader_control_replace_edit.svg",
@@ -1475,6 +2729,27 @@
       "sha256": "6084d4fe541922b718cfca0cbe073397bb25dbd5f4ac8204677258798458fc11"
     },
     {
+      "file": "reader_control_replace_edit_theme_night.svg",
+      "semanticRole": "reader_control_replace_edit night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1939:1255",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_edit.svg",
+      "sourceSha256": "6084d4fe541922b718cfca0cbe073397bb25dbd5f4ac8204677258798458fc11",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_control_replace_edit.332C25"
+        ]
+      },
+      "baseAsset": "reader_control_replace_edit.svg",
+      "baseSha256": "6084d4fe541922b718cfca0cbe073397bb25dbd5f4ac8204677258798458fc11",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ad06f775d02a0384d576d2f7af1310368512b37ff7382ee25b67b1beb7fffc5e"
+    },
+    {
       "file": "reader_control_replace_export.svg",
       "semanticRole": "restored in-reader replace export rules",
       "originType": "figma-node-export",
@@ -1487,6 +2762,27 @@
         "pathMutation": "none"
       },
       "sha256": "00815d9ded70806d2cb5c54a0d01e431211157f31fa5effc53452719dd80b1e8"
+    },
+    {
+      "file": "reader_control_replace_export_theme_night.svg",
+      "semanticRole": "reader_control_replace_export night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1938:12037",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_export.svg",
+      "sourceSha256": "00815d9ded70806d2cb5c54a0d01e431211157f31fa5effc53452719dd80b1e8",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_control_replace_export.332C25"
+        ]
+      },
+      "baseAsset": "reader_control_replace_export.svg",
+      "baseSha256": "00815d9ded70806d2cb5c54a0d01e431211157f31fa5effc53452719dd80b1e8",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c5866ab8fdfcba26dfbbbfae69a2037fe892a587ff5f75d129927ba39e828436"
     },
     {
       "file": "reader_control_replace_header.svg",
@@ -1503,6 +2799,27 @@
       "sha256": "bbdbfe2f2a99d8cd84bf4392c790ba8f2383140921e406ca1ebf07a4da2c9ede"
     },
     {
+      "file": "reader_control_replace_header_theme_night.svg",
+      "semanticRole": "reader_control_replace_header night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1938:12008",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_header.svg",
+      "sourceSha256": "bbdbfe2f2a99d8cd84bf4392c790ba8f2383140921e406ca1ebf07a4da2c9ede",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_control_replace_header.332C25"
+        ]
+      },
+      "baseAsset": "reader_control_replace_header.svg",
+      "baseSha256": "bbdbfe2f2a99d8cd84bf4392c790ba8f2383140921e406ca1ebf07a4da2c9ede",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a617701613f60836d98f196ff1018c1d239589e49face53f28b33a1fbc32112b"
+    },
+    {
       "file": "reader_control_replace_import.svg",
       "semanticRole": "restored in-reader replace import rules",
       "originType": "figma-node-export",
@@ -1515,6 +2832,27 @@
         "pathMutation": "none"
       },
       "sha256": "1375f7314210afb837c691caf489244d5dba792e98a5719129cc3a4bb99cf6eb"
+    },
+    {
+      "file": "reader_control_replace_import_theme_night.svg",
+      "semanticRole": "reader_control_replace_import night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "1938:12029",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_import.svg",
+      "sourceSha256": "1375f7314210afb837c691caf489244d5dba792e98a5719129cc3a4bb99cf6eb",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_control_replace_import.332C25"
+        ]
+      },
+      "baseAsset": "reader_control_replace_import.svg",
+      "baseSha256": "1375f7314210afb837c691caf489244d5dba792e98a5719129cc3a4bb99cf6eb",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ca853fc883c66723b180de82f4fbc4602096a00c1455a6d92c38e808c35abea2"
     },
     {
       "file": "reader_directory_back.svg",
@@ -1537,6 +2875,31 @@
       "sha256": "08253f6ff4975aca842e7c89249a62517543ffee57ffe20c2dd9d5c2874739c0"
     },
     {
+      "file": "reader_directory_back_theme_night.svg",
+      "semanticRole": "reader_directory_back night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:37",
+      "componentName": "Icon/Back",
+      "upstreamName": "Back",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Back.svg",
+      "sourceSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_back.332C25"
+        ]
+      },
+      "baseAsset": "reader_directory_back.svg",
+      "baseSha256": "08253f6ff4975aca842e7c89249a62517543ffee57ffe20c2dd9d5c2874739c0",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f237e69ae5dd2d97b4771042cc6a3c9b54adba6ed16cb4da76194a97263625cc"
+    },
+    {
       "file": "reader_directory_bottom.svg",
       "semanticRole": "full directory bottom",
       "originType": "figma-component-derived",
@@ -1555,6 +2918,31 @@
         "rotationDegrees": 0
       },
       "sha256": "793fba6e5436a6e3ade739d3cc4abd1fe031cb3f80187ea2606e5895efc9223b"
+    },
+    {
+      "file": "reader_directory_bottom_theme_night.svg",
+      "semanticRole": "reader_directory_bottom night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:87",
+      "componentName": "Icon/Bottom",
+      "upstreamName": "Bottom",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bottom.svg",
+      "sourceSha256": "4b73f60a5965c8723499993ea895965b5941cbc3fdf18e8dcd32153ac2081d59",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_bottom.2F6373"
+        ]
+      },
+      "baseAsset": "reader_directory_bottom.svg",
+      "baseSha256": "793fba6e5436a6e3ade739d3cc4abd1fe031cb3f80187ea2606e5895efc9223b",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "cc12eb129fd609f0e58a89a15bd751f17628b314c58b3b8ba4d9355644779fea"
     },
     {
       "file": "reader_directory_directory.svg",
@@ -1577,6 +2965,31 @@
       "sha256": "74c8a8378ca5c3b3e80c66520c2f960af1ab019b54c86b7af57a4195cfbb7bc2"
     },
     {
+      "file": "reader_directory_directory_theme_night.svg",
+      "semanticRole": "reader_directory_directory night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:183",
+      "componentName": "Icon/Directory",
+      "upstreamName": "Directory",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Directory.svg",
+      "sourceSha256": "ddfae776ec2b76eb84e4fcf6432f9ee7f430277d2a4132774dfbeb9bc56bbad6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_directory.332C25"
+        ]
+      },
+      "baseAsset": "reader_directory_directory.svg",
+      "baseSha256": "74c8a8378ca5c3b3e80c66520c2f960af1ab019b54c86b7af57a4195cfbb7bc2",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "81528b0146f70e35d0e0b81fb1e02260bbebec748922b7e7ce74272dc1943044"
+    },
+    {
       "file": "reader_directory_input_search.svg",
       "semanticRole": "full directory input search",
       "originType": "figma-component-derived",
@@ -1595,6 +3008,31 @@
         "rotationDegrees": 0
       },
       "sha256": "4bbb855d54bd62298aed75ebc024be9355d7166f17855a09727ea6ecc9232ee4"
+    },
+    {
+      "file": "reader_directory_input_search_theme_night.svg",
+      "semanticRole": "reader_directory_input_search night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:466",
+      "componentName": "Icon/Search",
+      "upstreamName": "Search",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Search.svg",
+      "sourceSha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_input_search.5B5046"
+        ]
+      },
+      "baseAsset": "reader_directory_input_search.svg",
+      "baseSha256": "4bbb855d54bd62298aed75ebc024be9355d7166f17855a09727ea6ecc9232ee4",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "1be8b983d432d310c6577f845c587b32b8d672744a209ab7e4699e96b94e790a"
     },
     {
       "file": "reader_directory_list_active.svg",
@@ -1657,6 +3095,56 @@
       "sha256": "210e7600dc2c1c2d22114d475f9296acd8cc341b4f4ce2ffe2d393c19584d47c"
     },
     {
+      "file": "reader_directory_marker_bookmark_active_theme_night.svg",
+      "semanticRole": "reader_directory_marker_bookmark_active night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:73",
+      "componentName": "Icon/Bookmark",
+      "upstreamName": "Bookmark",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookmark.svg",
+      "sourceSha256": "8afe54487abb2d3151853f5ff867605d7cec1925555db2f58716e3f63da07d34",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_marker_bookmark_active.2F6373"
+        ]
+      },
+      "baseAsset": "reader_directory_marker_bookmark_active.svg",
+      "baseSha256": "210e7600dc2c1c2d22114d475f9296acd8cc341b4f4ce2ffe2d393c19584d47c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "b33f67f47fc405ae1d1597e8484ef56abbe461cdf496ddff80c78ba9ebf50993"
+    },
+    {
+      "file": "reader_directory_marker_bookmark_theme_night.svg",
+      "semanticRole": "reader_directory_marker_bookmark night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:73",
+      "componentName": "Icon/Bookmark",
+      "upstreamName": "Bookmark",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookmark.svg",
+      "sourceSha256": "8afe54487abb2d3151853f5ff867605d7cec1925555db2f58716e3f63da07d34",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_marker_bookmark.5B5046"
+        ]
+      },
+      "baseAsset": "reader_directory_marker_bookmark.svg",
+      "baseSha256": "3c0956f29ad63bd0cbaa52aa1d5dcaa7d9eb10adb0da85b0e01438828e9a8e60",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "afeeeaca4d3c9b5fd7ef77d59a48f927c84ba04193b820a729501e73b13c5f7e"
+    },
+    {
       "file": "reader_directory_marker_check.svg",
       "semanticRole": "reader directory downloaded marker",
       "originType": "figma-component-derived",
@@ -1675,6 +3163,31 @@
         "rotationDegrees": 0
       },
       "sha256": "c7237a3d8929b61317599125d315d33298726145d52fcf79d77c280d9354c195"
+    },
+    {
+      "file": "reader_directory_marker_check_theme_night.svg",
+      "semanticRole": "reader_directory_marker_check night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:109",
+      "componentName": "Icon/Check",
+      "upstreamName": "Check",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Check.svg",
+      "sourceSha256": "e177fc1b508969c1f1f085eed80d0a14dd0f235445424e2ce4c72d936e8a0b7a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_marker_check.2F6373"
+        ]
+      },
+      "baseAsset": "reader_directory_marker_check.svg",
+      "baseSha256": "c7237a3d8929b61317599125d315d33298726145d52fcf79d77c280d9354c195",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "682e5b9abf890ed4a3404e694e8b1d41018ecb7c64dc5ca464fcc86c7ba524ad"
     },
     {
       "file": "reader_directory_marker_download.svg",
@@ -1697,6 +3210,31 @@
       "sha256": "1a785a5242e34a3a986a9d5705ee3d2ab448385918595feddc17b8fb2775c319"
     },
     {
+      "file": "reader_directory_marker_download_theme_night.svg",
+      "semanticRole": "reader_directory_marker_download night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:195",
+      "componentName": "Icon/Download",
+      "upstreamName": "Download",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Download.svg",
+      "sourceSha256": "5bb5a10684e0431055a1d9e40cd0ef2179266c738e5e80ae93776e802b77dfd0",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_marker_download.5B5046"
+        ]
+      },
+      "baseAsset": "reader_directory_marker_download.svg",
+      "baseSha256": "1a785a5242e34a3a986a9d5705ee3d2ab448385918595feddc17b8fb2775c319",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "73a039603e7b253b9adf3075d1ba1b0c3bd88f87c3e6b914dd1de1618481e530"
+    },
+    {
       "file": "reader_directory_more.svg",
       "semanticRole": "full directory more",
       "originType": "figma-component-derived",
@@ -1715,6 +3253,31 @@
         "rotationDegrees": 0
       },
       "sha256": "b0fcba50fa075c94e86b5ce63253865e8ad14890048e6e4f92fe08f206f8bc3f"
+    },
+    {
+      "file": "reader_directory_more_theme_night.svg",
+      "semanticRole": "reader_directory_more night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:333",
+      "componentName": "Icon/More",
+      "upstreamName": "More",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__More.svg",
+      "sourceSha256": "406c682a44490397f6e6f48b93880cf932b6a6caf735a4449447475e7636555e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_more.332C25"
+        ]
+      },
+      "baseAsset": "reader_directory_more.svg",
+      "baseSha256": "b0fcba50fa075c94e86b5ce63253865e8ad14890048e6e4f92fe08f206f8bc3f",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "141a6d501b38df93d361ffbb2cf4abb1f3ce99df64e986fb60da90671348deb8"
     },
     {
       "file": "reader_directory_search.svg",
@@ -1737,6 +3300,31 @@
       "sha256": "0172b160bb2bf1b3a3fc409b5934442bd3463030936c1517a29729454b76867c"
     },
     {
+      "file": "reader_directory_search_theme_night.svg",
+      "semanticRole": "reader_directory_search night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:466",
+      "componentName": "Icon/Search",
+      "upstreamName": "Search",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Search.svg",
+      "sourceSha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_search.2F6373"
+        ]
+      },
+      "baseAsset": "reader_directory_search.svg",
+      "baseSha256": "0172b160bb2bf1b3a3fc409b5934442bd3463030936c1517a29729454b76867c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a0dfc7a2467d967fb4fd0a9f1994d2fe76d1fcaec426fc22a67acdeb9296bc95"
+    },
+    {
       "file": "reader_directory_sort_ascending.svg",
       "semanticRole": "full directory ascending sort",
       "originType": "figma-component-derived",
@@ -1755,6 +3343,31 @@
         "rotationDegrees": 0
       },
       "sha256": "b31726a95ebe96ad31b27c620e893a53338e91058d5cceed6a6900b273701df6"
+    },
+    {
+      "file": "reader_directory_sort_ascending_theme_night.svg",
+      "semanticRole": "reader_directory_sort_ascending night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:499",
+      "componentName": "Icon/SortAsc",
+      "upstreamName": "SortAsc",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__SortAsc.svg",
+      "sourceSha256": "19738d317bfa001ddbb8039d6582e8a3219677a97ebc1ecc6eb9df3a9e0e3255",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_sort_ascending.2F6373"
+        ]
+      },
+      "baseAsset": "reader_directory_sort_ascending.svg",
+      "baseSha256": "b31726a95ebe96ad31b27c620e893a53338e91058d5cceed6a6900b273701df6",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "e201adf484198c801836314d9833cce682b4501c08501bd47b9c1ffd9df4ec89"
     },
     {
       "file": "reader_directory_sort_descending.svg",
@@ -1777,6 +3390,31 @@
       "sha256": "79408e4d1e3886596400e289ed0debcf989f6d4fa6850fe3762abd9937303f0c"
     },
     {
+      "file": "reader_directory_sort_descending_theme_night.svg",
+      "semanticRole": "reader_directory_sort_descending night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:506",
+      "componentName": "Icon/SortDesc",
+      "upstreamName": "SortDesc",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__SortDesc.svg",
+      "sourceSha256": "17c51919186f30d803c4f274d830c6f3257ab2556d7fb696cf939f8ec4d2ae6b",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_sort_descending.2F6373"
+        ]
+      },
+      "baseAsset": "reader_directory_sort_descending.svg",
+      "baseSha256": "79408e4d1e3886596400e289ed0debcf989f6d4fa6850fe3762abd9937303f0c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a08173aa08a3bbf72af14a2934f1efda3413800ea11cf158fec29d4c430623a5"
+    },
+    {
       "file": "reader_directory_switch.svg",
       "semanticRole": "full directory source switch",
       "originType": "figma-component-derived",
@@ -1795,6 +3433,31 @@
         "rotationDegrees": 0
       },
       "sha256": "439a6fb03cc445dab0e589bc75ba4a43718a04ca43a2abdde086003e060e7d12"
+    },
+    {
+      "file": "reader_directory_switch_theme_night.svg",
+      "semanticRole": "reader_directory_switch night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:532",
+      "componentName": "Icon/SourceSwitch",
+      "upstreamName": "SourceSwitch",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__SourceSwitch.svg",
+      "sourceSha256": "32cfebe3d3e8cd7d6a1a1341923f6be8c2d848c43db66cbd405427636166b7c4",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_switch.332C25"
+        ]
+      },
+      "baseAsset": "reader_directory_switch.svg",
+      "baseSha256": "439a6fb03cc445dab0e589bc75ba4a43718a04ca43a2abdde086003e060e7d12",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c8ab125e72a7f6da10e3d593f82f0e3cd0ada2095ee0596ce9cea49bdfcbb36d"
     },
     {
       "file": "reader_directory_top.svg",
@@ -1817,6 +3480,31 @@
       "sha256": "0cd06bab20d9a8460a854ad7118f03adc54d0dec7e65ade999ba466c93e9ff63"
     },
     {
+      "file": "reader_directory_top_theme_night.svg",
+      "semanticRole": "reader_directory_top night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:580",
+      "componentName": "Icon/Top",
+      "upstreamName": "Top",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Top.svg",
+      "sourceSha256": "daf12137f77011859f20c2f20244dbd3d7a8c3872814f38c32cbf6ad5144213f",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_top.2F6373"
+        ]
+      },
+      "baseAsset": "reader_directory_top.svg",
+      "baseSha256": "0cd06bab20d9a8460a854ad7118f03adc54d0dec7e65ade999ba466c93e9ff63",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "57f8bd4de690b42772ef81b69357bf3dd144057c8e2177f9859c384cdb48c0c1"
+    },
+    {
       "file": "reader_quick_back.svg",
       "semanticRole": "reader quick panel back",
       "originType": "figma-component-derived",
@@ -1835,6 +3523,31 @@
         "rotationDegrees": 0
       },
       "sha256": "53843b3ab4984a780e4443891623c903815cd77f10ea7d04315fdd0fa260c048"
+    },
+    {
+      "file": "reader_quick_back_theme_night.svg",
+      "semanticRole": "reader_quick_back night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:37",
+      "componentName": "Icon/Back",
+      "upstreamName": "Back",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Back.svg",
+      "sourceSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_quick_back.2F6373"
+        ]
+      },
+      "baseAsset": "reader_quick_back.svg",
+      "baseSha256": "53843b3ab4984a780e4443891623c903815cd77f10ea7d04315fdd0fa260c048",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "485265ce239da17135cf296a7d27b1c91c99b04d03f0d5e2c56e79898ca4a6a9"
     },
     {
       "file": "reader_quick_search.svg",
@@ -1857,6 +3570,31 @@
       "sha256": "0172b160bb2bf1b3a3fc409b5934442bd3463030936c1517a29729454b76867c"
     },
     {
+      "file": "reader_quick_search_theme_night.svg",
+      "semanticRole": "reader_quick_search night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:466",
+      "componentName": "Icon/Search",
+      "upstreamName": "Search",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Search.svg",
+      "sourceSha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_quick_search.2F6373"
+        ]
+      },
+      "baseAsset": "reader_quick_search.svg",
+      "baseSha256": "0172b160bb2bf1b3a3fc409b5934442bd3463030936c1517a29729454b76867c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a0dfc7a2467d967fb4fd0a9f1994d2fe76d1fcaec426fc22a67acdeb9296bc95"
+    },
+    {
       "file": "reader_replace_close.svg",
       "semanticRole": "reader replace close",
       "originType": "figma-component-derived",
@@ -1875,6 +3613,31 @@
         "rotationDegrees": 0
       },
       "sha256": "b13d6095dc01e6bb432bf2a9edc3ffb3130687ead81494daba405c5bc1b69a2e"
+    },
+    {
+      "file": "reader_replace_close_theme_night.svg",
+      "semanticRole": "reader_replace_close night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:142",
+      "componentName": "Icon/Close",
+      "upstreamName": "Close",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Close.svg",
+      "sourceSha256": "6032f75a2241549e2da953c09c5567b8030135b0fd03016b9c410134eb0ea066",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_replace_close.2F6373"
+        ]
+      },
+      "baseAsset": "reader_replace_close.svg",
+      "baseSha256": "b13d6095dc01e6bb432bf2a9edc3ffb3130687ead81494daba405c5bc1b69a2e",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "fda408b7c1ae674d7944d1e2bc499fc4b935ccd5e81a9b944ee8dec7af43f721"
     },
     {
       "file": "reader_replace_manage.svg",
@@ -1897,6 +3660,31 @@
       "sha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559"
     },
     {
+      "file": "reader_replace_manage_theme_night.svg",
+      "semanticRole": "reader_replace_manage night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:472",
+      "componentName": "Icon/Settings",
+      "upstreamName": "Settings",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Settings.svg",
+      "sourceSha256": "991b85162a8e75bda30a062835181fe2c01ba5259744b3c97465796d5148fc90",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_replace_manage.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_replace_manage.svg",
+      "baseSha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "61e4158f2ee214de2a11ec286c455c9c26054a75210063cf9101d4158dc477eb"
+    },
+    {
       "file": "reader_replace_preview.svg",
       "semanticRole": "reader replace preview",
       "originType": "figma-component-derived",
@@ -1917,6 +3705,31 @@
       "sha256": "dfe2541a911f781804d6378cbf4b4c1fb3cd273ea81b8a810d775f12f6aee796"
     },
     {
+      "file": "reader_replace_preview_theme_night.svg",
+      "semanticRole": "reader_replace_preview night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "415:138",
+      "componentName": "Icon/Eye",
+      "upstreamName": "Eye",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Eye.svg",
+      "sourceSha256": "2d650798d45042e0fd3134d28a31e2dc0d3574e736d05f1f7b94364b4853b093",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_replace_preview.332C25"
+        ]
+      },
+      "baseAsset": "reader_replace_preview.svg",
+      "baseSha256": "dfe2541a911f781804d6378cbf4b4c1fb3cd273ea81b8a810d775f12f6aee796",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "8df0e126018ac8114d35130d8b594b3875d7a679c4c713ba185bd53bf00a1c67"
+    },
+    {
       "file": "reader_session_pause.svg",
       "semanticRole": "reader session solid pause",
       "originType": "figma-node-export",
@@ -1931,6 +3744,27 @@
       "sha256": "ac720cd8930c97e9f91d0abb7d9dfaeffefeaf3681a502f1545564ad44d4629d"
     },
     {
+      "file": "reader_session_pause_theme_night.svg",
+      "semanticRole": "reader_session_pause night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "4624:26",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_session_pause.svg",
+      "sourceSha256": "ac720cd8930c97e9f91d0abb7d9dfaeffefeaf3681a502f1545564ad44d4629d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_session_pause.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_session_pause.svg",
+      "baseSha256": "ac720cd8930c97e9f91d0abb7d9dfaeffefeaf3681a502f1545564ad44d4629d",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "1ccd54db17f8ed3e3d4e4c192ffe0e4a0bdaaccad921712cf6e6b418166b82fc"
+    },
+    {
       "file": "reader_session_play.svg",
       "semanticRole": "reader session solid play",
       "originType": "figma-node-export",
@@ -1943,6 +3777,27 @@
         "pathMutation": "none"
       },
       "sha256": "431d2f7922802990422cd66c5e332295d8969a2e995f3d2e7f8c13b0a0c6bd5c"
+    },
+    {
+      "file": "reader_session_play_theme_night.svg",
+      "semanticRole": "reader_session_play night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "4624:29",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_session_play.svg",
+      "sourceSha256": "431d2f7922802990422cd66c5e332295d8969a2e995f3d2e7f8c13b0a0c6bd5c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_session_play.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_session_play.svg",
+      "baseSha256": "431d2f7922802990422cd66c5e332295d8969a2e995f3d2e7f8c13b0a0c6bd5c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "370982742d7b3d21a2e968bf1263a24834cf9bb8b7e35449613a9100ca052f77"
     },
     {
       "file": "reader_settings_header.svg",
@@ -1963,6 +3818,31 @@
         "rotationDegrees": 0
       },
       "sha256": "65f2b6da46e31a86afac6b84a8add6ff90acbf109d67399e17226b8b877e95cd"
+    },
+    {
+      "file": "reader_settings_header_theme_night.svg",
+      "semanticRole": "reader_settings_header night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:454",
+      "componentName": "Icon/ReaderModuleSettings",
+      "upstreamName": "ReaderModuleSettings",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ReaderModuleSettings.svg",
+      "sourceSha256": "e34d1b98951a36d30646a7a946a9d7231adb87b29dc88419193a2efa42b082c4",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_settings_header.332C25"
+        ]
+      },
+      "baseAsset": "reader_settings_header.svg",
+      "baseSha256": "65f2b6da46e31a86afac6b84a8add6ff90acbf109d67399e17226b8b877e95cd",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c879182f9f04802195f8bd846069453a26d64c1b736f8088ccc36c0678158196"
     },
     {
       "file": "reader_settings_nav_active.svg",
@@ -2005,6 +3885,31 @@
       "sha256": "f8d187fdb7dcfcdee21acc8ae3f219bfb713fa908ab8b869f6ffe13bdc490727"
     },
     {
+      "file": "reader_tts_clock_theme_night.svg",
+      "semanticRole": "reader_tts_clock night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:136",
+      "componentName": "Icon/Clock",
+      "upstreamName": "Clock",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Clock.svg",
+      "sourceSha256": "a72fd4bef969498320c75491607011060792a487da0585cf71851634f5a64d11",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_clock.2F6373"
+        ]
+      },
+      "baseAsset": "reader_tts_clock.svg",
+      "baseSha256": "f8d187fdb7dcfcdee21acc8ae3f219bfb713fa908ab8b869f6ffe13bdc490727",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "84ec1ff9ac67f0a031e5ea6488630c8fcdff451639ef3928b3ecc26df4f27e7e"
+    },
+    {
       "file": "reader_tts_header.svg",
       "semanticRole": "full tts header",
       "originType": "figma-component-derived",
@@ -2023,6 +3928,31 @@
         "rotationDegrees": 0
       },
       "sha256": "acffaa6383824652d309c5d01c1a24f593fc728ca635aabe0ffb306229e7e859"
+    },
+    {
+      "file": "reader_tts_header_theme_night.svg",
+      "semanticRole": "reader_tts_header night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:597",
+      "componentName": "Icon/Tts",
+      "upstreamName": "Tts",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Tts.svg",
+      "sourceSha256": "91e9b3d756f745bdeaa0b7a79883d058e33453530a538982a3641fa89fb0a994",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_header.332C25"
+        ]
+      },
+      "baseAsset": "reader_tts_header.svg",
+      "baseSha256": "acffaa6383824652d309c5d01c1a24f593fc728ca635aabe0ffb306229e7e859",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "09cd270847753c1503b279f04b5506fe6e5c01022c945683bc6847d4f0794ecf"
     },
     {
       "file": "reader_tts_headphones.svg",
@@ -2045,6 +3975,31 @@
       "sha256": "19106eda2d7b4d15e2bac430c1d3352b1ee13dedcec4f47f2d82fe4387301adc"
     },
     {
+      "file": "reader_tts_headphones_theme_night.svg",
+      "semanticRole": "reader_tts_headphones night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:597",
+      "componentName": "Icon/Tts",
+      "upstreamName": "Tts",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Tts.svg",
+      "sourceSha256": "91e9b3d756f745bdeaa0b7a79883d058e33453530a538982a3641fa89fb0a994",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_headphones.2F6373"
+        ]
+      },
+      "baseAsset": "reader_tts_headphones.svg",
+      "baseSha256": "19106eda2d7b4d15e2bac430c1d3352b1ee13dedcec4f47f2d82fe4387301adc",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "00a72d27ed7a5ff10ed7d4f112dc22fec29d34874abd013c1d232ae9b39ecf6d"
+    },
+    {
       "file": "reader_tts_make_close.svg",
       "semanticRole": "reader TTS close",
       "originType": "figma-make-source-export",
@@ -2058,6 +4013,28 @@
         "pathMutation": "none"
       },
       "sha256": "78c28ebe741de77fb83ffa8d43b6543b074fb965989987c962e10d462d3b7eee"
+    },
+    {
+      "file": "reader_tts_make_close_theme_night.svg",
+      "semanticRole": "reader_tts_make_close night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG close",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_close.svg",
+      "sourceSha256": "78c28ebe741de77fb83ffa8d43b6543b074fb965989987c962e10d462d3b7eee",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_close.5B5046"
+        ]
+      },
+      "baseAsset": "reader_tts_make_close.svg",
+      "baseSha256": "78c28ebe741de77fb83ffa8d43b6543b074fb965989987c962e10d462d3b7eee",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ac7036aa94714d82ae92cb01b11a919c0e589136ad886c9f5c57cee65f9c6f31"
     },
     {
       "file": "reader_tts_make_engine_check.svg",
@@ -2075,6 +4052,29 @@
       "sha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a"
     },
     {
+      "file": "reader_tts_make_engine_check_theme_night.svg",
+      "semanticRole": "reader_tts_make_engine_check night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG engine_check",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_engine_check.svg",
+      "sourceSha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_engine_check.2F6373",
+          "app.icon.reader_tts_make_engine_check.FFFCF8"
+        ]
+      },
+      "baseAsset": "reader_tts_make_engine_check.svg",
+      "baseSha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "6b6a81e0c20463664d993449524382f621e9c0d521e1680e933f623265ddefb9"
+    },
+    {
       "file": "reader_tts_make_minus.svg",
       "semanticRole": "reader TTS minus",
       "originType": "figma-make-dom-export",
@@ -2088,6 +4088,28 @@
         "pathMutation": "none"
       },
       "sha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948"
+    },
+    {
+      "file": "reader_tts_make_minus_theme_night.svg",
+      "semanticRole": "reader_tts_make_minus night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "svg:has(path[d=\"M3 7h8\"]):not(:has(path[d=\"M7 3v8\"]))",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_minus.svg",
+      "sourceSha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_minus.2F6373"
+        ]
+      },
+      "baseAsset": "reader_tts_make_minus.svg",
+      "baseSha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ce8969ba49f725439bdb1ac2e740259d74f0a6847a4ce992760b6e76df90c68e"
     },
     {
       "file": "reader_tts_make_next.svg",
@@ -2120,6 +4142,50 @@
       "sha256": "a14d5ac3f014a32bbfb956a9519dc665cb8ec4541944ec42addec1037a128064"
     },
     {
+      "file": "reader_tts_make_next_quick_theme_night.svg",
+      "semanticRole": "reader_tts_make_next_quick night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG next_quick",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_next_quick.svg",
+      "sourceSha256": "a14d5ac3f014a32bbfb956a9519dc665cb8ec4541944ec42addec1037a128064",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_next_quick.4D463F"
+        ]
+      },
+      "baseAsset": "reader_tts_make_next_quick.svg",
+      "baseSha256": "a14d5ac3f014a32bbfb956a9519dc665cb8ec4541944ec42addec1037a128064",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "edd2f1a4307c5b607ec3d0376b71a4e467207a63d29f934ee4f953032066799c"
+    },
+    {
+      "file": "reader_tts_make_next_theme_night.svg",
+      "semanticRole": "reader_tts_make_next night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "button[aria-label=\"下一章\"] svg",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_next.svg",
+      "sourceSha256": "1afbdb895ba27e5041b039f64c6ef8d68aecf9c5e982265443ae4188cddc5a80",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_next.332C25"
+        ]
+      },
+      "baseAsset": "reader_tts_make_next.svg",
+      "baseSha256": "1afbdb895ba27e5041b039f64c6ef8d68aecf9c5e982265443ae4188cddc5a80",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "0e425560d5942907ea2978de442ac3ea4eb0b0fc929500abc243596bfdb7e59a"
+    },
+    {
       "file": "reader_tts_make_pause.svg",
       "semanticRole": "reader TTS pause",
       "originType": "figma-make-source-export",
@@ -2133,6 +4199,28 @@
         "pathMutation": "none"
       },
       "sha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee"
+    },
+    {
+      "file": "reader_tts_make_pause_theme_night.svg",
+      "semanticRole": "reader_tts_make_pause night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG pause",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_pause.svg",
+      "sourceSha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_pause.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_tts_make_pause.svg",
+      "baseSha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "fce7011495e9417a35b619809ece2b14f7c36aeef418d7937d4f0b9333c7263a"
     },
     {
       "file": "reader_tts_make_play.svg",
@@ -2150,6 +4238,28 @@
       "sha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442"
     },
     {
+      "file": "reader_tts_make_play_theme_night.svg",
+      "semanticRole": "reader_tts_make_play night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG play",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_play.svg",
+      "sourceSha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_play.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_tts_make_play.svg",
+      "baseSha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "7798527783d53c049759046799dcef95ee6e0693a8580389b6c024d74fd3bc1d"
+    },
+    {
       "file": "reader_tts_make_plus.svg",
       "semanticRole": "reader TTS plus",
       "originType": "figma-make-dom-export",
@@ -2163,6 +4273,28 @@
         "pathMutation": "none"
       },
       "sha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e"
+    },
+    {
+      "file": "reader_tts_make_plus_theme_night.svg",
+      "semanticRole": "reader_tts_make_plus night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "svg:has(path[d=\"M7 3v8\"])",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_plus.svg",
+      "sourceSha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_plus.2F6373"
+        ]
+      },
+      "baseAsset": "reader_tts_make_plus.svg",
+      "baseSha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "4b474a9eb65fcc0dabd20c0664630e88bf5da31ac64eecf0e0f6d9b7d72d70d2"
     },
     {
       "file": "reader_tts_make_previous.svg",
@@ -2193,6 +4325,50 @@
         "pathMutation": "none"
       },
       "sha256": "8a53cd31a4a4a0c5d5c3d633071e79c32c134250db5b541c6724241c384716ae"
+    },
+    {
+      "file": "reader_tts_make_previous_quick_theme_night.svg",
+      "semanticRole": "reader_tts_make_previous_quick night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "src/PhoneScreen.tsx SVG previous_quick",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_previous_quick.svg",
+      "sourceSha256": "8a53cd31a4a4a0c5d5c3d633071e79c32c134250db5b541c6724241c384716ae",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_previous_quick.4D463F"
+        ]
+      },
+      "baseAsset": "reader_tts_make_previous_quick.svg",
+      "baseSha256": "8a53cd31a4a4a0c5d5c3d633071e79c32c134250db5b541c6724241c384716ae",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "6a33392113768a04d148e3ae1ba8749d4895afe62c83790d230cfdb3c247106d"
+    },
+    {
+      "file": "reader_tts_make_previous_theme_night.svg",
+      "semanticRole": "reader_tts_make_previous night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "DEu3TuYhaJPLMEdSxorhwE",
+      "sourceSelector": "button[aria-label=\"上一章\"] svg",
+      "sourceVersion": 17,
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_previous.svg",
+      "sourceSha256": "cfc153424cb6ef1cab550405bae38d554e724aa62db4c444b161021fc5202603",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_make_previous.332C25"
+        ]
+      },
+      "baseAsset": "reader_tts_make_previous.svg",
+      "baseSha256": "cfc153424cb6ef1cab550405bae38d554e724aa62db4c444b161021fc5202603",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "5c175fee5bd314c5f2a4b35e8fa2eb9e314311a53612edacf8af3bb8401cb590"
     },
     {
       "file": "reader_tts_make_stop.svg",
@@ -2250,6 +4426,31 @@
       "sha256": "9710aa7fb4cc109a3abeffe2a49961dfa78ecd36f71628481ac46571189580b1"
     },
     {
+      "file": "reader_tts_next_theme_night.svg",
+      "semanticRole": "reader_tts_next night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "362:15",
+      "componentName": "Icon/ChevronRight",
+      "upstreamName": "ChevronRight",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronRight.svg",
+      "sourceSha256": "651bef1c49216b39349268c9b3b9a24c150d188327576b8f7872eb15ee807f5c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_next.332C25"
+        ]
+      },
+      "baseAsset": "reader_tts_next.svg",
+      "baseSha256": "9710aa7fb4cc109a3abeffe2a49961dfa78ecd36f71628481ac46571189580b1",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "9a9f46c777d97ccea090a19dcc7b5c40fad7621a8330085a531e01f1cd54f104"
+    },
+    {
       "file": "reader_tts_online_engine.svg",
       "semanticRole": "reader online TTS service",
       "originType": "figma-node-export",
@@ -2262,6 +4463,27 @@
         "pathMutation": "none"
       },
       "sha256": "ad82520fc2d882921ceac5761c5f01eea90c2a389cc6c39d8e839a66629a9e89"
+    },
+    {
+      "file": "reader_tts_online_engine_theme_night.svg",
+      "semanticRole": "reader_tts_online_engine night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "930:948",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_online_engine.svg",
+      "sourceSha256": "ad82520fc2d882921ceac5761c5f01eea90c2a389cc6c39d8e839a66629a9e89",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_online_engine.756F69"
+        ]
+      },
+      "baseAsset": "reader_tts_online_engine.svg",
+      "baseSha256": "ad82520fc2d882921ceac5761c5f01eea90c2a389cc6c39d8e839a66629a9e89",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "e31c00ae7bfd492df95fa3c1637b016a5d614dd14435f89711f4065411b06419"
     },
     {
       "file": "reader_tts_play.svg",
@@ -2284,6 +4506,31 @@
       "sha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f"
     },
     {
+      "file": "reader_tts_play_theme_night.svg",
+      "semanticRole": "reader_tts_play night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:392",
+      "componentName": "Icon/Play",
+      "upstreamName": "Play",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Play.svg",
+      "sourceSha256": "ada2d95be0abd121062f8d7360351bdd536410a8e6e3f6666d7b9ccf7559bd33",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_play.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_tts_play.svg",
+      "baseSha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c7aaffed76a5b07a4602f68990f08ee3acbd0fd804e566889be08a95a5a4af69"
+    },
+    {
       "file": "reader_tts_previous.svg",
       "semanticRole": "reader tts previous",
       "originType": "figma-component-derived",
@@ -2302,6 +4549,31 @@
         "rotationDegrees": 0
       },
       "sha256": "c778e9abd7bf407919fc9d5f6f134ce0c00a759ffd6267bef43a2e888d08488c"
+    },
+    {
+      "file": "reader_tts_previous_theme_night.svg",
+      "semanticRole": "reader_tts_previous night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:124",
+      "componentName": "Icon/ChevronLeft",
+      "upstreamName": "ChevronLeft",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__ChevronLeft.svg",
+      "sourceSha256": "9f24d27fd1df5559af07875598096b0656b0dbed42db8b3eda72577fca26150a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_previous.332C25"
+        ]
+      },
+      "baseAsset": "reader_tts_previous.svg",
+      "baseSha256": "c778e9abd7bf407919fc9d5f6f134ce0c00a759ffd6267bef43a2e888d08488c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "2beb173c5a5ba8b04b248c7c00a10a8c62ebad8f70c1d71ceb000d18d8d12307"
     },
     {
       "file": "reader_tts_rate.svg",
@@ -2324,6 +4596,31 @@
       "sha256": "830073a1828d06451edb899a80c3bb5fba716f77d06bbc4d51126b67415b7762"
     },
     {
+      "file": "reader_tts_rate_theme_night.svg",
+      "semanticRole": "reader_tts_rate night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:340",
+      "componentName": "Icon/Motion",
+      "upstreamName": "Motion",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Motion.svg",
+      "sourceSha256": "a2758b66aefa3eddc10292f0447280bcdf2cf26dbeb4bef813f4311328571b13",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_rate.2F6373"
+        ]
+      },
+      "baseAsset": "reader_tts_rate.svg",
+      "baseSha256": "830073a1828d06451edb899a80c3bb5fba716f77d06bbc4d51126b67415b7762",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "055eaed1edf970678a5d2ac3ecc23070b5c654feed845c8a66ada8a2901ac1e2"
+    },
+    {
       "file": "reader_tts_speed_thumb.svg",
       "semanticRole": "reader quick TTS speed thumb",
       "originType": "figma-node-export",
@@ -2336,6 +4633,28 @@
         "pathMutation": "none"
       },
       "sha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21"
+    },
+    {
+      "file": "reader_tts_speed_thumb_theme_night.svg",
+      "semanticRole": "reader_tts_speed_thumb night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "750:1059",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_speed_thumb.svg",
+      "sourceSha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_speed_thumb.FFFAF4",
+          "app.icon.reader_tts_speed_thumb.2F6373"
+        ]
+      },
+      "baseAsset": "reader_tts_speed_thumb.svg",
+      "baseSha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d4ff798008b22a096f3654e34d854116765e549e89cd4d6d86800e61a9ac122e"
     },
     {
       "file": "reader_tts_stop.svg",
@@ -2358,6 +4677,31 @@
       "sha256": "f6d89164aee10abc248d2bcb033a80e5c86dd7980990400f8bbb0c4b06600599"
     },
     {
+      "file": "reader_tts_stop_theme_night.svg",
+      "semanticRole": "reader_tts_stop night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:542",
+      "componentName": "Icon/Stop",
+      "upstreamName": "Stop",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Stop.svg",
+      "sourceSha256": "00eaee4d8fa348a26d5149687dcdc0468b3aad6f7c486a202a8242b0e24f0a77",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_stop.FFFAF4"
+        ]
+      },
+      "baseAsset": "reader_tts_stop.svg",
+      "baseSha256": "f6d89164aee10abc248d2bcb033a80e5c86dd7980990400f8bbb0c4b06600599",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f26e79f0137940096317e02f0183fc8c202e303f7cef5d1700a396d3f7b7fbba"
+    },
+    {
       "file": "reader_tts_system_engine.svg",
       "semanticRole": "reader system TTS service",
       "originType": "figma-node-export",
@@ -2370,6 +4714,27 @@
         "pathMutation": "none"
       },
       "sha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf"
+    },
+    {
+      "file": "reader_tts_system_engine_theme_night.svg",
+      "semanticRole": "reader_tts_system_engine night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "930:936",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_system_engine.svg",
+      "sourceSha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_tts_system_engine.1F3528"
+        ]
+      },
+      "baseAsset": "reader_tts_system_engine.svg",
+      "baseSha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "57858a82888cd2c223cab1b80cec39a927873d921539426abc95845d8675879f"
     },
     {
       "file": "reading_paper_phone_highlight.svg",
@@ -2524,6 +4889,31 @@
       "sha256": "415f4841db4e3c1265bd1b979598a27b256d2bc7c6dce15a79e22cebbd09d5b8"
     },
     {
+      "file": "rss_add_theme_night.svg",
+      "semanticRole": "rss_add night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "363:29",
+      "componentName": "Icon/Plus",
+      "upstreamName": "Plus",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Plus.svg",
+      "sourceSha256": "d5766ddd43be5f3ef8a5b765bab27f6d7cf01cb564df742470621e882699056f",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_add.2D4A3E"
+        ]
+      },
+      "baseAsset": "rss_add.svg",
+      "baseSha256": "415f4841db4e3c1265bd1b979598a27b256d2bc7c6dce15a79e22cebbd09d5b8",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ace504c729dd57e5125eabc80d3e2539a69a18ef91aa78f46c7f18565ff514a4"
+    },
+    {
       "file": "rss_bookmark.svg",
       "semanticRole": "rss bookmark inactive",
       "originType": "figma-component-derived",
@@ -2564,6 +4954,56 @@
       "sha256": "ed23e3e0cbde51ce1ae87a3191d440bc36b9236b77ca3501ccceb1480d5138ec"
     },
     {
+      "file": "rss_bookmark_active_theme_night.svg",
+      "semanticRole": "rss_bookmark_active night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:73",
+      "componentName": "Icon/Bookmark",
+      "upstreamName": "Bookmark",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookmark.svg",
+      "sourceSha256": "8afe54487abb2d3151853f5ff867605d7cec1925555db2f58716e3f63da07d34",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_bookmark_active.1F3528"
+        ]
+      },
+      "baseAsset": "rss_bookmark_active.svg",
+      "baseSha256": "ed23e3e0cbde51ce1ae87a3191d440bc36b9236b77ca3501ccceb1480d5138ec",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "aed994a7fb2d0df188cb7ba2f7224382a0d18be42ca157be76327218d5118d8d"
+    },
+    {
+      "file": "rss_bookmark_theme_night.svg",
+      "semanticRole": "rss_bookmark night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:73",
+      "componentName": "Icon/Bookmark",
+      "upstreamName": "Bookmark",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookmark.svg",
+      "sourceSha256": "8afe54487abb2d3151853f5ff867605d7cec1925555db2f58716e3f63da07d34",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_bookmark.756F69"
+        ]
+      },
+      "baseAsset": "rss_bookmark.svg",
+      "baseSha256": "e789c3c91c79dda52a164b77c03ce5b079913a10166a62191dd60eebcd18ef1b",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "bdeede317261fb55eebd45d304ce7cc106ac50f06198468facc852edcbd1496c"
+    },
+    {
       "file": "rss_edit.svg",
       "semanticRole": "rss edit",
       "originType": "figma-component-derived",
@@ -2582,6 +5022,31 @@
         "rotationDegrees": 0
       },
       "sha256": "6f4c1951fffc601a1d23872cc6e114d19e36822e5f5bbc4b67a9fbacf2501209"
+    },
+    {
+      "file": "rss_edit_theme_night.svg",
+      "semanticRole": "rss_edit night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:201",
+      "componentName": "Icon/Edit",
+      "upstreamName": "Edit",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Edit.svg",
+      "sourceSha256": "902655d9b2511462ebbe076142dbfefde9896850e0c9035ccc3db1fe9b63b063",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_edit.3F372F"
+        ]
+      },
+      "baseAsset": "rss_edit.svg",
+      "baseSha256": "6f4c1951fffc601a1d23872cc6e114d19e36822e5f5bbc4b67a9fbacf2501209",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "ad89e7daa1be120f1b7bac8f71e45223fdc1830db8a3c24d2998b1559e2981d4"
     },
     {
       "file": "rss_empty.svg",
@@ -2604,6 +5069,31 @@
       "sha256": "0fa09ac5b9ce8c01eb40a3a98a8a641ea45cdd4e063680a24e6d0fb975b41fb0"
     },
     {
+      "file": "rss_empty_theme_night.svg",
+      "semanticRole": "rss_empty night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:460",
+      "componentName": "Icon/Rss",
+      "upstreamName": "Rss",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Rss.svg",
+      "sourceSha256": "0fa09ac5b9ce8c01eb40a3a98a8a641ea45cdd4e063680a24e6d0fb975b41fb0",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_empty.1F1B17"
+        ]
+      },
+      "baseAsset": "rss_empty.svg",
+      "baseSha256": "0fa09ac5b9ce8c01eb40a3a98a8a641ea45cdd4e063680a24e6d0fb975b41fb0",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "38ef30d4480abcc21f5bb3ff90294927bb5326c7e616aa2c809a2720c0a3b552"
+    },
+    {
       "file": "rss_error.svg",
       "semanticRole": "rss error state",
       "originType": "figma-component-derived",
@@ -2624,6 +5114,31 @@
       "sha256": "6ea43740a591ed528b6ab52f6601c5e8714753a15607ad1cddb315074f419ea3"
     },
     {
+      "file": "rss_error_theme_night.svg",
+      "semanticRole": "rss_error night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:624",
+      "componentName": "Icon/Warning",
+      "upstreamName": "Warning",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Warning.svg",
+      "sourceSha256": "6ea43740a591ed528b6ab52f6601c5e8714753a15607ad1cddb315074f419ea3",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_error.1F1B17"
+        ]
+      },
+      "baseAsset": "rss_error.svg",
+      "baseSha256": "6ea43740a591ed528b6ab52f6601c5e8714753a15607ad1cddb315074f419ea3",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "4521e15996bfe3a82efbc870ce48aed2237d74baa0f3117daa1a074971d4b894"
+    },
+    {
       "file": "rss_external.svg",
       "semanticRole": "rss external link",
       "originType": "figma-component-derived",
@@ -2642,6 +5157,31 @@
         "rotationDegrees": 0
       },
       "sha256": "656ae890197d151ce4deeb400549575ab61f19370fdfe98b4d79b287684b9d44"
+    },
+    {
+      "file": "rss_external_theme_night.svg",
+      "semanticRole": "rss_external night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "362:35",
+      "componentName": "Icon/Expand",
+      "upstreamName": "Expand",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Expand.svg",
+      "sourceSha256": "a21c21924d1e810ec8fa9390ebce2c1a8ecc9c9f560e7a6de03b67d5f58413f0",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_external.3F372F"
+        ]
+      },
+      "baseAsset": "rss_external.svg",
+      "baseSha256": "656ae890197d151ce4deeb400549575ab61f19370fdfe98b4d79b287684b9d44",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "be557259cbbe78a1f374aca4f979c62f91d7401104c7bbb3b23f60aed1c4ea46"
     },
     {
       "file": "rss_filter.svg",
@@ -2684,6 +5224,56 @@
       "sha256": "b9ea148abf75f6102e0cbd14850cf81650faeadbd976cb16a2e6ac67e987e427"
     },
     {
+      "file": "rss_filter_chevron_theme_night.svg",
+      "semanticRole": "rss_filter_chevron night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:119",
+      "componentName": "Icon/Chevron",
+      "upstreamName": "Chevron",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Chevron.svg",
+      "sourceSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_filter_chevron.3F372F"
+        ]
+      },
+      "baseAsset": "rss_filter_chevron.svg",
+      "baseSha256": "b9ea148abf75f6102e0cbd14850cf81650faeadbd976cb16a2e6ac67e987e427",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "69fc72aacef4afb66df9a55a6c363c7cf36271c39128b8e67cebb16e90337a5c"
+    },
+    {
+      "file": "rss_filter_theme_night.svg",
+      "semanticRole": "rss_filter night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:220",
+      "componentName": "Icon/Filter",
+      "upstreamName": "Filter",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Filter.svg",
+      "sourceSha256": "f2f6af86ab878e9e759e36d4b2bb96a18a81db4ef314a445094a8a40fba2fa3c",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_filter.3F372F"
+        ]
+      },
+      "baseAsset": "rss_filter.svg",
+      "baseSha256": "942de71963532a397e1165ac66249850bb78a5a0d751febc24cf888b1bd18774",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "3e36f3b59848839eae9428d0e5d944e21d05855b7fff2d31f17864be3f4a374b"
+    },
+    {
       "file": "rss_item_chevron.svg",
       "semanticRole": "rss item disclosure",
       "originType": "figma-component-derived",
@@ -2704,6 +5294,31 @@
       "sha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6"
     },
     {
+      "file": "rss_item_chevron_theme_night.svg",
+      "semanticRole": "rss_item_chevron night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:119",
+      "componentName": "Icon/Chevron",
+      "upstreamName": "Chevron",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Chevron.svg",
+      "sourceSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_item_chevron.1F1B17"
+        ]
+      },
+      "baseAsset": "rss_item_chevron.svg",
+      "baseSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "69fc72aacef4afb66df9a55a6c363c7cf36271c39128b8e67cebb16e90337a5c"
+    },
+    {
       "file": "rss_link.svg",
       "semanticRole": "rss link",
       "originType": "figma-component-derived",
@@ -2722,6 +5337,31 @@
         "rotationDegrees": 0
       },
       "sha256": "f3c91008c654f63f1ae3849e129fae08ca095e48f5eaceed4e2b43f9ac7cde65"
+    },
+    {
+      "file": "rss_link_theme_night.svg",
+      "semanticRole": "rss_link night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:295",
+      "componentName": "Icon/Link",
+      "upstreamName": "Link",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Link.svg",
+      "sourceSha256": "27911d1d0d98e9ee2cc3b559ba0fbc60fc5aa2b4fc154d27857c9f4dd518fabb",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_link.3F372F"
+        ]
+      },
+      "baseAsset": "rss_link.svg",
+      "baseSha256": "f3c91008c654f63f1ae3849e129fae08ca095e48f5eaceed4e2b43f9ac7cde65",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "4378c92eb7caf14f72021831e85396fab44cc6651a16d0335d88aa8d8dba1d90"
     },
     {
       "file": "rss_manage.svg",
@@ -2784,6 +5424,31 @@
       "sha256": "d876fd993ea766ade4d49a2fccf020ccdacf290d911ea2a12e42b5909012f24a"
     },
     {
+      "file": "rss_manage_edit_theme_night.svg",
+      "semanticRole": "rss_manage_edit night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:201",
+      "componentName": "Icon/Edit",
+      "upstreamName": "Edit",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Edit.svg",
+      "sourceSha256": "902655d9b2511462ebbe076142dbfefde9896850e0c9035ccc3db1fe9b63b063",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_manage_edit.1F1B17"
+        ]
+      },
+      "baseAsset": "rss_manage_edit.svg",
+      "baseSha256": "d876fd993ea766ade4d49a2fccf020ccdacf290d911ea2a12e42b5909012f24a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d632aaa7ce298eb2d4d18137dde10f90e89d535a8d361c172ecf2041b2481abf"
+    },
+    {
       "file": "rss_manage_refresh.svg",
       "semanticRole": "rss management refresh",
       "originType": "figma-component-derived",
@@ -2802,6 +5467,56 @@
         "rotationDegrees": 0
       },
       "sha256": "95a0d6901bd018d614b05db3f43bbae303b8168481c388b49020e7674a5dfe11"
+    },
+    {
+      "file": "rss_manage_refresh_theme_night.svg",
+      "semanticRole": "rss_manage_refresh night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:404",
+      "componentName": "Icon/Refresh",
+      "upstreamName": "Refresh",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Refresh.svg",
+      "sourceSha256": "54f29b2d36ac7dc4fb856d05fed78fb138933c03222df7b72c6c9bc581c6ab6d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_manage_refresh.1F1B17"
+        ]
+      },
+      "baseAsset": "rss_manage_refresh.svg",
+      "baseSha256": "95a0d6901bd018d614b05db3f43bbae303b8168481c388b49020e7674a5dfe11",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "32c4c0067be770fdcf134a4acf6397390c75263424efb6c68f2143592d6fbdff"
+    },
+    {
+      "file": "rss_manage_theme_night.svg",
+      "semanticRole": "rss_manage night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:472",
+      "componentName": "Icon/Settings",
+      "upstreamName": "Settings",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Settings.svg",
+      "sourceSha256": "991b85162a8e75bda30a062835181fe2c01ba5259744b3c97465796d5148fc90",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_manage.756F69"
+        ]
+      },
+      "baseAsset": "rss_manage.svg",
+      "baseSha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f326eaf270e34b87119b84a2a54eda0e4b7a5c3a51dfe2ad23d284c0950d5b3f"
     },
     {
       "file": "rss_manage_view_all.svg",
@@ -2824,6 +5539,31 @@
       "sha256": "a753d00b34a76be019b73b18bbbb732296e5c02fc400cac1b579a84f574bd5b5"
     },
     {
+      "file": "rss_manage_view_all_theme_night.svg",
+      "semanticRole": "rss_manage_view_all night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:303",
+      "componentName": "Icon/List",
+      "upstreamName": "List",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__List.svg",
+      "sourceSha256": "b79f8493de8051ae9cacd8f1f41a8cbad64385bb6f37c284bb422b42594abce9",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_manage_view_all.1F1B17"
+        ]
+      },
+      "baseAsset": "rss_manage_view_all.svg",
+      "baseSha256": "a753d00b34a76be019b73b18bbbb732296e5c02fc400cac1b579a84f574bd5b5",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "2faeee16c1a53c0b0fe5360c5d3494eb9d07592a9a78208e62f173305e9952bf"
+    },
+    {
       "file": "rss_refresh.svg",
       "semanticRole": "rss refresh",
       "originType": "figma-component-derived",
@@ -2842,6 +5582,31 @@
         "rotationDegrees": 0
       },
       "sha256": "a39034bb92503e4492ed0a03b4ba56bf9b7491cd536dd8aed866929b887da41a"
+    },
+    {
+      "file": "rss_refresh_theme_night.svg",
+      "semanticRole": "rss_refresh night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:404",
+      "componentName": "Icon/Refresh",
+      "upstreamName": "Refresh",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Refresh.svg",
+      "sourceSha256": "54f29b2d36ac7dc4fb856d05fed78fb138933c03222df7b72c6c9bc581c6ab6d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_refresh.1F3528"
+        ]
+      },
+      "baseAsset": "rss_refresh.svg",
+      "baseSha256": "a39034bb92503e4492ed0a03b4ba56bf9b7491cd536dd8aed866929b887da41a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c0dd3a77a1712841cac4d81ae32ec1dafc4e636e284de60fbe40fd52e0fe73ac"
     },
     {
       "file": "rss_source.svg",
@@ -2864,6 +5629,31 @@
       "sha256": "b020b178b761dfef0904746883dd6957c835ecf3fad70045aae9d6ef9eb5b6b1"
     },
     {
+      "file": "rss_source_theme_night.svg",
+      "semanticRole": "rss_source night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:460",
+      "componentName": "Icon/Rss",
+      "upstreamName": "Rss",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Rss.svg",
+      "sourceSha256": "0fa09ac5b9ce8c01eb40a3a98a8a641ea45cdd4e063680a24e6d0fb975b41fb0",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_source.1F3528"
+        ]
+      },
+      "baseAsset": "rss_source.svg",
+      "baseSha256": "b020b178b761dfef0904746883dd6957c835ecf3fad70045aae9d6ef9eb5b6b1",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "0644feaef11ea706e40a928417d7348ca9eb87798828305fded79ced609eabbc"
+    },
+    {
       "file": "rss_view_all.svg",
       "semanticRole": "rss view all",
       "originType": "figma-component-derived",
@@ -2882,6 +5672,31 @@
         "rotationDegrees": 0
       },
       "sha256": "f548f08fd95293d64ae3bb2a6a874042b0a1abddc0e9899c9ca13be2ea41ba24"
+    },
+    {
+      "file": "rss_view_all_theme_night.svg",
+      "semanticRole": "rss_view_all night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:303",
+      "componentName": "Icon/List",
+      "upstreamName": "List",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__List.svg",
+      "sourceSha256": "b79f8493de8051ae9cacd8f1f41a8cbad64385bb6f37c284bb422b42594abce9",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.rss_view_all.1F3528"
+        ]
+      },
+      "baseAsset": "rss_view_all.svg",
+      "baseSha256": "f548f08fd95293d64ae3bb2a6a874042b0a1abddc0e9899c9ca13be2ea41ba24",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "4dbafd10947ca7e4cffc342b2f65444be68104d4334221c6aa92f3557a73dbde"
     },
     {
       "file": "search_back.svg",
@@ -2904,6 +5719,31 @@
       "sha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba"
     },
     {
+      "file": "search_back_theme_night.svg",
+      "semanticRole": "search_back night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:37",
+      "componentName": "Icon/Back",
+      "upstreamName": "Back",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Back.svg",
+      "sourceSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.search_back.1F1B17"
+        ]
+      },
+      "baseAsset": "search_back.svg",
+      "baseSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f237e69ae5dd2d97b4771042cc6a3c9b54adba6ed16cb4da76194a97263625cc"
+    },
+    {
       "file": "search_clear.svg",
       "semanticRole": "search clear",
       "originType": "figma-node-export",
@@ -2916,6 +5756,27 @@
         "pathMutation": "none"
       },
       "sha256": "6a820bee5e09524cd2cf26c60b06b7e46c8c931137aaeaeae36ce589600f724a"
+    },
+    {
+      "file": "search_clear_theme_night.svg",
+      "semanticRole": "search_clear night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2635:59016",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/search_clear.svg",
+      "sourceSha256": "6a820bee5e09524cd2cf26c60b06b7e46c8c931137aaeaeae36ce589600f724a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.search_clear.756F69"
+        ]
+      },
+      "baseAsset": "search_clear.svg",
+      "baseSha256": "6a820bee5e09524cd2cf26c60b06b7e46c8c931137aaeaeae36ce589600f724a",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "34f03f8e01ec1881c6fa428aed432a7b800951a347b7deafa2e57ffa2bcd85ff"
     },
     {
       "file": "search_empty.svg",
@@ -2932,6 +5793,34 @@
       "sha256": "117834cd4fe8d874c4a205c39cbe2ae3397a08d4d99edf170f39e9b5750b7a08"
     },
     {
+      "file": "search_empty_theme_night.svg",
+      "semanticRole": "search_empty night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2635:59036",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/search_empty.svg",
+      "sourceSha256": "117834cd4fe8d874c4a205c39cbe2ae3397a08d4d99edf170f39e9b5750b7a08",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.search_empty.D8D1C4",
+          "app.icon.search_empty.C4BDB0",
+          "app.icon.search_empty.E0D9CC",
+          "app.icon.search_empty.CCC5B8",
+          "app.icon.search_empty.EAE4D8",
+          "app.icon.search_empty.D4CEC2",
+          "app.icon.search_empty.F8F4EC",
+          "app.icon.search_empty.756F69"
+        ]
+      },
+      "baseAsset": "search_empty.svg",
+      "baseSha256": "117834cd4fe8d874c4a205c39cbe2ae3397a08d4d99edf170f39e9b5750b7a08",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "71b36fd688b4765312cdbfc0f913187f4642a7cb8f2ae10387c82d2ce3a6cf54"
+    },
+    {
       "file": "search_error.svg",
       "semanticRole": "search error illustration",
       "originType": "figma-node-export",
@@ -2944,6 +5833,29 @@
         "pathMutation": "none"
       },
       "sha256": "a0ebc62a8abae7a8fe5a78f746936c42f1c7ab88ef93df97fc8a70d9f1ce78b9"
+    },
+    {
+      "file": "search_error_theme_night.svg",
+      "semanticRole": "search_error night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2635:59126",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/search_error.svg",
+      "sourceSha256": "a0ebc62a8abae7a8fe5a78f746936c42f1c7ab88ef93df97fc8a70d9f1ce78b9",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.search_error.F0EBE1",
+          "app.icon.search_error.C1C7CD",
+          "app.icon.search_error.756F69"
+        ]
+      },
+      "baseAsset": "search_error.svg",
+      "baseSha256": "a0ebc62a8abae7a8fe5a78f746936c42f1c7ab88ef93df97fc8a70d9f1ce78b9",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f933b6beda670ae023232e5a0bb6f8a4c6834fd76213f299e07c94d29dc3b08e"
     },
     {
       "file": "search_mag.svg",
@@ -2966,6 +5878,31 @@
       "sha256": "530b1f391b5251d3557eb59bd00a510b698259b1a7aab0ecda84ea1e69556c7c"
     },
     {
+      "file": "search_mag_theme_night.svg",
+      "semanticRole": "search_mag night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:466",
+      "componentName": "Icon/Search",
+      "upstreamName": "Search",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Search.svg",
+      "sourceSha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.search_mag.756F69"
+        ]
+      },
+      "baseAsset": "search_mag.svg",
+      "baseSha256": "530b1f391b5251d3557eb59bd00a510b698259b1a7aab0ecda84ea1e69556c7c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "1be8b983d432d310c6577f845c587b32b8d672744a209ab7e4699e96b94e790a"
+    },
+    {
       "file": "settings_gen_animation.svg",
       "semanticRole": "settings animation",
       "originType": "figma-component-derived",
@@ -2984,6 +5921,31 @@
         "rotationDegrees": 0
       },
       "sha256": "b33dc6997d3c55f17892602b50a909ccf0bcab0dc4ffa1e63ec3cbac8c40d938"
+    },
+    {
+      "file": "settings_gen_animation_theme_night.svg",
+      "semanticRole": "settings_gen_animation night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:340",
+      "componentName": "Icon/Motion",
+      "upstreamName": "Motion",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Motion.svg",
+      "sourceSha256": "a2758b66aefa3eddc10292f0447280bcdf2cf26dbeb4bef813f4311328571b13",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_animation.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_animation.svg",
+      "baseSha256": "b33dc6997d3c55f17892602b50a909ccf0bcab0dc4ffa1e63ec3cbac8c40d938",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "055eaed1edf970678a5d2ac3ecc23070b5c654feed845c8a66ada8a2901ac1e2"
     },
     {
       "file": "settings_gen_battery.svg",
@@ -3006,6 +5968,31 @@
       "sha256": "28267e1ad2fa1e3b1e71efab92b2af74f3d3f262c586aa25aed45258b650295b"
     },
     {
+      "file": "settings_gen_battery_theme_night.svg",
+      "semanticRole": "settings_gen_battery night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:50",
+      "componentName": "Icon/Battery",
+      "upstreamName": "Battery",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Battery.svg",
+      "sourceSha256": "d98bece54c345e011137631d580b63653288bf7ea3409b604688d39ce44a95e8",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_battery.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_battery.svg",
+      "baseSha256": "28267e1ad2fa1e3b1e71efab92b2af74f3d3f262c586aa25aed45258b650295b",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c0482af337f9e866cdf3f842e0006bc6965008086ac7d449862f1b991ce45af8"
+    },
+    {
       "file": "settings_gen_cache.svg",
       "semanticRole": "settings cache",
       "originType": "figma-component-derived",
@@ -3024,6 +6011,31 @@
         "rotationDegrees": 0
       },
       "sha256": "7733f3319e3ee46c35db29c964ae42525434278b8e28f9328b8422bd041e01bc"
+    },
+    {
+      "file": "settings_gen_cache_theme_night.svg",
+      "semanticRole": "settings_gen_cache night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:549",
+      "componentName": "Icon/Storage",
+      "upstreamName": "Storage",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Storage.svg",
+      "sourceSha256": "a77de1da14a9f05fe82db442c65656a9c0e372d6f9e1008654e20fc5ce6dd926",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_cache.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_cache.svg",
+      "baseSha256": "7733f3319e3ee46c35db29c964ae42525434278b8e28f9328b8422bd041e01bc",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "71b5dbb2623f6e292e7abdba8cdacd5f82a6d7b014b6e6f68faaabb9dafd0792"
     },
     {
       "file": "settings_gen_crash.svg",
@@ -3046,6 +6058,31 @@
       "sha256": "38b371f5bd2ee43a543ffa88f52a046f037e196a3c93632492a8c207cf033e9c"
     },
     {
+      "file": "settings_gen_crash_theme_night.svg",
+      "semanticRole": "settings_gen_crash night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:103",
+      "componentName": "Icon/Bug",
+      "upstreamName": "Bug",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bug.svg",
+      "sourceSha256": "3f7a3bf868431b7193aa2311218ce447dba77c1de9c74e8188364ffdea374ae5",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_crash.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_crash.svg",
+      "baseSha256": "38b371f5bd2ee43a543ffa88f52a046f037e196a3c93632492a8c207cf033e9c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "f4181972dbe531ec5e92846fb4244b120c58cbf59c4bf6b1934bb7a41925be65"
+    },
+    {
       "file": "settings_gen_file.svg",
       "semanticRole": "settings file access",
       "originType": "figma-component-derived",
@@ -3064,6 +6101,31 @@
         "rotationDegrees": 0
       },
       "sha256": "f57c7879a77c8dcf381fbb6e85788f7a4ef27ee618606c14d71b9455bb6d02a6"
+    },
+    {
+      "file": "settings_gen_file_theme_night.svg",
+      "semanticRole": "settings_gen_file night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:214",
+      "componentName": "Icon/File",
+      "upstreamName": "File",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__File.svg",
+      "sourceSha256": "e0c8cc309d95b41fb40c4ced0906a6a20a5d1e673e1d8346667018448faaaecb",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_file.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_file.svg",
+      "baseSha256": "f57c7879a77c8dcf381fbb6e85788f7a4ef27ee618606c14d71b9455bb6d02a6",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "422c2b201b2c099481745320608b7ce700763b6605cf3f423f52dedf8a700c74"
     },
     {
       "file": "settings_gen_language.svg",
@@ -3086,6 +6148,31 @@
       "sha256": "e13a7cae55598ae803275ee31bc519e666b9716eb50d5ea0a10502969dcaa2a3"
     },
     {
+      "file": "settings_gen_language_theme_night.svg",
+      "semanticRole": "settings_gen_language night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:254",
+      "componentName": "Icon/Globe",
+      "upstreamName": "Globe",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Globe.svg",
+      "sourceSha256": "d32aa32e502a480975e1160ea9eed7a8722195c5afac8656c105585c0923b4d8",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_language.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_language.svg",
+      "baseSha256": "e13a7cae55598ae803275ee31bc519e666b9716eb50d5ea0a10502969dcaa2a3",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "43c363f440c60df9baa8afc2a89a0a3a66036f60c31ab2a0001a5febc97cfc2e"
+    },
+    {
       "file": "settings_gen_motion.svg",
       "semanticRole": "settings reduced motion",
       "originType": "figma-component-derived",
@@ -3104,6 +6191,31 @@
         "rotationDegrees": 0
       },
       "sha256": "b33dc6997d3c55f17892602b50a909ccf0bcab0dc4ffa1e63ec3cbac8c40d938"
+    },
+    {
+      "file": "settings_gen_motion_theme_night.svg",
+      "semanticRole": "settings_gen_motion night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:340",
+      "componentName": "Icon/Motion",
+      "upstreamName": "Motion",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Motion.svg",
+      "sourceSha256": "a2758b66aefa3eddc10292f0447280bcdf2cf26dbeb4bef813f4311328571b13",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_motion.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_motion.svg",
+      "baseSha256": "b33dc6997d3c55f17892602b50a909ccf0bcab0dc4ffa1e63ec3cbac8c40d938",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "055eaed1edf970678a5d2ac3ecc23070b5c654feed845c8a66ada8a2901ac1e2"
     },
     {
       "file": "settings_gen_notification.svg",
@@ -3126,6 +6238,31 @@
       "sha256": "05d944b56f5284037955b557dd8c3beb68c488f7a64bf16e3171e4551ceb8b6c"
     },
     {
+      "file": "settings_gen_notification_theme_night.svg",
+      "semanticRole": "settings_gen_notification night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:56",
+      "componentName": "Icon/Bell",
+      "upstreamName": "Bell",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bell.svg",
+      "sourceSha256": "05dcd483476c3f6ad0609600e796377d01c3e157e4e5171ca5d965b516cdf04d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_notification.756F69"
+        ]
+      },
+      "baseAsset": "settings_gen_notification.svg",
+      "baseSha256": "05d944b56f5284037955b557dd8c3beb68c488f7a64bf16e3171e4551ceb8b6c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "9639d9d5b374c1b2501312bcf661e5ab6842c5cdaf908a994e1d3f6c92c8f758"
+    },
+    {
       "file": "settings_gen_refresh.svg",
       "semanticRole": "settings refresh",
       "originType": "figma-component-derived",
@@ -3144,6 +6281,31 @@
         "rotationDegrees": 0
       },
       "sha256": "01fb14b0643aef6c597fc3977d7f0b68640d86545afa56f4b7eee2a0469fa7b7"
+    },
+    {
+      "file": "settings_gen_refresh_theme_night.svg",
+      "semanticRole": "settings_gen_refresh night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:404",
+      "componentName": "Icon/Refresh",
+      "upstreamName": "Refresh",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Refresh.svg",
+      "sourceSha256": "54f29b2d36ac7dc4fb856d05fed78fb138933c03222df7b72c6c9bc581c6ab6d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_refresh.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_refresh.svg",
+      "baseSha256": "01fb14b0643aef6c597fc3977d7f0b68640d86545afa56f4b7eee2a0469fa7b7",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c0dd3a77a1712841cac4d81ae32ec1dafc4e636e284de60fbe40fd52e0fe73ac"
     },
     {
       "file": "settings_gen_startup.svg",
@@ -3166,6 +6328,31 @@
       "sha256": "14e39e3aebfc79c664d7f0aac108129f3a418bd6575e70db46d4aebfc87fe344"
     },
     {
+      "file": "settings_gen_startup_theme_night.svg",
+      "semanticRole": "settings_gen_startup night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:276",
+      "componentName": "Icon/Home",
+      "upstreamName": "Home",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Home.svg",
+      "sourceSha256": "1f968b6cf3308160ef9c94b7c76889baab5a930c19db9b68de02103690387922",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_startup.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_startup.svg",
+      "baseSha256": "14e39e3aebfc79c664d7f0aac108129f3a418bd6575e70db46d4aebfc87fe344",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "c01716245461082ae73dfa6f531ea8b08378aa4691f30ac73cea2532cbe00ee9"
+    },
+    {
       "file": "settings_gen_tap_top.svg",
       "semanticRole": "settings tap to top",
       "originType": "figma-component-derived",
@@ -3184,6 +6371,31 @@
         "rotationDegrees": 0
       },
       "sha256": "721f0e94afc0b5b90807974f7f47337f37b079a8c52ffe03c59aa9a600416cce"
+    },
+    {
+      "file": "settings_gen_tap_top_theme_night.svg",
+      "semanticRole": "settings_gen_tap_top night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:580",
+      "componentName": "Icon/Top",
+      "upstreamName": "Top",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Top.svg",
+      "sourceSha256": "daf12137f77011859f20c2f20244dbd3d7a8c3872814f38c32cbf6ad5144213f",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_tap_top.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_tap_top.svg",
+      "baseSha256": "721f0e94afc0b5b90807974f7f47337f37b079a8c52ffe03c59aa9a600416cce",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "57f8bd4de690b42772ef81b69357bf3dd144057c8e2177f9859c384cdb48c0c1"
     },
     {
       "file": "settings_gen_theme.svg",
@@ -3206,6 +6418,31 @@
       "sha256": "a1cbd7810b96cd8fa02741b20df159dd014e71fd0a913169605fa7468a2564d9"
     },
     {
+      "file": "settings_gen_theme_theme_night.svg",
+      "semanticRole": "settings_gen_theme night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:361",
+      "componentName": "Icon/Palette",
+      "upstreamName": "Palette",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Palette.svg",
+      "sourceSha256": "943143107849de5d37053f60046d5d8c89bb4ed1b04777bec1d7e224e677038b",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_theme.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_theme.svg",
+      "baseSha256": "a1cbd7810b96cd8fa02741b20df159dd014e71fd0a913169605fa7468a2564d9",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "5d74e9d94bd543845a73978365abaeba5867acec5ef64d0db4057be9fefdf511"
+    },
+    {
       "file": "settings_gen_update.svg",
       "semanticRole": "settings update",
       "originType": "figma-component-derived",
@@ -3224,6 +6461,31 @@
         "rotationDegrees": 0
       },
       "sha256": "feaac076bcfbbaca88378ae9f904cdf0680084ce3667fecedcf5f88f7da8beaa"
+    },
+    {
+      "file": "settings_gen_update_theme_night.svg",
+      "semanticRole": "settings_gen_update night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:195",
+      "componentName": "Icon/Download",
+      "upstreamName": "Download",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Download.svg",
+      "sourceSha256": "5bb5a10684e0431055a1d9e40cd0ef2179266c738e5e80ae93776e802b77dfd0",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_update.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_update.svg",
+      "baseSha256": "feaac076bcfbbaca88378ae9f904cdf0680084ce3667fecedcf5f88f7da8beaa",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "929306ca2412371de0c875dde0fdc803c74763cb285a5ed6e8ef3d289c6d8d49"
     },
     {
       "file": "settings_row_about.svg",
@@ -3246,6 +6508,31 @@
       "sha256": "9eb0b1b9161cc8ebac2b5f202c0334d382a2db0b121a90271c0e6339dd085651"
     },
     {
+      "file": "settings_row_about_theme_night.svg",
+      "semanticRole": "settings_row_about night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:289",
+      "componentName": "Icon/Info",
+      "upstreamName": "Info",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Info.svg",
+      "sourceSha256": "9d675b4fdf34dd5ff2b7bf66b2f85f1934a4bb4cedb3b5ef5fb60ab0a93a4646",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_row_about.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_row_about.svg",
+      "baseSha256": "9eb0b1b9161cc8ebac2b5f202c0334d382a2db0b121a90271c0e6339dd085651",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "85277c715091e65dc04f7943f234502dfdeebb5b1769e2358593504f91142f97"
+    },
+    {
       "file": "settings_row_general.svg",
       "semanticRole": "settings general",
       "originType": "figma-component-derived",
@@ -3264,6 +6551,31 @@
         "rotationDegrees": 0
       },
       "sha256": "8fafb40c3b3eab2e072531980a531db0b20d27c6203accd2487ccf0357207cfe"
+    },
+    {
+      "file": "settings_row_general_theme_night.svg",
+      "semanticRole": "settings_row_general night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:472",
+      "componentName": "Icon/Settings",
+      "upstreamName": "Settings",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Settings.svg",
+      "sourceSha256": "991b85162a8e75bda30a062835181fe2c01ba5259744b3c97465796d5148fc90",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_row_general.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_row_general.svg",
+      "baseSha256": "8fafb40c3b3eab2e072531980a531db0b20d27c6203accd2487ccf0357207cfe",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "01598afdebd24d430534b36f4f4b0fcda1d2a94de05ee8a5a8f1b01583e10577"
     },
     {
       "file": "settings_row_shelf_search.svg",
@@ -3286,6 +6598,31 @@
       "sha256": "88c8827257b5bc217cf531c0423039172a606c940c26a1d171b08da163fd33bb"
     },
     {
+      "file": "settings_row_shelf_search_theme_night.svg",
+      "semanticRole": "settings_row_shelf_search night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:466",
+      "componentName": "Icon/Search",
+      "upstreamName": "Search",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Search.svg",
+      "sourceSha256": "63468f05b1c0575504cc5ec7359d6c1b439de055d279501974ac4eefa7ff2b4e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_row_shelf_search.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_row_shelf_search.svg",
+      "baseSha256": "88c8827257b5bc217cf531c0423039172a606c940c26a1d171b08da163fd33bb",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a0dfc7a2467d967fb4fd0a9f1994d2fe76d1fcaec426fc22a67acdeb9296bc95"
+    },
+    {
       "file": "settings_row_source.svg",
       "semanticRole": "settings source",
       "originType": "figma-component-derived",
@@ -3304,6 +6641,31 @@
         "rotationDegrees": 0
       },
       "sha256": "bed7a3d29b0ab887ebc026d957598a873b0ed204dfe28669083e1f4d8d81bd7c"
+    },
+    {
+      "file": "settings_row_source_theme_night.svg",
+      "semanticRole": "settings_row_source night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:513",
+      "componentName": "Icon/Source",
+      "upstreamName": "Source",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Source.svg",
+      "sourceSha256": "48cb887ac72bdd3f83739f8d8d6aabf3a0aa5d3892fd3e79ee7668f1699aba36",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_row_source.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_row_source.svg",
+      "baseSha256": "bed7a3d29b0ab887ebc026d957598a873b0ed204dfe28669083e1f4d8d81bd7c",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d4bfcf2feeec1ddbd3caa76f4cfc28354f8c8bbf0279b5d4643ea844c0b332b3"
     },
     {
       "file": "settings_row_sync.svg",
@@ -3326,6 +6688,31 @@
       "sha256": "016180f544edbee38d6aa5fb599fd11aeab7906f5217f0b1b73feaacae7b8d57"
     },
     {
+      "file": "settings_row_sync_theme_night.svg",
+      "semanticRole": "settings_row_sync night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:564",
+      "componentName": "Icon/Sync",
+      "upstreamName": "Sync",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Sync.svg",
+      "sourceSha256": "a5c255f32326a4debcc01c9bc8d0ad418c848c1caa90a248af99a4ec80933d76",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_row_sync.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_row_sync.svg",
+      "baseSha256": "016180f544edbee38d6aa5fb599fd11aeab7906f5217f0b1b73feaacae7b8d57",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "a664594634806daa7d2e85b6eff022cfa33fc839b93d7105cd43c073f9d6bb69"
+    },
+    {
       "file": "settings_select_check.svg",
       "semanticRole": "settings select check",
       "originType": "figma-component-derived",
@@ -3344,6 +6731,31 @@
         "rotationDegrees": 0
       },
       "sha256": "352a94ca7eb70a63dcd1c0ca1f30491381e64b419824da75b9df118257dc8a68"
+    },
+    {
+      "file": "settings_select_check_theme_night.svg",
+      "semanticRole": "settings_select_check night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:109",
+      "componentName": "Icon/Check",
+      "upstreamName": "Check",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Check.svg",
+      "sourceSha256": "e177fc1b508969c1f1f085eed80d0a14dd0f235445424e2ce4c72d936e8a0b7a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_select_check.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_select_check.svg",
+      "baseSha256": "352a94ca7eb70a63dcd1c0ca1f30491381e64b419824da75b9df118257dc8a68",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "682e5b9abf890ed4a3404e694e8b1d41018ecb7c64dc5ca464fcc86c7ba524ad"
     },
     {
       "file": "source_add.svg",
@@ -3386,6 +6798,31 @@
       "sha256": "ef753d021a7020877ff03827d7d2a33c75ada5e6295c2c067e203edad042b9b1"
     },
     {
+      "file": "source_group_chevron_theme_night.svg",
+      "semanticRole": "source_group_chevron night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:119",
+      "componentName": "Icon/Chevron",
+      "upstreamName": "Chevron",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Chevron.svg",
+      "sourceSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.source_group_chevron.5B5046"
+        ]
+      },
+      "baseAsset": "source_group_chevron.svg",
+      "baseSha256": "ef753d021a7020877ff03827d7d2a33c75ada5e6295c2c067e203edad042b9b1",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "3b4a3ef25fcc98914870c9ad861a880433fe3cd3fe470de21a6998b4322eb8d3"
+    },
+    {
       "file": "source_group_folder.svg",
       "semanticRole": "source management group",
       "originType": "figma-component-derived",
@@ -3404,6 +6841,31 @@
         "rotationDegrees": 0
       },
       "sha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0"
+    },
+    {
+      "file": "source_group_folder_theme_night.svg",
+      "semanticRole": "source_group_folder night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:226",
+      "componentName": "Icon/Folder",
+      "upstreamName": "Folder",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Folder.svg",
+      "sourceSha256": "5f04f21524f6b7117273c7b1407fdb85a2f7818a66b6f287016cbb587c2a7dd5",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.source_group_folder.2D4A3E"
+        ]
+      },
+      "baseAsset": "source_group_folder.svg",
+      "baseSha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d3ce2d35413c17f5a601ff457d17b33b3f74aacedc8a011b45a12ad40a8214ad"
     },
     {
       "file": "source_switch_close.svg",
@@ -3426,6 +6888,31 @@
       "sha256": "2257fb57f6c058b9a19617e23d27c6e6e61a857912259ff1d045179a42e7f42f"
     },
     {
+      "file": "source_switch_close_theme_night.svg",
+      "semanticRole": "source_switch_close night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:142",
+      "componentName": "Icon/Close",
+      "upstreamName": "Close",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Close.svg",
+      "sourceSha256": "6032f75a2241549e2da953c09c5567b8030135b0fd03016b9c410134eb0ea066",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.source_switch_close.332C25"
+        ]
+      },
+      "baseAsset": "source_switch_close.svg",
+      "baseSha256": "2257fb57f6c058b9a19617e23d27c6e6e61a857912259ff1d045179a42e7f42f",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "e9ad0f5d9d4eeb4523744b5c20bcb3bf3f6cabe7fd543660c238f8e237457fcc"
+    },
+    {
       "file": "sync_account.svg",
       "semanticRole": "webdav account",
       "originType": "figma-component-derived",
@@ -3444,6 +6931,31 @@
         "rotationDegrees": 0
       },
       "sha256": "9b21ea26b3f79f36cfeaef65e29c558c3860b8de2246bc4e0162420ac37242c8"
+    },
+    {
+      "file": "sync_account_theme_night.svg",
+      "semanticRole": "sync_account night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:374",
+      "componentName": "Icon/People",
+      "upstreamName": "People",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__People.svg",
+      "sourceSha256": "f6cd2a6c18cc62a94b5e07b8f4f3d2975e58a45f79bb8fe20a46ca8eba51c8e7",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.sync_account.2D4A3E"
+        ]
+      },
+      "baseAsset": "sync_account.svg",
+      "baseSha256": "9b21ea26b3f79f36cfeaef65e29c558c3860b8de2246bc4e0162420ac37242c8",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "32d42edf50f681acdde9bddbd911a12863ed922e42863e8f282b634a5e40f0fb"
     },
     {
       "file": "sync_backup_password.svg",
@@ -3466,6 +6978,31 @@
       "sha256": "8eaae2c25320c2b2aaec2fcadf2269fe3e77f79b62349c62e300bf90b44e4f16"
     },
     {
+      "file": "sync_backup_password_theme_night.svg",
+      "semanticRole": "sync_backup_password night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "415:196",
+      "componentName": "Icon/Lock",
+      "upstreamName": "Lock",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Lock.svg",
+      "sourceSha256": "7bdfe1e253a12afc14ee60d8fafa84bcfcbe5a612d98fa0db9b03f8c2917a141",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.sync_backup_password.2D4A3E"
+        ]
+      },
+      "baseAsset": "sync_backup_password.svg",
+      "baseSha256": "8eaae2c25320c2b2aaec2fcadf2269fe3e77f79b62349c62e300bf90b44e4f16",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "5ce014056e65fc0090a38ec9896168b3bd5975c9352b98ddadd5caff7030c044"
+    },
+    {
       "file": "sync_folder.svg",
       "semanticRole": "webdav sync folder",
       "originType": "figma-component-derived",
@@ -3484,6 +7021,31 @@
         "rotationDegrees": 0
       },
       "sha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0"
+    },
+    {
+      "file": "sync_folder_theme_night.svg",
+      "semanticRole": "sync_folder night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:226",
+      "componentName": "Icon/Folder",
+      "upstreamName": "Folder",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Folder.svg",
+      "sourceSha256": "5f04f21524f6b7117273c7b1407fdb85a2f7818a66b6f287016cbb587c2a7dd5",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.sync_folder.2D4A3E"
+        ]
+      },
+      "baseAsset": "sync_folder.svg",
+      "baseSha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "d3ce2d35413c17f5a601ff457d17b33b3f74aacedc8a011b45a12ad40a8214ad"
     },
     {
       "file": "sync_password.svg",
@@ -3506,6 +7068,31 @@
       "sha256": "bdab92a0b1c3fde3ac297e0f58d313efca9b66716175c307818af8fbf9c02e89"
     },
     {
+      "file": "sync_password_theme_night.svg",
+      "semanticRole": "sync_password night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:478",
+      "componentName": "Icon/Shield",
+      "upstreamName": "Shield",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Shield.svg",
+      "sourceSha256": "77364ff85f463dc3ac908e7298b062615579eadbe868099a0ed5626c4326afdb",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.sync_password.2D4A3E"
+        ]
+      },
+      "baseAsset": "sync_password.svg",
+      "baseSha256": "bdab92a0b1c3fde3ac297e0f58d313efca9b66716175c307818af8fbf9c02e89",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "928811b1328f84b50169be298032cc5e3eab0d816f7c6896b850d2b2e8892654"
+    },
+    {
       "file": "sync_scope_chevron.svg",
       "semanticRole": "webdav backup scope chevron",
       "originType": "figma-component-derived",
@@ -3526,6 +7113,31 @@
       "sha256": "46a16f17abc7e0d6936c4f752875af79486f6d721c4784b36b10e50091deb724"
     },
     {
+      "file": "sync_scope_chevron_theme_night.svg",
+      "semanticRole": "sync_scope_chevron night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:119",
+      "componentName": "Icon/Chevron",
+      "upstreamName": "Chevron",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Chevron.svg",
+      "sourceSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.sync_scope_chevron.41484C"
+        ]
+      },
+      "baseAsset": "sync_scope_chevron.svg",
+      "baseSha256": "46a16f17abc7e0d6936c4f752875af79486f6d721c4784b36b10e50091deb724",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "34e6a85ae6c0863384c3031ca14d95126147f5d152ad6383495f1a54ef37299e"
+    },
+    {
       "file": "sync_server.svg",
       "semanticRole": "webdav server address",
       "originType": "figma-component-derived",
@@ -3544,6 +7156,31 @@
         "rotationDegrees": 0
       },
       "sha256": "149378aa5b8bd498f7db41cf06e772e8a5c43467a1e177f0859267b3cff381e3"
+    },
+    {
+      "file": "sync_server_theme_night.svg",
+      "semanticRole": "sync_server night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:295",
+      "componentName": "Icon/Link",
+      "upstreamName": "Link",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Link.svg",
+      "sourceSha256": "27911d1d0d98e9ee2cc3b559ba0fbc60fc5aa2b4fc154d27857c9f4dd518fabb",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.sync_server.2D4A3E"
+        ]
+      },
+      "baseAsset": "sync_server.svg",
+      "baseSha256": "149378aa5b8bd498f7db41cf06e772e8a5c43467a1e177f0859267b3cff381e3",
+      "themeRegistrySha256": "8094f973eb4eb86641d196e09d1cfd8b68cbd98fe0f02f09db9fffe75a56f4be",
+      "sha256": "902c30676a3920d6befeb5b7f1a4465aeb16e470ee2766d2b172b13ffaa27e05"
     }
   ]
 }

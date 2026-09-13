@@ -1,3 +1,4 @@
+import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -104,8 +105,8 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
   class Child {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
   }
-  const globals = { ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
-    ...Object.fromEntries(['Row', 'Column', 'Stack', 'Scroll', 'Text', 'TextInput', 'Span', 'Image', 'ForEach', 'If', '__Common__']
+  const globals = { readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
+    ...Object.fromEntries(['Button', 'Row', 'Column', 'Stack', 'Scroll', 'Text', 'TextInput', 'Span', 'Image', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
       'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'EdgeEffect'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),

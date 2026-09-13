@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 export const SVG_PROVENANCE_SCHEMA_VERSION = 1;
 export const SVG_FIGMA_FILE_KEY = 'klhs2jMM4MncaJFqZMfqEK';
 export const SVG_FIGMA_ICON_PAGE_NODE_ID = '259:4';
@@ -70,7 +71,6 @@ const icons = [
   icon('bookshelf_library_outline', 'Bookshelf', '#756F69', 'bookshelf library inactive navigation'),
   icon('bookshelf_list', 'List', '#756F69', 'bookshelf list mode', { fillNone: true }),
   icon('bookshelf_list_active', 'List', '#2D4A3E', 'bookshelf list mode active', { fillNone: true }),
-  icon('bookshelf_more_group', 'Folder', '#1F1B17', 'bookshelf more group', { fillNone: true }),
   icon('bookshelf_multiselect_trash', 'Trash', '#D7473E', 'bookshelf multiselect delete'),
   icon('bookshelf_rss', 'Rss', '#756F69', 'bookshelf rss inactive'),
   icon('bookshelf_rss_active', 'Rss', '#FFFAF4', 'bookshelf rss active navigation'),
@@ -226,7 +226,7 @@ const exactExports = [
   exact('import_done', '2657:907', 'local import done'),
   exact('import_failure', '2657:901', 'local import failure'),
   exact('import_info', '2657:785', 'local import information'),
-  exact('import_refresh', '2657:819', 'local import refresh'),
+  { ...exact('import_refresh', '2657:819', 'local import refresh'), originType: 'figma-node-platform-adapted' },
   exact('import_select_system', '2657:765', 'local import system picker'),
   exact('import_success', '2657:839', 'local import success'),
   exact('import_summary', '2657:809', 'local import result summary'),
@@ -266,8 +266,6 @@ const makeSourceExports = ['close', 'pause', 'play', 'engine_check', 'previous_q
 }));
 
 const adaptedExports = [
-  adaptedPopover('bookshelf_more_menu_surface', '4582:2',
-    'bookshelf more integrated pointer surface', 'bookshelf_more_menu_surface_reference.svg'),
 ];
 
 const appearanceMakeExports = [
@@ -308,5 +306,8 @@ const paperPrimitives = [
     ]),
 ];
 
-export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives]
+const themeVariants = JSON.parse(readFileSync(new URL('./theme-svg-variants.json', import.meta.url), 'utf8')).map(baseFile => ({
+  file: `${baseFile}_theme_night`, baseFile, semanticRole: `${baseFile} night app palette`, originType: 'theme-palette-derived',
+}));
+export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...themeVariants]
   .sort((left, right) => left.file.localeCompare(right.file));

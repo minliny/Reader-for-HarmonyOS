@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_READ_MUTED, TOK_READ_PRIMARY } from '../common/ReaderTokens';
 
 /**
@@ -6,16 +7,18 @@ import { TOK_READ_MUTED, TOK_READ_PRIMARY } from '../common/ReaderTokens';
  */
 @Component
 export struct ReaderBookmarkLoadingState {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   build() {
     Column({ space: 8 }) {
       LoadingProgress()
         .width(20)
         .height(20)
-        .color(TOK_READ_PRIMARY);
+        .color(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       Text('书签载入中…')
         .fontFamily('ReaderNotoSansSC')
         .fontSize(10)
-        .fontColor(TOK_READ_MUTED);
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
     }
     .width('100%')
     .height('100%')

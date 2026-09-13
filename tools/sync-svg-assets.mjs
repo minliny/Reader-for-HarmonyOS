@@ -1,3 +1,4 @@
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -52,6 +53,34 @@ function renderPaperPrimitive(recipe) {
 }
 
 async function renderRecipe(recipe) {
+  if (recipe.originType === 'theme-palette-derived') {
+    const base = svgAssetRecipes.find(value => value.file === recipe.baseFile);
+    assert.ok(base && base.originType !== 'theme-palette-derived', 'night variant requires an original trusted design asset');
+    const original = await renderRecipe(base);
+    const roles = [];
+    const content = original.content.replace(/#[0-9a-f]{6}\b/gi, color => {
+      const role = `app.icon.${recipe.baseFile}.${color.slice(1).toUpperCase()}`;
+      const target = readerAppColor(role, 'night');
+      assert.match(target, /^#FF[0-9A-F]{6}$/i, `${role}: SVG adapter preserves original opacity`);
+      roles.push(role);
+      return `#${target.slice(3)}`;
+    });
+    const themeSource = await readFile(path.join(ROOT, 'entry/src/main/ets/features/common/ReaderThemeRegistry.ts'), 'utf8');
+    return { content, manifest: { ...original.manifest, file: `${recipe.file}.svg`, semanticRole: recipe.semanticRole,
+      originType: recipe.originType, baseAsset: `${recipe.baseFile}.svg`, baseSha256: sha256(original.content),
+      themeRegistrySha256: sha256(themeSource), transform: { pathMutation: 'none', palette: 'night', colorRoles: [...new Set(roles)] } } };
+  }
+  if (recipe.originType === 'figma-node-platform-adapted') {
+    const original = await renderRecipe({ ...recipe, originType: 'figma-node-export' });
+    assert.equal(recipe.file, 'import_refresh');
+    // Figma's rotated rectangular export clip cuts the authored arc in the platform rasterizer.
+    // Keep all path/paint/viewBox bytes, remove only that export-time clipping group.
+    const content = original.content.replace(/<g clip-path="url\(#clip0_2657_819\)">\n/, '').replace('</g>\n', '')
+      .replace(/<defs>[\s\S]*?<\/defs>\n/, '');
+    assert.deepEqual(content.match(/<path[^>]+>/g), original.content.match(/<path[^>]+>/g));
+    return { content, manifest: { ...original.manifest, originType: recipe.originType,
+      transform: { pathMutation: 'none', exportClipRemoval: 'clip0_2657_819', viewBox: 'preserved' } } };
+  }
   if (recipe.originType === 'figma-component-derived') {
     const sourcePath = path.join(ICON_SOURCE_DIR, recipe.sourceFile);
     const source = await readFile(sourcePath, 'utf8');
@@ -229,7 +258,7 @@ export async function syncSvgAssets({ check = false } = {}) {
     schemaVersion: SVG_PROVENANCE_SCHEMA_VERSION,
     generatedBy: 'tools/sync-svg-assets.mjs',
     policy: {
-      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive'],
+      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive', 'figma-node-platform-adapted', 'theme-palette-derived'],
       unknownAllowed: false,
       manualPathMutationAllowed: false,
     },

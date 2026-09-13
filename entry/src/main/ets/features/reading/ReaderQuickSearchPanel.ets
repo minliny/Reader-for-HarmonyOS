@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';
 import { splitReaderSearchSnippet } from './ReaderSearchHighlight';
 import { ReaderSearchField } from '../common/ReaderSearchField';
@@ -63,6 +64,8 @@ export type ReaderQuickSearchState =
 /** Figma Reader Quick Search content: Phone `943:8625`, Tablet `942:48`. */
 @Component
 export struct ReaderQuickSearchPanel {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop isTablet: boolean = false;
   @Prop query: string = '';
   @Prop state: ReaderQuickSearchState = { kind: 'idle' };
@@ -84,8 +87,8 @@ export struct ReaderQuickSearchPanel {
       top: QUICK_SEARCH_PANEL_PADDING_Y,
       bottom: QUICK_SEARCH_PANEL_PADDING_Y,
     })
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(TOK_RADIUS_MD)
     .clip(true);
   }
@@ -94,14 +97,14 @@ export struct ReaderQuickSearchPanel {
   private searchHeader() {
     Row({ space: 5 }) {
       Row({ space: 4 }) {
-        Image($r('app.media.reader_quick_back'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_quick_back_theme_night') : $r('app.media.reader_quick_back')))
           .width(11)
           .height(11);
         Text('返回')
           .fontFamily('ReaderInter')
           .fontWeight(600)
           .fontSize(10)
-          .fontColor(TOK_READ_PRIMARY);
+          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       }
       .width(51)
       .height(QUICK_SEARCH_HEADER_HEIGHT)
@@ -130,11 +133,11 @@ export struct ReaderQuickSearchPanel {
           .fontFamily('ReaderInter')
           .fontWeight(700)
           .fontSize(10)
-          .fontColor('#FFFAF4');
+          .fontColor(readerAppColor('app.ReaderQuickSearchPanel.searchHeader.fontColor.FFFFFAF4', this.appThemeScheme));
       }
       .width(36)
       .height(QUICK_SEARCH_HEADER_HEIGHT)
-      .backgroundColor(TOK_READ_PRIMARY)
+      .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
       .borderRadius(TOK_RADIUS_MD)
       .opacity(this.canSearch() ? 1 : 0.4)
       .onClick((): void => {
@@ -171,7 +174,7 @@ export struct ReaderQuickSearchPanel {
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(10)
-            .fontColor(TOK_READ_MUTED)
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center)
             .maxLines(2);
         }
@@ -182,7 +185,7 @@ export struct ReaderQuickSearchPanel {
     .width('100%')
     .height(this.resultsHeight())
     .margin({ top: this.headerBodyGap() })
-    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(TOK_RADIUS_MD)
     .clip(true);
   }
@@ -195,7 +198,7 @@ export struct ReaderQuickSearchPanel {
         .fontFamily('ReaderInter')
         .fontWeight(700)
         .fontSize(10)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       this.resultSnippet(result);
@@ -203,7 +206,7 @@ export struct ReaderQuickSearchPanel {
     .width('100%')
     .height(QUICK_SEARCH_RESULT_ROW_HEIGHT)
     .padding({ left: 8, right: 8, top: 6 })
-    .border({ width: { bottom: 1 }, color: TOK_LINE })
+    .border({ width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .onClick((): void => this.onSelectResult(result));
   }
 
@@ -216,7 +219,7 @@ export struct ReaderQuickSearchPanel {
           result.chapterOffset, result.matchLength).prefix)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Regular)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       if (splitReaderSearchSnippet(result.snippet, result.snippetStart,
         result.chapterOffset, result.matchLength).match.length > 0) {
@@ -224,7 +227,7 @@ export struct ReaderQuickSearchPanel {
           result.chapterOffset, result.matchLength).match)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
-          .fontColor(TOK_READ_INK);
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       if (splitReaderSearchSnippet(result.snippet, result.snippetStart,
         result.chapterOffset, result.matchLength).suffix.length > 0) {
@@ -232,7 +235,7 @@ export struct ReaderQuickSearchPanel {
           result.chapterOffset, result.matchLength).suffix)
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Regular)
-          .fontColor(TOK_READ_MUTED);
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
     }
     .width('100%')
@@ -240,7 +243,7 @@ export struct ReaderQuickSearchPanel {
     .fontWeight(FontWeight.Regular)
     .fontSize(8)
     .lineHeight(10)
-    .fontColor(TOK_READ_MUTED)
+    .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
     .maxLines(2)
     .textOverflow({ overflow: TextOverflow.Ellipsis });
   }

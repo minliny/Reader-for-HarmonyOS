@@ -1,3 +1,4 @@
+import { readerAppColor } from './ReaderThemeRegistry';
 import { registerReaderFonts } from './ReaderFonts';
 import {
   TOK_BORDER,
@@ -43,6 +44,8 @@ export type ReaderSelectVariant =
 
 @Component
 export struct ReaderSelect {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop value: string = '';
   @Prop options: string[] = [];
   @Prop isOpen: boolean = false;
@@ -87,9 +90,9 @@ export struct ReaderSelect {
   private appearanceLibraryTrigger() {
     Row({ space: 6 }) {
       Text(this.value).layoutWeight(1).fontFamily('ReaderNotoSansSCUIRegular').fontSize(11).lineHeight(15)
-        .fontWeight(FontWeight.Regular).fontColor('#332C25').maxLines(1)
+        .fontWeight(FontWeight.Regular).fontColor(readerAppColor('app.ReaderSelect.appearanceLibraryTrigger.fontColor.FF332C25', this.appThemeScheme)).maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
-      Image($r('app.media.reader_appearance_make_chevron')).width(12).height(12)
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12)
         .rotate({ angle: this.isOpen ? 90 : 0 }).animation(this.dropdownAnimation());
     }.width('100%').height(30).padding({ left: 11, right: 9 }).borderRadius(999)
       .backgroundColor(this.isOpen ? APPEARANCE_SELECT_OPEN_FILL : APPEARANCE_SELECT_FILL)
@@ -107,11 +110,11 @@ export struct ReaderSelect {
         .fontWeight(TYPE_SELECT_APPEARANCE_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_APPEARANCE_VALUE.fontSizeFp)
         .lineHeight(TYPE_SELECT_APPEARANCE_VALUE.lineHeightFp as number)
-        .fontColor(TOK_PRIMARY_DARK)
+        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 10, y: 11 });
-      Image($r('app.media.reader_chevron_down'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
         .width(8)
         .height(4)
         .rotate({ angle: this.isOpen ? 180 : 0 })
@@ -120,8 +123,8 @@ export struct ReaderSelect {
     }
     .width('100%')
     .height(TRIGGER_H)
-    .backgroundColor(TOK_SURFACE_FIELD)
-    .border({ width: TOK_BORDER_W, color: '#C1C7CD' })
+    .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderSelect.appearanceTrigger.color.FFC1C7CD', this.appThemeScheme) })
     .borderRadius(6)
     .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
     .onClick((): void => this.onToggle());
@@ -135,17 +138,17 @@ export struct ReaderSelect {
         .fontWeight(TYPE_SELECT_SETTINGS_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_SETTINGS_VALUE.fontSizeFp)
         .lineHeight(TYPE_SELECT_SETTINGS_VALUE.lineHeightFp as number)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       if (this.variant === 'settingsTablet') {
-        Image($r('app.media.reader_chevron_down'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down')))
           .width(10)
           .height(6)
           .rotate({ angle: this.isOpen ? 180 : 0 })
           .animation(this.dropdownAnimation());
       } else {
-        Image($r('app.media.reader_chevron_right'))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right')))
           .width(7)
           .height(12);
       }
@@ -153,8 +156,8 @@ export struct ReaderSelect {
     .height(34)
     .padding({ left: 10, right: 8 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor('#0F2D4A3E')
-    .border({ width: TOK_BORDER_W, color: TOK_GREEN })
+    .backgroundColor(readerAppColor('app.ReaderSelect.settingsTrigger.backgroundColor.0F2D4A3E', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
     .borderRadius(7)
     .onClick((): void => this.onToggle());
   }
@@ -169,11 +172,11 @@ export struct ReaderSelect {
         .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
         .lineHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp as number)
-        .fontColor(TOK_INK)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 14, y: 10 });
-      Image($r('app.media.source_group_chevron'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron')))
         .width(12)
         .height(12)
         .rotate({ angle: this.isOpen ? 180 : 0 })
@@ -182,8 +185,8 @@ export struct ReaderSelect {
     }
     .width('100%')
     .height(TRIGGER_H)
-    .backgroundColor('#FFFCF8')
-    .border({ width: TOK_BORDER_W, color: '#85B4A697' })
+    .backgroundColor(readerAppColor('app.ReaderSelect.sourceGroupTrigger.backgroundColor.FFFFFCF8', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderSelect.sourceGroupTrigger.color.85B4A697', this.appThemeScheme) })
     .borderRadius(8)
     .onClick((): void => this.onToggle());
   }
@@ -196,19 +199,19 @@ export struct ReaderSelect {
         .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily)
         .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
-        .fontColor(TOK_PRIMARY_DARK)
+        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
         .textAlign(TextAlign.Start)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
-      Image($r('app.media.reader_chevron_down')).width(CHEVRON_W).height(CHEVRON_H)
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))).width(CHEVRON_W).height(CHEVRON_H)
         .rotate({ angle: this.isOpen ? 180 : 0 })
         .animation(this.dropdownAnimation());
     }
     .width('100%')
     .height(TRIGGER_H)
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(6)
     .alignItems(VerticalAlign.Center)
     .onClick((): void => this.onToggle());

@@ -1,3 +1,4 @@
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   type SyncHistoryEntry,
   type SyncRestoreConflict,
@@ -50,16 +51,11 @@ import {
 // rows (28px circular blue icon + 36px r6 input) and two action buttons;
 // Auto Backup / History = solid #FFFCF8 cards + #D8D0C3 r13 with muted
 // 11px tracked section titles.
-const CARD_BORDER_SOFT = '#D8D0C3';
-const ROW_BG = '#B3FFFCF8';        // rgba(255,252,248,0.7) — labelled row
-const ROW_BORDER = '#4DB4A697';    // rgba(180,166,151,0.3)
-const GHOST_BG = '#14236179';      // rgba(35,97,121,0.08) — test button
-const GHOST_BORDER = '#38236179';  // rgba(35,97,121,0.22)
-const SOLID_BG = '#243D30';        // save button
-const BADGE_BG = '#EEE7DB';
 
 @Component
 export struct SyncPage {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SyncSnapshot = DEFAULT_SYNC_SNAPSHOT;
   @Prop isTablet: boolean;
@@ -118,7 +114,7 @@ export struct SyncPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(TOK_PAPER)
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
     .clip(true)
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = this.numericAreaLength(newValue.width);
@@ -132,7 +128,7 @@ export struct SyncPage {
   private backBar() {
     PageBackBar({
       title: '同步与备份',
-      titleColor: '#1A1612',
+      titleColor: readerAppColor('app.SyncPage.backBar.paint.FF1A1612', this.appThemeScheme),
       onBack: (): void => this.onBack(),
     });
   }
@@ -147,7 +143,7 @@ export struct SyncPage {
       .fontWeight(900)
       .fontSize(13)
       .lineHeight(15.6)
-      .fontColor(TOK_INK)
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
       .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM });
   }
 
@@ -159,7 +155,7 @@ export struct SyncPage {
       .fontFamily('ReaderInter')
       .fontWeight(900)
       .fontSize(11)
-      .fontColor('#9C9488')
+      .fontColor(readerAppColor('app.SyncPage.sectionHeadingMuted.fontColor.FF9C9488', this.appThemeScheme))
       .letterSpacing(1.1)
       .padding({ left: TOK_SPACE_SM });
   }
@@ -168,7 +164,7 @@ export struct SyncPage {
   private webdavSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingDark('WebDAV 配置');
-      ReaderCard({ bg: TOK_CARD_BG, cardBorder: TOK_BORDER, radius: TOK_RADIUS_MD,
+      ReaderCard({ bg: readerAppColor('TOK_CARD_BG', this.appThemeScheme), cardBorder: readerAppColor('TOK_BORDER', this.appThemeScheme), radius: TOK_RADIUS_MD,
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_XS }) {
           Text('连接信息')
@@ -177,26 +173,26 @@ export struct SyncPage {
             .fontWeight(900)
             .fontSize(13)
             .lineHeight(15.6)
-            .fontColor(TOK_INK);
-          this.webdavInputRow($r('app.media.sync_server'), '服务器地址', this.effectiveWebdavUrl(),
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_server_theme_night') : $r('app.media.sync_server')), '服务器地址', this.effectiveWebdavUrl(),
             'https://dav.example.com/reader/backup', false, (value: string): void => {
               this.webdavUrlEdited = true;
               this.webdavUrl = value;
             });
-          this.webdavInputRow($r('app.media.sync_account'), '账号', this.effectiveWebdavUser(),
+          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_account_theme_night') : $r('app.media.sync_account')), '账号', this.effectiveWebdavUser(),
             'reader@example.com', false, (value: string): void => {
               this.webdavUserEdited = true;
               this.webdavUser = value;
             });
-          this.webdavInputRow($r('app.media.sync_password'), '密码', this.webdavPass,
+          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_password_theme_night') : $r('app.media.sync_password')), '密码', this.webdavPass,
             '••••••••••••', true, (value: string): void => {
               this.webdavPass = value;
             });
-          this.webdavInputRow($r('app.media.sync_backup_password'), '备份加密密码', this.backupPass,
+          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_backup_password_theme_night') : $r('app.media.sync_backup_password')), '备份加密密码', this.backupPass,
             '与 WebDAV 登录密码分开保存', true, (value: string): void => {
               this.backupPass = value;
             });
-          this.webdavInputRow($r('app.media.sync_folder'), '同步目录', this.effectiveWebdavPath(),
+          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_folder_theme_night') : $r('app.media.sync_folder')), '同步目录', this.effectiveWebdavPath(),
             '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
               this.webdavPathEdited = true;
               this.webdavPath = value;
@@ -220,7 +216,7 @@ export struct SyncPage {
       .width(28)
       .height(28)
       .borderRadius(14)
-      .backgroundColor(TOK_SETTING_ICON_BG);
+      .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
 
       Column({ space: 5 }) {
         Text(label)
@@ -229,7 +225,7 @@ export struct SyncPage {
           .fontWeight(800)
           .fontSize(13)
           .lineHeight(15.34)
-          .fontColor(TOK_INK)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1);
         if (isPassword) {
           TextInput({ text: value, placeholder: placeholder })
@@ -242,12 +238,12 @@ export struct SyncPage {
             .fontFamily('ReaderInter')
             .fontWeight(600)
             .fontSize(12)
-            .fontColor(TOK_CONTROL_INK)
-            .backgroundColor(TOK_FIELD_SURFACE)
-            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
+            .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
+            .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
             .borderRadius(6)
             .padding({ left: 11, right: 11 })
-            .placeholderColor('#9C9488')
+            .placeholderColor(readerAppColor('app.SyncPage.webdavInputRow.placeholderColor.FF9C9488', this.appThemeScheme))
             .onChange((newValue: string): void => onChange(newValue));
         } else {
           TextInput({ text: value, placeholder: placeholder })
@@ -256,12 +252,12 @@ export struct SyncPage {
             .fontFamily('ReaderInter')
             .fontWeight(600)
             .fontSize(12)
-            .fontColor(TOK_CONTROL_INK)
-            .backgroundColor(TOK_FIELD_SURFACE)
-            .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
+            .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
+            .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
             .borderRadius(6)
             .padding({ left: 11, right: 11 })
-            .placeholderColor('#9C9488')
+            .placeholderColor(readerAppColor('app.SyncPage.webdavInputRow.placeholderColor.FF9C9488', this.appThemeScheme))
             .onChange((newValue: string): void => onChange(newValue));
         }
       }
@@ -270,8 +266,8 @@ export struct SyncPage {
     }
     .width('100%')
     .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
-    .backgroundColor(ROW_BG)
-    .border({ width: TOK_BORDER_W, color: ROW_BORDER })
+    .backgroundColor(readerAppColor('app.SyncPage.ROW_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.ROW_BORDER', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -283,12 +279,12 @@ export struct SyncPage {
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
-          .fontColor(TOK_PRIMARY_DARK);
+          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
       }
       .height(42)
       .layoutWeight(1)
-      .backgroundColor(GHOST_BG)
-      .border({ width: TOK_BORDER_W, color: GHOST_BORDER })
+      .backgroundColor(readerAppColor('app.SyncPage.GHOST_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.GHOST_BORDER', this.appThemeScheme) })
       .borderRadius(8)
       .onClick((): void => this.onTestConnection(
         this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(),
@@ -299,12 +295,12 @@ export struct SyncPage {
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
-          .fontColor(TOK_ON_PRIMARY);
+          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
       }
       .height(42)
       .layoutWeight(1)
-      .backgroundColor(SOLID_BG)
-      .border({ width: TOK_BORDER_W, color: SOLID_BG })
+      .backgroundColor(readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) })
       .borderRadius(12)
       .onClick((): void => this.onSaveConfig(
         this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass,
@@ -317,7 +313,7 @@ export struct SyncPage {
   private manualActionsSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingMuted('前台手动备份');
-      ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13,
+      ReaderCard({ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 13,
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_SM }) {
           if (this.snapshot.statusMessage.length > 0) {
@@ -326,7 +322,7 @@ export struct SyncPage {
               .fontFamily('ReaderNotoSansSC')
               .fontSize(12)
               .lineHeight(18)
-              .fontColor(TOK_PRIMARY_DARK);
+              .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
           }
           Row({ space: TOK_SPACE_XS }) {
             this.manualActionButton('立即备份', true, (): void => this.onTriggerBackup());
@@ -351,12 +347,12 @@ export struct SyncPage {
         .fontFamily('ReaderInter')
         .fontWeight(900)
         .fontSize(12)
-        .fontColor(primary ? TOK_ON_PRIMARY : TOK_PRIMARY_DARK);
+        .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
     }
     .height(40)
     .layoutWeight(1)
-    .backgroundColor(primary ? SOLID_BG : GHOST_BG)
-    .border({ width: TOK_BORDER_W, color: primary ? SOLID_BG : GHOST_BORDER })
+    .backgroundColor(primary ? readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) : readerAppColor('app.SyncPage.GHOST_BG', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) : readerAppColor('app.SyncPage.GHOST_BORDER', this.appThemeScheme) })
     .borderRadius(10)
     .onClick(action);
   }
@@ -369,13 +365,13 @@ export struct SyncPage {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(13)
-        .fontColor(TOK_INK);
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       Text(`备份 ${conflict.backupId} · 本机 ${conflict.localChecksum.substring(0, 8)}… · 远端 ${conflict.remoteChecksum.substring(0, 8)}…`)
         .width('100%')
         .fontFamily('ReaderInter')
         .fontSize(11)
         .lineHeight(17)
-        .fontColor(TOK_MUTED);
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Row({ space: TOK_SPACE_XS }) {
         this.manualActionButton('取消', false, (): void => this.onResolveRestore(false));
         this.manualActionButton('覆盖本机', true, (): void => this.onResolveRestore(true));
@@ -384,8 +380,8 @@ export struct SyncPage {
     }
     .width('100%')
     .padding(TOK_SPACE_SM)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-    .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(8);
   }
 
@@ -393,13 +389,13 @@ export struct SyncPage {
   private autoBackupSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingMuted('自动备份（尚未启用）');
-      ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13,
+      ReaderCard({ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 13,
         cardWidth: this.contentFrame().width }) {
         Column() {
           this.gatedRow('保存位置', this.snapshot.saveLocation);
-          Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
+          Row().width('100%').height(1).backgroundColor(readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme));
           this.gatedRow('备份频率', this.snapshot.backupFrequency);
-          Row().width('100%').height(1).backgroundColor(CARD_BORDER_SOFT);
+          Row().width('100%').height(1).backgroundColor(readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme));
           this.scopeRow();
         }
         .width('100%');
@@ -416,12 +412,12 @@ export struct SyncPage {
         .fontFamily('ReaderInter')
         .fontWeight(600)
         .fontSize(13)
-        .fontColor('#1A1612');
+        .fontColor(readerAppColor('app.SyncPage.gatedRow.fontColor.FF1A1612', this.appThemeScheme));
       Text(value)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
-        .fontColor(TOK_MUTED);
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width('100%')
     .height(50)
@@ -440,7 +436,7 @@ export struct SyncPage {
         .fontFamily('ReaderInter')
         .fontWeight(600)
         .fontSize(13)
-        .fontColor('#1A1612')
+        .fontColor(readerAppColor('app.SyncPage.scopeRow.fontColor.FF1A1612', this.appThemeScheme))
         .maxLines(1);
       Row({ space: 8 }) {
         Text(this.scopeSummary())
@@ -448,16 +444,16 @@ export struct SyncPage {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor(TOK_PRIMARY_DARK)
+          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .maxLines(1);
-        Image($r('app.media.sync_scope_chevron')).width(12).height(8);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.sync_scope_chevron_theme_night') : $r('app.media.sync_scope_chevron'))).width(12).height(8);
       }
       .width(86)
       .height(36)
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(6)
       .alignItems(VerticalAlign.Center)
       .opacity(0.62)
@@ -494,7 +490,7 @@ export struct SyncPage {
   // node) and is kept as-is, restyled to the new card tokens.
   @Builder
   private emptyState() {
-    ReaderCard({ bg: TOK_SURFACE_SOLID, cardBorder: CARD_BORDER_SOFT, radius: 13,
+    ReaderCard({ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 13,
       cardWidth: this.contentFrame().width }) {
       Column({ space: 0 }) {
         Text('暂无备份记录')
@@ -503,7 +499,7 @@ export struct SyncPage {
           .fontWeight(FontWeight.Regular)
           .fontSize(13)
           .lineHeight(20)
-          .fontColor(TOK_MUTED)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .padding({ top: TOK_SPACE_LG, bottom: TOK_SPACE_SM });
         Text('立即备份')
@@ -512,10 +508,10 @@ export struct SyncPage {
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
           .lineHeight(16)
-          .fontColor(TOK_ON_PRIMARY)
+          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .padding({ top: 9, bottom: 9 })
-          .backgroundColor(TOK_GREEN)
+          .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
           .borderRadius(999)
           .margin({ bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, right: TOK_SPACE_MD })
           .onClick((): void => this.onTriggerBackup());
@@ -527,8 +523,8 @@ export struct SyncPage {
   @Builder
   private historyRow(entry: SyncHistoryEntry) {
     ReaderCard({
-      bg: TOK_SURFACE_SOLID,
-      cardBorder: CARD_BORDER_SOFT,
+      bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme),
+      cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme),
       radius: 13,
       cardWidth: this.contentFrame().width,
     }) {
@@ -539,19 +535,19 @@ export struct SyncPage {
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Bold)
               .fontSize(11)
-              .fontColor('#243D30')
+              .fontColor(readerAppColor('app.SyncPage.historyRow.fontColor.FF243D30', this.appThemeScheme))
               .maxLines(1);
           }
           .width(64)
           .height(24)
           .borderRadius(12)
-          .backgroundColor(BADGE_BG);
+          .backgroundColor(readerAppColor('app.SyncPage.BADGE_BG', this.appThemeScheme));
 
           Text(entry.timestamp)
             .fontFamily('ReaderInter')
             .fontWeight(600)
             .fontSize(12)
-            .fontColor('#5C564E')
+            .fontColor(readerAppColor('app.SyncPage.historyRow.fontColor.FF5C564E', this.appThemeScheme))
             .maxLines(1)
             .margin({ left: TOK_SPACE_CONTROL_INLINE });
         }
@@ -566,13 +562,13 @@ export struct SyncPage {
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
-            .fontColor('#5C564E')
+            .fontColor(readerAppColor('app.SyncPage.historyRow.fontColor.FF5C564E', this.appThemeScheme))
             .maxLines(1);
           Text(`${(entry.size / 1048576).toFixed(1)} MB`)
             .fontFamily('ReaderInter')
             .fontWeight(600)
             .fontSize(12)
-            .fontColor('#9C9488')
+            .fontColor(readerAppColor('app.SyncPage.historyRow.fontColor.FF9C9488', this.appThemeScheme))
             .maxLines(1);
         }
         .width('100%')
@@ -594,11 +590,11 @@ export struct SyncPage {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(10)
-          .fontColor(TOK_READ_PRIMARY);
+          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       }
       .height(26)
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(8);
     }
     .width('100%')

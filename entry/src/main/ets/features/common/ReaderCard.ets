@@ -1,3 +1,4 @@
+import { readerAppColor } from './ReaderThemeRegistry';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -9,8 +10,10 @@ import {
 // 0.556px 在 ArkUI 栅格化后对比度消失, 提到 TOK_BORDER_W(1vp)。
 @Component
 export struct ReaderCard {
-  @Prop bg: string = TOK_CARD_BG;
-  @Prop cardBorder: string = TOK_BORDER;
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
+  @Prop bg: string = '';
+  @Prop cardBorder: string = '';
   @Prop radius: number = 8;
   @Prop cardWidth: number = 0; // 0 = 撑满父宽
   @BuilderParam content: () => void;
@@ -22,8 +25,8 @@ export struct ReaderCard {
     .width(this.cardWidth > 0 ? this.cardWidth : '100%')
     // 内容最大宽约束 (Fill 相应, 宽屏不超 722): 页面两档 cardWidth 由此单点取代。
     .constraintSize({ maxWidth: TOK_CONTENT_MAX_W_TABLET })
-    .backgroundColor(this.bg)
-    .border({ width: TOK_BORDER_W, color: this.cardBorder })
+    .backgroundColor((this.bg === '' ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : this.bg))
+    .border({ width: TOK_BORDER_W, color: (this.cardBorder === '' ? readerAppColor('TOK_BORDER', this.appThemeScheme) : this.cardBorder) })
     .borderRadius(this.radius);
   }
 }

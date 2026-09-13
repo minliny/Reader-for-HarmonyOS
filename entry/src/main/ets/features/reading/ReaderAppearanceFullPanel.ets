@@ -1,3 +1,5 @@
+import { readerControlAppearanceThemeSwatch, readerControlAppearanceThemeLabel } from './ReaderControlAppearanceStyle';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSelect } from '../common/ReaderSelect';
 import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
@@ -69,6 +71,8 @@ const READER_FONT_REORDER_ROW_STRIDE = 38;
  */
 @Component
 export struct ReaderAppearanceFullPanel {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+
   @Prop isTablet: boolean = false;
   @Prop availableWidth: number = 0;
   @Prop availableHeight: number = 0;
@@ -143,7 +147,7 @@ export struct ReaderAppearanceFullPanel {
         Row()
           .width(42)
           .height(4)
-          .backgroundColor(TOK_READ_HANDLE)
+          .backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
           .borderRadius(999)
           .position({ x: this.handleX(), y: 9 });
       }
@@ -178,8 +182,8 @@ export struct ReaderAppearanceFullPanel {
     Row()
       .width(this.viewportWidth())
       .height(this.viewportHeight())
-      .backgroundColor(TOK_SURFACE_PANEL)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .borderRadius(12)
       .position({ x: 13, y: 57 })
       .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
@@ -231,8 +235,8 @@ export struct ReaderAppearanceFullPanel {
     Row()
       .width(this.motionFullViewportWidth())
       .height(this.motionFullViewportHeight())
-      .backgroundColor(TOK_SURFACE_PANEL)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .borderRadius(12)
       .position({
         x: this.currentMotionFrame().contentSurface.x,
@@ -294,8 +298,8 @@ export struct ReaderAppearanceFullPanel {
     }
     .width(this.motionViewportWidth())
     .height(this.motionViewportHeight())
-    .backgroundColor(TOK_SURFACE_PANEL)
-    .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true)
     .enabled(this.quickEndpointInteractionEnabled())
@@ -328,7 +332,7 @@ export struct ReaderAppearanceFullPanel {
   @Builder
   private header() {
     Row() {
-      Image($r('app.media.reader_appearance_header'))
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')))
         .width(20)
         .height(20);
       Text('界面')
@@ -337,18 +341,18 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(14)
         .lineHeight(20)
-        .fontColor(TOK_READ_INK);
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Blank();
       Text('收起')
         .width(40)
         .height(26)
-        .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
         .borderRadius(8)
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(13)
-        .fontColor(TOK_READ_PRIMARY)
+        .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .enabled(this.motionEnabled ? this.fullEndpointInteractionEnabled() :
           this.interactionEnabled)
@@ -384,7 +388,7 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(17)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .position({ x: 2, y: 10 });
       Text(this.themeSummary())
         .width(122)
@@ -393,7 +397,7 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Medium)
         .fontSize(10)
         .lineHeight(13)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.End)
         .maxLines(1)
         .position({ x: this.sectionInnerWidth() - 120, y: 10 });
@@ -408,7 +412,7 @@ export struct ReaderAppearanceFullPanel {
       Row()
         .width(this.sectionWidth())
         .height(1)
-        .backgroundColor(TOK_LINE)
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: 0, y: 209 });
     }
     .width(this.sectionWidth())
@@ -429,7 +433,7 @@ export struct ReaderAppearanceFullPanel {
         .width(this.fullCardWidth() - 10)
         .height(24)
         .backgroundColor(this.themeColor(theme))
-        .border({ width: TOK_BORDER_W, color: '#1F5B5046' })
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderAppearanceFullPanel.fullThemeCard.color.1F5B5046', this.appThemeScheme) })
         .borderRadius(6)
         .position({ x: 5, y: 10 });
       Text(this.themeLabel(theme))
@@ -439,14 +443,14 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Regular)
         .fontSize(9)
         .lineHeight(13)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .position({ x: 5, y: 42.9 });
     }
     .width(this.fullCardWidth())
     .height(58.8)
-    .backgroundColor(this.snapshot.activeTheme === theme ? TOK_READ_ACTIVE_SOFT : TOK_READ_DISABLED_BG)
+    .backgroundColor(this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : readerAppColor('TOK_READ_DISABLED_BG', this.appThemeScheme))
     .opacity(this.snapshot.activeTheme === theme ? 1 : 0.8)
     .borderRadius(8)
     .position({
@@ -466,9 +470,9 @@ export struct ReaderAppearanceFullPanel {
       .fontWeight(FontWeight.Bold)
       .fontSize(9)
       .lineHeight(13)
-      .fontColor(TOK_READ_INK)
+      .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
       .textAlign(TextAlign.Center)
-      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .borderRadius(6)
       .position({ x: day ? this.sectionInnerWidth() - 152 : this.sectionInnerWidth() - 72, y: 172 })
       .accessibilityText(day ? '将当前主题设为日间主题' : '将当前主题设为夜间主题')
@@ -491,7 +495,7 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(14.4)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .position({ x: 1, y: 10 });
       Text('可拖动调整位置')
         .width(70)
@@ -499,7 +503,7 @@ export struct ReaderAppearanceFullPanel {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Medium)
         .fontSize(10)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.End)
         .position({ x: this.sectionWidth() - 72, y: 10 });
 
@@ -517,7 +521,7 @@ export struct ReaderAppearanceFullPanel {
     }
     .width(this.sectionWidth())
     .height(136)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .position({ x: 11, y: 220.98 })
     .opacity(this.motionFrameOrUndefined()?.fontLibrary.opacity ?? 1)
     .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
@@ -532,8 +536,8 @@ export struct ReaderAppearanceFullPanel {
     Row()
       .width(this.fullFontCardWidth())
       .height(30)
-      .backgroundColor(TOK_READ_ACTIVE_SOFT)
-      .border({ width: TOK_BORDER_W, color: TOK_READ_PRIMARY, style: BorderStyle.Dashed })
+      .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme), style: BorderStyle.Dashed })
       .borderRadius(6)
       .opacity(0.58)
       .position({
@@ -548,17 +552,17 @@ export struct ReaderAppearanceFullPanel {
     Text(readerAppearanceFontSlotLabel(this.snapshot, fontId))
       .width(this.fullFontCardWidth())
       .height(30)
-      .backgroundColor(this.isActiveFont(fontId) ? TOK_PRIMARY_SOFT : Color.Transparent)
+      .backgroundColor(this.isActiveFont(fontId) ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent)
       .border({
         width: TOK_BORDER_W,
-        color: this.isActiveFont(fontId) ? TOK_READ_PRIMARY : TOK_LINE,
+        color: this.isActiveFont(fontId) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme),
         style: fontId === 'import' ? BorderStyle.Dashed : BorderStyle.Solid,
       })
       .borderRadius(6)
       .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
       .fontWeight(FontWeight.Regular)
       .fontSize(10)
-      .fontColor(TOK_READ_INK)
+      .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
       .textAlign(TextAlign.Center)
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -575,7 +579,7 @@ export struct ReaderAppearanceFullPanel {
         y: this.draggedFontId === fontId ? 1.035 : 1,
       })
       .shadow(this.draggedFontId === fontId ?
-        { radius: 12, color: '#2B332C25', offsetX: 0, offsetY: 5 } :
+        { radius: 12, color: readerAppColor('app.ReaderAppearanceFullPanel.fullFontCell.color.2B332C25', this.appThemeScheme), offsetX: 0, offsetY: 5 } :
         { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
       .opacity(this.draggedFontId === fontId ? 0.96 : 1)
       .zIndex(this.draggedFontId === fontId ? 3 : 1)
@@ -615,7 +619,7 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(12)
         .lineHeight(17)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .position({ x: 2, y: 11 });
       Text('即时应用')
         .width(70)
@@ -624,7 +628,7 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Medium)
         .fontSize(10)
         .lineHeight(14)
-        .fontColor(TOK_READ_MUTED)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.End)
         .position({ x: this.sectionInnerWidth() - 70, y: 13 });
 
@@ -651,7 +655,7 @@ export struct ReaderAppearanceFullPanel {
     }
     .width(this.sectionWidth())
     .height(406)
-    .border({ width: { top: TOK_BORDER_W }, color: TOK_LINE })
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .position({ x: 11, y: 366.98 })
     .opacity(this.motionFrameOrUndefined()?.typography.opacity ?? 1)
     .translate({
@@ -676,14 +680,14 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(14)
-        .fontColor(TOK_READ_BODY_INK)
+        .fontColor(readerAppColor('app.control.itemInk', this.appThemeScheme))
         .position({ x: 9, y: 15 });
 
       Row()
         .width(200)
         .height(36)
-        .backgroundColor(TOK_SURFACE_FIELD)
-        .border({ width: TOK_BORDER_W, color: TOK_BORDER })
+        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
         .borderRadius(6)
         .position({ x: this.indentRowWidth() - 209, y: 4 });
 
@@ -708,12 +712,12 @@ export struct ReaderAppearanceFullPanel {
     Text(label)
       .layoutWeight(1)
       .height(24)
-      .backgroundColor(this.indentOptionActive(value) ? TOK_READ_ELEVATED : Color.Transparent)
+      .backgroundColor(this.indentOptionActive(value) ? readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme) : Color.Transparent)
       .borderRadius(6)
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(this.indentOptionActive(value) ? FontWeight.Bold : FontWeight.Medium)
       .fontSize(9)
-      .fontColor(this.indentOptionActive(value) ? TOK_READ_PRIMARY : TOK_READ_MUTED)
+      .fontColor(this.indentOptionActive(value) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
       .textAlign(TextAlign.Center)
       .accessibilityText(label)
       .onClick((): void => {
@@ -734,7 +738,7 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(14)
-        .fontColor(TOK_READ_BODY_INK)
+        .fontColor(readerAppColor('app.control.itemInk', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 9, y: 14 });
@@ -768,9 +772,9 @@ export struct ReaderAppearanceFullPanel {
             .fontFamily('ReaderNotoSansSC')
             .fontWeight(FontWeight.Bold)
             .fontSize(10)
-            .fontColor(TOK_READ_INK);
+            .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
           Blank();
-          Image($r('app.media.reader_chevron_down_primary'))
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_primary_theme_night') : $r('app.media.reader_chevron_down_primary')))
             .width(8)
             .height(4);
         }
@@ -778,8 +782,8 @@ export struct ReaderAppearanceFullPanel {
         .height(36)
         .padding({ left: 8, right: 6 })
         .alignItems(VerticalAlign.Center)
-        .backgroundColor(TOK_SURFACE_FIELD)
-        .border({ width: TOK_BORDER_W, color: '#C1C7CD' })
+        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.ReaderAppearanceFullPanel.selectField.color.FFC1C7CD', this.appThemeScheme) })
         .borderRadius(6)
         .opacity(0.38)
         .position({ x: this.selectRowWidth() - this.selectControlWidth(kind) - 8, y: 3 })
@@ -849,7 +853,7 @@ export struct ReaderAppearanceFullPanel {
         .fontWeight(FontWeight.Medium)
         .fontSize(11)
         .lineHeight(16)
-        .fontColor(TOK_READ_BODY_INK)
+        .fontColor(readerAppColor('app.control.itemInk', this.appThemeScheme))
         .position({ x: 8, y: index === 0 ? 9 : 9.5 });
 
       Row({ space: 4 }) {
@@ -860,7 +864,7 @@ export struct ReaderAppearanceFullPanel {
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
-          .fontColor(TOK_READ_INK)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .textAlign(TextAlign.Center);
         this.stepButton(metric, 1);
       }
@@ -871,7 +875,7 @@ export struct ReaderAppearanceFullPanel {
     }
     .width(this.stepperRowWidth())
     .height(34)
-    .border({ width: { top: index === 0 ? 0 : TOK_BORDER_W }, color: TOK_LINE })
+    .border({ width: { top: index === 0 ? 0 : TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .position({ x: 9, y: 2 + index * 34 });
   }
 
@@ -881,13 +885,13 @@ export struct ReaderAppearanceFullPanel {
       Text(direction < 0 ? '-' : '+')
         .width(24)
         .height(28)
-        .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
         .borderRadius(8)
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Bold)
         .fontSize(10)
         .lineHeight(14)
-        .fontColor(TOK_READ_INK)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
     }
     .width(30)
@@ -1415,53 +1419,11 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private themeLabel(theme: ReaderAppearanceTheme): string {
-    if (theme === 'day') {
-      return '日间';
-    }
-    if (theme === 'warm') {
-      return '暖白';
-    }
-    if (theme === 'night') {
-      return '夜间';
-    }
-    if (theme === 'warmNight') {
-      return '暖夜';
-    }
-    if (theme === 'paper') {
-      return '纸纹';
-    }
-    if (theme === 'green') {
-      return '青叶纹';
-    }
-    if (theme === 'paperNight') {
-      return '夜纹';
-    }
-    return '林夜纹';
+    return readerControlAppearanceThemeLabel(theme);
   }
 
   private themeColor(theme: ReaderAppearanceTheme): string {
-    if (theme === 'day') {
-      return '#FFFFFF';
-    }
-    if (theme === 'warm') {
-      return '#FBF0DF';
-    }
-    if (theme === 'night') {
-      return '#26231F';
-    }
-    if (theme === 'warmNight') {
-      return '#302922';
-    }
-    if (theme === 'paper') {
-      return '#F5EAD8';
-    }
-    if (theme === 'green') {
-      return '#E7F0E2';
-    }
-    if (theme === 'paperNight') {
-      return '#34302B';
-    }
-    return '#263129';
+    return readerControlAppearanceThemeSwatch(theme);
   }
 
 }
