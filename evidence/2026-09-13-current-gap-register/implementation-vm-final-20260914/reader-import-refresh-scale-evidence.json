@@ -1,0 +1,38 @@
+{
+  "figmaScreenshotPixels": [
+    318,
+    52
+  ],
+  "figmaArc": {
+    "bounds": [
+      285,
+      19,
+      299,
+      33
+    ],
+    "pixels": 45
+  },
+  "nativeImageBounds": [
+    1029,
+    1326,
+    1092,
+    1389
+  ],
+  "nativeArc": {
+    "bounds": [
+      1041,
+      1338,
+      1080,
+      1377
+    ],
+    "pixels": 359
+  },
+  "nativeDensity": 3.5,
+  "figmaNodeFrame": 18,
+  "figmaVector": 13.5,
+  "figmaStroke": 1.5,
+  "currentSvg": 24,
+  "currentRenderImage": 18,
+  "currentSvgStroke": 1.51556,
+  "currentEffectiveStroke": 1.13667
+}

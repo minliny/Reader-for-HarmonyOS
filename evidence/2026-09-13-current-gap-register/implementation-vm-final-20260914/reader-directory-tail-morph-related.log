@@ -1,0 +1,3 @@
+PASS shared scroll lifecycle: 5 actual component adapters, latest-offset handoff, held endpoint reversals, delayed native reset, shared/full-only roles, new expansion top; NOT visual acceptance
+(node:18239) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

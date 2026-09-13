@@ -1,0 +1,129 @@
+{
+  "records": [
+    {
+      "scheme": "day",
+      "resource": "app.media.import_refresh",
+      "width": 18,
+      "height": 18,
+      "expectedPaint": 23.754,
+      "stroke": 1.13667
+    },
+    {
+      "scheme": "night",
+      "resource": "app.media.import_refresh_theme_night",
+      "width": 18,
+      "height": 18,
+      "expectedPaint": 23.754,
+      "stroke": 1.13667
+    },
+    {
+      "scheme": "day",
+      "resource": "app.media.import_refresh",
+      "width": 18,
+      "height": 18,
+      "expectedPaint": 23.754,
+      "stroke": 1.13667
+    }
+  ],
+  "nodes": [
+    {
+      "type": "Column",
+      "id": 0,
+      "create": [],
+      "width": "100%",
+      "padding": {
+        "left": "TOK_SPACE_MD",
+        "right": "TOK_SPACE_MD",
+        "top": "TOK_SPACE_MD"
+      }
+    },
+    {
+      "type": "Row",
+      "id": 1,
+      "create": {
+        "space": "TOK_SPACE_SM"
+      },
+      "width": "100%",
+      "constraintSize": {
+        "minHeight": 52
+      },
+      "padding": {
+        "left": 17,
+        "right": 17,
+        "top": "TOK_SPACE_XS",
+        "bottom": "TOK_SPACE_XS"
+      },
+      "backgroundColor": "#FFF8F4EC",
+      "border": {
+        "width": "TOK_BORDER_W",
+        "color": "#FFE8E2D9"
+      },
+      "borderRadius": 12
+    },
+    {
+      "type": "Stack",
+      "id": 2,
+      "create": {
+        "alignContent": "Alignment.Center"
+      },
+      "width": 36,
+      "height": 36,
+      "backgroundColor": "#FFE8F4ED",
+      "borderRadius": 18
+    },
+    {
+      "type": "Image",
+      "id": 3,
+      "create": "app.media.import_success",
+      "width": 18,
+      "height": 18
+    },
+    {
+      "type": "Column",
+      "id": 4,
+      "create": {
+        "space": 1
+      },
+      "layoutWeight": 1,
+      "alignItems": "HorizontalAlign.Start"
+    },
+    {
+      "type": "Text",
+      "id": 5,
+      "create": "导入完成",
+      "fontFamily": "ReaderInter",
+      "fontWeight": "FontWeight.Bold",
+      "fontSize": 13,
+      "lineHeight": 19.5,
+      "letterSpacing": -0.0762,
+      "fontColor": "#FF1F1B17"
+    },
+    {
+      "type": "Text",
+      "id": 6,
+      "create": "1本已在书架",
+      "fontFamily": "ReaderInter",
+      "fontWeight": "FontWeight.Regular",
+      "fontSize": 11,
+      "lineHeight": 16.5,
+      "letterSpacing": 0.0645,
+      "fontColor": "#FF756F69"
+    },
+    {
+      "type": "Stack",
+      "id": 7,
+      "create": {
+        "alignContent": "Alignment.Center"
+      },
+      "width": 18,
+      "height": 18
+    },
+    {
+      "type": "Image",
+      "id": 8,
+      "create": "app.media.import_refresh",
+      "width": 18,
+      "height": 18
+    }
+  ]
+}

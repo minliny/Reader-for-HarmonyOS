@@ -1,0 +1,628 @@
+{
+  "layer": "Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels",
+  "builder": [
+    {
+      "method": "LocalBookDetail.chapterSection",
+      "scheme": "day",
+      "actual": "#FF1F3528",
+      "expected": "#FF1F3528"
+    },
+    {
+      "method": "LocalBookDetail.chapterSection",
+      "scheme": "night",
+      "actual": "#FFD2BD96",
+      "expected": "#FFD2BD96"
+    },
+    {
+      "method": "LocalBookDetail.chapterSection",
+      "scheme": "day",
+      "actual": "#FF1F3528",
+      "expected": "#FF1F3528"
+    },
+    {
+      "method": "settings/RulesManagementPage.ets.actionButton",
+      "scheme": "day",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "settings/RulesManagementPage.ets.actionButton",
+      "scheme": "day",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "settings/RulesManagementPage.ets.actionButton",
+      "scheme": "night",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF7A684F"
+      },
+      "secondary": {
+        "font": "#FFD2BD96",
+        "fill": "#A32C2824"
+      }
+    },
+    {
+      "method": "settings/RulesManagementPage.ets.actionButton",
+      "scheme": "night",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF7A684F"
+      },
+      "secondary": {
+        "font": "#FFD2BD96",
+        "fill": "#A32C2824"
+      }
+    },
+    {
+      "method": "settings/RulesManagementPage.ets.actionButton",
+      "scheme": "day",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "settings/RulesManagementPage.ets.actionButton",
+      "scheme": "day",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "source/SourceToolsPage.ets.actionButton",
+      "scheme": "day",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "source/SourceToolsPage.ets.actionButton",
+      "scheme": "day",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "source/SourceToolsPage.ets.actionButton",
+      "scheme": "night",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF7A684F"
+      },
+      "secondary": {
+        "font": "#FFD2BD96",
+        "fill": "#A32C2824"
+      }
+    },
+    {
+      "method": "source/SourceToolsPage.ets.actionButton",
+      "scheme": "night",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF7A684F"
+      },
+      "secondary": {
+        "font": "#FFD2BD96",
+        "fill": "#A32C2824"
+      }
+    },
+    {
+      "method": "source/SourceToolsPage.ets.actionButton",
+      "scheme": "day",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "source/SourceToolsPage.ets.actionButton",
+      "scheme": "day",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "bookshelf/BookshelfManagementPage.ets.actionButton",
+      "scheme": "day",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "bookshelf/BookshelfManagementPage.ets.actionButton",
+      "scheme": "day",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "bookshelf/BookshelfManagementPage.ets.actionButton",
+      "scheme": "night",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF7A684F"
+      },
+      "secondary": {
+        "font": "#FFD2BD96",
+        "fill": "#A32C2824"
+      }
+    },
+    {
+      "method": "bookshelf/BookshelfManagementPage.ets.actionButton",
+      "scheme": "night",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF7A684F"
+      },
+      "secondary": {
+        "font": "#FFD2BD96",
+        "fill": "#A32C2824"
+      }
+    },
+    {
+      "method": "bookshelf/BookshelfManagementPage.ets.actionButton",
+      "scheme": "day",
+      "busy": false,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    },
+    {
+      "method": "bookshelf/BookshelfManagementPage.ets.actionButton",
+      "scheme": "day",
+      "busy": true,
+      "primary": {
+        "font": "#FFFFFAF4",
+        "fill": "#FF1F3528"
+      },
+      "secondary": {
+        "font": "#FF1F3528",
+        "fill": "#A3EEE6DB"
+      }
+    }
+  ],
+  "consumers": [
+    {
+      "file": "features/bookshelf/BookshelfEmptyCard.ets",
+      "line": 114,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/bookshelf/BookshelfManagementPage.ets",
+      "line": 100,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/bookshelf/BookshelfManagementPage.ets",
+      "line": 184,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/bookshelf/BookshelfManagementPage.ets",
+      "line": 243,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/bookshelf/BookshelfManagementPage.ets",
+      "line": 299,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/bookshelf/BookshelfManagementPage.ets",
+      "line": 307,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/bookshelf/LocalBookDetail.ets",
+      "line": 319,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/common/ReaderSelect.ets",
+      "line": 113,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/common/ReaderSelect.ets",
+      "line": 202,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/common/ReaderSelectPanel.ets",
+      "line": 188,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/common/ReaderSelectPanel.ets",
+      "line": 212,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssEntryDetailPage.ets",
+      "line": 178,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssEntryDetailPage.ets",
+      "line": 314,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssEntryDetailPage.ets",
+      "line": 350,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssPage.ets",
+      "line": 171,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssPage.ets",
+      "line": 202,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssPage.ets",
+      "line": 217,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssPage.ets",
+      "line": 243,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssPage.ets",
+      "line": 504,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssPage.ets",
+      "line": 566,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssPage.ets",
+      "line": 802,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssSourceFeedPage.ets",
+      "line": 195,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssSubscriptionEditorPage.ets",
+      "line": 68,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssSubscriptionEditorPage.ets",
+      "line": 201,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssSubscriptionManagementPage.ets",
+      "line": 121,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/rss/RssSubscriptionManagementPage.ets",
+      "line": 166,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/settings/RulesManagementPage.ets",
+      "line": 136,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/settings/RulesManagementPage.ets",
+      "line": 308,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/settings/RulesManagementPage.ets",
+      "line": 352,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/source/SourceManagementPage.ets",
+      "line": 255,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/source/SourceManagementPage.ets",
+      "line": 507,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/source/SourceToolsPage.ets",
+      "line": 307,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/source/SourceToolsPage.ets",
+      "line": 413,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/source/SourceToolsPage.ets",
+      "line": 429,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/source/SourceToolsPage.ets",
+      "line": 619,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/source/SourceToolsPage.ets",
+      "line": 640,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/source/SourceToolsPage.ets",
+      "line": 661,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/sync/SyncPage.ets",
+      "line": 282,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/sync/SyncPage.ets",
+      "line": 325,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/sync/SyncPage.ets",
+      "line": 350,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    },
+    {
+      "file": "features/sync/SyncPage.ets",
+      "line": 447,
+      "colors": [
+        "#FF1F3528",
+        "#FFD2BD96",
+        "#FF1F3528"
+      ]
+    }
+  ]
+}

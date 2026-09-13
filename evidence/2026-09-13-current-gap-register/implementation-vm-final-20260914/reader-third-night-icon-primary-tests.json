@@ -1,0 +1,74 @@
+[
+  {
+    "test": "test-theme-primary-text",
+    "exit": 0,
+    "stdout": "PASS Night primary text: 41 production AST foregrounds, 21 retained Builder states; Day/solid fill/alpha/layout retained.\n",
+    "stderr": "(node:31141) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "test": "test-theme-dynamic-icons",
+    "exit": 0,
+    "stdout": "PASS dynamic theme icons: 6 computed $r sites, 101 actual state/paint cases, retained SDK Builders and all resource geometry/alpha.\n",
+    "stderr": "(node:31142) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "test": "test-reader-theme-selection",
+    "exit": 0,
+    "stdout": "PASS theme truth table, migrations, sync fallback, atomic publication, old failure isolation and current failure durable rollback\nPASS removed local theme falls back to matching configured day/night default\n",
+    "stderr": ""
+  },
+  {
+    "test": "test-rss-subscription-management-page",
+    "exit": 0,
+    "stdout": "rss subscription management page contract: PASS\n",
+    "stderr": ""
+  },
+  {
+    "test": "test-rss-page-architecture",
+    "exit": 0,
+    "stdout": "rss page architecture contract: PASS\n",
+    "stderr": ""
+  },
+  {
+    "test": "test-rss-discover-responsive-layout",
+    "exit": 0,
+    "stdout": "RSS and Discover responsive layout regressions: PASS\n",
+    "stderr": ""
+  },
+  {
+    "test": "test-bookshelf-management",
+    "exit": 0,
+    "stdout": "bookshelf management Core ownership contract: PASS\n",
+    "stderr": ""
+  },
+  {
+    "test": "test-source-product-tools",
+    "exit": 0,
+    "stdout": "Source product tools static boundary: PASS\n",
+    "stderr": ""
+  },
+  {
+    "test": "test-sync-webdav-product",
+    "exit": 0,
+    "stdout": "WebDAV product boundary/static contract: PASS\n",
+    "stderr": "(node:31153) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  },
+  {
+    "test": "test-rule-entity-management",
+    "exit": 0,
+    "stdout": "rule entity management Core ownership contract: PASS\n",
+    "stderr": ""
+  },
+  {
+    "test": "test-select-semantics",
+    "exit": 0,
+    "stdout": "select semantic contract: PASS\n",
+    "stderr": ""
+  },
+  {
+    "test": "test-bookshelf-reading-entry",
+    "exit": 0,
+    "stdout": "bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)\nReader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS\n",
+    "stderr": "(node:31159) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+  }
+]

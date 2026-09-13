@@ -1,0 +1,2 @@
+Reader control Host session: production projection, command, close-commit and lifecycle cases PASS
+Reader control Host wiring: structural checks PASS (not ArkUI execution or visual acceptance)

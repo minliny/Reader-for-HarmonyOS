@@ -1,0 +1,90 @@
+{
+  "scope": "Original-byte supplemental evidence for installed third package 9509d4fe; local repairs may postdate that package. No new HAP or device acceptance implied.",
+  "files": [
+    {
+      "file": "reader-import-refresh-builder-before.json",
+      "bytes": 2628,
+      "sha256": "1335b6e7ff621eb7efa84efb6c9aecfd4b108c762ee0699d374a80dd0bcf538b"
+    },
+    {
+      "file": "reader-import-refresh-builder-probe.mjs",
+      "bytes": 1476,
+      "sha256": "74a62715fb4c243bf1f8a18dcb93a957b72c9750a9af450a231ed85ac38aa375"
+    },
+    {
+      "file": "reader-import-refresh-figma-live-20260914.json",
+      "bytes": 19276,
+      "sha256": "acd3b7b5029ae6b562a10588834e139e376958b41d068c74022a116fe8247dfb"
+    },
+    {
+      "file": "reader-import-refresh-figma-parent-live-20260914.json",
+      "bytes": 1121,
+      "sha256": "b57d6f7c5a2a186cbb0f5ed0dfc1e063c703df03b3989dfc6e76784031a3d012"
+    },
+    {
+      "file": "reader-import-refresh-figma-summary.png",
+      "bytes": 4685,
+      "sha256": "a5f72470fb7c1a5ae185bb421560fa642c0f057e60f81b430cb7562cba3e6168"
+    },
+    {
+      "file": "reader-import-refresh-scale-evidence.json",
+      "bytes": 543,
+      "sha256": "e78462096f1d7b0330008734aed63b29eeba98f5198b5d9ac0cd6fd88ecb147b"
+    },
+    {
+      "file": "reader-import-refresh-source-audit-20260914.md",
+      "bytes": 3016,
+      "sha256": "216804263a38eee2f78a52afb86ea49d25310116875a3863d6f08cd8552e6026"
+    },
+    {
+      "file": "reader-third-night-icon-font-role-before.json",
+      "bytes": 10867,
+      "sha256": "b5196b9170cc77452bba9ac5b8b3f7712376d55d4ab74cdb575d5a70a7957e36"
+    },
+    {
+      "file": "reader-third-night-icon-font-role-fix.json",
+      "bytes": 11572,
+      "sha256": "f156115afaa0d2138d79b44f4e42d61e4b66bba873b2f74d7672694ed0a69975"
+    },
+    {
+      "file": "reader-third-night-icon-observation-summary.json",
+      "bytes": 5207,
+      "sha256": "0bfbd16718ef5e3294dd90cfeca0d319432437995f5455a9bd9ae00706fe533f"
+    },
+    {
+      "file": "reader-third-night-icon-observation.json",
+      "bytes": 33275,
+      "sha256": "2f17921f3119df359c6f08868db6e048458aaf94441d01cf25721fc02c0fa250"
+    },
+    {
+      "file": "reader-third-night-icon-observation.md",
+      "bytes": 6109,
+      "sha256": "de03104b78607dc48e175cdf99a582fdc79b6f848fecfe48693f79280a9beec3"
+    },
+    {
+      "file": "reader-third-night-icon-observation.py",
+      "bytes": 6562,
+      "sha256": "db6ac502a93b6794f5c9f6a72a98c856dba1b8ad0251e555c4dcef60b9e6a42a"
+    },
+    {
+      "file": "reader-third-night-icon-primary-builder-after.json",
+      "bytes": 12974,
+      "sha256": "625b5e5cd04fc6caaca1cee1ff6e5aa44fa5c38a476834912cff13f0022e3802"
+    },
+    {
+      "file": "reader-third-night-icon-primary-builder-before.json",
+      "bytes": 452,
+      "sha256": "0316503d113bb9d69855beb717b572a33674342ffd6dc9b0daff9891db3fb40b"
+    },
+    {
+      "file": "reader-third-night-icon-primary-tests.json",
+      "bytes": 3035,
+      "sha256": "1352cd72a40d928624baac05902a03773e4d98490a0f2f3410086079e3748a05"
+    },
+    {
+      "file": "reader-import-refresh-builder-after.json",
+      "bytes": 1100,
+      "sha256": "b0914ede9142e8d4cff63574158c17523c8ff2d8db1b17fc74b248943c04966b"
+    }
+  ]
+}

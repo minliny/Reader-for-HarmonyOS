@@ -1,0 +1,470 @@
+{
+  "scope": "third package five collapse controls, local reading of persisted evidence only",
+  "capturePrefix": "reader-control-r9509-1789315814956-",
+  "modules": [
+    {
+      "module": "auto",
+      "stages": [
+        {
+          "stage": "quick",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-auto-quick.json",
+          "sha256": "11ccf989821da5ab8b4c014b5e1b62a065f13202a1319ef29253d9b1a8d78010",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:16:59.164Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1045,1721][1185,1812]",
+          "headerEffectiveOpacity": 0.0,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "full",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-auto-full.json",
+          "sha256": "a5fc6ffb499650bb690ad81dc0503cc8a20cf93a67ee5f8f5de459a2a549e703",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:17:00.698Z",
+          "shellBounds": "[46,388][1235,2734]",
+          "contentBounds": "[92,588][1190,2689]",
+          "headerButtonBounds": "[1046,465][1186,556]",
+          "headerEffectiveOpacity": 0.999557,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "collapsed",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-auto-collapsed.json",
+          "sha256": "fbbaf3df7f921635b8e85c3482178c1abf42039a1548926ce93882302dfb84fe",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:33.592Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1044,1721][1184,1812]",
+          "headerEffectiveOpacity": 0.0,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        }
+      ],
+      "interveningInputs": [
+        {
+          "at": "2026-09-13T16:18:32.573Z",
+          "args": [
+            "shell",
+            "uitest",
+            "uiInput",
+            "click",
+            "1118",
+            "510"
+          ],
+          "ok": true
+        }
+      ],
+      "collapseResult": "PASS specified button-to-same-module-Quick path only"
+    },
+    {
+      "module": "settings",
+      "stages": [
+        {
+          "stage": "quick",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-settings-quick.json",
+          "sha256": "5e117395ddb1ceda65aed4f34c8f5710f3e0bb7740ed496f234fb81740de0c6b",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:34.507Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1050,1653][1190,1744]",
+          "headerEffectiveOpacity": 0.0,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "full",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-settings-full.json",
+          "sha256": "5cf083e96c93bb24c861a1a0e61464261fa0b1a365555ff64f222a01db0b0b55",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:36.070Z",
+          "shellBounds": "[46,388][1235,2734]",
+          "contentBounds": "[92,588][1190,2689]",
+          "headerButtonBounds": "[1050,462][1190,553]",
+          "headerEffectiveOpacity": 0.999557,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "collapsed",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-settings-collapsed.json",
+          "sha256": "1c2a6d71b646eb9fa2445b14e7b5fa141ef7905bc449aa55fc62aa7c6d14bcff",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:36.993Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1050,1653][1190,1744]",
+          "headerEffectiveOpacity": 0.0,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        }
+      ],
+      "interveningInputs": [
+        {
+          "at": "2026-09-13T16:18:36.070Z",
+          "args": [
+            "shell",
+            "uitest",
+            "uiInput",
+            "click",
+            "1118",
+            "510"
+          ],
+          "ok": true
+        }
+      ],
+      "collapseResult": "PASS specified button-to-same-module-Quick path only"
+    },
+    {
+      "module": "appearance",
+      "stages": [
+        {
+          "stage": "quick",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-appearance-quick.json",
+          "sha256": "906e4aa5c00bf921065ed1fe1fb158e32ffed9baa581d6076cabfb25aface64a",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:37.871Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1050,1653][1190,1744]",
+          "headerEffectiveOpacity": 0.0,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "full",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-appearance-full.json",
+          "sha256": "5ec523f744cebca5c0da92fa1d487703a24340a4858f7a441590a87b1ab812e1",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:39.459Z",
+          "shellBounds": "[46,388][1235,2734]",
+          "contentBounds": "[92,588][1190,2689]",
+          "headerButtonBounds": "[1050,462][1190,553]",
+          "headerEffectiveOpacity": 0.9995350097460001,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "collapsed",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-appearance-collapsed.json",
+          "sha256": "4578bc08166453081e82476f392b83899914c86ade64178fd5fffe7afd0a49ff",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:40.500Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1050,1653][1190,1744]",
+          "headerEffectiveOpacity": 0.000176921589,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        }
+      ],
+      "interveningInputs": [
+        {
+          "at": "2026-09-13T16:18:39.460Z",
+          "args": [
+            "shell",
+            "uitest",
+            "uiInput",
+            "click",
+            "1118",
+            "510"
+          ],
+          "ok": true
+        }
+      ],
+      "collapseResult": "PASS specified button-to-same-module-Quick path only"
+    },
+    {
+      "module": "tts",
+      "stages": [
+        {
+          "stage": "quick",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-tts-quick.json",
+          "sha256": "64fb8d6ba81ca3ff70fdba49819c5947482576feb01f19cbec4f30fde9cb48b5",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:41.569Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1050,1653][1190,1744]",
+          "headerEffectiveOpacity": 0.000176921589,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "full",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-tts-full.json",
+          "sha256": "175ea807a1d778b451c5f62a01902ebc541e223316aa3645fd8cce81969f0d12",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:43.198Z",
+          "shellBounds": "[46,388][1235,2734]",
+          "contentBounds": "[92,588][1190,2689]",
+          "headerButtonBounds": "[1050,462][1190,553]",
+          "headerEffectiveOpacity": 0.999557,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "collapsed",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-tts-collapsed.json",
+          "sha256": "9e5596bf7868c52450168c17cd9173c73f2a6a9744b58d5643f1f0b1f7686c08",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:44.184Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1050,1653][1190,1744]",
+          "headerEffectiveOpacity": 0.00039582457199999996,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        }
+      ],
+      "interveningInputs": [
+        {
+          "at": "2026-09-13T16:18:43.199Z",
+          "args": [
+            "shell",
+            "uitest",
+            "uiInput",
+            "click",
+            "1118",
+            "510"
+          ],
+          "ok": true
+        }
+      ],
+      "collapseResult": "PASS specified button-to-same-module-Quick path only"
+    },
+    {
+      "module": "directory",
+      "stages": [
+        {
+          "stage": "quick",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-directory-quick.json",
+          "sha256": "f29897830e66a178233611d0d9221060f37d01ce6ab5c37ea70cf4c10c887bd8",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:45.091Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1050,1653][1190,1744]",
+          "headerEffectiveOpacity": 0.00039582457199999996,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "full",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-directory-full.json",
+          "sha256": "e548256f86b06ef4bc7fded645ae05c4a805758a141d85019f53e1e4afd47c17",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:46.577Z",
+          "shellBounds": "[46,388][1235,2734]",
+          "contentBounds": "[92,588][1190,2689]",
+          "headerButtonBounds": "[1050,462][1190,553]",
+          "headerEffectiveOpacity": 0.999557,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        },
+        {
+          "stage": "collapsed",
+          "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/reader-control-r9509-1789315814956-directory-collapsed.json",
+          "sha256": "2327a3c60677c05996b5051b9ea830b31efd5a1c3cc43c443818159515d91bb8",
+          "captureIntegrity": true,
+          "capturedAt": "2026-09-13T16:18:47.526Z",
+          "shellBounds": "[46,1579][1235,2734]",
+          "contentBounds": "[92,1681][1008,2346]",
+          "headerButtonBounds": "[1050,1653][1190,1744]",
+          "headerEffectiveOpacity": 0.0,
+          "headerParentHitTests": [
+            "HitTestMode.Transparent",
+            "HitTestMode.Default",
+            "HitTestMode.Default"
+          ],
+          "visibleBodyTextSha256": "9e8a671c755d0e8f3dfaf76f242eea081313f72f3b28489be39153719fe644f5",
+          "footer": [
+            "第 3 / 4 页"
+          ]
+        }
+      ],
+      "interveningInputs": [
+        {
+          "at": "2026-09-13T16:18:46.577Z",
+          "args": [
+            "shell",
+            "uitest",
+            "uiInput",
+            "click",
+            "1118",
+            "510"
+          ],
+          "ok": true
+        }
+      ],
+      "collapseResult": "PASS specified button-to-same-module-Quick path only"
+    }
+  ],
+  "directoryAnchorObservation": {
+    "quickVisible": "146(partial)-150",
+    "fullVisible": "139(partial)-150",
+    "collapsedVisible": "139(partial)-143; PNG fully legible 140-143",
+    "bodyUnchanged": true,
+    "codeHypothesis": "Full viewport legal tail clamp followed by unconditional endpoint semantic anchor release; production-method clamp replay pending",
+    "status": "VM observed; code cause reproduced; fixed locally after installed package; next-package VM OPEN",
+    "rootCause": "Full legal tail clamp followed by unconditional semantic anchor release at settled endpoint. Later collapse captures clamped row instead of preserved original intent.",
+    "productionReplay": {
+      "rows": 150,
+      "quickContentVp": 190,
+      "fullContentVp": 600.2857142857143,
+      "before": {
+        "originalQuickOffset": 4659,
+        "roundTripOffset": 4438.171428571428
+      },
+      "after": "originalQuickOffset restored within half native pixel"
+    },
+    "fix": "Only release leadingRow/key after native row height and fraction are aligned with requested semantic row; preserve clamped/unmeasured intent; actual user scroll/new list still supersedes it.",
+    "formalNewCases": 8,
+    "productionFiles": [
+      "Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets"
+    ],
+    "testFiles": [
+      "Reader-for-HarmonyOS/tools/test-reader-control-directory-model.mjs"
+    ]
+  },
+  "installedSource": {
+    "harmony": "9509d4feb410ce559d67b77785e2248e88485f4e",
+    "core": "952704bd57518af530a948dfd3408a119c20e276",
+    "runId": "20260913T160039Z-9509d4fe-25529e1f",
+    "source": "independently read immutable manifest"
+  },
+  "localEvidence": [
+    {
+      "path": "/private/tmp/reader-directory-tail-anchor-before.log",
+      "result": "expected FAIL",
+      "sha256": "bf1e29da20e94a2510fe935a54bcb102bec968fc5d8148d95e8eae2a9e40b810"
+    },
+    {
+      "path": "/private/tmp/reader-directory-tail-anchor-after.log",
+      "result": "PASS",
+      "sha256": "2994522198f28c7519234e002f802051e2bf1b0fe4123e08cedbb2e2a6e9e447"
+    },
+    {
+      "path": "/private/tmp/reader-directory-tail-header-related.log",
+      "result": "PASS",
+      "sha256": "cc54817c79be7b357ba5a0076474c25bd02fc243dbb1ea9a5073190415cdb747"
+    },
+    {
+      "path": "/private/tmp/reader-directory-tail-host-related.log",
+      "result": "PASS",
+      "sha256": "c9c06719e80b75f5faae9962657f978060cd7c23b2ca66806b048f9f4331f87b"
+    },
+    {
+      "path": "/private/tmp/reader-directory-tail-morph-related.log",
+      "result": "PASS",
+      "sha256": "a9b7ee345b5e135bd28f038211c4d4203d39504385e87b8ca53738b70d9900a1"
+    }
+  ],
+  "postFixSourceHashes": {
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets": "10729446b8faf095a97d884a15a00bc5a97b670acb2b757e1c5243fadea16cd2",
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-control-directory-model.mjs": "830d1957e55d2d67eee5f55e80f869a596c7dffd03ca4f0c3c6aa69d2608f3cf"
+  }
+}

@@ -1,0 +1,57 @@
+[
+  {
+    "index": 0,
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "be0ac5",
+      "wall_time_seconds": 0.704491208,
+      "exit_code": 0,
+      "original_token_count": 507,
+      "output": "[\n  {\n    \"phase\": \"before\",\n    \"exitCode\": 1,\n    \"log\": \"search-history-lifecycle-before.log\",\n    \"cases\": [\n      {\n        \"name\": \"initial history Scroll uses the top of the content viewport\",\n        \"status\": \"FAIL\",\n        \"message\": \"Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ undefined\\n- 'Alignment.TopStart'\\n\"\n      },\n      {\n        \"name\": \"one history item appears after the independently measurable outer container reports its real width\",\n        \"status\": \"FAIL\",\n        \"message\": \"unmeasured history must not be presented as wholly collapsed\"\n      },\n      {\n        \"name\": \"empty first paint still provides width before asynchronous history arrives\",\n        \"status\": \"FAIL\",\n        \"message\": \"one authoritative measured history container\\n\\n0 !== 1\\n\"\n      },\n      {\n        \"name\": \"two measured rows adapt to real width, long chips, tablet padding and late replacement\",\n        \"status\": \"FAIL\",\n        \"message\": \"measure the stable history container, not count-dependent empty Flex\\n\\n'Flex' !== 'Column'\\n\"\n      },\n      {\n        \"name\": \"actual SDK action preserves matching expand and collapse intents\",\n        \"status\": \"PASS\"\n      }\n    ]\n  },\n  {\n    \"phase\": \"after\",\n    \"exitCode\": 0,\n    \"log\": \"search-history-lifecycle-after.log\",\n    \"cases\": [\n      {\n        \"name\": \"initial history Scroll uses the top of the content viewport\",\n        \"status\": \"PASS\"\n      },\n      {\n        \"name\": \"one history item appears after the independently measurable outer container reports its real width\",\n        \"status\": \"PASS\"\n      },\n      {\n        \"name\": \"empty first paint still provides width before asynchronous history arrives\",\n        \"status\": \"PASS\"\n      },\n      {\n        \"name\": \"two measured rows adapt to real width, long chips, tablet padding and late replacement\",\n        \"status\": \"PASS\"\n      },\n      {\n        \"name\": \"actual SDK action preserves matching expand and collapse intents\",\n        \"status\": \"PASS\"\n      }\n    ]\n  }\n]\n"
+    }
+  },
+  {
+    "index": 1,
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "bf6698",
+      "wall_time_seconds": 0.27284375,
+      "exit_code": 0,
+      "original_token_count": 86,
+      "output": "PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership\n(node:47658) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "index": 2,
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "9c5566",
+      "wall_time_seconds": 0.000001125,
+      "exit_code": 0,
+      "original_token_count": 61,
+      "output": "search stable rows, enrichment and navigation state: PASS\n(node:47661) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "index": 3,
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "c57268",
+      "wall_time_seconds": 0.000002125,
+      "exit_code": 0,
+      "original_token_count": 11,
+      "output": "search publication identity contract: PASS\n"
+    }
+  },
+  {
+    "index": 4,
+    "status": "fulfilled",
+    "value": {
+      "chunk_id": "2d95a2",
+      "wall_time_seconds": 0.000002,
+      "exit_code": 0,
+      "original_token_count": 13,
+      "output": "responsive surface width regression matrix: PASS\n"
+    }
+  }
+]

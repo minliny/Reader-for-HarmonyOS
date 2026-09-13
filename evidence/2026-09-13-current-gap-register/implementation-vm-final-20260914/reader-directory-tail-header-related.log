@@ -1,0 +1,3 @@
+reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS
+(node:18237) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

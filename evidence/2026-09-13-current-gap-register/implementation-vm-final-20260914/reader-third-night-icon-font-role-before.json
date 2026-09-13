@@ -1,0 +1,330 @@
+[
+  {
+    "file": "entry/src/main/ets/features/bookshelf/BookshelfEmptyCard.ets",
+    "line": 114,
+    "method": "build",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 4062,
+    "end": 4117
+  },
+  {
+    "file": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+    "line": 100,
+    "method": "statusCard",
+    "argument": "this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme)",
+    "start": 3394,
+    "end": 3521
+  },
+  {
+    "file": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+    "line": 184,
+    "method": "groupRow",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 7555,
+    "end": 7610
+  },
+  {
+    "file": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+    "line": 243,
+    "method": "assignmentBookRow",
+    "argument": "this.isSelectedBook(book) ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 10367,
+    "end": 10506
+  },
+  {
+    "file": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+    "line": 299,
+    "method": "actionButton",
+    "argument": "primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 13096,
+    "end": 13217
+  },
+  {
+    "file": "entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets",
+    "line": 307,
+    "method": "smallAction",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 13648,
+    "end": 13703
+  },
+  {
+    "file": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+    "line": 319,
+    "method": "chapterSection",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 11185,
+    "end": 11240
+  },
+  {
+    "file": "entry/src/main/ets/features/common/ReaderSelect.ets",
+    "line": 113,
+    "method": "appearanceTrigger",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 4223,
+    "end": 4278
+  },
+  {
+    "file": "entry/src/main/ets/features/common/ReaderSelect.ets",
+    "line": 202,
+    "method": "defaultTrigger",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 8166,
+    "end": 8221
+  },
+  {
+    "file": "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+    "line": 188,
+    "method": "appearanceSelectedRow",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 7967,
+    "end": 8022
+  },
+  {
+    "file": "entry/src/main/ets/features/common/ReaderSelectPanel.ets",
+    "line": 212,
+    "method": "defaultSelectedRow",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 8954,
+    "end": 9009
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+    "line": 178,
+    "method": "sourceCard",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 5980,
+    "end": 6035
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+    "line": 314,
+    "method": "originalLinkCard",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 11011,
+    "end": 11066
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+    "line": 350,
+    "method": "bottomActions",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 12297,
+    "end": 12352
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssPage.ets",
+    "line": 171,
+    "method": "topBar",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 5443,
+    "end": 5498
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssPage.ets",
+    "line": 202,
+    "method": "refreshPill",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 6295,
+    "end": 6350
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssPage.ets",
+    "line": 217,
+    "method": "refreshPill",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 6754,
+    "end": 6809
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssPage.ets",
+    "line": 243,
+    "method": "managePill",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 7736,
+    "end": 7791
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssPage.ets",
+    "line": 504,
+    "method": "sourceItem",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 17103,
+    "end": 17158
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssPage.ets",
+    "line": 566,
+    "method": "recentUnreadHeader",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 19297,
+    "end": 19352
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssPage.ets",
+    "line": 802,
+    "method": "stateButtons",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 27431,
+    "end": 27486
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+    "line": 195,
+    "method": "entrySectionHeader",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 6390,
+    "end": 6445
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+    "line": 68,
+    "method": "build",
+    "argument": "this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme)",
+    "start": 2294,
+    "end": 2421
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+    "line": 201,
+    "method": "sectionTitle",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 8839,
+    "end": 8894
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+    "line": 121,
+    "method": "backBar",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 4159,
+    "end": 4214
+  },
+  {
+    "file": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+    "line": 166,
+    "method": "sourceDocumentAction",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 5622,
+    "end": 5677
+  },
+  {
+    "file": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+    "line": 136,
+    "method": "statusCard",
+    "argument": "this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme)",
+    "start": 4536,
+    "end": 4663
+  },
+  {
+    "file": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+    "line": 308,
+    "method": "actionButton",
+    "argument": "primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 13858,
+    "end": 13979
+  },
+  {
+    "file": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+    "line": 352,
+    "method": "smallButton",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 16583,
+    "end": 16638
+  },
+  {
+    "file": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+    "line": 255,
+    "method": "statusBanner",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 8522,
+    "end": 8577
+  },
+  {
+    "file": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+    "line": 507,
+    "method": "loginButton",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 17589,
+    "end": 17644
+  },
+  {
+    "file": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+    "line": 307,
+    "method": "batchCheckCard",
+    "argument": "this.snapshot.batchCheck.phase === 'failed' ? readerAppColor('app.SourceToolsPage.batchCheckCard.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 11385,
+    "end": 11581
+  },
+  {
+    "file": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+    "line": 413,
+    "method": "batchResultRow",
+    "argument": "result.state === 'passed' ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) :\n          (result.state === 'failed' ? readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FF9A6A1F', this.appThemeScheme))",
+    "start": 15811,
+    "end": 16124
+  },
+  {
+    "file": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+    "line": 429,
+    "method": "statusCard",
+    "argument": "this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme)",
+    "start": 16600,
+    "end": 16727
+  },
+  {
+    "file": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+    "line": 619,
+    "method": "smallButton",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 24317,
+    "end": 24372
+  },
+  {
+    "file": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+    "line": 640,
+    "method": "actionButton",
+    "argument": "primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 25021,
+    "end": 25142
+  },
+  {
+    "file": "entry/src/main/ets/features/source/SourceToolsPage.ets",
+    "line": 661,
+    "method": "fullWidthActionButton",
+    "argument": "primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 25916,
+    "end": 26037
+  },
+  {
+    "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+    "line": 282,
+    "method": "configActions",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 10940,
+    "end": 10995
+  },
+  {
+    "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+    "line": 325,
+    "method": "manualActionsSection",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 12845,
+    "end": 12900
+  },
+  {
+    "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+    "line": 350,
+    "method": "manualActionButton",
+    "argument": "primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 13712,
+    "end": 13833
+  },
+  {
+    "file": "entry/src/main/ets/features/sync/SyncPage.ets",
+    "line": 447,
+    "method": "scopeRow",
+    "argument": "readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)",
+    "start": 17551,
+    "end": 17606
+  }
+]

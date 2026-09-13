@@ -1,0 +1,18 @@
+{
+  "layer": "Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels",
+  "builder": [
+    {
+      "method": "LocalBookDetail.chapterSection",
+      "scheme": "day",
+      "actual": "#FF1F3528",
+      "expected": "#FF1F3528"
+    },
+    {
+      "method": "LocalBookDetail.chapterSection",
+      "scheme": "night",
+      "actual": "#FF7A684F",
+      "expected": "#FFD2BD96"
+    }
+  ],
+  "consumers": []
+}

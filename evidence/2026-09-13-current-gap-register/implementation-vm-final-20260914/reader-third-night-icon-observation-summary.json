@@ -1,0 +1,243 @@
+{
+  "pass": true,
+  "nav": 20,
+  "quickActions": [
+    {
+      "label": "搜索",
+      "bounds": [
+        221,
+        2133,
+        305,
+        2217
+      ],
+      "expectedSvg": "#EADFCE",
+      "foregroundPixelsWithin1RGB": 906,
+      "legacyTealPixels": 0,
+      "dominantColors": [
+        {
+          "color": "#2B2723",
+          "pixels": 5344
+        },
+        {
+          "color": "#E9DECD",
+          "pixels": 876
+        },
+        {
+          "color": "#2C2723",
+          "pixels": 371
+        },
+        {
+          "color": "#CAC0B1",
+          "pixels": 36
+        }
+      ],
+      "pass": true
+    },
+    {
+      "label": "自动翻页",
+      "bounds": [
+        523,
+        2133,
+        607,
+        2217
+      ],
+      "expectedSvg": "#EADFCE",
+      "foregroundPixelsWithin1RGB": 1227,
+      "legacyTealPixels": 0,
+      "dominantColors": [
+        {
+          "color": "#2B2723",
+          "pixels": 4864
+        },
+        {
+          "color": "#E9DECD",
+          "pixels": 1227
+        },
+        {
+          "color": "#2C2723",
+          "pixels": 449
+        },
+        {
+          "color": "#37322E",
+          "pixels": 73
+        }
+      ],
+      "pass": true
+    },
+    {
+      "label": "替换",
+      "bounds": [
+        826,
+        2133,
+        910,
+        2217
+      ],
+      "expectedSvg": "#EADFCE",
+      "foregroundPixelsWithin1RGB": 1579,
+      "legacyTealPixels": 0,
+      "dominantColors": [
+        {
+          "color": "#2B2723",
+          "pixels": 4546
+        },
+        {
+          "color": "#E9DECD",
+          "pixels": 1579
+        },
+        {
+          "color": "#2C2723",
+          "pixels": 386
+        },
+        {
+          "color": "#968E83",
+          "pixels": 150
+        }
+      ],
+      "pass": true
+    }
+  ],
+  "visibleEmptyBookmarks": 11,
+  "collapse": {
+    "replace": {
+      "full": {
+        "reader-control-motion-shell": {
+          "bounds": [
+            46,
+            388,
+            1235,
+            2734
+          ],
+          "effectiveOpacity": 0.999557
+        },
+        "reader-control-content-host": {
+          "bounds": [
+            92,
+            588,
+            1190,
+            2689
+          ],
+          "effectiveOpacity": 0.999557
+        }
+      },
+      "collapsed": {
+        "reader-control-motion-shell": {
+          "bounds": [
+            46,
+            1579,
+            1235,
+            2734
+          ],
+          "effectiveOpacity": 0.999557
+        },
+        "reader-control-content-host": {
+          "bounds": [
+            92,
+            1681,
+            1008,
+            2346
+          ],
+          "effectiveOpacity": 0.999557
+        }
+      },
+      "pass": true,
+      "scope": "Native layout transitioned Full→Quick; collapsed PNG not captured, no claim about transition frame smoothness."
+    },
+    "inbook-search": {
+      "full": {
+        "reader-control-motion-shell": {
+          "bounds": [
+            46,
+            388,
+            1235,
+            2734
+          ],
+          "effectiveOpacity": 0.999557
+        },
+        "reader-control-content-host": {
+          "bounds": [
+            92,
+            588,
+            1190,
+            2689
+          ],
+          "effectiveOpacity": 0.999557
+        },
+        "reader-control-collapse": {
+          "bounds": [
+            1046,
+            465,
+            1186,
+            556
+          ],
+          "effectiveOpacity": 0.999557
+        }
+      },
+      "collapsed": {
+        "reader-control-motion-shell": {
+          "bounds": [
+            46,
+            1579,
+            1235,
+            2734
+          ],
+          "effectiveOpacity": 0.999557
+        },
+        "reader-control-content-host": {
+          "bounds": [
+            92,
+            1681,
+            1008,
+            2346
+          ],
+          "effectiveOpacity": 0.999557
+        },
+        "reader-control-collapse": {
+          "bounds": [
+            1044,
+            1721,
+            1184,
+            1812
+          ],
+          "effectiveOpacity": 0.0
+        }
+      },
+      "pass": true,
+      "scope": "Native layout transitioned Full→Quick; collapsed PNG not captured, no claim about transition frame smoothness."
+    }
+  },
+  "bookInfoIssue": {
+    "observedText": {
+      "expectedSvg": "#7A684F",
+      "foregroundPixelsWithin1RGB": 3096,
+      "legacyTealPixels": 0,
+      "dominantColors": [
+        {
+          "color": "#2A2521",
+          "pixels": 3821
+        },
+        {
+          "color": "#7A684F",
+          "pixels": 3061
+        },
+        {
+          "color": "#75644C",
+          "pixels": 73
+        },
+        {
+          "color": "#493F33",
+          "pixels": 59
+        }
+      ]
+    },
+    "textBounds": [
+      969,
+      1442,
+      1138,
+      1491
+    ],
+    "source": "LocalBookDetail.ets:319",
+    "rootCause": "Outlined action text consumes TOK_PRIMARY_DARK for Night fill (#7A684F), while its icon consumes primary (#D2BD96).",
+    "approvedFix": "Shared TOK_PRIMARY_TEXT: Day retains #1F3528; Night uses established primary #D2BD96. 41 foreground consumers repaired; no fill/border/layout changes.",
+    "status": "CODE_FIXED_LOCAL_REGRESSION_PASS_NEW_VM_OPEN"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "sourceNodes": [
+    "2657:818",
+    "2657:819",
+    "2657:820"
+  ],
+  "layer": "actual SDK Builder retained paint calls; new device pixels OPEN",
+  "records": [
+    {
+      "scheme": "day",
+      "resource": "app.media.import_refresh",
+      "layout": [
+        18,
+        18
+      ],
+      "scale": [
+        1.3196666666666668,
+        1.3196666666666668
+      ],
+      "paint": [
+        23.754,
+        23.754
+      ],
+      "stroke": 1.5000255100000002
+    },
+    {
+      "scheme": "night",
+      "resource": "app.media.import_refresh_theme_night",
+      "layout": [
+        18,
+        18
+      ],
+      "scale": [
+        1.3196666666666668,
+        1.3196666666666668
+      ],
+      "paint": [
+        23.754,
+        23.754
+      ],
+      "stroke": 1.5000255100000002
+    },
+    {
+      "scheme": "day",
+      "resource": "app.media.import_refresh",
+      "layout": [
+        18,
+        18
+      ],
+      "scale": [
+        1.3196666666666668,
+        1.3196666666666668
+      ],
+      "paint": [
+        23.754,
+        23.754
+      ],
+      "stroke": 1.5000255100000002
+    }
+  ]
+}

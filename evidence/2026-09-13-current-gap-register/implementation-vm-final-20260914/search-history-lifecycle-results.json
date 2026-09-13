@@ -1,0 +1,60 @@
+[
+  {
+    "phase": "before",
+    "exitCode": 1,
+    "log": "search-history-lifecycle-before.log",
+    "cases": [
+      {
+        "name": "initial history Scroll uses the top of the content viewport",
+        "status": "FAIL",
+        "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Alignment.TopStart'\n"
+      },
+      {
+        "name": "one history item appears after the independently measurable outer container reports its real width",
+        "status": "FAIL",
+        "message": "unmeasured history must not be presented as wholly collapsed"
+      },
+      {
+        "name": "empty first paint still provides width before asynchronous history arrives",
+        "status": "FAIL",
+        "message": "one authoritative measured history container\n\n0 !== 1\n"
+      },
+      {
+        "name": "two measured rows adapt to real width, long chips, tablet padding and late replacement",
+        "status": "FAIL",
+        "message": "measure the stable history container, not count-dependent empty Flex\n\n'Flex' !== 'Column'\n"
+      },
+      {
+        "name": "actual SDK action preserves matching expand and collapse intents",
+        "status": "PASS"
+      }
+    ]
+  },
+  {
+    "phase": "after",
+    "exitCode": 0,
+    "log": "search-history-lifecycle-after.log",
+    "cases": [
+      {
+        "name": "initial history Scroll uses the top of the content viewport",
+        "status": "PASS"
+      },
+      {
+        "name": "one history item appears after the independently measurable outer container reports its real width",
+        "status": "PASS"
+      },
+      {
+        "name": "empty first paint still provides width before asynchronous history arrives",
+        "status": "PASS"
+      },
+      {
+        "name": "two measured rows adapt to real width, long chips, tablet padding and late replacement",
+        "status": "PASS"
+      },
+      {
+        "name": "actual SDK action preserves matching expand and collapse intents",
+        "status": "PASS"
+      }
+    ]
+  }
+]

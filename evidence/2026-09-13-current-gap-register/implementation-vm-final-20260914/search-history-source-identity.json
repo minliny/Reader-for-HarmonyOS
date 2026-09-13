@@ -1,0 +1,29 @@
+{
+  "readerAppColorBindingsPreserved": 58,
+  "productionScope": [
+    "SearchPage.ets"
+  ],
+  "SearchHistoryLayout": "audited, unchanged; collapsedHistoryCount packs the supplied measured widths correctly",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "bytes": 52812,
+      "sha256": "6a4ce9cf379e40a3c53cf31d3a34b13871a4f5f9febccd5ea67bcb20a92d0417"
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchHistoryLayout.ts",
+      "bytes": 592,
+      "sha256": "830cae0ae436c2c1cc6f4f55d64b7a847ed57606499887bd1abbbee252005271"
+    },
+    {
+      "path": "tools/test-search-history-layout-lifecycle.mjs",
+      "bytes": 7414,
+      "sha256": "1f4a66ed18155371783eb6c4d4713ecbc8c49be087df55895d80ca03d0b81ce6"
+    },
+    {
+      "path": "evidence/2026-09-13-current-gap-register/implementation-vm-final-20260914/search-history-before-source.ets.txt",
+      "bytes": 52438,
+      "sha256": "120db652d3a3fb77efad3572ca9a260bab9961ab81af496ae99e54c14cb9aad1"
+    }
+  ]
+}
