@@ -97,7 +97,7 @@ export struct BookshelfManagementPage {
       .fontFamily('ReaderNotoSansSC')
       .fontSize(12)
       .lineHeight(18)
-      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -181,7 +181,7 @@ export struct BookshelfManagementPage {
                   .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
               }
               .layoutWeight(1).alignItems(HorizontalAlign.Start);
-              Text('编辑').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+              Text('编辑').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
                 .padding(8).onClick((): void => this.onSelectGroup(group.groupId));
             }
             .width('100%');
@@ -240,7 +240,7 @@ export struct BookshelfManagementPage {
           .layoutWeight(1).alignItems(HorizontalAlign.Start);
           Text(this.isSelectedBook(book) ? '已选择' : '选择')
             .fontFamily('ReaderNotoSansSC').fontSize(11)
-            .fontColor(this.isSelectedBook(book) ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+            .fontColor(this.isSelectedBook(book) ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
             .backgroundColor(this.isSelectedBook(book) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
             .padding(8).borderRadius(8)
             .onClick((): void => this.onSelectBook(book.sourceId, book.bookId));
@@ -296,7 +296,7 @@ export struct BookshelfManagementPage {
   private actionButton(label: string, primary: boolean, action: () => void) {
     Text(label).layoutWeight(1).height(44).textAlign(TextAlign.Center)
       .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(12)
-      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(8).opacity(this.snapshot.busy ? 0.62 : 1)
       .onClick((): void => { if (!this.snapshot.busy) action(); });
@@ -304,7 +304,7 @@ export struct BookshelfManagementPage {
 
   @Builder
   private smallAction(label: string, action: () => void) {
-    Text(label).fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+    Text(label).fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .padding({ left: 9, right: 9, top: 7, bottom: 7 })
       .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8).onClick(action);

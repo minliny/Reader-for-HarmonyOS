@@ -118,7 +118,7 @@ export struct RssSubscriptionManagementPage {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
       .width(60)
@@ -163,7 +163,7 @@ export struct RssSubscriptionManagementPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(11)
-      .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(8)
       .onClick((): void => action());

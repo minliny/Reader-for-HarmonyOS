@@ -110,7 +110,7 @@ export struct ReaderSelect {
         .fontWeight(TYPE_SELECT_APPEARANCE_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_APPEARANCE_VALUE.fontSizeFp)
         .lineHeight(TYPE_SELECT_APPEARANCE_VALUE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: 10, y: 11 });
@@ -199,7 +199,7 @@ export struct ReaderSelect {
         .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily)
         .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
-        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .textAlign(TextAlign.Start)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });

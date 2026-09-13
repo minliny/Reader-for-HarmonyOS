@@ -111,7 +111,7 @@ export struct BookshelfEmptyCard {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(13)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .margin({ left: 13 });
       }
       .width(this.actionWidth())

@@ -316,7 +316,7 @@ export struct LocalBookDetail {
               .fontFamily('ReaderInter')
               .fontWeight(900)
               .fontSize(12)
-              .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+              .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
               .maxLines(1);
           }
           .width(94)

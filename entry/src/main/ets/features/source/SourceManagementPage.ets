@@ -252,7 +252,7 @@ export struct SourceManagementPage {
           .fontFamily('ReaderNotoSansSC')
           .fontSize(11)
           .fontWeight(FontWeight.Bold)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .onClick((): void => this.onRetryLoad());
       }
     }
@@ -504,7 +504,7 @@ export struct SourceManagementPage {
         .fontFamily('ReaderNotoSansSC')
         .fontWeight(FontWeight.Bold)
         .fontSize(11)
-        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .maxLines(1);
     }
     .width(44)

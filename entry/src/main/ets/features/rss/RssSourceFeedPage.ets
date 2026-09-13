@@ -192,7 +192,7 @@ export struct RssSourceFeedPage {
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(11)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
       .height(30)

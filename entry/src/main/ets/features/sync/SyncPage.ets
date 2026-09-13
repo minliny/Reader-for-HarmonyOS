@@ -279,7 +279,7 @@ export struct SyncPage {
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
       }
       .height(42)
       .layoutWeight(1)
@@ -322,7 +322,7 @@ export struct SyncPage {
               .fontFamily('ReaderNotoSansSC')
               .fontSize(12)
               .lineHeight(18)
-              .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
+              .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
           }
           Row({ space: TOK_SPACE_XS }) {
             this.manualActionButton('立即备份', true, (): void => this.onTriggerBackup());
@@ -347,7 +347,7 @@ export struct SyncPage {
         .fontFamily('ReaderInter')
         .fontWeight(900)
         .fontSize(12)
-        .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
+        .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
     }
     .height(40)
     .layoutWeight(1)
@@ -444,7 +444,7 @@ export struct SyncPage {
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Bold)
           .fontSize(12)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .maxLines(1);
         Image((this.appThemeScheme === 'night' ? $r('app.media.sync_scope_chevron_theme_night') : $r('app.media.sync_scope_chevron'))).width(12).height(8);

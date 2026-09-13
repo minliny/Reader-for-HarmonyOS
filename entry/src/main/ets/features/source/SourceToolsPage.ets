@@ -304,7 +304,7 @@ export struct SourceToolsPage {
           .fontFamily('ReaderNotoSansSC')
           .fontSize(11)
           .fontWeight(FontWeight.Bold)
-          .fontColor(this.snapshot.batchCheck.phase === 'failed' ? readerAppColor('app.SourceToolsPage.batchCheckCard.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
+          .fontColor(this.snapshot.batchCheck.phase === 'failed' ? readerAppColor('app.SourceToolsPage.batchCheckCard.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
       }
       .width('100%');
       Row() {
@@ -410,7 +410,7 @@ export struct SourceToolsPage {
         .fontFamily('ReaderNotoSansSC')
         .fontSize(11)
         .fontWeight(FontWeight.Bold)
-        .fontColor(result.state === 'passed' ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) :
+        .fontColor(result.state === 'passed' ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) :
           (result.state === 'failed' ? readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FF9A6A1F', this.appThemeScheme)));
     }
     .width('100%')
@@ -426,7 +426,7 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontSize(12)
       .lineHeight(18)
-      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -616,7 +616,7 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(11)
-      .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(7)
@@ -637,7 +637,7 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(12)
-      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8)
@@ -658,7 +658,7 @@ export struct SourceToolsPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(12)
-      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(8)

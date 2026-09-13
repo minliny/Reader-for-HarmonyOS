@@ -65,7 +65,7 @@ export struct RssSubscriptionEditorPage {
             .fontFamily('ReaderNotoSansSC')
             .fontSize(12)
             .lineHeight(18)
-            .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
             .padding(TOK_SPACE_SM)
             .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
             .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -198,7 +198,7 @@ export struct RssSubscriptionEditorPage {
       .fontFamily('ReaderNotoSansSC')
       .fontWeight(FontWeight.Bold)
       .fontSize(14)
-      .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .margin({ top: TOK_SPACE_XS });
   }
 

@@ -168,7 +168,7 @@ export struct RssPage {
         .fontWeight(FontWeight.Bold)
         .fontSize(29)
         .lineHeight(41)
-        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .maxLines(1)
         .margin({ left: 20 });
 
@@ -199,7 +199,7 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       } else {
         Marquee({
@@ -214,7 +214,7 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(12)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
       }
       Image((this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')))
         .width(18)
@@ -240,7 +240,7 @@ export struct RssPage {
         .fontFamily('ReaderInter')
         .fontWeight(900)
         .fontSize(12)
-        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .maxLines(1);
     }
     .width(64)
@@ -501,7 +501,7 @@ export struct RssPage {
         .fontFamily('ReaderInter')
         .fontWeight(900)
         .fontSize(16)
-        .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .maxLines(1);
 
       StatusBadge({
@@ -563,7 +563,7 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(900)
           .fontSize(11)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
       .height(28)
@@ -799,7 +799,7 @@ export struct RssPage {
           .fontFamily('ReaderInter')
           .fontWeight(800)
           .fontSize(13)
-          .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
       .width(88)

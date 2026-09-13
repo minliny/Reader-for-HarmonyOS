@@ -133,7 +133,7 @@ export struct RulesManagementPage {
       .fontFamily('ReaderNotoSansSC')
       .fontSize(12)
       .lineHeight(18)
-      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -305,7 +305,7 @@ export struct RulesManagementPage {
   @Builder
   private actionButton(label: string, primary: boolean, action: () => void) {
     Text(label).layoutWeight(1).height(40).textAlign(TextAlign.Center).fontWeight(FontWeight.Bold)
-      .fontSize(12).fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .fontSize(12).fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
       .opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
@@ -349,7 +349,7 @@ export struct RulesManagementPage {
   @Builder
   private smallButton(label: string, action: () => void) {
     Text(label).height(30).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-      .textAlign(TextAlign.Center).fontSize(11).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .textAlign(TextAlign.Center).fontSize(11).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(7).opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
         if (!this.snapshot.busy) action();
