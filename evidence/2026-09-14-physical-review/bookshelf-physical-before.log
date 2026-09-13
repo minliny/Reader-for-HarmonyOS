@@ -1,0 +1,35 @@
+FAIL TXT uses format identity without changing Core metadata: Expected values to be strictly equal:
+FAIL default group retains empty and explicit default identities without mutating legacy groups: Expected values to be strictly deep-equal:
+PASS real section settings callback opens the default selector without navigating to another settings surface
+FAIL source owns remaining row width and progress retains intrinsic width at trailing edge: Expected values to be strictly equal:
+FAIL day: detail metadata shares source typography, label and moving source action: The expression evaluated to a falsy value:
+FAIL night: detail metadata shares source typography, label and moving source action: The expression evaluated to a falsy value:
+FAIL missing synopsis is explained without contaminating the metadata projection: The expression evaluated to a falsy value:
+FAIL empty chapters expose status: 暂无章节信息: The expression evaluated to a falsy value:
+FAIL empty chapters expose status: 正在读取本地目录…: The expression evaluated to a falsy value:
+FAIL empty chapters expose status: 目录读取失败，请重试: The expression evaluated to a falsy value:
+FAIL source name/category/URL remain distinct and login precedes detect (no login): The expression evaluated to a falsy value:
+FAIL source name/category/URL remain distinct and login precedes detect (login): The expression evaluated to a falsy value:
+FAIL single-book sheet matches cover frame and both layers have straight lower corners: Expected values to be strictly equal:
+FAIL 44vp source SVG stays 44vp in the single-book more action: The input did not match the regular expression /Image\([\s\S]*?\)\.width\(44\)\.height\(44\)/. Input:
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: 14 physical-feedback checks
+
+13 !== 0
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-bookshelf-physical-feedback.mjs:157:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 13,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

@@ -1,0 +1,6 @@
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+Legado product behavior contract: PASS
+(node:5126) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

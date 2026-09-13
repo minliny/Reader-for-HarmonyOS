@@ -1,0 +1,3 @@
+PASS brightness: HLG low-range allocation, 991 inverse samples, two-way pending toggle, system observation races, and SDK shared track clip
+(node:84673) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

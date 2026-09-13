@@ -1,0 +1,128 @@
+[
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+    "commit": "9509d4fe",
+    "matches": [
+      {
+        "line": 849,
+        "text": ".id('reader-control-full-content-surface')"
+      },
+      {
+        "line": 896,
+        "text": ".id('reader-control-motion-grabber')"
+      }
+    ]
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+    "commit": "9509d4fe",
+    "matches": [
+      {
+        "line": 191,
+        "text": ".fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))"
+      },
+      {
+        "line": 210,
+        "text": ".fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1)"
+      },
+      {
+        "line": 244,
+        "text": ".fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))"
+      },
+      {
+        "line": 274,
+        "text": ".fontWeight(FontWeight.Medium).fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);"
+      },
+      {
+        "line": 290,
+        "text": ".fontWeight(FontWeight.Medium).fontSize(11).lineHeight(16).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);"
+      }
+    ]
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts",
+    "commit": "9509d4fe",
+    "matches": []
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts",
+    "commit": "9509d4fe",
+    "matches": [
+      {
+        "line": 6,
+        "text": "export const READER_SESSION_LAUNCH_DURATION_MS = 3500;"
+      },
+      {
+        "line": 196,
+        "text": "const time = reducedMotion ? READER_SESSION_LAUNCH_DURATION_MS :"
+      },
+      {
+        "line": 197,
+        "text": "Math.max(0, Math.min(READER_SESSION_LAUNCH_DURATION_MS, Number.isFinite(elapsedMs) ? elapsedMs : 0));"
+      }
+    ]
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+    "commit": "9509d4fe",
+    "matches": [
+      {
+        "line": 7974,
+        "text": "AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', !this.sessionLaunch.sample.finished);"
+      },
+      {
+        "line": 8009,
+        "text": "if (next.sample.finished) {"
+      },
+      {
+        "line": 8010,
+        "text": "AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', false);"
+      },
+      {
+        "line": 8026,
+        "text": "AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', false);"
+      },
+      {
+        "line": 8059,
+        "text": "AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', true);"
+      },
+      {
+        "line": 8115,
+        "text": "AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', false);"
+      }
+    ]
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts",
+    "commit": "9509d4fe",
+    "matches": [
+      {
+        "line": 362,
+        "text": "chapterName: input.chapterTitle,"
+      },
+      {
+        "line": 375,
+        "text": "this.requireString(rawBookmark, 'bookText', 'bookmark.create bookmark');"
+      }
+    ]
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts",
+    "commit": "9509d4fe",
+    "matches": []
+  },
+  {
+    "path": "entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets",
+    "commit": "9509d4fe",
+    "matches": [
+      {
+        "line": 546,
+        "text": "this.selectField('pageTurn', 122);"
+      },
+      {
+        "line": 547,
+        "text": "this.selectField('alignment', 164);"
+      }
+    ]
+  }
+]

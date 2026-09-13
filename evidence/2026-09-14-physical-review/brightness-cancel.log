@@ -1,0 +1,3 @@
+PASS brightness cancel UI: issued ACK, preview retention, cancelled pending, newer intent, failed write convergence
+(node:86312) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,0 +1,62 @@
+{
+  "source": "current-after-repair",
+  "layer": "SDK emitted builder attributes and production callbacks; no native layout pixels",
+  "results": [
+    {
+      "name": "TXT uses format identity without changing Core metadata",
+      "passed": true
+    },
+    {
+      "name": "default group retains empty and explicit default identities without mutating legacy groups",
+      "passed": true
+    },
+    {
+      "name": "real section settings callback opens the default selector without navigating to another settings surface",
+      "passed": true
+    },
+    {
+      "name": "source owns remaining row width and progress retains intrinsic width at trailing edge",
+      "passed": true
+    },
+    {
+      "name": "day: detail metadata shares source typography, label and moving source action",
+      "passed": true
+    },
+    {
+      "name": "night: detail metadata shares source typography, label and moving source action",
+      "passed": true
+    },
+    {
+      "name": "missing synopsis is explained without contaminating the metadata projection",
+      "passed": true
+    },
+    {
+      "name": "empty chapters expose status: 暂无章节信息",
+      "passed": true
+    },
+    {
+      "name": "empty chapters expose status: 正在读取本地目录…",
+      "passed": true
+    },
+    {
+      "name": "empty chapters expose status: 目录读取失败，请重试",
+      "passed": true
+    },
+    {
+      "name": "source name/category/URL remain distinct and login precedes detect (no login)",
+      "passed": true
+    },
+    {
+      "name": "source name/category/URL remain distinct and login precedes detect (login)",
+      "passed": true
+    },
+    {
+      "name": "single-book sheet matches cover frame and both layers have straight lower corners",
+      "passed": true
+    },
+    {
+      "name": "44vp source SVG stays 44vp in the single-book more action",
+      "passed": true
+    }
+  ]
+}

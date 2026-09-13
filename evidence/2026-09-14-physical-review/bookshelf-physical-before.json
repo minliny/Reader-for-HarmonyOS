@@ -1,0 +1,75 @@
+{
+  "source": "current-before-repair (9509 differences archived)",
+  "layer": "SDK emitted builder attributes and production callbacks; no native layout pixels",
+  "results": [
+    {
+      "name": "TXT uses format identity without changing Core metadata",
+      "passed": false,
+      "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ '本地 local'\n- '本地 TXT'\n      ^\n"
+    },
+    {
+      "name": "default group retains empty and explicit default identities without mutating legacy groups",
+      "passed": false,
+      "message": "Expected values to be strictly deep-equal:\n+ actual - expected\n... Skipped lines\n\n  [\n    {\n      bookId: 'b0',\n      group: undefined,\n      sourceId: 'local'\n...\n    },\n-   {\n-     bookId: 'b2',\n-     group: '默认',\n-     sourceId: 'local'\n-   }\n  ]\n"
+    },
+    {
+      "name": "real section settings callback opens the default selector without navigating to another settings surface",
+      "passed": true
+    },
+    {
+      "name": "source owns remaining row width and progress retains intrinsic width at trailing edge",
+      "passed": false,
+      "message": "Expected values to be strictly equal:\n\n1 !== 0\n"
+    },
+    {
+      "name": "day: detail metadata shares source typography, label and moving source action",
+      "passed": false,
+      "message": "The expression evaluated to a falsy value:\n\n  assert.ok(nodes.some(n => n.create === '作者：作者名'))\n"
+    },
+    {
+      "name": "night: detail metadata shares source typography, label and moving source action",
+      "passed": false,
+      "message": "The expression evaluated to a falsy value:\n\n  assert.ok(nodes.some(n => n.create === '作者：作者名'))\n"
+    },
+    {
+      "name": "missing synopsis is explained without contaminating the metadata projection",
+      "passed": false,
+      "message": "The expression evaluated to a falsy value:\n\n  assert.ok(texts(owner).some(n => n.create === '暂无简介'))\n"
+    },
+    {
+      "name": "empty chapters expose status: 暂无章节信息",
+      "passed": false,
+      "message": "The expression evaluated to a falsy value:\n\n  assert.ok(texts(owner).some(n => n.create === expected))\n"
+    },
+    {
+      "name": "empty chapters expose status: 正在读取本地目录…",
+      "passed": false,
+      "message": "The expression evaluated to a falsy value:\n\n  assert.ok(texts(owner).some(n => n.create === expected))\n"
+    },
+    {
+      "name": "empty chapters expose status: 目录读取失败，请重试",
+      "passed": false,
+      "message": "The expression evaluated to a falsy value:\n\n  assert.ok(texts(owner).some(n => n.create === expected))\n"
+    },
+    {
+      "name": "source name/category/URL remain distinct and login precedes detect (no login)",
+      "passed": false,
+      "message": "The expression evaluated to a falsy value:\n\n  assert.ok(labels.includes(source.baseUrl))\n"
+    },
+    {
+      "name": "source name/category/URL remain distinct and login precedes detect (login)",
+      "passed": false,
+      "message": "The expression evaluated to a falsy value:\n\n  assert.ok(labels.includes(source.baseUrl))\n"
+    },
+    {
+      "name": "single-book sheet matches cover frame and both layers have straight lower corners",
+      "passed": false,
+      "message": "Expected values to be strictly equal:\n\n180 !== 240\n"
+    },
+    {
+      "name": "44vp source SVG stays 44vp in the single-book more action",
+      "passed": false,
+      "message": "The input did not match the regular expression /Image\\([\\s\\S]*?\\)\\.width\\(44\\)\\.height\\(44\\)/. Input:\n\n'private projectionListDetails(book: ShelfBook, isTablet: boolean) {\\n' +\n  '    Row({ space: TOK_SPACE_CONTROL_INLINE }) {\\n' +\n  '      ShelfBookListDetails({ book })\\n' +\n  '        .layoutWeight(1).constraintSize({ minWidth: 0 });\\n' +\n  '\\n' +\n  '      Stack({ alignContent: Alignment.Center }) {\\n' +\n  \"        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(20).height(20);\\n\" +\n  '      }\\n' +\n  '      .width(isTablet ? 44 : 34)\\n' +\n  '      .height(isTablet ? 44 : 34)\\n' +\n  '      .borderRadius(isTablet ? 22 : 17)\\n' +\n  '      .accessibilityText(`${book.title}更多操作`)\\n' +\n  '      .onClick((): void => this.presentBookActionSheet(book));\\n' +\n  '    }\\n' +\n  '    .width(this.projectionListDetailsWidth(isTablet))\\n' +\n  '    .height(this.listCoverHeight(isTablet))\\n' +\n  '    .alignItems(VerticalAlign.Center)\\n' +\n  '    .translate({ x: this.listCoverWidth(isTablet) + TOK_SPACE_CONTROL_INLINE })\\n' +\n  '    .opacity(this.viewSwitchListContentOpacity)\\n' +\n  \"    .hitTestBehavior(this.viewMode === 'list' ? HitTestMode.Default : HitTestMode.None);\\n\" +\n  '  }\\n' +\n  '\\n' +\n  '\\n' +\n  '\\n' +\n  '  '\n"
+    }
+  ]
+}

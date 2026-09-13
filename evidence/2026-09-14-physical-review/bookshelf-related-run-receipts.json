@@ -1,0 +1,292 @@
+{
+  "initial": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-physical-feedback",
+        "chunk_id": "278afd",
+        "wall_time_seconds": 2.2605957500000002,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-view-and-menu",
+        "chunk_id": "6006c7",
+        "wall_time_seconds": 2.044558083,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-viewport-return",
+        "chunk_id": "d704b5",
+        "wall_time_seconds": 1.729624625,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-tablet-navigation",
+        "chunk_id": "af0773",
+        "wall_time_seconds": 0.271482375,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-management",
+        "chunk_id": "6bbece",
+        "wall_time_seconds": 5.42e-7,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-reading-entry",
+        "chunk_id": "f8c6e4",
+        "wall_time_seconds": 2.459880667,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-detail-removal",
+        "chunk_id": "84b9e9",
+        "wall_time_seconds": 0.212105042,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-source-name-durability",
+        "chunk_id": "a9307d",
+        "wall_time_seconds": 2.135444167,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "book-metadata-presentation",
+        "chunk_id": "937ff6",
+        "wall_time_seconds": 0.493361083,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "error-message-conformance",
+        "chunk_id": "bbf387",
+        "wall_time_seconds": 0.527972667,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "theme-primary-text",
+        "chunk_id": "40efbd",
+        "wall_time_seconds": 2.691999083,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "theme-local-consumers",
+        "chunk_id": "b126a3",
+        "wall_time_seconds": 1.911241125,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "phone-layout-figma-regressions",
+        "chunk_id": "352ce3",
+        "wall_time_seconds": 0.122031875,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "reader-feedback-regressions",
+        "chunk_id": "f5e6a8",
+        "wall_time_seconds": 0.392633917,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "responsive-surface-widths",
+        "chunk_id": "b527be",
+        "wall_time_seconds": 0.233240083,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "dynamic-list-refresh",
+        "chunk_id": "b374f1",
+        "wall_time_seconds": 0.182969125,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "reader-source-category",
+        "chunk_id": "dad4fe",
+        "wall_time_seconds": 0.571520333,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "source-product-tools",
+        "chunk_id": "da2032",
+        "wall_time_seconds": 0.221380958,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "source-switch-transaction",
+        "chunk_id": "62705f",
+        "wall_time_seconds": 0.000001334,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "icon-design-contract",
+        "chunk_id": "eadffc",
+        "wall_time_seconds": 0.426337834,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "navigation-performance",
+        "chunk_id": "2ff3e9",
+        "wall_time_seconds": 0.257508125,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "reader-typography-architecture",
+        "chunk_id": "f09e54",
+        "wall_time_seconds": 0.188317833,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    }
+  ],
+  "finalAffected": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-view-and-menu",
+        "chunk_id": "8d53c2",
+        "wall_time_seconds": 0.737502291,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-viewport-return",
+        "chunk_id": "6d5bfc",
+        "wall_time_seconds": 0.646476541,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "bookshelf-management",
+        "chunk_id": "a97570",
+        "wall_time_seconds": 0.013420833,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "name": "surface-repair",
+        "chunk_id": "3121b2",
+        "wall_time_seconds": 0.706769375,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    }
+  ]
+}

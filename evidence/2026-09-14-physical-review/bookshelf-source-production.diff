@@ -1,0 +1,337 @@
+--- entry/src/main/ets/features/bookshelf/BookshelfPage.ets (before current)
++++ entry/src/main/ets/features/bookshelf/BookshelfPage.ets (after)
+@@ -306,6 +306,7 @@
+       dragBar: false,
+       showClose: false,
+       backgroundColor: readerAppColor('app.BookshelfPage.bookshelfTabContent.bindSheet.FFFFFCF8', this.appThemeScheme),
++      radius: { topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 },
+       maskColor: readerAppColor('app.BookshelfPage.bookshelfTabContent.bindSheet.52000000', this.appThemeScheme),
+       enableOutsideInteractive: false,
+       onDisappear: (): void => {
+@@ -889,11 +890,11 @@
+         .layoutWeight(1).constraintSize({ minWidth: 0 });
+ 
+       Stack({ alignContent: Alignment.Center }) {
+-        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(20).height(20);
+-      }
+-      .width(isTablet ? 44 : 34)
+-      .height(isTablet ? 44 : 34)
+-      .borderRadius(isTablet ? 22 : 17)
++        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(44).height(44);
++      }
++      .width(44)
++      .height(44)
++      .borderRadius(22)
+       .accessibilityText(`${book.title}更多操作`)
+       .onClick((): void => this.presentBookActionSheet(book));
+     }
+@@ -921,10 +922,8 @@
+   }
+ 
+   private bookActionWidth(): number {
+-    const metrics = ReaderWindowCoordinator.metrics();
+-    const available = Math.max(0, this.effectiveViewportWidth() -
+-      readerVisualSafeLeft(metrics) - readerVisualSafeRight(metrics));
+-    return Math.min(available, available * .75);
++    // Same live horizontal frame as the outside edges of the shelf covers.
++    return this.shelfContentWidth(this.isWideViewport());
+   }
+ 
+   private phoneContentWidth(): number {
+--- entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets (before current)
++++ entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets (after)
+@@ -17,7 +17,7 @@
+  * opaque floating panel so its outline remains visible on every device.
+  *
+  * The action contents retain the Figma typography and spacing; the host-level
+- * presentation intentionally follows the product's new 75% width requirement.
++ * presentation follows the same horizontal inset as the shelf covers.
+  */
+ @Component
+ export struct BookshelfBookActionSheet {
+@@ -60,7 +60,7 @@
+     .height(BOOK_ACTION_SHEET_HEIGHT)
+     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+     .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+-    .borderRadius(24)
++    .borderRadius({ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 })
+     .shadow({ radius: 46, color: readerAppColor('app.BookshelfBookActionSheet.build.color.29594632', this.appThemeScheme), offsetX: 0, offsetY: 18 })
+     .clip(true);
+   }
+--- entry/src/main/ets/features/bookshelf/ShelfBookListDetails.ets (before current)
++++ entry/src/main/ets/features/bookshelf/ShelfBookListDetails.ets (after)
+@@ -21,10 +21,9 @@
+       Text(ShelfBookPresentation.latestChapter(this.book)).width('100%').fontFamily('ReaderNotoSansSC')
+         .fontWeight(FontWeight.Regular).fontSize(11).lineHeight(13.75).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+-      Row() {
++      Row({ space: 8 }) {
+         this.statusPill(ShelfBookPresentation.source(this.book), false);
+         this.statusPill(ShelfBookPresentation.progress(this.book), true);
+-        Blank().layoutWeight(1);
+       }
+       .width('100%').height(18);
+     }
+@@ -33,7 +32,8 @@
+ 
+   @Builder
+   private statusPill(label: string, primary: boolean) {
+-    Text(label).layoutWeight(1).constraintSize({ minWidth: 0 }).height(18)
++    Text(label).layoutWeight(primary ? 0 : 1).flexShrink(primary ? 0 : 1)
++      .constraintSize({ minWidth: 0 }).height(18)
+       .padding({ left: 6, right: 6 }).backgroundColor(primary ? readerAppColor('app.ShelfBookListDetails.statusPill.backgroundColor.FFF5ECE6', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+       .borderRadius(999).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular)
+       .fontSize(10).lineHeight(12).fontColor(primary ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+--- entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts (before current)
++++ entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts (after)
+@@ -4,7 +4,10 @@
+ export class ShelfBookPresentation {
+   static source(book: ShelfBook): string {
+     if (book.sourceId === 'local') {
+-      return book.kind?.trim() ? `本地 ${book.kind}` : '本地书';
++      const kind = book.kind?.trim() ?? '';
++      // Core's legacy local kind identifies imported plain text, not a format label.
++      if (kind.toLowerCase() === 'local' || kind.toLowerCase() === 'txt') return '本地 TXT';
++      return kind.length > 0 ? `本地 ${kind.toUpperCase()}` : '本地书';
+     }
+     const name = book.sourceName?.trim() ?? '';
+     return name.length > 0 && name !== book.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)
+@@ -24,7 +27,7 @@
+   static visible(books: ShelfBook[], selectedGroup: string): ShelfBook[] {
+     return books.filter((book: ShelfBook): boolean => {
+       const group = book.group?.trim() ?? '';
+-      return selectedGroup === '' || (selectedGroup === '默认' ? group === '' : group === selectedGroup);
++      return selectedGroup === '' || (selectedGroup === '默认' ? group === '' || group === '默认' : group === selectedGroup);
+     });
+   }
+ }
+--- entry/src/main/ets/features/bookshelf/LocalBookDetail.ets (before current)
++++ entry/src/main/ets/features/bookshelf/LocalBookDetail.ets (after)
+@@ -163,7 +163,7 @@
+           .maxLines(1)
+           .textOverflow({ overflow: TextOverflow.Ellipsis });
+ 
+-        Text(this.book.author)
++        Text(`作者：${this.book.author}`)
+           .width('100%')
+           .margin({ top: TOK_SPACE_XS })
+           .fontFamily('ReaderInter')
+@@ -174,36 +174,22 @@
+           .maxLines(1)
+           .textOverflow({ overflow: TextOverflow.Ellipsis });
+ 
+-        Row({ space: 5 }) {
+-          Text('最新')
+-            .width(37)
+-            .fontFamily('ReaderInter')
+-            .fontWeight(800)
+-            .fontSize(11)
+-            .lineHeight(16.188)
+-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+-            .maxLines(1);
+-          Text(this.book.lastChapter ?? '')
+-            .layoutWeight(1)
+-            .fontFamily('ReaderInter')
+-            .fontWeight(FontWeight.Regular)
+-            .fontSize(12)
+-            .lineHeight(16.188)
+-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+-            .maxLines(1)
+-            .textOverflow({ overflow: TextOverflow.Ellipsis });
+-        }
+-        .width('100%')
+-        .height(16.188)
+-        .margin({ top: TOK_SPACE_CONTROL_INLINE });
++        Text(`最新：${this.book.lastChapter?.trim() || '暂无最新章节'}`)
++          .width('100%').height(18)
++          .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
++          .fontSize(12).lineHeight(15)
++          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
++          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
++          .margin({ top: TOK_SPACE_XS });
+ 
+         // Figma `2260:1432`/`2260:1433`: the Hero's 4th row — source label +
+         // 更换书源 pill. The geometry stays shared, while the label is the
+         // source identity admitted by the local or remote reading session.
+         Row({ space: TOK_SPACE_XS }) {
+           Text(`书源：${this.book.sourceName}`)
+-            .width(72)
+-            .height(15)
++            .constraintSize({ minWidth: 0 })
++            .flexShrink(1)
++            .height(18)
+             .fontFamily('ReaderInter')
+             .fontWeight(FontWeight.Bold)
+             .fontSize(12)
+@@ -214,16 +200,19 @@
+ 
+           Stack({ alignContent: Alignment.Center }) {
+             Text('更换书源')
++              .width('100%')
++              .height('100%')
+               .fontFamily('ReaderInter')
+               .fontWeight(900)
+               .fontSize(9)
+               .lineHeight(18)
+               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+               .textAlign(TextAlign.Center)
+-              .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS });
++              .maxLines(1);
+           }
+           .width(52)
+           .height(18)
++          .flexShrink(0)
+           .borderRadius(999)
+           .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme))
+           .opacity(this.sourceSwitchEnabled ? 1 : 0.4)
+@@ -239,15 +228,18 @@
+         .height(18)
+         .margin({ top: TOK_SPACE_XS });
+         Text('分组：默认')
++          .width('100%').height(18)
++          .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
+           .fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).lineHeight(15)
+-          .margin({ top: 4 });
++          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
++          .margin({ top: TOK_SPACE_XS });
+       }
+       .layoutWeight(1)
+-      .constraintSize({ minHeight: 142 })
++      .constraintSize({ minWidth: 0 })
+       .alignItems(HorizontalAlign.Start);
+     }
+     .width(this.contentWidth())
+-    .height(152)
++    .constraintSize({ minHeight: 152 })
+     .padding(15)
+     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+@@ -268,10 +260,8 @@
+         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+         .maxLines(1);
+ 
+-      // Core may legitimately omit EPUB/TXT description metadata.  Do not
+-      // manufacture replacement copy; the local route still keeps the Figma
+-      // card geometry and shows only Core-owned text when available.
+-      Text(this.displayIntro())
++      // A display placeholder never becomes book metadata or a fake chapter.
++      Text(this.displayIntro().length > 0 ? this.displayIntro() : '暂无简介')
+         .width('100%')
+         .height(this.summaryTextHeight())
+         .fontFamily('ReaderInter')
+@@ -335,6 +325,14 @@
+         ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
+           this.chapterRow(entry);
+         }, (entry: LocalReadingTocEntry): string => `book-detail-toc-${entry.index}`);
++        if (this.toc.length === 0) {
++          Text(this.chapterEmptyMessage())
++            .width('100%')
++            .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING, top: TOK_SPACE_XS })
++            .fontFamily('ReaderInter').fontSize(13).lineHeight(21.45)
++            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
++            .maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis });
++        }
+       }
+       .width('100%')
+       .height('100%')
+@@ -464,6 +462,12 @@
+     return bookIntroText(this.book.intro);
+   }
+ 
++  private chapterEmptyMessage(): string {
++    if (this.loadingMessage.trim().length > 0) return this.loadingMessage;
++    if (!this.readingEnabled && this.readingBlockedReason.trim().length > 0) return this.readingBlockedReason;
++    return '暂无章节信息';
++  }
++
+   private contentWidth(): number {
+     return this.contentFrame().width;
+   }
+--- entry/src/main/ets/features/source/SourceManagementPage.ets (before current)
++++ entry/src/main/ets/features/source/SourceManagementPage.ets (after)
+@@ -432,16 +432,24 @@
+   private sourceRow(source: BookSource) {
+     Row({ space: TOK_SPACE_XS }) {
+       Column({ space: TOK_SPACE_XS }) {
+-        Text(source.name)
+-          .width('100%')
+-          .fontFamily('ReaderNotoSansSC')
+-          .fontWeight(FontWeight.Bold)
+-          .fontSize(13)
+-          .lineHeight(15.34)
+-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+-          .maxLines(1)
+-          .textOverflow({ overflow: TextOverflow.Ellipsis });
+-        Text(this.sourceMeta(source))
++        Row({ space: 6 }) {
++          Text(source.name)
++            .constraintSize({ minWidth: 0 }).flexShrink(1)
++            .fontFamily('ReaderNotoSansSC')
++            .fontWeight(FontWeight.Bold)
++            .fontSize(13)
++            .lineHeight(15.34)
++            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
++            .maxLines(1)
++            .textOverflow({ overflow: TextOverflow.Ellipsis });
++          Text(readerSourceCategoryLabel(source.category))
++            .flexShrink(0)
++            .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular)
++            .fontSize(10).lineHeight(12.5)
++            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
++            .maxLines(1);
++        }.width('100%').alignItems(VerticalAlign.Center);
++        Text(source.baseUrl)
+           .width('100%')
+           .fontFamily('ReaderNotoSansSC')
+           .fontWeight(FontWeight.Regular)
+@@ -450,9 +458,21 @@
+           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+           .maxLines(1)
+           .textOverflow({ overflow: TextOverflow.Ellipsis });
++        if (source.checkMessage !== undefined && source.checkMessage.trim().length > 0 &&
++          source.checkState !== undefined && source.checkState !== 'unchecked') {
++          Text(source.checkMessage)
++            .width('100%').fontFamily('ReaderNotoSansSC').fontSize(10).lineHeight(12.5)
++            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
++            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
++        }
+       }
+       .layoutWeight(1)
++      .constraintSize({ minWidth: 0 })
+       .alignItems(HorizontalAlign.Start);
++
++      if (source.loginUrl !== undefined && source.loginUrl.trim().length > 0) {
++        this.loginButton(source);
++      }
+ 
+       this.detectButton(source);
+ 
+@@ -463,9 +483,6 @@
+ 
+       this.sourceSwitch(source.enabled, (): void => this.onToggleSource(source.sourceId, !source.enabled));
+ 
+-      if (source.loginUrl !== undefined) {
+-        this.loginButton(source);
+-      }
+     }
+     .width(this.contentFrame().width)
+     .height(70)
+@@ -569,18 +586,6 @@
+     .margin({ top: TOK_SPACE_SM, bottom: TOK_SPACE_MD });
+   }
+ 
+-  private sourceMeta(source: BookSource): string {
+-    const category = readerSourceCategoryLabel(source.category);
+-    if (source.checkState !== undefined && source.checkState !== 'unchecked' &&
+-      source.checkMessage !== undefined && source.checkMessage.length > 0) {
+-      return `${category} · ${source.checkMessage}`;
+-    }
+-    if (source.baseUrl.length > 0) {
+-      return `${category} · ${source.baseUrl}`;
+-    }
+-    return `${category} · ${source.enabled ? '已启用' : '已禁用'}`;
+-  }
+-
+   private sourceRenderKey(source: BookSource): string {
+     return `source-${source.sourceId}-${source.name}-${source.baseUrl}-${source.group ?? ''}-${source.category}-` +
+       `${source.loginUrl ?? ''}-${source.enabled}-${source.checkState ?? 'unchecked'}-` +

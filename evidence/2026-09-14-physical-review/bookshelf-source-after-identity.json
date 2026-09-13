@@ -1,0 +1,32 @@
+[
+  {
+    "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+    "sha256": "54fb1fd00620b3d8273d209a328407c2f92d850d1043ac2ea708503b9f00b5a4",
+    "bytes": 55380
+  },
+  {
+    "path": "entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets",
+    "sha256": "e669c8fac9eef3039fcc1dd2bd9654d094c36052a21d10827dc4e11a73be22b0",
+    "bytes": 3430
+  },
+  {
+    "path": "entry/src/main/ets/features/bookshelf/ShelfBookListDetails.ets",
+    "sha256": "266da0e3bd3a348fc66e7afbd32fbc592e1c263a9aadcaeb2b7d469ac001ccc6",
+    "bytes": 2514
+  },
+  {
+    "path": "entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts",
+    "sha256": "3f22734617319aece0a9f11c637ff83bd08bf421fc6049203c5b41c1ae92bacf",
+    "bytes": 1453
+  },
+  {
+    "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+    "sha256": "14c5a2b9012d7b7dc36d7083258af0dfd1877529d0e042e3be53db873c7acb38",
+    "bytes": 20603
+  },
+  {
+    "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+    "sha256": "1d7b8d449c993ed6a40411e9d9d48fe05a778e63a8eb6452aede0eb2d276d98d",
+    "bytes": 26125
+  }
+]

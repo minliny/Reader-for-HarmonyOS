@@ -1,0 +1,9 @@
+{"name":"initial history Scroll uses the top of the content viewport","status":"PASS"}
+{"name":"one history item appears after the independently measurable outer container reports its real width","status":"PASS"}
+{"name":"empty first paint still provides width before asynchronous history arrives","status":"PASS"}
+{"name":"two measured rows adapt to real width, long chips, tablet padding and late replacement","status":"PASS"}
+{"name":"one or two complete rows have no collapse action","status":"PASS"}
+{"name":"actual SDK action preserves matching expand and collapse intents","status":"PASS"}
+Search History actual SDK container/width lifecycle and production two-row measurement PASS; native pixels remain a separate gate.
+(node:67529) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

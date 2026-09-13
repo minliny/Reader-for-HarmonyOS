@@ -1,0 +1,4 @@
+search gateway remote-result and canonical synchronization: PASS
+(node:67659) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search gateway broad projection responsiveness: PASS

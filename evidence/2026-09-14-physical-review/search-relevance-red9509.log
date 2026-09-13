@@ -1,0 +1,34 @@
+search stable rows, enrichment and navigation state: PASS
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: late exact title moves before first-arriving fan fiction
++ actual - expected
+
+  {
++   author: '作者',
++   bookId: '/fan1',
++   sourceId: 'fan1',
++   title: '诡秘之主同人'
+-   author: '爱潜水的乌贼',
+-   bookId: '/original',
+-   sourceId: 'original',
+-   title: '诡秘之主'
+  }
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-search-view-state.mjs:104:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: { sourceId: 'fan1', bookId: '/fan1', title: '诡秘之主同人', author: '作者' },
+  expected: {
+    sourceId: 'original',
+    bookId: '/original',
+    title: '诡秘之主',
+    author: '爱潜水的乌贼'
+  },
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

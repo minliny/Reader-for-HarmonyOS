@@ -1,0 +1,11 @@
+bundled category coverage: {
+  novel: 877,
+  comic: 107,
+  music: 22,
+  download: 25,
+  external: 14,
+  other: 1
+}
+reader source category isolation: PASS
+(node:53996) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

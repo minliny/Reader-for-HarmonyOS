@@ -1,0 +1,2 @@
+PASS theme truth table, migrations, sync fallback, atomic publication, old failure isolation and current failure durable rollback
+PASS removed local theme falls back to matching configured day/night default

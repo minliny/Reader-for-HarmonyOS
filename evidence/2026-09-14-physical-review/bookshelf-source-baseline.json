@@ -1,0 +1,38 @@
+[
+  {
+    "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+    "source9509": "37a74ca4cae58f5533e580c4536126ea5064925570e1c3d49a50a491de754d90",
+    "beforeCurrent": "37a74ca4cae58f5533e580c4536126ea5064925570e1c3d49a50a491de754d90",
+    "sameAs9509": true
+  },
+  {
+    "path": "entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets",
+    "source9509": "ef16743bef87e890eda5517d726981738880d2b882ac60b542d9a5f98727bfab",
+    "beforeCurrent": "ef16743bef87e890eda5517d726981738880d2b882ac60b542d9a5f98727bfab",
+    "sameAs9509": true
+  },
+  {
+    "path": "entry/src/main/ets/features/bookshelf/ShelfBookListDetails.ets",
+    "source9509": "a9eba410f5f7d31a4b4b3d68d19117e003dc2c1d3263454befac78a8c0afdbbb",
+    "beforeCurrent": "a9eba410f5f7d31a4b4b3d68d19117e003dc2c1d3263454befac78a8c0afdbbb",
+    "sameAs9509": true
+  },
+  {
+    "path": "entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts",
+    "source9509": "63966720ef6a31b6eb0fcdf37b3c12fff488f8582dac88b8f7d640f5cd8e8e8e",
+    "beforeCurrent": "63966720ef6a31b6eb0fcdf37b3c12fff488f8582dac88b8f7d640f5cd8e8e8e",
+    "sameAs9509": true
+  },
+  {
+    "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+    "source9509": "ef5a6a011833f95bc38ce7f836d62f119cbfbf5da0ee73058a7225701323f418",
+    "beforeCurrent": "fd07604a8e6ad6856239f3425d5dad2c3221491dad4a51230333bf25aad6668b",
+    "sameAs9509": false
+  },
+  {
+    "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+    "source9509": "590375090ac0882283d7d2606b562c9f5e505d59882374a3613389c1ca86bb6c",
+    "beforeCurrent": "1c4962482a087a854dc595d794c3815a31730382d618a89eb037ae8b00d4936b",
+    "sameAs9509": false
+  }
+]

@@ -1,0 +1,10 @@
+{"name":"PH24 native loading indicator preserves 13/36 sizes and responds without remounting","status":"PASS"}
+{"name":"PH37 four Toggle states retain geometry, track role, click and thumb position","status":"PASS"}
+{"name":"PH7 real theme actions signal accepted defaults and reject wrong day/night type explicitly","status":"PASS"}
+{"name":"PH31 each SDK preview uses the same gradient endpoints as the actual reader definition","status":"PASS"}
+{"name":"PH36 real Index Back returns General to Settings before Bookshelf and preserves overlay priority","status":"PASS"}
+{"name":"PH34 actual General and Rules Scrolls align short contents at the top","status":"PASS"}
+{"name":"PH35 real cache action has intrinsic height, bounded width and retained pending/result label","status":"PASS"}
+search/settings physical feedback production/SDK regression PASS (7 groups); native pixels/device acceptance remain separate.
+(node:77569) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

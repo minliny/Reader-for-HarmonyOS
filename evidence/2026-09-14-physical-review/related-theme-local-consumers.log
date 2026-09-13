@@ -1,0 +1,3 @@
+PASS 76 local-color bindings / 46 roles: authored Day and alpha, reactive App scope, distinct production status states and action foregrounds.
+(node:53990) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
