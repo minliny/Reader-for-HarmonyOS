@@ -217,7 +217,9 @@ export struct ReaderControlSettingsContent {
       }, (option: string): string => `reader-control-settings-${group}-${option}`);
     }
     .width(this.bar(row).width).height(this.bar(row).height)
-    .backgroundColor(TOK_SURFACE_PANEL_SOFT).borderRadius(8)
+    .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+    .border({ width: TOK_BORDER_W, color: TOK_LINE })
+    .borderRadius(8)
     .position({ x: this.bar(row).x, y: this.bar(row).y })
     .clipShape(this.sharedClip(row, true));
   }

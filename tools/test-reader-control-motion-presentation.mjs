@@ -81,7 +81,7 @@ if (readerBuilderSdkAvailable) {
   // Exercise the real SDK-generated Speed wrapper on one mount; replay every
   // paint observer across progress/reversal and real scroll anchors.
   const methods = ['onlineServicePage', 'isHttpEngineSelected', 'speed', 'p', 'frame', 'effectiveRate', 'moduleHeader', 'quickLabel',
-    'sectionSurface', 'surfaceY', 'sectionActor', 'fullInput', 'ratePresets', 'ratePreset', 'chooseRatePreset',
+    'sectionSurface', 'surfaceY', 'sectionActor', 'fullInput', 'ratePresets', 'ratePresetWidth', 'ratePreset', 'chooseRatePreset',
     'quickLabelActor', 'headerActor', 'headerMeta', 'timerSummary', 'twoDigits',
     'statusText', 'playbackLabel', 'presentation', 'outlineOpacity', 'sharedClip', 'sharedScrollTranslation', 'sharedInput'];
   const noopNative = new Proxy({}, { get: (_, key) => key === 'name' ? 'Slider' : () => {} });

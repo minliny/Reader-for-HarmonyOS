@@ -122,7 +122,7 @@ for (const p of points) {
   assert.deepEqual(sampleReaderControlSearch(p, width, height), f, 'reverse/regrab uses the same pose');
 
   const title = readerControlSettingsScreenTitle(p);
-  near(title.y, 9 + track(settingsMotion, '1692:3685', 'translate', p)[1]);
+  near(title.y, 9 * p, 'settings title follows the repaired compact-to-full lane');
   near(title.opacity, track(settingsMotion, '1692:3685', 'opacity', p)[0]);
   for (const [i, labelId, barId, firstChoice, count] of [
     [0, '1692:3686', '1692:3687', 3688, 3],
@@ -131,11 +131,13 @@ for (const p of points) {
   ]) {
     const label = readerControlSettingsLabel(i, p);
     const labelT = track(settingsMotion, labelId, 'translate', p);
-    near(label.x, labelT[0]); near(label.y, 37 + 72 * i + labelT[1]);
+    near(label.x, labelT[0]);
+    near(label.y, 18 + 19 * p + (54 + 18 * p) * i, 'settings labels stay below the title lane');
     for (const prop of ['width', 'height']) near(label[prop], track(settingsMotion, labelId, prop, p)[0]);
     const bar = readerControlSettingsBar(i, p, width);
     const barT = track(settingsMotion, barId, 'translate', p);
-    near(bar.x, barT[0]); near(bar.y, 61 + 72 * i + barT[1]);
+    near(bar.x, barT[0]);
+    near(bar.y, 35 + 26 * p + (54 + 18 * p) * i, 'settings bars stay below their labels');
     for (const prop of ['width', 'height']) near(bar[prop], track(settingsMotion, barId, prop, p)[0]);
     for (let c = 0; c < count; c++) {
       const id = '1692:' + (firstChoice + c);

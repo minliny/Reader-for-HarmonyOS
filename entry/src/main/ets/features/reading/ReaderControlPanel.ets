@@ -75,6 +75,7 @@ import {
   TOK_READ_SURFACE,
   TOK_RADIUS_LG,
   TOK_SURFACE_PANEL,
+  TOK_SURFACE_SOLID,
   TOK_SURFACE_SOLID_OPAQUE,
 } from '../common/ReaderTokens';
 import {
@@ -739,7 +740,10 @@ export struct ReaderControlPanel {
           .backgroundColor(TOK_READ_SURFACE).borderRadius(24)
           .border({ width: TOK_BORDER_W, color: TOK_LINE_STRONG })
           .opacity(this.frame().shell.opacity)
-          .hitTestBehavior(this.frame().visibility > 0 ? HitTestMode.Block : HitTestMode.None);
+          // The shell is a visual actor only.  A full-size Block here steals
+          // pointer hit testing from the mounted header/content actors below,
+          // so taps such as the collapse action never reach their onClick.
+          .hitTestBehavior(HitTestMode.None);
         Stack()
           .id('reader-control-full-content-surface')
           .width(this.frame().contentSurface.width).height(this.frame().contentSurface.height)
@@ -764,8 +768,10 @@ export struct ReaderControlPanel {
           .width(this.frame().header.width).height(this.frame().header.height)
           .position({ x: this.frame().header.x, y: this.frame().header.y })
           .opacity((this.contentLocation().module === 'replace') ? 1 : this.frame().header.opacity)
-          .zIndex((this.contentLocation().module === 'replace') ? 1 : 0)
-          .hitTestBehavior(HitTestMode.Transparent)
+          // Header controls must win over the visual shell and content slot
+          // at the same coordinates while keeping the authored actor mounted.
+          .zIndex(2)
+          .hitTestBehavior(HitTestMode.Block)
           .enabled(this.inputEnabled && this.frame().visibility > 0 && this.visualHeldPointerId < 0);
         Stack({ alignContent: Alignment.TopStart }) { this.brightnessRail(); }
           .width(this.frame().brightness.width).height(this.frame().brightness.height)
@@ -865,6 +871,8 @@ export struct ReaderControlPanel {
           .position({ x: 10, y: this.headerInter() ? 7 : 6 });
       }.width(40).height(26).position({ x: Math.max(0, this.headerFrame().width - 40), y: 2 })
         .backgroundColor(TOK_READ_ACTIVE_SOFT).borderRadius(8)
+        .id('reader-control-collapse')
+        .hitTestBehavior(HitTestMode.Block)
         .accessibilityText(`收起${this.contentTitle()}`)
         .onClick((): void => this.collapseControl());
     }.width(this.headerFrame().width).height(this.headerFrame().height)

@@ -39,7 +39,11 @@ export function sampleReaderControlSettings(p: number, width: number): ReaderCon
 
 /** Local coordinates inside PersistentModule/Settings/Screen (15,5). */
 export function readerControlSettingsLabel(index: number, p: number): ReaderControlActorFrame {
-  return sample(actor(4, 15 + 54 * index, 248, 12),
+  // Compact endpoint reserves a clear title lane (0..16vp). The previous
+  // 15vp label origin intersected the title's 17..33vp box and its own
+  // segment bar. Keep the same row rhythm while moving the compact labels
+  // and bars down; full endpoint remains Figma exact.
+  return sample(actor(4, 18 + 54 * index, 248, 12),
     actor(0, 37 + 72 * index, 150, 16), p);
 }
 
@@ -47,7 +51,7 @@ export function readerControlSettingsBar(index: number, p: number,
   availableWidth: number): ReaderControlActorFrame {
   const progress = unit(p);
   const delta = availableWidth - lerp(286, 338, progress);
-  const value = sample(actor(4, 32 + 54 * index, 248, 30),
+  const value = sample(actor(4, 35 + 54 * index, 248, 30),
     actor(0, 61 + 72 * index, 308, 33), progress);
   return actor(value.x, value.y, Math.max(0, value.width + delta), value.height);
 }
@@ -67,7 +71,7 @@ export function readerControlSettingsChoice(count: number, index: number, p: num
 }
 
 export function readerControlSettingsScreenTitle(p: number): ReaderControlActorFrame {
-  return sample(actor(0, 17, 160, 16, 0), actor(0, 9, 160, 16), p);
+  return sample(actor(0, 0, 160, 16, 0), actor(0, 9, 160, 16), p);
 }
 
 export function readerControlSettingsAddedGroup(group: ReaderControlSettingsAddedGroup,

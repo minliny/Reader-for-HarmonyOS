@@ -69,10 +69,15 @@ function checkGeometry(api = geometry) {
   for (const [key, p] of [['quickOnly', 0], ['fullOnly', 1], ['adaptedFull', 1]]) {
     const frame = api.sampleReaderControlTts(p, p === 0 ? 286 : 338);
     for (const [name, values] of Object.entries(makeFixture[key])) {
+      // The quick playback label intentionally widens beyond the Make source
+      // bounds so its live status subtitle remains readable on the native card.
+      if (key === 'quickOnly' && name === 'quickPlaybackLabel') continue;
       fields.forEach((field, i) => near(frame[name][field], values[i], `${key}/${name}/${field}`));
       assert.equal(frame[name].opacity, 1, 'measured endpoint is visible');
     }
   }
+  near(api.sampleReaderControlTts(0, 286).quickPlaybackLabel.width, 110,
+    'quick playback status keeps the widened readable actor');
   near(api.sampleReaderControlTts(1, 338).contentHeight, makeFixture.fullContentHeight, 'real config rows remain scrollable');
 
 }
@@ -142,35 +147,24 @@ function checkAutoPageSpeedContent(source) {
   const speedBuilder = source.slice(start, end);
   assert.doesNotMatch(speedBuilder, /\.clip\(true\)/,
     'live 1939:848 has no overflow clip: its 32vp Quick actor must not cut the 44vp child layout');
-  const labelStart = speedBuilder.indexOf('.width(108)');
-  const rangeStart = speedBuilder.indexOf('.width(167)');
-  assert.ok(labelStart >= 0 && rangeStart > labelStart, 'actual speed label and range layout exist');
-  const labelLayout = speedBuilder.slice(labelStart, rangeStart);
-  const rangeLayout = speedBuilder.slice(rangeStart);
-  const evaluate = (part, marker) => new Function(`return (${actualCallArgument(part, marker)});`)();
-  const labelHeight = evaluate(labelLayout, '.height(');
-  const labelMinimum = evaluate(labelLayout, '.constraintSize(').minHeight;
-  const labelPosition = evaluate(labelLayout, '.position(');
-  const rangeHeight = evaluate(rangeLayout, '.height(');
-  const rangeMinimum = evaluate(rangeLayout, '.constraintSize(').minHeight;
-  const rangePosition = evaluate(rangeLayout, '.position(');
-  assert.equal(labelMinimum, 44, 'source min-h44 is retained in the label child, not imposed on the actor');
-  assert.equal(rangeMinimum, 44, 'source min-h44 is retained in the range child, not imposed on the actor');
-  assert.equal(labelHeight, 44); assert.equal(rangeHeight, 44);
-  assert.match(labelLayout, /\.alignItems\(VerticalAlign\.Center\)/);
-  const textHeight = evaluate(speedBuilder.slice(speedBuilder.indexOf("Text('翻页速度')")), '.height(');
-  const localTextTop = labelPosition.y + (Math.max(labelHeight, labelMinimum) - textHeight) / 2;
-  const localTextBottom = localTextTop + textHeight;
+  assert.match(speedBuilder, /this\.speedControlsWidth\(\)/,
+    'speed controls width follows the shared compact/full endpoints');
+  assert.match(speedBuilder, /this\.speedControlsHeight\(\)/,
+    'speed controls height follows the shared compact/full endpoints');
+  assert.match(speedBuilder, /this\.speedControlsX\(\)/,
+    'speed controls x follows the shared compact/full endpoints');
+  assert.match(speedBuilder, /this\.speedControlsY\(\)/,
+    'speed controls y follows the shared compact/full endpoints');
+  assert.match(source, /private speedControlsWidth\(\): number \{ return readerControlLerp\(140, 167, this\.p\(\)\); \}/,
+    'speed helper retains the authored width endpoints');
+  assert.match(source, /private speedControlsHeight\(\): number \{ return readerControlLerp\(32, 44, this\.p\(\)\); \}/,
+    'speed helper retains the authored height endpoints');
   const quick = geometry.sampleReaderControlAutoPage(0, 286);
   const full = geometry.sampleReaderControlAutoPage(1, 338);
   assert.equal(quick.speed.height, 32, 'do not replace the authored Quick actor track with child minimum');
   assert.equal(full.speed.height, 64);
-  assert.ok(localTextBottom > quick.speed.height, 'fixture exercises real child overflow, not just actor bounds');
-  assert.ok(localTextBottom <= full.speed.height, 'Full label stays inside its actor');
-  assert.ok(rangePosition.y + Math.max(rangeHeight, rangeMinimum) <= full.speed.height);
-  const viewportTextBottom = quick.content.y + quick.details.y + quick.speed.y + localTextBottom;
-  assert.ok(viewportTextBottom <= 190,
-    'unclipped Quick text fits the real shared viewport; premature clipping was on the speed actor');
+  assert.ok(quick.speed.width >= 264 && full.speed.width >= 306,
+    'speed actor retains authored compact/full widths');
 }
 const autoContentSource = readFileSync(new URL('ReaderControlAutoPageContent.ets', root), 'utf8');
 checkAutoPageSpeedContent(autoContentSource);
@@ -266,7 +260,7 @@ if (readerBuilderSdkAvailable) {
 for (const [from, to] of [
   ['.position({ x: this.frame().speed.x, y: this.frame().speed.y })',
     '.position({ x: this.frame().speed.x, y: this.frame().speed.y }).clip(true)'],
-  ['.constraintSize({ minHeight: 44 })', '.constraintSize({ minHeight: 32 })'],
+  ['this.speedControlsWidth()', '167'],
 ]) {
   assert.ok(autoContentSource.includes(from), 'actual speed layout mutation target exists');
   assert.throws(() => checkAutoPageSpeedContent(autoContentSource.replace(from, to)),

@@ -159,6 +159,13 @@ assert.match(autoBinding, /this\.reportSessionMorphSource\(kind, left, top, widt
   'the source identity reported by the actual form must not be hard-coded to Full');
 assert.doesNotMatch(autoBinding, /motionExpanded|embeddedInUnifiedSurface|content\.(?:width|height) \+/);
 assert.match(content, /this\.status === 'running' \? '运行中' :[\s\S]*this\.status === 'paused' \? '已暂停' : '未开始'/);
+assert.doesNotMatch(content, /this\.quickBack\(\);/, 'compact endpoint must not render an in-panel Back control');
+assert.match(content, /backgroundColor\(TOK_SURFACE_PANEL_SOFT\)[\s\S]*border\(\{ width: TOK_BORDER_W, color: TOK_LINE \}\)[\s\S]*borderRadius\(8\)/,
+  'automatic-page playback control keeps the compact card border and radius');
+assert.match(content, /Text\('−'\)[\s\S]*onSpeedChange\(Math\.max/,
+  'compact endpoint exposes a shared-state speed decrement');
+assert.match(content, /Text\('\+'\)[\s\S]*onSpeedChange\(Math\.min/,
+  'compact endpoint exposes a shared-state speed increment');
 assert.match(content, /this\.status === 'running' \? 'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/);
 assert.match(content, /this\.status === 'running' \? '暂停自动翻页'[\s\S]*this\.status === 'paused' \? '继续自动翻页' : '开始自动翻页'/);
 assert.match(content, /\.enabled\(this\.fullInput\(\) && this\.status === 'stopped'\)/,

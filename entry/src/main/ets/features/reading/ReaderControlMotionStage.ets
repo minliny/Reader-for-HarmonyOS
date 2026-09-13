@@ -21,7 +21,8 @@ import {
   pauseReaderControlLayoutCompensation, rebaseReaderControlLayout,
   settleReaderControlLayoutCompensation, type ReaderControlLayoutCompensation,
 } from './ReaderControlLayoutRebase';
-import { TOK_BORDER_W, TOK_LINE, TOK_LINE_STRONG, TOK_READ_HANDLE, TOK_READ_SURFACE, TOK_SURFACE_PANEL }
+import { TOK_BORDER_W, TOK_LINE, TOK_LINE_STRONG, TOK_READ_HANDLE, TOK_READ_SURFACE, TOK_SURFACE_PANEL,
+  TOK_SURFACE_SOLID }
   from '../common/ReaderTokens';
 import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
 

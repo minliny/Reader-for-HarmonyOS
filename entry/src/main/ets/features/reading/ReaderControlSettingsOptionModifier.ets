@@ -1,4 +1,4 @@
-import { TOK_READ_ELEVATED, TOK_READ_INK, TOK_READ_PRIMARY } from '../common/ReaderTokens';
+import { TOK_LINE, TOK_READ_ELEVATED, TOK_READ_INK, TOK_READ_PRIMARY } from '../common/ReaderTokens';
 import { type ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import { type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
 
@@ -32,6 +32,8 @@ export class ReaderControlSettingsOptionModifier implements AttributeModifier<Te
       .width(this.actor.width).height(this.actor.height)
       .position({ x: this.actor.x, y: this.actor.y })
       .backgroundColor(this.active ? TOK_READ_ELEVATED : Color.Transparent)
+      .borderRadius(6)
+      .border({ width: 0.5, color: TOK_LINE })
       .fontColor(this.active ? TOK_READ_PRIMARY : TOK_READ_INK)
       .enabled(this.enabled).accessibilityText(this.accessibility).onClick(this.action);
   }

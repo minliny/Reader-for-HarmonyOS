@@ -14,7 +14,7 @@ import {
 } from './ReaderAutoPageFullState';
 import type { ReaderControlForm } from './ReaderControlSessionState';
 import { readerSessionMorphActorId, type ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';
-import { readerControlUnit, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
+import { readerControlUnit, readerControlLerp, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import {
   sampleReaderControlAutoPage, readerControlPlaybackSourceKind, readerControlPlaybackMeasuredSource,
   type ReaderControlAutoPageFrame, type ReaderControlPlaybackMeasuredRect,
@@ -157,7 +157,10 @@ export struct ReaderControlAutoPageContent {
         .border({ width: TOK_BORDER_W, color: TOK_LINE }).borderRadius(12).hitTestBehavior(HitTestMode.None);
       Scroll(this.scroller) {
         Stack({ alignContent: Alignment.TopStart }) {
-          this.quickBack();
+          // Quick endpoint intentionally has no in-panel Back affordance.
+          // System back and the shared control-bar collapse affordance remain
+          // the navigation paths; removing this actor also recovers its 58vp
+          // footprint from the compact layout.
           Stack({ alignContent: Alignment.TopStart }) {
             this.controlSection();
             this.timerSection();
@@ -231,6 +234,9 @@ export struct ReaderControlAutoPageContent {
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
         .clipShape(this.sharedClip('control'));
     }.width(this.frame().control.width).height(this.frame().control.height)
+      .backgroundColor(TOK_SURFACE_PANEL_SOFT)
+      .border({ width: TOK_BORDER_W, color: TOK_LINE })
+      .borderRadius(8)
       .id(this.actorId(true)).onAreaChange((_old: Area, area: Area): void => this.measureActor(true, area));
   }
 
@@ -398,6 +404,11 @@ export struct ReaderControlAutoPageContent {
 
   @Builder
   private speedRow() {
+    // The compact speed card is only 32vp high and its control track is
+    // narrower than the full 64vp card. Keep every child on the same shared
+    // morph clock so no child hangs below or outside the card during the
+    // transition (the old fixed 44x167 track caused clipping and a visible
+    // pause at the compact endpoint).
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
       Row() {
@@ -422,13 +433,19 @@ export struct ReaderControlAutoPageContent {
           .maxLines(1);
       }
       .width(108)
-      .height(44)
-      .constraintSize({ minHeight: 44 })
+      .height(this.speedControlsHeight())
+      .constraintSize({ minHeight: this.speedControlsHeight() })
       .alignItems(VerticalAlign.Center)
-      .position({ x: 11, y: 10 });
+      .position({ x: 11, y: this.speedControlsY() });
 
       Stack({ alignContent: Alignment.TopStart }) {
-        Text('2 秒')
+        Text('−').width(24).height(24).fontSize(16).fontColor(TOK_READ_PRIMARY)
+          .textAlign(TextAlign.Center).position({ x: this.speedMinusX(), y: this.speedControlsY() }).opacity(1 - this.p())
+          .enabled(this.sharedInput()).onClick((): void => {
+            if (this.sharedInput()) this.onSpeedChange(Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
+              this.effectiveSpeedSeconds() - 1));
+          });
+        Text(`${this.effectiveSpeedSeconds()} 秒`)
           .width(17.3)
           .height(13)
           .fontFamily('ReaderInter')
@@ -437,7 +454,7 @@ export struct ReaderControlAutoPageContent {
           .lineHeight(13)
           .fontColor(TOK_READ_MUTED)
           .maxLines(1)
-          .position({ x: 0, y: 15.5 });
+          .position({ x: 0, y: this.speedLabelY() });
 
         // Figma node `1764:11058` is an intentionally empty 109×44 frame.
         // The nearly-transparent native slider supplies semantics without
@@ -451,8 +468,8 @@ export struct ReaderControlAutoPageContent {
           direction: Axis.Horizontal,
           reverse: false,
         })
-          .width(109)
-          .height(44)
+          .width(this.speedSliderWidth())
+          .height(this.speedControlsHeight())
           .opacity(0.001)
           .accessibilityText('调整自动翻页速度')
           .onChange((value: number, mode: SliderChangeMode): void => {
@@ -464,7 +481,7 @@ export struct ReaderControlAutoPageContent {
               this.onSpeedChange(committed);
             }
           })
-          .position({ x: 26.3, y: 0 });
+          .position({ x: this.speedSliderX(), y: 0 });
 
         Text('20 秒')
           .width(23.14)
@@ -476,12 +493,17 @@ export struct ReaderControlAutoPageContent {
           .fontColor(TOK_READ_MUTED)
           .textAlign(TextAlign.End)
           .maxLines(1)
-          .position({ x: 143.86, y: 15.5 });
+          .position({ x: this.speedMaxLabelX(), y: this.speedLabelY() });
+        Text('+').width(24).height(24).fontSize(16).fontColor(TOK_READ_PRIMARY)
+          .textAlign(TextAlign.Center).position({ x: this.speedPlusX(), y: this.speedControlsY() }).opacity(1 - this.p())
+          .enabled(this.sharedInput()).onClick((): void => {
+            if (this.sharedInput()) this.onSpeedChange(Math.min(READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS,
+              this.effectiveSpeedSeconds() + 1));
+          });
       }
-      .width(167)
-      .height(44)
-      .constraintSize({ minHeight: 44 })
-      .position({ x: 128, y: 10 });
+      .width(this.speedControlsWidth())
+      .height(this.speedControlsHeight())
+      .position({ x: this.speedControlsX(), y: this.speedControlsY() });
     }
       .width(this.frame().speed.width).height(this.frame().speed.height)
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
@@ -538,6 +560,17 @@ export struct ReaderControlAutoPageContent {
     return Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
       Math.min(READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, Math.round(this.speedSeconds)));
   }
+
+  private speedControlsWidth(): number { return readerControlLerp(140, 167, this.p()); }
+  private speedControlsHeight(): number { return readerControlLerp(32, 44, this.p()); }
+  private speedControlsX(): number { return readerControlLerp(115, 128, this.p()); }
+  private speedControlsY(): number { return readerControlLerp(0, 10, this.p()); }
+  private speedSliderWidth(): number { return readerControlLerp(91, 109, this.p()); }
+  private speedSliderX(): number { return readerControlLerp(22, 26.3, this.p()); }
+  private speedMinusX(): number { return readerControlLerp(69, 82, this.p()); }
+  private speedMaxLabelX(): number { return Math.max(0, this.speedControlsWidth() - 41); }
+  private speedPlusX(): number { return Math.max(0, this.speedControlsWidth() - 24); }
+  private speedLabelY(): number { return readerControlLerp(9.5, 15.5, this.p()); }
 
   private currentTimerValue(minutes: boolean): number {
     const raw = minutes ? this.timerMinutes : this.timerSeconds;
