@@ -139,8 +139,8 @@ export struct ReaderControlAutoPageContent {
   }
   private sharedPaintRect(kind: 'control' | 'speed', p: number): ReaderControlMotionClipRect {
     const f = sampleReaderControlAutoPage(p, this.availableWidth);
-    // Preserve the source's overflow: control icons begin 5vp above their
-    // group; Quick speed's 44vp children extend beyond its 32vp actor.
+    // Preserve control icons beginning 5vp above their group. The speed paint
+    // envelope covers both the 32vp Quick and 64vp Full endpoint contents.
     return kind === 'control' ? { x: f.content.x + 4, y: f.content.y + 27.3906,
       width: f.content.width - 8, height: 67 } :
       { x: f.content.x + f.details.x + f.speed.x, y: f.content.y + f.details.y + f.speed.y,
@@ -473,78 +473,78 @@ export struct ReaderControlAutoPageContent {
     .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
   }
 
+  private speedActor(kind: 'title' | 'current' | 'minus' | 'plus' | 'minimum' | 'slider' | 'maximum'): ReaderControlActorFrame {
+    return this.frame().speedContent[kind];
+  }
+
+  private speedActorId(kind: string): string {
+    return this.sourceOnly === 'none' ? `reader-auto-speed-${kind}` : '';
+  }
+
+  private changeSpeedStep(increase: boolean): void {
+    if (!this.sharedInput() || this.p() !== 0) return;
+    this.onSpeedChange(Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
+      Math.min(READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, this.effectiveSpeedSeconds() + (increase ? 1 : -1))));
+  }
+
+  @Builder
+  private speedStepButton(increase: boolean) {
+    Stack({ alignContent: Alignment.Center }) {
+      Text(increase ? '+' : '−').width(18).height(18).fontFamily('ReaderInter').fontSize(18).lineHeight(18)
+        .fontColor(readerAppColor('TOK_READ_ICON', this.appScheme)).textAlign(TextAlign.Center);
+    }.width(24).height(24).borderRadius(12)
+      .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
+      .position({ x: this.speedActor(increase ? 'plus' : 'minus').x, y: this.speedActor(increase ? 'plus' : 'minus').y })
+      .opacity(this.speedActor(increase ? 'plus' : 'minus').opacity)
+      .enabled(this.sharedInput() && this.p() === 0)
+      .accessibilityLevel(this.p() === 0 ? 'auto' : 'no-hide-descendants')
+      .accessibilityText(increase ? '增加翻页间隔' : '减少翻页间隔')
+      .onClick((): void => this.changeSpeedStep(increase));
+  }
+
   @Builder
   private speedRow() {
-    // The compact speed card is only 32vp high and its control track is
-    // narrower than the full 64vp card. Keep every child on the same shared
-    // morph clock so no child hangs below or outside the card during the
-    // transition (the old fixed 44x167 track caused clipping and a visible
-    // pause at the compact endpoint).
+    // Quick 736:48 contains only title, minus, current value and plus. Full
+    // 1939:848 contains title/current and the 2–20 range. The previous adapter
+    // painted both endpoint layouts together and repeated current as minimum.
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
-      Row() {
-        Text('翻页速度')
-          .width(80.56)
-          .height(14)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
-          .lineHeight(13)
-          .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
-          .maxLines(1);
-        Text(`${this.effectiveSpeedSeconds()} 秒`)
-          .width(19.44)
-          .height(14)
-          .margin({ left: 8 })
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
-          .lineHeight(13)
-          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
-          .maxLines(1);
-      }
-      .width(108)
-      .height(this.speedControlsHeight())
-      .constraintSize({ minHeight: this.speedControlsHeight() })
-      .alignItems(VerticalAlign.Center)
-      .position({ x: 11, y: this.speedControlsY() });
-
-      Stack({ alignContent: Alignment.TopStart }) {
-        Text('−').width(24).height(24).fontSize(16).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-          .textAlign(TextAlign.Center).position({ x: this.speedMinusX(), y: this.speedControlsY() }).opacity(1 - this.p())
-          .enabled(this.sharedInput()).onClick((): void => {
-            if (this.sharedInput()) this.onSpeedChange(Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
-              this.effectiveSpeedSeconds() - 1));
-          });
-        Text(`${this.effectiveSpeedSeconds()} 秒`)
-          .width(17.3)
-          .height(13)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(9)
-          .lineHeight(13)
-          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
-          .maxLines(1)
-          .position({ x: 0, y: this.speedLabelY() });
-
-        // Figma node `1764:11058` is an intentionally empty 109×44 frame.
-        // The nearly-transparent native slider supplies semantics without
-        // inventing a visible track or thumb absent from the source design.
-        Slider({
-          value: this.effectiveSpeedSeconds(),
-          min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
-          max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS,
-          step: 1,
-          style: SliderStyle.OutSet,
-          direction: Axis.Horizontal,
-          reverse: false,
-        })
-          .width(this.speedSliderWidth())
-          .height(this.speedControlsHeight())
-          .opacity(0.001)
+        Text('翻页速度').id(this.speedActorId('title'))
+          .width(this.speedActor('title').width).height(this.speedActor('title').height)
+          .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
+          .fontSize(readerControlLerp(11, 10, this.p())).lineHeight(13)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1)
+          .position({ x: this.speedActor('title').x, y: this.speedActor('title').y });
+        Text(`${this.effectiveSpeedSeconds()} 秒`).id(this.speedActorId('current'))
+          .width(this.speedActor('current').width).height(this.speedActor('current').height)
+          .fontFamily('ReaderInter').fontWeight(Math.round(readerControlLerp(900, 400, this.p())))
+          .fontSize(readerControlLerp(11, 10, this.p())).lineHeight(13)
+          .fontColor(readerAppColor(this.p() === 0 ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', this.appScheme))
+          .textAlign(TextAlign.Center).maxLines(1)
+          .position({ x: this.speedActor('current').x, y: this.speedActor('current').y });
+        this.speedStepButton(false);
+        this.speedStepButton(true);
+        Text('2 秒').id(this.speedActorId('minimum'))
+          .width(this.speedActor('minimum').width).height(this.speedActor('minimum').height)
+          .fontFamily('ReaderInter').fontSize(9).lineHeight(13)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme)).maxLines(1)
+          .position({ x: this.speedActor('minimum').x, y: this.speedActor('minimum').y })
+          .opacity(this.speedActor('minimum').opacity)
+          .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
+        Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
+          max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1, style: SliderStyle.OutSet,
+          direction: Axis.Horizontal, reverse: false })
+          .width(this.speedActor('slider').width).height(this.speedActor('slider').height)
+          .trackThickness(4).blockSize({ width: 14, height: 14 })
+          .trackColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
+          .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+          .blockColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+          .opacity(this.speedActor('slider').opacity).enabled(this.fullInput())
+          .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
           .accessibilityText('调整自动翻页速度')
           .onChange((value: number, mode: SliderChangeMode): void => {
-            if (!this.sharedInput()) { this.speedPreviewSeconds = -1; return; }
+            if (!this.fullInput()) { this.speedPreviewSeconds = -1; return; }
             this.speedPreviewSeconds = Math.round(value);
             if (mode === SliderChangeMode.End) {
               const committed = this.speedPreviewSeconds;
@@ -552,45 +552,22 @@ export struct ReaderControlAutoPageContent {
               this.onSpeedChange(committed);
             }
           })
-          .position({ x: this.speedSliderX(), y: 0 });
-
-        Text('20 秒')
-          .width(23.14)
-          .height(13)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(9)
-          .lineHeight(13)
-          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
-          .textAlign(TextAlign.End)
-          .maxLines(1)
-          .position({ x: this.speedMaxLabelX(), y: this.speedLabelY() });
-        Text('+').width(24).height(24).fontSize(16).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
-          .textAlign(TextAlign.Center).position({ x: this.speedPlusX(), y: this.speedControlsY() }).opacity(1 - this.p())
-          .enabled(this.sharedInput()).onClick((): void => {
-            if (this.sharedInput()) this.onSpeedChange(Math.min(READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS,
-              this.effectiveSpeedSeconds() + 1));
-          });
-      }
-      .width(this.speedControlsWidth())
-      .height(this.speedControlsHeight())
-      .position({ x: this.speedControlsX(), y: this.speedControlsY() });
-    }
-      .width(this.frame().speed.width).height(this.frame().speed.height)
-      .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
-    }
-    .width(this.frame().speed.width)
-    .height(this.frame().speed.height)
-    .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) })
-    .borderRadius(6)
-    // 1939:848 keeps its 32 -> 64 actor track, but its source layout has
-    // min-h44 children and no overflow clip. Quick text extends below the
-    // 32vp actor and must remain visible inside the shared content viewport.
-    .position({ x: this.frame().speed.x, y: this.frame().speed.y })
-    .translate({ y: this.sharedScrollTranslation() })
-    .clipShape(this.sharedClip('speed'))
-    .enabled(this.sharedInput());
+          .position({ x: this.speedActor('slider').x, y: this.speedActor('slider').y });
+        Text('20 秒').id(this.speedActorId('maximum'))
+          .width(this.speedActor('maximum').width).height(this.speedActor('maximum').height)
+          .fontFamily('ReaderInter').fontSize(9).lineHeight(13)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme)).textAlign(TextAlign.End).maxLines(1)
+          .position({ x: this.speedActor('maximum').x, y: this.speedActor('maximum').y })
+          .opacity(this.speedActor('maximum').opacity)
+          .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');
+      }.width(this.frame().speed.width).height(this.frame().speed.height).position({ x: 0, y: 0 })
+        .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
+    }.width(this.frame().speed.width).height(this.frame().speed.height)
+      .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(6)
+      .position({ x: this.frame().speed.x, y: this.frame().speed.y })
+      .translate({ y: this.sharedScrollTranslation() }).clipShape(this.sharedClip('speed'))
+      .enabled(this.sharedInput());
   }
 
   @Builder
@@ -631,17 +608,6 @@ export struct ReaderControlAutoPageContent {
     return Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
       Math.min(READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, Math.round(this.speedSeconds)));
   }
-
-  private speedControlsWidth(): number { return readerControlLerp(140, 167, this.p()); }
-  private speedControlsHeight(): number { return readerControlLerp(32, 44, this.p()); }
-  private speedControlsX(): number { return readerControlLerp(115, 128, this.p()); }
-  private speedControlsY(): number { return readerControlLerp(0, 10, this.p()); }
-  private speedSliderWidth(): number { return readerControlLerp(91, 109, this.p()); }
-  private speedSliderX(): number { return readerControlLerp(22, 26.3, this.p()); }
-  private speedMinusX(): number { return readerControlLerp(69, 82, this.p()); }
-  private speedMaxLabelX(): number { return Math.max(0, this.speedControlsWidth() - 41); }
-  private speedPlusX(): number { return Math.max(0, this.speedControlsWidth() - 24); }
-  private speedLabelY(): number { return readerControlLerp(9.5, 15.5, this.p()); }
 
   private currentTimerValue(minutes: boolean): number {
     const raw = minutes ? this.timerMinutes : this.timerSeconds;

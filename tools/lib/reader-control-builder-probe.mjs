@@ -106,10 +106,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
   }
   const globals = { readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
-    ...Object.fromEntries(['Button', 'Row', 'Column', 'Stack', 'Scroll', 'Text', 'TextInput', 'Span', 'Image', 'ForEach', 'If', '__Common__']
+    ...Object.fromEntries(['Button', 'Row', 'Column', 'Stack', 'Scroll', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
-      'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'EdgeEffect'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
+      'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...dependencies };
   const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));

@@ -52,7 +52,12 @@ function checkGeometry(api = geometry) {
       for (const [actor, id] of Object.entries(mapping)) {
         const q = sourceEndpoint(module, id, 0), f = sourceEndpoint(module, id, 1);
         for (const field of ['x', 'y', 'width', 'height', 'opacity']) {
-          near(frame[actor][field], q[field] + (f[field] - q[field]) * p, `${module}/${id}/${field}/p${p}`);
+          // The restored static Full bounds never shrank these Full-only
+          // surfaces at Quick, which let their parent overrun the viewport by
+          // 40vp. Keep authored motion tracks; fit width to the actual parent.
+          const parentFit = field === 'width' && ['controlHeader', 'timer', 'detailsHeader', 'follow'].includes(actor) ?
+            50 * (1 - p) : 0;
+          near(frame[actor][field], q[field] + (f[field] - q[field]) * p - parentFit, `${module}/${id}/${field}/p${p}`);
         }
       }
       assert.deepEqual(sample(p, 286 + 52 * p), frame, 'reverse/re-grab at same p has same pose');
@@ -146,19 +151,13 @@ function checkAutoPageSpeedContent(source) {
   assert.ok(start >= 0 && end > start, 'actual speed builder boundaries exist');
   const speedBuilder = source.slice(start, end);
   assert.doesNotMatch(speedBuilder, /\.clip\(true\)/,
-    'live 1939:848 has no overflow clip: its 32vp Quick actor must not cut the 44vp child layout');
-  assert.match(speedBuilder, /this\.speedControlsWidth\(\)/,
-    'speed controls width follows the shared compact/full endpoints');
-  assert.match(speedBuilder, /this\.speedControlsHeight\(\)/,
-    'speed controls height follows the shared compact/full endpoints');
-  assert.match(speedBuilder, /this\.speedControlsX\(\)/,
-    'speed controls x follows the shared compact/full endpoints');
-  assert.match(speedBuilder, /this\.speedControlsY\(\)/,
-    'speed controls y follows the shared compact/full endpoints');
-  assert.match(source, /private speedControlsWidth\(\): number \{ return readerControlLerp\(140, 167, this\.p\(\)\); \}/,
-    'speed helper retains the authored width endpoints');
-  assert.match(source, /private speedControlsHeight\(\): number \{ return readerControlLerp\(32, 44, this\.p\(\)\); \}/,
-    'speed helper retains the authored height endpoints');
+    'live 1939:848 has no extra overflow clip during the shared 32 to 64vp track');
+  for (const field of ['width', 'height', 'x', 'y', 'opacity']) {
+    assert.ok(speedBuilder.includes(`this.speedActor('slider').${field}`), `native range reads its retained responsive ${field}`);
+  }
+  assert.doesNotMatch(speedBuilder, /\.opacity\(0\.001\)/, 'the Full range must be visible');
+  assert.equal((speedBuilder.match(/Text\(`\$\{this\.effectiveSpeedSeconds\(\)\} 秒`\)/g) ?? []).length, 1,
+    'Quick and Full share one live current value');
   const quick = geometry.sampleReaderControlAutoPage(0, 286);
   const full = geometry.sampleReaderControlAutoPage(1, 338);
   assert.equal(quick.speed.height, 32, 'do not replace the authored Quick actor track with child minimum');
@@ -260,7 +259,7 @@ if (readerBuilderSdkAvailable) {
 for (const [from, to] of [
   ['.position({ x: this.frame().speed.x, y: this.frame().speed.y })',
     '.position({ x: this.frame().speed.x, y: this.frame().speed.y }).clip(true)'],
-  ['this.speedControlsWidth()', '167'],
+  ["this.speedActor('slider').width", '109'],
 ]) {
   assert.ok(autoContentSource.includes(from), 'actual speed layout mutation target exists');
   assert.throws(() => checkAutoPageSpeedContent(autoContentSource.replace(from, to)),

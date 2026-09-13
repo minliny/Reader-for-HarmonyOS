@@ -163,17 +163,17 @@ assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? 
 assert.doesNotMatch(content, /this\.quickBack\(\);/, 'compact endpoint must not render an in-panel Back control');
 assert.match(readerDayResourceBranches(content), /backgroundColor\(this\.sourceOnly === 'full' \? Color\.Transparent : readerAppColor\('TOK_SURFACE_PANEL_SOFT', this\.appScheme\)\)[\s\S]*border\(\{ width: this\.sourceOnly === 'full' \? 0 : TOK_BORDER_W, color: readerAppColor\('TOK_LINE', this\.appScheme\) \}\)[\s\S]*borderRadius\(8\)/,
   'automatic-page playback control keeps the compact card border and radius');
-assert.match(readerDayResourceBranches(content), /Text\('−'\)[\s\S]*onSpeedChange\(Math\.max/,
-  'compact endpoint exposes a shared-state speed decrement');
-assert.match(readerDayResourceBranches(content), /Text\('\+'\)[\s\S]*onSpeedChange\(Math\.min/,
-  'compact endpoint exposes a shared-state speed increment');
+assert.match(content, /this\.speedStepButton\(false\);[\s\S]*this\.speedStepButton\(true\);/,
+  'compact endpoint exposes both persistent speed buttons');
+assert.match(content, /this\.effectiveSpeedSeconds\(\) \+ \(increase \? 1 : -1\)/,
+  'both buttons use the same bounded business speed value');
 assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? 'app\.media\.reader_session_pause' : 'app\.media\.reader_auto_full_play'/);
 assert.match(readerDayResourceBranches(content), /this\.status === 'running' \? '暂停自动翻页'[\s\S]*this\.status === 'paused' \? '继续自动翻页' : '开始自动翻页'/);
 assert.match(readerDayResourceBranches(content), /\.enabled\(this\.fullInput\(\) && this\.status === 'stopped'\)/,
   'the current FollowHighlight input retains its pre-session-only business gate');
 assert.match(readerDayResourceBranches(content), /this\.sharedInput\(\) && this\.status !== 'stopped'/,
   'stopped sessions must not dispatch stop');
-assert.match(readerDayResourceBranches(content), /if \(!this\.sharedInput\(\)\) \{ this\.speedPreviewSeconds = -1; return; \}/,
+assert.match(readerDayResourceBranches(content), /if \(!this\.fullInput\(\)\) \{ this\.speedPreviewSeconds = -1; return; \}/,
   'late native slider callbacks must not commit after input revocation');
 for (const callback of ['onAutoPageToggle', 'onAutoPageStop', 'onPreviousChapter', 'onNextChapter',
   'onAutoPageFullTimerChange', 'onAutoPageFullSpeedChange', 'onAutoPageFollowHighlightChange']) {

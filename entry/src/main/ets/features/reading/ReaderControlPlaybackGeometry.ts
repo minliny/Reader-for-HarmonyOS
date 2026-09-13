@@ -154,9 +154,42 @@ export interface ReaderControlAutoPageFrame {
   details: ReaderControlActorFrame;
   detailsHeader: ReaderControlActorFrame;
   speed: ReaderControlActorFrame;
+  speedContent: ReaderControlAutoPageSpeedContentFrame;
   follow: ReaderControlActorFrame;
   back: ReaderControlActorFrame;
   contentHeight: number;
+}
+
+export interface ReaderControlAutoPageSpeedContentFrame {
+  title: ReaderControlActorFrame;
+  current: ReaderControlActorFrame;
+  minus: ReaderControlActorFrame;
+  plus: ReaderControlActorFrame;
+  minimum: ReaderControlActorFrame;
+  slider: ReaderControlActorFrame;
+  maximum: ReaderControlActorFrame;
+}
+
+/** Quick is the live 736:48 +/- card, not a compressed Full range control.
+ * Shared title/current actors move on the existing p. Full min/range/max and
+ * Quick +/- are independent actors; fixed text slots never borrow rail space.
+ * Full's empty Figma range frame is represented by the platform range widget.
+ */
+export function sampleReaderControlAutoPageSpeed(progress: number,
+  width: number): ReaderControlAutoPageSpeedContentFrame {
+  const p = readerControlUnit(progress);
+  return {
+    title: sampleReaderControlActor(readerControlActor(6, 0, Math.min(140, Math.max(0, width - 108)), 30),
+      readerControlActor(11, 25, 80.56, 14), p),
+    current: sampleReaderControlActor(readerControlActor(width - 66, 9.5, 30, 13),
+      readerControlActor(99.56, 25, 25, 14), p),
+    minus: readerControlActor(width - 94, readerControlLerp(3, 20, p), 24, 24, 1 - p),
+    plus: readerControlActor(width - 32, readerControlLerp(3, 20, p), 24, 24, 1 - p),
+    minimum: readerControlActor(128, readerControlLerp(9.5, 25.5, p), 17.3, 13, p),
+    slider: readerControlActor(154.3, readerControlLerp(0, 10, p), Math.max(0, width - 197),
+      readerControlLerp(32, 44, p), p),
+    maximum: readerControlActor(width - 34.14, readerControlLerp(9.5, 25.5, p), 23.14, 13, p),
+  };
 }
 
 export function sampleReaderControlAutoPage(progress: number,
@@ -167,7 +200,9 @@ export function sampleReaderControlAutoPage(progress: number,
   // common Stage viewport follows 29 -> 57. Compensate the local origin, not
   // the shared clock or shell. Full content x25 - Stage x13 = 12.
   const content = readerControlActor(12, readerControlLerp(40, 12, p),
-    Math.max(0, 314 + widthDelta), 435.173);
+    Math.max(0, readerControlLerp(264, 314, p) + widthDelta), 435.173);
+  const speed = sampleReaderControlActor(readerControlActor(-1.45, -175.2324, 264 + widthDelta, 32),
+    readerControlActor(4, 33.3906, 306 + widthDelta, 64), p);
   const previous = sampleReaderControlActor(readerControlActor(3.3, -4.841, 62, 52),
     readerControlActor(9.75, 5, 72, 52), p);
   const toggle = sampleReaderControlActor(readerControlActor(110.5501875, -2.341, 32, 32),
@@ -190,8 +225,8 @@ export function sampleReaderControlAutoPage(progress: number,
     timer: readerControlActor(0, readerControlLerp(126.391, 104.391, p), content.width, 181.391, p),
     details: readerControlActor(0, 285.782, content.width, 149.391),
     detailsHeader: readerControlActor(4, readerControlLerp(29, 11, p), Math.max(0, content.width - 8), 14.3906, p),
-    speed: sampleReaderControlActor(readerControlActor(-1.45, -175.2324, 264 + widthDelta, 32),
-      readerControlActor(4, 33.3906, 306 + widthDelta, 64), p),
+    speed: speed,
+    speedContent: sampleReaderControlAutoPageSpeed(p, speed.width),
     follow: readerControlActor(4, readerControlLerp(121.3906, 103.3906, p),
       Math.max(0, content.width - 8), 36, p),
     back: readerControlActor(10.44, readerControlLerp(12, 26, p), 58, 24, 1 - p),
