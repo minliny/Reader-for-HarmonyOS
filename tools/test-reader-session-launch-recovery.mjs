@@ -34,13 +34,13 @@ for(const time of [0,100,450,1100,1700,2200]){
 }
 for(const local of [true,false]){
  const actions=[],p=Object.assign(new P(),{inputEnabled:true,moreMenuVisible:false,frame:()=>({visibility:1}),
- currentPageBookmarkReady:false,isLocalBook:()=>local,onTemporaryLayerChange:v=>actions.push(['temporary',v]),
- onMore:()=>actions.push('bookmark'),onOpenBookInfo:()=>actions.push('info'),onExpandDirectory:()=>actions.push('directory'),onSourceSwitch:()=>actions.push('source')});
- p.setMoreMenuVisible(true);p.performMoreAction('bookmark');assert.equal(p.moreMenuVisible,true);
- assert.ok(!actions.includes('bookmark'),'unknown bookmark state cannot mutate');
- p.currentPageBookmarkReady=true;p.performMoreAction('bookmark');assert.equal(actions.at(-1),'bookmark');assert.equal(p.moreMenuVisible,false);
- for(const a of ['info','directory']){p.setMoreMenuVisible(true);p.performMoreAction(a);assert.equal(actions.at(-1),a);}
- p.setMoreMenuVisible(true);p.performMoreAction('source');assert.equal(actions.includes('source'),!local);
+ chapterRefreshEnabled:false,isLocalBook:()=>local,onTemporaryLayerChange:v=>actions.push(['temporary',v]),
+ onRefreshChapter:()=>actions.push('refresh'),onOpenBookInfo:()=>actions.push('info')});
+ p.setMoreMenuVisible(true);p.performMoreAction('refresh');assert.equal(p.moreMenuVisible,true);
+ assert.ok(!actions.includes('refresh'),'unready chapter cannot refresh');
+ p.chapterRefreshEnabled=true;p.performMoreAction('refresh');assert.equal(actions.at(-1),'refresh');assert.equal(p.moreMenuVisible,false);
+ p.performMoreAction('refresh');assert.equal(actions.filter(a=>a==='refresh').length,1,'closed menu cannot dispatch twice');
+ p.setMoreMenuVisible(true);p.performMoreAction('info');assert.equal(actions.at(-1),'info');
 }
 // Pure-source Builders use the same visual section functions, omit the normal
 // Scroll/modal host, and cannot dispatch measurement/business callbacks.
