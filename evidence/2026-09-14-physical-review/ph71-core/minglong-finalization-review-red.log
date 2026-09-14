@@ -1,0 +1,44 @@
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.46s
+     Running tests/remote_content_finalization.rs (target/debug/deps/remote_content_finalization-b0d6f6a940c36ec4)
+
+running 6 tests
+test replacement_templates_share_the_first_response_and_merged_result_context ... FAILED
+test replacement_can_read_first_response_and_book_chapter_context ... ok
+test standalone_chapter_helper_passes_extracted_continuation_to_final_replacement ... FAILED
+test image_descriptor_round_trip_preserves_url_options_and_scalar_anchors ... FAILED
+test json_and_html_layers_preserve_text_and_decode_only_their_own_syntax ... ok
+test source_replacement_is_an_independent_complete_rule ... ok
+
+failures:
+
+---- replacement_templates_share_the_first_response_and_merged_result_context stdout ----
+
+thread 'replacement_templates_share_the_first_response_and_merged_result_context' (64959599) panicked at crates/reader-content/tests/remote_content_finalization.rs:112:5:
+assertion `left == right` failed
+  left: "{{result}}|"
+ right: "甲\n乙|第一页"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- standalone_chapter_helper_passes_extracted_continuation_to_final_replacement stdout ----
+
+thread 'standalone_chapter_helper_passes_extracted_continuation_to_final_replacement' (64959601) panicked at crates/reader-content/tests/remote_content_finalization.rs:123:5:
+assertion `left == right` failed
+  left: "正文|"
+ right: "正文|second"
+
+---- image_descriptor_round_trip_preserves_url_options_and_scalar_anchors stdout ----
+
+thread 'image_descriptor_round_trip_preserves_url_options_and_scalar_anchors' (64959596) panicked at crates/reader-content/tests/remote_content_finalization.rs:103:9:
+Some("<js>result</js>"): ReadingDocumentProjection { content: "甲😀\n\n￼\n\n乙", blocks: [Text { text: "甲😀", start_scalar: 0, end_scalar: 2 }, Text { text: "\n\n", start_scalar: 2, end_scalar: 4 }, Image { source: "https://example.test/image.png,{", start_scalar: 4, end_scalar: 5 }, Text { text: "\n\n", start_scalar: 5, end_scalar: 7 }, Text { text: "乙", start_scalar: 7, end_scalar: 8 }] }
+
+
+failures:
+    image_descriptor_round_trip_preserves_url_options_and_scalar_anchors
+    replacement_templates_share_the_first_response_and_merged_result_context
+    standalone_chapter_helper_passes_extracted_continuation_to_final_replacement
+
+test result: FAILED. 3 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+error: test failed, to rerun pass `-p reader-content --test remote_content_finalization`

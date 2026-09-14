@@ -1,0 +1,44 @@
+(node:48972) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "source": "file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+  "evidenceLayer": "production methods parsed by Harmony SDK; no device or Core I/O",
+  "outcomes": [
+    {
+      "name": "first source parses: search -> preview -> reading -> detail -> exact search state",
+      "status": "PASS"
+    },
+    {
+      "name": "failed first source -> replacement source -> trial -> detail -> original search",
+      "status": "PASS"
+    },
+    {
+      "name": "repeated preview replacements keep the original search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "late failed first admission cannot replace a new preview or its return target",
+      "status": "PASS"
+    },
+    {
+      "name": "leaving preview during replacement rejects late success without changing the new route",
+      "status": "PASS"
+    },
+    {
+      "name": "late replacement failure cannot reopen an old detail or replace a newer search",
+      "status": "PASS"
+    },
+    {
+      "name": "a failed replacement preserves the current detail and the search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf direct resume retains its own return semantics",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf explicit info retains its own return semantics",
+      "status": "PASS"
+    }
+  ]
+}

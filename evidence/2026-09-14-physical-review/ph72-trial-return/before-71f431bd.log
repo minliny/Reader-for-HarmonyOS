@@ -1,0 +1,65 @@
+(node:49448) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "source": "/private/tmp/reader-trial-return-71f431bd.ets",
+  "evidenceLayer": "production methods parsed by Harmony SDK; no device or Core I/O",
+  "outcomes": [
+    {
+      "name": "first source parses: search -> preview -> reading -> detail -> exact search state",
+      "status": "PASS"
+    },
+    {
+      "name": "failed first source -> replacement source -> trial -> detail -> original search",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+    },
+    {
+      "name": "repeated preview replacements keep the original search parent",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+    },
+    {
+      "name": "late failed first admission cannot replace a new preview or its return target",
+      "status": "FAIL",
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+    },
+    {
+      "name": "leaving preview during replacement rejects late success without changing the new route",
+      "status": "PASS"
+    },
+    {
+      "name": "late replacement failure cannot reopen an old detail or replace a newer search",
+      "status": "PASS"
+    },
+    {
+      "name": "a failed replacement preserves the current detail and the search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf direct resume retains its own return semantics",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf explicit info retains its own return semantics",
+      "status": "PASS"
+    }
+  ]
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: trial-reading return flow regressions
+
+3 !== 0
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-search-trial-reading-return.mjs:194:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 3,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

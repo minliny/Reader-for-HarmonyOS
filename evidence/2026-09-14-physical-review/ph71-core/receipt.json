@@ -1,0 +1,111 @@
+{
+  "coreCommit": "316ed8362",
+  "status": "specific regressions PASS; root final full gate recorded separately",
+  "files": [
+    {
+      "file": "minglong-66-missing-data-after.log",
+      "sha256": "cc7e4bbc0fff2dc0fee79e3b9f3522f962a48f3b99317e4469412cc59f74d079",
+      "bytes": 698
+    },
+    {
+      "file": "minglong-66-valid-after.log",
+      "sha256": "4254de9baaf1386b453cc6cb04e35c18aae75d6604eb574697445912e0c8f2ed",
+      "bytes": 1095
+    },
+    {
+      "file": "minglong-content-final.log",
+      "sha256": "c7ce288e11e880e014a7789806abdb2d8490dc7dcb14dc3ca5379ce7c71c0f45",
+      "bytes": 30985
+    },
+    {
+      "file": "minglong-final-cli-info.log",
+      "sha256": "d08fb6c0c68828e2fda0b069727633dab2b96a8e8edcb47972dc51674d834677",
+      "bytes": 907
+    },
+    {
+      "file": "minglong-final-cli-sha256.txt",
+      "sha256": "1de203b4e4d12901c7a2413c6f463458a97a706839e1d20297f35ad354770adc",
+      "bytes": 90
+    },
+    {
+      "file": "minglong-final-clippy.log",
+      "sha256": "58fe3b7a6ad55ae5e5e139f7b05acd590132280569b962ccee2231c66d8c17a5",
+      "bytes": 495
+    },
+    {
+      "file": "minglong-final-conformance.log",
+      "sha256": "edd83647104b4ceaca3e2f8fb29d8889939be64a869e2d56255b75d23bfa4616",
+      "bytes": 17408
+    },
+    {
+      "file": "minglong-finalization-review-green2.log",
+      "sha256": "1faa2f49b41750034ba39b8b942f007233a59c4476fe9647c0a05d00fb0f1ec7",
+      "bytes": 882
+    },
+    {
+      "file": "minglong-finalization-review-red.log",
+      "sha256": "7759b00e4f756815f9bce8f94c5d08275657581b1b0b2697fe85d9f38784ed39",
+      "bytes": 2773
+    },
+    {
+      "file": "minglong-runtime-final-targeted.log",
+      "sha256": "8ded1ecbd862dbb2ff4606d3bfa23b05292ed3f1ebd827c5e2827390a78d1064",
+      "bytes": 6929
+    },
+    {
+      "file": "minglong-terminal-review-green.log",
+      "sha256": "9f92ed999a24ca64b06a0bb3636737742d5dea6934f69a69c25ec4b2bd1abc11",
+      "bytes": 714
+    },
+    {
+      "file": "minglong-terminal-review-red.log",
+      "sha256": "4285e72e7b064018084d55269f4c0a5cc586dce682ed4531595f282449906010",
+      "bytes": 2544
+    },
+    {
+      "file": "REPORT.md",
+      "sha256": "3c1b23f8a849cb81449901419536b2ba7920f44ab744a76a070f883bb337f1e7",
+      "bytes": 9237
+    },
+    {
+      "file": "minglong-toc-retry-red.log",
+      "sha256": "2b6c9af2714169e726e379f30c8c0a509c54bc58ad594a7337eba53b81b397fd",
+      "bytes": 1109
+    },
+    {
+      "file": "minglong-workspace-clippy4.log",
+      "sha256": "6ab4f58023070f5c9152068078290e9a249c928d30f6d7b577b7f0d690b0906c",
+      "bytes": 606
+    },
+    {
+      "file": "minglong-workspace-nextest.log",
+      "sha256": "36fdbeada873b09c92cf25cee18b2e878203c3dd0913f7e1c4cc927c782f90c1",
+      "bytes": 4947
+    },
+    {
+      "file": "minglong-workspace-nextest2.log",
+      "sha256": "8cc2e68dd804a42f1468f247302d7896331f0105950c24c64ee6564eed0c9ec8",
+      "bytes": 467097
+    },
+    {
+      "file": "minglong-workspace-nextest3.log",
+      "sha256": "8402bd38210b28f6d52135569bb7689b5d50d2e81d8aa5884225d8d291c68f60",
+      "bytes": 467435
+    },
+    {
+      "file": "ph68-66-exact-toc-replay.json",
+      "sha256": "cf5d58ec622748854925863247444b73a3b6104570e1498539b69f00708111b0",
+      "bytes": 35691
+    },
+    {
+      "file": "ph68-66-missing-data.json",
+      "sha256": "43a062244677386638c4f8dfddc0f3b7392ce1b978cbee06cc27dcd76d523eb7",
+      "bytes": 35541
+    },
+    {
+      "file": "ph68-74-core-final-gate.log",
+      "sha256": "20843ca826ed5899e50d40e1a568f437c1fa51e71cacb07f521384e854d8e476",
+      "bytes": 441191
+    }
+  ]
+}

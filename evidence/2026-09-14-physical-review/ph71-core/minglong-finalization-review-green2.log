@@ -1,0 +1,14 @@
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.83s
+     Running tests/remote_content_finalization.rs (target/debug/deps/remote_content_finalization-b0d6f6a940c36ec4)
+
+running 6 tests
+test replacement_templates_share_the_first_response_and_merged_result_context ... ok
+test replacement_can_read_first_response_and_book_chapter_context ... ok
+test standalone_chapter_helper_passes_extracted_continuation_to_final_replacement ... ok
+test json_and_html_layers_preserve_text_and_decode_only_their_own_syntax ... ok
+test image_descriptor_round_trip_preserves_url_options_and_scalar_anchors ... ok
+test source_replacement_is_an_independent_complete_rule ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+

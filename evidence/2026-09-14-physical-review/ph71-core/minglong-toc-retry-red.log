@@ -1,0 +1,24 @@
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.52s
+     Running tests/toc_rule_single_execution.rs (target/debug/deps/toc_rule_single_execution-67099668cca3afb0)
+
+running 1 test
+test bundled_66_toc_missing_data_is_not_retried_as_an_identical_rule ... FAILED
+
+failures:
+
+---- bundled_66_toc_missing_data_is_not_retried_as_an_identical_rule stdout ----
+
+thread 'bundled_66_toc_missing_data_is_not_retried_as_an_identical_rule' (65044310) panicked at crates/reader-content/tests/toc_rule_single_execution.rs:31:9:
+assertion `left == right` failed: one supplied response must execute the exact source rule only once
+  left: 2
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bundled_66_toc_missing_data_is_not_retried_as_an_identical_rule
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+error: test failed, to rerun pass `-p reader-content --test toc_rule_single_execution`

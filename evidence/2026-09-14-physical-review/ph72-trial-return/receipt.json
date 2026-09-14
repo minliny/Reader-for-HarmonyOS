@@ -1,0 +1,147 @@
+{
+  "recordedAt": "2026-09-14T11:11:44.015529+00:00",
+  "baselineHead": "71f431bda9e5f4db7c9c1ea1092600db15f66593",
+  "installedBaseline": "84cdc4ef (root confirmed; no device operated by this subtask)",
+  "legadoHead": "6763d061bc92b2164ac274363a807e4ed4be34e2",
+  "files": {
+    "entry/src/main/ets/pages/Index.ets": "13aac82679c4304120cc326df984effb80a920f430ffefffa60d03b7cce7bbac",
+    "tools/test-search-trial-reading-return.mjs": "ac27abb1814b089afa94baf33588063659679c4547bd8a7dc4b81d5e273a09da"
+  },
+  "baselineSourceSha256": {
+    "84cdc4ef": "95e55f8cbbb17aa83f6330e893e87d87946a5fa90dcc66c305e386bd35d03085",
+    "71f431bd": "2f87fb0be8a9664d2589cfa890a299e38b54a992e4d1bef06342ea496ec111b3"
+  },
+  "returnTests": {
+    "before-84cdc4ef.log": [
+      {
+        "name": "first source parses: search -> preview -> reading -> detail -> exact search state",
+        "status": "PASS"
+      },
+      {
+        "name": "failed first source -> replacement source -> trial -> detail -> original search",
+        "status": "FAIL",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+      },
+      {
+        "name": "repeated preview replacements keep the original search parent",
+        "status": "FAIL",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+      },
+      {
+        "name": "late failed first admission cannot replace a new preview or its return target",
+        "status": "FAIL",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+      },
+      {
+        "name": "leaving preview during replacement rejects late success without changing the new route",
+        "status": "PASS"
+      },
+      {
+        "name": "late replacement failure cannot reopen an old detail or replace a newer search",
+        "status": "PASS"
+      },
+      {
+        "name": "a failed replacement preserves the current detail and the search parent",
+        "status": "PASS"
+      },
+      {
+        "name": "shelf direct resume retains its own return semantics",
+        "status": "PASS"
+      },
+      {
+        "name": "shelf explicit info retains its own return semantics",
+        "status": "PASS"
+      }
+    ],
+    "before-71f431bd.log": [
+      {
+        "name": "first source parses: search -> preview -> reading -> detail -> exact search state",
+        "status": "PASS"
+      },
+      {
+        "name": "failed first source -> replacement source -> trial -> detail -> original search",
+        "status": "FAIL",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+      },
+      {
+        "name": "repeated preview replacements keep the original search parent",
+        "status": "FAIL",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+      },
+      {
+        "name": "late failed first admission cannot replace a new preview or its return target",
+        "status": "FAIL",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'bookshelf'\n- 'search'\n"
+      },
+      {
+        "name": "leaving preview during replacement rejects late success without changing the new route",
+        "status": "PASS"
+      },
+      {
+        "name": "late replacement failure cannot reopen an old detail or replace a newer search",
+        "status": "PASS"
+      },
+      {
+        "name": "a failed replacement preserves the current detail and the search parent",
+        "status": "PASS"
+      },
+      {
+        "name": "shelf direct resume retains its own return semantics",
+        "status": "PASS"
+      },
+      {
+        "name": "shelf explicit info retains its own return semantics",
+        "status": "PASS"
+      }
+    ],
+    "after-production-return.log": [
+      {
+        "name": "first source parses: search -> preview -> reading -> detail -> exact search state",
+        "status": "PASS"
+      },
+      {
+        "name": "failed first source -> replacement source -> trial -> detail -> original search",
+        "status": "PASS"
+      },
+      {
+        "name": "repeated preview replacements keep the original search parent",
+        "status": "PASS"
+      },
+      {
+        "name": "late failed first admission cannot replace a new preview or its return target",
+        "status": "PASS"
+      },
+      {
+        "name": "leaving preview during replacement rejects late success without changing the new route",
+        "status": "PASS"
+      },
+      {
+        "name": "late replacement failure cannot reopen an old detail or replace a newer search",
+        "status": "PASS"
+      },
+      {
+        "name": "a failed replacement preserves the current detail and the search parent",
+        "status": "PASS"
+      },
+      {
+        "name": "shelf direct resume retains its own return semantics",
+        "status": "PASS"
+      },
+      {
+        "name": "shelf explicit info retains its own return semantics",
+        "status": "PASS"
+      }
+    ]
+  },
+  "evidenceLayer": "Unmodified production methods parsed by Harmony SDK. Core/transport are deterministic fakes. No HAP build, installation, device, or user-acceptance claim.",
+  "logs": {
+    "before-84cdc4ef.log": "1ac7b1538dcf67ef7e216a8161eb1a8c8a52b8b75ffe8f7f46dcf8bd49748a92",
+    "before-71f431bd.log": "0b31f6a01f45b342bde87a5d0648c2a0f969ee8e3c5abd7f0fb38e85fd186e7c",
+    "after-production-return.log": "727943030a1816339b645ac566ee168ffd78d386dc4e021f265760b93c1bceda",
+    "bookshelf-reading-entry.log": "a886b23dede4c5e509eb647d61bde0cdb2f653f284c3d8b69c45733972aa4715",
+    "search-view-state.log": "391f6507c39cdaf222b1dff63d9638e1d5634477a66fa0b8013a4425667c98d7",
+    "search-detail-cache-first.log": "e46b1f411ae9beaa7eaffff2e0ee097ee17add0f74358fa4f67200fac4f9dcf2",
+    "source-switch-transaction.log": "368a7db3a378e48cc5cd976e547b9bf5a4deb377903db2918e37805511920b0f",
+    "source-switch-gateway.log": "f3e532ba88bfd080c769cf6d9ae8ba938ed27bcdd279a82a1597dc80fe0164ed"
+  }
+}

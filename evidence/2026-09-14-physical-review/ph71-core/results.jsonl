@@ -1,0 +1,13 @@
+{"actual":"甲\n乙\n丙","expected":"甲\n乙\n丙","id":"json_path_actual_crlf","match":true}
+{"actual":"甲\n乙\n丙","expected":"甲\n乙\n丙","id":"json_js_actual_crlf","match":true}
+{"actual":"代码字符串：\\r\\n，路径 C:\\reader\\novel","expected":"代码字符串：\\r\\n，路径 C:\\reader\\novel","id":"json_literal_code_preserved","match":true}
+{"actual":"甲\\r\\n乙\\r\\n丙","expected":"甲\\r\\n乙\\r\\n丙","id":"json_double_encoded_stays_literal","match":true}
+{"actual":"甲\n乙","expected":"甲\n乙","id":"explicit_nested_json_decode","match":true}
+{"actual":"代码字符串：\\r\\n，路径 C:\\reader\\novel","expected":"代码字符串：\\r\\n，路径 C:\\reader\\novel","id":"html_literal_code_preserved","match":true}
+{"actual":"\">甲\n乙","expected":"甲\n乙","id":"html_attribute_gt","match":false}
+{"actual":"甲\nbad()bad{}\n乙","expected":"甲\n乙","id":"html_script_excluded","match":false}
+{"actual":"甲&copy;&lrm;&eacute;","expected":"甲©‎é","id":"html_named_entity","match":false}
+{"actual":"正文广告","expected":"正文","id":"standalone_replace_rule_is_skipped","match":false}
+{"actual":"甲\\r\\n乙","expected":"甲\n乙","id":"standalone_escape_decode_rule_is_skipped","match":false}
+{"actual":"","expected":"正文","id":"source_regex_must_not_mutate_body","match":false}
+{"cases":12,"mismatch":6}

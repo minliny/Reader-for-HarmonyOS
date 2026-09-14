@@ -1,0 +1,51 @@
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-cli v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/tools/reader-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 14.34s
+────────────
+ Nextest run ID 63c05320-9e01-4bb5-8dfb-9a02350462cc with nextest profile: default
+    Starting 42 tests across 5 binaries (1183 tests skipped)
+        PASS [   1.889s] ( 1/42) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.176s] ( 2/42) reader-runtime remote::source_fetch_and_catalog_tests::toc_pagination_cycle_and_limit_never_publish_partial_directory
+        PASS [   0.179s] ( 3/42) reader-runtime remote::source_webview_plan_tests::chapter_redirect_final_url_survives_the_canonical_cache_for_relative_images
+        PASS [   0.016s] ( 4/42) reader-runtime remote::source_webview_plan_tests::content_resource_matching_is_not_a_text_replacement_or_timeline_guess
+        PASS [   0.016s] ( 5/42) reader-runtime remote::source_webview_plan_tests::content_rule_web_js_is_the_fallback_only_for_webview_content_fetches
+        PASS [   0.016s] ( 6/42) reader-runtime remote::source_webview_plan_tests::get_webview_rule_becomes_typed_navigation_with_headers_and_profile
+        PASS [   0.184s] ( 7/42) reader-runtime remote::source_webview_plan_tests::post_http_then_webview_completion_reuses_the_normal_search_parser
+        PASS [   0.016s] ( 8/42) reader-runtime remote::source_webview_plan_tests::post_webview_rule_preserves_http_then_html_sequence
+        PASS [   0.186s] ( 9/42) reader-runtime remote::source_webview_plan_tests::remote_reading_search_replace_and_tts_share_one_document_scalar_space
+        PASS [   0.026s] (10/42) reader-runtime runtime::tests::replace_persistence_failures_restore_persist_and_undo_before_images
+        PASS [   0.210s] (11/42) reader-runtime::runtime_integration pagination::book_toc_no_pagination_when_no_next_toc_url
+        PASS [   0.211s] (12/42) reader-runtime::runtime_integration pagination::book_toc_pagination_merges_three_pages_in_order
+        PASS [   0.187s] (13/42) reader-runtime::runtime_integration pagination::book_toc_pagination_starts_when_next_toc_url_present
+        PASS [   0.185s] (14/42) reader-runtime::runtime_integration pagination::book_toc_pagination_stops_on_cycle
+        PASS [   0.198s] (15/42) reader-runtime::runtime_integration pagination::chapter_content_no_pagination_when_no_next_content_url
+        PASS [   0.201s] (16/42) reader-runtime::runtime_integration pagination::chapter_content_pagination_concatenates_three_pages
+        PASS [   0.203s] (17/42) reader-runtime::runtime_integration pagination::chapter_content_pagination_starts_when_next_content_url_present
+        PASS [   0.185s] (18/42) reader-runtime::runtime_integration pagination::chapter_content_pagination_stops_on_cycle
+        PASS [   0.846s] (19/42) reader-runtime::runtime_integration pagination::chapter_pagination_consumes_the_limit_page_and_rejects_incomplete_content
+        PASS [   0.229s] (20/42) reader-runtime::runtime_integration pagination::final_replacement_failure_preserves_the_previous_cached_body_and_version
+        PASS [   0.181s] (21/42) reader-runtime::runtime_integration pagination::final_replacement_images_resolve_against_first_page_and_keep_existing_absolute_images
+        PASS [   0.184s] (22/42) reader-runtime::runtime_integration pagination::merged_chapter_replacement_runs_once_and_keeps_first_analyzer_context
+        PASS [   0.808s] (23/42) reader-runtime::runtime_integration pagination::toc_pagination_consumes_all_fetched_responses_and_rejects_truncation
+        PASS [   0.024s] (24/42) reader-runtime::runtime_integration reader_ui_source_switch_commands::crash_windows_after_commit_before_or_after_pagination_recover_exactly_once
+        PASS [   0.182s] (25/42) reader-runtime::runtime_integration search_content_commands::canonical_remote_cache_is_reprocessed_for_read_and_search_without_refetch
+        PASS [   0.016s] (26/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_book_name_empty_when_not_on_shelf
+        PASS [   0.015s] (27/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_empty_keyword_returns_invalid_params_error
+        PASS [   0.016s] (28/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_filtered_by_book_id
+        PASS [   0.017s] (29/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_max_results_truncates
+        PASS [   0.015s] (30/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_missing_keyword_param_returns_invalid_params_error
+        PASS [   0.017s] (31/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_no_match_returns_empty_array
+        PASS [   0.020s] (32/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_offset_pages_stably_and_marks_terminal_page
+        PASS [   0.016s] (33/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_returns_every_occurrence_within_one_chapter
+        PASS [   0.017s] (34/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_returns_finished_with_results
+        PASS [   0.017s] (35/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_snippet_includes_keyword_and_context
+        PASS [   0.015s] (36/42) reader-runtime::runtime_integration search_content_commands::dispatch_search_content_source_filter_keeps_duplicate_book_ids_unambiguous
+        PASS [   0.015s] (37/42) reader-runtime::runtime_integration search_content_commands::legacy_chapter_cache_remains_readable_without_reexecuting_source_rules
+        PASS [   0.016s] (38/42) reader-runtime::runtime_integration search_content_commands::scoped_replacement_uses_source_scoped_book_name
+        PASS [   0.170s] (39/42) reader-runtime::runtime_integration source_check_commands::source_check_l4_fails_when_pending_pagination_yields_zero_chapters
+        PASS [   0.175s] (40/42) reader-runtime::runtime_integration source_check_commands::source_check_l4_passes_when_toc_returns_pending_pagination
+        PASS [   0.173s] (41/42) reader-runtime::runtime_integration source_check_commands::source_check_l5_passes_when_content_returns_pending_pagination
+        PASS [   0.193s] (42/42) reader-runtime::runtime_integration source_check_run_commands::source_check_run_pagination_descriptors_keep_l4_and_l5_recorder_stages
+────────────
+     Summary [   7.667s] 42 tests run: 42 passed, 1183 skipped

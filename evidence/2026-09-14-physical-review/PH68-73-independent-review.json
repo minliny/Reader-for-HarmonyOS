@@ -1,0 +1,10 @@
+{
+  "cancellation": {
+    "attemptsAfterVisibilityResume": 2,
+    "pending": 0,
+    "attemptedKeys": 1
+  },
+  "unhandledBackgroundRefresh": null,
+  "foregroundRefreshStillRejects": true,
+  "evidenceLayer": "production prepare and refresh methods; transport outcomes controlled"
+}

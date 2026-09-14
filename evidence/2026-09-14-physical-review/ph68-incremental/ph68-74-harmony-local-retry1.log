@@ -1,0 +1,407 @@
+app shell safe geometry: PASS
+(node:6205) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope
+shared book acquisition lifecycle, identities, and scheduling: PASS
+PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS
+(node:6211) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:6213) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+PASS PH60 shelf filters: independent dimensions, real SDK live chips/toggles, shared order, legacy data and hidden batch-selection safety
+(node:6217) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf management Core ownership contract: PASS
+(node:6243) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manual update bypasses prepared sessions and executes real Gateway detail/TOC","status":"PASS"}
+{"name":"manual update also bypasses durable catalog cache after prepared eviction","status":"PASS"}
+{"name":"manual request waits for a cache-only in-flight acquisition then refreshes","status":"PASS"}
+{"name":"per-book failure/empty results preserve old records, settle flags and continue bounded batch","status":"PASS"}
+{"name":"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions","status":"PASS"}
+{"name":"multiple force waiters share one refresh after the nonforce admission settles","status":"PASS"}
+{"name":"force waiting revalidates cancel before new network work","status":"PASS"}
+{"name":"force waiting revalidates close before new network work","status":"PASS"}
+{"name":"force waiting revalidates source-delete before new network work","status":"PASS"}
+PH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS
+PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update
+(node:6247) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS TXT uses format identity without changing Core metadata
+PASS default group retains empty and explicit default identities without mutating legacy groups
+PASS real section settings callback opens the default selector without navigating to another settings surface
+PASS PH61 progress/source retain equal left/right slots and live progress after row reuse
+PASS day: detail metadata shares source typography, label and moving source action
+PASS night: detail metadata shares source typography, label and moving source action
+PASS PH46/47 original author typography and the entire five-line block align with the cover
+PASS missing synopsis is explained without contaminating the metadata projection
+PASS empty chapters expose status: 暂无章节信息
+PASS empty chapters expose status: 正在读取本地目录…
+PASS empty chapters expose status: 目录读取失败，请重试
+PASS source name/category/URL remain distinct and login precedes detect (no login)
+PASS source name/category/URL remain distinct and login precedes detect (login)
+PASS single-book sheet matches cover frame and both layers have straight lower corners
+PASS 44vp source SVG stays 44vp in the single-book more action
+(node:6269) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6275) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS
+(node:6301) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection
+bookshelf tablet navigation contract: PASS
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation
+(node:6311) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS bookshelf route return: identity+item offset, list/filter/group state, reordered books, late callback isolation
+(node:6338) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1046 tested records, 919 unique identities)
+cookie exact-host and HttpOnly script-isolation policy: PASS
+core build identity startup contract: PASS
+(node:6352) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+PASS: deterministic import.persist rejection discards staged input without recovery orphan
+PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation
+PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (118 sources swept)
+(node:6376) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony HttpTTS credential URL encoding and expansion bounds: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:6383) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6403) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+PASS: HTTPS-only requests reject cleartext redirect downgrades
+PASS: same-origin comparison normalizes host case and default HTTPS port
+PASS: credential-bearing URL redirects stay on the same effective origin
+PASS: custom credential-header redirects stay on the same effective origin
+Host staging recovery retry: PASS
+(node:6408) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:6409) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+PASS import refresh: Figma C arc/source unchanged, 18vp slot, 23.754vp paint, 1.5vp stroke; retained Day/Night/Day.
+(node:6416) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+Legado product behavior contract: PASS
+(node:6440) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+local book format picker contract: PASS
+(node:6453) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.
+local EPUB resource architecture: PASS
+local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)
+(node:6482) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: first-click detail admission must use the shared cache-first/background-refresh coordinator
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-performance-regressions.mjs:27:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: "import { readerAppColor } from '../features/common/ReaderThemeRegistry';\n" +
+    "import { BookshelfSettingsPage } from '../features/bookshelf/BookshelfSettingsPage';\n" +
+    "import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSelector';\n" +
+    "import { BookshelfManagementGateway } from '../features/bookshelf/BookshelfManagementGateway';\n" +
+    "import type { JsonObject } from '@reader/core-harmony';\n" +
+    "import { SearchViewState } from '../features/search/SearchViewState';\n" +
+    "import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';\n" +
+    "import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';\n" +
+    "import { errorMessageOf } from '../app/ErrorMessage';\n" +
+    "import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';\n" +
+    "import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';\n" +
+    'import {\n' +
+    '  ReaderCoreGateway,\n' +
+    '  type ShelfBook,\n' +
+    "} from '../app/ReaderCoreGateway';\n" +
+    'import {\n' +
+    '  type BookshelfDataState,\n' +
+    '  BookshelfFlowGateway,\n' +
+    '  type BookshelfRemovalTarget,\n' +
+    '  type BookshelfRemoveBatchOutcome,\n' +
+    '  type BookshelfRemoveOutcome,\n' +
+    "} from '../features/bookshelf/BookshelfFlowGateway';\n" +
+    "import { BookshelfPage } from '../features/bookshelf/BookshelfPage';\n" +
+    "import { BookshelfMultiSelectPage } from '../features/bookshelf/BookshelfMultiSelectPage';\n" +
+    "import { BookshelfManagementPage } from '../features/bookshelf/BookshelfManagementPage';\n" +
+    'import {\n' +
+    '  BookshelfManagementOrchestrator,\n' +
+    '  EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT,\n' +
+    '  type BookshelfManagementSnapshot,\n' +
+    "} from '../features/bookshelf/BookshelfManagementOrchestrator';\n" +
+    "import { DiscoverPage } from '../features/discover/DiscoverPage';\n" +
+    'import {\n' +
+    '  DiscoverOrchestrator,\n' +
+    '  EMPTY_DISCOVER_PRESENTATION,\n' +
+    '  type DiscoverPresentation,\n' +
+    "} from '../features/discover/DiscoverOrchestrator';\n" +
+    "import { BookshelfEmptyPage } from '../features/bookshelf/BookshelfEmptyPage';\n" +
+    "import { LocalBookDetail } from '../features/bookshelf/LocalBookDetail';\n" +
+    'import {\n' +
+    '  LocalImportDialog,\n' +
+    '  type LocalImportDialogState,\n' +
+    "} from '../features/bookshelf/LocalImportDialog';\n" +
+    'import type {\n' +
+    '  LocalImportBatch,\n' +
+    "} from '../features/bookshelf/LocalBookImportGateway';\n" +
+    'import type {\n' +
+    '  ReadingCommit,\n' +
+    "} from '../features/reading/LocalReadingExperience';\n" +
+    'import {\n' +
+    '  ReaderBookmarkAnchorRequest,\n' +
+    "} from '../features/reading/LocalReadingExperience';\n" +
+    "import { ReaderShell } from '../features/shell/ReaderShell';\n" +
+    'import {\n' +
+    '  loadReaderControlBookmarkProjection, mergeReaderControlBookmarkProjection,\n' +
+    "} from '../features/reading/ReaderControlBookmarkLoad';\n" +
+    'import {\n' +
+    '  LocalReadingFlowGateway,\n' +
+    '  type LocalReadingDownloadState,\n' +
+    '  type LocalReadingTocEntry,\n' +
+    "} from '../features/reading/LocalReadingFlowGateway';\n" +
+    "import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';\n" +
+    "import type { BookAcquisitionCandidate, BookAcquisitionChange } from '../app/BookAcquisitionCoordinator';\n" +
+    "import type { RemoteReadingIdentity } from '../features/reading/RemoteReadingContract';\n" +
+    "import { searchCandidateRank } from '../features/search/SearchCandidatePolicy';\n" +
+    'import {\n' +
+    '  RemoteReadingFlowGateway,\n' +
+    '  type RemoteReadingBookSeed,\n' +
+    '  type RemoteReadingProgressState,\n' +
+    '  type RemoteReadingSession,\n' +
+    "} from '../features/reading/RemoteReadingFlowGateway';\n" +
+    "import { ReadingOfflineGateway } from '../features/reading/ReadingOfflineGateway';\n" +
+    'import {\n' +
+    '  isRemoteSourceFailureKind,\n' +
+    '  remoteReadingFailureKindOf,\n' +
+    '  verdictForFailureKind,\n' +
+    '  type RemoteContentVerdict,\n' +
+    '  type RemoteReadingFailureKind,\n' +
+    "} from '../features/reading/RemoteContentAdmission';\n" +
+    'import type {\n' +
+    '  ReaderBookIdentity,\n' +
+    "} from '../features/reading/ReaderBookmarkProjection';\n" +
+    'import {\n' +
+    '  isRemoteReadingCacheFallbackEligible,\n' +
+    '  RemoteReadingGatewayError,\n' +
+    '  remoteReadingFailureRecord,\n' +
+    '  type RemoteReadingVariable,\n' +
+    "} from '../features/reading/RemoteReadingContract';\n" +
+    'import type {\n' +
+    '  ReaderDirectoryChapterStartBookmarkRequest,\n' +
+    '  ReaderPageBookmarkToggleRequest,\n' +
+    "} from '../features/reading/ReaderDirectoryMarkerState';\n" +
+    'import type {\n' +
+    '  SearchBook,\n' +
+    '  SearchSource,\n' +
+    "} from '../features/search/SearchGateway';\n" +
+    "import { SearchOrchestrator } from '../features/search/SearchOrchestrator';\n" +
+    'import {\n' +
+    '  SearchPage,\n' +
+    '  type SearchPresentation,\n' +
+    "} from '../features/search/SearchPage';\n" +
+    'import {\n' +
+    '  RssGateway,\n' +
+    '  type RssItem,\n' +
+    '  type RssSourceExportResult,\n' +
+    '  type RssSourceImportResult,\n' +
+    '  type RssSubscription,\n' +
+    "} from '../features/rss/RssGateway';\n" +
+    'import {\n' +
+    '  RssEntryDetailPage,\n' +
+    '  type RssFavoritePresentation,\n' +
+    "} from '../features/rss/RssEntryDetailPage';\n" +
+    'import {\n' +
+    '  RssSourceFeedPage,\n' +
+    "} from '../features/rss/RssSourceFeedPage';\n" +
+    'import {\n' +
+    '  RssSubscriptionManagementPage,\n' +
+    '  type RssSubscriptionManagementItem,\n' +
+    "} from '../features/rss/RssSubscriptionManagementPage';\n" +
+    "import { RssSubscriptionEditorPage } from '../features/rss/RssSubscriptionEditorPage';\n" +
+    'import {\n' +
+    '  EMPTY_RSS_EDITOR_SNAPSHOT,\n' +
+    '  RssSubscriptionEditorOrchestrator,\n' +
+    '  type RssSourceTextField,\n' +
+    '  type RssSubscriptionEditorSnapshot,\n' +
+    "} from '../features/rss/RssSubscriptionEditorOrchestrator';\n" +
+    'import {\n' +
+    '  RssOrchestrator,\n' +
+    '  type RssEntrySnapshot,\n' +
+    '  type RssSourceSnapshot,\n' +
+    "} from '../features/rss/RssOrchestrator';\n" +
+    'import {\n' +
+    '  RssPage,\n' +
+    '  type RssMode,\n' +
+    '  type RssPresentation,\n' +
+    "} from '../features/rss/RssPage';\n" +
+    "import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';\n" +
+    "import { SettingsOrchestrator } from '../features/settings/SettingsOrchestrator';\n" +
+    "import { RulesManagementPage } from '../features/settings/RulesManagementPage';\n" +
+    'import {\n' +
+    '  EMPTY_RULES_MANAGEMENT_SNAPSHOT,\n' +
+    '  RulesManagementOrchestrator,\n' +
+    '  type RulesManagementSnapshot,\n' +
+    "} from '../features/settings/RulesManagementOrchestrator';\n" +
+    'import type {\n' +
+    '  DictRuleDraft,\n' +
+    '  ManagedRuleSubscription,\n' +
+    '  ReplaceRuleDraft,\n' +
+    '  RuleSubscriptionDraft,\n' +
+    '  TxtTocRuleDraft,\n' +
+    "} from '../features/settings/RulesManagementGateway';\n" +
+    'import {\n' +
+    '  SourceGateway,\n' +
+    '  type BookSource,\n' +
+    "} from '../features/source/SourceGateway';\n" +
+    "import { readerSourceCategoryIsText, readerSourceCategoryLabel } from '../features/source/ReaderSourceCategory';\n" +
+    'import {\n' +
+    '  SourceOrchestrator,\n' +
+    '  type SourceImportCompletion,\n' +
+    '  type SourceManagementStatusKind,\n' +
+    "} from '../features/source/SourceOrchestrator';\n" +
+    'import {\n' +
+    '  buildSourceSwitchCommitParams,\n' +
+    '  sourceSwitchCandidateKey,\n' +
+    '  SourceSwitchGateway,\n' +
+    '  type SourceSwitchCandidate,\n' +
+    '  type SourceSwitchCommitOutcome,\n' +
+    '  type SourceSwitchDiscoveryOutcome,\n' +
+    '  type PendingSourceSwitch,\n' +
+    '  type SourceSwitchProbeQuery,\n' +
+    '  type SourceSwitchRollbackResult,\n' +
+    '  type SourceSwitchTargetToc,\n' +
+    "} from '../features/source/SourceSwitchGateway';\n" +
+    "import { SourceManagementPage } from '../features/source/SourceManagementPage';\n" +
+    "import { SourceToolsPage } from '../features/source/SourceToolsPage';\n" +
+    'import {\n' +
+    '  EMPTY_SOURCE_TOOLS_SNAPSHOT,\n' +
+    '  SourceToolsOrchestrator,\n' +
+    '  type SourceToolsSnapshot,\n' +
+    "} from '../features/source/SourceToolsOrchestrator';\n" +
+    "import { SourceSwitchPanel } from '../features/reading/SourceSwitchPanel';\n" +
+    "import type { SourceSwitchPanelState } from '../features/reading/SourceSwitchPanel';\n" +
+    "import { SyncPage } from '../features/sync/SyncPage';\n" +
+    "import type { SyncSnapshot } from '../features/sync/SyncGateway';\n" +
+    "import { SyncOrchestrator } from '../features/sync/SyncOrchestrator';\n" +
+    "import { hilog } from '@kit.PerformanceAnalysisKit';\n" +
+    "import deviceInfo from '@ohos.deviceInfo';\n" +
+    "import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';\n" +
+    "import { JsonImportDialog } from '../features/common/JsonImportDialog';\n" +
+    "import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';\n" +
+    "import { TOK_GREEN, TOK_INK, TOK_MUTED, TOK_ON_PRIMARY } from '../features/common/ReaderTokens';\n" +
+    '\n' +
+    'const DOMAIN = 0x5244;\n' +
+    "const IMPORT_PRESENTATION_KEY = 'reader.bookshelf.import.presentation.v1';\n" +
+    'const MAX_IMPORT_RESULT_ITEMS = 50;\n' +
+    "const LOCAL_SOURCE_ID = 'local';\n" +
+    'const READING_CACHE_BEFORE = 2;\n' +
+    'const READING_CACHE_AFTER = 2;\n' +
+    'const CATALOG_REFRESH_NEAR_END = 3;\n' +
+    'const CATALOG_REFRESH_INTERVAL_MS = 10 * 60 * 1000;\n' +
+    '\n' +
+    "type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |\n" +
+    "  'bookshelfManagement' | 'bookshelfMultiSelect' | 'bookshelfSettings' |\n" +
+    "  'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |\n" +
+    "  'rssSubscriptionEditor' | 'settings' | 'rulesManagement' | 'source' | 'sourceTools' | 'sync';\n" +
+    "type PreparedReaderRoute = 'reading' | 'directory';\n" +
+    "type DirectoryReturnTarget = 'detail' | 'readerControl';\n" +
+    "type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';\n" +
+    "type RssSourceFeedReturnTarget = 'rss' | 'rssSubscriptionManagement';\n" +
+    "type JsonImportContext = 'bookSource' | 'ruleBundle' | 'rssMerge' | 'rssReplace';\n" +
+    "type RulesManagementReturnTarget = 'settings' | 'reader';\n" +
+    "type DetailReturnRoute = 'bookshelf' | 'search';\n" +
+    "type SourceManagementReturnTarget = 'settings' | 'search';\n" +
+    "type ReadingFailureAction = 'retry' | 'switch';\n" +
+    '\n' +
+    'class SourceSwitchAnchor {\n' +
+    '  chapterIndex: number;\n' +
+    '  chapterTitle: string;\n' +
+    '\n' +
+    '  constructor(chapterIndex: number, chapterTitle: string) {\n' +
+    '    this.chapterIndex = chapterIndex;\n' +
+    '    this.chapterTitle = chapterTitle;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'class PendingSourceSwitchTransaction {\n' +
+    '  fromSourceId: string;\n' +
+    '  fromBookId: string;\n' +
+    '  targetSourceId: string;\n' +
+    '  targetBookId: string;\n' +
+    '  targetChapterIndex: number;\n' +
+    '  transactionId: string;\n' +
+    '\n' +
+    '  constructor(\n' +
+    '    fromSourceId: string,\n' +
+    '    fromBookId: string,\n' +
+    '    targetSourceId: string,\n' +
+    '    targetBookId: string,\n' +
+    '    targetChapterIndex: number,\n' +
+    '    transactionId: string,\n' +
+    '  ) {\n' +
+    '    this.fromSourceId = fromSourceId;\n' +
+    '    this.fromBookId = fromBookId;\n' +
+    '    this.targetSourceId = targetSourceId;\n' +
+    '    this.targetBookId = targetBookId;\n' +
+    '    this.targetChapterIndex = targetChapterIndex;\n' +
+    '    this.transactionId = transactionId;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'class RemoteDetailAdmission {\n' +
+    '  session: RemoteReadingSession;\n' +
+    '  refreshInBackground: boolean;\n' +
+    '  backgroundRefresh: Promise<RemoteReadingSession> | undefined;\n' +
+    '\n' +
+    '  constructor(session: RemoteReadingSession, backgroundRefresh?: Promise<RemoteReadingSession>) {\n' +
+    '    this.session = session;\n' +
+    '    this.backgroundRefresh = backgroundRefresh;\n' +
+    '    this.refreshInBackground = backgroundRefresh !== undefined;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'class RemoteSessionAttemptOutcome {\n' +
+    '  index: number;\n' +
+    '  session: Rem'... 223336 more characters,
+  expected: /bookAcquisitions\(\)[\s\S]*?acquireBookWithBackgroundRefresh\(seeds\[0\]/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

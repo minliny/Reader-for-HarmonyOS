@@ -1,0 +1,22 @@
+{
+  "evidence": "production methods, mocked RPC, local only",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/search/SearchGateway.ts",
+      "sha256": "0c6425593d3327c334a8e93d81e20b28591ebf89b32a5af7a605a92419dfbb21"
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchOrchestrator.ets",
+      "sha256": "0b1915a92208c32726d098438f57934fbfd151795144b5bbb5bf24b8fb62b406"
+    },
+    {
+      "path": "tools/test-search-gateway.mjs",
+      "sha256": "a9a5d4a50b640646e2a25fec35da59baf88d8c6a1fc2befb74a12c5afdbb4a5c"
+    },
+    {
+      "path": "tools/test-search-orchestrator.mjs",
+      "sha256": "80c2d96e021b4fab7aeca1c06fb85d4b88602d2b65bdfad0c70dc0ce1357f62b"
+    }
+  ],
+  "deviceTests": false
+}

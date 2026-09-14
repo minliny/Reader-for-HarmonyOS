@@ -1,0 +1,11 @@
+{
+  "evidenceLayer": "production SDK methods; synthetic diagnostic text, no real-source assertion",
+  "oldText": "开头\\r\\n目标文字这里还有很长的下文用于排除末尾clamp",
+  "newText": "开头\n目标文字这里还有很长的下文用于排除末尾clamp",
+  "oldOffset": 6,
+  "expectedSameTextOffset": 3,
+  "actualRestoredOffset": 6,
+  "actualCharacter": "字",
+  "expectedCharacter": "目",
+  "result": "CONFIRMED: replacement plus existing restore shifts the anchor"
+}

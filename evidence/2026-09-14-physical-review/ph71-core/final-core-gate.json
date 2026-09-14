@@ -1,0 +1,25 @@
+{
+  "coreCommit": "316ed8362d4d820756f22f22bee35fd4d5f932a9",
+  "coreDirty": false,
+  "command": "CARGO_TARGET_DIR=target ./scripts/check-local.sh",
+  "exitCode": 0,
+  "format": "PASS",
+  "clippy": "workspace all targets -D warnings PASS",
+  "workspaceTests": {
+    "passed": 3742,
+    "failed": 0,
+    "skipped": 0
+  },
+  "conformance": {
+    "passed": 210,
+    "failed": 0
+  },
+  "strictDrift": "PASS",
+  "cAbi": "PASS",
+  "cppAbi": "PASS",
+  "log": "ph68-74-core-final-gate.log",
+  "sha256": "7d7c3ac67a10d27ae188424a521e960568c845b5408a49682966c66a805f8791",
+  "historicalFailuresRetained": true,
+  "vm": "not run",
+  "physical": "not run"
+}

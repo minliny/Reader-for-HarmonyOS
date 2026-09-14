@@ -1,0 +1,11 @@
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.45s
+     Running tests/runtime_integration.rs (target/debug/deps/runtime_integration-15396c6231b7a99c)
+
+running 2 tests
+test pagination::final_replacement_images_resolve_against_first_page_and_keep_existing_absolute_images ... ok
+test pagination::final_replacement_failure_preserves_the_previous_cached_body_and_version ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 631 filtered out; finished in 0.24s
+

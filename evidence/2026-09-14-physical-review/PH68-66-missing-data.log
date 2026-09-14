@@ -1,0 +1,4 @@
+{"type":"host.request","protocolVersion":1,"requestId":901,"operationId":1000000,"capability":"http.execute","params":{"body":"","charset":"utf-8","followRedirects":true,"headers":{},"method":"GET","session":null,"url":"https://wxapp.qidian.com/api/book/categoryV2?bookId=123456&_csrfToken=","usePlatformCookieJar":false}}
+{"type":"host.request","protocolVersion":1,"requestId":901,"operationId":1000001,"capability":"http.execute","params":{"body":"","charset":"utf-8","followRedirects":true,"headers":{},"method":"GET","session":null,"url":"https://wxapp.qidian.com/api/book/categoryV2?bookId=123456&_csrfToken=","usePlatformCookieJar":false}}
+
+STDERR:

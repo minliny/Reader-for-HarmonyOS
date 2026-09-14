@@ -1,0 +1,79 @@
+{
+  "observedAt": "2026-09-14T11:33:17.505861+00:00",
+  "scope": "own search candidate/preparation/source-switch source freeze; root Gateway/Orchestrator integration separate",
+  "device": "none; installed user artifact remains 84cdc4ef",
+  "sourceFiles": [
+    {
+      "path": "entry/src/main/ets/app/BookAcquisitionCoordinator.ts",
+      "sha256": "2de7a69e84e68b897882d162cfbd5c6c26845d583338a0e1d58775aab12d324c"
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "sha256": "a63e58eb5b0876f8bef38fc2bda038faa13de20abe2198080902a6cc2df0bca4"
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "sha256": "aa27bb9de83fea454b0606c5a6e454d857778847ff549144b18e14d3d97a247d"
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchCandidatePolicy.ts",
+      "sha256": "b1049e9c0f2c35679234d957815c1975c0bdbcebd49d7fd084256c995d2c05ca"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceSwitchGateway.ts",
+      "sha256": "d6c5ba1a0e9f7544c626c93452b59c75a23a7c3cbc560c961d8ddac4da1d141b"
+    }
+  ],
+  "checks": [
+    {
+      "name": "test-search-candidate-acquisition.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-search-candidate-acquisition.mjs.log"
+    },
+    {
+      "name": "test-source-switch-gateway.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-source-switch-gateway.mjs.log"
+    },
+    {
+      "name": "test-search-detail-cache-first.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-search-detail-cache-first.mjs.log"
+    },
+    {
+      "name": "test-legado-product-logic.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-legado-product-logic.mjs.log"
+    },
+    {
+      "name": "test-bookshelf-reading-entry.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-bookshelf-reading-entry.mjs.log"
+    },
+    {
+      "name": "test-reading-session-routing.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-reading-session-routing.mjs.log"
+    },
+    {
+      "name": "test-source-switch-transaction.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-source-switch-transaction.mjs.log"
+    },
+    {
+      "name": "test-navigation-performance.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-navigation-performance.mjs.log"
+    },
+    {
+      "name": "test-book-acquisition-coordinator.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-book-acquisition-coordinator.mjs.log"
+    },
+    {
+      "name": "test-search-trial-reading-return.mjs",
+      "result": "PASS",
+      "log": "/private/tmp/final-test-search-trial-reading-return.mjs.log"
+    }
+  ]
+}

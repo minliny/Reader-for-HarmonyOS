@@ -1,0 +1,9 @@
+search gateway remote-result and canonical synchronization: PASS
+(node:83977) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search gateway broad projection responsiveness: PASS
+PH65 source registry reuse and mutation invalidation PASS
+PH65 yielding decode, superseded sweep and late source projection invalidation PASS
+PH65 no-op canonical refresh retains projection identity PASS
+PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS
+PH68 2000-row fixture: initial full reads=1, three metadata updates=3 exact gets, identity builds=1; broad batch=1 indexed origin read PASS

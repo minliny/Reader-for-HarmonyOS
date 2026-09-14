@@ -1,0 +1,74 @@
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-local-book v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-local-book)
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-sync v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-sync)
+   Compiling reader-rule v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-rule)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+   Compiling reader-rss v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-rss)
+   Compiling reader-html v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-html)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-domain v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-domain)
+   Compiling reader-ffi v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-ffi)
+   Compiling reader-cli v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/tools/reader-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.72s
+────────────
+ Nextest run ID 880a30c1-419b-4f85-9765-2525a2255e0e with nextest profile: default
+    Starting 3738 tests across 93 binaries
+        PASS [   1.724s] (   1/3738) reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   1.776s] (   2/3738) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        FAIL [   1.776s] (   3/3738) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+  stdout ───
+
+    running 1 test
+    test host_record_suite_outputs_replayable_comparison_fixture ... FAILED
+
+    failures:
+
+    failures:
+        host_record_suite_outputs_replayable_comparison_fixture
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 1.76s
+
+  stderr ───
+
+    thread 'host_record_suite_outputs_replayable_comparison_fixture' (64893957) panicked at tools/reader-cli/tests/host_replay.rs:409:5:
+    reader-cli failed: stdout={"type":"error","protocolVersion":1,"requestId":0,"error":{"code":"INTERNAL","message":"host record expected result event","retryable":true,"details":{"error":{"code":"INVALID_PARAMS","details":{"operationId":1},"message":"unknown host operationId: 1","retryable":false}}}}
+     stderr=
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 9 tests still running
+        PASS [   0.015s] (   4/3738) reader-cli::bin/reader-cli anti_bot::tests::detect_baidu_verify
+        PASS [   0.069s] (   5/3738) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   1.836s] (   6/3738) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   1.913s] (   7/3738) reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   1.915s] (   8/3738) reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   1.945s] (   9/3738) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        FAIL [   1.956s] (  10/3738) reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+  stdout ───
+
+    running 1 test
+    test booksource_fixture_outputs_stable_json ... FAILED
+
+    failures:
+
+    failures:
+        booksource_fixture_outputs_stable_json
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 1.94s
+
+  stderr ───
+
+    thread 'booksource_fixture_outputs_stable_json' (64893959) panicked at tools/reader-cli/tests/fixture_vertical.rs:531:5:
+    assertion `left == right` failed
+      left: String("First line.\nAD: remove me\nSecond line.")
+     right: "First line.\nbooksource-fixture\nSecond line."
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   2.468s] (  11/3738) reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   4.354s] (  12/3738) reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+────────────
+     Summary [   4.357s] 12/3738 tests run: 10 passed, 2 failed, 0 skipped
+        FAIL [   1.776s] (   3/3738) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        FAIL [   1.956s] (  10/3738) reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+warning: 3726/3738 tests were not run due to test failure (run with --no-fail-fast to run all tests, or run with --max-fail)
+error: test run failed

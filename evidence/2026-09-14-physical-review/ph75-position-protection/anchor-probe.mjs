@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { productionMotionMethods } from '/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs';
+import { readFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
+const mapSource=readFileSync('/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts','utf8').replace('constructor(private readonly content: string) {', 'private readonly content: string; constructor(content: string) { this.content = content;');
+const ReadingSurfaceLayoutMap=new Function(stripTypeScriptTypes(mapSource).replace('export class','class')+'; return ReadingSurfaceLayoutMap;')();
+const Reading=productionMotionMethods(new URL('file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets'), ['configureRestoredAnchor','lastVisibleScalar']);
+const oldText='开头\\r\\n目标文字这里还有很长的下文用于排除末尾clamp';
+const newText='开头\n目标文字这里还有很长的下文用于排除末尾clamp';
+const oldOffset=Array.from(oldText.slice(0,oldText.indexOf('目标'))).length;
+const wanted=Array.from(newText.slice(0,newText.indexOf('目标'))).length;
+const reading=Object.assign(new Reading(),{restoredProgress:{kind:'restored',progress:{chapterIndex:0,chapterOffset:oldOffset,chapterProgress:oldOffset/Array.from(oldText).length}}});
+reading.configureRestoredAnchor({chapterIndex:0,content:newText,contentVersion:'new-body'},new ReadingSurfaceLayoutMap(newText),true);
+assert.equal(reading.desiredChapterOffset,oldOffset,'current production keeps the numeric offset, not the original target');
+assert.notEqual(reading.desiredChapterOffset,wanted,'current production has no old-to-new remote body mapping');
+console.log(JSON.stringify({evidenceLayer:'production SDK methods; synthetic diagnostic text, no real-source assertion',oldText,newText,oldOffset,expectedSameTextOffset:wanted,actualRestoredOffset:reading.desiredChapterOffset,actualCharacter:Array.from(newText)[reading.desiredChapterOffset],expectedCharacter:'目',result:'CONFIRMED: replacement plus existing restore shifts the anchor'},null,2));

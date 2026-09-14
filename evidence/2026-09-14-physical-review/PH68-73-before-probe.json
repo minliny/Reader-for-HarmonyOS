@@ -1,0 +1,82 @@
+{
+  "scope": "production methods, synthetic RPC boundaries; no real source/device claims",
+  "results": [
+    {
+      "name": "Repeated unchanged 2000-row publication still clones and schedules all rows",
+      "copies": 20000,
+      "pending": 1998,
+      "active": 2,
+      "synchronousMs": 6.525583999999981
+    },
+    {
+      "name": "Preparation has concurrency bounds but no total/visible budget",
+      "books": 12,
+      "counts": {
+        "source.list": 1,
+        "search-book.get": 12,
+        "cache.book.status": 12,
+        "book.detail": 12,
+        "book.toc": 12,
+        "reading.progress.get": 12,
+        "chapter.content": 12,
+        "search-book.put": 12
+      }
+    },
+    {
+      "name": "Immediate opening freshly prepared book repeats detail and TOC",
+      "backgroundRefresh": true,
+      "commands": [
+        "search-book.get",
+        "book.detail",
+        "book.toc"
+      ]
+    },
+    {
+      "name": "Actual production detail admission never tries supplied healthy second candidate",
+      "detailIdentity": "s1",
+      "verdict": "parseFailed",
+      "sourceNetwork": [
+        [
+          "book.detail",
+          "s1"
+        ],
+        [
+          "book.toc",
+          "s1"
+        ]
+      ],
+      "error": [
+        "详情加载失败",
+        "book.toc returned no readable chapters"
+      ]
+    },
+    {
+      "name": "Source switch current known rows reuse cache with zero search HTTP",
+      "count": 2,
+      "commands": [
+        "source.list",
+        "search-book.list"
+      ]
+    },
+    {
+      "name": "Empty durable candidate cache does not reuse passed variants or discover automatically",
+      "state": "empty",
+      "commands": [
+        "source.list",
+        "search-book.list"
+      ]
+    },
+    {
+      "name": "Representative ignores known source-specific failed versus readable verdict",
+      "selected": "s1",
+      "variants": 2
+    },
+    {
+      "name": "Single visible book enrichment repeatedly reads complete durable store",
+      "bookReads": 3,
+      "sourceReads": 1,
+      "rowsTransferred": 6000,
+      "projectionElapsedMs": 718.8234170000001
+    }
+  ]
+}

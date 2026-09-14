@@ -1,0 +1,32 @@
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.11s
+     Running tests/runtime_integration.rs (target/debug/deps/runtime_integration-15396c6231b7a99c)
+
+running 2 tests
+test pagination::final_replacement_images_resolve_against_first_page_and_keep_existing_absolute_images ... FAILED
+test pagination::final_replacement_failure_preserves_the_previous_cached_body_and_version ... FAILED
+
+failures:
+
+---- pagination::final_replacement_images_resolve_against_first_page_and_keep_existing_absolute_images stdout ----
+
+thread 'pagination::final_replacement_images_resolve_against_first_page_and_keep_existing_absolute_images' (65032499) panicked at crates/reader-runtime/tests/pagination.rs:817:5:
+assertion `left == right` failed
+  left: ["https://books.example.test/book/old.png", "new.png"]
+ right: ["https://books.example.test/book/old.png", "https://books.example.test/book/new.png"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- pagination::final_replacement_failure_preserves_the_previous_cached_body_and_version stdout ----
+
+thread 'pagination::final_replacement_failure_preserves_the_previous_cached_body_and_version' (65032498) panicked at crates/reader-runtime/tests/pagination.rs:795:9:
+{{JSON.parse('invalid fixture')}}: Ok(Complete(Object {"blocks": Array [Object {"endScalar": Number(33), "kind": String("text"), "startScalar": Number(0), "text": String("{{JSON.parse('invalid fixture')}}")}], "bookId": String("b1"), "chapterTitle": String("章名"), "content": String("{{JSON.parse('invalid fixture')}}"), "http": Object {"finalUrl": String("https://books.example.test/2"), "finalUrlDigest": String("01fe534e46a90494414314720117f4cd62338974c77cf75d5fa9e69e58f04dd4"), "responseBytes": Number(38), "responseDigest": String("6d9b39a60ed2eb2a4f70261154a4372145253fb8737aecfdb97a578688d8db96"), "status": Number(200)}, "sourceId": String("src-1"), "via": String("rule")}))
+
+
+failures:
+    pagination::final_replacement_failure_preserves_the_previous_cached_body_and_version
+    pagination::final_replacement_images_resolve_against_first_page_and_keep_existing_absolute_images
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 631 filtered out; finished in 0.23s
+
+error: test failed, to rerun pass `-p reader-runtime --test runtime_integration`
