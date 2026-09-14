@@ -21,6 +21,9 @@ const committed = {
   storedChapterIndex: 10, storedChapterOffset: 123,
 };
 assert.equal(readerControlSelectionMayClose(ticket, owner, committed), true);
+assert.equal(readerControlSelectionMayClose({ ...ticket, closeOnCommit: false }, owner, committed), false);
+assert.equal(readerControlSelectionOwnsReading({ ...ticket, closeOnCommit: false }, owner), true,
+  'keeping the panel open does not remove reading transaction/recovery ownership');
 assert.equal(readerControlSelectionMayClose(ticket, owner, { ...committed, phaseReady: false }), false,
   'downloaded/measuring content is not a completed reading jump');
 for (const changed of [

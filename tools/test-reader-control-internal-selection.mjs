@@ -140,8 +140,8 @@ assert.throws(() => checkProjection(Host(oldProjection)), /internal conversion\/
   commit(host, 2, 70); assert.equal(host.hideCalls, 0);
 }
 
-// Conversely, all real user selection entries retain same-session close AFTER
-// the actual ready/materialized/stored join, never immediately on selection.
+// Discrete list/bookmark/search picks retain close AFTER the real commit.
+// Progress scrubbing is a continuous control and keeps the same panel open.
 const picks = [
   ['directory', host => host.selectControlChapter(3)],
   ['bookmark', host => host.selectBookmarkAnchor(3, 50)],
@@ -163,13 +163,37 @@ for (const [name, pick] of picks) {
   assert.equal(host.pendingControlSelection?.controlOpenRevision, 41, name);
   assert.equal(host.hideCalls, 0, name + ' must not close on download/start');
   commit(host, host.pendingControlSelection.targetChapterIndex, 0);
-  assert.equal(host.hideCalls, 1, name + ' still closes after real commit');
+  assert.equal(host.hideCalls, name.startsWith('progress') ? 0 : 1,
+    name + ' applies its explicitly chosen close policy after real commit');
 
   const newer = owner(); pick(newer);
   newer.controlOpenRevision = 42;
   commit(newer, newer.pendingControlSelection.targetChapterIndex, 0);
   assert.equal(newer.hideCalls, 0, name + ' cannot close a later reopening');
 }
+for (const deferred of [false, true]) {
+  const host = owner(); host.pageTurnSettlementActive = deferred;
+  host.seekControlProgress(25);
+  if (deferred) {
+    assert.equal(host.pageTurnPendingChapterSelection.closeControlOnCommit, false);
+    host.pageTurnSettlementActive = false; host.resumeDeferredPageTurnWork();
+  }
+  const first = host.pendingControlSelection;
+  assert.equal(first.closeOnCommit, false); assert.equal(first.controlOpenRevision, 41);
+  host.seekControlProgress(75);
+  const latest = host.pendingControlSelection;
+  assert.notEqual(first.selectionToken, latest.selectionToken);
+  host.completeControlSelectionAfterCommit({chapterIndex:first.targetChapterIndex,chapterOffset:0},
+    {startScalar:0},first.selectionToken,first.lifecycleToken);
+  assert.strictEqual(host.pendingControlSelection, latest, 'late older scrub commit cannot clear the current intent');
+  commit(host, latest.targetChapterIndex, 0);
+  assert.equal(host.hideCalls, 0, 'consecutive progress commits keep controls open');
+  assert.equal(host.pendingControlSelection, undefined);
+  host.seekControlProgress(40); commit(host, host.pendingControlSelection.targetChapterIndex, 0);
+  assert.equal(host.hideCalls, 0, 'a third continuous adjustment remains available');
+}
+assert.match(method('showControlSelectionFailure'), /retry\.controlOwnerRevision, retry\.closeControlOnCommit/,
+  'a failed scrub retry preserves its no-close policy and recoverable selection owner');
 {
   const host = owner();
   host.pageTurnSettlementActive = true;

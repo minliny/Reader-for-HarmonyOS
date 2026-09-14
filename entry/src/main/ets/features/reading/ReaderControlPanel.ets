@@ -911,9 +911,14 @@ export struct ReaderControlPanel {
           .opacity(this.frame().navigation.opacity)
           .enabled(this.contentInputEnabled() && this.frame().navigation.opacity > 0)
           .hitTestBehavior(this.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
-        Stack({ alignContent: Alignment.Top }) {
-          Row().width(42).height(4).borderRadius(2).backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appScheme))
-            .margin({ top: 9 }).opacity(this.frame().grabber.opacity);
+        Stack({ alignContent: Alignment.TopStart }) {
+          // Paint from the same actor used by the spatial axis. Stack margin
+          // alignment must not become a second source of vertical placement.
+          Row().width(this.frame().grabber.width).height(this.frame().grabber.height).borderRadius(2)
+            .backgroundColor(readerAppColor('TOK_READ_HANDLE', this.appScheme))
+            .position({ x: this.frame().grabber.x - (this.layout.fullPanelWidth - 72) / 2,
+              y: this.frame().grabber.y - this.frame().shell.y })
+            .id('reader-control-motion-grabber-bar').opacity(this.frame().grabber.opacity);
         }
         .width(72).height(28)
         .id('reader-control-motion-grabber')
@@ -930,11 +935,14 @@ export struct ReaderControlPanel {
         });
         }
         .width(this.layout.fullPanelWidth).height(this.controlPanelHeight())
+        .id('reader-control-motion-dock')
         .translate({ y: this.frame().dock.translateY })
         .opacity(this.frame().dock.opacity)
         .position({ x: this.dockLeft(), y: this.dockTop() })
-        .enabled(this.inputEnabled && this.frame().visibility > 0)
-          .hitTestBehavior(this.inputEnabled && this.frame().visibility > 0 ?
+        // A held pointer may reach the hidden endpoint before UP. Retiring
+        // its ancestor here loses UP/CANCEL and leaves the runtime held.
+        .enabled(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0))
+          .hitTestBehavior(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) ?
           HitTestMode.Transparent : HitTestMode.None);
       if (this.moreMenuVisible) { this.readerMoreMenu(); }
       if (this.launchSample !== undefined) {
@@ -1648,7 +1656,7 @@ export struct ReaderControlPanel {
       .accessibilityText('阅读进度')
       .onChange((value: number, mode: SliderChangeMode): void => {
         this.progressPreviewPercent = this.clampPercent(value);
-        if (mode === SliderChangeMode.End) {
+        if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
           const committed = this.progressPreviewPercent;
           this.progressPreviewPercent = -1;
           this.onProgressChange(committed);

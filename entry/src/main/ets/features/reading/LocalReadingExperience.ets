@@ -694,6 +694,7 @@ class ReaderDeferredChapterSelection {
   stopTts: boolean;
   requestedProgress: number | undefined;
   controlOwnerRevision: number;
+  closeControlOnCommit: boolean;
 
   constructor(
     chapterIndex: number,
@@ -702,6 +703,7 @@ class ReaderDeferredChapterSelection {
     stopTts: boolean,
     requestedProgress: number | undefined,
     controlOwnerRevision: number,
+    closeControlOnCommit: boolean = true,
   ) {
     this.chapterIndex = chapterIndex;
     this.chapterOffset = chapterOffset;
@@ -709,6 +711,7 @@ class ReaderDeferredChapterSelection {
     this.stopTts = stopTts;
     this.requestedProgress = requestedProgress;
     this.controlOwnerRevision = controlOwnerRevision;
+    this.closeControlOnCommit = closeControlOnCommit;
   }
 }
 
@@ -8628,7 +8631,7 @@ export struct ReadingExperience {
     this.replacePanelGeneration += 1;
     const sessionKey = `${this.sourceId}:${this.bookId}:${this.lifecycleToken}`;
     if (this.controlReplaceState.sessionKey !== sessionKey) {
-      this.controlReplaceState = createReaderControlReplaceState(sessionKey);
+      this.controlReplaceState = createReaderControlReplaceState(sessionKey, this.bookTitle, this.sourceId);
     }
     this.setControlPage('quickReplace');
     // A valid empty collection still opens: Full offers a real Add action.
@@ -9252,7 +9255,7 @@ export struct ReadingExperience {
       const anchor = wholeBookAnchorForPercent(metrics, percent);
       if (anchor !== undefined) {
         this.clearTtsChapterEndTimer();
-        this.selectChapterAnchor(anchor.chapterIndex, anchor.chapterOffset, false);
+        this.selectChapterAnchor(anchor.chapterIndex, anchor.chapterOffset, false, true, undefined, -2, false);
       }
       return;
     }
@@ -9264,7 +9267,7 @@ export struct ReadingExperience {
     const position = Math.min(this.readingTocEntries().length - 1, Math.floor(scaled));
     const chapterProgress = normalized >= 1 ? 1 : scaled - position;
     this.clearTtsChapterEndTimer();
-    this.selectChapterAnchor(this.readingTocEntries()[position].index, 0, false, true, chapterProgress);
+    this.selectChapterAnchor(this.readingTocEntries()[position].index, 0, false, true, chapterProgress, -2, false);
   }
 
   private selectChapterAnchor(
@@ -9274,6 +9277,7 @@ export struct ReadingExperience {
     stopTts: boolean = true,
     requestedProgress?: number,
     controlOwnerRevision: number = -2,
+    closeControlOnCommit: boolean = true,
   ): void {
     if (!this.mounted || !this.isKnownControlChapter(chapterIndex)) {
       return;
@@ -9289,6 +9293,7 @@ export struct ReadingExperience {
         stopTts,
         requestedProgress,
         selectionControlRevision,
+        closeControlOnCommit,
       );
       return;
     }
@@ -9307,11 +9312,12 @@ export struct ReadingExperience {
       selectionToken,
       controlOpenRevision: selectionControlRevision,
       targetChapterIndex: chapterIndex,
+      closeOnCommit: closeControlOnCommit,
     };
     this.pendingControlSelectionOrigin = origin;
     this.pendingControlSelectionCandidate = undefined;
     this.pendingControlSelectionRetry = new ReaderDeferredChapterSelection(chapterIndex, chapterOffset,
-      requireChapterStart, stopTts, requestedProgress, selectionControlRevision);
+      requireChapterStart, stopTts, requestedProgress, selectionControlRevision, closeControlOnCommit);
     this.controlSelectionReconciliationInFlight = false;
     this.resetForChapterSelection();
     this.restoredProgress = undefined;
@@ -9395,8 +9401,8 @@ export struct ReadingExperience {
     this.pendingControlSelectionCandidate = undefined;
     this.pendingControlSelectionRetry = undefined;
     this.controlSelectionReconciliationInFlight = false;
-    // UI closure is a consequence of a committed jump, never part of loading.
-    // The legacy close driver is retained until the unified control host lands.
+    // List/search selection closes only after commit. Slider scrubbing owns
+    // the same recoverable transaction but deliberately keeps its panel open.
     if (mayClose) this.hideControl();
   }
 
@@ -9522,7 +9528,7 @@ export struct ReadingExperience {
       primaryButton: { value: '重试', action: (): void => {
         if (retry === undefined || !readerControlSelectionOwnsReading(ticket, this.controlSelectionOwner())) return;
         this.selectChapterAnchor(retry.chapterIndex, retry.chapterOffset, retry.requireChapterStart,
-          retry.stopTts, retry.requestedProgress, retry.controlOwnerRevision);
+          retry.stopTts, retry.requestedProgress, retry.controlOwnerRevision, retry.closeControlOnCommit);
       } },
       secondaryButton: { value: '关闭提示', action: (): void => {} },
     });
@@ -10969,6 +10975,7 @@ export struct ReadingExperience {
         pendingChapterSelection.stopTts,
         pendingChapterSelection.requestedProgress,
         pendingChapterSelection.controlOwnerRevision,
+        pendingChapterSelection.closeControlOnCommit,
       );
     } else if (pendingReplaceReload) {
       this.reloadCurrentPageAfterReplacePersist(lifecycleToken, this.bookId);

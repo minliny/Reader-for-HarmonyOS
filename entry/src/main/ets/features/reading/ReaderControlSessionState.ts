@@ -467,11 +467,12 @@ export function beginReaderControlDragSegment(state: ReaderControlSessionState,
     const morphIntoClose = transition.kind === 'morph' && direction === 'down' &&
       (frame.expansionProgress === 0 || frame.expansionProgress === 1);
     const closeIntoMorph = transition.kind === 'dismiss' && direction === 'up' &&
-      frame.expansionProgress === 0;
+      frame.expansionProgress === 0 && frame.visibilityProgress === transition.from.visibilityProgress;
     const crossesSpatialSegment = morphIntoClose || closeIntoMorph;
-    // A resumed logical goal can begin at an expansion endpoint while still
-    // partially hidden. Crossing that exact endpoint must continue from its
-    // sampled frame; requiring fully-visible state would discard MOVE residue.
+    // Undo must first retrace the captured close segment before crossing into
+    // expansion. Crossing early crops the MR1 path and can create a zero-length
+    // dismiss on a second reversal. A resumed source may itself be partially
+    // hidden, so compare its captured visibility rather than assuming it is 1.
     if (!crossesSpatialSegment &&
       (frame.visibilityProgress !== 1 || !spatiallyStatic)) return state;
     source = copyState(state);

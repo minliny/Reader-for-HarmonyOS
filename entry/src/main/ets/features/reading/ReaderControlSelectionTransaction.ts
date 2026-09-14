@@ -6,6 +6,8 @@ export interface ReaderControlSelectionTicket {
   selectionToken: number;
   controlOpenRevision: number;
   targetChapterIndex: number;
+  /** Slider scrubbing keeps the panel open; list/search selections still close. */
+  closeOnCommit?: boolean;
 }
 
 export interface ReaderControlSelectionOwner {
@@ -49,7 +51,7 @@ export function readerControlSelectionMayClose(
   owner: ReaderControlSelectionOwner,
   commit: ReaderControlSelectionCommit,
 ): boolean {
-  return readerControlSelectionOwnsReading(ticket, owner) && owner.controlVisible &&
+  return ticket.closeOnCommit !== false && readerControlSelectionOwnsReading(ticket, owner) && owner.controlVisible &&
     !owner.controlClosing && ticket.controlOpenRevision === owner.controlOpenRevision &&
     commit.phaseReady && commit.materializedSelectionToken === ticket.selectionToken &&
     commit.visibleSelectionToken === ticket.selectionToken &&

@@ -1,0 +1,171 @@
+{
+  "timestampUTC": "2026-09-14T01:15:14Z",
+  "auditedSource": "9a8ef9a1 plus scoped working-tree fixes",
+  "installedSource": "643bcaf5",
+  "deviceAccess": false,
+  "build": false,
+  "scope": "PH48 PH49 PH55 and coordinated PH54 context forwarding",
+  "results": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "grabber-input",
+        "chunk_id": "a99ebb",
+        "wall_time_seconds": 1.112159292,
+        "exit_code": 0,
+        "original_token_count": 112,
+        "output": "PH48/49/55 PASS: authoritative grabber actor, actual Host/native-parent admission, 7 modules x Quick/Full reversal, 28 hidden-hold UP/CANCEL paths, tap, actual Slider End/Click; two negative mutations rejected. Native compositor/physical touch remains separate.\n(node:23591) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "internal-selection",
+        "chunk_id": "debc97",
+        "wall_time_seconds": 0.221636792,
+        "exit_code": 0,
+        "original_token_count": 87,
+        "output": "PASS internal/user selection ownership: actual Host methods, stale reopen, TTS/projection negative mutations and committed-close semantics; NOT device acceptance\n(node:23588) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "selection-transaction",
+        "chunk_id": "18545a",
+        "wall_time_seconds": 0.002367667,
+        "exit_code": 0,
+        "original_token_count": 20,
+        "output": "reader control selection transaction: production ownership/commit policy passed\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "gesture-driver",
+        "chunk_id": "fe3b09",
+        "wall_time_seconds": 0.140146458,
+        "exit_code": 0,
+        "original_token_count": 14,
+        "output": "reader control gesture production driver behavior: PASS\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "gesture-continuation",
+        "chunk_id": "bb97c4",
+        "wall_time_seconds": 0.152779917,
+        "exit_code": 0,
+        "original_token_count": 20,
+        "output": "reader control bounded finger residue and distinct continuation timings: PASS\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "spatial-path",
+        "chunk_id": "6c8a9f",
+        "wall_time_seconds": 0.200640167,
+        "exit_code": 0,
+        "original_token_count": 19,
+        "output": "reader control shared spatial sampler and inverse production behavior: PASS\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "resume-timing",
+        "chunk_id": "dae5f9",
+        "wall_time_seconds": 0.047487625,
+        "exit_code": 0,
+        "original_token_count": 21,
+        "output": "reader control original-operation resume, MR1 timing and mixed restoration: PASS\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "runtime",
+        "chunk_id": "868a6e",
+        "wall_time_seconds": 0.491696875,
+        "exit_code": 0,
+        "original_token_count": 97,
+        "output": "Production control runtime: seven modules, frame revocation, regrab, close, lifecycle PASS\n(node:23595) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nProduction Panel scalar projection: seven modules x 101 frames retain route identity and current input state PASS\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "input-routing",
+        "chunk_id": "fd67b4",
+        "wall_time_seconds": 0.638360375,
+        "exit_code": 0,
+        "original_token_count": 83,
+        "output": "Reader control input routing: PASS (actual SDK Header ancestor/child callback, 7 modules, runtime + Link delivery; native touch remains VM evidence)\n(node:23597) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "integration-events",
+        "chunk_id": "412877",
+        "wall_time_seconds": 0.086684833,
+        "exit_code": 0,
+        "original_token_count": 22,
+        "output": "reader control integration event ownership, CANCEL, and exact mixed-path behavior: PASS\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "session-state",
+        "chunk_id": "6f1433",
+        "wall_time_seconds": 0.1440655,
+        "exit_code": 0,
+        "original_token_count": 14,
+        "output": "reader control session production state behavior: PASS\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "host-session",
+        "chunk_id": "84b5db",
+        "wall_time_seconds": 0.161249625,
+        "exit_code": 0,
+        "original_token_count": 49,
+        "output": "Reader control Host session: production projection, command, close-commit and lifecycle cases PASS\nReader control Host wiring: structural checks PASS (not ArkUI execution or visual acceptance)\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "stage-composition",
+        "chunk_id": "687d1c",
+        "wall_time_seconds": 0.084591167,
+        "exit_code": 0,
+        "original_token_count": 26,
+        "output": "reader control Stage composition + diagnostic timing wiring: PASS (structure only; not pixels/touch)\n"
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "id": "stage-lifecycle",
+        "chunk_id": "a1fbdf",
+        "wall_time_seconds": 0.143196875,
+        "exit_code": 0,
+        "original_token_count": 76,
+        "output": "reader control Stage lifecycle: production adapter methods passed (mock frame queue; not native/touch/visual acceptance)\n(node:23589) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+      }
+    }
+  ],
+  "finalTargetedRerun": {
+    "test": "tools/test-reader-control-grabber-input.mjs",
+    "exit_code": 0,
+    "chunk_id": "583658",
+    "addedCoverage": "captured visibility .2/.7/1 on actual SDK Panel and Runtime, close retrace before morph boundary; CANCEL resumes original Full target",
+    "output": "PH48/49/55 PASS: authoritative grabber actor, actual Host/native-parent admission, 7 modules x Quick/Full reversal, 28 hidden-hold UP/CANCEL paths, .2/.7/1 captured-visibility driver crossings, tap, actual Slider End/Click; two negative mutations rejected. Native compositor/physical touch remains separate."
+  }
+}
