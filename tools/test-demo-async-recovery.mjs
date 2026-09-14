@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createHash } from 'node:crypto';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -38,19 +39,40 @@ const stage=()=>({loads:0,getMainWindowSync:()=>({}),loadContent(){this.loads++;
  const e=new Entry(),s=stage();e.onWindowStageCreate(s);setups[2].resolve(false);await tick();assert.equal(s.loads,0);
 }
 console.log('PASS: detail mutation settles after exit; stale window completion cannot load content');
-// Cache freshness and request joining now live in the process coordinator;
-// executable cases are in test-book-acquisition-coordinator.mjs.
-const cacheMethods=method(index,'async openSearchSessionCacheFirst(');
+// Cache freshness/request joining live in the coordinator. Exercise the active
+// Index admission call and its generation guards, not the removed wrapper.
 const admission=index.slice(index.indexOf('class RemoteDetailAdmission {'),index.indexOf('\nclass RemoteSessionAttemptOutcome'));
-const shared=deferred();let joins=0;
-const CacheClass=new Function('ReaderRuntimeOwner',stripTypeScriptTypes(admission+'\nclass Cache { '+cacheMethods+' };')+'return Cache;')({current:()=>({bookAcquisitions:()=>({
- acquireBookWithBackgroundRefresh:()=>{joins++;return shared.promise;},
- acquireBook:()=>{joins++;return shared.promise;},
-})})});
-{
- const h=new CacheClass();const pending=h.openSearchSessionCacheFirst({},[{sourceId:'s',bookId:'b'}],()=>true);
- shared.resolve({session:{identity:{sourceId:'s',bookId:'b'}}});const result=await pending;
- assert.equal(result.session.identity.bookId,'b');assert.equal(joins,1);
+const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admission)+';return RemoteDetailAdmission;')();
+for(const stale of [false,true]) for(const fails of [false,true]) {
+ const shared=deferred(),background=deferred(),calls=[],failures=[],refreshes=[];
+ const coordinator={setPreparationVisible(value){assert.equal(value,false);},
+   acquireBookWithBackgroundRefresh(seed,options){calls.push({seed,options});return shared.promise;},
+   recentFailures:()=>[]};
+ const CacheClass=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
+   ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed'],{
+     ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>coordinator})},RemoteDetailAdmission,
+     RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},
+     ReaderCoreGateway:class{async loadShelfBook(){return undefined;}},
+     RemoteReadingGatewayError:class extends Error{},DOMAIN:0,hilog:{info(){},warn(){},error(){}},
+   });
+ const seed={sourceId:'s',bookId:'b',title:'预览',author:'作者'};
+ const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
+ const h=Object.assign(new CacheClass(),{route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
+   remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',
+   probeRemoteContentVerdict:async()=>0,loadRemoteDirectoryProjection:async()=>session.entries,
+   showReadingFailure:(...args)=>failures.push(args),
+   refreshCachedSearchDetailInBackground:(...args)=>refreshes.push(args)});
+ h.openRemoteBookDetail(seed,'书源名称');assert.equal(calls.length,1);assert.equal(calls[0].seed,seed);
+ assert.equal(calls[0].options.isCurrent(),true);assert.equal(h.detailReturnRoute,'search');
+ if(stale){h.nextNavigationGeneration();h.route='bookshelf';assert.equal(calls[0].options.isCurrent(),false);}
+ if(fails)shared.reject(Error('synthetic admission failure'));else shared.resolve({session,backgroundRefresh:background.promise});
+ await tick();
+ assert.equal(h.route,stale?'bookshelf':'detail');
+ assert.equal(failures.length,!stale&&fails?1:0,'only the current admission may present an error');
+ assert.equal(refreshes.length,!stale&&!fails?1:0,'only the current admission hands off the existing background promise');
+ if(!stale&&!fails){assert.equal(h.remoteReadingSession,session);assert.equal(refreshes[0][4],background.promise);}
+ else assert.equal(h.remoteReadingSession,undefined,'failure/late admission cannot mount a session');
+ background.resolve(session);
 }
 const registry=read('entry/src/main/ets/app/ReaderHostRegistry.ts');
 const recoveryMethods=[
@@ -89,7 +111,7 @@ const Recovery=new Function('fileIo','cryptoFramework','hilog','LOG_DOMAIN','err
  assert.equal(files.has('/stage/2-1-'+badHash+'.source'),false);
  assert.equal(files.has('/assets/'+badHash+'.source'),false);
 }
-console.log('PASS: cache winner retains one online refresh; startup preserves complete EPUB resources');
+console.log('PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources');
 
 // An import.persist reply lost after Core commits must not destroy lazy EPUB resources.
 const importSource=read('entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts');

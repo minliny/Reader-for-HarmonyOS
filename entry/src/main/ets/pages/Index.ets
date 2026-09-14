@@ -59,6 +59,9 @@ import {
   type LocalReadingTocEntry,
 } from '../features/reading/LocalReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';
+import type { BookAcquisitionCandidate, BookAcquisitionChange } from '../app/BookAcquisitionCoordinator';
+import type { RemoteReadingIdentity } from '../features/reading/RemoteReadingContract';
+import { searchCandidateRank } from '../features/search/SearchCandidatePolicy';
 import {
   RemoteReadingFlowGateway,
   type RemoteReadingBookSeed,
@@ -393,6 +396,7 @@ struct Index {
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
   private sourceSwitchGateway: SourceSwitchGateway | undefined;
+  private searchDetailCandidates: SearchBook[] = [];
   /** Retained until the target chapter's first measured progress commit. */
   private pendingSourceSwitch: PendingSourceSwitchTransaction | undefined = undefined;
   private sourceSwitchRollbackInFlight: boolean = false;
@@ -746,6 +750,7 @@ struct Index {
           onClearHistory: (): void => this.clearSearchHistory(),
           onSelectResult: (book: SearchBook, variants: SearchBook[]): void =>
             this.onSearchResultSelected(book, variants),
+          onVisibleGroups: (groups: SearchBook[][]): void => this.scheduleSearchDetailWarmups(groups),
           onRetry: (): void => this.retrySearch(),
           onManageSources: (): void => this.manageSourcesFromSearch(),
         });
@@ -2200,6 +2205,7 @@ struct Index {
 
   private onSearchVisibilityChanged(): void {
     ReaderRuntimeOwner.current().bookAcquisitions().visibilityChanged();
+    ReaderRuntimeOwner.current().bookAcquisitions().setPreparationVisible(this.route === 'search' && this.searchAppForeground);
     this.searchOrchestrator?.visibilityChanged();
     void this.refreshDetailAcquisitionProjection();
   }
@@ -2280,7 +2286,6 @@ struct Index {
       this.searchOrchestrator = new SearchOrchestrator(
         (presentation: SearchPresentation): void => {
           this.searchPresentation = presentation;
-          this.scheduleSearchDetailWarmups(presentation);
         },
         (sources: SearchSource[]): void => {
           this.searchSources = sources;
@@ -2306,12 +2311,17 @@ struct Index {
     ReaderRuntimeOwner.current().bookAcquisitions().beginSearch();
   }
 
-  private scheduleSearchDetailWarmups(presentation: SearchPresentation): void {
-    if (presentation.kind !== 'results' || presentation.stopped === true) return;
-    const seeds = presentation.results
+  private scheduleSearchDetailWarmups(groups: SearchBook[][]): void {
+    const coordinator = ReaderRuntimeOwner.current().bookAcquisitions();
+    coordinator.setPreparationVisible(this.route === 'search' && this.searchAppForeground);
+    coordinator.prepareGroups(groups.slice(0, 6).map((books: SearchBook[]): BookAcquisitionCandidate[] => books
       .filter((book: SearchBook): boolean => book.sourceId !== LOCAL_SOURCE_ID && readerSourceCategoryIsText(book.category))
-      .map((book: SearchBook): RemoteReadingBookSeed => this.remoteSeedForSearchBook(book));
-    ReaderRuntimeOwner.current().bookAcquisitions().prepare(seeds);
+      .map((book: SearchBook): BookAcquisitionCandidate => this.searchAcquisitionCandidate(book))));
+  }
+
+  private searchAcquisitionCandidate(book: SearchBook): BookAcquisitionCandidate {
+    const rank = searchCandidateRank(book);
+    return { seed: this.remoteSeedForSearchBook(book), catalogReady: rank < 2, failed: rank === 3 };
   }
 
   private searchDetailKey(sourceId: string, bookId: string): string {
@@ -2339,6 +2349,10 @@ struct Index {
 
 
   private onSearchResultSelected(book: SearchBook, variants: SearchBook[] = []): void {
+    this.searchDetailCandidates = [book, ...variants.filter((candidate: SearchBook): boolean =>
+      (candidate.sourceId !== book.sourceId || candidate.bookId !== book.bookId) &&
+      (book.groupKey !== undefined && candidate.groupKey === book.groupKey ||
+        candidate.title === book.title && candidate.author === book.author))];
     if (book.sourceId === LOCAL_SOURCE_ID) {
       const localBook = this.shelfBooks.find((item: ShelfBook): boolean =>
         item.sourceId === LOCAL_SOURCE_ID && item.bookId === book.bookId);
@@ -2352,7 +2366,7 @@ struct Index {
     // Keep every source candidate. The shared scheduler bounds concurrency;
     // source identity remains the one selected by the user.
     const ordered: SearchBook[] = [book];
-    for (const candidate of variants) {
+    for (const candidate of this.searchDetailCandidates) {
       if (candidate.sourceId === book.sourceId && candidate.bookId === book.bookId) {
         continue;
       }
@@ -2443,6 +2457,7 @@ struct Index {
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
     this.route = entryRoute;
+    ReaderRuntimeOwner.current().bookAcquisitions().setPreparationVisible(false);
     const owner = ReaderRuntimeOwner.current();
     const reading = new LocalReadingFlowGateway(owner);
     reading.loadToc(selection.bookId)
@@ -2509,6 +2524,7 @@ struct Index {
     resumeImmediately: boolean = false,
     fallbackSeeds: RemoteReadingBookSeed[] = [],
     fallbackSourceNames: string[] = [],
+    retainedDetailReturnRoute: DetailReturnRoute | undefined = undefined,
   ): void {
     const reusableRemoteSession = shelfSnapshot !== undefined &&
       this.remoteReadingSession?.identity.sourceId === seed.sourceId &&
@@ -2518,7 +2534,9 @@ struct Index {
     const entryRoute = resumeImmediately ? this.readingOriginRoute : 'detail';
     this.readingOriginRoute = entryRoute;
     this.shelfReadingPreparation = entryRoute === 'bookshelf';
-    this.detailReturnRoute = originRoute === 'search' ? 'search' : 'bookshelf';
+    // Replacing the source inside an existing preview retains that preview's
+    // parent. Its current `detail` route is not a new bookshelf entry.
+    this.detailReturnRoute = retainedDetailReturnRoute ?? (originRoute === 'search' ? 'search' : 'bookshelf');
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
@@ -2538,6 +2556,7 @@ struct Index {
     // reading" action waits for the leading-chapter readability probe.
     this.remoteContentVerdict = 'verifying';
     this.route = entryRoute;
+    ReaderRuntimeOwner.current().bookAcquisitions().setPreparationVisible(false);
     if (shelfSnapshot?.lastCheckAt !== undefined) {
       const catalogKey = `${seed.sourceId}\u0000${seed.bookId}`;
       const persistedRefreshAt = shelfSnapshot.lastCheckAt * 1000;
@@ -2561,8 +2580,16 @@ struct Index {
     const detailAdmissionStartedAt = Date.now();
     // The coordinator validates the source and its durable cache together.
     // A deleted/disabled source must not hide already downloaded chapters.
-    const sessionAdmission: Promise<RemoteDetailAdmission> = owner.bookAcquisitions()
-      .acquireBookWithBackgroundRefresh(seed, { isCurrent })
+    const allowGroupFallback = shelfSnapshot === undefined && !resumeImmediately && originRoute === 'search' &&
+      fallbackSeeds.length > 0 && this.pendingSourceSwitch === undefined;
+    const candidates = candidateSeeds.map((candidate: RemoteReadingBookSeed): BookAcquisitionCandidate => {
+      const row = this.searchDetailCandidates.find((book: SearchBook): boolean =>
+        book.sourceId === candidate.sourceId && book.bookId === candidate.bookId);
+      return row === undefined ? { seed: candidate, catalogReady: false, failed: false } : this.searchAcquisitionCandidate(row);
+    });
+    const sessionAdmission: Promise<RemoteDetailAdmission> = (allowGroupFallback ? owner.bookAcquisitions()
+      .acquireCandidateGroup(candidates, { isCurrent }) : owner.bookAcquisitions()
+      .acquireBookWithBackgroundRefresh(seed, { isCurrent }))
       .then((admission): RemoteDetailAdmission =>
         new RemoteDetailAdmission(admission.session, admission.backgroundRefresh));
     void sessionAdmission
@@ -2739,19 +2766,6 @@ struct Index {
           this.showReadingFailure(resumeImmediately ? '阅读加载失败' : '详情加载失败', error.message);
         }
       });
-  }
-
-  private async openSearchSessionCacheFirst(
-    gateway: RemoteReadingFlowGateway,
-    seeds: RemoteReadingBookSeed[],
-    isCurrent: () => boolean,
-  ): Promise<RemoteDetailAdmission> {
-    if (seeds.length === 0) {
-      throw new Error('no candidate source available');
-    }
-    const admission = await ReaderRuntimeOwner.current().bookAcquisitions()
-      .acquireBookWithBackgroundRefresh(seeds[0], { isCurrent });
-    return new RemoteDetailAdmission(admission.session, admission.backgroundRefresh);
   }
 
   private refreshCachedSearchDetailInBackground(
@@ -4151,27 +4165,50 @@ struct Index {
       return;
     }
     const gateway = this.getSourceSwitchGateway();
+    const known = this.knownSearchSourceCandidates(query);
+    if (!forceRefresh && known.length > 0) {
+      this.sourceSwitchState = { kind: 'candidates', candidates: known, refreshing: false };
+    }
     const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
     this.sourceSwitchUnsubscribe?.();
-    let refreshingProjection = false;
+    // Serialize dirty publications behind the initial snapshot as well; a
+    // slow first read must not overwrite a newer candidate update.
+    let refreshingProjection = true;
     let refreshProjectionAgain = false;
-    const refreshProjection = (): void => {
+    let projectionReset = false;
+    const projectionDirty = new Map<string, RemoteReadingIdentity>();
+    const refreshProjection = (change: BookAcquisitionChange): void => {
       if (!isCurrent()) return;
+      projectionReset = projectionReset || change.reset;
+      for (const identity of change.identities) projectionDirty.set(
+        sourceSwitchCandidateKey(identity.sourceId, identity.bookId), identity);
+      if (!projectionReset && projectionDirty.size === 0) return;
       if (refreshingProjection) { refreshProjectionAgain = true; return; }
       if (this.sourceSwitchState.kind !== 'candidates' &&
         this.sourceSwitchState.kind !== 'empty' && this.sourceSwitchState.kind !== 'discovering') return;
       refreshProjectionAgain = false;
       refreshingProjection = true;
-      void gateway.loadCachedCandidates(query, isCurrent).then((candidates: SourceSwitchCandidate[]): void => {
+      const batch: BookAcquisitionChange = { reset: projectionReset, identities: Array.from(projectionDirty.values()) };
+      projectionReset = false;
+      projectionDirty.clear();
+      void gateway.loadCachedCandidates(query, isCurrent, known, batch).then((candidates: SourceSwitchCandidate[]): void => {
         if (!isCurrent()) return;
         if (candidates.length > 0) this.sourceSwitchState = { kind: 'candidates', candidates,
           refreshing: this.sourceSwitchState.kind === 'candidates' && this.sourceSwitchState.refreshing === true };
         else if (this.sourceSwitchState.kind !== 'candidates' || this.sourceSwitchState.refreshing !== true) {
           this.sourceSwitchState = { kind: 'empty' };
         }
-      }).catch((): void => {}).finally((): void => {
+      }).catch((): void => {
+        if (!isCurrent()) return;
+        // Keep failed work for the next real publication. A transient read
+        // must not lose identities/reset consumed before the await, and must
+        // not manufacture an unbounded automatic retry loop.
+        projectionReset = projectionReset || batch.reset;
+        for (const identity of batch.identities) projectionDirty.set(
+          sourceSwitchCandidateKey(identity.sourceId, identity.bookId), identity);
+      }).finally((): void => {
         refreshingProjection = false;
-        if (refreshProjectionAgain) refreshProjection();
+        if (refreshProjectionAgain) refreshProjection({ reset: false, identities: [] });
       });
     };
     this.sourceSwitchUnsubscribe = ReaderRuntimeOwner.current().bookAcquisitions().subscribe(refreshProjection);
@@ -4183,11 +4220,12 @@ struct Index {
     }
     const load = forceRefresh
       ? gateway.refreshCandidates(query, isCurrent)
-      : gateway.loadCachedCandidates(query, isCurrent)
+      : gateway.loadCachedCandidates(query, isCurrent, known)
         .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> |
           SourceSwitchDiscoveryOutcome => cached.length > 0
           ? { kind: 'sources', candidates: cached }
-          : { kind: 'noSources' });
+          : gateway.refreshCandidates(query, isCurrent,
+            this.detailReturnRoute === 'search' ? this.searchOrchestrator?.searchedSourceIds() ?? [] : []));
     load
       .then((outcome: SourceSwitchDiscoveryOutcome): void => {
         if (!isCurrent()) {
@@ -4223,6 +4261,9 @@ struct Index {
         } else {
           this.sourceSwitchState = { kind: 'discoveryError', message: error.message };
         }
+      }).finally((): void => {
+        refreshingProjection = false;
+        if (refreshProjectionAgain) refreshProjection({ reset: false, identities: [] });
       });
   }
 
@@ -4253,6 +4294,19 @@ struct Index {
       currentChapterIndex: anchor.index,
       currentChapterTitle: anchor.title,
     };
+  }
+
+  private knownSearchSourceCandidates(query: SourceSwitchProbeQuery): SourceSwitchCandidate[] {
+    if (this.detailReturnRoute !== 'search') return [];
+    return this.searchDetailCandidates.map((book: SearchBook): SourceSwitchCandidate => {
+      const rank = searchCandidateRank(book);
+      return { sourceId: book.sourceId, sourceName: book.sourceName, sourceVersion: book.sourceRuleVersion,
+        searchVariables: book.variables,
+        bookUrl: book.bookId, bookName: book.title, author: book.author, coverUrl: book.coverUrl,
+        latestChapterTitle: book.latestChapterTitle, category: book.category,
+        acquisitionState: rank === 0 ? 'readable' : rank === 1 ? 'catalogReady' : rank === 3 ? 'failed' : 'discovered',
+        isCurrent: query.sourceId === book.sourceId && query.bookId === book.bookId };
+    });
   }
 
   private onPickSource(candidate: SourceSwitchCandidate): void {
@@ -4334,10 +4388,11 @@ struct Index {
   }
 
   private async switchPreviewSource(candidate: SourceSwitchCandidate, isCurrent: () => boolean): Promise<void> {
+    const detailReturnRoute = this.detailReturnRoute;
     const owner = ReaderRuntimeOwner.current();
     const seed: RemoteReadingBookSeed = { sourceId: candidate.sourceId, bookId: candidate.bookUrl,
       detailUrl: candidate.bookUrl, title: candidate.bookName, author: candidate.author ?? '',
-      sourceVersion: candidate.sourceVersion, coverUrl: candidate.coverUrl };
+      sourceVersion: candidate.sourceVersion, coverUrl: candidate.coverUrl, searchVariables: candidate.searchVariables };
     const session = await owner.bookAcquisitions().acquireBook(seed, { isCurrent });
     const gateway = new RemoteReadingFlowGateway(owner);
     let readable = false;
@@ -4355,7 +4410,8 @@ struct Index {
     this.sourceSwitchUnsubscribe = undefined;
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
-    this.openRemoteBookDetail(seed, candidate.sourceName ?? candidate.sourceId);
+    this.openRemoteBookDetail(seed, candidate.sourceName ?? candidate.sourceId,
+      undefined, false, [], [], detailReturnRoute);
   }
 
   private async reconcileUnknownSourceSwitchCommit(
@@ -4764,6 +4820,7 @@ struct Index {
   }
 
   private returnToBookshelf(): void {
+    this.searchDetailCandidates = [];
     this.searchOrchestrator?.close();
     const retainedRemoteSession = this.detailBook !== undefined &&
       this.detailBook.sourceId !== LOCAL_SOURCE_ID &&

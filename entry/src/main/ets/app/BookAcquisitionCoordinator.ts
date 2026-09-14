@@ -1,4 +1,3 @@
-import { remoteReadingFailureKindOf } from '../features/reading/RemoteContentAdmission';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import { BookRequestScheduler, type BookRequestExecutor, type BookRequestPriority, type BookRequestOptions } from './BookRequestScheduler';
 import { errorMessageOf } from './ErrorMessage';
@@ -8,11 +7,21 @@ import {
 } from '../features/reading/RemoteReadingFlowGateway';
 import { decodeRemoteReadingVariables, RemoteReadingGatewayError, classifyRemoteReadingCommandFailure,
   isRemoteReadingCacheRecoveryEligible, remoteReadingFailureRecord,
-  type RemoteReadingFailureRecord } from '../features/reading/RemoteReadingContract';
+  type RemoteReadingFailureRecord, type RemoteReadingIdentity } from '../features/reading/RemoteReadingContract';
+
+export interface BookAcquisitionChange {
+  reset: boolean;
+  identities: RemoteReadingIdentity[];
+}
 
 const PREPARED_SESSION_LIMIT = 32;
 const CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
-type Preparation = { seed: RemoteReadingBookSeed; scope: number; forceRefresh: boolean };
+export interface BookAcquisitionCandidate {
+  seed: RemoteReadingBookSeed;
+  catalogReady: boolean;
+  failed: boolean;
+}
+type Preparation = { candidates: BookAcquisitionCandidate[]; scope: number; forceRefresh: boolean };
 type BookJob = { promise: Promise<RemoteReadingSession>; priority: BookRequestPriority; forceRefresh: boolean };
 type PreparedSession = { session: RemoteReadingSession; at: number };
 
@@ -42,9 +51,13 @@ export class BookAcquisitionCoordinator {
   private pending: Map<string, Preparation> = new Map();
   private attempted: Set<string> = new Set();
   private preparationActive: number = 0;
+  private preparationVisible: boolean = true;
+  private preparationGroups: Set<string> = new Set();
   private scope: number = 0;
   private closed: boolean = false;
-  private listeners: Set<() => void> = new Set();
+  private listeners: Set<(change: BookAcquisitionChange) => void> = new Set();
+  private changedIdentities: Map<string, RemoteReadingIdentity> = new Map();
+  private changedReset: boolean = false;
   private notifyTimer: number = -1;
   private attemptClock: number = 0;
   private failures: RemoteReadingFailureRecord[] = [];
@@ -58,7 +71,7 @@ export class BookAcquisitionCoordinator {
     this.scheduler = new BookRequestScheduler(execute);
   }
 
-  subscribe(listener: () => void): () => void {
+  subscribe(listener: (change: BookAcquisitionChange) => void): () => void {
     this.listeners.add(listener);
     return (): void => { this.listeners.delete(listener); };
   }
@@ -88,7 +101,7 @@ export class BookAcquisitionCoordinator {
     if (this.closed) throw new Error('书籍任务已关闭');
     const changesSources = method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
       method === 'runtime.storage.apply' || method === 'runtime.storage.restore';
-    if (changesSources) this.invalidateSourceRegistry();
+    if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
     const registryAtStart = this.registryRevision;
     try {
       const sourceId = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : '';
@@ -110,10 +123,13 @@ export class BookAcquisitionCoordinator {
         }
       }
       if (method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
-        method === 'search-book.put' || method === 'search-book.delete' || method === 'change.bookSource') this.changed();
+        method === 'search-book.put' || method === 'search-book.delete' || method === 'change.bookSource') {
+        this.observeChangedBooks(method, params, result.data);
+        this.changed();
+      }
       return result;
     } finally {
-      if (changesSources) { this.invalidateSourceRegistry(); this.changed(); }
+      if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
     }
   }
 
@@ -121,11 +137,15 @@ export class BookAcquisitionCoordinator {
     this.scope += 1;
     this.pending.clear();
     this.attempted.clear();
+    this.preparationGroups.clear();
+    this.preparationVisible = true;
   }
 
   endSearch(): void {
     this.scope += 1;
     this.pending.clear();
+    this.preparationGroups.clear();
+    this.preparationVisible = false;
     this.scheduler.visibilityChanged();
     // Admitted detail/TOC/body work has independent ownership until completion.
   }
@@ -133,18 +153,70 @@ export class BookAcquisitionCoordinator {
   visibilityChanged(): void { this.scheduler.visibilityChanged(); }
 
   prepare(seeds: RemoteReadingBookSeed[], forceRefresh: boolean = false): void {
-    for (const seed of seeds) {
-      const key = acquisitionBookKey(seed.sourceId, seed.bookId);
-      if (seed.sourceId === 'local' || this.pending.has(key) || (!forceRefresh && this.attempted.has(key))) continue;
-      this.pending.set(key, { seed, scope: this.scope, forceRefresh });
+    this.prepareGroups(seeds.slice(0, 6).map((seed): BookAcquisitionCandidate[] =>
+      [{ seed, catalogReady: false, failed: false }]), forceRefresh);
+  }
+
+  /** Only the visible book groups own speculative catalog work; never fetch bodies. */
+  prepareGroups(groups: BookAcquisitionCandidate[][], forceRefresh: boolean = false): void {
+    this.pending.clear();
+    this.preparationGroups.clear();
+    for (const candidates of groups.slice(0, 6)) {
+      if (candidates.length === 0 || candidates[0].seed.sourceId === 'local') continue;
+      const key = JSON.stringify(candidates.map((candidate: BookAcquisitionCandidate): string =>
+        JSON.stringify([candidate.seed.sourceId, candidate.seed.bookId, candidate.seed.sourceVersion])));
+      this.preparationGroups.add(key);
+      if (!forceRefresh && this.attempted.has(key)) continue;
+      this.pending.set(key, { candidates, scope: this.scope, forceRefresh });
     }
     this.drainPreparations();
+  }
+
+  setPreparationVisible(visible: boolean): void {
+    this.preparationVisible = visible;
+    if (visible) this.drainPreparations();
+  }
+
+  /** Business fallback for an admitted same-book group, never for a fixed shelf identity. */
+  async acquireCandidateGroup(candidates: BookAcquisitionCandidate[], options: RemoteReadingOpenOptions = {},
+    priority: BookRequestPriority = 'foreground'): Promise<BookAcquisitionAdmission> {
+    const seen = new Set<string>();
+    const ordered = candidates.slice().sort((a: BookAcquisitionCandidate, b: BookAcquisitionCandidate): number =>
+      (a.failed ? 2 : a.catalogReady ? 0 : 1) - (b.failed ? 2 : b.catalogReady ? 0 : 1));
+    let unverifiedAttempts = 0;
+    let failure: Error = new Error('没有可用的同书候选');
+    for (const candidate of ordered) {
+      if (this.closed || options.isCurrent?.() === false) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+      const key = acquisitionBookKey(candidate.seed.sourceId, candidate.seed.bookId);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (candidate.failed && !options.forceRefresh) continue;
+      if (!candidate.catalogReady && unverifiedAttempts >= 3) continue;
+      if (!candidate.catalogReady) unverifiedAttempts += 1;
+      try {
+        const admission = await this.acquireBookWithBackgroundRefresh(candidate.seed, options, priority);
+        if (options.isCurrent?.() === false) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+        return admission;
+      } catch (error) {
+        if (!(error instanceof RemoteReadingGatewayError) || !this.canTryAnotherCandidate(error)) throw error;
+        failure = error;
+      }
+    }
+    throw failure;
+  }
+
+  private canTryAnotherCandidate(error: RemoteReadingGatewayError): boolean {
+    if (error.capability !== undefined || error.code === 'unsupportedHostCapability') return false;
+    return error.code === 'emptyToc' || error.code === 'missingTocUrl' ||
+      ((error.command === 'book.detail' || error.command === 'book.toc') &&
+        (error.code === 'commandFailed' || error.code === 'invalidResponse'));
   }
 
   async acquireBook(seed: RemoteReadingBookSeed, options: RemoteReadingOpenOptions = {},
     priority: BookRequestPriority = 'foreground'): Promise<RemoteReadingSession> {
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     await this.ensureSources();
+    if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     const version = this.versions.get(seed.sourceId);
     const key = JSON.stringify([seed.sourceId, seed.bookId, version]);
     if (priority === 'foreground') {
@@ -189,25 +261,26 @@ export class BookAcquisitionCoordinator {
   }
 
   /**
-   * Admit the fastest known session and, when it came from the fresh prepared
-   * cache, refresh that identity in the background. Keeping this decision in
+   * Admit the fastest known session and refresh it in the background only
+   * when the admitted catalog recommends a refresh. Keeping this decision in
    * the process coordinator prevents page layers from peeking at cache state.
    */
   async acquireBookWithBackgroundRefresh(seed: RemoteReadingBookSeed,
     options: RemoteReadingOpenOptions = {}, priority: BookRequestPriority = 'foreground'):
     Promise<BookAcquisitionAdmission> {
     await this.ensureSources();
+    if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     const version = this.versions.get(seed.sourceId);
-    const key = JSON.stringify([seed.sourceId, seed.bookId, version]);
-    const cachedEntry = this.prepared.get(key);
-    const cached = !options.forceRefresh && cachedEntry !== undefined &&
-      Date.now() - cachedEntry.at < CACHE_FRESH_MS;
     const session = await this.acquireBook(seed, options, priority);
-    if ((!cached && session.refreshRecommended !== true) || options.forceRefresh || this.closed || version === undefined) return { session };
+    if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+    if (session.refreshRecommended !== true || options.forceRefresh || this.closed || version === undefined) return { session };
     // Do not pass the page's isCurrent guard to process-owned refresh work;
     // the visible subscriber may disappear while the refresh updates the
     // shared admission cache for the next opener.
     const backgroundRefresh = this.acquireBook(seed, { forceRefresh: true }, 'background');
+    // The process owns failure recording even if its page/viewport subscriber
+    // has gone away. Keep the original promise rejectable for active callers.
+    void backgroundRefresh.catch((_error: Error): void => {});
     return { session, backgroundRefresh };
   }
 
@@ -327,6 +400,13 @@ export class BookAcquisitionCoordinator {
       const failure = cacheFailure === undefined ? classified : new RemoteReadingGatewayError(classified.code,
         classified.message, classified.command, classified.capability, classified.diagnostic, cacheFailure, classified.category);
       this.recordFailure(failure, attemptId, failureContext('refresh'));
+      if (isCurrent() && version !== undefined && this.canTryAnotherCandidate(failure)) {
+        try {
+          await this.request('search-book.put', { origin: seed.sourceId, bookUrl: seed.bookId,
+            acquisition: { schemaVersion: 1, sourceVersion: version, checkedAt: attemptId,
+              stage: 'failed', message: errorMessageOf(failure) } });
+        } catch (_publicationError) { /* A failed fact publication never erases the original source failure. */ }
+      }
       throw failure;
     }
     if (!isCurrent() || (session.sourceVersion !== undefined && session.sourceVersion !== version)) {
@@ -337,7 +417,7 @@ export class BookAcquisitionCoordinator {
   }
 
   private drainPreparations(): void {
-    while (!this.closed && this.preparationActive < 2 && this.pending.size > 0) {
+    while (!this.closed && this.preparationVisible && this.preparationActive < 2 && this.pending.size > 0) {
       const key = this.pending.keys().next().value;
       if (key === undefined) return;
       const task = this.pending.get(key);
@@ -345,50 +425,22 @@ export class BookAcquisitionCoordinator {
       if (task === undefined || task.scope !== this.scope) continue;
       this.attempted.add(key);
       this.preparationActive += 1;
-      void this.prepareOne(task.seed, task.forceRefresh).catch((): void => {}).finally((): void => {
+      void this.prepareOne(task, key).catch((error: Error): void => {
+        if (error instanceof RemoteReadingGatewayError && error.code === 'cancelled' && task.scope === this.scope) {
+          this.attempted.delete(key);
+          if (this.preparationGroups.has(key)) this.pending.set(key, task);
+        }
+      }).finally((): void => {
         this.preparationActive -= 1;
         this.drainPreparations();
       });
     }
   }
 
-  private async prepareOne(seed: RemoteReadingBookSeed, forceRefresh: boolean): Promise<void> {
-    let session: RemoteReadingSession | undefined = undefined;
-    await this.ensureSources();
-    const versionAtStart = this.versions.get(seed.sourceId);
-    const startedAt = this.beginAttempt();
-    try {
-      session = await this.acquireBook(seed, { forceRefresh }, 'background');
-      const gateway = new RemoteReadingFlowGateway({
-        request: (method: string, params?: JsonObject, options?: RequestOptions): Promise<ReaderCoreResultEvent> =>
-          this.request(method, params, options, 'background'),
-      });
-      const progress = await gateway.loadProgress(session.identity);
-      const start = progress.kind === 'restored' ? progress.progress.chapterIndex : 0;
-      const entries = session.entries.filter((entry): boolean => entry.index >= start && entry.url.trim().length > 0).slice(0, progress.kind === 'restored' ? 1 : 3);
-      let failure = '没有可读章节';
-      let attemptAt = this.beginAttempt();
-      for (const entry of entries) {
-        attemptAt = this.beginAttempt();
-        try {
-          await gateway.loadChapter(session, entry.index, (): boolean => !this.closed);
-          await this.reportVerdict(session, entry.url, undefined, attemptAt);
-          return;
-        } catch (error) {
-          failure = errorMessageOf(error);
-          if (remoteReadingFailureKindOf(error) !== 'SOURCE_CONTENT_EMPTY') break;
-        }
-      }
-      await this.reportVerdict(session, '', failure, attemptAt);
-    } catch (error) {
-      const version = session?.sourceVersion ?? versionAtStart;
-      if (version !== undefined && !this.closed) {
-        try {
-          await this.request('search-book.put', { origin: seed.sourceId, bookUrl: seed.bookId,
-            acquisition: { schemaVersion: 1, sourceVersion: version, checkedAt: startedAt, stage: 'failed', message: errorMessageOf(error) } });
-        } catch (_publicationError) { /* Deleted/replaced source rejects the old verdict. */ }
-      }
-    }
+  private async prepareOne(task: Preparation, key: string): Promise<void> {
+    const isCurrent = (): boolean => !this.closed && task.scope === this.scope &&
+      this.preparationVisible && this.preparationGroups.has(key);
+    await this.acquireCandidateGroup(task.candidates, { forceRefresh: task.forceRefresh, isCurrent }, 'background');
   }
 
   private async ensureSources(): Promise<void> {
@@ -414,12 +466,33 @@ export class BookAcquisitionCoordinator {
     if (complete) this.registryReady = true;
   }
 
-  private changed(): void {
+  private observeChangedBooks(method: string, params: JsonObject, data: JsonObject): void {
+    const admit = (sourceId: unknown, bookId: unknown): void => {
+      if (typeof sourceId !== 'string' || typeof bookId !== 'string' || sourceId.length === 0 || bookId.length === 0) return;
+      this.changedIdentities.set(acquisitionBookKey(sourceId, bookId), { sourceId, bookId });
+    };
+    if (method === 'book.search' && Array.isArray(data['books'])) {
+      for (const value of data['books']) admit(data['sourceId'] ?? params['sourceId'], objectValue(value)?.['bookId']);
+    } else if (method === 'change.bookSource' && Array.isArray(data['candidates'])) {
+      for (const value of data['candidates']) {
+        const row = objectValue(value);
+        admit(row?.['sourceId'], row?.['bookUrl']);
+      }
+    } else {
+      admit(params['sourceId'] ?? params['origin'], params['bookId'] ?? params['bookUrl'] ?? objectValue(params['book'])?.['bookId']);
+    }
+  }
+
+  private changed(reset: boolean = false): void {
+    this.changedReset = this.changedReset || reset;
     if (this.closed || this.notifyTimer >= 0) return;
     this.notifyTimer = setTimeout((): void => {
       this.notifyTimer = -1;
+      const change: BookAcquisitionChange = { reset: this.changedReset, identities: Array.from(this.changedIdentities.values()) };
+      this.changedReset = false;
+      this.changedIdentities.clear();
       for (const listener of this.listeners) {
-        try { listener(); } catch (_error) { /* One disposed projection cannot block others. */ }
+        try { listener(change); } catch (_error) { /* One disposed projection cannot block others. */ }
       }
     }, 16);
   }

@@ -1,5 +1,6 @@
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { searchResultRelevance } from '../entry/src/main/ets/features/search/SearchResultRelevance.ts';
+import { searchCandidateRank } from '../entry/src/main/ets/features/search/SearchCandidatePolicy.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -92,7 +93,8 @@ console.log('search stable rows, enrichment and navigation state: PASS');
 
 // PH25: execute the real page grouping method over progressively arriving sources.
 const Page = productionMotionMethods(process.env.READER_SEARCH_RELEVANCE_SOURCE ?? new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url),
-  ['groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults'], { SearchBookGroup, searchResultRelevance });
+  ['groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups'],
+  { SearchBookGroup, searchResultRelevance, searchCandidateRank });
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
 const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
@@ -122,6 +124,7 @@ console.log('search relevance: late exact title, stable ties, canonical variants
 // Reversed later source buckets and enriched source counts must not shuffle ties.
 const t = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部',
+  visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) { this.publishedGroups = groups; },
   resultDataSource: new SearchResultDataSource(), measureHistory() {} });
 const tieA = book('tie-a', '诡秘之主·甲');
 const tieB = book('tie-b', '诡秘之主·乙');
@@ -138,6 +141,7 @@ t.presentation = { kind: 'results', keyword: '诡秘之主', results: [tieB, tie
 t.viewStateRevision = t.viewState.revision;
 t.scrollRestored = true;
 t.refreshVisibleResults();
+assert.deepEqual(t.publishedGroups, [t.visibleGroups[0].variants], 'actual refresh publishes the current visible candidate group');
 assert.deepEqual(t.visibleGroups.map(g => g.book.sourceId), ['original', 'tie-a', 'tie-b']);
 assert.equal(t.resultDataSource.getData(2), retainedB, 'rank insertion retains the observed anchored row');
 assert.equal(retainedB.sourceCount, 2, 'source enrichment keeps the same first-seen tie');
@@ -186,3 +190,24 @@ p.shelfBooks = [book('shelf-other-source', '诡秘之主', '爱潜水的乌贼')
 p.presentation = { kind: 'results', keyword: '诡秘之主' }; p.selectedGroupName = '全部';
 assert.equal(p.groupResults(aliases)[0].inBookshelf, true);
 console.log('PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS');
+
+// Same relevance/group: only current rule-version admission facts can promote a candidate.
+{
+  const now = Date.now();
+  const candidate = (id, acquisition) => book(id, '鸣龙', '关关公子', {
+    sourceRuleVersion: 'current', groupKey: 'minglong', acquisition,
+  });
+  const failed = candidate('failed', { sourceVersion: 'current', failure: { at: now } });
+  const catalog = candidate('catalog', { sourceVersion: 'current', catalogAt: now - 1000, catalogCount: 20 });
+  const unknown = candidate('unknown', undefined);
+  const stale = candidate('stale', { sourceVersion: 'current', catalogAt: now - 1000, catalogCount: 20, stale: true });
+  const oldVersion = candidate('old-version', { sourceVersion: 'previous', catalogAt: now - 1000, catalogCount: 20 });
+  const owner = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '鸣龙' },
+    viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
+  assert.equal(owner.groupResults([failed, catalog])[0].book, catalog,
+    'a current verified catalog represents the group instead of a recently failed source');
+  assert.equal(owner.groupResults([unknown, stale])[0].book, unknown, 'stale facts do not outrank unverified candidates');
+  assert.equal(owner.groupResults([unknown, oldVersion])[0].book, unknown, 'other source versions do not outrank unverified candidates');
+  assert.equal(owner.groupResults([stale, oldVersion, catalog])[0].book, catalog);
+}
+console.log('current-version catalog group representative; stale and other-version facts are not verified PASS');

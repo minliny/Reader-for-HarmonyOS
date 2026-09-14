@@ -1,3 +1,5 @@
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { searchCandidateRank } from '../entry/src/main/ets/features/search/SearchCandidatePolicy.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -277,7 +279,7 @@ const refreshRows = [{ bookUrl: 'old-book', origin: 'old-source', name: 'Current
 const refreshCalls = [];
 let preparation;
 const refreshRuntime = {
-  bookAcquisitions: () => ({ prepare: (seeds, refresh) => { preparation = { seeds, refresh }; } }),
+  bookAcquisitions: () => ({ sourceRegistryRevision: () => 1, prepare: (seeds, refresh) => { preparation = { seeds, refresh }; } }),
   async request(method, params) {
     refreshCalls.push(method);
     if (method === 'search-book.list') return { data: { books: refreshRows } };
@@ -300,10 +302,9 @@ const refreshed = await new SourceSwitchGateway(refreshRuntime).refreshCandidate
 });
 assert.equal(refreshed.kind, 'sources');
 assert.equal(refreshed.candidates.length, 2, 'partial refresh failure retains the old source');
-assert.deepEqual(new Set(preparation.seeds.map(seed => seed.sourceId)), new Set(['old-source', 'fresh-source']));
-assert.equal(preparation.refresh, true);
+assert.equal(preparation, undefined, 'discovery must not enqueue unbounded catalog/body acquisition');
 assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', 'book.toc', 'chapter.content'].includes(method)), false,
-  'explicit discovery returns progressive candidates and delegates acquisition to shared tasks');
+  'explicit discovery returns candidates; catalog preparation belongs to the visible viewport');
 
 const runtime = {
   async request(method, params) {
@@ -363,3 +364,120 @@ assert.deepEqual(pending.map((entry) => [entry.transactionId, entry.fromBookId, 
 ]);
 
 console.log('source-switch gateway contract: PASS');
+
+// PH70: entry reuses exact candidates already emitted by Search even if the
+// durable projection has not arrived; no second source sweep is permitted.
+{
+  const calls=[];let revision=1;
+  const records=new Map();
+  const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>revision}),request:async(method,params)=>{
+    calls.push({method,params});
+    if(method==='source.list')return {data:{sources:[{sourceId:'a',name:'A',enabled:true,sourceVersion:'v1'},{sourceId:'b',name:'B',enabled:revision===1,sourceVersion:'v1'}]}};
+    if(method==='search-book.list')return {data:{books:[...records.values()]}};
+    if(method==='search-book.get')return {data:{book:records.get(params.origin)??null}};
+    throw Error(`cached switch entry must not perform ${method}`);
+  }};
+  const gateway=new SourceSwitchGateway(owner);
+  const query={sourceId:'a',bookId:'/book',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
+  const known=['a','b'].map(sourceId=>({sourceId,sourceVersion:'v1',bookUrl:'/book',bookName:'鸣龙',author:'关关公子',category:'novel',acquisitionState:'discovered',searchVariables:[{name:'token',value:'carry'}]}));
+  const first=await gateway.loadCachedCandidates(query,()=>true,known);
+  assert.deepEqual(first.map(c=>c.sourceId),['a','b']);assert.equal(first[1].searchVariables[0].value,'carry');
+  const row={origin:'b',bookUrl:'/book',name:'鸣龙',author:'关关公子',variable:'{}',time:Date.now(),acquisition:{sourceVersion:'v1',catalogCount:1,catalogAt:Date.now()}};
+  records.set('b',row);calls.length=0;
+  const next=await gateway.loadCachedCandidates(query,()=>true,known,{reset:false,identities:[{sourceId:'b',bookId:'/book'},{sourceId:'b',bookId:'/book'}]});
+  assert.deepEqual(calls.map(c=>c.method),['search-book.get'],'duplicate dirty identities read once without full DB/source scan');
+  assert.equal(next.find(c=>c.sourceId==='b').acquisitionState,'catalogReady');
+  revision++;calls.length=0;
+  const replaced=await gateway.loadCachedCandidates(query,()=>true,known,{reset:true,identities:[]});
+  assert.deepEqual(replaced.map(c=>c.sourceId),['a'],'disabled source cannot be revived by a known row');
+  assert.deepEqual(calls.map(c=>c.method),['source.list','search-book.list']);
+}
+// Missing-candidate discovery excludes sources already dispatched by this
+// exact search session; an explicit refresh (no exclusions) checks all again.
+{
+  const searched=[];const owner={request:async(method,params)=>{
+    if(method==='source.list')return{data:{sources:['a','b','c'].map(sourceId=>({sourceId,name:sourceId,enabled:true}))}};
+    assert.equal(method,'change.bookSource');searched.push(params.sourceIds[0]);return{data:{candidates:[]}};
+  }};const gateway=new SourceSwitchGateway(owner);
+  await gateway.discoverCandidates('a','/book','鸣龙',()=>true,['a','b']);assert.deepEqual(searched,['c']);
+  searched.length=0;await gateway.discoverCandidates('a','/book','鸣龙',()=>true);assert.deepEqual(searched,['a','b','c']);
+}
+console.log('PH70 known candidate first paint, delta projection, registry deletion and missing-only discovery PASS');
+{
+  let release;const sourceGate=new Promise(r=>release=r);const calls=[];let listener;
+  const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>1,subscribe:fn=>{listener=fn;return()=>{}}}),request:async(method)=>{
+    calls.push(method);
+    if(method==='source.list'){await sourceGate;return{data:{sources:['a','b'].map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:'v1'}))}}}
+    if(method==='search-book.list')return{data:{books:[]}};
+    throw Error(`entry must not re-search known candidates: ${method}`);
+  }};
+  const gateway=new SourceSwitchGateway(owner);
+  const query={sourceId:'a',bookId:'/book',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
+  const Index=productionMotionMethods(resolve(repo,'entry/src/main/ets/pages/Index.ets'),
+    ['startSourceDiscovery','knownSearchSourceCandidates','isSourceSwitchActive'],{
+      ReaderRuntimeOwner:{current:()=>owner},searchCandidateRank,sourceSwitchCandidateKey,
+      errorMessageOf:error=>error.message,DOMAIN:0,hilog:{warn(){}}
+    });
+  const page=Object.assign(new Index(),{detailBook:{sourceId:'a',bookId:'/book'},detailReturnRoute:'search',
+    navigationGeneration:1,sourceSwitchVisible:true,sourceSwitchState:{kind:'discovering'},
+    searchDetailCandidates:['a','b'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
+      bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'})),
+    sourceSwitchProbeQuery:()=>query,getSourceSwitchGateway:()=>gateway});
+  page.startSourceDiscovery(1);
+  assert.equal(page.sourceSwitchState.kind,'candidates');assert.equal(page.sourceSwitchState.candidates.length,2,
+    'known Search group paints synchronously before registry/cache I/O completes');
+  listener({reset:false,identities:[]});assert.deepEqual(calls,['source.list'],'empty event does no work');
+  release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
+  assert.equal(page.sourceSwitchState.candidates.length,2);assert.deepEqual(calls,['source.list','search-book.list']);
+}
+console.log('PH70 real Index source-switch entry paints known candidates before cache RPC PASS');
+
+// PH70 retry ownership: a failed consumed batch remains pending until a later
+// real event; it must be unioned with that event rather than silently lost.
+for (const reset of [false, true]) {
+  let listener; let fail = false;
+  const calls = [];
+  const rows = new Map(['a', 'b'].map(sourceId => [sourceId, { origin: sourceId,
+    bookUrl: '/book', name: '鸣龙', author: '关关公子', time: Date.now(),
+    acquisition: { sourceVersion: 'v1', catalogCount: 1, catalogAt: Date.now() } }]));
+  const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => 1,
+    subscribe: fn => { listener = fn; return () => {}; } }), request: async (method, params) => {
+    calls.push({ method, params });
+    if (method === 'source.list') return { data: { sources: ['a', 'b'].map(sourceId =>
+      ({ sourceId, name: sourceId, enabled: true, sourceVersion: 'v1' })) } };
+    if (fail && method === (reset ? 'search-book.list' : 'search-book.get')) {
+      fail = false; throw Error('one transient projection failure');
+    }
+    if (method === 'search-book.list') return { data: { books: [...rows.values()] } };
+    if (method === 'search-book.get') return { data: { book: rows.get(params.origin) } };
+    throw Error(`unexpected source discovery request: ${method}`);
+  } };
+  const gateway = new SourceSwitchGateway(owner);
+  const query = { sourceId: 'a', bookId: '/book', bookName: '鸣龙', author: '关关公子',
+    currentChapterIndex: 0, currentChapterTitle: '' };
+  const Index = productionMotionMethods(resolve(repo, 'entry/src/main/ets/pages/Index.ets'),
+    ['startSourceDiscovery', 'knownSearchSourceCandidates', 'isSourceSwitchActive'], {
+      ReaderRuntimeOwner: { current: () => owner }, searchCandidateRank, sourceSwitchCandidateKey,
+      errorMessageOf: error => error.message, DOMAIN: 0, hilog: { warn() {} },
+    });
+  const page = Object.assign(new Index(), { detailBook: { sourceId: 'a', bookId: '/book' },
+    detailReturnRoute: 'search', navigationGeneration: 1, sourceSwitchVisible: true,
+    sourceSwitchState: { kind: 'discovering' }, searchDetailCandidates: [],
+    sourceSwitchProbeQuery: () => query, getSourceSwitchGateway: () => gateway });
+  const settle = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setImmediate(r)); };
+  page.startSourceDiscovery(1); await settle(); calls.length = 0;
+  fail = true;
+  listener({ reset, identities: [{ sourceId: 'a', bookId: '/book' }] }); await settle();
+  const failedCalls = calls.length;
+  await settle();
+  assert.equal(calls.length, failedCalls, 'failure alone must not create an automatic retry loop');
+  calls.length = 0;
+  listener({ reset: false, identities: [{ sourceId: 'b', bookId: '/book' }] }); await settle();
+  if (reset) assert.equal(calls.filter(c => c.method === 'search-book.list').length, 1,
+    'failed reset must survive and force the subsequent event to rebuild its snapshot');
+  else assert.deepEqual(calls.filter(c => c.method === 'search-book.get').map(c => c.params.origin).sort(), ['a', 'b'],
+    'failed A plus a later B event must re-read both actual identities');
+  assert.equal(page.sourceSwitchState.kind, 'candidates');
+  assert.equal(page.sourceSwitchState.candidates.length, 2);
+}
+console.log('PH70 actual Index/Gateway retain failed delta/reset without automatic retry loops PASS');

@@ -1,4 +1,6 @@
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
+import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
+import type { RemoteReadingIdentity, RemoteReadingVariable } from '../reading/RemoteReadingContract';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { CachedBookIdentityResolver } from '../common/CachedBookIdentity';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -25,6 +27,7 @@ export type SourceSwitchCandidate = {
   acquisitionMessage?: string;
   verifiedChapterUrl?: string;
   sourceVersion?: string;
+  searchVariables?: RemoteReadingVariable[];
   sourceId: string;
   sourceName?: string;
   category: ReaderSourceCategory;
@@ -182,6 +185,10 @@ export class SourceSwitchGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private readonly normalizedMatchText = new Map<string, string>();
   private readonly bookIdentities = new CachedBookIdentityResolver();
+  private cachedSources: Map<string, SourceSwitchRegistryEntry> | undefined;
+  private cachedSourceRevision: number | undefined;
+  private cachedBooks: Map<string, JsonObject> | undefined;
+  private cachedBookRevision: number | undefined;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -195,15 +202,33 @@ export class SourceSwitchGateway {
   async loadCachedCandidates(
     query: SourceSwitchProbeQuery,
     isCurrent: (() => boolean) | undefined = undefined,
+    known: SourceSwitchCandidate[] = [],
+    change: BookAcquisitionChange | undefined = undefined,
   ): Promise<SourceSwitchCandidate[]> {
     this.validateProbeQuery(query);
     const enabledSources = await this.loadEnabledSources(isCurrent);
-    const result = await this.runtimeOwner.request(
-      'search-book.list',
-      {},
-      this.requestOptions(isCurrent),
-    );
-    const rawBooks = result.data['books'];
+    const revision = this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision();
+    let rawBooks: unknown;
+    if (change !== undefined && !change.reset && this.cachedBooks !== undefined && this.cachedBookRevision === revision) {
+      const rows = new Map(this.cachedBooks);
+      const changes = new Map<string, RemoteReadingIdentity>();
+      for (const identity of change.identities) changes.set(sourceSwitchCandidateKey(identity.sourceId, identity.bookId), identity);
+      for (const [key, identity] of changes) {
+        if (isCurrent?.() === false) return [];
+        const result = await this.runtimeOwner.request('search-book.get',
+          { origin: identity.sourceId, bookUrl: identity.bookId }, this.requestOptions(isCurrent));
+        const row = result.data['book'];
+        if (row !== null && typeof row === 'object' && !Array.isArray(row)) {
+          const record = row as JsonObject;
+          if (record['origin'] !== identity.sourceId || record['bookUrl'] !== identity.bookId) throw new Error('候选缓存返回了不同的书籍身份');
+          rows.set(key, record);
+        } else rows.delete(key);
+      }
+      rawBooks = Array.from(rows.values());
+    } else {
+      const result = await this.runtimeOwner.request('search-book.list', {}, this.requestOptions(isCurrent));
+      rawBooks = result.data['books'];
+    }
     if (!Array.isArray(rawBooks)) {
       throw new Error('search-book.list returned invalid data');
     }
@@ -214,10 +239,14 @@ export class SourceSwitchGateway {
       if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('search-book.list returned a non-object row');
       records.push(raw as JsonObject);
     }
+    if (isCurrent?.() === false || revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) return [];
+    this.cachedBooks = new Map<string, JsonObject>();
+    for (const row of records) this.cachedBooks.set(
+      sourceSwitchCandidateKey(this.optionalString(row, 'origin') ?? '', this.optionalString(row, 'bookUrl') ?? ''), row);
+    this.cachedBookRevision = revision;
     const identities = await this.bookIdentities.build(records, new Set(enabledSources.keys()));
     const group = identities.groupFor(query.sourceId, query.bookId) ??
       identities.groupForAlias(this.bookIdentities.aliasKey(query.bookName, query.author));
-    if (group === undefined) return [];
     const candidates: SourceSwitchCandidate[] = [];
     for (const raw of rawBooks) {
       if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
@@ -225,7 +254,7 @@ export class SourceSwitchGateway {
         throw new Error('search-book.list returned a non-object row');
       }
       const book = raw as JsonObject;
-      if (identities.groupFor(this.optionalString(book, 'origin') ?? '', this.optionalString(book, 'bookUrl') ?? '') !== group) {
+      if (group === undefined || identities.groupFor(this.optionalString(book, 'origin') ?? '', this.optionalString(book, 'bookUrl') ?? '') !== group) {
         continue;
       }
       const bookUrl = this.requireString(book, 'bookUrl', 'search-book.list');
@@ -237,6 +266,19 @@ export class SourceSwitchGateway {
       }
       candidates.push(this.decodeCachedCandidate(book, query, checkedAt, source));
     }
+    const keys = new Set(candidates.map((candidate: SourceSwitchCandidate): string =>
+      sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
+    for (const candidate of known) {
+      const source = enabledSources.get(candidate.sourceId);
+      const key = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
+      if (source === undefined || keys.has(key)) continue;
+      candidates.push({ ...candidate, sourceName: source.sourceName, sourceOrder: source.sourceOrder,
+        acquisitionState: candidate.sourceVersion === source.sourceVersion ? candidate.acquisitionState : 'stale',
+        isCurrent: candidate.sourceId === query.sourceId && candidate.bookUrl === query.bookId });
+      keys.add(key);
+    }
+    if (isCurrent?.() === false) return [];
+    if (revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) throw new Error('书源配置已变更，请重试');
     return this.sortCandidates(candidates);
   }
 
@@ -247,15 +289,11 @@ export class SourceSwitchGateway {
   async refreshCandidates(
     query: SourceSwitchProbeQuery,
     isCurrent: (() => boolean) | undefined = undefined,
+    excludedSourceIds: string[] = [],
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.validateProbeQuery(query);
-    await this.discoverCandidates(query.sourceId, query.bookId, query.bookName, isCurrent);
+    await this.discoverCandidates(query.sourceId, query.bookId, query.bookName, isCurrent, excludedSourceIds);
     const candidates = await this.loadCachedCandidates(query, isCurrent);
-    this.runtimeOwner.bookAcquisitions?.().prepare(candidates.map((candidate: SourceSwitchCandidate) => ({
-      sourceId: candidate.sourceId, bookId: candidate.bookUrl, detailUrl: candidate.bookUrl,
-      title: candidate.bookName, author: candidate.author ?? '', sourceVersion: candidate.sourceVersion,
-      coverUrl: candidate.coverUrl, lastChapter: candidate.latestChapterTitle,
-    })), true);
     return candidates.length === 0 ? { kind: 'noSources' } : { kind: 'sources', candidates };
   }
 
@@ -269,6 +307,7 @@ export class SourceSwitchGateway {
     bookId: string,
     keyword: string,
     isCurrent: (() => boolean) | undefined = undefined,
+    excludedSourceIds: string[] = [],
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
@@ -283,6 +322,7 @@ export class SourceSwitchGateway {
       throw new Error('source.list returned invalid data');
     }
     const sources: SourceSwitchRegistryEntry[] = [];
+    const excluded = new Set(excludedSourceIds);
     for (let sourceOrder = 0; sourceOrder < rawSources.length; sourceOrder += 1) {
       const raw = rawSources[sourceOrder];
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -293,6 +333,7 @@ export class SourceSwitchGateway {
         continue;
       }
       const sourceId = this.optionalString(source, 'sourceId');
+      if (sourceId !== undefined && excluded.has(sourceId)) continue;
       if (sourceId !== undefined && sourceId.length > 0) {
         const sourceName = this.optionalString(source, 'name');
         const rawBookSource = source['bookSource'];
@@ -797,6 +838,8 @@ export class SourceSwitchGateway {
   private async loadEnabledSources(
     isCurrent: (() => boolean) | undefined,
   ): Promise<Map<string, SourceSwitchRegistryEntry>> {
+    const revision = this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision();
+    if (revision !== undefined && this.cachedSourceRevision === revision && this.cachedSources !== undefined) return this.cachedSources;
     const result = await this.runtimeOwner.request(
       'source.list',
       { enabledOnly: true },
@@ -836,6 +879,9 @@ export class SourceSwitchGateway {
         });
       }
     }
+    if (revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) throw new Error('书源配置已变更，请重试');
+    this.cachedSourceRevision = revision;
+    this.cachedSources = sources;
     return sources;
   }
 

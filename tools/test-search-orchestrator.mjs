@@ -896,7 +896,7 @@ console.log('search orchestrator bounded concurrency and retained lifecycle: PAS
   const b = { ...a, sourceId: 'b', bookId: '/b', title: '稍后返回' };
   const old = { kind: 'results', keyword: '书', results: [a], searching: true,
     totalSourceCount: 40, completedSourceCount: 1, failedSourceCount: 0 };
-  Object.assign(orches, { sessionOpen: true, presentation: old, gateway: { refreshBooks() {
+  Object.assign(orches, { sessionOpen: true, presentation: old, gateway: { resetBookProjection() {}, refreshBooks() {
     reads++; return reads === 1 ? gate : new Promise(() => {});
   } } });
   const pending = orches.refreshSharedBooks();
@@ -922,13 +922,13 @@ for (const superseded of [false, true]) {
   const oldBook = { sourceId: 'a', bookId: '/a', title: '旧', author: '作者', sourceRuleVersion: 'v1', searchRequestId: 's' };
   const initial = { kind: 'results', keyword: '书', results: [oldBook], searching: true,
     totalSourceCount: 10, completedSourceCount: 1, failedSourceCount: 0 };
-  Object.assign(o, { sessionOpen: true, presentation: initial, gateway: { refreshBooks: () => gate } });
+  Object.assign(o, { sessionOpen: true, presentation: initial, gateway: { resetBookProjection() {}, refreshBooks: () => gate } });
   const pending = o.refreshSharedBooks();
   const newer = { ...oldBook, title: '较新请求正文', sourceRuleVersion: 'v2' };
   o.presentation = { ...initial, keyword: superseded ? '其他书' : '书', results: [newer], completedSourceCount: 3 };
-  if (superseded) o.work++;
+  if (superseded) { o.work++; o.resultGeneration++; }
   // Follow-up projection remains pending so this assertion observes the old read's own completion.
-  o.gateway = { refreshBooks: () => new Promise(() => {}) };
+  o.gateway = { resetBookProjection() {}, refreshBooks: () => new Promise(() => {}) };
   finish([{ ...oldBook, title: '旧请求详情' }]); await pending;
   assert.equal(o.presentation.results[0], newer);
   assert.equal(o.presentation.completedSourceCount, 3);
@@ -939,7 +939,7 @@ for (const superseded of [false, true]) {
   let reads = 0;
   const o = new SearchOrchestrator(() => {}, () => {}, () => true, {});
   Object.assign(o, { sessionOpen: true, unsubscribeBooks: () => {},
-    gateway: { refreshBooks() { reads++; return new Promise(() => {}); } } });
+    gateway: { resetBookProjection() {}, refreshBooks() { reads++; return new Promise(() => {}); } } });
   const book = { sourceId: 'a', bookId: '/a', title: '旧', author: '作者', sourceRuleVersion: 'v1', searchRequestId: 's', groupKey: 'old' };
   const raw = [book];
   const p = { kind: 'results', keyword: '书', results: raw, searching: true,
@@ -957,3 +957,58 @@ for (const superseded of [false, true]) {
   o.close();
 }
 console.log('PH65 stale metadata/work guards, 39 counter updates and canonical grouping retention PASS');
+
+// PH68: a failed incremental read is retained until a later event; unrelated
+// changes must not permanently lose the earlier book's update or spin retries.
+{
+  let visible=true,fail=true;const deltas=[];
+  const a={sourceId:'a',bookId:'/a',title:'鸣龙',author:'关关公子'};
+  const o=new SearchOrchestrator(()=>{},()=>{},()=>visible,{});
+  Object.assign(o,{sessionOpen:true,presentation:{kind:'results',keyword:'鸣龙',results:[a],searching:false},
+    gateway:{resetBookProjection(){},async refreshBooks(books,delta){
+      deltas.push(structuredClone(delta));if(fail)throw Error('transient cache failure');return books;
+    }}});
+  await o.refreshSharedBooks({reset:false,identities:[{sourceId:'a',bookId:'/a'}]});
+  await sleep(10);assert.equal(deltas.length,1,'no automatic retry loop after a failure');
+  fail=false;
+  await o.refreshSharedBooks({reset:false,identities:[{sourceId:'b',bookId:'/b'}]});
+  assert.deepEqual(deltas[1],{reset:false,identities:[{sourceId:'a',bookId:'/a'},{sourceId:'b',bookId:'/b'}]});
+  visible=false;
+  await o.refreshSharedBooks({reset:false,identities:[{sourceId:'c',bookId:'/c'}]});
+  await o.refreshSharedBooks({reset:true,identities:[]});
+  assert.equal(deltas.length,2,'hidden route retains changes without IO');
+  visible=true;o.visibilityChanged();await sleep(10);
+  assert.deepEqual(deltas[2],{reset:true,identities:[{sourceId:'c',bookId:'/c'}]});o.close();
+}
+// PH68: busy reads union multiple delta notifications into one following pass.
+{
+  let finish;const gate=new Promise(r=>{finish=r;});const deltas=[];
+  const a={sourceId:'a',bookId:'/a',title:'鸣龙',author:'关关公子'};
+  const o=new SearchOrchestrator(()=>{},()=>{},()=>true,{});
+  Object.assign(o,{sessionOpen:true,presentation:{kind:'results',keyword:'鸣龙',results:[a],searching:false},
+    gateway:{resetBookProjection(){},async refreshBooks(books,delta){deltas.push(structuredClone(delta));
+      if(deltas.length===1)await gate;return books;}}});
+  const first=o.refreshSharedBooks({reset:false,identities:[{sourceId:'a',bookId:'/a'}]});
+  await o.refreshSharedBooks({reset:false,identities:[{sourceId:'b',bookId:'/b'}]});
+  await o.refreshSharedBooks({reset:false,identities:[{sourceId:'c',bookId:'/c'},{sourceId:'b',bookId:'/b'}]});
+  finish();await first;await sleep(10);
+  assert.equal(deltas.length,2);assert.deepEqual(deltas[1],{reset:false,identities:[{sourceId:'b',bookId:'/b'},{sourceId:'c',bookId:'/c'}]});
+  o.close();
+}
+console.log('PH68 incremental deltas: failure retention without retry loop, hidden IO pause/resume, and busy union PASS');
+
+// PH68: stop halts source dispatch, but retains this query and its outstanding
+// metadata projection. A late success must enrich the stopped visible results.
+{
+  let finish;const gate=new Promise(r=>{finish=r;});
+  const a={sourceId:'a',bookId:'/a',title:'旧标题',author:'关关公子'};
+  const o=new SearchOrchestrator(()=>{},()=>{},()=>true,{});
+  Object.assign(o,{sessionOpen:true,presentation:{kind:'results',keyword:'鸣龙',results:[a],searching:true,
+    totalSourceCount:10,completedSourceCount:2,failedSourceCount:0},
+    gateway:{resetBookProjection(){},refreshBooks:()=>gate}});
+  const pending=o.refreshSharedBooks({reset:false,identities:[{sourceId:'a',bookId:'/a'}]});
+  o.stop();finish([{...a,title:'已确认标题'}]);await pending;
+  assert.equal(o.presentation.stopped,true);assert.equal(o.presentation.searching,false);
+  assert.equal(o.presentation.results[0].title,'已确认标题');o.close();
+}
+console.log('PH68 stopped query retains completed metadata without restarting source search PASS');

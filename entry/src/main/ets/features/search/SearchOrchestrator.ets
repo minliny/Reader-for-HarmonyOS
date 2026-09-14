@@ -7,6 +7,8 @@ import {
 import type {
   SearchPresentation,
 } from './SearchPage';
+import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
+import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf } from '../../app/ErrorMessage';
@@ -52,6 +54,9 @@ export class SearchOrchestrator {
   private unsubscribeBooks: (() => void) | undefined = undefined;
   private refreshPending: boolean = false;
   private refreshAgain: boolean = false;
+  private resultGeneration: number = 0;
+  private pendingBookReset: boolean = false;
+  private pendingBookIdentities: Map<string, RemoteReadingIdentity> = new Map();
   private rawResultsInput: SearchBook[] | undefined = undefined;
   private owner: ReaderRuntimeOwner;
   /** Bumped on every entry into Search; stale-entry async work is dropped. */
@@ -64,6 +69,9 @@ export class SearchOrchestrator {
    * True while the live sweep has active or paused workers.
    */
   private sweepAlive: boolean = false;
+  private searchedSources: Set<string> = new Set();
+
+  searchedSourceIds(): string[] { return Array.from(this.searchedSources); }
   /**
    * Completed (ok or failed) sources of the live sweep. stop() reads it to
    * settle an interrupted loading surface with an honest source count.
@@ -89,7 +97,10 @@ export class SearchOrchestrator {
   open(): void {
     this.close();
     this.sessionOpen = true;
-    this.unsubscribeBooks = this.owner.bookAcquisitions?.().subscribe((): void => { void this.refreshSharedBooks(); });
+    this.unsubscribeBooks = this.owner.bookAcquisitions?.().subscribe((change: BookAcquisitionChange): void => {
+      if (change !== undefined && !change.reset && change.identities.length === 0) return;
+      void this.refreshSharedBooks(change ?? { reset: true, identities: [] });
+    });
     this.session += 1;
     const session = this.session;
     this.work = 0;
@@ -156,6 +167,11 @@ export class SearchOrchestrator {
     if (keyword.trim().length === 0) {
       return;
     }
+    this.searchedSources.clear();
+    this.resultGeneration += 1;
+    this.gateway.resetBookProjection();
+    this.pendingBookReset = false;
+    this.pendingBookIdentities.clear();
     this.sourceLoad = this.gateway.loadSources();
     this.sourceLoadSession = this.session;
     this.work += 1;
@@ -229,10 +245,17 @@ export class SearchOrchestrator {
   /** Called after route or Ability foreground changes. In-flight work is retained. */
   visibilityChanged(): void {
     this.wakeDispatchers();
+    if (this.isCurrent() && (this.pendingBookReset || this.pendingBookIdentities.size > 0)) {
+      void this.refreshSharedBooks();
+    }
   }
 
   /** Logical exit releases the query, including workers waiting for foreground. */
   close(): void {
+    this.resultGeneration += 1;
+    this.gateway.resetBookProjection();
+    this.pendingBookReset = false;
+    this.pendingBookIdentities.clear();
     this.unsubscribeBooks?.();
     this.unsubscribeBooks = undefined;
     this.sessionOpen = false;
@@ -241,17 +264,27 @@ export class SearchOrchestrator {
     this.wakeDispatchers();
   }
 
-  private async refreshSharedBooks(): Promise<void> {
+  private async refreshSharedBooks(change?: BookAcquisitionChange): Promise<void> {
+    if (change !== undefined) {
+      this.pendingBookReset = this.pendingBookReset || change.reset;
+      for (const identity of change.identities) {
+        this.pendingBookIdentities.set(`${identity.sourceId}\u0000${identity.bookId}`, identity);
+      }
+    }
     if (this.refreshPending) { this.refreshAgain = true; return; }
-    if (!this.sessionOpen || this.presentation.kind !== 'results') return;
+    if (!this.sessionOpen || this.presentation.kind !== 'results' || !this.isCurrent()) return;
+    const delta: BookAcquisitionChange = { reset: this.pendingBookReset || this.pendingBookIdentities.size === 0,
+      identities: Array.from(this.pendingBookIdentities.values()) };
+    this.pendingBookReset = false;
+    this.pendingBookIdentities.clear();
     this.refreshAgain = false;
     this.refreshPending = true;
     const session = this.session;
-    const work = this.work;
+    const resultGeneration = this.resultGeneration;
     const current = this.presentation;
     try {
-      const results = await this.gateway.refreshBooks(current.results);
-      if (this.isCurrentWork(work, session) && this.presentation.kind === 'results') {
+      const results = await this.gateway.refreshBooks(current.results, delta);
+      if (this.isCurrentSession(session) && resultGeneration === this.resultGeneration && this.presentation.kind === 'results') {
         const latest = this.presentation;
         // Counters and later source arrivals must not invalidate completed
         // canonical facts. Replace only the exact rows captured by this read;
@@ -271,6 +304,7 @@ export class SearchOrchestrator {
           } else {
             merged.push(book);
             this.refreshAgain = true;
+            this.pendingBookIdentities.set(key, { sourceId: book.sourceId, bookId: book.bookId });
           }
         }
         for (const book of results) {
@@ -284,7 +318,17 @@ export class SearchOrchestrator {
           searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
           completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount }, false);
       }
-    } catch (_error) { /* Keep the latest live results when cache projection fails. */ }
+    } catch (_error) {
+      // Keep the displayed results and retry these exact facts only on a later
+      // event/visibility change. Dropping a consumed delta loses it permanently
+      // once unrelated changes stop triggering full cache reads.
+      if (this.isCurrentSession(session) && resultGeneration === this.resultGeneration) {
+        this.pendingBookReset = this.pendingBookReset || delta.reset;
+        for (const identity of delta.identities) {
+          this.pendingBookIdentities.set(`${identity.sourceId}\u0000${identity.bookId}`, identity);
+        }
+      }
+    }
     finally {
       this.refreshPending = false;
       if (this.refreshAgain) void this.refreshSharedBooks();
@@ -346,6 +390,8 @@ export class SearchOrchestrator {
 
   /** Clear recent history back to the Initial surface. */
   clearHistory(): void {
+    this.resultGeneration += 1;
+    this.gateway.resetBookProjection();
     this.work += 1;
     this.wakeDispatchers();
     this.sweepAlive = false;
@@ -498,6 +544,7 @@ export class SearchOrchestrator {
             return;
           }
           const source = enabled[index];
+          this.searchedSources.add(source.sourceId);
           const outcome = await this.gateway.searchBySource(
             source,
             keyword,
@@ -728,6 +775,7 @@ export class SearchOrchestrator {
   private present(presentation: SearchPresentation, retainShared: boolean = true): void {
     const previous = this.presentation;
     let newIdentities = false;
+    let newBooks: SearchBook[] = [];
     if (retainShared && presentation.kind === 'results') {
       const rawResults = presentation.results;
       if (previous.kind === 'results' && previous.keyword === presentation.keyword) {
@@ -749,12 +797,14 @@ export class SearchOrchestrator {
             else if (book.sourceRuleVersion === results[position].sourceRuleVersion &&
               book.searchRequestId === results[position].searchRequestId) results[position] = book;
           }
-          newIdentities = rawResults.some((book: SearchBook): boolean =>
+          newBooks = rawResults.filter((book: SearchBook): boolean =>
             !previousKeys.has(`${book.sourceId}\u0000${book.bookId}`));
+          newIdentities = newBooks.length > 0;
           presentation.results = results;
         }
       } else {
         newIdentities = rawResults.length > 0;
+        newBooks = rawResults;
       }
       this.rawResultsInput = rawResults;
     } else if (presentation.kind !== 'results') {
@@ -764,7 +814,10 @@ export class SearchOrchestrator {
     this.emitPresentation(presentation);
     // Book-change notifications drive enrichment. A newly visible identity
     // also needs one read when its Core event preceded the partial publish.
-    if (retainShared && newIdentities && this.unsubscribeBooks !== undefined) void this.refreshSharedBooks();
+    if (retainShared && newIdentities && this.unsubscribeBooks !== undefined) {
+      void this.refreshSharedBooks({ reset: false, identities: newBooks.map((book: SearchBook): RemoteReadingIdentity =>
+        ({ sourceId: book.sourceId, bookId: book.bookId })) });
+    }
   }
 
   private presentSources(sources: SearchSource[]): void {

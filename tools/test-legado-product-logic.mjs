@@ -52,15 +52,15 @@ assert.doesNotMatch(failureBlock, /automaticSourceRecoveryKey/,
 assert.match(index,
   /if \(autoPickFirst\) \{[\s\S]*value\.isCurrent !== true[\s\S]*this\.onPickSource\(candidate\);/,
   'the discovery auto-pick branch stays available only to explicit non-failure callers');
-assert.match(index, /gateway\.loadCachedCandidates\(query, isCurrent\)/,
+assert.match(index, /gateway\.loadCachedCandidates\(query, isCurrent, known\)/,
   'source picker reads the same durable candidates as search');
-assert.doesNotMatch(index, /cached\.length > 0[\s\S]{0,150}gateway\.refreshCandidates/,
-  'opening an empty picker does not launch another module-local search');
+assert.match(index, /gateway\.refreshCandidates\(query, isCurrent,[\s\S]{0,150}searchedSourceIds\(\)/,
+  'an empty picker only discovers sources not already dispatched by its search');
 assert.match(sourceSwitchGateway, /const SOURCE_SWITCH_CACHE_TTL_MS = 24 \* 60 \* 60 \* 1000;/);
 assert.match(sourceSwitchGateway, /acquisitionState = stale/,
   'cache expiry is explicit and retains previous source information');
-assert.match(sourceSwitchGateway, /bookAcquisitions\?\.\(\)\.prepare/,
-  'explicit discovery delegates preparation to shared tasks');
+assert.doesNotMatch(sourceSwitchGateway, /bookAcquisitions\?\.\(\)\.prepare/,
+  'candidate discovery must not enqueue an unbounded speculative body sweep');
 assert.match(sourceSwitchRow, /acquisitionState === 'catalogReady'/);
 assert.match(sourceSwitchRow, /acquisitionState === 'readable'/,
   'a discovered source must not be labeled readable');

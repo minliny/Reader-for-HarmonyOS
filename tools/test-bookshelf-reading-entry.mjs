@@ -8,6 +8,7 @@ import * as readerControlKeyboard from '../entry/src/main/ets/features/reading/R
 import * as readerTiming from '../entry/src/main/ets/features/common/ProductMotionTiming.ts';
 import * as readerRapid from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
 import * as readerAuto from '../entry/src/main/ets/features/reading/ReaderAutoPageState.ts';
+import { searchCandidateRank } from '../entry/src/main/ets/features/search/SearchCandidatePolicy.ts';
 
 const source = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
 function method(name) {
@@ -22,6 +23,7 @@ const methods = [
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'retryCurrentReadingSource(', 'runReadingFailureActionAfterExit(', 'openDetailSourceSwitch(',
+  'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',
   ...(source.includes('  private cancelReaderExitDestination(') ? ['cancelReaderExitDestination('] : []),
 ].map(method).join('\n');
 const back = source.slice(source.indexOf('  onBackPress(): boolean {'), source.indexOf('\n  build() {'));
@@ -47,10 +49,10 @@ function create(remote = false) {
     'ReadingOfflineGateway', 'ReaderCoreGateway', 'SourceGateway', 'RemoteDetailAdmission',
     'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel',
     'remoteReadingFailureKindOf', 'verdictForFailureKind', 'isRemoteSourceFailureKind',
-    'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord',
+    'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord', 'searchCandidateRank',
     `${harnessCode}; return Harness;`,
   )(
-    'local', { current: () => ({ bookAcquisitions: () => ({ endSearch() {}, acquireBookWithBackgroundRefresh: () => catalog.promise.then(session => ({ session })), recentFailures: () => [] }) }) },
+    'local', { current: () => ({ bookAcquisitions: () => ({ endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: () => catalog.promise.then(session => ({ session })), recentFailures: () => [] }) }) },
     class { loadToc() { return toc.promise; } loadDirectoryProjection() { return Promise.resolve(entries); } },
     class {
       openCachedCatalogSession() { return catalog.promise; }
@@ -62,7 +64,7 @@ function create(remote = false) {
     class { constructor(value) { this.session = value; } },
     { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',
     error => error.kind ?? 'NETWORK_FAILED', () => 'networkFailed',
-    kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}),
+    kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}), searchCandidateRank,
   );
   const h = new Harness(), routes = [], alerts = [];
   let route = 'bookshelf';
@@ -70,13 +72,13 @@ function create(remote = false) {
   Object.assign(h, {
     readingOriginRoute: 'detail', shelfReadingPreparation: false, navigationGeneration: 0,
     readingSessionActive: false, detailReturnRoute: 'bookshelf', detailToc: [], shelfBooks: [book],
+    searchDetailCandidates: [],
     remoteCatalogRefreshAt: new Map(), offlineMutationGeneration: 0, bookshelfRemovalActiveKey: '',
     bookshelfRemovalGeneration: 0, bookshelfLoadGeneration: 0,
     sourceSwitchVisible: false, remoteContentVerdict: 'readable',
     sourceDisplayName: () => 'Test source', readingDetailForShelf: value => ({ ...value }),
     readingDetailForRemoteSeed: value => ({ ...value }), hasDeclaredCoverUrl: () => true,
     loadRemoteDirectoryProjection: async () => entries,
-    openSearchSessionCacheFirst: async () => ({ session: await catalog.promise }),
     refreshDetailAcquisitionProjection: async () => {},
     refreshBookshelf() {}, resetSearchDetailWarmups() {}, hasVisibleImportDialog: () => false,
     startSourceDiscovery() {}, showReadingFailure: (title, message) => alerts.push({ title, message }),

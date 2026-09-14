@@ -30,7 +30,7 @@ assert.match(remoteDetail,
   /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
   'only an exact shelf identity may reuse the already admitted remote session');
 assert.match(remoteDetail,
-  /const sessionAdmission: Promise<RemoteDetailAdmission> = owner\.bookAcquisitions\(\)[\s\S]*?\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
+  /const sessionAdmission: Promise<RemoteDetailAdmission> = \(allowGroupFallback \?[\s\S]*?: owner\.bookAcquisitions\(\)\s*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'shelf re-entry must reuse a live session or admit the durable Core catalog before any network refresh');
 assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
   'remote detail must project its inert shell before network/session admission');

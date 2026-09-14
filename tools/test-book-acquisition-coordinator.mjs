@@ -59,29 +59,32 @@ function fixture() {
   const detail=f.runtime.acquireBook(seed('/same'),{isCurrent:()=>visible});
   const picker=f.runtime.acquireBook(seed('/same'));
   visible=false; f.runtime.endSearch(); gate.resolve();
-  const [a,b]=await Promise.all([detail,picker]);
-  assert.equal(a,b); assert.equal(a.sourceVersion,'v1');
-  await until(()=>f.calls.some(c=>c.method==='search-book.put'));
+  const [a,b]=await Promise.allSettled([detail,picker]);
+  assert.equal(a.status,'rejected'); assert.equal(a.reason.code,'cancelled');
+  assert.equal(b.status,'fulfilled'); assert.equal(b.value.sourceVersion,'v1');
+  await until(()=>f.runtime.preparationActive===0);
   assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);
   assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
-  assert.equal(f.calls.filter(c=>c.method==='chapter.content').length,1);
-  assert.equal(f.rows.get(f.key('s1','/same')).acquisition.stage,'readable');
+  assert.equal(f.calls.filter(c=>c.method==='chapter.content').length,0,'speculative catalog never fetches body');
+  assert.equal(f.calls.filter(c=>c.method==='reading.progress.get').length,0);
+  assert.equal(f.rows.get(f.key('s1','/same')).acquisition.stage,undefined);
   await f.runtime.acquireBook(seed('/same'));
   assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1,'re-entry reuses the completed session');
   await f.runtime.request('book.toc', { sourceId: 's1', bookId: '/same', tocUrl: '/same/toc' });
   const renewed = await f.runtime.acquireBook(seed('/same'));
-  assert.notEqual(renewed, a, 'a catalog refreshed elsewhere invalidates the old prepared projection');
+  assert.notEqual(renewed, b.value, 'a catalog refreshed elsewhere invalidates the old prepared projection');
   f.runtime.close();
 }
 
-// All candidates are queued; logical search exit releases only waiting work.
+// Only a bounded catalog window is queued; exit releases waiting work.
 {
   const f=fixture(); const gates=[deferred(),deferred()];
   gates.forEach((gate,i)=>f.gates.set(`book.detail:${f.key('s1',`/b${i}`)}`,gate));
   f.runtime.prepare(Array.from({length:12},(_,i)=>seed(`/b${i}`)));
   await until(()=>f.calls.filter(c=>c.method==='book.detail').length===2);
   f.runtime.endSearch(); gates.forEach(g=>g.resolve());
-  await until(()=>f.calls.filter(c=>c.method==='search-book.put').length===2);
+  await until(()=>f.runtime.preparationActive===0);
+  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,2);
   await tick();
   assert.equal(f.calls.filter(c=>c.method==='book.detail').length,2,'unadmitted preparation was released');
   f.runtime.close();
@@ -124,8 +127,7 @@ function fixture() {
   f.runtime.close();
 }
 
-// A fresh prepared session is returned immediately while one process-owned
-// refresh is started; the refresh must not inherit the page cancellation guard.
+// A freshly prepared catalog is already current; opening it must not refresh again.
 {
   const f = fixture();
   const first = await f.runtime.acquireBook(seed('/background'));
@@ -134,11 +136,11 @@ function fixture() {
     isCurrent: () => visible,
   });
   assert.equal(admission.session, first, 'fresh cache remains the fast admission');
-  assert.ok(admission.backgroundRefresh instanceof Promise, 'fresh cache starts one refresh');
+  assert.equal(admission.backgroundRefresh, undefined, 'fresh catalog must not trigger duplicate HTTP');
   visible = false;
   await admission.backgroundRefresh;
-  assert.equal(f.calls.filter(call => call.method === 'book.detail').length, 2,
-    'background refresh performs one forced detail acquisition');
+  assert.equal(f.calls.filter(call => call.method === 'book.detail').length, 1,
+    'fresh preparation is the single detail acquisition');
   f.runtime.close();
 }
 

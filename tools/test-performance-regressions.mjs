@@ -24,8 +24,14 @@ const scheduler = read('entry/src/main/ets/app/BookRequestScheduler.ts');
 assert.match(acquisition, /this\.preparationActive < 2/);
 assert.match(scheduler, /job\.priority !== 'foreground' && this\.active >= 5/,
   'reading retains reserved capacity while source/search work is running');
-assert.match(index, /bookAcquisitions\(\)[\s\S]*?acquireBookWithBackgroundRefresh\(seeds\[0\]/,
-  'first-click detail admission must use the shared cache-first/background-refresh coordinator');
+const remoteOpen = index.slice(index.indexOf('  private openRemoteBookDetail('),
+  index.indexOf('  private refreshCachedSearchDetailInBackground('));
+assert.match(remoteOpen, /owner\.bookAcquisitions\(\)\s*\.acquireCandidateGroup\(candidates, \{ isCurrent \}\)/,
+  'group fallback uses the shared coordinator with the active navigation guard');
+assert.match(remoteOpen, /owner\.bookAcquisitions\(\)\s*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
+  'fixed-source detail admission uses the shared cache-first/background-refresh coordinator');
+assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('const sessionAdmission:'),
+  'detail remains visible before either asynchronous admission branch');
 assert.match(index, /PERF search-detail-admission/,
   'device runs must expose first-click admission latency instead of relying on subjective timing');
 

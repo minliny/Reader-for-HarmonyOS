@@ -4,6 +4,7 @@ import { SearchSpinner } from './SearchSpinner';
 import { collapsedHistoryCount } from './SearchHistoryLayout';
 import { SearchViewState } from './SearchViewState';
 import { bookIntroText } from '../common/BookIntroText';
+import { searchCandidateRank } from './SearchCandidatePolicy';
 import {
   type SearchBook,
   type SearchSource,
@@ -310,6 +311,10 @@ export struct SearchPage {
   onClearHistory: () => void = (): void => {};
   onSelectResult: (book: SearchBook, variants: SearchBook[]) => void =
     (_book: SearchBook, _variants: SearchBook[]): void => {};
+  onVisibleGroups: (groups: SearchBook[][]) => void = (_groups: SearchBook[][]): void => {};
+  private visibleStart: number = 0;
+  private visibleEnd: number = 0;
+  private warmupGroups: SearchBook[][] = [];
   onRetry: () => void = (): void => {};
   onManageSources: () => void = (): void => {};
   @State keyword: string = '';
@@ -336,6 +341,22 @@ export struct SearchPage {
     this.historyExpanded = this.viewState.historyExpanded;
     this.keyword = this.viewState.keywordDraft;
     this.refreshVisibleResults();
+  }
+
+  aboutToDisappear(): void { this.onVisibleGroups([]); }
+
+  private publishVisibleGroups(start: number = this.visibleStart, end: number = this.visibleEnd): void {
+    this.visibleStart = Math.max(0, start);
+    this.visibleEnd = Math.max(this.visibleStart, end);
+    const groups = this.presentation.kind !== 'results' || this.presentation.stopped === true ? [] :
+      this.visibleGroups.slice(this.visibleStart, Math.min(this.visibleEnd + 1, this.visibleStart + 6))
+        .filter((group: SearchBookGroup): boolean => group.book.sourceId !== 'local')
+        .map((group: SearchBookGroup): SearchBook[] => group.variants);
+    if (groups.length === this.warmupGroups.length && groups.every((group: SearchBook[], i: number): boolean =>
+      group.length === this.warmupGroups[i].length && group.every((book: SearchBook, j: number): boolean =>
+        book === this.warmupGroups[i][j]))) return;
+    this.warmupGroups = groups;
+    this.onVisibleGroups(groups);
   }
 
   build() {
@@ -719,6 +740,7 @@ export struct SearchPage {
       this.visibleGroups = groups;
       this.resultDataSource.replace(groups);
     }
+    this.publishVisibleGroups();
   }
 
   // ArkUI does not track mutable @Builder value parameters. Read state at
@@ -805,7 +827,8 @@ export struct SearchPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .maintainVisibleContentPosition(true)
-        .onScrollIndex((start: number): void => {
+        .onScrollIndex((start: number, end: number): void => {
+          this.publishVisibleGroups(start, end);
           if (!this.scrollRestored) return;
           const group = this.visibleGroups[start];
           if (group === undefined) return;
@@ -884,7 +907,8 @@ export struct SearchPage {
         relevance.set(key, score);
       } else {
         existing.admit(book, inBookshelf);
-        if (score < (relevance.get(key) ?? score)) {
+        if (score < (relevance.get(key) ?? score) ||
+          (score === relevance.get(key) && searchCandidateRank(book) < searchCandidateRank(existing.book))) {
           existing.book = book;
           relevance.set(key, score);
         }

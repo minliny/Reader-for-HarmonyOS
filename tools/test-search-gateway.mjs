@@ -345,3 +345,92 @@ console.log('PH65 yielding decode, superseded sweep and late source projection i
   assert.equal(await gateway.refreshBooks(books), books, 'no new cache facts means no new UI payload');
 }
 console.log('PH65 no-op canonical refresh retains projection identity PASS');
+
+// PH68: opening Search and submitting before source.list returns must not
+// decode the same registry twice. A mutation/restore starts a new generation.
+{
+  const defer = () => { let resolve, reject; const promise = new Promise((a,b)=>{resolve=a;reject=b;}); return {promise,resolve,reject}; };
+  let revision = 1, calls = [];
+  const gateway = new SearchGateway({bookAcquisitions:()=>({sourceRegistryRevision:()=>revision}),request:method=>{
+    assert.equal(method,'source.list');const pending=defer();calls.push(pending);return pending.promise;
+  }});
+  const first=gateway.loadSources(), submit=gateway.loadSources();assert.equal(calls.length,1);
+  calls[0].resolve({data:{sources:[source]}});
+  assert.equal(await first,await submit,'one immutable projection is shared');
+  assert.equal((await gateway.loadSources())[0].sourceId,source.sourceId);assert.equal(calls.length,1);
+  revision++;
+  const old=gateway.loadSources();const oldRejected=assert.rejects(old,/source registry changed/);
+  revision++;
+  const fresh=gateway.loadSources();assert.equal(calls.length,3);
+  calls[1].resolve({data:{sources:[{...source,name:'stale'}]}});await oldRejected;
+  const joinFresh=gateway.loadSources();assert.equal(calls.length,3,'old completion cannot clear a newer in-flight load');
+  calls[2].resolve({data:{sources:[{...source,name:'fresh'}]}});
+  assert.equal((await fresh)[0].name,'fresh');assert.equal(await fresh,await joinFresh);
+  revision++;
+  const failed=gateway.loadSources(), joinedFailure=gateway.loadSources();
+  const failures=Promise.all([assert.rejects(failed,/fixture offline/),assert.rejects(joinedFailure,/fixture offline/)]);
+  calls[3].reject(Error('fixture offline'));await failures;
+  const retried=gateway.loadSources();assert.equal(calls.length,5,'failure clears only its own pending promise');
+  calls[4].resolve({data:{sources:[source]}});await retried;
+}
+console.log('PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS');
+
+// PH68: metadata changes read only the dirty identities and reuse canonical
+// membership. The Core origin index bounds a broad source batch to one RPC.
+{
+  const rows = new Map(Array.from({length:2000}, (_,i) => {
+    const row={origin:i===1?'source-b':'source-a',bookUrl:`/book/${i}`,name:i<2?'鸣龙':`其他书${i}`,
+      author:'关关公子',acquisition:{sourceVersion:'v1',detailAt:1}};
+    return [JSON.stringify([row.origin,row.bookUrl]),row];
+  }));
+  const calls=[];let revision=1;
+  const g=new SearchGateway({bookAcquisitions:()=>({sourceRegistryRevision:()=>revision}),request:async(method,params)=>{
+    calls.push({method,params});
+    if(method==='source.list')return {data:{sources:[{...source,sourceVersion:'v1'},
+      {...source,sourceId:'source-b',sourceVersion:'v1'}]}};
+    if(method==='search-book.list')return {data:{books:structuredClone(Array.from(rows.values()).filter(r=>!params.origin||r.origin===params.origin))}};
+    if(method==='search-book.get')return {data:{book:structuredClone(rows.get(JSON.stringify([params.origin,params.bookUrl]))??null)}};
+    throw Error(method);
+  }});
+  let builds=0;const build=g.bookIdentities.build.bind(g.bookIdentities);
+  g.bookIdentities.build=async(...args)=>{builds++;return build(...args);};
+  const seed={...validOutcome.results[0],bookId:'/book/0',detailUrl:'/book/0',title:'鸣龙',author:'关关公子',sourceRuleVersion:'v1'};
+  let books=await g.refreshBooks([seed],{reset:false,identities:[{sourceId:'source-a',bookId:'/book/0'}]});
+  assert.equal(books.length,2,'related cached source joins, 1998 unrelated rows stay out');
+  const groupIndex=g.projectedKeysByGroup;
+  for(let i=2;i<=4;i++) {
+    rows.get(JSON.stringify(['source-a','/book/0'])).acquisition.detailAt=i;
+    books=await g.refreshBooks(books,{reset:false,identities:[{sourceId:'source-a',bookId:'/book/0'},
+      {sourceId:'source-a',bookId:'/book/0'}]});
+    assert.equal(books.find(b=>b.sourceId==='source-a').acquisition.detailAt,i);
+    assert.equal(g.projectedKeysByGroup,groupIndex,'metadata keeps canonical member index');
+  }
+  assert.equal(calls.filter(c=>c.method==='search-book.list').length,1,'one initial full cache read');
+  assert.equal(calls.filter(c=>c.method==='search-book.get').length,3,'duplicate dirty identities coalesce');
+  assert.equal(builds,1,'metadata changes do not rebuild the identity graph');
+  books=await g.refreshBooks(books,{reset:false,identities:Array.from({length:8},(_,i)=>({sourceId:'source-a',bookId:`/book/${i+2}`}))});
+  assert.deepEqual(calls.filter(c=>c.method==='search-book.list').map(c=>c.params),[{}, {origin:'source-a'}]);
+  assert.equal(books.length,2,'scoped read cannot remove another source');assert.equal(builds,1);
+  rows.get(JSON.stringify(['source-b','/book/1'])).name='鸣龙：校订';
+  rows.get(JSON.stringify(['source-b','/book/1'])).acquisition.aliases=[{name:'鸣龙',author:'关关公子'}];
+  books=await g.refreshBooks(books,{reset:false,identities:[{sourceId:'source-b',bookId:'/book/1'}]});
+  assert.equal(builds,2,'changed aliases rebuild membership exactly once');
+  assert.equal(books.find(b=>b.sourceId==='source-b').title,'鸣龙：校订');
+  revision++;
+  await g.refreshBooks(books,{reset:false,identities:[]});
+  assert.equal(calls.filter(c=>c.method==='source.list').length,2);
+  assert.equal(calls.filter(c=>c.method==='search-book.list'&&!c.params.origin).length,2,'registry revision rebuilds projection');
+  console.log('PH68 2000-row fixture: initial full reads=1, three metadata updates=3 exact gets, identity builds=1; broad batch=1 indexed origin read PASS');
+}
+// Closing/new query during source loading cannot dispatch an ownerless cache read.
+{
+  let release;const gate=new Promise(r=>{release=r;});const calls=[];
+  const g=new SearchGateway({bookAcquisitions:()=>({sourceRegistryRevision:()=>1}),request:async method=>{
+    calls.push(method);if(method==='source.list'){await gate;return {data:{sources:[source]}};}
+    return {data:{books:[]}};
+  }});
+  const pending=g.refreshBooks([validOutcome.results[0]],{reset:false,identities:[]});
+  const rejected=assert.rejects(pending,/superseded/);
+  g.resetBookProjection();release();await rejected;
+  assert.deepEqual(calls,['source.list']);assert.equal(g.projectedBookRows,undefined);
+}

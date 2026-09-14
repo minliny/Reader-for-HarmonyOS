@@ -32,7 +32,7 @@ function fixture(history, { width = 0, tablet = false, expanded = false, measure
     };
   } });
   ({ owner } = createReaderBuilderProbe(source,
-    ['stateContent', 'initialContent', 'moreChip', 'measureHistory', 'refreshVisibleResults'],
+    ['stateContent', 'initialContent', 'moreChip', 'measureHistory', 'refreshVisibleResults', 'publishVisibleGroups'],
     { collapsedHistoryCount, Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'),
       FlexAlign: enumValues('FlexAlign'), TOK_BORDER_W: 1, TOK_SPACE_XS: 8,
       TOK_SPACE_CARD_PADDING: 12, TOK_SPACE_ROW_BLOCK: 4 }));
@@ -41,6 +41,9 @@ function fixture(history, { width = 0, tablet = false, expanded = false, measure
     historyWidth: width, historyCollapsedCount: 0, historyExpanded: expanded,
     viewState: { revision: 0, category: '全部', keywordDraft: '', historyExpanded: expanded },
     viewStateRevision: -1, appThemeScheme: 'day',
+    visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) {
+      assert.deepEqual(groups, [], 'history view cannot admit online candidate preparation');
+    },
     resultDataSource: { replace() {} },
     getUIContext: () => ({ getMeasureUtils: () => ({ measureTextSize: input => {
       measurements.push(input); return { width: measureVp(input.textContent) * 3.5 };
