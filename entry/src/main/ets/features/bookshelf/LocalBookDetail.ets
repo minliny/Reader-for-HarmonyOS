@@ -155,6 +155,7 @@ export struct LocalBookDetail {
         Text(this.book.title)
           // Current Figma maps the former Songti title role to Noto Serif SC Bold.
           .width('100%')
+          .height(25.96)
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
           .fontSize(22)
@@ -165,7 +166,7 @@ export struct LocalBookDetail {
 
         Text(`作者：${this.book.author}`)
           .width('100%')
-          .margin({ top: TOK_SPACE_XS })
+          .height(17.55)
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
           .fontSize(13)
@@ -179,8 +180,7 @@ export struct LocalBookDetail {
           .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
           .fontSize(12).lineHeight(15)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: TOK_SPACE_XS });
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
 
         // Figma `2260:1432`/`2260:1433`: the Hero's 4th row — source label +
         // 更换书源 pill. The geometry stays shared, while the label is the
@@ -225,21 +225,21 @@ export struct LocalBookDetail {
           });
         }
         .width('100%')
-        .height(18)
-        .margin({ top: TOK_SPACE_XS });
+        .height(18);
         Text('分组：默认')
           .width('100%').height(18)
           .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
           .fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).lineHeight(15)
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .margin({ top: TOK_SPACE_XS });
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }
       .layoutWeight(1)
+      .height(122)
+      .justifyContent(FlexAlign.SpaceBetween)
       .constraintSize({ minWidth: 0 })
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.contentWidth())
-    .constraintSize({ minHeight: 152 })
+    .height(152)
     .padding(15)
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })

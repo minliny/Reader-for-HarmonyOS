@@ -108,7 +108,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
   const globals = { readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
     ...Object.fromEntries(['Button', 'Row', 'Column', 'Stack', 'Scroll', 'LoadingProgress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
-    ...Object.fromEntries(['FontWeight', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
+    ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...dependencies };

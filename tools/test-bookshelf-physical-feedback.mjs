@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroText.ts';
 import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
 
@@ -93,6 +94,28 @@ for (const scheme of ['day', 'night']) {
     assert.equal(texts(owner).find(n => String(n.create).startsWith('书源：')).width, undefined);
   });
 }
+check('PH46/47 original author typography and the entire five-line block align with the cover', () => {
+  const { owner } = createReaderBuilderProbe(detailSource, ['heroCard'], { NoCoverCover: Child, ImageFit: { Cover: 'Cover' } });
+  Object.assign(owner, { appThemeScheme:'day', book:{title:'Title',author:'Author',sourceName:'Source',lastChapter:'Chapter',coverUrl:'https://example.test/cover'},
+    hasCover:()=>true,contentWidth:()=>326,sourceSwitchEnabled:true });
+  owner.heroCard();
+  const nodes=[...owner.nodes.values()];
+  const cover=nodes.find(n=>n.type==='Image');
+  const column=nodes.find(n=>n.type==='Column'&&n.layoutWeight===1);
+  assert.equal(cover.height,122); assert.equal(column.height,cover.height);
+  assert.equal(column.justifyContent,'FlexAlign.SpaceBetween');
+  const title=nodes.find(n=>n.type==='Text'&&n.create==='Title');
+  const author=nodes.find(n=>n.type==='Text'&&String(n.create).endsWith('Author'));
+  assert.deepEqual([author.fontFamily,author.fontWeight,author.fontSize,author.lineHeight,author.height],
+    ['ReaderInter','FontWeight.Regular',13,17.55,17.55]);
+  assert.equal(author.fontColor,readerAppColor('TOK_MUTED','day'));
+  assert.equal(author.margin,undefined);
+  assert.equal(title.height,25.96);
+  assert.equal(nodes.find(n=>n.type==='Row'&&n.width===326).height,152);
+  const gap=(column.height-title.height-author.height-3*18)/4;
+  assert.ok(gap>6&&gap<6.2,'five fixed line slots leave positive uniform space between');
+});
+
 check('missing synopsis is explained without contaminating the metadata projection', () => {
   const { owner } = createReaderBuilderProbe(detailSource, ['summaryCard', 'displayIntro'], { bookIntroText });
   Object.assign(owner, { appThemeScheme: 'day', book: Object.freeze({ intro: '' }), contentWidth: () => 326,
