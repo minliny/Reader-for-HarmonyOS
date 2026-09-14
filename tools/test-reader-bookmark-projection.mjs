@@ -188,6 +188,26 @@ assert.equal(readerBookmarkExcerpt(long, 4), 'ああああ…');
 
 const sampleTime = new Date(2026, 7, 31, 9, 5).getTime();
 assert.equal(readerBookmarkTimeLabel(sampleTime), '08-31 09:05');
+for (const value of [0, 1, 2, 500, 1789410740, 999999999999, -1, NaN, Infinity,
+  Number.MAX_SAFE_INTEGER + 1, 8640000000000001, sampleTime + 0.5]) {
+  assert.equal(readerBookmarkTimeLabel(value), '时间未知',
+    'legacy sequence/seconds and invalid dates must not acquire a guessed calendar time');
+}
+const timestampEntries = [{ index: 0, title: 'chapter', bookmarks: [
+  { time: 2, chapterIndex: 0, chapterOffset: 9, chapterTitle: 'chapter', content: 'old note', bookText: 'old text' },
+  { time: sampleTime, chapterIndex: 0, chapterOffset: 20, chapterTitle: 'chapter', content: 'new note', bookText: 'new text' },
+] }];
+const timestampSnapshot = structuredClone(timestampEntries);
+const timestampRows = projectReaderBookmarkRows(timestampEntries, '');
+assert.deepEqual(timestampRows.map(row => row.timeLabel), ['时间未知', '08-31 09:05']);
+assert.deepEqual(timestampRows.map(row => row.bookmarkId), ['session:0:9:2', `session:0:20:${sampleTime}`],
+  'display repair preserves exact primary keys and identity');
+assert.deepEqual(timestampEntries, timestampSnapshot, 'old keys, notes, text and positions remain untouched');
+const timestampRecords = migrateLegacyBookmarks(timestampEntries[0].bookmarks.map(bookmark => ({
+  ...bookmark, bookName: identity.bookName, bookAuthor: identity.bookAuthor,
+})), resolver);
+assert.deepEqual(readerBookmarkRowsFromRecords(timestampRecords).map(row => row.timeLabel),
+  ['时间未知', '08-31 09:05'], 'both session and migrated record paths use the same time admission');
 assert.equal(readerBookmarkPositionLabel(120, 1200), '10%');
 assert.equal(readerBookmarkPositionLabel(120, 0), '');
 assert.equal(readerBookmarkPositionLabel(120, undefined), '');

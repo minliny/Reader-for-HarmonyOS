@@ -161,9 +161,17 @@ export function readerBookmarkExcerpt(content: string, maxScalars: number = BOOK
   return scalars.slice(0, maxScalars).join('') + '…';
 }
 
-/** Deterministic local-time label `MM-DD HH:mm` for the creation timestamp. */
+// Current Core allocations and timestamp imports use epoch milliseconds.
+// Legacy auto-increment keys (and second-based values) do not establish a
+// creation date. Preserve those keys; never guess by multiplying them.
+const BOOKMARK_EPOCH_MILLIS_MIN = 1_000_000_000_000;
+const BOOKMARK_TIME_UNKNOWN = '时间未知';
+
+/** Local `MM-DD HH:mm` for supported epoch milliseconds, otherwise unknown. */
 export function readerBookmarkTimeLabel(time: number): string {
+  if (!Number.isSafeInteger(time) || time < BOOKMARK_EPOCH_MILLIS_MIN) return BOOKMARK_TIME_UNKNOWN;
   const date = new Date(time);
+  if (!Number.isFinite(date.getTime())) return BOOKMARK_TIME_UNKNOWN;
   const pad = (value: number): string => (value < 10 ? `0${value}` : `${value}`);
   return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
