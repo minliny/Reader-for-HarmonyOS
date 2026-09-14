@@ -1,0 +1,109 @@
+{
+  "scope": "PH60/PH67 approved implementation; excludes later Minglong feedback",
+  "runId": "20260914T110254Z-e39667ad-2b90f28e",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T110254Z-e39667ad-2b90f28e/manifest.json",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "commit": "e39667ad868a26639d5ca31a369114ec363e85ef",
+      "dirty": false,
+      "status": []
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "commit": "bf3e2682051f0c5d84103800c1cec4e7140b203c",
+      "dirty": false,
+      "status": []
+    },
+    "buildInputs": {
+      "fingerprint": "2b90f28eb41957bd9581139fec3111a652a93a69b7ca30e9c50734edfa99fada",
+      "fileCount": 720,
+      "snapshot": "source-snapshot.json"
+    },
+    "effectiveBuildProfile": {
+      "mode": "local",
+      "bytes": 1510,
+      "sha256": "0857c8a0897ca62681003b7507acc2048c14d5421df1ae8039143bee74301f7d",
+      "secretMaterialArchived": false
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 19120736,
+      "sha256": "fb5e106db5cac6d5838fbca51f263b32678c508f85a72ca5f35f253620b882dd"
+    }
+  },
+  "readerUiCommit": "e0ef372f7a9f9517382abeeec8270eeaaf389bc0",
+  "harmonyContractGroups": 243,
+  "nonIncrementalBuildSeconds": 29.113,
+  "gates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "9d704f2e979dadfe4cd19672b28694ad5b93b8eeb97c6c70d027f128c6e31831",
+      "fileCount": 304,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "4df3dcc01332d05019d75f7f17572663ed67aa29a9ca6f44a65f06fec7257d9c",
+      "fileCount": 15,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "signed": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 167014422,
+    "sha256": "ae96b0bc8d07c2a40d8caeaf4f315651cdb8b02f9327f3223a081d65631021ea",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 14582400,
+      "sha256": "812fa3dcac426473f28991ccd7697a30d8b30113ee6be7cd9adf9a55320adbd3"
+    }
+  },
+  "offlineVerify": "PASS",
+  "evidenceBoundary": {
+    "packageBuild": "PASS",
+    "vmInstall": "OPEN",
+    "physicalInstall": "OPEN",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  },
+  "deviceOperations": "NONE",
+  "dataPreservation": "No device or user-data mutation performed",
+  "buildAttempts": [
+    {
+      "result": "FAILED_UNPUBLISHED",
+      "cause": "one remaining SDK preview test expected pre-approval Make light colors",
+      "log": "/private/tmp/ph60-67-approved-build.log"
+    },
+    {
+      "result": "PASS",
+      "log": "/private/tmp/ph60-67-approved-build-retry.log"
+    }
+  ],
+  "remaining": "PH30/PH42/PH45 and prior performance/device/user acceptance remain open; later Minglong feedback has separate records"
+}
