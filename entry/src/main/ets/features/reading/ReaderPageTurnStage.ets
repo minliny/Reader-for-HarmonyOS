@@ -137,6 +137,7 @@ struct ReaderPageTurnSurface {
   @Prop longPressSelectText: boolean = false;
   @Prop chromeTopStartText: string = '';
   @Prop chromeTopEndText: string = '';
+  @Prop chromeTopTranslateY: number = 0;
   @Prop chromeBottomStartText: string = '';
   @Prop chromeBottomEndText: string = '';
   @Prop chromeSessionVisible: boolean = false;
@@ -181,6 +182,7 @@ struct ReaderPageTurnSurface {
           longPressSelectText: this.longPressSelectText,
           chromeTopStartText: this.chromeTopStartText,
           chromeTopEndText: this.chromeTopEndText,
+          chromeTopTranslateY: this.chromeTopTranslateY,
           chromeBottomStartText: this.chromeBottomStartText,
           chromeBottomEndText: this.chromeBottomEndText,
           chromeSessionVisible: this.chromeSessionVisible,
@@ -284,6 +286,7 @@ export struct ReaderPageTurnStage {
         bottomJustifyGap: this.slotPage('a').bottomJustifyGap,
         chromeTopStartText: this.slotPage('a').chromeTopStartText,
         chromeTopEndText: this.slotPage('a').chromeTopEndText,
+        chromeTopTranslateY: -this.translateY,
         chromeBottomStartText: this.slotPage('a').chromeBottomStartText,
         chromeBottomEndText: this.slotPage('a').chromeBottomEndText,
         chromeSessionVisible: this.slotPage('a').chromeSessionVisible,
@@ -319,6 +322,7 @@ export struct ReaderPageTurnStage {
         bottomJustifyGap: this.slotPage('b').bottomJustifyGap,
         chromeTopStartText: this.slotPage('b').chromeTopStartText,
         chromeTopEndText: this.slotPage('b').chromeTopEndText,
+        chromeTopTranslateY: -this.translateY,
         chromeBottomStartText: this.slotPage('b').chromeBottomStartText,
         chromeBottomEndText: this.slotPage('b').chromeBottomEndText,
         chromeSessionVisible: this.slotPage('b').chromeSessionVisible,
@@ -342,7 +346,10 @@ export struct ReaderPageTurnStage {
     .width('100%')
     .height('100%')
     .translate({ y: this.translateY })
-    .clip(true);
+    // The top-info child counter-translates during bookmark pull. Clipping
+    // this translated stage would cut that fixed header off at its old edge.
+    // The reading viewport remains the outer clipping boundary.
+    .clip(this.translateY <= 0);
   }
 
   private slotPage(slot: ReaderPageTurnSlot): ReaderPageTurnRenderPage {

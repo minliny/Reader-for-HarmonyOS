@@ -9,6 +9,8 @@ export const READER_PAGE_CHROME_SAFE_TOP_GAP = 8;
 export const READER_PAGE_CHROME_BOTTOM_INSET = 23;
 export const READER_PAGE_CHROME_FOOTER_HEIGHT = 24;
 export const READER_PAGE_CHROME_FOOTER_GAP = 5;
+// A stable semantic slot keeps the clock still during bookmark drag/ACK.
+export const READER_PAGE_CHROME_BOOKMARK_SIZE = 24;
 
 export class ReaderPageChromeMeasurements {
   topStartWidth: number;
@@ -22,6 +24,8 @@ export class ReaderPageChromeMeasurements {
   sessionVisible: boolean;
   sessionWidth: number;
   sessionHeight: number;
+  topAccessoryWidth: number;
+  topAccessoryHeight: number;
 
   constructor(
     topStartWidth: number = 0,
@@ -35,6 +39,8 @@ export class ReaderPageChromeMeasurements {
     sessionVisible: boolean = false,
     sessionWidth: number = 0,
     sessionHeight: number = 0,
+    topAccessoryWidth: number = 0,
+    topAccessoryHeight: number = 0,
   ) {
     this.topStartWidth = finiteLength(topStartWidth);
     this.topStartHeight = finiteLength(topStartHeight);
@@ -47,6 +53,8 @@ export class ReaderPageChromeMeasurements {
     this.sessionVisible = sessionVisible && sessionWidth > 0 && sessionHeight > 0;
     this.sessionWidth = this.sessionVisible ? finiteLength(sessionWidth) : 0;
     this.sessionHeight = this.sessionVisible ? finiteLength(sessionHeight) : 0;
+    this.topAccessoryWidth = finiteLength(topAccessoryWidth);
+    this.topAccessoryHeight = finiteLength(topAccessoryHeight);
   }
 }
 
@@ -57,6 +65,10 @@ export class ReaderPageChromeLayoutSnapshot {
   topEndX: number;
   topEndY: number;
   topEndMaxWidth: number;
+  topAccessoryX: number;
+  topAccessoryY: number;
+  topAccessoryWidth: number;
+  topAccessoryHeight: number;
   bottomStartX: number;
   bottomStartY: number;
   bottomStartMaxWidth: number;
@@ -75,6 +87,10 @@ export class ReaderPageChromeLayoutSnapshot {
     this.topEndX = 0;
     this.topEndY = 0;
     this.topEndMaxWidth = 0;
+    this.topAccessoryX = 0;
+    this.topAccessoryY = 0;
+    this.topAccessoryWidth = 0;
+    this.topAccessoryHeight = 0;
     this.bottomStartX = 0;
     this.bottomStartY = 0;
     this.bottomStartMaxWidth = 0;
@@ -120,14 +136,23 @@ export function resolveReaderPageChromeLayout(
   result.topStartMaxWidth = Math.max(0,
     result.topEndX - READER_PAGE_CHROME_FOOTER_GAP - visualLeft);
   result.topEndMaxWidth = Math.max(0, visualRight - visualLeft);
+  const accessoryHeight = layout.pageChromeTopRegionHeight > 0 ?
+    Math.min(measurements.topAccessoryHeight, layout.pageChromeTopRegionHeight) : measurements.topAccessoryHeight;
+  const accessoryWidth = Math.min(measurements.topAccessoryWidth, accessoryHeight);
+  const rowHeight = Math.max(measurements.topStartHeight, measurements.topEndHeight, accessoryHeight);
+  let topLeft = visualLeft;
+  let topRight = visualRight;
+  let topLeftLimit = visualRight;
+  let topRightFloor = visualLeft;
+  let rowTop = layout.pageChromeTopRegionHeight > 0 ? layout.pageChromeVisualSafeTop +
+    Math.max(0, (layout.pageChromeTopRegionHeight - rowHeight) / 2) : top;
   const metrics = layout.pageChromeStatusMetrics;
   if (metrics !== undefined && metrics.ready && metrics.statusBarRect.height > 0) {
     // Public Window gives a region, not OEM status-glyph baselines. Centre our
     // measured text in that region and derive its edge clearance from the
     // current lane/rounded corners; never use a phone-model coordinate table.
     const rect = metrics.statusBarRect;
-    const rowHeight = Math.max(measurements.topStartHeight, measurements.topEndHeight);
-    const rowTop = layout.pageChromeVisualSafeTop + Math.max(0, (rect.height - rowHeight) / 2);
+    rowTop = layout.pageChromeVisualSafeTop + Math.max(0, (rect.height - rowHeight) / 2);
     const left = Math.max(layout.pageChromeVisualSafeLeft, rect.left + rect.height / 2,
       cornerEdge(metrics.topLeftCorner, rowTop, true) + rowHeight / 2);
     const right = Math.min(layout.viewportWidth - layout.pageChromeVisualSafeRight,
@@ -138,6 +163,10 @@ export function resolveReaderPageChromeLayout(
       rowTop < cutout.top + cutout.height && rowTop + rowHeight > cutout.top;
     const leftLimit = intersectsCutout ? Math.min(right, cutout.left - rowHeight / 2) : right;
     const rightFloor = intersectsCutout ? Math.max(left, cutout.left + cutout.width + rowHeight / 2) : left;
+    topLeft = left;
+    topRight = right;
+    topLeftLimit = leftLimit;
+    topRightFloor = rightFloor;
     result.topStartX = left;
     result.topStartY = rowTop + Math.max(0, (rowHeight - measurements.topStartHeight) / 2);
     result.topEndY = rowTop + Math.max(0, (rowHeight - measurements.topEndHeight) / 2);
@@ -145,6 +174,26 @@ export function resolveReaderPageChromeLayout(
     result.topEndX = Math.max(rightFloor, right - Math.min(measurements.topEndWidth, result.topEndMaxWidth));
     result.topStartMaxWidth = Math.max(0, Math.min(leftLimit,
       result.topEndX - READER_PAGE_CHROME_FOOTER_GAP) - left);
+  }
+
+  if (accessoryWidth > 0) {
+    // Preserve the complete clock width. A narrow cutout-side lane moves the
+    // bookmark to the title lane instead of covering or hiding the clock.
+    const gap = READER_PAGE_CHROME_FOOTER_GAP;
+    const fitsWithClock = topRight - topRightFloor >= measurements.topEndWidth + gap + accessoryWidth;
+    result.topAccessoryWidth = Math.min(accessoryWidth,
+      Math.max(0, fitsWithClock ? topRight - topRightFloor : topLeftLimit - topLeft - gap));
+    result.topAccessoryHeight = Math.min(accessoryHeight, result.topAccessoryWidth);
+    result.topAccessoryX = fitsWithClock ? topRight - result.topAccessoryWidth : topLeft;
+    result.topAccessoryY = rowTop + Math.max(0, (rowHeight - result.topAccessoryHeight) / 2);
+    const clockRight = fitsWithClock ? result.topAccessoryX - gap : topRight;
+    result.topEndMaxWidth = Math.max(0, clockRight - topRightFloor);
+    result.topEndX = Math.max(topRightFloor, clockRight - Math.min(measurements.topEndWidth, result.topEndMaxWidth));
+    result.topEndY = rowTop + Math.max(0, (rowHeight - measurements.topEndHeight) / 2);
+    result.topStartX = fitsWithClock ? topLeft : topLeft + result.topAccessoryWidth + gap;
+    result.topStartY = rowTop + Math.max(0, (rowHeight - measurements.topStartHeight) / 2);
+    result.topStartMaxWidth = Math.max(0,
+      Math.min(topLeftLimit, result.topEndX - gap) - result.topStartX);
   }
 
   result.footerRight = Math.max(visualLeft, layout.viewportWidth - interactiveRightInset);

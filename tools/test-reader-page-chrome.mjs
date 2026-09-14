@@ -3,8 +3,10 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import {
   ReaderPageChromeMeasurements,
+  READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
 } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
+import { measureReaderPageChromeText } from '../entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ts';
 import {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
@@ -87,7 +89,7 @@ assert.equal(formatReaderPageOrdinal(new ReaderPageOrdinal(8)), '第 9 页');
 const chromeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), 'utf8');
 const measureSource = chromeSource.slice(chromeSource.indexOf('  private textMeasure('),
   chromeSource.indexOf('  private metaColor('));
-const ChromeMeasure = new Function(`${stripTypeScriptTypes(`class ChromeMeasure { ${measureSource} }`)}; return ChromeMeasure;`)();
+const ChromeMeasure = new Function('measureReaderPageChromeText', `${stripTypeScriptTypes(`class ChromeMeasure { ${measureSource} }`)}; return ChromeMeasure;`)(measureReaderPageChromeText);
 let measurements = 0;
 let density = 3;
 let fontScale = 1;
@@ -151,7 +153,8 @@ console.log('page chrome/native snapshot invalidation: PASS');
 const LayoutChrome = productionMotionMethods(
   new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), ['chromeLayout'],
   { TYPE_READER_IMMERSIVE_TIME: style, TYPE_READER_IMMERSIVE_PROGRESS: style,
-    TYPE_READER_IMMERSIVE_PAGE_ORDINAL: style, ReaderPageChromeMeasurements, resolveReaderPageChromeLayout });
+    TYPE_READER_IMMERSIVE_PAGE_ORDINAL: style, ReaderPageChromeMeasurements, resolveReaderPageChromeLayout,
+    READER_PAGE_CHROME_BOOKMARK_SIZE });
 let layoutMeasures = 0;
 const layoutChrome = Object.assign(new LayoutChrome(), { ...chrome, layout: layout(390, 844),
   topStartText: 'Book', topEndText: '12:30', bottomStartText: '9%', bottomEndText: '第 2 页',
@@ -161,7 +164,8 @@ const geometry = layoutChrome.chromeLayout();
 for (let frame = 0; frame < 100; frame++) assert.equal(layoutChrome.chromeLayout(), geometry);
 assert.equal(layoutMeasures, 4, 'geometry reads reuse the complete immutable layout');
 layoutChrome.layout.pageChromeVisualSafeTop = 40;
-assert.equal(layoutChrome.chromeLayout().topEndY, 48);
+assert.equal(layoutChrome.chromeLayout().topEndY, 48 + (24 - 14.4) / 2,
+  'clock centres in the same 24vp bookmark lane below the safe top');
 assert.equal(layoutMeasures, 8, 'in-place safe area changes invalidate geometry');
 layoutChrome.sessionVisible = true; layoutChrome.sessionWidth = 80; layoutChrome.sessionHeight = 24;
 assert.notEqual(layoutChrome.chromeLayout().bottomEndX, geometry.bottomEndX);

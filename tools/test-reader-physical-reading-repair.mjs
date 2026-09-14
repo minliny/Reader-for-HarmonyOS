@@ -160,10 +160,12 @@ assert.equal(bookmark.currentPageBookmarkStatus(),'bookmarked');
 entries=[{index:0,title:'C',bookmarks:undefined}];assert.equal(bookmark.currentPageBookmarkStatus(),'unknown');
 const feedbackSource=readFileSync(file('LocalReadingExperience.ets'),'utf8');
 for(const [status,offset,preview,expectVisible] of [['empty',24,true,true],['bookmarked',24,true,true],
- ['empty',24,false,true],['empty',0,false,true],['bookmarked',0,false,true],['unknown',0,false,false]]) {
+ ['empty',24,false,true],['empty',0,false,false],['bookmarked',0,false,true],['unknown',0,false,false]]) {
   const {owner}=createReaderBuilderProbe(feedbackSource,['bookmarkCornerFeedback','pageBookmarkFeedbackFilled'],{FlexAlign:{End:'end'}});
   Object.assign(owner,{bookmarkPendingTarget:'',controlVisible:()=>false,controlObscured:false,currentPageBookmarkStatus:()=>status,
     bookmarkPageOffsetY:offset,bookmarkPreviewChanged:preview,readerAppScheme:'day',viewportWidth:390,
+    bookmarkCornerLayout:()=>({topAccessoryX:341,topAccessoryY:4,topAccessoryWidth:24,topAccessoryHeight:24}),
+    bookmarkFeedbackLabel:()=> 'bookmark',
     readingLayout:()=>({pageChromeVisualSafeTop:0,pageChromeTopRegionHeight:32})});
   owner.bookmarkCornerFeedback();const icons=[...owner.nodes.values()].filter(n=>n.type==='Image');
   assert.equal(icons.length,expectVisible?1:0);

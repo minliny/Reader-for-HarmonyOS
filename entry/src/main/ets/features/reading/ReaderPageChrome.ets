@@ -20,13 +20,12 @@ import {
 } from './ReaderLayoutGeometry';
 import {
   ReaderPageChromeMeasurements,
+  READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
   type ReaderPageChromeLayoutSnapshot,
 } from './ReaderPageChromeLayout';
 
-// Font metrics are shared by mounted pages and short-lived offscreen rasters.
-// The key includes typography, density and system scale; retain only 64 labels.
-const readerPageChromeTextMeasurements: Map<string, Size> = new Map<string, Size>();
+import { measureReaderPageChromeText, readerPageChromeTextMeasurements } from './ReaderPageChromeTextMeasurement';
 
 /**
  * Figma `Reader/ImmersiveInfo` + the page-owned part of
@@ -49,6 +48,7 @@ export struct ReaderPageChrome {
   @StorageLink('readerTopInfoSuppressed') private topInfoSuppressed: boolean = false;
   @Prop topStartText: string = '';
   @Prop topEndText: string = '';
+  @Prop topTranslateY: number = 0;
   @Prop bottomStartText: string = '';
   @Prop bottomEndText: string = '';
   @Prop sessionVisible: boolean = false;
@@ -76,7 +76,8 @@ export struct ReaderPageChrome {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .constraintSize({ maxWidth: this.chromeLayout().topStartMaxWidth })
-          .position({ x: this.chromeLayout().topStartX, y: this.chromeLayout().topStartY }).opacity(this.incomingOpacity);
+          .position({ x: this.chromeLayout().topStartX, y: this.chromeLayout().topStartY })
+          .translate({ y: this.topTranslateY }).opacity(this.incomingOpacity);
       }
 
       if (!this.topInfoSuppressed && this.topEndText.length > 0) {
@@ -90,7 +91,8 @@ export struct ReaderPageChrome {
           .maxLines(1)
           .constraintSize({ maxWidth: this.chromeLayout().topEndMaxWidth })
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .position({ x: this.chromeLayout().topEndX, y: this.chromeLayout().topEndY }).opacity(this.incomingOpacity);
+          .position({ x: this.chromeLayout().topEndX, y: this.chromeLayout().topEndY })
+          .translate({ y: this.topTranslateY }).opacity(this.incomingOpacity);
       }
 
       if (this.bottomStartText.length > 0) {
@@ -157,10 +159,12 @@ export struct ReaderPageChrome {
       this.sessionVisible,
       this.sessionWidth,
       this.sessionHeight,
+      READER_PAGE_CHROME_BOOKMARK_SIZE, READER_PAGE_CHROME_BOOKMARK_SIZE,
     ));
     this.noSessionChromeLayout = resolveReaderPageChromeLayout(layout, new ReaderPageChromeMeasurements(
       topStart.width, topStart.height, topEnd.width, topEnd.height, bottomStart.width, bottomStart.height,
-      bottomEnd.width, bottomEnd.height, false, 0, 0));
+      bottomEnd.width, bottomEnd.height, false, 0, 0,
+      READER_PAGE_CHROME_BOOKMARK_SIZE, READER_PAGE_CHROME_BOOKMARK_SIZE));
     this.chromeLayoutCacheKey = key;
     this.chromeLayoutCache = result;
     return result;
@@ -177,38 +181,7 @@ export struct ReaderPageChrome {
   }
 
   private textMeasure(text: string, style: ReaderTextStyle): Size {
-    if (text.length === 0) {
-      return { width: 0, height: 0 };
-    }
-    const context = this.getUIContext();
-    const key = JSON.stringify([text, style.fontSizeFp, style.fontFamily,
-      style.fontWeight, style.lineHeightFp, this.layout.systemFontScale,
-      context.px2vp(1), context.fp2px(1)]);
-    const cached = this.textMeasureCache.get(key);
-    if (cached !== undefined) {
-      this.textMeasureCache.delete(key);
-      this.textMeasureCache.set(key, cached);
-      return cached;
-    }
-    const widthPx = context.getMeasureUtils().measureText({
-      textContent: text,
-      fontSize: style.fontSizeFp,
-      fontFamily: style.fontFamily,
-      fontWeight: style.fontWeight,
-    });
-    const lineHeight = style.lineHeightFp ?? style.fontSizeFp;
-    const measured: Size = {
-      width: Math.max(0, context.px2vp(widthPx)),
-      height: lineHeight * Math.max(1, this.layout.systemFontScale),
-    };
-    if (this.textMeasureCache.size >= 64) {
-      for (const oldest of this.textMeasureCache.keys()) {
-        this.textMeasureCache.delete(oldest);
-        break;
-      }
-    }
-    this.textMeasureCache.set(key, measured);
-    return measured;
+    return measureReaderPageChromeText(text, style, this.layout, this.getUIContext(), this.textMeasureCache);
   }
 
   private metaColor(): string {

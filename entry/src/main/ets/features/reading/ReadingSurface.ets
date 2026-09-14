@@ -312,6 +312,7 @@ export struct ReadingSurface {
   @Prop longPressSelectText: boolean = false;
   @Prop chromeTopStartText: string = '';
   @Prop chromeTopEndText: string = '';
+  @Prop chromeTopTranslateY: number = 0;
   @Prop chromeBottomStartText: string = '';
   @Prop chromeBottomEndText: string = '';
   @Prop chromeSessionVisible: boolean = false;
@@ -472,6 +473,7 @@ export struct ReadingSurface {
       ReaderPageChrome({
         topStartText: this.chromeTopStartText,
         topEndText: this.chromeTopEndText,
+        topTranslateY: this.chromeTopTranslateY,
         bottomStartText: this.chromeBottomStartText,
         bottomEndText: this.chromeBottomEndText,
         sessionVisible: this.chromeSessionVisible,

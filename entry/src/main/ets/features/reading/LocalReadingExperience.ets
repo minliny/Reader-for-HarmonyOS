@@ -6,6 +6,8 @@ import { READER_SESSION_LAUNCH_CURVES } from './ReaderSessionLaunchCurves';
 import { ReaderSessionLaunchController, type ReaderSessionLaunchTransaction,
   type ReaderSessionLaunchIdentity, type ReaderSessionLaunchCancelReason } from './ReaderSessionLaunchController';
 import { ReaderPageChrome } from './ReaderPageChrome';
+import { measureReaderPageChromeText } from './ReaderPageChromeTextMeasurement';
+import { TYPE_READER_IMMERSIVE_TIME } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { settings, type BusinessError } from '@kit.BasicServicesKit';
 import { readerBrightnessWindowValue, readerBrightnessControlPercent, readerBrightnessSystemValue } from './ReaderBrightnessCurve';
@@ -161,6 +163,7 @@ import {
 } from './ReaderPageChromeModel';
 import {
   ReaderPageChromeMeasurements,
+  READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
   type ReaderPageChromeLayoutSnapshot,
 } from './ReaderPageChromeLayout';
@@ -10553,32 +10556,39 @@ export struct ReadingExperience {
     }
   }
 
+  private bookmarkCornerLayout(): ReaderPageChromeLayoutSnapshot {
+    const layout = this.readingLayout();
+    const clock = measureReaderPageChromeText(this.pageChromeClockText,
+      TYPE_READER_IMMERSIVE_TIME, layout, this.getUIContext());
+    const title = measureReaderPageChromeText(this.bookTitle,
+      TYPE_READER_IMMERSIVE_TIME, layout, this.getUIContext());
+    return resolveReaderPageChromeLayout(layout, new ReaderPageChromeMeasurements(
+      title.width, title.height, clock.width, clock.height, 0, 0, 0, 0, false, 0, 0,
+      READER_PAGE_CHROME_BOOKMARK_SIZE, READER_PAGE_CHROME_BOOKMARK_SIZE));
+  }
+
+  private bookmarkFeedbackLabel(): string {
+    if (this.bookmarkPageOffsetY <= 0) return '本页已添加书签';
+    return this.bookmarkPreviewChanged ? (this.currentPageBookmarkStatus() === 'bookmarked' ?
+      '松手移除书签' : '松手添加书签') : '取消书签操作';
+  }
+
   @Builder
   private bookmarkCornerFeedback() {
-    // Existing gesture owns threshold preview and rebound; the pending visual
-    // bridges the rebound to the canonical projection without a hollow flash.
+    // A dedicated top-info slot shares the page chrome's measured clock,
+    // safe/cutout geometry. Never overlay a hint on the title or the clock.
     if (!this.controlVisible() && !this.controlObscured &&
-      (this.bookmarkPageOffsetY > 0 || this.currentPageBookmarkStatus() !== 'unknown' ||
-      (this.bookmarkPendingTarget.length > 0 && this.bookmarkPendingAnchor === this.pageBookmarkFeedbackAnchor()))) {
-      Row({ space: 6 }) {
-        if (this.bookmarkPageOffsetY > 0) {
-          Text(this.bookmarkPreviewChanged ? (this.currentPageBookmarkStatus() === 'bookmarked' ?
-            '松手移除书签' : '松手添加书签') : '取消书签操作')
-            .fontFamily('ReaderNotoSansSC').fontSize(11).maxLines(1)
-            .fontColor(readerAppColor('TOK_READ_INK', this.readerAppScheme));
-        }
-        Image(this.pageBookmarkFeedbackFilled() ? (this.readerAppScheme === 'night' ?
-          $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled')) :
-          (this.readerAppScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
-            $r('app.media.reader_directory_marker_bookmark_active')))
-          .width(24).height(24)
-          .opacity(this.bookmarkPageOffsetY > 0 && !this.bookmarkPreviewChanged ? 0.35 : 1);
-      }.height(28).justifyContent(FlexAlign.End)
-        .width(Math.max(0, this.viewportWidth - 50))
-        .position({ x: 25, y: this.readingLayout().pageChromeVisualSafeTop +
-          this.readingLayout().pageChromeTopRegionHeight + 8 })
-        .translate({ y: Math.min(24, this.bookmarkPageOffsetY) })
-        .zIndex(6).hitTestBehavior(HitTestMode.None);
+      (this.bookmarkPageOffsetY > 0 || this.pageBookmarkFeedbackFilled())) {
+      Image(this.pageBookmarkFeedbackFilled() ? (this.readerAppScheme === 'night' ?
+        $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled')) :
+        (this.readerAppScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
+          $r('app.media.reader_directory_marker_bookmark_active')))
+        .width(this.bookmarkCornerLayout().topAccessoryWidth)
+        .height(this.bookmarkCornerLayout().topAccessoryHeight)
+        .position({ x: this.bookmarkCornerLayout().topAccessoryX, y: this.bookmarkCornerLayout().topAccessoryY })
+        .opacity(this.bookmarkPageOffsetY > 0 && !this.bookmarkPreviewChanged ? 0.35 : 1)
+        .accessibilityText(this.bookmarkFeedbackLabel())
+        .zIndex(9).hitTestBehavior(HitTestMode.None);
     }
   }
 
