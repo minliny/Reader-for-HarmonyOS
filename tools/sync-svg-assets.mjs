@@ -38,6 +38,10 @@ function renderIcon(recipe, source) {
   if (recipe.rotation !== 0) {
     result = result.replace(/<g([^>]*)>/, `<g transform="rotate(${recipe.rotation} 24 24)"$1>`);
   }
+  if (recipe.fillInterior) {
+    assert.ok(!/<path[^>]*\bfill=/.test(result), `${recipe.sourceFile}: paths already carry a fill attribute`);
+    result = result.replaceAll('<path d=', `<path fill="${recipe.color}" d=`);
+  }
   if (recipe.fillNone) {
     assert.ok(!/<path[^>]*\bfill=/.test(result), `${recipe.sourceFile}: paths already carry a fill attribute`);
     result = result.replaceAll('<path d=', '<path fill="none" d=');
@@ -59,7 +63,7 @@ async function renderRecipe(recipe) {
     const original = await renderRecipe(base);
     const roles = [];
     const content = original.content.replace(/#[0-9a-f]{6}\b/gi, color => {
-      const role = `app.icon.${recipe.baseFile}.${color.slice(1).toUpperCase()}`;
+      const role = `app.icon.${recipe.baseFile === 'reader_page_bookmark_filled' ? 'reader_directory_marker_bookmark_active' : recipe.baseFile}.${color.slice(1).toUpperCase()}`;
       const target = readerAppColor(role, 'night');
       assert.match(target, /^#FF[0-9A-F]{6}$/i, `${role}: SVG adapter preserves original opacity`);
       roles.push(role);
@@ -101,7 +105,7 @@ async function renderRecipe(recipe) {
         sourceFile: path.relative(ROOT, sourcePath),
         sourceSha256: sha256(source),
         transform: {
-          pathMutation: recipe.fillNone ? 'fill-none-on-stroke-paths' : 'none',
+          pathMutation: recipe.fillInterior ? 'fill-interior-for-explicit-state' : recipe.fillNone ? 'fill-none-on-stroke-paths' : 'none',
           recolor: recipe.color,
           rotationDegrees: recipe.rotation,
         },

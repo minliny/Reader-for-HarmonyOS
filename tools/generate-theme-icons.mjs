@@ -17,7 +17,7 @@ collect(path.join(root,'entry/src/main/ets'));
 if(process.argv.includes('--list')){console.log(JSON.stringify([...names].sort()));process.exit(0);}
 const manifest=[];
 for(const name of names){const f=path.join(media,name+'.svg');if(!fs.existsSync(f))continue;const original=fs.readFileSync(f,'utf8');let changed=false;
- const night=original.replace(/#[0-9a-f]{6}\b/gi,color=>{const rgb=color.slice(1).toUpperCase();const role='app.icon.'+name+'.'+rgb;let target=map[rgb]||rgb;
+ const night=original.replace(/#[0-9a-f]{6}\b/gi,color=>{const rgb=color.slice(1).toUpperCase();const role='app.icon.'+(name==='reader_page_bookmark_filled'?'reader_directory_marker_bookmark_active':name)+'.'+rgb;let target=map[rgb]||rgb;
   if(['FFFAF4','FFFCF8'].includes(rgb)&&name.startsWith('reader_'))target='1C1A18';
   if(!registry.appRoles[role])registry.appRoles[role]={day:rgba(rgb),night:rgba(target),provenance:`Existing monochrome/state SVG ${name}; same path and alpha, §2 App role mapping`};
   const c=registry.appRoles[role].night;const resolved='#'+[c.r,c.g,c.b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();

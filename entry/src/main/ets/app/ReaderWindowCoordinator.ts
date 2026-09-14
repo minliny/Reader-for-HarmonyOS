@@ -4,6 +4,7 @@ import { ReaderStatusBarMeasurement } from './ReaderStatusBarMeasurement';
 import {
   ReaderInsetsVp,
   ReaderRectVp,
+  ReaderDisplayCornerVp,
   ReaderWindowMetricsSnapshot,
   createDefaultReaderWindowMetrics,
 } from '../features/common/ReaderWindowMetrics';
@@ -82,6 +83,8 @@ export class ReaderWindowCoordinator {
   private static metricsSnapshot: ReaderWindowMetricsSnapshot = createDefaultReaderWindowMetrics();
   private static statusBarMeasurement: ReaderStatusBarMeasurement = new ReaderStatusBarMeasurement();
   private static statusBarHiddenApplied: boolean = false;
+  private static windowRectListener: ((options: window.RectChangeOptions) => void) | undefined = undefined;
+  private static displayChangeListener: ((id: number) => void) | undefined = undefined;
   private static windowSizeListener: ((size: window.Size) => void) | undefined = undefined;
   private static avoidAreaListener: ((options: window.AvoidAreaOptions) => void) | undefined = undefined;
   private static desiredChrome: ReaderWindowChromeRequest =
@@ -157,6 +160,15 @@ export class ReaderWindowCoordinator {
         // must be cleared so the next stage never reuses stale callbacks.
       }
     }
+    if (win !== undefined && ReaderWindowCoordinator.windowRectListener !== undefined) {
+      try { win.off('windowRectChange', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}
+      try { win.off('rectChangeInGlobalDisplay', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}
+    }
+    if (ReaderWindowCoordinator.displayChangeListener !== undefined) {
+      try { display.off('change', ReaderWindowCoordinator.displayChangeListener); } catch (_error) {}
+    }
+    ReaderWindowCoordinator.windowRectListener = undefined;
+    ReaderWindowCoordinator.displayChangeListener = undefined;
     ReaderWindowCoordinator.installEpoch += 1;
     ReaderWindowCoordinator.mainWindow = undefined;
     ReaderWindowCoordinator.windowPolicyRevision += 1;
@@ -265,6 +277,17 @@ export class ReaderWindowCoordinator {
     };
     win.on('windowSizeChange', ReaderWindowCoordinator.windowSizeListener);
     win.on('avoidAreaChange', ReaderWindowCoordinator.avoidAreaListener);
+    ReaderWindowCoordinator.windowRectListener = (_options: window.RectChangeOptions): void => {
+      if (ReaderWindowCoordinator.mainWindow === win) ReaderWindowCoordinator.refreshMetrics();
+    };
+    ReaderWindowCoordinator.displayChangeListener = (_id: number): void => {
+      if (ReaderWindowCoordinator.mainWindow === win) ReaderWindowCoordinator.refreshMetrics();
+    };
+    // Position-only moves and same-size rotation need a refresh too. Snapshot
+    // equality below deduplicates overlapping size/rect/avoid notifications.
+    try { win.on('windowRectChange', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}
+    try { win.on('rectChangeInGlobalDisplay', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}
+    try { display.on('change', ReaderWindowCoordinator.displayChangeListener); } catch (_error) {}
   }
 
   private static nextWindowPolicyRevision(): number {
@@ -369,13 +392,20 @@ export class ReaderWindowCoordinator {
     const systemFontScale = scaledDensity / density;
     const previous = ReaderWindowCoordinator.metricsSnapshot;
     const statusMeasurementKey = `${windowRect.left}:${windowRect.top}:${windowRect.width}:` +
-      `${windowRect.height}:${globalRectVp.left}:${globalRectVp.top}:${density}`;
-    const statusBarHeight = ReaderWindowCoordinator.statusBarMeasurement.observe(statusMeasurementKey,
-      windowRect.width > windowRect.height, systemInsets.top,
+      `${windowRect.height}:${globalRectVp.left}:${globalRectVp.top}:${density}:${displayInfo.id}:${displayInfo.rotation}`;
+    const statusBarRect = ReaderWindowCoordinator.statusBarMeasurement.observeRect(statusMeasurementKey,
+      windowRect.width > windowRect.height, ReaderWindowCoordinator.statusBarRectVp(density),
       ReaderWindowCoordinator.statusBarHiddenApplied ||
       (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
       ReaderWindowCoordinator.desiredReaderWindowPolicy.hideStatusBar));
+    const statusBarHeight = statusBarRect.height;
+    const statusBarCutoutRect = ReaderWindowCoordinator.topAvoidRectVp(window.AvoidAreaType.TYPE_CUTOUT, density);
+    const corners = ReaderWindowCoordinator.topCornersVp(displayInfo, globalRectVp, density);
     if (previous.ready && previous.statusBarHeight === statusBarHeight &&
+      ReaderWindowCoordinator.sameRectVp(previous.statusBarRect, statusBarRect) &&
+      ReaderWindowCoordinator.sameRectVp(previous.statusBarCutoutRect, statusBarCutoutRect) &&
+      ReaderWindowCoordinator.sameCornerVp(previous.topLeftCorner, corners[0]) &&
+      ReaderWindowCoordinator.sameCornerVp(previous.topRightCorner, corners[1]) &&
       ReaderWindowCoordinator.sameRectVp(previous.windowRect, windowRect) &&
       ReaderWindowCoordinator.sameRectVp(previous.globalRect, globalRectVp) &&
       ReaderWindowCoordinator.sameInsetsVp(previous.systemInsets, systemInsets) &&
@@ -404,12 +434,54 @@ export class ReaderWindowCoordinator {
       revision,
       true,
       statusBarHeight,
+      statusBarRect, statusBarCutoutRect, corners[0], corners[1],
     );
     AppStorage.setOrCreate<number>('readerWindowMetricsRevision', revision);
   }
 
   private static sameRectVp(a: ReaderRectVp, b: ReaderRectVp): boolean {
     return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
+  }
+
+  private static sameCornerVp(a: ReaderDisplayCornerVp, b: ReaderDisplayCornerVp): boolean {
+    return a.x === b.x && a.y === b.y && a.radius === b.radius;
+  }
+
+  private static topAvoidRectVp(type: window.AvoidAreaType, density: number): ReaderRectVp {
+    try {
+      const win = ReaderWindowCoordinator.mainWindow;
+      return win === undefined ? new ReaderRectVp() : ReaderWindowCoordinator.rectVp(win.getWindowAvoidArea(type).topRect, density);
+    } catch (_error) { return new ReaderRectVp(); }
+  }
+
+  private static statusBarRectVp(density: number): ReaderRectVp {
+    const win = ReaderWindowCoordinator.mainWindow;
+    // API22 is optional at runtime. API21 or an unsupported window keeps the
+    // existing visible-area + exact-geometry measured fallback, never a model table.
+    if (win !== undefined && typeof win.getWindowAvoidAreaIgnoringVisibility === 'function') {
+      try {
+        const rect = win.getWindowAvoidAreaIgnoringVisibility(window.AvoidAreaType.TYPE_SYSTEM).topRect;
+        if (rect.height > 0) return ReaderWindowCoordinator.rectVp(rect, density);
+      } catch (_error) {}
+    }
+    return ReaderWindowCoordinator.topAvoidRectVp(window.AvoidAreaType.TYPE_SYSTEM, density);
+  }
+
+  private static topCornersVp(info: display.Display, globalRect: ReaderRectVp,
+    density: number): ReaderDisplayCornerVp[] {
+    const result: ReaderDisplayCornerVp[] = [new ReaderDisplayCornerVp(), new ReaderDisplayCornerVp()];
+    if (typeof info.getRoundedCorner !== 'function') return result;
+    try {
+      for (const corner of info.getRoundedCorner()) {
+        if (corner.type !== display.CornerType.TOP_LEFT && corner.type !== display.CornerType.TOP_RIGHT) continue;
+        const index = corner.type === display.CornerType.TOP_LEFT ? 0 : 1;
+        result[index] = new ReaderDisplayCornerVp(
+          (corner.position.x + (info.x ?? 0)) / density - globalRect.left,
+          (corner.position.y + (info.y ?? 0)) / density - globalRect.top,
+          Math.max(0, corner.radius / density));
+      }
+    } catch (_error) {}
+    return result;
   }
 
   private static sameInsetsVp(a: ReaderInsetsVp, b: ReaderInsetsVp): boolean {

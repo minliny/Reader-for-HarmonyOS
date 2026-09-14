@@ -144,10 +144,10 @@ for(let revision=0;revision<160;revision++) {
   assert.ok(hydration.bookmarkExcerptCache.size<=128);
 }
 // Original page text uses the existing UTF-16/scalar map, preserving emoji/CRLF.
-const Bookmark=productionMotionMethods(file('LocalReadingExperience.ets'),['currentPageBookmarkText','currentPageBookmarkStatus','toggleCurrentPageBookmark']);
+const Bookmark=productionMotionMethods(file('LocalReadingExperience.ets'),['currentPageBookmarkText','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','reconcilePageBookmarkFeedback']);
 const chapterText='A\ud83d\ude42\r\nBC\u4e2dD',map=new ReadingSurfaceLayoutMap(chapterText);
 let requests=[];let entries=[{index:0,title:'C',bookmarks:[]}];
-const bookmark=Object.assign(new Bookmark(),{chapter:{chapterIndex:0,content:chapterText},chapterLayoutMap:map,
+const bookmark=Object.assign(new Bookmark(),{bookmarkPendingTarget:'',bookmarkMutationGeneration:0,mounted:true,chapter:{chapterIndex:0,content:chapterText},chapterLayoutMap:map,
   visiblePage:{startScalar:1,endScalar:7},currentChapterIndex:()=>0,controlDirectoryEntries:()=>entries,
   onTogglePageBookmark:request=>requests.push(request)});
 assert.equal(bookmark.currentPageBookmarkText(),'\ud83d\ude42\r\nBC\u4e2d');bookmark.toggleCurrentPageBookmark();
@@ -158,9 +158,9 @@ assert.equal(bookmark.currentPageBookmarkStatus(),'bookmarked');
 entries=[{index:0,title:'C',bookmarks:undefined}];assert.equal(bookmark.currentPageBookmarkStatus(),'unknown');
 const feedbackSource=readFileSync(file('LocalReadingExperience.ets'),'utf8');
 for(const [status,offset,preview,expectVisible] of [['empty',24,true,true],['bookmarked',24,true,true],
- ['empty',24,false,true],['empty',0,false,false],['bookmarked',0,false,true],['unknown',0,false,false]]) {
-  const {owner}=createReaderBuilderProbe(feedbackSource,['bookmarkCornerFeedback'],{FlexAlign:{End:'end'}});
-  Object.assign(owner,{controlVisible:()=>false,controlObscured:false,currentPageBookmarkStatus:()=>status,
+ ['empty',24,false,true],['empty',0,false,true],['bookmarked',0,false,true],['unknown',0,false,false]]) {
+  const {owner}=createReaderBuilderProbe(feedbackSource,['bookmarkCornerFeedback','pageBookmarkFeedbackFilled'],{FlexAlign:{End:'end'}});
+  Object.assign(owner,{bookmarkPendingTarget:'',controlVisible:()=>false,controlObscured:false,currentPageBookmarkStatus:()=>status,
     bookmarkPageOffsetY:offset,bookmarkPreviewChanged:preview,readerAppScheme:'day',viewportWidth:390,
     readingLayout:()=>({pageChromeVisualSafeTop:0,pageChromeTopRegionHeight:32})});
   owner.bookmarkCornerFeedback();const icons=[...owner.nodes.values()].filter(n=>n.type==='Image');

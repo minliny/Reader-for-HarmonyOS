@@ -18,6 +18,8 @@ export type ReaderPageBookmarkToggleRequest = {
   bookmarkTimes: number[];
   /** Captured original text from this exact visible page; never a user note. */
   bookText?: string;
+  /** Host-only acknowledgment of a confirmed write; projection failure remains separately unknown. */
+  onSettled?: (success: boolean) => void;
 };
 
 /**

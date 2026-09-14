@@ -32,6 +32,16 @@ export class ReaderInsetsVp {
   }
 }
 
+/** Public display geometry, in this window's logical coordinate space. */
+export class ReaderDisplayCornerVp {
+  x: number;
+  y: number;
+  radius: number;
+  constructor(x: number = 0, y: number = 0, radius: number = 0) {
+    this.x = x; this.y = y; this.radius = radius;
+  }
+}
+
 export class ReaderWindowMetricsSnapshot {
   windowRect: ReaderRectVp;
   globalRect: ReaderRectVp;
@@ -45,6 +55,10 @@ export class ReaderWindowMetricsSnapshot {
   revision: number;
   ready: boolean;
   statusBarHeight: number;
+  statusBarRect: ReaderRectVp;
+  statusBarCutoutRect: ReaderRectVp;
+  topLeftCorner: ReaderDisplayCornerVp;
+  topRightCorner: ReaderDisplayCornerVp;
 
   constructor(
     windowRect: ReaderRectVp = new ReaderRectVp(),
@@ -59,6 +73,10 @@ export class ReaderWindowMetricsSnapshot {
     revision: number = 0,
     ready: boolean = false,
     statusBarHeight: number = systemInsets.top,
+    statusBarRect: ReaderRectVp = new ReaderRectVp(0, 0, windowRect.width, statusBarHeight),
+    statusBarCutoutRect: ReaderRectVp = new ReaderRectVp(),
+    topLeftCorner: ReaderDisplayCornerVp = new ReaderDisplayCornerVp(),
+    topRightCorner: ReaderDisplayCornerVp = new ReaderDisplayCornerVp(),
   ) {
     this.windowRect = windowRect;
     this.globalRect = globalRect;
@@ -72,6 +90,10 @@ export class ReaderWindowMetricsSnapshot {
     this.revision = revision;
     this.ready = ready;
     this.statusBarHeight = Math.max(0, statusBarHeight);
+    this.statusBarRect = statusBarRect;
+    this.statusBarCutoutRect = statusBarCutoutRect;
+    this.topLeftCorner = topLeftCorner;
+    this.topRightCorner = topRightCorner;
   }
 }
 

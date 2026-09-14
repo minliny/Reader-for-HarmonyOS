@@ -1,0 +1,60 @@
+{
+  "sourceCommit": "bf3e2682051f0c5d84103800c1cec4e7140b203c",
+  "sourceDirty": false,
+  "layer": "local Core only; no HAP/device evidence",
+  "format": "PASS",
+  "clippy": "PASS",
+  "nextest": {
+    "status": "PASS",
+    "passed": 3727,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 37.116,
+    "command": "CARGO_TARGET_DIR=target/check cargo nextest run --workspace --locked --no-fail-fast --failure-output immediate-final --final-status-level fail"
+  },
+  "conformance": {
+    "passed": 210,
+    "failed": 0
+  },
+  "strictContractDrift": "PASS",
+  "cAbiSmoke": "PASS",
+  "cxxAbiSmoke": "PASS",
+  "history": [
+    {
+      "issue": "New optional field omitted from integration pagination fixture",
+      "resolution": "Added force_refresh:false to original cycle-detection case; full clippy passed after correction"
+    },
+    {
+      "issue": "Sandbox blocked two WebDAV local listener tests; fail-fast left 404 unrun",
+      "resolution": "Local listener allowance granted; three WebDAV cases passed, then all 3727 tests rerun successfully"
+    }
+  ],
+  "logs": {
+    "initialCompile": {
+      "path": "/private/tmp/reader-ph56-core-check.log",
+      "sha256": "49ae603ae716a0919752c305a7929633e22ccdb842d609055315866abe2dea56",
+      "summary": [
+        "error[E0063]: missing field `force_refresh` in initializer of `reader_contract::ChapterContentParams`"
+      ]
+    },
+    "sandboxRun": {
+      "path": "/private/tmp/reader-ph56-core-check-2.log",
+      "sha256": "2997d7b03850a9ca4bb06edf5bdc69676d937f90c9fe69dbcbb6e462a04d4a42",
+      "summary": [
+        "    bind mock webdav port: Os { code: 1, kind: PermissionDenied, message: \"Operation not permitted\" }",
+        "    bind mock webdav port: Os { code: 1, kind: PermissionDenied, message: \"Operation not permitted\" }",
+        "     Summary [  50.913s] 3323/3727 tests run: 3321 passed, 2 failed, 0 skipped",
+        "    bind mock webdav port: Os { code: 1, kind: PermissionDenied, message: \"Operation not permitted\" }",
+        "    bind mock webdav port: Os { code: 1, kind: PermissionDenied, message: \"Operation not permitted\" }",
+        "warning: 404/3727 tests were not run due to test failure (run with --no-fail-fast to run all tests, or run with --max-fail)"
+      ]
+    },
+    "completeTests": {
+      "path": "/private/tmp/reader-ph56-core-nextest-final.log",
+      "sha256": "0455a8a3af23c27df91993fb9618fd0079469264104e9276551d31d692b01cfe",
+      "summary": [
+        "     Summary [  37.116s] 3727 tests run: 3727 passed, 0 skipped"
+      ]
+    }
+  }
+}

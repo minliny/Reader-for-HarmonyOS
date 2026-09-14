@@ -113,6 +113,7 @@ export class ReaderReadingLayoutSnapshot {
   pageChromeVisualSafeLeft: number;
   pageChromeInteractiveSafeRight: number;
   pageChromeInteractiveSafeBottom: number;
+  pageChromeStatusMetrics: ReaderWindowMetricsSnapshot | undefined;
 
   constructor(
     widthClass: ReaderWidthClass,
@@ -130,6 +131,7 @@ export class ReaderReadingLayoutSnapshot {
     pageChromeInteractiveSafeRight: number = 0,
     pageChromeInteractiveSafeBottom: number = 0,
     pageChromeTopRegionHeight: number = 0,
+    pageChromeStatusMetrics?: ReaderWindowMetricsSnapshot,
   ) {
     this.widthClass = widthClass;
     this.viewportWidth = viewportWidth;
@@ -149,6 +151,7 @@ export class ReaderReadingLayoutSnapshot {
     this.pageChromeVisualSafeLeft = pageChromeVisualSafeLeft;
     this.pageChromeInteractiveSafeRight = pageChromeInteractiveSafeRight;
     this.pageChromeInteractiveSafeBottom = pageChromeInteractiveSafeBottom;
+    this.pageChromeStatusMetrics = pageChromeStatusMetrics;
   }
 
   bodyWidth(): number {
@@ -259,7 +262,8 @@ export function resolveReaderReadingLayout(
     widthClass === 'expanded' && insetProfile === undefined ? Math.max(0, (width - 720) / 2) : 0);
   // Reserve the information lane exactly once. With system chrome visible,
   // it starts below the retained status region; when extended it owns that region.
-  const informationBottom = (extendIntoCutout ? 0 : metrics.statusBarHeight) + metrics.statusBarHeight;
+  const informationTop = metrics.statusBarRect.top + (extendIntoCutout ? 0 : metrics.statusBarHeight);
+  const informationBottom = informationTop + metrics.statusBarHeight;
   const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop,
     informationBottom > 0 ? informationBottom + 8 : 0);
   const contentBottom = Math.max(
@@ -278,13 +282,14 @@ export function resolveReaderReadingLayout(
     Math.max(profile.contentBottom, contentBottom),
     contentHorizontal,
     systemFontScale,
-    extendIntoCutout ? 0 : metrics.statusBarHeight,
+    informationTop,
     readerVisualSafeRight(metrics),
     readerVisualSafeBottom(metrics),
     readerVisualSafeLeft(metrics),
     readerInteractiveSafeRight(metrics, true),
     readerInteractiveSafeBottom(metrics, true),
     metrics.statusBarHeight,
+    metrics,
   );
 }
 
@@ -303,7 +308,9 @@ export function resolveReaderControlLayout(
   const width = viewportWidth > 0 ? viewportWidth : profile.referenceWidth;
   const height = viewportHeight > 0 ? viewportHeight : profile.referenceHeight;
   const safeHorizontal = readerContentSafeHorizontal(metrics);
-  const safeTop = readerContentSafeTop(metrics);
+  // Control invocation reveals system chrome asynchronously. Its target lane
+  // is already measured even while the current visible avoid-area is zero.
+  const safeTop = Math.max(readerContentSafeTop(metrics), metrics.statusBarRect.top + metrics.statusBarHeight);
   // A resized content viewport has already paid part/all of the IME inset.
   // Subtract only the keyboard area that still intersects this viewport.
   const consumedKeyboard = Math.max(0, metrics.windowRect.height - height);

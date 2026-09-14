@@ -88,6 +88,8 @@ export struct ReaderPageChrome {
           .letterSpacing(TYPE_READER_IMMERSIVE_TIME.letterSpacingFp)
           .fontColor(this.metaColor())
           .maxLines(1)
+          .constraintSize({ maxWidth: this.chromeLayout().topEndMaxWidth })
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .position({ x: this.chromeLayout().topEndX, y: this.chromeLayout().topEndY }).opacity(this.incomingOpacity);
       }
 
@@ -135,6 +137,7 @@ export struct ReaderPageChrome {
       layout.viewportWidth, layout.viewportHeight, layout.systemFontScale,
       layout.pageChromeVisualSafeLeft, layout.pageChromeVisualSafeRight,
       layout.pageChromeVisualSafeTop, layout.pageChromeTopRegionHeight, layout.pageChromeVisualSafeBottom,
+      layout.pageChromeStatusMetrics?.revision,
       layout.pageChromeInteractiveSafeRight, layout.pageChromeInteractiveSafeBottom,
       context.px2vp(1), context.fp2px(1)]);
     if (key === this.chromeLayoutCacheKey && this.chromeLayoutCache !== undefined) return this.chromeLayoutCache;

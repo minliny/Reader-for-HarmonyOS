@@ -695,6 +695,7 @@ class ReaderDeferredChapterSelection {
   requestedProgress: number | undefined;
   controlOwnerRevision: number;
   closeControlOnCommit: boolean;
+  refreshContent: boolean;
 
   constructor(
     chapterIndex: number,
@@ -704,6 +705,7 @@ class ReaderDeferredChapterSelection {
     requestedProgress: number | undefined,
     controlOwnerRevision: number,
     closeControlOnCommit: boolean = true,
+    refreshContent: boolean = false,
   ) {
     this.chapterIndex = chapterIndex;
     this.chapterOffset = chapterOffset;
@@ -712,6 +714,7 @@ class ReaderDeferredChapterSelection {
     this.requestedProgress = requestedProgress;
     this.controlOwnerRevision = controlOwnerRevision;
     this.closeControlOnCommit = closeControlOnCommit;
+    this.refreshContent = refreshContent;
   }
 }
 
@@ -1041,6 +1044,10 @@ export struct ReadingExperience {
   @State private pageTurnSettlementActive: boolean = false;
   @State private bookmarkPageOffsetY: number = 0;
   private bookmarkRollbackGeneration: number = 0;
+  @State private bookmarkPendingTarget: string = '';
+  private bookmarkPendingAnchor: string = '';
+  private bookmarkMutationGeneration: number = 0;
+  private bookmarkMutationConfirmed: boolean = false;
   /** Shared gesture preview directly paints the right-corner feedback. */
   @State private bookmarkPreviewChanged: boolean = false;
   private bookmarkStatusEntries: LocalReadingTocEntry[] | undefined = undefined;
@@ -1524,6 +1531,8 @@ export struct ReadingExperience {
   aboutToDisappear(): void {
     this.finishSessionCapsuleMorph();
     this.bookmarkRollbackGeneration += 1;
+    this.bookmarkMutationGeneration += 1;
+    this.bookmarkPendingTarget = '';
     // Do not begin a second, fire-and-forget write after the host has already
     // unmounted us. Normal exit is serialized through requestExit() instead.
     this.invalidatePageTurnRuntime(true);
@@ -1799,10 +1808,9 @@ export struct ReadingExperience {
           this.hideControl();
           this.onSwitchSource();
         },
-        onMore: (): void => this.toggleCurrentPageBookmark(),
+        onRefreshChapter: (): void => this.refreshCurrentChapter(),
         onOpenBookInfo: (): void => this.onOpenBookInfo(),
-        currentPageBookmarkReady: this.currentPageBookmarkStatus() !== 'unknown',
-        currentPageBookmarked: this.currentPageBookmarkStatus() === 'bookmarked',
+        chapterRefreshEnabled: this.canRefreshCurrentChapter(),
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),
@@ -1944,6 +1952,7 @@ export struct ReadingExperience {
             this.onReaderPageGestureDecision(decision),
       });
       this.bookmarkCornerFeedback();
+      this.readerStatusBarUnderlay();
       if (this.sessionLaunch === undefined && this.shouldShowSessionCapsule()) {
         ReaderSessionCapsule({
           type: this.sessionCapsuleType(), sessionState: this.sessionCapsuleState(), countdown: this.sessionCapsuleCountdown(),
@@ -3117,13 +3126,14 @@ export struct ReadingExperience {
     selectionToken: number,
     requestedOffset?: number,
     requestedProgress?: number,
+    refreshContent: boolean = false,
   ): Promise<void> {
     try {
       if (!isInitial && this.tocEntries.length > 0) {
         this.requireKnownChapter(chapterIndex);
       }
       const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken);
-      const chapter = await this.loadSessionChapter(chapterIndex, isCurrent);
+      const chapter = await this.loadSessionChapter(chapterIndex, isCurrent, refreshContent);
       if (!isCurrent()) {
         return;
       }
@@ -3160,12 +3170,13 @@ export struct ReadingExperience {
   private async loadSessionChapter(
     chapterIndex: number,
     isCurrent: () => boolean,
+    forceRefresh: boolean = false,
   ): Promise<ReadingSessionChapter> {
     const cached = this.chapterWindow.get(chapterIndex);
-    if (cached !== undefined) {
+    if (cached !== undefined && !forceRefresh) {
       return cached;
     }
-    return this.activeGateway().loadChapter(this.bookId, chapterIndex, isCurrent);
+    return this.activeGateway().loadChapter(this.bookId, chapterIndex, isCurrent, forceRefresh);
   }
 
   /**
@@ -7197,6 +7208,20 @@ export struct ReadingExperience {
       .catch((_error: Error): void => {});
   }
 
+  @Builder
+  private readerStatusBarUnderlay() {
+    // Native status chrome overlays this explicit reader-owned band. It stays
+    // independent of the moving page and App-colored control surfaces below.
+    if (this.windowChromeActive && (!this.readerSettingsSnapshot.extendIntoCutout || this.controlsPresentedForWindow())) {
+      Row().width(ReaderWindowCoordinator.metrics().statusBarRect.width)
+        .height(ReaderWindowCoordinator.metrics().statusBarHeight)
+        .position({ x: ReaderWindowCoordinator.metrics().statusBarRect.left,
+          y: ReaderWindowCoordinator.metrics().statusBarRect.top })
+        .backgroundColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart)
+        .id('reader-status-bar-underlay').zIndex(10).hitTestBehavior(HitTestMode.None);
+    }
+  }
+
   private applyWindowChrome(): void {
     if (!this.windowChromeActive) {
       ReaderWindowCoordinator.requestAppChrome();
@@ -7298,6 +7323,7 @@ export struct ReadingExperience {
   }
 
   private onControlDirectoryDataChanged(): void {
+    this.reconcilePageBookmarkFeedback();
     // Parent detail admission may arrive before the reader's own TOC promise.
     // Prime the retained presentation as soon as a non-empty validated
     // projection exists, so a later control close cannot replace it with the
@@ -9270,6 +9296,22 @@ export struct ReadingExperience {
     this.selectChapterAnchor(this.readingTocEntries()[position].index, 0, false, true, chapterProgress, -2, false);
   }
 
+  private canRefreshCurrentChapter(): boolean {
+    return this.isControlInputEnabled() && this.phase === 'ready' && this.visiblePage !== undefined &&
+      this.chapter !== undefined && !this.pageTurnSettlementActive && !this.pageTurnInputOwned;
+  }
+
+  private refreshCurrentChapter(): void {
+    if (!this.canRefreshCurrentChapter()) return;
+    const page = this.visiblePage;
+    const chapter = this.chapter;
+    if (page === undefined || chapter === undefined) return;
+    this.pauseAutoPage('touch');
+    // Existing selection keeps the committed display/recovery origin until a
+    // new page is admitted. Bypass only the target body read, never clear data.
+    this.selectChapterAnchor(chapter.chapterIndex, page.startScalar, false, true, undefined, -2, false, true);
+  }
+
   private selectChapterAnchor(
     chapterIndex: number,
     chapterOffset: number,
@@ -9278,6 +9320,7 @@ export struct ReadingExperience {
     requestedProgress?: number,
     controlOwnerRevision: number = -2,
     closeControlOnCommit: boolean = true,
+    refreshContent: boolean = false,
   ): void {
     if (!this.mounted || !this.isKnownControlChapter(chapterIndex)) {
       return;
@@ -9294,6 +9337,7 @@ export struct ReadingExperience {
         requestedProgress,
         selectionControlRevision,
         closeControlOnCommit,
+        refreshContent,
       );
       return;
     }
@@ -9317,7 +9361,7 @@ export struct ReadingExperience {
     this.pendingControlSelectionOrigin = origin;
     this.pendingControlSelectionCandidate = undefined;
     this.pendingControlSelectionRetry = new ReaderDeferredChapterSelection(chapterIndex, chapterOffset,
-      requireChapterStart, stopTts, requestedProgress, selectionControlRevision, closeControlOnCommit);
+      requireChapterStart, stopTts, requestedProgress, selectionControlRevision, closeControlOnCommit, refreshContent);
     this.controlSelectionReconciliationInFlight = false;
     this.resetForChapterSelection();
     this.restoredProgress = undefined;
@@ -9329,6 +9373,7 @@ export struct ReadingExperience {
       selectionToken,
       requireChapterStart ? 0 : (requestedProgress === undefined ? chapterOffset : undefined),
       requestedProgress,
+      refreshContent,
     );
   }
 
@@ -9528,7 +9573,7 @@ export struct ReadingExperience {
       primaryButton: { value: '重试', action: (): void => {
         if (retry === undefined || !readerControlSelectionOwnsReading(ticket, this.controlSelectionOwner())) return;
         this.selectChapterAnchor(retry.chapterIndex, retry.chapterOffset, retry.requireChapterStart,
-          retry.stopTts, retry.requestedProgress, retry.controlOwnerRevision, retry.closeControlOnCommit);
+          retry.stopTts, retry.requestedProgress, retry.controlOwnerRevision, retry.closeControlOnCommit, retry.refreshContent);
       } },
       secondaryButton: { value: '关闭提示', action: (): void => {} },
     });
@@ -10096,7 +10141,8 @@ export struct ReadingExperience {
   }
 
   private canStartReaderBookmarkGesture(): boolean {
-    return this.canTurnPage();
+    return this.canTurnPage() && this.currentPageBookmarkStatus() !== 'unknown' &&
+      !(this.bookmarkPendingTarget.length > 0 && this.bookmarkPendingAnchor === this.pageBookmarkFeedbackAnchor());
   }
 
   private onReaderPageGestureDecision(decision: ReaderPageGestureDecision): ReaderPageGestureDecision {
@@ -10370,13 +10416,35 @@ export struct ReadingExperience {
     return this.bookmarkStatusValue;
   }
 
+  private pageBookmarkFeedbackAnchor(): string {
+    const page = this.visiblePage;
+    return page === undefined ? '' : `${this.sourceId}:${this.bookId}:${this.currentChapterIndex()}:${page.startScalar}:${page.endScalar}`;
+  }
+
+  private pageBookmarkFeedbackFilled(): boolean {
+    if (this.bookmarkPendingTarget.length > 0 && this.bookmarkPendingAnchor === this.pageBookmarkFeedbackAnchor()) {
+      return this.bookmarkPendingTarget === 'bookmarked';
+    }
+    const bookmarked = this.currentPageBookmarkStatus() === 'bookmarked';
+    return this.bookmarkPreviewChanged ? !bookmarked : bookmarked;
+  }
+
+  private reconcilePageBookmarkFeedback(): void {
+    if (!this.bookmarkMutationConfirmed || this.bookmarkPendingTarget.length === 0) return;
+    if (this.bookmarkPendingAnchor !== this.pageBookmarkFeedbackAnchor() ||
+      this.currentPageBookmarkStatus() === this.bookmarkPendingTarget) {
+      this.bookmarkPendingTarget = '';
+      this.bookmarkMutationConfirmed = false;
+    }
+  }
+
   @Builder
   private bookmarkCornerFeedback() {
-    // The existing bookmark gesture owns preview and its 160ms rollback.
-    // The persistent marker reads only the admitted Core projection, so a
-    // failed/unknown write cannot paint a false success state.
+    // Existing gesture owns threshold preview and rebound; the pending visual
+    // bridges the rebound to the canonical projection without a hollow flash.
     if (!this.controlVisible() && !this.controlObscured &&
-      (this.bookmarkPageOffsetY > 0 || this.currentPageBookmarkStatus() === 'bookmarked')) {
+      (this.bookmarkPageOffsetY > 0 || this.currentPageBookmarkStatus() !== 'unknown' ||
+      (this.bookmarkPendingTarget.length > 0 && this.bookmarkPendingAnchor === this.pageBookmarkFeedbackAnchor()))) {
       Row({ space: 6 }) {
         if (this.bookmarkPageOffsetY > 0) {
           Text(this.bookmarkPreviewChanged ? (this.currentPageBookmarkStatus() === 'bookmarked' ?
@@ -10384,8 +10452,10 @@ export struct ReadingExperience {
             .fontFamily('ReaderNotoSansSC').fontSize(11).maxLines(1)
             .fontColor(readerAppColor('TOK_READ_INK', this.readerAppScheme));
         }
-        Image(this.readerAppScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
-          $r('app.media.reader_directory_marker_bookmark_active'))
+        Image(this.pageBookmarkFeedbackFilled() ? (this.readerAppScheme === 'night' ?
+          $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled')) :
+          (this.readerAppScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
+            $r('app.media.reader_directory_marker_bookmark_active')))
           .width(24).height(24)
           .opacity(this.bookmarkPageOffsetY > 0 && !this.bookmarkPreviewChanged ? 0.35 : 1);
       }.height(28).justifyContent(FlexAlign.End)
@@ -10430,12 +10500,24 @@ export struct ReadingExperience {
         bookmarkTimes.push(bookmark.time);
       }
     }
+    const anchor = this.pageBookmarkFeedbackAnchor();
+    if (this.bookmarkPendingTarget.length > 0 && this.bookmarkPendingAnchor === anchor) return;
+    const generation = ++this.bookmarkMutationGeneration;
+    this.bookmarkPendingAnchor = anchor;
+    this.bookmarkMutationConfirmed = false;
+    this.bookmarkPendingTarget = bookmarkTimes.length > 0 ? 'empty' : 'bookmarked';
     this.onTogglePageBookmark({
       chapterIndex,
       chapterOffset: page.startScalar,
       chapterTitle: currentEntry.title,
       bookmarkTimes,
       bookText: this.currentPageBookmarkText(),
+      onSettled: (success: boolean): void => {
+        if (generation !== this.bookmarkMutationGeneration || !this.mounted) return;
+        this.bookmarkMutationConfirmed = success;
+        if (!success) { this.bookmarkPendingTarget = ''; this.bookmarkPreviewChanged = false; }
+        this.reconcilePageBookmarkFeedback();
+      },
     });
   }
 
@@ -10976,6 +11058,7 @@ export struct ReadingExperience {
         pendingChapterSelection.requestedProgress,
         pendingChapterSelection.controlOwnerRevision,
         pendingChapterSelection.closeControlOnCommit,
+        pendingChapterSelection.refreshContent,
       );
     } else if (pendingReplaceReload) {
       this.reloadCurrentPageAfterReplacePersist(lifecycleToken, this.bookId);

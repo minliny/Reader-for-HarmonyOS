@@ -3735,7 +3735,7 @@ struct Index {
     const book = this.detailBook;
     if (book === undefined || !Number.isSafeInteger(request.chapterIndex) || request.chapterIndex < 0 ||
       !Number.isSafeInteger(request.chapterOffset) || request.chapterOffset < 0 ||
-      request.chapterTitle.trim().length === 0) return;
+      request.chapterTitle.trim().length === 0) { request.onSettled?.(false); return; }
     let entry: LocalReadingTocEntry | undefined = undefined;
     for (const candidate of this.detailToc) {
       if (candidate.index === request.chapterIndex && candidate.title === request.chapterTitle) {
@@ -3743,7 +3743,7 @@ struct Index {
         break;
       }
     }
-    if (entry === undefined || entry.bookmarks === undefined) return;
+    if (entry === undefined || entry.bookmarks === undefined) { request.onSettled?.(false); return; }
     const admittedTimes: number[] = [];
     for (const time of request.bookmarkTimes) {
       if (!Number.isSafeInteger(time) || admittedTimes.indexOf(time) >= 0) continue;
@@ -3754,9 +3754,9 @@ struct Index {
         }
       }
     }
-    if (admittedTimes.length !== request.bookmarkTimes.length) return;
+    if (admittedTimes.length !== request.bookmarkTimes.length) { request.onSettled?.(false); return; }
     const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
-    if (mutationGeneration < 0) return;
+    if (mutationGeneration < 0) { request.onSettled?.(false); return; }
     const mutationKey = this.directoryBookmarkMutationKey(book);
     const navigationGeneration = this.navigationGeneration;
     const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
@@ -3767,7 +3767,7 @@ struct Index {
       this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
     if (admittedTimes.length > 0) {
       void this.performDirectoryBookmarkDeletion(
-        gateway, book, admittedTimes, isCurrent, mutationGeneration, mutationKey,
+        gateway, book, admittedTimes, isCurrent, mutationGeneration, mutationKey, request.onSettled,
       );
       return;
     }
@@ -3903,6 +3903,7 @@ struct Index {
       }
     } finally {
       this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
+      request.onSettled?.(writeConfirmed);
     }
   }
 
@@ -3913,6 +3914,7 @@ struct Index {
     isCurrent: () => boolean,
     mutationGeneration: number,
     mutationKey: string,
+    onSettled?: (success: boolean) => void,
   ): Promise<void> {
     let confirmedDeletes = 0;
     try {
@@ -3940,6 +3942,7 @@ struct Index {
       }
     } finally {
       this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
+      onSettled?.(confirmedDeletes === bookmarkTimes.length);
     }
   }
 

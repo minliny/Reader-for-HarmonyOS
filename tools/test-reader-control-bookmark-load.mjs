@@ -104,6 +104,7 @@ const HostProbe = new Function('readerControlContentLocation', 'hilog',
   `${stripTypeScriptTypes(`class HostProbe { ${hostMethods} }`)}\nreturn HostProbe;`)(
   sessionPolicy.readerControlContentLocation, { warn() {} });
 const owner = new HostProbe();
+  owner.reconcilePageBookmarkFeedback = () => {};
 const quick = sessionPolicy.enterReaderControlModule(sessionPolicy.openReaderControlSession(
   sessionPolicy.createReaderControlSessionState(), 0), 'directory', 0);
 const requests = [];

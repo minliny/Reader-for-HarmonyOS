@@ -133,7 +133,8 @@ const HostProbe = new Function('readerControlContentLocation', 'hilog',
   sessionPolicy.readerControlContentLocation, { warn() {} });
 const flush = () => new Promise(resolve => setImmediate(resolve));
 for (const messageFirst of [false, true]) {
-  const owner = new HostProbe(); let reads = 0; const notices = [];
+  const owner = new HostProbe();
+  owner.reconcilePageBookmarkFeedback = () => {}; let reads = 0; const notices = [];
   Object.assign(owner, { mounted: true, exitRequested: false, lifecycleToken: 1,
     sourceId: book.sourceId, bookId: book.bookId, controlOpenRevision: 1,
     controlSession: sessionPolicy.enterReaderControlModule(sessionPolicy.openReaderControlSession(

@@ -17,13 +17,13 @@ assert.equal(fs.existsSync(path.join(readingRoot, 'ReaderContentBusinessPanel.et
 assert.doesNotMatch(experienceSource,
   /ReaderContentBusiness|contentBusiness|content-edit\.|chapterReview|saveContentBusinessEdit|restoreContentBusinessOriginal/,
   'the production reader must not retain a dormant ContentEdit or chapter-review route');
-assert.match(controlSource, /onMore: \(\) => void/);
+assert.match(controlSource, /onRefreshChapter: \(\) => void/);
 const moreActor = controlSource.match(/\/\/ MoreHitArea 34×42[\s\S]*?\.accessibilityText\('更多'\);/);
 assert.ok(moreActor, 'the Figma More actor must remain present');
 assert.doesNotMatch(moreActor[0], /\.opacity\(0\.4\)|\.enabled\(false\)/,
   'Figma `933:59` defines a normal More actor, not an invented disabled state');
-assert.match(experienceSource, /onMore:\s*\(\): void => this\.toggleCurrentPageBookmark\(\)/,
-  'the bookmark menu action still uses the Host admission gate');
+assert.match(experienceSource, /onRefreshChapter:\s*\(\): void => this\.refreshCurrentChapter\(\)/,
+  'PH58 refresh uses the original guarded reading selection path');
 assert.match(moreActor[0], /\.onClick\(\(\): void => this\.setMoreMenuVisible\(!this\.moreMenuVisible\)\)/,
   'the More actor opens its real menu; it cannot mutate a bookmark directly');
 

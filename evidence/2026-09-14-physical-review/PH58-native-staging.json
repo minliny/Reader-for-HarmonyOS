@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-09-14T05:35:03.226939+00:00",
+  "coreIdentity": {
+    "schemaVersion": 1,
+    "buildId": "d513bd21c808a32b0bbc8fc66d2c1e949cb8e52170fa7d1c165f8f6a5626f761",
+    "gitCommit": "bf3e2682051f0c5d84103800c1cec4e7140b203c",
+    "gitDirty": false,
+    "cargoLockSha256": "0e2268c0557d04a5ceb8172452e9432d59f224f314760444aaa71c9511298da9",
+    "protocolSha256": "d774c7363af6583bd6ae509e504f5b32e9f748879fdbf99c8a5188016d40f7cd",
+    "rustProfile": "release"
+  },
+  "identitySha256": "c47aea9aad86d5d904ed66babe9241cb237ed55bd8d2c92297af82d191bfa5ed",
+  "sourceNativeSha256": "fb5e106db5cac6d5838fbca51f263b32678c508f85a72ca5f35f253620b882dd",
+  "appNativeSha256": "fb5e106db5cac6d5838fbca51f263b32678c508f85a72ca5f35f253620b882dd",
+  "previousAppNativeSha256": "38fb4245cb8b98b694de59cd88abca0fb503b9d89ad01533db68b3baebcc95cf",
+  "appNativeBytes": 19120736,
+  "expectedEmbeddedNativeSha256": "812fa3dcac426473f28991ccd7697a30d8b30113ee6be7cd9adf9a55320adbd3",
+  "expectedEmbeddedNativeBytes": 14582400,
+  "stripTool": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-objcopy",
+  "stripArgs": [
+    "--strip-all"
+  ],
+  "bindings": [
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/Index.ets",
+      "destination": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/vendor/core-harmony/Index.ts",
+      "sha256": "9b6c6141a5e0989d5e5adc95f88ef77d2bf2aa17645b09fc9bb7e407acce7bc0",
+      "changed": false
+    },
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/README.md",
+      "destination": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/vendor/core-harmony/README.md",
+      "sha256": "bc38d17933de7f590a505b927643e0845ccc0832fcb9f85d42431149059034cf",
+      "changed": false
+    },
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/STATUS.md",
+      "destination": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/vendor/core-harmony/STATUS.md",
+      "sha256": "da6e38be7e15c23a1e30da1a10150dafb7db9d0c8370b2bc3c8391592b78536c",
+      "changed": false
+    },
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/sdk/reader_core.ts",
+      "destination": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/vendor/core-harmony/sdk/reader_core.ts",
+      "sha256": "6010196cead18c6a3bf2413267af39c8c2c2a999db3261766209e8dbbe1a8aa5",
+      "changed": false
+    },
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/sdk/smoke_report.ts",
+      "destination": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/vendor/core-harmony/sdk/smoke_report.ts",
+      "sha256": "a4988e8a5f15f5a7b82cdd9f6888f11c4cbfdf7404b22f9cedad3726943da957",
+      "changed": false
+    }
+  ],
+  "packageMetadata": "Existing Index.ts/main/types adaptation retained; vendor libs excluded",
+  "scope": "Native rebuild and Host staging only; no HAP build or device operation"
+}

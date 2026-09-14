@@ -283,10 +283,9 @@ export struct ReaderControlPanel {
   onExitReading: () => void = (): void => {};
   onDismiss: () => void = (): void => {};
   onSourceSwitch: () => void = (): void => {};
-  onMore: () => void = (): void => {};
+  onRefreshChapter: () => void = (): void => {};
   onOpenBookInfo: () => void = (): void => {};
-  @Prop currentPageBookmarked: boolean = false;
-  @Prop currentPageBookmarkReady: boolean = false;
+  @Prop chapterRefreshEnabled: boolean = false;
   @State private moreMenuVisible: boolean = false;
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
@@ -994,19 +993,16 @@ export struct ReaderControlPanel {
 
   private dismissMoreMenu(): void { this.setMoreMenuVisible(false); }
 
-  private performMoreAction(action: 'info' | 'bookmark' | 'directory' | 'source'): void {
+  private performMoreAction(action: 'info' | 'refresh'): void {
     if (!this.moreMenuVisible || !this.inputEnabled) return;
-    if (action === 'bookmark' && !this.currentPageBookmarkReady) return;
-    if (action === 'source' && this.isLocalBook()) return;
+    if (action === 'refresh' && !this.chapterRefreshEnabled) return;
     this.dismissMoreMenu();
     if (action === 'info') this.onOpenBookInfo();
-    else if (action === 'bookmark') this.onMore();
-    else if (action === 'directory') this.onExpandDirectory();
-    else this.onSourceSwitch();
+    else this.onRefreshChapter();
   }
 
   @Builder
-  private readerMoreAction(label: string, action: 'info' | 'bookmark' | 'directory' | 'source', enabled: boolean) {
+  private readerMoreAction(label: string, action: 'info' | 'refresh', enabled: boolean) {
     Row() {
       Text(label).fontFamily('ReaderNotoSansSC').fontSize(15)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
@@ -1023,13 +1019,10 @@ export struct ReaderControlPanel {
       Scroll() {
         Column() {
           this.readerMoreAction('书籍信息', 'info', true);
-          this.readerMoreAction(this.currentPageBookmarked ? '移除当前页书签' : '添加当前页书签',
-            'bookmark', this.currentPageBookmarkReady);
-          this.readerMoreAction('目录', 'directory', true);
-          if (!this.isLocalBook()) this.readerMoreAction('换源', 'source', true);
+          this.readerMoreAction('刷新本章', 'refresh', this.chapterRefreshEnabled);
         }.width('100%');
       }.width(Math.min(176, Math.max(0, this.layout.viewportWidth - 24)))
-        .height(Math.min(this.isLocalBook() ? 150 : 200,
+        .height(Math.min(100,
           Math.max(0, this.layout.viewportHeight - this.layout.topBarTop - 62 - this.layout.dockBottomGap)))
         .scrollBar(BarState.Off).backgroundColor(readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appScheme))
         .border({ width: 1, color: readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appScheme) })

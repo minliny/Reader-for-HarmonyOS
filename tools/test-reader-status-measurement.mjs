@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ReaderStatusBarMeasurement} from '../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts';
+import { registerHooks } from 'node:module';
+registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
+const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
 const measured = new ReaderStatusBarMeasurement();
 assert.equal(measured.observe('portrait-full',false,48,false),48);
 assert.equal(measured.observe('portrait-full',false,0,true),48);
@@ -17,5 +19,5 @@ assert.equal(measured.observe('portrait-full',false,0,false),0,'visible policy z
 assert.equal(new ReaderStatusBarMeasurement().observe('portrait-full',false,0,true),0,'new window has no old measurements');
 const source=readFileSync(new URL('../entry/src/main/ets/app/ReaderWindowCoordinator.ts',import.meta.url),'utf8');
 assert.match(source,/static detach\(\)[\s\S]*?statusBarMeasurement = new ReaderStatusBarMeasurement/);
-assert.match(source,/statusBarMeasurement\.observe\(statusMeasurementKey,[\s\S]*?desiredWindowPolicyOwner === 'reader' &&[\s\S]*?desiredReaderWindowPolicy\.hideStatusBar/);
+assert.match(source,/statusBarMeasurement\.observeRect\(statusMeasurementKey,[\s\S]*?desiredWindowPolicyOwner === 'reader' &&[\s\S]*?desiredReaderWindowPolicy\.hideStatusBar/);
 console.log('PASS status height: hidden rotate, exact-window/split isolation, visible zero, replacement reset');

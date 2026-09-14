@@ -535,3 +535,21 @@ assert.deepEqual(serialOrder, [
 ]);
 
 console.log('remote reading flow deterministic runtime: PASS');
+
+// PH58 uses the existing typed gateway all the way to Core's optional flag.
+const refreshStart=calls.length;
+await readingSessionGateway.loadChapter(BOOK_ID,0,isCurrent,true);
+const forcedCalls=calls.slice(refreshStart).filter(c=>c.method==='chapter.content');
+assert.equal(forcedCalls.length,1);assert.equal(forcedCalls[0].params.forceRefresh,true);
+assert.equal(forcedCalls[0].params.sourceId,SOURCE_ID);assert.equal(forcedCalls[0].params.bookId,BOOK_ID);
+assert.ok(calls.slice(0,refreshStart).filter(c=>c.method==='chapter.content').every(c=>!('forceRefresh' in c.params)),
+ 'ordinary cache-first reads retain the old default contract');
+const offlineStart=calls.length;
+await gateway.loadChapter({...session,acquisitionMode:'offline',hostRequirements:[]},0,isCurrent,true);
+assert.equal(calls.slice(offlineStart).filter(c=>c.method==='chapter.content')[0].params.forceRefresh,true,
+ 'explicit refresh bypasses the offline-only cache probe while preserving source identity');
+const failedRefreshGateway=new RemoteReadingFlowGateway({async request(method,params){
+ assert.equal(method,'chapter.content');assert.equal(params.forceRefresh,true);throw Error('source transport failed');}});
+await assert.rejects(failedRefreshGateway.loadChapter(session,0,isCurrent,true),/source transport failed/,
+ 'explicit refresh does not disguise source failure as a successful old-cache reload');
+console.log('PASS PH58 actual remote/reading-session adapters: optional force flag, offline refresh, identity and failure propagation');

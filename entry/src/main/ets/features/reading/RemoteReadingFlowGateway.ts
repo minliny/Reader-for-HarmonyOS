@@ -420,6 +420,7 @@ export class RemoteReadingFlowGateway {
     session: RemoteReadingSession,
     chapterIndex: number,
     isCurrent?: () => boolean,
+    forceRefresh: boolean = false,
   ): Promise<ReadingSessionChapter> {
     const coordinator = this.runtimeOwner.bookAcquisitions?.();
     const attemptAt = coordinator?.beginAttempt() ?? Date.now();
@@ -433,16 +434,25 @@ export class RemoteReadingFlowGateway {
         `chapter ${chapterIndex} is not present in the remote session TOC`,
       );
     }
+    if (forceRefresh && session.requiresContextRefresh === true) {
+      const fresh = await this.openSession({ ...session.book, ...identity, detailUrl: session.detailUrl,
+        sourceVersion: session.sourceVersion, searchVariables: [] }, { forceRefresh: true, isCurrent });
+      const refreshedEntry = fresh.entries.find((entry): boolean => entry.index === selected.index && entry.url === selected.url);
+      if (refreshedEntry === undefined) throw new RemoteReadingGatewayError('sourceVersionChanged',
+        '目录已更新，已保留当前阅读位置，请重新打开本书', 'book.toc');
+      return this.loadChapter(fresh, chapterIndex, isCurrent, true);
+    }
+    if (forceRefresh) assertRemoteReadingHostRequirements(['httpExecute']);
     if (session.acquisitionMode === 'online' && coordinator !== undefined) {
       const currentVersion = await coordinator.currentSourceVersion(identity.sourceId);
       if (session.sourceVersion !== currentVersion) {
         // A rule edit never invalidates downloaded bodies. Re-enter through
         // cache-only admission; only a missing body can request fresh rules.
         return this.loadChapter({ ...session, acquisitionMode: 'offline', hostRequirements: [],
-          sourceVersion: currentVersion, requiresContextRefresh: currentVersion !== undefined }, chapterIndex, isCurrent);
+          sourceVersion: currentVersion, requiresContextRefresh: currentVersion !== undefined }, chapterIndex, isCurrent, forceRefresh);
       }
     }
-    if (session.acquisitionMode === 'offline') {
+    if (session.acquisitionMode === 'offline' && !forceRefresh) {
       try {
         await this.assertOfflineChapterAvailable(identity, chapterIndex, isCurrent);
       } catch (error) {
@@ -460,14 +470,16 @@ export class RemoteReadingFlowGateway {
     assertRemoteReadingNonBlankString(selected.title, 'session chapter title');
     assertRemoteReadingNonBlankString(selected.url, 'session chapter URL');
     const variables = mergeRemoteReadingVariables(session.continuationVariables, selected.variables);
-    const result = await this.request('chapter.content', {
+    const params: JsonObject = {
       sourceId: identity.sourceId,
       bookId: identity.bookId,
       chapterTitle: selected.title,
       chapterIndex: selected.index,
       chapterUrl: selected.url,
       variables: encodeRemoteReadingVariables(variables),
-    }, isCurrent);
+    };
+    if (forceRefresh) params['forceRefresh'] = true;
+    const result = await this.request('chapter.content', params, isCurrent);
     this.assertIdentity(result.data, identity, 'chapter.content');
     // chapter index is the navigation identity; title is a Core-projected
     // display value and can legitimately change after a Chinese conversion

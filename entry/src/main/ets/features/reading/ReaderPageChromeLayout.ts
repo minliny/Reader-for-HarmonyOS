@@ -1,4 +1,5 @@
 import type { ReaderReadingLayoutSnapshot } from './ReaderLayoutGeometry';
+import type { ReaderDisplayCornerVp } from '../common/ReaderWindowMetrics';
 
 /** Figma `Reader/ImmersiveInfo`/`Reader/ImmersiveFooterStatus` semantic tracks. */
 export const READER_PAGE_CHROME_SIDE_INSET = 25;
@@ -55,6 +56,7 @@ export class ReaderPageChromeLayoutSnapshot {
   topStartMaxWidth: number;
   topEndX: number;
   topEndY: number;
+  topEndMaxWidth: number;
   bottomStartX: number;
   bottomStartY: number;
   bottomStartMaxWidth: number;
@@ -72,6 +74,7 @@ export class ReaderPageChromeLayoutSnapshot {
     this.topStartMaxWidth = 0;
     this.topEndX = 0;
     this.topEndY = 0;
+    this.topEndMaxWidth = 0;
     this.bottomStartX = 0;
     this.bottomStartY = 0;
     this.bottomStartMaxWidth = 0;
@@ -116,6 +119,33 @@ export function resolveReaderPageChromeLayout(
   result.topEndY = top + Math.max(0, (measurements.topStartHeight - measurements.topEndHeight) / 2);
   result.topStartMaxWidth = Math.max(0,
     result.topEndX - READER_PAGE_CHROME_FOOTER_GAP - visualLeft);
+  result.topEndMaxWidth = Math.max(0, visualRight - visualLeft);
+  const metrics = layout.pageChromeStatusMetrics;
+  if (metrics !== undefined && metrics.ready && metrics.statusBarRect.height > 0) {
+    // Public Window gives a region, not OEM status-glyph baselines. Centre our
+    // measured text in that region and derive its edge clearance from the
+    // current lane/rounded corners; never use a phone-model coordinate table.
+    const rect = metrics.statusBarRect;
+    const rowHeight = Math.max(measurements.topStartHeight, measurements.topEndHeight);
+    const rowTop = layout.pageChromeVisualSafeTop + Math.max(0, (rect.height - rowHeight) / 2);
+    const left = Math.max(layout.pageChromeVisualSafeLeft, rect.left + rect.height / 2,
+      cornerEdge(metrics.topLeftCorner, rowTop, true) + rowHeight / 2);
+    const right = Math.min(layout.viewportWidth - layout.pageChromeVisualSafeRight,
+      rect.left + rect.width - rect.height / 2,
+      cornerEdge(metrics.topRightCorner, rowTop, false) - rowHeight / 2);
+    const cutout = metrics.statusBarCutoutRect;
+    const intersectsCutout = cutout.width > 0 && cutout.height > 0 &&
+      rowTop < cutout.top + cutout.height && rowTop + rowHeight > cutout.top;
+    const leftLimit = intersectsCutout ? Math.min(right, cutout.left - rowHeight / 2) : right;
+    const rightFloor = intersectsCutout ? Math.max(left, cutout.left + cutout.width + rowHeight / 2) : left;
+    result.topStartX = left;
+    result.topStartY = rowTop + Math.max(0, (rowHeight - measurements.topStartHeight) / 2);
+    result.topEndY = rowTop + Math.max(0, (rowHeight - measurements.topEndHeight) / 2);
+    result.topEndMaxWidth = Math.max(0, right - rightFloor);
+    result.topEndX = Math.max(rightFloor, right - Math.min(measurements.topEndWidth, result.topEndMaxWidth));
+    result.topStartMaxWidth = Math.max(0, Math.min(leftLimit,
+      result.topEndX - READER_PAGE_CHROME_FOOTER_GAP) - left);
+  }
 
   result.footerRight = Math.max(visualLeft, layout.viewportWidth - interactiveRightInset);
   result.footerTop = footerTop;
@@ -140,6 +170,13 @@ export function resolveReaderPageChromeLayout(
   result.bottomStartMaxWidth = Math.max(0,
     result.bottomEndX - READER_PAGE_CHROME_FOOTER_GAP - result.bottomStartX);
   return result;
+}
+
+function cornerEdge(corner: ReaderDisplayCornerVp, rowTop: number, left: boolean): number {
+  if (corner.radius <= 0 || rowTop >= corner.y) return left ? 0 : Number.MAX_SAFE_INTEGER;
+  const vertical = Math.min(corner.radius, Math.max(0, corner.y - rowTop));
+  const horizontal = Math.sqrt(Math.max(0, corner.radius * corner.radius - vertical * vertical));
+  return left ? corner.x - horizontal : corner.x + horizontal;
 }
 
 function finiteLength(value: number): number {

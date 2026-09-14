@@ -3780,6 +3780,51 @@
       "sha256": "57f8bd4de690b42772ef81b69357bf3dd144057c8e2177f9859c384cdb48c0c1"
     },
     {
+      "file": "reader_page_bookmark_filled.svg",
+      "semanticRole": "PH59 page bookmark armed and confirmed fill; original Figma/Tabler contour",
+      "originType": "figma-component-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:73",
+      "componentName": "Icon/Bookmark",
+      "upstreamName": "Bookmark",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookmark.svg",
+      "sourceSha256": "8afe54487abb2d3151853f5ff867605d7cec1925555db2f58716e3f63da07d34",
+      "transform": {
+        "pathMutation": "fill-interior-for-explicit-state",
+        "recolor": "#2F6373",
+        "rotationDegrees": 0
+      },
+      "sha256": "018f1e70604c85ae94d568033cf7be0540631de6f80ec3fc296a1623231c4bc0"
+    },
+    {
+      "file": "reader_page_bookmark_filled_theme_night.svg",
+      "semanticRole": "reader_page_bookmark_filled night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:73",
+      "componentName": "Icon/Bookmark",
+      "upstreamName": "Bookmark",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookmark.svg",
+      "sourceSha256": "8afe54487abb2d3151853f5ff867605d7cec1925555db2f58716e3f63da07d34",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_directory_marker_bookmark_active.2F6373"
+        ]
+      },
+      "baseAsset": "reader_page_bookmark_filled.svg",
+      "baseSha256": "018f1e70604c85ae94d568033cf7be0540631de6f80ec3fc296a1623231c4bc0",
+      "themeRegistrySha256": "8d0158e9e38b1173d942ee39154b4073aed7cf4ffb7ada89b920a25dbb10a5de",
+      "sha256": "bef10db9c8cce6b8a99571014198a5b47f07d33f1a955ff628ead606e580b3da"
+    },
+    {
       "file": "reader_quick_back.svg",
       "semanticRole": "reader quick panel back",
       "originType": "figma-component-derived",

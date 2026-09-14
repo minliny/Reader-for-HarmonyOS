@@ -163,10 +163,11 @@ export class ReadingSessionFlowGateway {
     bookId: string,
     chapterIndex: number,
     isCurrent?: () => boolean,
+    forceRefresh: boolean = false,
   ): Promise<ReadingSessionChapter> {
     this.assertBook(bookId);
     if (this.source.kind === 'remote') {
-      return this.remote.loadChapter(this.source.session, chapterIndex, isCurrent);
+      return this.remote.loadChapter(this.source.session, chapterIndex, isCurrent, forceRefresh);
     }
     const chapter = await this.local.loadChapter(bookId, chapterIndex, isCurrent);
     const documentData: JsonObject = { content: chapter.content };

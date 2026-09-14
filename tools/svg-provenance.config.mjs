@@ -17,6 +17,7 @@ function icon(file, component, color, semanticRole, options = {}) {
     // HarmonyOS svg parsing does not inherit the root fill="none", so closed
     // stroke paths render as filled silhouettes once Image.fillColor applies.
     fillNone: options.fillNone ?? false,
+    fillInterior: options.fillInterior ?? false,
   };
 }
 
@@ -124,6 +125,7 @@ const icons = [
   icon('reader_directory_list_active', 'ReaderModuleDirectory', '#FFFAF4',
     'reader directory module active outline', { fillNone: true }),
   icon('reader_directory_marker_bookmark', 'Bookmark', '#5B5046', 'reader directory bookmark marker'),
+  icon('reader_page_bookmark_filled', 'Bookmark', '#2F6373', 'PH59 page bookmark armed and confirmed fill; original Figma/Tabler contour', { fillInterior: true }),
   icon('reader_directory_marker_bookmark_active', 'Bookmark', '#2F6373', 'reader directory bookmark marker active'),
   icon('reader_directory_marker_check', 'Check', '#2F6373', 'reader directory downloaded marker'),
   icon('reader_directory_marker_download', 'Download', '#5B5046', 'reader directory download marker'),
