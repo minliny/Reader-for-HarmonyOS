@@ -94,7 +94,7 @@ assert.equal(selected.length,0,'neither stale identity nor invalid value can cha
 appearance.commitSelect('繁转简','language:2'); assert.deepEqual(selected,[['language','繁转简']]);
 
 const Host=productionMotionMethods(feature('reading/LocalReadingExperience.ets'),
- ['performContinuousPageTurn','onReaderBookmarkGestureReleased','finishBookmarkRollback'],
+ ['performContinuousPageTurn','onReaderBookmarkGestureReleased','finishBookmarkRollback','reconcilePageBookmarkFeedback'],
  {motionAnimateParam,completeReaderPageGestureSettlement:S=>({...S,phase:'idle',owner:'none'})});
 for(const reduceMotion of [false,true]){
  const requests=[];
