@@ -1,0 +1,93 @@
+{
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T055011Z-324af813-33793710/manifest.json",
+  "runId": "20260914T055011Z-324af813-33793710",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "commit": "324af8139abd44b75eba2a8d5a5b3de31ce27b58",
+      "dirty": false,
+      "status": []
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "commit": "bf3e2682051f0c5d84103800c1cec4e7140b203c",
+      "dirty": false,
+      "status": []
+    }
+  },
+  "readerUi": {
+    "commit": "73acab57811ee628cd57c85ef860bc1b30a47d51",
+    "dirty": false,
+    "registryBytesUnchanged": true,
+    "registrySha256": "0769a423fe7e135c9775cdb006a1529a9581d9921e26ad38a1fae9b5618f1126"
+  },
+  "checks": {
+    "harmonyGroups": 240,
+    "harmony": "PASS",
+    "arkts": "PASS",
+    "nonIncrementalSeconds": 28.818,
+    "signedDebug": "PASS",
+    "offlineManifestVerify": "PASS",
+    "coreNapiIdentityChain": "PASS"
+  },
+  "artifact": {
+    "path": "entry-default-signed.hap",
+    "bytes": 166975787,
+    "sha256": "95c2d02fbd957f4e82def36dcf9d7a9b19ad82318dcf47d467352999044b746a",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 14582400,
+      "sha256": "812fa3dcac426473f28991ccd7697a30d8b30113ee6be7cd9adf9a55320adbd3"
+    }
+  },
+  "boundaries": {
+    "packageBuild": "PASS",
+    "vmInstall": "OPEN",
+    "physicalInstall": "OPEN",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  },
+  "currentlyInstalledPhysicalSource": "84cdc4ef",
+  "deviceOperationsThisTurn": false,
+  "failureHistory": [
+    {
+      "attempt": 1,
+      "phase": "Harmony tests",
+      "reason": "Old session launch regression still invoked removed bookmark/source More actions",
+      "fixCommit": "b03c64fe"
+    },
+    {
+      "attempt": 2,
+      "phase": "Harmony tests",
+      "reason": "Global regex mistook forceRefresh argument for a for loop; replaced with actual metric I/O regression",
+      "fixCommit": "4ece8863"
+    },
+    {
+      "attempt": 3,
+      "phase": "ArkTS compile after 240 PASS",
+      "reason": "Object type alias in ETS rejected; declared explicit interface",
+      "fixCommit": "324af813"
+    }
+  ],
+  "toolingSideEffect": {
+    "issue": "Icon generator rewrote three unchanged alpha literals from 1.0 to 1",
+    "resolution": "Verified semantic identity before restoring original bytes; generator now writes registry only when roles really change; registry and generated adapter checks passed",
+    "fixCommit": "b03c64fe"
+  },
+  "logs": [
+    "/private/tmp/reader-ph56-hap.log",
+    "/private/tmp/reader-ph56-hap-2.log",
+    "/private/tmp/reader-ph56-hap-3.log",
+    "/private/tmp/reader-ph56-hap-4.log"
+  ]
+}
