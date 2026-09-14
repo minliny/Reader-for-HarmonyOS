@@ -1046,6 +1046,8 @@ console.log('PH68 stopped query retains completed metadata without restarting so
   assert.equal(last(presentations).results.length,1,'second response remains in the batching window');
   search.stop();assert.equal(last(presentations).results.length,2);assert.equal(last(presentations).completedSourceCount,2);
   assert.equal(last(presentations).localSearchFailed,true);assert.equal(last(presentations).stopped,true);
+  assert.equal(search.run.localFailureReason,'local read unavailable');
+  assert.equal(last(presentations).localFailureMessage,'读取未完成，请稍后重试');
   gates[2].release();await sleep(130);assert.equal(last(presentations).results.length,2);search.close();
 }
 // R3: failure recovery retains successful identities/query/history and retries only failed work.
@@ -1057,7 +1059,10 @@ console.log('PH68 stopped query retains completed metadata without restarting so
   await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
   const first=last(presentations).results[0], query=first.searchRequestId;
   assert.equal(last(presentations).localSearchFailed,true);assert.equal(last(presentations).failedSourceCount,1);
-  failing=false;search.retry();await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+  failing=false;search.retry();
+  assert.equal(search.run.localFailureReason,'local read unavailable','retry keeps the last cause until this branch succeeds');
+  await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+  assert.equal(search.run.localFailureReason,undefined);assert.equal(last(presentations).localFailureMessage,undefined);
   assert.equal(last(presentations).localSearchFailed,false);assert.equal(last(presentations).failedSourceCount,0);
   assert.equal(owner.state.calls.filter(c=>c.sourceId==='source-0').length,1);
   assert.equal(owner.state.calls.filter(c=>c.sourceId==='source-1').length,2);
@@ -1139,3 +1144,45 @@ console.log('R3 failed local branch retries while online remains active; repeate
   search.publishRun(run);assert.equal(search.presentation.kind,'empty');search.close();
 }
 console.log('R6 actual empty source → publication → page/list: 1000 retained rows, zero flatten/index lookup/group rebuild/notice; populated-bucket deletion still invalidates PASS');
+
+// R3: preserve typed/opaque source-list cause through stop, classify UI text,
+// and clear only the recovered branch. Late failures cannot pollute a new run.
+{
+  let releaseLocal;const localGate=new Promise(r=>releaseLocal=r);let failSources=true;
+  const cause={message:'SQLITE_BUSY https://private.example/read?token=secret-response'};
+  const owner=fakeOwner({sources:makeSources(1),resultsFor:()=>[{bookId:'/book',title:'书',author:'作者'}]});
+  const request=owner.request;owner.request=async(method,...args)=>{
+    if(method==='bookshelf.list')await localGate;
+    if(method==='source.list'&&failSources)throw cause;
+    return request(method,...args);
+  };
+  const {orchestrator,presentations}=capture();const search=orchestrator(owner);search.open();search.search('书');
+  await waitUntil(owner.state,()=>search.run.sourceListFailed);
+  search.stop();const stopped=last(presentations);
+  assert.equal(stopped.kind,'empty');assert.equal(stopped.stopped,true);
+  assert.equal(search.run.sourceListFailureReason,cause.message);
+  assert.equal(stopped.sourceListFailureMessage,'本地数据暂时无法读取，请稍后重试');
+  assert.ok(!JSON.stringify(stopped).includes('secret-response'),'presentation never exposes raw error response');
+  failSources=false;search.retry();releaseLocal();
+  await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+  assert.equal(search.run.sourceListFailureReason,undefined);
+  assert.equal(last(presentations).sourceListFailureMessage,undefined);search.close();
+}
+{
+  let rejectOld;const oldGate=new Promise((_r,reject)=>rejectOld=reject);let localReads=0;
+  const owner=fakeOwner({sources:makeSources(1),resultsFor:(_s,k)=>[{bookId:'/book-'+k,title:k,author:'作者'}]});
+  const request=owner.request;owner.request=async(method,...args)=>{
+    if(method==='bookshelf.list'&&++localReads===1)await oldGate;
+    return request(method,...args);
+  };
+  const {orchestrator,presentations}=capture();const search=orchestrator(owner);search.open();search.search('旧');
+  await waitUntil(owner.state,()=>localReads===1);search.search('新');
+  await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+  const current=search.run;rejectOld(Error('network private old response'));await sleep(20);
+  assert.equal(search.run,current);assert.equal(current.localFailureReason,undefined);
+  assert.equal(last(presentations).keyword,'新');assert.equal(last(presentations).localFailureMessage,undefined);
+  assert.equal(search.branchFailureMessage('TIMEOUT token=secret'),'读取超时，请重试');
+  assert.equal(search.branchFailureMessage('NETWORK_ERROR cookie=secret'),'连接暂时不可用，请稍后重试');
+  assert.equal(search.branchFailureMessage('runtime closed'),'读取已中断，可重试');search.close();
+}
+console.log('R3 branch causes survive stop/retry, safe classified UI, successful recovery and old-run rejection PASS');

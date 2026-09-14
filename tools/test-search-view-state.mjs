@@ -344,3 +344,20 @@ console.log('R7 layout-key resolution, mid-layout list changes, query/page guard
   }
 }
 console.log('R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS');
+
+// R3 safe branch explanations are rendered on both partial and stopped-empty
+// surfaces; raw query-owned errors are never rendered by these methods.
+{
+  const FailurePage=productionMotionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),
+    ['partialSearchFailure','searchFailureMessage'],{});
+  for(const kind of ['results','empty','error']) {
+    const owner=Object.assign(new FailurePage(),{presentation:{kind,localSearchFailed:true,sourceListFailed:true,
+      localFailureMessage:'读取超时，请重试',sourceListFailureMessage:'本地数据暂时无法读取，请稍后重试',
+      localFailureReason:'secret raw response',sourceListFailureReason:'https://private.example/token'}});
+    const text=owner.partialSearchFailure();assert.ok(text.includes('本地检索：读取超时'));
+    assert.ok(text.includes('书源列表：本地数据暂时无法读取'));assert.ok(!text.includes('secret')&&!text.includes('private.example'));
+    if(kind==='error')assert.equal(owner.searchFailureMessage(),text);
+  }
+  assert.match(page,/\.onDisAppear\(\(\): void => \{ this\.listMounted = false/,'use the declared ArkUI List lifecycle callback');
+}
+console.log('R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS');

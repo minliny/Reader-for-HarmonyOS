@@ -67,6 +67,9 @@ export interface SearchResultsPresentation {
   delta?: SearchResultDelta;
   localSearchFailed?: boolean;
   sourceListFailed?: boolean;
+  /** Safe classified text only; raw causes remain with the query owner. */
+  localFailureMessage?: string;
+  sourceListFailureMessage?: string;
   keyword: string;
   results: SearchBook[];
   /**
@@ -89,6 +92,9 @@ export interface SearchEmptyPresentation {
   kind: 'empty';
   localSearchFailed?: boolean;
   sourceListFailed?: boolean;
+  /** Safe classified text only; raw causes remain with the query owner. */
+  localFailureMessage?: string;
+  sourceListFailureMessage?: string;
   keyword: string;
   /** Enabled sources the search actually attempted. */
   searchedSourceCount: number;
@@ -102,6 +108,9 @@ export interface SearchErrorPresentation {
   kind: 'error';
   localSearchFailed?: boolean;
   sourceListFailed?: boolean;
+  /** Safe classified text only; raw causes remain with the query owner. */
+  localFailureMessage?: string;
+  sourceListFailureMessage?: string;
   keyword: string;
   /** Enabled sources the search actually attempted. */
   searchedSourceCount: number;
@@ -939,7 +948,7 @@ export struct SearchPage {
         .onScrollIndex((start: number, end: number): void => this.onResultScrollIndex(start, end))
         .onScroll((): void => { if (this.scrollRestored) this.saveScrollAnchor(); })
         .onAppear((): void => { this.listMounted = true; this.scheduleScrollRestore(); })
-        .onDisappear((): void => { this.listMounted = false; this.restoreEpoch += 1; })
+        .onDisAppear((): void => { this.listMounted = false; this.restoreEpoch += 1; })
         .onAreaChange((): void => { if (!this.scrollRestored) this.scheduleScrollRestore(); });
       }
       .width('100%')
@@ -1082,9 +1091,12 @@ export struct SearchPage {
   }
 
   private partialSearchFailure(): string {
-    if (this.presentation.kind !== 'results') return '';
-    if (this.presentation.localSearchFailed && this.presentation.sourceListFailed) return '本地检索和书源列表读取失败，重试';
-    return this.presentation.localSearchFailed ? '本地检索失败，重试' : '书源列表读取失败，重试';
+    if (this.presentation.kind !== 'results' && this.presentation.kind !== 'empty' && this.presentation.kind !== 'error') return '';
+    const messages: string[] = [];
+    if (this.presentation.localSearchFailed) messages.push(`本地检索：${this.presentation.localFailureMessage ?? '读取未完成，请重试'}`);
+    if (this.presentation.sourceListFailed) messages.push(`书源列表：${this.presentation.sourceListFailureMessage ?? '读取未完成，请重试'}`);
+    if (messages.length > 0) return messages.join('；');
+    return (this.presentation.failedSourceCount ?? 0) > 0 ? `${this.presentation.failedSourceCount} 个书源请求失败，可重试或检查书源状态` : '';
   }
 
   private searchFailureTitle(): string {
@@ -1095,10 +1107,7 @@ export struct SearchPage {
 
   private searchFailureMessage(): string {
     if (this.presentation.kind !== 'error') return '';
-    if (this.presentation.localSearchFailed && this.presentation.sourceListFailed) return '本地书架与书源列表均未能读取，请重试';
-    if (this.presentation.localSearchFailed) return '本地书架读取失败，请重试；已完成的在线搜索结果会保留';
-    if (this.presentation.sourceListFailed) return '书源列表读取失败，请重试；本地搜索仍可使用';
-    return `${this.presentation.failedSourceCount ?? this.presentation.searchedSourceCount} 个书源请求失败，可重试或检查书源状态`;
+    return this.partialSearchFailure();
   }
 
   @Builder
@@ -1133,6 +1142,14 @@ export struct SearchPage {
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .maxLines(3);
+
+        if (this.partialSearchFailure().length > 0) {
+          Text(this.partialSearchFailure())
+            .fontSize(12)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .margin({ top: TOK_SPACE_CONTROL_INLINE })
+            .onClick((): void => this.onRetry());
+        }
 
         Column({ space: 0 }) {
           Text('搜索建议')

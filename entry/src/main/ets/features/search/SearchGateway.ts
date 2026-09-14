@@ -47,6 +47,11 @@ export type SearchBookVariable = {
   value: string;
 };
 
+/** Preserve every candidate field while assigning this query's admission order. */
+export function searchBookWithAdmission(book: SearchBook, admittedOrder: number): SearchBook {
+  return { ...book, admittedOrder };
+}
+
 export type SearchHistory = {
   keywords: string[];
   count: number;

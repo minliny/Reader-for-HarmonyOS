@@ -1,5 +1,6 @@
 import {
   SearchGateway,
+  searchBookWithAdmission,
   type SearchBook,
   type SearchResultDelta,
   type SearchHistory,
@@ -48,9 +49,11 @@ class SearchQueryRun {
   localResults: SearchBook[] = [];
   localStatus: SearchBranchStatus = 'running';
   localFailed: boolean = false;
+  localFailureReason: string | undefined = undefined;
   historyWritten: boolean = false;
   onlineStatus: SearchBranchStatus = 'running';
   sourceListFailed: boolean = false;
+  sourceListFailureReason: string | undefined = undefined;
   stopped: boolean = false;
   order: Map<string, number> = new Map();
   revision: number = 0;
@@ -75,7 +78,7 @@ class SearchQueryRun {
       seen.add(key);
       let rank = this.order.get(key);
       if (rank === undefined) { rank = this.order.size; this.order.set(key, rank); }
-      admitted.push({ ...book, admittedOrder: rank });
+      admitted.push(searchBookWithAdmission(book, rank));
     }
     // A successful empty source changes completion counters only. Replacing
     // an earlier nonempty bucket still changes membership and must invalidate.
@@ -307,6 +310,7 @@ export class SearchOrchestrator {
         failedSourceCount: presentation.failedSourceCount,
         stopped: true,
         localSearchFailed: presentation.localSearchFailed, sourceListFailed: presentation.sourceListFailed,
+        localFailureMessage: presentation.localFailureMessage, sourceListFailureMessage: presentation.sourceListFailureMessage,
       });
     }
   }
@@ -414,7 +418,11 @@ export class SearchOrchestrator {
         for (const book of accepted) this.resultIndex.set(`${book.sourceId}\u0000${book.bookId}`, book);
         const resultDelta: SearchResultDelta = { baseRevision: this.resultRevision, revision: this.resultRevision + 1,
           reset: false, upserted: accepted, removedKeys: removed };
-        this.present({ ...latest, results: Array.from(this.resultIndex.values()), delta: resultDelta }, false);
+        this.present({ kind: 'results', keyword: latest.keyword, results: Array.from(this.resultIndex.values()), delta: resultDelta,
+          searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
+          completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
+          localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
+          localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage }, false);
       } else {
       const results = await this.gateway.refreshBooks(current.results, delta);
       if (this.isCurrentSession(session) && resultGeneration === this.resultGeneration && this.presentation.kind === 'results') {
@@ -448,6 +456,7 @@ export class SearchOrchestrator {
           merged.every((book: SearchBook, index: number): boolean => book === latest.results[index])) return;
         this.present({ kind: 'results', keyword: latest.keyword, results: merged,
           localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
+          localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage,
           searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
           completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount }, false);
       }
@@ -561,18 +570,21 @@ export class SearchOrchestrator {
     if (this.run !== run || !this.sessionOpen) return;
     const results = run.results();
     const searching = !stopped && (run.localStatus === 'running' || run.onlineStatus === 'running');
+    const localFailureMessage = this.branchFailureMessage(run.localFailureReason);
+    const sourceListFailureMessage = this.branchFailureMessage(run.sourceListFailureReason);
     this.sweepCompletedSourceCount = run.completed.size;
     if (results.length > 0) {
       this.present({ kind: 'results', keyword: run.keyword, results, searching,
         totalSourceCount: run.sources.length, completedSourceCount: run.completed.size,
         failedSourceCount: run.failures.size, localSearchFailed: run.localFailed,
-        sourceListFailed: run.sourceListFailed, stopped: stopped || undefined });
+        sourceListFailed: run.sourceListFailed, localFailureMessage, sourceListFailureMessage, stopped: stopped || undefined });
     } else if (!searching) {
       const failed = run.localFailed || run.sourceListFailed ||
         (run.sources.length > 0 && run.failures.size === run.sources.length);
       this.present({ kind: failed && !stopped ? 'error' : 'empty', keyword: run.keyword,
         searchedSourceCount: run.completed.size, failedSourceCount: run.failures.size,
         localSearchFailed: run.localFailed, sourceListFailed: run.sourceListFailed,
+        localFailureMessage, sourceListFailureMessage,
         stopped: stopped || undefined });
     } else if (this.presentation.kind !== 'loading') {
       this.present({ kind: 'loading', keyword: run.keyword });
@@ -619,10 +631,13 @@ export class SearchOrchestrator {
         run.localResults = run.admit(books, run.localResults);
         run.localStatus = 'done';
         run.localFailed = false;
-      } catch (_error) {
+        run.localFailureReason = undefined;
+      } catch (error) {
         if (!this.isCurrentWork(work, session)) return;
         run.localStatus = 'failed';
         run.localFailed = true;
+        run.localFailureReason = errorMessageOf(error);
+        hilog.warn(DOMAIN, 'Reader', 'Search local branch failed: %{private}s', this.sanitizedLogText(run.localFailureReason));
       }
       this.scheduleRunPublish(run, work, session);
     };
@@ -638,6 +653,7 @@ export class SearchOrchestrator {
           (scope === undefined || scope.has(source.sourceId)));
         run.sources = enabled;
         run.sourceListFailed = false;
+        run.sourceListFailureReason = undefined;
         // Keep successful source buckets on retry. Replaced/deleted sources
         // cannot survive an explicit registry refresh through a stale bucket.
         const retained = new Set<string>(enabled.map((source: SearchSource): string => source.sourceId));
@@ -681,10 +697,12 @@ export class SearchOrchestrator {
         await Promise.all(workers);
         if (!this.isCurrentWork(work, session)) return;
         run.onlineStatus = 'done';
-      } catch (_error) {
+      } catch (error) {
         if (!this.isCurrentWork(work, session)) return;
         run.sourceListFailed = true;
         run.onlineStatus = 'failed';
+        run.sourceListFailureReason = errorMessageOf(error);
+        hilog.warn(DOMAIN, 'Reader', 'Search source list branch failed: %{private}s', this.sanitizedLogText(run.sourceListFailureReason));
       }
       this.scheduleRunPublish(run, work, session);
     };
@@ -698,6 +716,16 @@ export class SearchOrchestrator {
 
   private isCurrentSession(session: number): boolean {
     return this.sessionOpen && session === this.session;
+  }
+
+  /** Raw causes stay query-owned and in private diagnostics, never in UI text. */
+  private branchFailureMessage(reason: string | undefined): string | undefined {
+    if (reason === undefined) return undefined;
+    if (/timeout|timed.out|超时/i.test(reason)) return '读取超时，请重试';
+    if (/sqlite|database|storage|disk|数据库|存储/i.test(reason)) return '本地数据暂时无法读取，请稍后重试';
+    if (/cancel|closed|shutdown|取消|关闭/i.test(reason)) return '读取已中断，可重试';
+    if (/network|connect|dns|enotfound|网络|连接/i.test(reason)) return '连接暂时不可用，请稍后重试';
+    return '读取未完成，请稍后重试';
   }
 
   private isCurrentWork(work: number, session: number): boolean {
@@ -853,11 +881,13 @@ export class SearchOrchestrator {
           // Retain only cache-discovered variants. A replaced/removed raw source
           // bucket is authoritative and must not be resurrected by an old frame.
           const enabled = this.run === undefined ? undefined : new Set(this.run.sources.map((source: SearchSource): string => source.sourceId));
-          for (const [key, book] of this.resultIndex) if (!next.has(key) && !this.rawIdentityKeys.has(key) &&
-            (book.sourceId === 'local' || enabled === undefined || enabled.has(book.sourceId))) next.set(key, book);
+          this.resultIndex.forEach((book: SearchBook, key: string): void => {
+            if (!next.has(key) && !this.rawIdentityKeys.has(key) &&
+              (book.sourceId === 'local' || enabled === undefined || enabled.has(book.sourceId))) next.set(key, book);
+          });
         }
         const upserted: SearchBook[] = []; const removedKeys: string[] = [];
-        for (const [key, book] of next) if (this.resultIndex.get(key) !== book) upserted.push(book);
+        next.forEach((book: SearchBook, key: string): void => { if (this.resultIndex.get(key) !== book) upserted.push(book); });
         for (const key of this.resultIndex.keys()) if (!next.has(key)) removedKeys.push(key);
         const changed = upserted.length > 0 || removedKeys.length > 0 || previous.kind !== 'results';
         if (changed) {
