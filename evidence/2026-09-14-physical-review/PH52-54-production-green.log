@@ -1,0 +1,11 @@
+(node:14241) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Replace actual SDK mounted rule font: fixed 12, preserved row tracks, parent-only clip, same rule identity and 4 mutations PASS
+PASS reader-control-replace-content: actual async production methods, confirmation/failure/retry, session and preview dismissal guards; NOT ArkUI pixel evidence
+{"name":"actual TextInput uses explicit compact geometry and live app-theme text without repeating label","status":"PASS"}
+{"name":"actual editor has distinct back and fixed bottom save/cancel outside scrolling fields","status":"PASS"}
+{"name":"actual reading draft uses real book/source defaults and editing/global creation remain independent","status":"PASS"}
+{"name":"save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss","status":"PASS"}
+{"name":"same mounted footer reacts to mutation, uncertain writes and endpoint input guards","status":"PASS"}
+{"name":"actual standalone settings Add action has no inherited reading scope","status":"PASS"}
+PH52–54 actual SDK editor and business behavior PASS (6 groups); no device evidence.

@@ -2,6 +2,7 @@ import { copyReaderReplaceRule, type ReaderReplaceRule } from './ReaderReplaceQu
 
 export interface ReaderControlReplaceState {
   sessionKey: string;
+  defaultScope: string;
   revision: number;
   status: 'idle' | 'loading' | 'ready' | 'error';
   rules: ReaderReplaceRule[];
@@ -30,8 +31,14 @@ export interface ReaderControlReplaceDraft {
   order: number;
 }
 
-export function createReaderControlReplaceState(sessionKey: string = ''): ReaderControlReplaceState {
-  return { sessionKey, revision: 0, status: 'idle', rules: [], mutationPending: false,
+export function createReaderControlReplaceState(sessionKey: string = '', bookTitle: string = '',
+  sourceId: string = ''): ReaderControlReplaceState {
+  // Existing Core scope is an OR of book/source tokens, not a composite ID.
+  // Never parse sessionKey or widen one local book to the shared local origin.
+  const scopes: string[] = [];
+  if (bookTitle.trim().length > 0) scopes.push(bookTitle.trim());
+  if (sourceId.trim().length > 0 && sourceId !== 'local' && sourceId !== bookTitle.trim()) scopes.push(sourceId);
+  return { sessionKey, defaultScope: scopes.join(';'), revision: 0, status: 'idle', rules: [], mutationPending: false,
     errorMessage: '', writeUncertain: false, canonicalReloadRequired: false };
 }
 
@@ -47,7 +54,7 @@ export function orderedReaderControlReplaceRules(rules: ReaderReplaceRule[]): Re
 }
 
 function copyState(state: ReaderControlReplaceState): ReaderControlReplaceState {
-  return { sessionKey: state.sessionKey, revision: state.revision, status: state.status,
+  return { sessionKey: state.sessionKey, defaultScope: state.defaultScope, revision: state.revision, status: state.status,
     rules: state.rules, mutationPending: state.mutationPending,
     errorMessage: state.errorMessage, writeUncertain: state.writeUncertain,
     canonicalReloadRequired: state.canonicalReloadRequired };
@@ -145,10 +152,11 @@ export function failReaderControlReplaceRequest(state: ReaderControlReplaceState
   return next;
 }
 
-export function createReaderControlReplaceDraft(rule?: ReaderReplaceRule, order: number = 0): ReaderControlReplaceDraft {
+export function createReaderControlReplaceDraft(rule?: ReaderReplaceRule, order: number = 0,
+  defaultScope: string = ''): ReaderControlReplaceDraft {
   return { original: rule === undefined ? undefined : copyReaderReplaceRule(rule),
     name: rule?.name ?? '', pattern: rule?.pattern ?? '', replacement: rule?.replacement ?? '',
-    group: rule?.group ?? '', scope: rule?.scope ?? '', excludeScope: rule?.excludeScope ?? '',
+    group: rule?.group ?? '', scope: rule === undefined ? defaultScope : (rule.scope ?? ''), excludeScope: rule?.excludeScope ?? '',
     scopeTitle: rule?.scopeTitle ?? false, scopeSource: rule?.scopeSource ?? false,
     scopeContent: rule?.scopeContent ?? true, isEnabled: rule?.isEnabled ?? true,
     isRegex: rule?.isRegex ?? true, timeoutMillisecond: rule?.timeoutMillisecond ?? 3000,

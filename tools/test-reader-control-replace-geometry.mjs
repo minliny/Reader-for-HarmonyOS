@@ -98,7 +98,7 @@ assert.equal((content.match(/ForEach\(this\.state\.rules,/g) || []).length, 1, '
 assert.doesNotMatch(content, /ForEach\([^\n]*slice|setInterval|setTimeout|animateTo|\.animation\(/);
 assert.match(content, /control-replace-rule-\$\{rule\.id\}/);
 assert.match(content, /ReaderControlSwitchTrack/);
-for (const action of ['新增规则', '导入', '导出', '确认保存', '确认删除', '重新加载核对']) assert.ok(content.includes(action));
+for (const action of ['新增规则', '导入', '导出', "Text('保存')", "Text('取消')", '确认删除', '重新加载核对']) assert.ok(content.includes(action));
 assert.match(content, /this\.presentationRevision/);
 assert.match(content, /key === this\.state\.sessionKey/);
 console.log('PASS reader-control-replace-geometry: production endpoint/midpoint sampling, widths and one-tree wiring; NOT native pixel acceptance');

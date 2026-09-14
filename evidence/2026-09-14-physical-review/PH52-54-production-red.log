@@ -1,0 +1,6 @@
+{"name":"actual TextInput uses explicit compact geometry and live app-theme text without repeating label","status":"FAIL","message":"Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- '#FFEADFCE'\n"}
+{"name":"actual editor has distinct back and fixed bottom save/cancel outside scrolling fields","status":"FAIL","message":"Expected values to be strictly equal:\n\n0 !== 1\n"}
+{"name":"actual reading draft uses real book/source defaults and editing/global creation remain independent","status":"FAIL","message":"Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- '当前书名;https://source.example'\n"}
+{"name":"save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss","status":"FAIL","message":"production methods: saveEditor, cancelTemporaryLayer, perform, dismissTemporaryLayer"}
+(node:5281) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

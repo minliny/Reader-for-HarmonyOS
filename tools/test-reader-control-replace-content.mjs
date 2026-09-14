@@ -154,7 +154,7 @@ owner.localPending = false;
 for (const call of actionCalls(source)) {
   new Function(stripTypeScriptTypes(`${call};`)).call(owner);
 }
-assert.equal(predicates.size, 10);
+assert.equal(predicates.size, 9, 'save now belongs to the fixed editor footer, whose actual SDK guards are checked below');
 assert.equal(predicates.get('预览当前章节已保存规则')(), false);
 assert.equal(predicates.get('预览效果')(), true);
 owner.motionProgress = 1;
@@ -166,12 +166,12 @@ assert.equal(predicates.get('完整管理')(), false);
 for (const pendingKind of ['mutationPending', 'localPending']) {
   if (pendingKind === 'mutationPending') owner.state.mutationPending = true;
   else owner.localPending = true;
-  for (const label of ['预览当前章节已保存规则', '确认保存', '确认删除', '选择文件并导入', '取消', '重新加载核对', '重试预览']) {
+  for (const label of ['预览当前章节已保存规则', '确认删除', '选择文件并导入', '取消', '重新加载核对', '重试预览']) {
     assert.equal(predicates.get(label)(), false, `${label} disables immediately during ${pendingKind}`);
   }
   owner.state.mutationPending = false;
   owner.localPending = false;
-  for (const label of ['预览当前章节已保存规则', '确认保存', '确认删除', '选择文件并导入', '取消', '重新加载核对', '重试预览']) {
+  for (const label of ['预览当前章节已保存规则', '确认删除', '选择文件并导入', '取消', '重新加载核对', '重试预览']) {
     assert.equal(predicates.get(label)(), true, `${label} recovers after ${pendingKind}`);
   }
 }
@@ -247,7 +247,8 @@ for (const [label, field] of fields) {
   field.change('42');
   assert.equal(field.value(), '42', `${label}: second edit remains live`);
 }
-assert.match(source, /TextInput\(\{ text: value\(\), placeholder: label \}\)/);
+assert.match(source, /TextInput\(\{ text: value\(\), placeholder: '' \}\)/,
+  'input keeps its live value getter while leaving the already-labelled placeholder empty');
 assert.match(source, /ReaderControlSwitchTrack\(\{ value: value\(\) \}\)/);
 assert.match(source, /\.onClick\(\(\): void => this\.changeEditorFlag\(value, change\)\)/);
 
@@ -390,3 +391,4 @@ if (readerBuilderSdkAvailable) {
   console.log('Replace actual SDK mounted rule font: fixed 12, preserved row tracks, parent-only clip, same rule identity and 4 mutations PASS');
 } else console.log('Replace mounted typography check SKIP: actual ETS SDK unavailable');
 console.log('PASS reader-control-replace-content: actual async production methods, confirmation/failure/retry, session and preview dismissal guards; NOT ArkUI pixel evidence');
+await import('./test-reader-replace-editor-feedback.mjs');

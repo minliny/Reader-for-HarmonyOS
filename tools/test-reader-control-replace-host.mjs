@@ -91,6 +91,16 @@ function closeReopen(host) {
   host.visible = true; // the reader opened the initial Home before entering Replace
   host.openQuickReplace();
 }
+{
+  const host = owner();
+  host.bookTitle = '真实阅读书名'; host.sourceId = 'https://real-source.example';
+  host.page = 'home'; host.controlReplaceState = statePolicy.createReaderControlReplaceState();
+  host.openQuickReplace();
+  assert.equal(host.controlReplaceState.defaultScope, '真实阅读书名;https://real-source.example',
+    'actual LRE entry passes admitted book title and source identity, not a parsed session key');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(host.controlReplaceState.defaultScope, '真实阅读书名;https://real-source.example', 'canonical reload preserves context');
+}
 async function reopenedImport(Type = Host()) {
   const host = owner(Type), write = deferred();
   const pending = host.runControlReplaceMutation(-2, () => write.promise);

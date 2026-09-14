@@ -1,0 +1,38 @@
+[
+  {
+    "name": "test-reader-control-replace-state.mjs",
+    "initialExitCode": 0,
+    "finalExitCode": 0,
+    "finalOutput": "PASS reader-control-replace-state: canonical all rows, partial/full guards, uncertainty, import and stale sessions\n"
+  },
+  {
+    "name": "test-reader-control-replace-content.mjs",
+    "initialExitCode": 1,
+    "finalExitCode": 0,
+    "finalOutput": "Final PASS; full output archived in PH52-54-production-green.log"
+  },
+  {
+    "name": "test-reader-control-replace-gateway.mjs",
+    "initialExitCode": 0,
+    "finalExitCode": 0,
+    "finalOutput": "PASS reader-control-replace-gateway: real production requests, all rules, lossless partial CRUD, guards, receipts, preview and replace-only bundle\n"
+  },
+  {
+    "name": "test-reader-control-replace-host.mjs",
+    "initialExitCode": 0,
+    "finalExitCode": 0,
+    "finalOutput": "(node:8439) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS Replace Host actual methods: reopen/import canonical read, stale reads, write ownership, uncertainty and Promise rejection; NOT device acceptance\n"
+  },
+  {
+    "name": "test-reader-control-replace-geometry.mjs",
+    "initialExitCode": 1,
+    "finalExitCode": 0,
+    "finalOutput": "archived replace motion capture absent; optional source-value checks skipped\nPASS reader-control-replace-geometry: production endpoint/midpoint sampling, widths and one-tree wiring; NOT native pixel acceptance\n"
+  },
+  {
+    "name": "test-reader-replace-quick.mjs",
+    "initialExitCode": 0,
+    "finalExitCode": 0,
+    "finalOutput": "reader Quick Replace pure/static contract: PASS\n"
+  }
+]

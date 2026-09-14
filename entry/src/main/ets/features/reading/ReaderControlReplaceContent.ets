@@ -180,7 +180,7 @@ export struct ReaderControlReplaceContent {
     if (!this.fullInput() || !this.readyInput()) return;
     const order = this.state.rules.length > 0 ? Math.min(2147483647,
       this.state.rules[this.state.rules.length - 1].order + 1) : 0;
-    this.draft = createReaderControlReplaceDraft(rule, order);
+    this.draft = createReaderControlReplaceDraft(rule, order, this.state.defaultScope);
     this.setLayer('editor');
   }
   private askDelete(rule: ReaderReplaceRule): void {
@@ -262,6 +262,16 @@ export struct ReaderControlReplaceContent {
   }
   private changeEditorFlag(value: () => boolean, change: (value: boolean) => void): void {
     if (this.readyInput()) change(!value());
+  }
+
+  private cancelTemporaryLayer(): void {
+    if (this.localPending || this.state.mutationPending) return;
+    this.dismissTemporaryLayer();
+  }
+
+  private async saveEditor(): Promise<void> {
+    if (this.layer !== 'editor' || !this.fullInput() || !this.readyInput()) return;
+    await this.perform(async (): Promise<void> => this.onSave(this.draft), true);
   }
 
   build() {
@@ -442,10 +452,18 @@ export struct ReaderControlReplaceContent {
   private temporaryOverlay() {
     Column({ space: 8 }) {
       Row({ space: 8 }) {
+        if (this.layer === 'editor') {
+          Text('返回').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
+            .width(38).height(28).textAlign(TextAlign.Center)
+            .enabled(!this.localPending && !this.state.mutationPending)
+            .onClick((): void => this.cancelTemporaryLayer());
+        }
         Text(this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :
           this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览')
           .fontFamily('ReaderNotoSansSC').fontSize(13).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
-        this.textAction('取消', (): void => this.dismissTemporaryLayer(), (): boolean => !this.localPending && !this.state.mutationPending);
+        if (this.layer !== 'editor') {
+          this.textAction('取消', (): void => this.cancelTemporaryLayer(), (): boolean => !this.localPending && !this.state.mutationPending);
+        }
       }.width('100%').height(28);
       Scroll() {
         Column({ space: 8 }) {
@@ -475,9 +493,29 @@ export struct ReaderControlReplaceContent {
             Text('正在等待确认…').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
           }
         }.width('100%').alignItems(HorizontalAlign.Start);
-      }.width('100%').layoutWeight(1).scrollBar(BarState.Auto);
+      }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
+      if (this.layer === 'editor') {
+        this.editorActions();
+      }
     }.width(this.availableWidth).height(this.availableHeight).padding(12)
       .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(12);
+  }
+  @Builder
+  private editorActions() {
+    Row({ space: 8 }) {
+      Text('取消').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
+        .layoutWeight(1).height(36).textAlign(TextAlign.Center).borderRadius(6)
+        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+        .enabled(!this.localPending && !this.state.mutationPending)
+        .onClick((): void => this.cancelTemporaryLayer());
+      Text('保存').fontFamily('ReaderNotoSansSC').fontSize(11)
+        .fontColor(readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme))
+        .layoutWeight(1).height(36).textAlign(TextAlign.Center).borderRadius(6)
+        .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
+        .enabled(this.fullInput() && this.readyInput())
+        .onClick((): void => { this.saveEditor(); });
+    }.width('100%').height(36).flexShrink(0);
   }
   @Builder
   private editorFields() {
@@ -494,16 +532,18 @@ export struct ReaderControlReplaceContent {
     this.editorFlag('作用于标题', (): boolean => this.draft.scopeTitle, (value: boolean): void => { this.draft.scopeTitle = value; });
     this.editorFlag('作用于正文', (): boolean => this.draft.scopeContent, (value: boolean): void => { this.draft.scopeContent = value; });
     this.editorFlag('作用于书源导入', (): boolean => this.draft.scopeSource, (value: boolean): void => { this.draft.scopeSource = value; });
-    this.textAction('确认保存', (): void => { if (this.readyInput()) this.perform(async (): Promise<void> => this.onSave(this.draft), true); }, (): boolean => this.readyInput());
-    Text('保存会先经 Core 校验；列表仅在写入回执确认后更新。预览使用已保存规则，不会提前写入草稿。')
+    Text('保存后规则生效；章节预览使用已保存规则。')
       .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
   }
   @Builder
   private editorText(label: string, value: () => string, change: (value: string) => void) {
     Column({ space: 3 }) {
       Text(label).fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-      TextInput({ text: value(), placeholder: label }).width('100%').height(36)
-        .fontFamily('ReaderNotoSansSC').fontSize(12).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+      TextInput({ text: value(), placeholder: '' }).width('100%').height(36)
+        .fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
+        .placeholderColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(6)
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
         .enabled(this.fullInput() && !this.localPending && !this.state.mutationPending && !this.state.writeUncertain)
         .onChange((text: string): void => change(text));
     }.width('100%').alignItems(HorizontalAlign.Start);
