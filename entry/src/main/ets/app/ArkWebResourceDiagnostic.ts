@@ -163,7 +163,10 @@ export class ArkWebResourceDiagnostic {
     const type = url.slice(0, comma).toLowerCase();
     const body = url.slice(comma + 1);
     if (type === 'data:text/html;base64' || type === 'data:text/html;charset=utf-8;base64') {
-      return body === this.documentBodyBase64;
+      if (body === this.documentBodyBase64) return true;
+      // Native loadData percent-encodes its Base64 data body. The decoded
+      // value must still equal this run's exact platform-generated encoding.
+      try { return decodeURIComponent(body) === this.documentBodyBase64; } catch (_) { return false; }
     }
     if (type !== 'data:text/html' && type !== 'data:text/html;charset=utf-8') return false;
     if (body === this.documentBody) return true;
