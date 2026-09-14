@@ -1178,7 +1178,7 @@ export struct BookshelfPage {
     let key = `bookshelf-row-${rowIndex}`;
     for (const book of row) {
       key += `|${book.sourceId}:${book.bookId}:${book.title}:${book.author}:` +
-        `${book.coverUrl ?? ''}:${book.currentChapterTitle ?? ''}:${book.lastChapter ?? ''}:` +
+        `${book.sourceName ?? ''}:${book.coverUrl ?? ''}:${book.currentChapterTitle ?? ''}:${book.lastChapter ?? ''}:` +
         `${book.unreadCount ?? 0}:${book.readProgress ?? 0}`;
     }
     return key;

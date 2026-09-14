@@ -71,7 +71,7 @@ const batch={state:'completed',items:[{fileName:'a',state:'success'}],imported:1
 }
 const books=[{sourceId:'https://bad.test',bookId:'1',title:'a',author:'b',currentChapterTitle:'current',group:''},
  {sourceId:'remote2',sourceName:'真实书源',bookId:'2',group:'历史分组',readProgress:80}];
-assert.equal(ShelfBookPresentation.source(books[0]),'书源已移除');
+assert.equal(ShelfBookPresentation.source(books[0]),'书源名称暂不可用');
 assert.equal(ShelfBookPresentation.source(books[1]),'真实书源');
 assert.equal(ShelfBookPresentation.latestChapter(books[0]),'暂无最新章节');
 assert.deepEqual(ShelfBookPresentation.visible(books,'默认'),[books[0]]);assert.deepEqual(ShelfBookPresentation.visible(books,''),books);

@@ -11,7 +11,7 @@ export class ShelfBookPresentation {
     }
     const name = book.sourceName?.trim() ?? '';
     return name.length > 0 && name !== book.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)
-      ? name : '书源已移除';
+      ? name : '书源名称暂不可用';
   }
 
   static latestChapter(book: ShelfBook): string {

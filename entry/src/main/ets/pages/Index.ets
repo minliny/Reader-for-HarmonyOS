@@ -416,6 +416,7 @@ struct Index {
   private bookshelfBatchRemovalGeneration: number = 0;
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
+  private bookshelfSourceNameRequest: number = 0;
   /**
    * The latest bookshelf read failed. On the un-admitted blank home this
    * surfaces a persistent retry entry (a dismissed dialog would leave the
@@ -2394,7 +2395,7 @@ struct Index {
       coverUrl: selection.coverUrl,
       intro: selection.intro,
       lastChapter: selection.lastChapter,
-    }, this.sourceDisplayName(selection.sourceId), selection, true);
+    }, this.sourceDisplayName(selection.sourceId, selection.sourceName), selection, true);
   }
 
   private openShelfBookInfo(selection: ShelfBook): void {
@@ -2411,7 +2412,7 @@ struct Index {
       coverUrl: selection.coverUrl,
       intro: selection.intro,
       lastChapter: selection.lastChapter,
-    }, this.sourceDisplayName(selection.sourceId), selection, false);
+    }, this.sourceDisplayName(selection.sourceId, selection.sourceName), selection, false);
   }
 
   private openLocalBookDetail(selection: ShelfBook, resumeImmediately: boolean = false): void {
@@ -4839,7 +4840,7 @@ struct Index {
   private readingDetailForShelf(book: ShelfBook): ReadingBookDetail {
     return {
       sourceId: book.sourceId,
-      sourceName: this.sourceDisplayName(book.sourceId),
+      sourceName: this.sourceDisplayName(book.sourceId, book.sourceName),
       bookId: book.bookId,
       title: book.title,
       author: book.author,
@@ -4850,26 +4851,26 @@ struct Index {
     };
   }
 
-  private sourceDisplayName(sourceId: string): string {
-    if (sourceId === LOCAL_SOURCE_ID) {
-      return '本地书籍';
-    }
+  private sourceDisplayName(sourceId: string, persistedName: string = ''): string {
+    if (sourceId === LOCAL_SOURCE_ID) return '本地书籍';
+    const savedName = persistedName.trim();
+    // Only Core's exact persisted-source lookup can establish absence. Empty
+    // in-memory lists may simply be unready, failed, or from another route.
+    if (savedName === '书源已移除') return savedName;
+    const readable = (name: string): boolean => name.length > 0 && name !== sourceId.trim() &&
+      name !== '书源名称暂不可用' && name !== '书源已移除' &&
+      !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name);
+    if (readable(savedName)) return savedName;
     for (const source of this.searchSources) {
-      if (source.sourceId === sourceId && source.name.trim().length > 0) {
-        return source.name.trim();
-      }
+      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
     }
     for (const source of this.sourceSources) {
-      if (source.sourceId === sourceId && source.name.trim().length > 0) {
-        return source.name.trim();
-      }
+      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
     }
     for (const source of this.sourceToolsSnapshot.sources) {
-      if (source.sourceId === sourceId && source.name.trim().length > 0) {
-        return source.name.trim();
-      }
+      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
     }
-    return '书源已移除';
+    return '书源名称暂不可用';
   }
 
   private readingDetailForRemoteSeed(seed: RemoteReadingBookSeed, sourceName: string): ReadingBookDetail {
@@ -5091,13 +5092,22 @@ struct Index {
     // Keep the source's own display name with the shelf projection. The
     // source id remains the stable identity; the label is resolved from the
     // admitted source registry and never replaced with a generic "网络书".
+    const cachedNames = new Map<string, string>();
+    for (const previous of this.shelfBooks) {
+      const name = previous.sourceName?.trim() ?? '';
+      if (name.length > 0 && name !== previous.sourceId.trim() && name !== '书源名称暂不可用' &&
+        name !== '书源已移除' && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)) {
+        cachedNames.set(previous.sourceId, name);
+      }
+    }
     this.shelfBooks = state.shelf.books.map((book: ShelfBook): ShelfBook => {
-      const liveName = this.sourceDisplayName(book.sourceId);
       const savedName = book.sourceName?.trim() ?? '';
-      // Core resolves the current persisted source row, including rename and
-      // deletion. An older in-memory registry must not override that result.
-      const name = savedName.length > 0 && savedName !== book.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(savedName) && !/^www\./i.test(savedName)
-        ? savedName : liveName;
+      // Core's confirmed deletion wins; an unavailable label cannot erase a
+      // known exact-source name. Never borrow names by book title or bookId.
+      const persisted = savedName.length > 0 && savedName !== book.sourceId.trim() &&
+        savedName !== '书源名称暂不可用' && !/^[a-z][a-z0-9+.-]*:/i.test(savedName) && !/^www\./i.test(savedName);
+      const name = persisted ? savedName :
+        (cachedNames.get(book.sourceId) ?? this.sourceDisplayName(book.sourceId));
       return this.copyShelfBookWithSourceName(book, name);
     });
     this.hydrateShelfSourceNames(this.bookshelfLoadGeneration);
@@ -5116,21 +5126,28 @@ struct Index {
   }
 
   private hydrateShelfSourceNames(generation: number): void {
-    void new SourceGateway(ReaderRuntimeOwner.current()).loadSources()
+    const request = ++this.bookshelfSourceNameRequest;
+    const owner = ReaderRuntimeOwner.current();
+    const admittedBooks = this.shelfBooks;
+    void new SourceGateway(owner).loadSources()
       .then((sources: BookSource[]): void => {
-        if (generation !== this.bookshelfLoadGeneration || this.shelfBooks.length === 0) return;
+        if (request !== this.bookshelfSourceNameRequest || owner !== ReaderRuntimeOwner.current() ||
+          generation !== this.bookshelfLoadGeneration || admittedBooks !== this.shelfBooks || this.shelfBooks.length === 0) return;
         const names = new Map<string, string>();
         for (const source of sources) {
           const name = source.name.trim();
-          if (name.length > 0 && name !== source.sourceId.trim() && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)) {
+          if (name.length > 0 && name !== source.sourceId.trim() && name !== '书源名称暂不可用' &&
+            name !== '书源已移除' && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)) {
             names.set(source.sourceId, name);
-          } else { names.set(source.sourceId, '书源名称暂不可用'); }
+          }
         }
         let changed = false;
         const projected = this.shelfBooks.map((book: ShelfBook): ShelfBook => {
-          const name = book.sourceId === LOCAL_SOURCE_ID ? '本地书籍' :
-            (names.get(book.sourceId) ?? '书源已移除');
-          if (book.sourceName === name) return book;
+          // A source.list projection can omit malformed rows. Its absence is
+          // not deletion, and it cannot revive Core's confirmed missing row.
+          if (book.sourceName === '书源已移除') return book;
+          const name = book.sourceId === LOCAL_SOURCE_ID ? '本地书籍' : names.get(book.sourceId);
+          if (name === undefined || book.sourceName === name) return book;
           changed = true;
           return this.copyShelfBookWithSourceName(book, name);
         });
