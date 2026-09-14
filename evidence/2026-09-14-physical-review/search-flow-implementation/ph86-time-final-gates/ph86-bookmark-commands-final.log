@@ -1,0 +1,25 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.29s
+     Running tests/runtime_integration.rs (target/check/debug/deps/runtime_integration-fb80445612078c8f)
+
+running 15 tests
+test bookmark_commands::delete_unknown_time_is_idempotent_returns_deleted_false ... ok
+test bookmark_commands::delete_existing_bookmark_returns_deleted_true ... ok
+test bookmark_commands::create_without_time_assigns_monotonic_time ... ok
+test bookmark_commands::global_list_searches_book_chapter_text_and_note_case_insensitively ... ok
+test bookmark_commands::global_list_supports_legado_book_location_order ... ok
+test bookmark_commands::create_with_explicit_time_round_trips ... ok
+test bookmark_commands::automatic_time_exhaustion_returns_error_without_replacing_old_records ... ok
+test bookmark_commands::concurrent_automatic_times_do_not_overwrite_existing_bookmarks ... ok
+test bookmark_commands::automatic_time_storage_read_error_never_falls_back_to_an_existing_key ... ok
+test bookmark_commands::list_rejects_partial_book_identity ... ok
+test bookmark_commands::automatic_time_rejects_unsafe_generated_integer_without_changing_explicit_keys ... ok
+test bookmark_commands::list_returns_all_bookmarks_sorted_by_time ... ok
+test bookmark_commands::update_applies_partial_changes_and_returns_updated_bookmark ... ok
+test bookmark_commands::update_unknown_time_returns_invalid_params_error ... ok
+test bookmark_commands::list_filtered_by_book_name_and_author ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 623 filtered out; finished in 0.27s
+

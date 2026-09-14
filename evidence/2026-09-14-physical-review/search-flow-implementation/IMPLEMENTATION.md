@@ -1,8 +1,31 @@
 # 搜索至试读实施记录
 
+后续构建准备（不改变6863已安装身份）：Core `0c5a3956274197578554f36b1a7fed9e1977ea78` 时间修复已提交，正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift 0、C/C++ smoke PASS；Native已完成并由根任务集成，后续HAP尚待独立manifest/部署回执。首次门禁在3399通过/1失败后因沙盒禁止绑定localhost中止，437未运行；失败日志原样保留，授权本机测试端口后的全量结果另列。新Core不能倒写为6863内容；本包日期仍为旧显示、PH76仍OPEN。
+
+[后续Core门禁与Native证据](ph86-time-final-gates/receipt.json)、[正式全量](ph86-time-final-gates/ph86-time-core-final-unrestricted.log)、[环境失败原件](ph86-time-final-gates/ph86-time-core-final.log)。
+
+## 当前已验证产物与边界：6863af5d
+
+本轮执行 READER_REPAIR_SPEC §16 及 PH77–91。最近取得正式部署回执的是 **`20260914T182625Z-6863af5d-ded2e152`**：Harmony `6863af5d4e9c5dac34e3ca74b120a7d5daa2952e`、Core `28369db9405822f4b8277eb95ad94057f177b7bb`，构建时两仓 clean。该包 **261 项 Harmony 检查、ArkTS、签名、内置源字节检查及 VM 保数据安装/启动通过**。日期修复可能产生后续包，当前不能提前把待构建源码记为已安装。
+
+| 层级 | 当前证据 | 限定 |
+|---|---|---|
+| Core/Native | 沿用同 Core 的3832/3832官方检查（1 leaky、0 skipped）及已验 Native | Core 未变化；不是这次 Harmony 包重新执行了一次 Core 全量。原日志和 LEAK 边界保留在下方阶段记录。 |
+| Harmony/HAP | [本包构建](vm-6863af5d/build.log)261项 PASS；[manifest](vm-6863af5d/manifest.json) | `iteration`、`acceptanceEligible=false`；警告原样保留，不声称零警告或验收包。 |
+| VM 安装与启动 | 18:28:21.450 UTC，[保数据回执](vm-6863af5d/deployment.json)，targetRef `6460677a198b` | HAP SHA `3df455f5b6f0d13bafd09f2d15c3e3c456efc1642eb54ba6b8ccc103db2e0b8f`，与 manifest/安装输入一致。 |
+| PH86 本包实证 | 新增后填充书签、39.790秒后仍在；列表17+18章；删除后图标消失、重开列表只剩17章 | [完整时序/原图/节点摘要](VM_VALIDATION.md)、[回执](vm-6863af5d/receipt.json)。通过所测保存/删除闭环；未证明连续动效、重启后持久性或真机行为。 |
+| PH86 日期 | **6863仍错误显示01-01 08:00**；独立负责人已在后续源码处理 | [日期专项](ph86-bookmark-time-audit.json)；新日期规则不在6863，不把本地修复当该包VM验收。 |
+| 其他 VM 项 | aa387 的既有功能/胶囊采样分包保留 | 安装更新不等于所有旧项目在6863重新验证；PH90精确中途paint、PH89首次交接/全程帧率仍未验。 |
+| 在线闭环/PH76 | **OPEN** | 旧在线109源失败已定位106次非公网地址准入、3次缺searchUrl；详见末节。新包PH76实际回调结果未归档前不标通过。 |
+| 真机/用户验收 | **OPEN** | 仅有本包VM回执；不能沿用旧真机包的身份，不能声称完整计划验收完成。 |
+
+最新逐项事实统一见 [VM_VALIDATION.md](VM_VALIDATION.md)。下方 aa387 与更早记录保留其原阶段状态，不混作当前包结果；后续新产物必须另绑 manifest、源码、部署回执及实际验证。
+
+## aa387f08 阶段快照（历史包，不代表6863重复验证）
+
 本轮执行 READER_REPAIR_SPEC §16 及 PH77–91 反馈修复。当前绑定产物为 `20260914T171802Z-aa387f08-71c7172c`：Harmony `aa387f08`、Core `28369db94`，构建时两仓 clean；Core 官方 **3832 项 PASS（1 leaky）/0 skipped**，本次 HAP 入口 Harmony **260 项 PASS**，Native、HAP 编译/签名/校验及 VM 保数据安装与启动通过。**PH90 收起回首条的终态符合用户原约定，初判“位置丢失”已撤回；精确中途 paint 未验。在线搜索 109 源约 3 秒全部失败正在定位，不能记为速度 PASS；当前不是全部交付或用户验收通过。**
 
-## 当前证据状态
+## aa387 阶段证据状态
 
 | 层级 | 当前状态 | 证据边界 |
 |---|---|---|

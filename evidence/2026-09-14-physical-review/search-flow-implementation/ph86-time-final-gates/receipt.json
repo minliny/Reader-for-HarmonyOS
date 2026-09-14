@@ -1,0 +1,57 @@
+{
+  "coreCommit": "0c5a3956274197578554f36b1a7fed9e1977ea78",
+  "files": [
+    {
+      "source": "/private/tmp/ph86-time-core-final-unrestricted.log",
+      "copy": "ph86-time-core-final-unrestricted.log",
+      "bytes": 454861,
+      "sha256": "dc55bf66b197c7e2d8aaf89d30e5d4a2fd972a94c18e94a24da94e814b3eeea3"
+    },
+    {
+      "source": "/private/tmp/ph86-time-core-final.log",
+      "copy": "ph86-time-core-final.log",
+      "bytes": 390089,
+      "sha256": "4bf7062ff98dc4cdc1086165446734fd273ed5114961f54021852a5224d3b5aa"
+    },
+    {
+      "source": "/private/tmp/ph86-time-native-final.log",
+      "copy": "ph86-time-native-final.log",
+      "bytes": 3869,
+      "sha256": "a5b579ec218b547afb9e58217e25d41822ed6866bb8c9cc96781d4006f09251f"
+    },
+    {
+      "source": "/private/tmp/ph86-bookmark-commands-final.log",
+      "copy": "ph86-bookmark-commands-final.log",
+      "bytes": 2078,
+      "sha256": "f708017ec3f22b538281cb360b0cd98321271d6365249daf582322dbeff3d082"
+    },
+    {
+      "source": "/private/tmp/ph86-bookmark-clock-final.log",
+      "copy": "ph86-bookmark-clock-final.log",
+      "bytes": 881,
+      "sha256": "9c1895d446e831dee15ea4382875b9db3c75e492b88b513a9d179f6b6e40a4e8"
+    },
+    {
+      "source": "/private/tmp/ph86-bookmark-clippy-final.log",
+      "copy": "ph86-bookmark-clippy-final.log",
+      "bytes": 586,
+      "sha256": "38163bb309f25ca08e2e506b802db0d043664b0b9896eb40e0953aa2fdc5218b"
+    },
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/core-build-identity.json",
+      "copy": "core-build-identity.json",
+      "bytes": 391,
+      "sha256": "d20d78c2886ee2242b9a16f956fa99a99653ce52a80f79d9c5c3a183cc430977"
+    }
+  ],
+  "finalGateLines": [
+    "    Starting 3837 tests across 95 binaries",
+    "     Summary [  36.745s] 3837 tests run: 3837 passed, 0 skipped",
+    "PASS: no structural drift or release blockers",
+    "c-abi-smoke: ok",
+    "c-abi-smoke-cxx: ok"
+  ],
+  "status": "Core and Native complete; subsequent HAP not yet evidenced here; installed 6863 remains previous Core",
+  "firstRun": "PermissionDenied binding mock localhost; retained failed run, not Reader app failure",
+  "nativeSha256ReportedByBuild": "b49783b623dd35ff39c77de821055119b09597befe4ce1714655983222394a46"
+}

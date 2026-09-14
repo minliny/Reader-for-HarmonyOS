@@ -1,0 +1,11 @@
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+PASS bounded data metadata/body equality diagnostics: exact/URI/base64/unsupported/malformed/oversized, no URL or body disclosure and no admission widening
+PASS diagnostic attributes old resource token during new job: lateOld=false
+PASS diagnostic attributes old resource token during new job: lateOld=true
+PASS disposing the pilot cancels only owned jobs and clears response timers/observer
+PASS diagnostic execution errors retain a failure receipt
+PASS actual SDK Host callback: exact main document, tamper rejection, policy-first order and redacted navigation labels
+PASS new run rejects previous run main URL and data document
+PH76 diagnostic runner: 8 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence
+(node:17330) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

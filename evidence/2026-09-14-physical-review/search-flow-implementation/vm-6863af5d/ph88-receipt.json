@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260914T182625Z-6863af5d-ded2e152",
+  "targetRef": "6460677a198b",
+  "files": [
+    {
+      "source": "/private/tmp/reader-ph88-vm-final/reader-control-ph88-quick.png",
+      "copy": "ph88-quick.png",
+      "sha256": "ee6c2d11d9341c0f3cb2c7fcf832784cf8293fb8271df0113d533c22772587f6",
+      "bytes": 605610,
+      "captureStartedAtUtc": "2026-09-14T18:50:13.231Z",
+      "captureCompletedAtUtc": "2026-09-14T18:50:13.425Z"
+    }
+  ],
+  "nodes": [
+    {
+      "type": "Stack",
+      "text": "",
+      "bounds": "[1055,1681][1188,2346]",
+      "origBounds": "[1055,1681][1188,2346]",
+      "backgroundColor": "#00000000",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    },
+    {
+      "type": "Column",
+      "text": "",
+      "bounds": "[1055,1681][1188,2346]",
+      "origBounds": "[1055,1681][1188,2346]",
+      "backgroundColor": "#9EFFFCF8",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    },
+    {
+      "type": "Image",
+      "text": "",
+      "bounds": "[1087,1712][1157,1782]",
+      "origBounds": "[1087,1712][1157,1782]",
+      "backgroundColor": "#00000000",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    },
+    {
+      "type": "Stack",
+      "text": "",
+      "bounds": "[1080,1831][1164,2195]",
+      "origBounds": "[1080,1831][1164,2195]",
+      "backgroundColor": "#00000000",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    },
+    {
+      "type": "Stack",
+      "text": "",
+      "bounds": "[1108,1831][1136,2195]",
+      "origBounds": "[1108,1831][1136,2195]",
+      "backgroundColor": "#FFC1C7CD",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    },
+    {
+      "type": "Row",
+      "text": "",
+      "bounds": "[1108,2130][1136,2195]",
+      "origBounds": "[1108,2130][1136,2195]",
+      "backgroundColor": "#FF2F6373",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    },
+    {
+      "type": "Stack",
+      "text": "",
+      "bounds": "[1080,2244][1164,2314]",
+      "origBounds": "[1080,2244][1164,2314]",
+      "backgroundColor": "#00000000",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    },
+    {
+      "type": "Stack",
+      "text": "",
+      "bounds": "[1087,2244][1157,2314]",
+      "origBounds": "[1087,2244][1157,2314]",
+      "backgroundColor": "#142F6373",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    },
+    {
+      "type": "Text",
+      "text": "A",
+      "bounds": "[1087,2244][1157,2314]",
+      "origBounds": "[1087,2244][1157,2314]",
+      "backgroundColor": "#00000000",
+      "opacity": "1.000000",
+      "visible": "true",
+      "id": "",
+      "nonOpaqueAncestors": [
+        {
+          "type": "Stack",
+          "bounds": "[46,388][1235,2734]",
+          "opacity": "0.999994"
+        }
+      ]
+    }
+  ],
+  "sourceProof": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "sha256": "931c4679d1dec11fff45776ef26367d93ffcf9467eee66984096009543a9e6f5",
+      "matches6863ManifestSourceSnapshot": true
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlGeometry.ts",
+      "sha256": "d8701c251fb44df13f7ede69e5b68a3aeff7fd6963ba77e825e0c52ba11da38b",
+      "matches6863ManifestSourceSnapshot": true
+    }
+  ],
+  "layoutSource": {
+    "path": "/private/tmp/reader-ph88-vm-final/reader-control-ph88-quick.json",
+    "sha256": "ab8a152a535199cdd4b9de49f5fceed45fd0531dced07ed4fa030194250fb194",
+    "bytes": 113258,
+    "captureStartedAtUtc": "2026-09-14T18:50:12.439Z",
+    "captureCompletedAtUtc": "2026-09-14T18:50:13.202Z"
+  },
+  "geometryPx": {
+    "rail": [
+      1055,
+      1681,
+      1188,
+      2346
+    ],
+    "sun": [
+      1087,
+      1712,
+      1157,
+      1782
+    ],
+    "trackHit": [
+      1080,
+      1831,
+      1164,
+      2195
+    ],
+    "trackPaint": [
+      1108,
+      1831,
+      1136,
+      2195
+    ],
+    "fill": [
+      1108,
+      2130,
+      1136,
+      2195
+    ],
+    "autoHit": [
+      1080,
+      2244,
+      1164,
+      2314
+    ],
+    "autoPill": [
+      1087,
+      2244,
+      1157,
+      2314
+    ],
+    "inferredRenderScaleFromRailDimensions": 3.5,
+    "railCapCenters": [
+      [
+        1121.5,
+        1747.5
+      ],
+      [
+        1121.5,
+        2279.5
+      ]
+    ],
+    "endpointCenters": [
+      [
+        1122,
+        1747
+      ],
+      [
+        1122,
+        2279
+      ]
+    ],
+    "endpointCenterErrorPx": [
+      [
+        0.5,
+        -0.5
+      ],
+      [
+        0.5,
+        -0.5
+      ]
+    ],
+    "trackHeightPx": 364,
+    "trackWidthPx": 28,
+    "bothGapsPx": 49
+  },
+  "sourceInterpretation": {
+    "railVp": [
+      38,
+      190
+    ],
+    "trackVp": [
+      8,
+      104
+    ],
+    "trackHitVp": [
+      24,
+      104
+    ],
+    "iconVp": [
+      20,
+      20
+    ],
+    "autoHitVp": [
+      24,
+      20
+    ],
+    "gapVp": 14,
+    "capCentersYVp": [
+      19,
+      171
+    ],
+    "borderVp": 1,
+    "sunMarginTopVp": 8,
+    "borderEquation": "1 + 8 + 20/2 = 19, measured relative to outer rail",
+    "sliderBoundary": "brightnessRail uses a clipped Stack with Pan/Tap gestures; native Slider elsewhere in this screenshot belongs to chapter progress, not brightness"
+  },
+  "limits": [
+    "One stable quick-control VM sample, not all sizes/orientations/full states.",
+    "Geometric center differences <=0.5 physical pixel per axis are consistent with integer layout bounds; not a pixel-by-pixel anti-aliasing proof.",
+    "No brightness drag or Auto click performed; no device brightness response, HLG comfort calibration, or automatic behavior acceptance.",
+    "No extreme minimum fill sample; existing clip production/SDK evidence is separate.",
+    "Date/PH76 and all other open gaps unchanged."
+  ]
+}

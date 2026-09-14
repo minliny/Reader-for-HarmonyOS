@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260914T182625Z-6863af5d-ded2e152",
+  "sourceHarmony": "6863af5d4e9c5dac34e3ca74b120a7d5daa2952e",
+  "sourceCore": "28369db9405822f4b8277eb95ad94057f177b7bb",
+  "targetRef": "6460677a198b",
+  "targetKind": "VM",
+  "files": [
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T182625Z-6863af5d-ded2e152/manifest.json",
+      "copy": "manifest.json",
+      "bytes": 4260,
+      "sha256": "5eda752bc7acd71d224b08c5c0407dbc133d886955a2fed7a96dc31f03bebf5b"
+    },
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T182625Z-6863af5d-ded2e152/deploy-vm-6460677a198b-20260914T182821Z.json",
+      "copy": "deployment.json",
+      "bytes": 1755,
+      "sha256": "2b9a9d9da611cae6a0d3e9411b732081a2351c49d99f26143ab85eaddb9e19d6"
+    },
+    {
+      "source": "/private/tmp/ph7791-final-build.log",
+      "copy": "build.log",
+      "bytes": 144735,
+      "sha256": "254c43af503eacd5931935a986fad092b6da92c5da60eee8ba007999edde43c8"
+    },
+    {
+      "source": "/private/tmp/ph7791-final-inspect.log",
+      "copy": "inspect.log",
+      "bytes": 1173,
+      "sha256": "034b46feebe4533eaba92e6a2a7780ff0ad0410601a6ebf1fdc63e30aba6f540"
+    },
+    {
+      "source": "/private/tmp/ph7791-final-install.log",
+      "copy": "install.log",
+      "bytes": 206,
+      "sha256": "ef7b7154ed0bc8be80867102a129be93396c4b02310dc6a3e20f0b8126bdd4fe"
+    },
+    {
+      "source": "/private/tmp/reader-ph7791-final-vm/reader-control-final-bookmark-add.png",
+      "copy": "bookmark-add.png",
+      "bytes": 618451,
+      "sha256": "0b09c95f2708e99a7bf3f0ca6504d73cb6f0820dd576cdeabb6367f2b6ab3c9b",
+      "captureStartedAtUtc": "2026-09-14T18:30:08.072Z",
+      "captureCompletedAtUtc": "2026-09-14T18:30:08.238Z",
+      "screenCapElapsedMs": 165.392875000005
+    },
+    {
+      "source": "/private/tmp/reader-ph7791-final-vm/reader-control-final-bookmark-stable.png",
+      "copy": "bookmark-stable.png",
+      "bytes": 618451,
+      "sha256": "0b09c95f2708e99a7bf3f0ca6504d73cb6f0820dd576cdeabb6367f2b6ab3c9b",
+      "captureStartedAtUtc": "2026-09-14T18:30:47.862Z",
+      "captureCompletedAtUtc": "2026-09-14T18:30:48.066Z",
+      "screenCapElapsedMs": 203.39654200000223
+    },
+    {
+      "source": "/private/tmp/reader-ph7791-final-vm/reader-control-final-bookmarks-list.png",
+      "copy": "bookmarks-list.png",
+      "bytes": 642490,
+      "sha256": "d933db524ed55074debd1d9fa103423d6975140be4866ac74d20edb0067157c3",
+      "captureStartedAtUtc": "2026-09-14T18:32:16.974Z",
+      "captureCompletedAtUtc": "2026-09-14T18:32:17.133Z",
+      "screenCapElapsedMs": 159.20087499998044
+    },
+    {
+      "source": "/private/tmp/reader-ph7791-final-vm/reader-control-final-bookmark-remove.png",
+      "copy": "bookmark-remove.png",
+      "bytes": 617935,
+      "sha256": "4acef2c02f742c5547908e4b5e6fa0d31d0738888667573c1e4e1b5908c78559",
+      "captureStartedAtUtc": "2026-09-14T18:35:02.973Z",
+      "captureCompletedAtUtc": "2026-09-14T18:35:03.139Z",
+      "screenCapElapsedMs": 165.88120900001377
+    },
+    {
+      "source": "/private/tmp/reader-ph86-final-remove-check/reader-control-final-after-removal-list.png",
+      "copy": "after-removal-list.png",
+      "bytes": 606874,
+      "sha256": "25c7149a13619bef26dc98a24a8ad0b3c5b6ba62a71e6e479c064302ef428c0b",
+      "captureStartedAtUtc": "2026-09-14T18:39:43.078Z",
+      "captureCompletedAtUtc": "2026-09-14T18:39:43.256Z",
+      "screenCapElapsedMs": 177.90779099999781
+    },
+    {
+      "source": "/private/tmp/reader-ph7791-final-vm/reader-control-5501c839-e24b-4dd5-baa0-d0013eeb71c5-frame-2.png",
+      "copy": "bookmark-before.png",
+      "bytes": 617257,
+      "sha256": "6d924ab3e579220f2749044913c23977e9020d869205f0e8b74680a26405b254",
+      "captureStartedAtUtc": "2026-09-14T18:29:28.859Z",
+      "captureCompletedAtUtc": "2026-09-14T18:29:29.044Z",
+      "screenCapElapsedMs": 185.3384589999987
+    }
+  ],
+  "layouts": [
+    {
+      "source": "/private/tmp/reader-ph7791-final-vm/reader-control-final-bookmarks-list.json",
+      "sha256": "b7269ef1b2caccd589d288c1ddaef706e338c77f6967a0955a43a7d3ad7fc266",
+      "bytes": 126373,
+      "captureStartedAtUtc": "2026-09-14T18:32:16.252Z",
+      "captureCompletedAtUtc": "2026-09-14T18:32:16.935Z",
+      "relevantNodes": [
+        {
+          "type": "Text",
+          "text": "的位置写进册子，用来核对翻到前页和",
+          "bounds": "[78,1765][1202,1888]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "后页时是否仍然连续。阅读暂停后又继",
+          "bounds": "[78,1888][1202,2011]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "续，段落边界和换行都应保持原来的顺",
+          "bounds": "[78,2011][1202,2134]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "序。这里的编号是测试文本的一部分。",
+          "bounds": "[78,2134][1202,2257]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "章节",
+          "bounds": "[342,1749][420,1805]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "书签",
+          "bounds": "[744,1749][822,1805]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[177,1871][706,1920]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "01-01 08:00",
+          "bounds": "[734,1877][911,1915]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章017段04】晨光从…",
+          "bounds": "[233,1927][925,2011]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "第18章 连续翻页验证",
+          "bounds": "[177,2060][706,2109]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "01-01 08:00",
+          "bounds": "[734,2066][911,2104]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一…",
+          "bounds": "[233,2116][925,2200]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "A",
+          "bounds": "[1087,2244][1157,2314]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        }
+      ]
+    },
+    {
+      "source": "/private/tmp/reader-ph86-final-remove-check/reader-control-final-after-removal-list.json",
+      "sha256": "f594171b92b02e13e3ba873381ffdee3884fa4a7b716c14ce606622386164067",
+      "bytes": 120790,
+      "captureStartedAtUtc": "2026-09-14T18:39:42.401Z",
+      "captureCompletedAtUtc": "2026-09-14T18:39:43.045Z",
+      "relevantNodes": [
+        {
+          "type": "Text",
+          "text": "的位置写进册子，用来核对翻到前页和",
+          "bounds": "[78,1765][1202,1888]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "后页时是否仍然连续。阅读暂停后又继",
+          "bounds": "[78,1888][1202,2011]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "续，段落边界和换行都应保持原来的顺",
+          "bounds": "[78,2011][1202,2134]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "序。这里的编号是测试文本的一部分。",
+          "bounds": "[78,2134][1202,2257]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "章节",
+          "bounds": "[342,1749][420,1805]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "书签",
+          "bounds": "[744,1749][822,1805]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[177,1871][706,1920]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "01-01 08:00",
+          "bounds": "[734,1877][911,1915]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章017段04】晨光从…",
+          "bounds": "[233,1927][925,2011]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "A",
+          "bounds": "[1087,2244][1157,2314]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "nonOpaqueAncestors": []
+        }
+      ]
+    }
+  ],
+  "signedHapSha256": "3df455f5b6f0d13bafd09f2d15c3e3c456efc1642eb54ba6b8ccc103db2e0b8f",
+  "signedHapBytes": 167845253,
+  "installCompletedAtUtc": "2026-09-14T18:28:21.450Z",
+  "harmonyContractCount": 261,
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "coreGateProvenance": "same 28369db94 prior official gate: 3832/3832, 1 leaky, 0 skipped; not rerun for this Harmony-only package",
+  "observations": [
+    "18:29:28 baseline has no corner bookmark marker, same chapter18/page3 body.",
+    "18:30:08 add screenshot has filled bookmark at top right.",
+    "18:30:47 stable screenshot retains filled bookmark, same chapter 18 page 3; screenshot start delta 39.790 seconds.",
+    "18:32:16 list dump and screenshot contain separate chapter 17 and chapter 18 bookmark rows with body snippets.",
+    "18:35:02 removal screenshot has no corner marker; same chapter 18 page 3 body.",
+    "18:39:42 reopened bookmark list dump and screenshot retain chapter17 and omit chapter18.",
+    "List dates remain 01-01 08:00 in this package; later date fix is not device-verified here."
+  ],
+  "limits": [
+    "Sparse captures prove sampled states and in-session bookmark save/remove list round trip; no continuous animation/frame-rate claim.",
+    "No restart persistence test or physical device acceptance in this evidence slice.",
+    "Old aa387 stable-missing-marker observations are preserved; newer successful sample does not identify unique cause of the old anomaly.",
+    "PH76 remains OPEN pending root result; no online search/TOC/body success inferred from bookmark sample."
+  ],
+  "ph88Evidence": {
+    "receipt": "ph88-receipt.json",
+    "screenshot": "ph88-quick.png",
+    "scope": "stable quick geometry only; no brightness/Auto action"
+  }
+}

@@ -1,0 +1,4 @@
+{"kind":"coreFirstImplicitKey","time":1,"iso":"1970-01-01T00:00:00.001Z","label":"01-01 08:00","timezone":"Asia/Shanghai"}
+{"kind":"coreSecondImplicitKey","time":2,"iso":"1970-01-01T00:00:00.002Z","label":"01-01 08:00","timezone":"Asia/Shanghai"}
+{"kind":"unixSeconds","time":1789410740,"iso":"1970-01-21T17:03:30.740Z","label":"01-22 01:03","timezone":"Asia/Shanghai"}
+{"kind":"unixMilliseconds","time":1789410740000,"iso":"2026-09-14T18:32:20.000Z","label":"09-15 02:32","timezone":"Asia/Shanghai"}

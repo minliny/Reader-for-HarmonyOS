@@ -1,0 +1,62 @@
+{
+  "issue": "New and existing bookmark time labels show 01-01 08:00",
+  "run": "20260914T182625Z-6863af5d-ded2e152",
+  "manifest": ".reader-artifacts/hap/20260914T182625Z-6863af5d-ded2e152/manifest.json",
+  "trigger": "After stable page-18 bookmark creation, open directory/bookmarks list. Two records have identical epoch-like labels.",
+  "confirmedVMFacts": [
+    "Root observed filled marker remains at about40seconds and directory contains newly created chapter18 page3 record plus old chapter17 record.",
+    "Existing native dump contains two Text nodes with originalText 01-01 08:00."
+  ],
+  "status": "CONFIRMED semantic mismatch. Host display fix and production-method regressions complete; Core default epoch allocation independently in progress. No new-package VM date verification yet.",
+  "artifacts": [
+    {
+      "source": "/private/tmp/reader-ph7791-final-vm/reader-control-final-bookmarks-list.png",
+      "file": "ph86-bookmark-time-native.png",
+      "sha256": "d933db524ed55074debd1d9fa103423d6975140be4866ac74d20edb0067157c3"
+    }
+  ],
+  "mode": "No device commands or Git; inspect existing artifact and current production methods.",
+  "cause": {
+    "coreDefault": "reader-runtime/src/remote.rs:14988 next_bookmark_time lists bookmarks and returns max(time)+1, starting at1; bookmark_create:14999 chooses it when params.time is absent.",
+    "contract": "reader-contract/src/remote.rs:4407 explicitly describes optional time as a primary key, with monotonic default.",
+    "hostWrite": "LocalReadingFlowGateway.ts:419 createPositionBookmark sends no time.",
+    "hostRead": "LocalReadingFlowGateway.ts:314 and428 preserve Core safe integer without unit conversion.",
+    "projection": "ReaderBookmarkProjection.ts:165 and compiled SDK output both new Date(time), then local MM-DD HH:mm.",
+    "proof": "ph86-bookmark-time-before.jsonl executes the actual production formatter under Asia/Shanghai. Keys1/2 exactly reproduce01-01 08:00. Unix seconds would produce01-22, so multiplying by1000 is not the evidenced fix."
+  },
+  "repairBoundary": [
+    "Existing sequence-key creation dates remain unknown; no historical timestamp invented.",
+    "No new Gateway allocation, retry protocol, full-library Host pre-read or primary key rewrite.",
+    "Core allocation tests and build/VM date evidence are separate from Host projection PASS."
+  ],
+  "chosenRepair": {
+    "protocol": "Reuse existing optional time primary key, no schema/createdAt migration. Core owner changes only omitted-time allocation under existing publication guard to max(epochMillis,maxExistingKey+1), preserving explicit-time behavior.",
+    "host": "ReaderBookmarkProjection.ts:165 admits safe integer epoch millisecond representations >=1000000000000 and valid Date; lower legacy sequence/seconds and invalid values display unknown. Never multiply values or modify keys.",
+    "compatibilityBoundary": "The cutoff is the supported modern epoch-millisecond representation, not evidence recovery for historical sequence keys. Arbitrary caller-supplied large numeric primary keys have no provenance in the existing contract; their prior millisecond display interpretation is retained.",
+    "preservation": "Primary keys, ordering, notes, excerpts, chapter/offset and record identity are unchanged; no storage migration.",
+    "changedHostFiles": [
+      "entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts",
+      "tools/test-reader-bookmark-projection.mjs"
+    ],
+    "sourceSha256": "6fd0c3488001c2b0d2e5b34ea1c99ce38a06f70ca8a174ef99b7aef2d8ae640d"
+  },
+  "verification": [
+    {
+      "log": "ph86-bookmark-time-projection-fixed.log",
+      "result": "PASS actual production projection and formatter; sequence/seconds/noninteger/invalid date unknown, valid epoch date unchanged, session/migration paths and input/key preservation."
+    },
+    {
+      "log": "ph86-bookmark-time-before.jsonl",
+      "result": "Before fix, Asia/Shanghai production formatter gives 01-01 08:00 for1/2."
+    },
+    {
+      "log": "ph86-bookmark-time-after.jsonl",
+      "result": "After fix, legacy1/2 andseconds unknown; sample1789410740000 displays09-15 02:32."
+    },
+    {
+      "log": "ph86-bookmark-time-content-fixed.log",
+      "result": "PASS existing actual SDK bookmark row/content production geometry, metadata/identity and clip mutations; not native visual/date acceptance."
+    }
+  ],
+  "hostFrozen": true
+}

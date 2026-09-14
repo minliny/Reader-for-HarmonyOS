@@ -1,5 +1,9 @@
 # 2026-09-14 真机人工审视反馈
 
+后续构建准备（不改变6863已安装身份）：Core `0c5a3956274197578554f36b1a7fed9e1977ea78` 时间修复已提交，正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift 0、C/C++ smoke PASS；Native已完成并由根任务集成，后续HAP尚待独立manifest/部署回执。首次门禁在3399通过/1失败后因沙盒禁止绑定localhost中止，437未运行；失败日志原样保留，授权本机测试端口后的全量结果另列。新Core不能倒写为6863内容；本包日期仍为旧显示、PH76仍OPEN。
+
+[后续Core门禁与Native证据](search-flow-implementation/ph86-time-final-gates/receipt.json)、[正式全量](search-flow-implementation/ph86-time-final-gates/ph86-time-core-final-unrestricted.log)、[环境失败原件](search-flow-implementation/ph86-time-final-gates/ph86-time-core-final.log)。
+
 追加输入见 [PH43–PH47](FOLLOWUP_43_47.md)：用户在643bcaf5上纠正主题修复方向，并补充朗读预备、终宋书源和详情几何。原PH01–41及PH42编号保留；PH31旧处理明确撤回，新的代码/验证结论不与旧报告混用。
 
 本轮反馈对应已安装的 `9509d4feb410ce559d67b77785e2248e88485f4e`，不是当前工作树 `4802ef4b`。安装 run `20260913T160039Z-9509d4fe-25529e1f`，signed SHA256 `b9ef64ece51c02c865ca1740fee52ca7efebe162495fb784fa000fae1aacf2fd`；[保数据安装及启动回执](../../.reader-artifacts/hap/20260913T160039Z-9509d4fe-25529e1f/deploy-physical-b1f20b88963d-20260913T170111Z.json)。用户人工审视提出39号编号，17和19各出现两次，合计41项，全部分别保留。
@@ -99,9 +103,9 @@ PH29已向用户提出“保留固定加底部分隔线/整行随列表滚动”
 | PH83 | 7 | 详情目录预览不应仅4章，历史为20或30且可翻动 | 已确认历史20章及内部滚动 | 已恢复20章Scroll；VM已滚动至第20章，准确点击第20章的设备验证未单列 |
 | PH84 | 8 | 详情完整目录误接阅读完整控制栏目录 | 已定外部完整目录入口 | 已直接挂外部目录，不先解析正文；VM外部入口及返回详情通过，保留原外壳历史样式 |
 | PH85 | 9 | 《鸣龙》松鹤阅读正文残留方括号及字面反斜杠r/n等 | 原始数据类型/源规则/规范化 | 已修 JSONPath 数组文本提取，正文格式升2并沿 PH75 保护位置；Core 回归通过，原书呈现待验 |
-| PH86 | 10 | 常态无书签不显示图标；已有书签才显示填充；镂空仅下拉反馈且不入正文 | 沉浸顶层书签反馈 | 已落实状态/ACK与顶栏独立槽，保留时钟并避开正文/安全区；实际 Builder/手势回归通过，新 VM 待验 |
+| PH86 | 10 | 常态无书签不显示图标；已有书签才显示填充；镂空仅下拉反馈且不入正文 | 沉浸顶层书签反馈 | 6863 VM新增/约40秒稳定/列表可见/删除闭环通过；稀疏图不证明全动画。该包日期仍为01-01 08:00，后续日期修复独立待验 |
 | PH87 | 11 | 阅读更多新增下载全部章节；弹窗缺指向凸起、应右对齐且宽度适应文本 | 复用离线下载；对照Figma菜单 | 已接下载全部、右锚菜单/凸起/文本宽度；VM稳定外观及本地书禁用通过，在线全部下载业务未验 |
-| PH88 | 12 | 亮度/自动按钮没有对齐轨道上下圆角圆心，轨道偏短 | 几何共享/用户明确增长轨道 | 已改38×190、轨道104、间隔14及圆心19/171，扣除原生边框内缩；实际 SDK/公式通过，新包像素待验 |
+| PH88 | 12 | 亮度/自动按钮没有对齐轨道上下圆角圆心，轨道偏短 | 几何共享/用户明确增长轨道 | 已改38×190/104轨道/19、171圆心并扣除边框内缩；6863 VM快捷稳态端点每轴误差仅0.5px，符合取整；未拖亮度或点自动 |
 | PH89 | 13 | 自动翻页胶囊内部元素高度不齐，倒计时圆形轮廓形变/尺寸和文字高度错误 | 胶囊布局/用户明确16×16圆 | 已改圆与数字16×16、标签高16、24高行居中；VM稳定几何/暂停/停止通过，首次交接及全程帧率未验 |
 | PH90 | 14 | 完整内容搜索打开后卡顿，键盘延迟，后续点击无响应 | 内容搜索扫描/共享锁/原生列表/输入 | 一致快照分批扫描释放全局锁；去二次方查找/Prop复制；本地50/2000/10000回归通过；VM输入、结果滚动及转换终态通过，精确中途paint/帧率未验 |
 | PH91 | 15 | 内容搜索快/完整两处重复搜索图标；输入框内不应有图标；右侧按钮颜色和轮廓异常 | 共享搜索输入和按钮主题/Figma | 已删除框内重复图标、恢复右侧单图标及青色资源角色；SDK与VM所测日间快/完整态通过 |
@@ -114,7 +118,7 @@ PH82 的初始代码审计无法区分 caret、选择手柄与圆角裁切，随
 
 Core 已提交 `28369db9405822f4b8277eb95ad94057f177b7bb`；[官方检查](search-flow-implementation/ph77-91-core-official-final2.log)3832项测试通过，其中1项标记 leaky，为退出后输出管道未及时关闭的警告，非应用堆泄漏证明；[独立复核及未决边界](search-flow-implementation/ph77-91-leak-summary.json)保留，未放宽超时。新 Native [构建](search-flow-implementation/ph77-91-native.log)完成，[身份](search-flow-implementation/ph77-91-core-build-identity.json)为 clean/release，buildId `5ffa51028024982bce9a607e5c3c88b69126d709e980a2823e1e7d2888f6c3fd`，已同步 Harmony 受版本管理的 `.so`。
 
-当前安装与逐项VM证据见[VM记录](search-flow-implementation/VM_VALIDATION.md)：aa387f08包已保数据安装VM并验证部分交互。其后646e8634修复三条正文就绪/预取发布顺序；acbea857包261项Harmony门禁、ArkTS、签名及独立verify通过，但尚未部署。Core仍为28369db94、3832项通过。后续书签正常动画时序与PH76诊断修正须按各自最终manifest与回执记账，不能倒写上述包的内容。
+最近取得正式 VM 部署回执的包是 **`20260914T182625Z-6863af5d-ded2e152`**（Harmony `6863af5d4e9c5dac34e3ca74b120a7d5daa2952e` / Core `28369db9405822f4b8277eb95ad94057f177b7bb`），261项Harmony门禁、ArkTS、签名及VM保数据安装/启动通过；18:28:21.450 UTC完成，targetRef `6460677a198b`，HAP SHA `3df455f5b6f0d13bafd09f2d15c3e3c456efc1642eb54ba6b8ccc103db2e0b8f`。见[manifest](search-flow-implementation/vm-6863af5d/manifest.json)、[回执](search-flow-implementation/vm-6863af5d/deployment.json)及[分包VM记录](search-flow-implementation/VM_VALIDATION.md)。aa387的先前部分交互、646e8634发布顺序修复、acbea857仅构建未部署均保留为各自历史；不得把它们改成6863重复验收。Core未变，沿用同提交3832项官方通过（含1 leaky）的门禁；6863仍为iteration，不代表全部计划或用户验收通过。后续日期修复若产生更末版包，须另绑回执，不能倒写6863。
 
 原因与正式回归入口：PH77/79 的 `SearchPublication` 稳定 holder + revision 修复真实 ArkUI Prop 深复制，见[属性边界证据](search-flow-implementation/ph77-79-publication-boundary.json)及 `test-search-publication-boundary.mjs`；PH78 的源 worker 共享队列见[阻塞回归](search-flow-implementation/ph78-shared-source-queue.log)。R8 空队列有等待、连续即时轮有让出，未发现无等待 busy-loop；FIFO不保证来源完成顺序或网络耗时。PH80/81 见 `test-search-history-layout-lifecycle.mjs`；PH83/84 见 `LocalBookDetail`、Index外部目录分支及 `test-detail-external-directory.mjs`；PH85 见[规则与格式升级报告](PH85/REPORT.md)，普通旧缓存不自动升级、歧义保留旧文旧位置。PH86 的顶栏槽/手势/ACK见 `test-reader-bookmark-top-info.mjs`；PH87见 `test-reader-more-popup.mjs`；PH88见 `test-reader-brightness-perception.mjs`；PH89/91见 `test-reader-physical-control-details.mjs`。16×16圆覆盖旧 Figma 1164:10275 的18×16椭圆，增长亮度条也是用户明确要求，不重新列为产品待决。
 
@@ -130,3 +134,11 @@ PH77–91 首次 HAP 编译失败：260 组本地检查通过后，正式 ArkTS 
 - PH90完整收起回首条的初判已撤回：按用户既定执行参考196–214，搜索终态回顶是预期；保留中途连续性/重抓的本地证据和原生精确paint未验边界，不增加新需求。
 - PH86正常动画探针发现ACK/projection先于回弹完成可二次反转，已在978d29f1修复，6种顺序/12次生命周期本地通过；旧VM稳定画面缺标记未获得对应落库ACK，不能声称已定位唯一原因。
 - PH76原生early首次超时已记录；诊断自己生成的主文档原来被provider拒绝是可证实缺口，已修精确文档准入及拒绝日志，最终原生early/cancel结果待新包重验。
+
+### 6863af5d 书签新增/稳定/删除的本包实证
+
+18:30第18章第3页下拉新增后出现填充书签，39.790秒后的静止采样仍保留；18:32书签列表有原第17章和新增第18章两条记录及正文摘录。选择第18章后再次下拉删除，阅读图标消失，18:39重开列表仅剩第17章。原图/节点/命令时间及SHA见[专项回执](search-flow-implementation/vm-6863af5d/receipt.json)。该样本支持应用内保存与删除闭环，不代替连续手势动画、重启后持久性、真机或用户验收；aa387旧缺图标现象与缺少对应ACK的边界不撤销。
+
+6863列表中的`01-01 08:00`日期问题仍在。独立[日期审计](search-flow-implementation/ph86-bookmark-time-audit.json)定位旧Core缺省time采用递增键、Host直接Date；不能把它笼统说成秒/毫秒换算错误或据小主键认定书签内容损坏。后续Host已补无法证明为现代毫秒时间时显示“时间未知”的本地回归，Core新缺省真实时间在另一切片处理；旧主键/排序/备注/正文/偏移保留。本包不包含该新日期效果。PH76本包结果未记录前继续OPEN，不由书签闭环推断资源回调或在线搜索通过。
+
+PH88的6863快捷稳态截图/原生bounds已归档：[几何回执](search-flow-implementation/vm-6863af5d/ph88-receipt.json)。外框133×665px、轨道28×364px对应38×190/8×104vp，上下图标中心与端帽圆心每轴差0.5px；仅几何样本通过，亮度拖动/自动按钮/其他尺寸与连续响应未测试。日期/PH76未因此关闭。

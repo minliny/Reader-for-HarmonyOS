@@ -1,0 +1,28 @@
+{
+  "issue": "PH76 second VM data-document denied before pageBegin/pageEnd",
+  "artifactRun": "20260914T182625Z-6863af5d-ded2e152",
+  "diagnosticRun": "1789411296382-1",
+  "status": "Bounded shape diagnostic only; existing exact admission unchanged. Native representation and original early/cancel acceptance remain open.",
+  "changed": [
+    "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts",
+    "tools/test-arkweb-resource-diagnostic.mjs"
+  ],
+  "unchangedScope": [
+    "ArkWebExecutor.ts",
+    "ArkWebExecutionHost.ets",
+    "production network policy"
+  ],
+  "sha256": {
+    "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts": "66cc1779a6a6ff3f82f3fc16de12b7b9109e3c92029bc6ab6c110580677ad4ee",
+    "tools/test-arkweb-resource-diagnostic.mjs": "a798c21ee0e2690088c20c3281cc81c3cea5c8065178e09c86186f5cd314e766",
+    "entry/src/main/ets/app/ArkWebExecutor.ts": "eb237b943a2713c936e126451dfb9fbc40a00192ae8899b3b280c7ecc5cc4e0c",
+    "entry/src/main/ets/app/ArkWebExecutionHost.ets": "f51379c05719cea2d50d170c541455f0c7a9ac7613c744214b04ddb1ff247d29"
+  },
+  "localEntry": "node tools/test-arkweb-resource-diagnostic.mjs",
+  "localResult": "8 scenario groups PASS plus actual SDK Host callback/default/policy wiring",
+  "log": "ph76-data-shape-diagnostic-tests.log",
+  "vmFailure": "ph76-vm-second-data-denied-hilog.log",
+  "deviceCommandsPerformed": false,
+  "buildPerformed": false,
+  "gitPerformed": false
+}

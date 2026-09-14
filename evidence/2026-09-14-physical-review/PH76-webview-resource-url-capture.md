@@ -123,3 +123,28 @@ Root 在 aa387 包的隔离 pilot 执行 early，得到 `TIMEOUT`。现有 `/pri
 **本地回归（非 native 内核执行）。** `node tools/test-arkweb-resource-diagnostic.mjs` 7 组通过，覆盖当前 raw/percent/base64 HTML、base URL 内存响应、篡改与坏编码、非 HTML data、上轮文档、完成后迟到请求、取消/卸载清理；同时用实际 SDK 编译的 Host `onInterceptRequest` 闭包验证政策先行与 provider 接线，平台网络/响应对象仍由本地替身承担。`node tools/test-arkweb-resource-capture.mjs` 原 19 场景通过，`node tools/test-arkweb-network-policy.mjs` 3 组通过。日志为 `ph76-document-admission-after.log`、`ph76-document-resource-regression.log`、`ph76-document-network-regression.log`。未做 HAP 构建、Git 操作或设备操作。
 
 **后续最小 VM 目的。** Root 在 acbea857 已构建后授权此诊断修正；该旧产物不包含本节变化。新产物只需一次 early 记录，先判主文档为哪种标签、有无 documentAllowed/documentProvided/interceptDenied，再判 CSS/JS native 回调与 matcher；不能沿用旧日志的无标签结论。原始失败保留为 `ph76-vm-early-hilog.log` / `ph76-vm-early-result.json`；同一 hilog 中此前公网搜索失败不是此样本的网络事实。early 有效后再按既定 cancel 样本验证迟到归属，未通过不宣称 PH76 native 验收完成。
+
+
+## 第二次 VM early 超时：已确认 data 主文档被拒（2026-09-15）
+
+本次为 `20260914T182625Z-6863af5d-ded2e152` 包，受控 runToken `1789411296382-1`。[完整脱敏原日志](ph76-vm-second-data-denied-hilog.log)顺序为 start(1789411296385)、interceptDenied(data-document, 1789411296406)、pageBegin(1789411296426)、pageEnd(1789411296427)、end(1789411300390)，最终 TIMEOUT；没有 resource/intercept/matcher 事件。与第一次无拒绝标签不同，本次已证明主文档经过 provider 并遭拒绝，不能继续把它写成“没有原生拦截回调”。
+
+现有日志没有逗号前的 data 元信息或正文匹配结果，因此还不能确定是 MIME/charset 参数排列、base64/URI 表示、长度限制或正文不一致；也不能据此放行任意 data。当前代码只接受四种明确 text/html 头部及当前正文的 raw/URI/base64 精确匹配。此切片保持 Executor、Host 网络政策和现有准入不变，先补受限形态诊断，以便下一次根任务受控 early 样本确定原生表示。
+
+### 第二次失败后的受限诊断补充（本地冻结，非 native 修复通过）
+
+仅修改 `ArkWebResourceDiagnostic.ts` 及对应 `test-arkweb-resource-diagnostic.mjs`。每个运行中 data 主文档在原判定之前增加 `dataDocumentShape` 事件，仍共享 256 事件上限；达到上限后不再构造此诊断。`isCurrentDataDocument`、Executor 和 Host 网络政策均未改变，没有把未观察过的头部或编码形式加入白名单。
+
+| 字段 | 含义与边界 |
+|---|---|
+| `metadata` | 仅逗号前、去掉 `data:` 的前 96 个字符；采用 ASCII 白名单。出现白名单外字符或明文/编码 URL 形态时整段记为 `redacted`，不输出其片段；无逗号则为空 |
+| `metadataTruncated` / `metadataSanitized` | 只说明截断或脱敏是否发生，不附原始值 |
+| `hasComma` / `bodyLength` | 逗号是否存在及其后回调字符串的 UTF-16 长度；不是解码正文的字节数 |
+| `hasCurrentDocument` / `withinLengthBound` | 是否有当前轮拥有的主文档，以及是否在原匹配器的长度界限内 |
+| `matchesCurrentBody` / `matchesCurrentBase64` | 回调正文是否与当前精确 HTML 或其既有平台 Base64 编码完全相同 |
+| `uriDecodeAttempted` / `uriDecodeSucceeded` | 只在当前文档、逗号及长度界限均成立时尝试标准 `decodeURIComponent`，坏编码记录失败，不扩大解码范围 |
+| `uriDecodedMatchesCurrentBody` / `uriDecodedMatchesCurrentBase64` | 解码后与当前 HTML/Base64 的相等布尔值；不输出原文、解码内容或原始 URL |
+
+下一次由根任务独占设备执行一个 `early` 样本即可先分辨：当前文档/长度界限是否成立，正文是否属于既有三种表示，以及被拒头部是否与原有限白名单不同。相等布尔值为 true 仍不自动放行；若全为 false，继续从已确定的不一致层查原生表示或正文变化，不能猜测忽略任意前后缀。该诊断本身不能证明 early matcher 或 cancel 归属已通过。
+
+`node tools/test-arkweb-resource-diagnostic.mjs` **8 组 PASS**，日志 [ph76-data-shape-diagnostic-tests.log](ph76-data-shape-diagnostic-tests.log)。新增真实 provider 回归覆盖 raw/URI/Base64 相等、未知头部仍 403、URI 转义 Base64 仍 403、坏编码、超长体不解码、96 字符上限、无逗号不泄露内容，以及正文和嵌入地址不出现在日志。原取消/卸载/旧轮拒绝与实际 SDK Host 政策先行接线继续通过。没有新构建、Git 或设备操作；第二次 VM 超时原件完整保留，当前只达到诊断本地冻结。
