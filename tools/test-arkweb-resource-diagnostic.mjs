@@ -12,7 +12,7 @@ class Response {
  setResponseIsReady(v){this.ready=v;if(v)this.onReady?.();}
 }
 const util={TextEncoder,Base64Helper:class {encodeToStringSync(bytes){return Buffer.from(bytes).toString('base64');}}};
-function harness({lateOld=false,throwEarly=false}={}){
+function harness({lateOld=false,throwEarly=false,shapeProbes=false}={}){
  let now=1000,next=1,observer,diagnostic;const timers=new Map(),jobs=new Map(),logs=[],documents=[];
  const set=(fn,ms)=>{const id=next++;timers.set(id,{at:now+ms,fn});return id;};const clear=id=>timers.delete(id);
  const emit=(kind,id,url)=>observer?.({kind,requestId:id,url,at:now});
@@ -32,6 +32,20 @@ function harness({lateOld=false,throwEarly=false}={}){
   assert.equal(diagnostic.provide(dataUrl+'changed').code,403);
   assert.equal(diagnostic.provide('data:text/html,%broken').code,403);
   assert.equal(diagnostic.provide('data:application/javascript,'+encodeURIComponent(body)).code,403);
+  if(shapeProbes){
+   const base64=Buffer.from(body).toString('base64');
+   const escapedBase64='%'+base64.charCodeAt(0).toString(16)+encodeURIComponent(base64.slice(1));
+   assert.equal(diagnostic.provide('data:text/html;utf-8,'+encodeURIComponent(body)).code,403,
+    'unobserved native metadata shapes remain denied even when the decoded body matches');
+   assert.equal(diagnostic.provide('data:text/html;base64,'+escapedBase64).code,403,
+    'diagnostic URI comparison does not widen base64 admission');
+   assert.equal(diagnostic.provide('data:text/html;'+('a'.repeat(120))+','+body).code,403);
+   assert.equal(diagnostic.provide('data:text/html;"<\\n>"=x,PRIVATE_BODY_NOT_FOR_LOG').code,403);
+   assert.equal(diagnostic.provide('data:text/html;base=https://PRIVATE_HOST_NOT_FOR_LOG/x,'+body).code,403);
+   assert.equal(diagnostic.provide('data:text/html;base=https%3A%2F%2FPRIVATE_HOST_NOT_FOR_LOG/x,'+body).code,403);
+   assert.equal(diagnostic.provide('data:text/html,'+body.repeat(10)).code,403);
+   assert.equal(diagnostic.provide('data:NO_COMMA_PRIVATE_BODY_NOT_FOR_LOG').code,403);
+  }
   if(oldDocument){
    assert.equal(diagnostic.provide('data:text/html,'+oldDocument.body).code,403);
    if(oldDocument.baseUrl!==params.document.baseUrl)assert.equal(diagnostic.provide(oldDocument.baseUrl).code,403);
@@ -66,6 +80,35 @@ function harness({lateOld=false,throwEarly=false}={}){
  assert.ok(h.logs[0].events.some(e=>e.kind==='interceptDenied'&&e.resource==='data-document'));
  assert.equal(h.diagnostic.provide('data:text/html,'+h.documents[0].body).code,403,'finished run has no admitted document');
  console.log('PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup');
+}
+{
+ const h=harness({shapeProbes:true});await h.diagnostic.run('early');
+ const shapes=h.logs[0].events.filter(e=>e.kind==='dataDocumentShape').map(e=>e.dataDocument);
+ const find=metadata=>shapes.find(shape=>shape.metadata===metadata);
+ assert.ok(find('text/html').matchesCurrentBody,'raw exact body is reported as a boolean');
+ assert.ok(find('text/html;charset=utf-8').uriDecodedMatchesCurrentBody);
+ assert.ok(find('text/html;charset=utf-8;base64').matchesCurrentBase64);
+ assert.equal(find('text/html;utf-8').matchesCurrentBody,false);
+ assert.equal(find('text/html;utf-8').uriDecodedMatchesCurrentBody,true);
+ assert.equal(find('text/html;base64').matchesCurrentBase64,false);
+ assert.equal(find('text/html;base64').uriDecodedMatchesCurrentBase64,true);
+ assert.ok(shapes.some(shape=>shape.uriDecodeAttempted&&!shape.uriDecodeSucceeded),'malformed URI is visible without leaking body');
+ assert.ok(shapes.some(shape=>shape.metadataTruncated&&shape.metadata.length===96));
+ assert.ok(shapes.some(shape=>shape.metadataSanitized));
+ assert.ok(shapes.some(shape=>!shape.withinLengthBound&&shape.bodyLength>0&&!shape.uriDecodeAttempted));
+ assert.ok(shapes.some(shape=>!shape.hasComma&&shape.metadata===''&&!shape.uriDecodeAttempted));
+ for(const shape of shapes){
+  assert.match(shape.metadata,/^[A-Za-z0-9 /;=+._%-]{0,96}$/);
+  assert.deepEqual(Object.keys(shape).sort(),['metadata','metadataTruncated','metadataSanitized','hasComma','bodyLength',
+   'hasCurrentDocument','withinLengthBound','matchesCurrentBody','matchesCurrentBase64','uriDecodeAttempted',
+   'uriDecodeSucceeded','uriDecodedMatchesCurrentBody','uriDecodedMatchesCurrentBase64'].sort());
+ }
+ const output=JSON.stringify(h.logs);
+ assert.ok(!output.includes('PRIVATE_BODY_NOT_FOR_LOG'));
+ assert.ok(!output.includes('PRIVATE_HOST_NOT_FOR_LOG'));
+ assert.ok(!output.includes('https://')&&!output.includes('<html>'));
+ assert.ok(h.logs[0].events.length<=256);
+ console.log('PASS bounded data metadata/body equality diagnostics: exact/URI/base64/unsupported/malformed/oversized, no URL or body disclosure and no admission widening');
 }
 for(const lateOld of [false,true]){
  const h=harness({lateOld});const result=h.diagnostic.run('cancel');await ticks();await h.advance(1000);await result;
@@ -122,4 +165,4 @@ assert.ok(policyPosition>=0&&host.indexOf('return this.diagnosticResourceProvide
 assert.match(host,/diagnosticResourceProvider:[^\n]+undefined = undefined/);
 assert.ok(!read('ArkWebResourceDiagnostic.ts').includes('onResourceLoad('),'runner never fabricates native callbacks');
 assert.ok(!read('ArkWebResourceDiagnostic.ts').includes('performance.getEntries'));
-console.log('PH76 diagnostic runner: 7 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence');
+console.log('PH76 diagnostic runner: 8 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence');

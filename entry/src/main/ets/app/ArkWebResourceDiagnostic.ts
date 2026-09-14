@@ -3,7 +3,23 @@ import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
 import { ArkWebExecutor, type ArkWebDiagnosticEvent } from './ArkWebExecutor';
 
-type DiagnosticRecord = { kind: string; at: number; requestId?: number; resource?: string };
+type DiagnosticDataDocumentShape = {
+  metadata: string;
+  metadataTruncated: boolean;
+  metadataSanitized: boolean;
+  hasComma: boolean;
+  bodyLength: number;
+  hasCurrentDocument: boolean;
+  withinLengthBound: boolean;
+  matchesCurrentBody: boolean;
+  matchesCurrentBase64: boolean;
+  uriDecodeAttempted: boolean;
+  uriDecodeSucceeded: boolean;
+  uriDecodedMatchesCurrentBody: boolean;
+  uriDecodedMatchesCurrentBase64: boolean;
+};
+type DiagnosticRecord = { kind: string; at: number; requestId?: number; resource?: string;
+  dataDocument?: DiagnosticDataDocumentShape };
 type DiagnosticFailure = { code?: string; details?: JsonObject };
 const ORIGIN = 'https://93.184.216.34';
 const FIRST_ID = 7600001;
@@ -45,6 +61,9 @@ export class ArkWebResourceDiagnostic {
     response.setResponseMimeType('text/plain');
     response.setResponseData('');
     const active = !this.disposed && this.running && this.prefix.length > 0 && this.documentBody.length > 0;
+    if (this.running && this.records.length < 256 && url.startsWith('data:')) {
+      this.record('dataDocumentShape', undefined, 'data-document', Date.now(), this.dataDocumentShape(url, active));
+    }
     if (active && this.isCurrentDataDocument(url)) {
       this.record('documentAllowed', undefined, 'data-document');
       return null!;
@@ -151,6 +170,39 @@ export class ArkWebResourceDiagnostic {
     try { return decodeURIComponent(body) === this.documentBody; } catch (_) { return false; }
   }
 
+  private dataDocumentShape(url: string, active: boolean): DiagnosticDataDocumentShape {
+    const comma = url.indexOf(',');
+    // No comma means there is no proven metadata/body boundary to log.
+    const metadata = comma < 0 ? '' : url.slice(5, Math.min(comma, 101));
+    // Redact the entire header rather than leak pieces of an embedded URL or
+    // arbitrary text after replacing only its punctuation.
+    const safeMetadata = /^[A-Za-z0-9 /;=+._%-]*$/.test(metadata) && !/(\/\/|%3a|%2f%2f)/i.test(metadata);
+    const sanitized = safeMetadata ? metadata : 'redacted';
+    const withinLengthBound = url.length <= this.documentBody.length * 4 + 128;
+    const shape: DiagnosticDataDocumentShape = {
+      metadata: sanitized, metadataTruncated: comma > 101, metadataSanitized: metadata !== sanitized,
+      hasComma: comma >= 0, bodyLength: comma < 0 ? 0 : url.length - comma - 1,
+      hasCurrentDocument: active, withinLengthBound,
+      matchesCurrentBody: false, matchesCurrentBase64: false,
+      uriDecodeAttempted: false, uriDecodeSucceeded: false,
+      uriDecodedMatchesCurrentBody: false, uriDecodedMatchesCurrentBase64: false,
+    };
+    // Diagnostics never decode an unbounded/unowned body, and never return
+    // body text, decoded text or the original URL to the public log.
+    if (!active || comma < 0 || !withinLengthBound) return shape;
+    const body = url.slice(comma + 1);
+    shape.matchesCurrentBody = body === this.documentBody;
+    shape.matchesCurrentBase64 = body === this.documentBodyBase64;
+    shape.uriDecodeAttempted = true;
+    try {
+      const decoded = decodeURIComponent(body);
+      shape.uriDecodeSucceeded = true;
+      shape.uriDecodedMatchesCurrentBody = decoded === this.documentBody;
+      shape.uriDecodedMatchesCurrentBase64 = decoded === this.documentBodyBase64;
+    } catch (_) {}
+    return shape;
+  }
+
   private documentLabel(url: string): string {
     if (url === 'about:blank') return 'about-blank';
     if (url.startsWith('data:')) return 'data-document';
@@ -232,9 +284,10 @@ export class ArkWebResourceDiagnostic {
     this.delayed.clear();
   }
 
-  private record(kind: string, requestId?: number, resource?: string, at: number = Date.now()): void {
+  private record(kind: string, requestId?: number, resource?: string, at: number = Date.now(),
+    dataDocument?: DiagnosticDataDocumentShape): void {
     if (this.records.length >= 256) return;
-    this.records.push({ kind, at, requestId, resource });
+    this.records.push({ kind, at, requestId, resource, dataDocument });
   }
 
   private finish(scenario: string, pass: boolean, measurements: JsonObject): string {
