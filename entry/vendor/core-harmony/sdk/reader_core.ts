@@ -214,6 +214,12 @@ type QueuedReaderCoreEvent = {
   event: ReaderCoreEvent;
 };
 
+type ResultWaiter = {
+  requestId: number;
+  interruption?: Error;
+  wake?: () => void;
+};
+
 export class ReaderCoreRuntime {
   static readonly protocolVersion = 1;
 
@@ -232,6 +238,7 @@ export class ReaderCoreRuntime {
   private closed = false;
   private capabilityRouter: CapabilityRouter | null = null;
   private readonly activeHostRequests = new Map<number, ReaderCoreHostRequestEvent>();
+  private readonly resultWaiters = new Map<number, Set<ResultWaiter>>();
 
   constructor(nativeModule: NativeReaderCoreModule, config: JsonObject = {}) {
     this.native = nativeModule;
@@ -259,16 +266,27 @@ export class ReaderCoreRuntime {
     if (this.closed) {
       return;
     }
-    for (const event of this.activeHostRequests.values()) {
-      this.capabilityRouter?.cancel(event);
+    this.closed = true;
+    const active = Array.from(this.activeHostRequests.values());
+    for (const waiters of this.resultWaiters.values()) {
+      for (const waiter of waiters) {
+        this.interruptWaiter(waiter, new Error("Reader-Core runtime is closed"));
+      }
     }
-    this.native.releaseRuntime(this.runtime);
+    this.resultWaiters.clear();
+    for (const event of active) {
+      try {
+        this.capabilityRouter?.cancel(event);
+      } catch (_) {
+        // A failed platform abort must not retain the other waiters/runtime.
+      }
+    }
     this.pendingEvents.clear();
     this.pendingEventsByRequest.clear();
     this.pendingEventCountValue = 0;
     this.activeHostRequests.clear();
     this.abandonedRequestIds.clear();
-    this.closed = true;
+    this.native.releaseRuntime(this.runtime);
   }
 
   send(method: string, params: JsonObject = {}, requestId = this.allocateRequestId()): number {
@@ -290,11 +308,7 @@ export class ReaderCoreRuntime {
   cancel(requestId: number): void {
     this.ensureOpen();
     assertNonNegativeSafeInteger(requestId, "requestId");
-    const active = this.activeHostRequests.get(requestId);
-    if (active !== undefined) {
-      this.capabilityRouter?.cancel(active);
-    }
-    this.native.cancelRequest(this.runtime, requestId);
+    this.cancelPendingRequest(requestId);
   }
 
   readEvent(timeoutMs = 0): ReaderCoreEvent | null {
@@ -361,70 +375,97 @@ export class ReaderCoreRuntime {
     const timeoutMs = readTimeoutMs(options.timeoutMs);
     const pollMs = readPollMs(options.pollMs);
     const deadline = Date.now() + timeoutMs;
+    const waiter: ResultWaiter = { requestId };
+    const waiters = this.resultWaiters.get(requestId) ?? new Set<ResultWaiter>();
+    waiters.add(waiter);
+    this.resultWaiters.set(requestId, waiters);
+    let immediateTurns = 0;
 
-    while (Date.now() <= deadline) {
-      this.ensureOpen();
-      if (options.shouldCancel?.()) {
-        this.cancelPendingRequest(requestId);
-        throw new Error(`Reader-Core request cancelled by caller: ${requestId}`);
-      }
-      const event = this.takePendingForRequest(requestId);
-      if (event === null) {
-        await this.pollNativeQueue(Math.min(pollMs, Math.max(0, deadline - Date.now())));
-        continue;
-      }
-
-      if (event.type === "host.request") {
-        if (event.requestId !== requestId) {
-          this.enqueuePendingEvent(event);
-          await delay(0);
+    try {
+      while (Date.now() <= deadline) {
+        this.checkWaiter(waiter);
+        // A long chain of immediately available events/Host results must still
+        // let UI timers and cancellation producers run. This is not Host polling.
+        if (++immediateTurns >= 32) {
+          await this.waitForWake(waiter, 0);
+          immediateTurns = 0;
+          this.checkWaiter(waiter);
+        }
+        if (options.shouldCancel?.()) {
+          this.cancelPendingRequest(requestId);
+          throw new Error(`Reader-Core request cancelled by caller: ${requestId}`);
+        }
+        const event = this.takePendingForRequest(requestId);
+        if (event === null) {
+          await this.pollNativeQueue(waiter, Math.min(pollMs, Math.max(0, deadline - Date.now())));
           continue;
         }
-        const routerHandler = this.capabilityRouter?.has(event.capability)
-          ? this.capabilityRouter
-          : undefined;
-        const inlineHandler = options.hostRequest;
-        if (routerHandler === undefined && inlineHandler === undefined) {
-          this.cancelPendingRequest(requestId);
-          throw new Error(`Reader-Core host.request requires a handler: ${event.operationId}`);
-        }
-        try {
-          const result = await this.awaitHostHandler(
-            event,
-            routerHandler !== undefined
-              ? () => routerHandler.route(event)
-              : () => inlineHandler!(event),
-            deadline,
-            pollMs,
-            options.shouldCancel
-          );
-          if (options.shouldCancel?.()) {
+
+        if (event.type === "host.request") {
+          if (event.requestId !== requestId) {
+            this.enqueuePendingEvent(event);
+            await this.waitForWake(waiter, 0);
+            continue;
+          }
+          const routerHandler = this.capabilityRouter?.has(event.capability)
+            ? this.capabilityRouter
+            : undefined;
+          const inlineHandler = options.hostRequest;
+          if (routerHandler === undefined && inlineHandler === undefined) {
             this.cancelPendingRequest(requestId);
-            throw new Error(`Reader-Core request cancelled by caller: ${requestId}`);
+            throw new Error(`Reader-Core host.request requires a handler: ${event.operationId}`);
           }
-          this.completeHostRequest(event, result);
-        } catch (error) {
-          if (this.abandonedRequestIds.has(requestId)) {
-            throw error;
+          try {
+            const result = await this.awaitHostHandler(
+              event,
+              routerHandler !== undefined
+                ? () => routerHandler.route(event)
+                : () => inlineHandler!(event),
+              deadline,
+              pollMs,
+              options.shouldCancel,
+              waiter
+            );
+            this.checkWaiter(waiter);
+            if (Date.now() >= deadline) {
+              const error = new Error(`Reader-Core request timed out: ${requestId}`);
+              this.cancelPendingRequest(requestId, error);
+              throw error;
+            }
+            if (options.shouldCancel?.()) {
+              this.cancelPendingRequest(requestId);
+              throw new Error(`Reader-Core request cancelled by caller: ${requestId}`);
+            }
+            this.completeHostRequest(event, result);
+          } catch (error) {
+            if (this.closed || waiter.interruption !== undefined || this.abandonedRequestIds.has(requestId)) {
+              throw error;
+            }
+            this.failHostRequest(event, normalizeHostError(error));
           }
-          this.failHostRequest(event, normalizeHostError(error));
+          continue;
         }
-        continue;
+
+        if (event.requestId === requestId) {
+          if (event.type === "error") {
+            throw new ReaderCoreRequestError(event);
+          }
+          return event;
+        }
+
+        this.enqueuePendingEvent(event);
+        await this.waitForWake(waiter, 0);
       }
 
-      if (event.requestId === requestId) {
-        if (event.type === "error") {
-          throw new ReaderCoreRequestError(event);
-        }
-        return event;
+      const error = new Error(`Reader-Core request timed out: ${requestId}`);
+      this.cancelPendingRequest(requestId, error);
+      throw error;
+    } finally {
+      waiters.delete(waiter);
+      if (waiters.size === 0 && this.resultWaiters.get(requestId) === waiters) {
+        this.resultWaiters.delete(requestId);
       }
-
-      this.enqueuePendingEvent(event);
-      await delay(0);
     }
-
-    this.cancelPendingRequest(requestId);
-    throw new Error(`Reader-Core request timed out: ${requestId}`);
   }
 
   private async awaitHostHandler(
@@ -432,44 +473,63 @@ export class ReaderCoreRuntime {
     handler: () => JsonObject | Promise<JsonObject>,
     deadline: number,
     pollMs: number,
-    shouldCancel: (() => boolean) | undefined
+    shouldCancel: (() => boolean) | undefined,
+    waiter: ResultWaiter
   ): Promise<JsonObject> {
-    let settled = false;
-    let rejected = false;
-    let result: JsonObject | undefined;
-    let failure: unknown;
     this.activeHostRequests.set(event.requestId, event);
-    Promise.resolve()
-      .then(handler)
-      .then(
-        (value) => {
-          result = value;
-          settled = true;
-        },
-        (error) => {
-          failure = error;
-          rejected = true;
-          settled = true;
-        }
-      );
     try {
-      while (!settled) {
-        this.ensureOpen();
-        if (shouldCancel?.()) {
-          this.cancelPendingRequest(event.requestId);
-          throw new Error(`Reader-Core request cancelled by caller: ${event.requestId}`);
-        }
-        const remaining = deadline - Date.now();
-        if (remaining <= 0) {
-          this.cancelPendingRequest(event.requestId);
-          throw new Error(`Reader-Core request timed out: ${event.requestId}`);
-        }
-        await delay(Math.min(pollMs, remaining));
-      }
-      if (rejected) {
-        throw failure;
-      }
-      return result as JsonObject;
+      return await new Promise<JsonObject>((resolve, reject) => {
+        let settled = false;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const finish = (value: JsonObject | undefined, error?: unknown, failed = false): void => {
+          if (settled) return;
+          settled = true;
+          if (timer !== undefined) clearTimeout(timer);
+          if (waiter.wake === checkInterruption) waiter.wake = undefined;
+          if (failed) reject(error);
+          else resolve(value as JsonObject);
+        };
+        const checkInterruption = (): boolean => {
+          if (settled) return true;
+          try {
+            this.checkWaiter(waiter);
+            if (shouldCancel?.()) {
+              this.cancelPendingRequest(event.requestId);
+              this.checkWaiter(waiter);
+            }
+            if (Date.now() >= deadline) {
+              const error = new Error(`Reader-Core request timed out: ${event.requestId}`);
+              this.cancelPendingRequest(event.requestId, error);
+              throw error;
+            }
+            return false;
+          } catch (error) {
+            finish(undefined, error, true);
+            return true;
+          }
+        };
+        const scheduleCheck = (): void => {
+          const remaining = Math.max(0, deadline - Date.now());
+          // setTimeout accepts a signed 32-bit delay on supported JS hosts.
+          timer = setTimeout(() => {
+            timer = undefined;
+            if (!checkInterruption()) scheduleCheck();
+          }, Math.min(0x7fffffff, shouldCancel === undefined ? remaining : Math.min(pollMs, remaining)));
+        };
+        // Install cancellation/close wakeup before invoking even a synchronous
+        // handler. Completion uses this same once-only finish, never a poll tick.
+        waiter.wake = checkInterruption;
+        if (checkInterruption()) return;
+        scheduleCheck();
+        Promise.resolve().then(() => checkInterruption() ? undefined : handler()).then(
+          (value) => {
+            if (!checkInterruption()) finish(value);
+          },
+          (error) => {
+            if (!checkInterruption()) finish(undefined, error, true);
+          }
+        );
+      });
     } finally {
       if (this.activeHostRequests.get(event.requestId) === event) {
         this.activeHostRequests.delete(event.requestId);
@@ -477,16 +537,54 @@ export class ReaderCoreRuntime {
     }
   }
 
-  private cancelPendingRequest(requestId: number): void {
-    this.abandonedRequestIds.add(requestId);
-    this.discardAbandonedPendingEvents();
-    try {
-      this.cancel(requestId);
-    } catch (_) {
-      if (this.closed) {
-        this.abandonedRequestIds.delete(requestId);
-      }
+  private cancelPendingRequest(
+    requestId: number,
+    error = new Error(`Reader-Core request cancelled by caller: ${requestId}`)
+  ): void {
+    const active = this.activeHostRequests.get(requestId);
+    const waiters = this.resultWaiters.get(requestId);
+    const alreadyCancelled = this.abandonedRequestIds.has(requestId);
+    if (active !== undefined || waiters !== undefined) {
+      this.abandonedRequestIds.add(requestId);
+      this.discardAbandonedPendingEvents();
     }
+    if (waiters !== undefined) {
+      for (const waiter of waiters) this.interruptWaiter(waiter, error);
+    }
+    if (alreadyCancelled || this.closed) return;
+    try {
+      if (active !== undefined) this.capabilityRouter?.cancel(active);
+    } finally {
+      this.native.cancelRequest(this.runtime, requestId);
+    }
+  }
+
+  private interruptWaiter(waiter: ResultWaiter, error: Error): void {
+    if (waiter.interruption !== undefined) return;
+    waiter.interruption = error;
+    waiter.wake?.();
+  }
+
+  private checkWaiter(waiter: ResultWaiter): void {
+    this.ensureOpen();
+    if (waiter.interruption !== undefined) throw waiter.interruption;
+  }
+
+  private waitForWake(waiter: ResultWaiter, waitMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const finish = (): void => {
+        if (settled) return;
+        settled = true;
+        if (timer !== undefined) clearTimeout(timer);
+        if (waiter.wake === finish) waiter.wake = undefined;
+        resolve();
+      };
+      waiter.wake = finish;
+      if (this.closed || waiter.interruption !== undefined) finish();
+      else timer = setTimeout(finish, waitMs);
+    });
   }
 
   async coreInfo(timeoutMs = 2000): Promise<ReaderCoreResultEvent> {
@@ -528,13 +626,14 @@ export class ReaderCoreRuntime {
   /** Serialize only the native non-blocking read. The retry delay deliberately
    * stays outside this lane so one empty waiter cannot hold every concurrent
    * request behind its timer. */
-  private async pollNativeQueue(waitMs: number): Promise<void> {
+  private async pollNativeQueue(waiter: ResultWaiter, waitMs: number): Promise<void> {
     if (await this.pollNativeOnce()) {
       return;
     }
     if (waitMs > 0) {
-      await delay(waitMs);
+      await this.waitForWake(waiter, waitMs);
     }
+    this.checkWaiter(waiter);
     await this.pollNativeOnce();
   }
 
@@ -546,6 +645,7 @@ export class ReaderCoreRuntime {
     });
     await predecessor;
     try {
+      this.ensureOpen();
       const event = this.readNativeEvent(0);
       if (event !== null) {
         this.enqueuePendingEvent(event);
@@ -806,8 +906,4 @@ function readTransactionPendingDetails(
 
 function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
