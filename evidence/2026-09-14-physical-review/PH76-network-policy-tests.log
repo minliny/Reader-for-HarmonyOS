@@ -1,0 +1,5 @@
+(node:1201) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope

@@ -1,0 +1,51 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running unittests src/lib.rs (target/debug/deps/reader_runtime-47fbc363ec3cde2d)
+
+running 44 tests
+test host_callback_bridge::tests::bridge_registers_all_host_descriptor_callback_names ... ok
+test host_callback_bridge::tests::abort_request_wakes_only_the_cancelled_callback ... ok
+test host_callback_bridge::tests::a64_cookie_callback_fail_closed_when_cookie_not_in_manifest ... ok
+test host_callback_bridge::tests::a64_js_callback_fail_closed_when_http_execute_not_in_manifest ... ok
+test host_callback_bridge::tests::callback_context_and_variables_are_isolated_across_source_workers ... ok
+test host_callback_bridge::tests::a64_js_callback_succeeds_when_http_execute_in_manifest ... ok
+test host_callback_bridge::tests::a64_clear_host_manifest_returns_to_optimistic ... ok
+test host_callback_bridge::tests::a64_js_callback_optimistic_when_no_manifest ... ok
+test host_callback_bridge::tests::deferred_callbacks_return_deferred_messages ... ok
+test host_callback_bridge::tests::fail_closed_callbacks_return_red_line_4_messages ... ok
+test host_callback_bridge::tests::core_side_local_stubs_return_empty_without_blocking ... ok
+test host_callback_bridge::tests::cookie_get_cookie_routes_to_host_capability_cookie_get ... ok
+test host_callback_bridge::tests::build_sandbox_executes_js_with_java_android_id ... ok
+test host_callback_bridge::tests::java_android_id_returns_stub_value ... ok
+test host_callback_bridge::tests::build_sandbox_executes_js_with_non_http_host_callbacks ... ok
+test host_callback_bridge::tests::cookie_remove_cookie_expires_host_records ... ok
+test host_callback_bridge::tests::execute_single_http_emits_host_request_and_receives_body ... ok
+test host_callback_bridge::tests::host_error_routes_error_message_to_callback ... ok
+test host_callback_bridge::tests::java_ajax_parses_url_dsl_headers_method_and_body ... ok
+test host_callback_bridge::tests::java_get_source_returns_empty_object ... ok
+test host_callback_bridge::tests::java_put_returns_value_without_network ... ok
+test host_callback_bridge::tests::java_replace_font_returns_original_text_as_graceful_degradation ... ok
+test host_callback_bridge::tests::build_sandbox_executes_js_with_java_get_callback ... ok
+test host_callback_bridge::tests::missing_request_context_fails_fast ... ok
+test host_callback_bridge::tests::pending_callback_cleanup_guard_preserves_reused_operation_entry ... ok
+test host_callback_bridge::tests::pending_callback_cleanup_guard_removes_unpublished_entry ... ok
+test host_callback_bridge::tests::java_connect_returns_final_url_when_host_provides_it ... ok
+test host_callback_bridge::tests::reentrant_completion_is_retained_until_sink_returns ... ok
+test host_callback_bridge::tests::reentrant_abort_keeps_late_completion_on_same_callback ... ok
+test host_callback_bridge::tests::java_ajax_returns_body_string_only ... ok
+test host_callback_bridge::tests::cookie_set_cookie_routes_to_host_capability_cookie_set ... ok
+test host_callback_bridge::tests::source_get_key_returns_empty_string_no_credentials ... ok
+test host_callback_bridge::tests::source_get_set_variable_round_trips_through_bridge ... ok
+test host_callback_bridge::tests::try_complete_returns_false_for_unknown_op_id ... ok
+test host_callback_bridge::tests::try_complete_returns_false_when_operation_id_missing ... ok
+test host_callback_bridge::tests::resource_capture_bridge_rejects_unsupported_regex_before_any_host_request ... ok
+test host_callback_bridge::tests::java_get_cookie_routes_to_scoped_host_cookie_jar ... ok
+test host_callback_bridge::tests::java_get_host_request_includes_charset_field ... ok
+test host_callback_bridge::tests::java_get_returns_final_url_when_host_provides_it ... ok
+test host_callback_bridge::tests::java_get_host_request_includes_follow_redirects_false ... ok
+test host_callback_bridge::tests::java_web_view_routes_to_scoped_host_capability ... ok
+test host_callback_bridge::tests::set_current_charset_overrides_default_in_host_request ... ok
+test host_callback_bridge::tests::resource_capture_bridge_requires_real_callback_receipt_and_preserves_session ... ok
+test host_callback_bridge::tests::callback_times_out_when_host_never_responds ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 333 filtered out; finished in 0.07s
+

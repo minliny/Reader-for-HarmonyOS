@@ -1,0 +1,26 @@
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.60s
+     Running tests/remote_content_position_contract.rs (target/debug/deps/remote_content_position_contract-df80a052fb9d3a5d)
+
+running 5 tests
+test remote_position_legacy_payloads_do_not_require_guessed_versions ... ok
+test remote_position_result_fixtures_preserve_migration_anchors_and_read_scopes ... FAILED
+test remote_position_malformed_or_incomplete_scope_is_not_accepted_as_legacy ... ok
+test remote_position_commands_retain_their_exact_content_scope ... ok
+test remote_position_schema_contract_reaches_all_read_and_write_methods ... ok
+
+failures:
+
+---- remote_position_result_fixtures_preserve_migration_anchors_and_read_scopes stdout ----
+
+thread 'remote_position_result_fixtures_preserve_migration_anchors_and_read_scopes' (65707913) panicked at crates/reader-contract/tests/remote_content_position_contract.rs:22:56:
+called `Result::unwrap()` on an `Err` value: Error("remote http diagnostics must be an object", line: 0, column: 0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    remote_position_result_fixtures_preserve_migration_anchors_and_read_scopes
+
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p reader-contract --test remote_content_position_contract`

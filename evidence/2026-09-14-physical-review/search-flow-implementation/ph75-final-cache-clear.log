@@ -1,0 +1,11 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.21s
+     Running unittests src/lib.rs (target/debug/deps/reader_runtime-47fbc363ec3cde2d)
+
+running 4 tests
+test remote::tests::cache_clear_preserves_bookshelf_catalog_product_state ... ok
+test remote::tests::book_cache_clear_reports_toc_without_counting_retained_catalog ... ok
+test remote::remote_content_positions::tests::remote_cache_clear_detached_proof_rejects_position_changes_and_processing_drift ... ok
+test remote::remote_content_positions::tests::remote_cache_clear_retains_position_facts_and_restores_only_identical_body ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 385 filtered out; finished in 0.12s
+

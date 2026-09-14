@@ -1,0 +1,35 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running unittests src/lib.rs (target/debug/deps/reader_runtime-47fbc363ec3cde2d)
+
+running 28 tests
+test remote::source_fetch_and_catalog_tests::prefetch_range_skips_non_navigable_volume_rows_without_renumbering ... ok
+test remote::source_fetch_and_catalog_tests::display_intro_projection_does_not_rewrite_stored_source_books ... ok
+test remote::source_fetch_and_catalog_tests::progress_update_refreshes_the_catalog_through_the_write_lock ... ok
+test remote::source_fetch_and_catalog_tests::catalog_write_lock_excludes_concurrent_writers_for_the_same_book ... ok
+test remote::source_fetch_and_catalog_tests::toc_classifies_non_json_response_without_changing_search_policy ... ok
+test remote::source_fetch_and_catalog_tests::inline_source_fetches_are_exempt_from_version_drift ... ok
+test remote::source_fetch_and_catalog_tests::cached_toc_status_classifies_corruption_and_successful_fetch_repairs_it ... ok
+test remote::source_fetch_and_catalog_tests::a_late_stale_chapter_completion_cannot_overwrite_the_newer_body ... ok
+test remote::source_fetch_and_catalog_tests::toc_book_identity_survives_redirects_and_empty_first_pages ... ok
+test remote::source_fetch_and_catalog_tests::a_late_stale_toc_completion_cannot_overwrite_the_newer_cache ... ok
+test remote::source_fetch_and_catalog_tests::a_newer_toc_completion_wins_even_when_the_older_one_finishes_first ... ok
+test remote::source_fetch_and_catalog_tests::chapter_context_uses_canonical_identity_and_current_redirect_on_every_page ... ok
+test remote::source_fetch_and_catalog_tests::webdav_product_relative_href_rejects_encoded_path_traversal ... ok
+test remote::source_fetch_and_catalog_tests::webdav_product_response_size_is_checked_before_bridge_copy ... ok
+test remote::source_fetch_and_catalog_tests::explicit_chapter_refresh_bypasses_cache_without_deleting_body_or_anchor ... ok
+test remote::source_fetch_and_catalog_tests::toc_completion_rejects_a_response_after_the_source_is_deleted ... ok
+test remote::source_fetch_and_catalog_tests::toc_book_url_matches_base_url_positive_control ... ok
+test remote::source_fetch_and_catalog_tests::toc_next_page_completion_rejects_a_drifted_source ... ok
+test remote::source_fetch_and_catalog_tests::toc_completion_still_parses_when_the_source_is_unchanged ... ok
+test remote::source_fetch_and_catalog_tests::webdav_shutdown_clear_releases_completed_start_rows ... ok
+test remote::source_fetch_and_catalog_tests::toc_empty_volume_only_and_rule_errors_preserve_previous_directory_and_progress ... ok
+test remote::source_fetch_and_catalog_tests::toc_http_failure_keeps_safe_response_summary_and_old_cache ... ok
+test remote::source_fetch_and_catalog_tests::webdav_stale_completion_cannot_remove_a_newer_revision ... ok
+test remote::source_fetch_and_catalog_tests::toc_pagination_cycle_and_limit_never_publish_partial_directory ... ok
+test remote::source_fetch_and_catalog_tests::toc_page_continuation_keeps_allowed_variables_and_canonical_book_facts ... ok
+test remote::source_fetch_and_catalog_tests::webdav_stale_continuation_cannot_resurrect_cancelled_transaction ... ok
+test remote::source_fetch_and_catalog_tests::webdav_transaction_survives_reused_request_id_cancellation ... ok
+test remote::source_fetch_and_catalog_tests::webdav_start_cancellation_between_precheck_and_insert_drops_row ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 361 filtered out; finished in 0.66s
+

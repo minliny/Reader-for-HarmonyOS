@@ -1,0 +1,550 @@
+DIAGNOSTIC ENTRY tools/test-reader-directory-projection.mjs
+reader directory projection behavior: PASS
+DIAGNOSTIC ENTRY tools/test-reader-drag-follow-gate.mjs
+reader drag-follow gate contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-dynamic-highlight.mjs
+dynamic highlight geometry/color/identity and static snapshot separation: PASS; pixels require runtime verification
+(node:47223) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-feedback-regressions.mjs
+reader reported feedback regressions: PASS
+DIAGNOSTIC ENTRY tools/test-reader-first-page-sdk.mjs
+actual SDK first-page admission: viewport/chapter order, stale selection and adjacent context PASS
+(node:47248) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-hdc-lease.mjs
+reader HDC target lease serialization: PASS
+DIAGNOSTIC ENTRY tools/test-reader-host-path-boundary.mjs
+Reader Host staging/asset path boundary: PASS
+(node:47313) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-host-selection-boundary.mjs
+Reader Host picker selection boundary: PASS
+(node:47315) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-http-tts-gateway.mjs
+reader HttpTTS strict gateway: PASS
+reader HttpTTS profile, secret boundary and nullable playback: PASS
+reader HttpTTS URL credential placeholder boundary: PASS
+reader OnlineTTS profile validator and credential alias binding: PASS
+DIAGNOSTIC ENTRY tools/test-reader-indent-measurement.mjs
+paragraph indent production measurement: Unicode offsets and continued fragments PASS (controlled metrics)
+(node:47321) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-layout-architecture.mjs
+reader layout architecture contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-module-selection.mjs
+reader module selection contract: PASS
+(node:47324) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-motion-repair.mjs
+PASS production motion repair: first-frame clock, opening navigation/input, menu ownership/exactly-once, reduced motion, capsule lifecycle/timeline, shelf reversal and font sampled retarget. Device pixels remain separate.
+(node:47347) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-navigable-toc.mjs
+production canonical TOC headings, initial/previous/next/control guards and hot projection reuse: PASS
+PASS Index directory title projection and local/remote known-chapter guards preserve canonical headings
+(node:47353) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-page-bottom-justify.mjs
+reader page-bottom justification: PASS
+DIAGNOSTIC ENTRY tools/test-reader-page-chrome.mjs
+reader page chrome dynamic layout: PASS
+page chrome/native snapshot invalidation: PASS
+page chrome complete layout reuse and safe-area/session invalidation: PASS
+mounted slot revision delivery gates current/adjacent chrome capture: PASS
+production texture refresh cache matrix: no idle frame waits; requested direction first; expensive captures remain spread: PASS
+(node:47378) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-page-gesture-state.mjs
+reader page-gesture pure state: PASS
+DIAGNOSTIC ENTRY tools/test-reader-page-input-runtime.mjs
+reader page input production sequence regressions: PASS
+(node:47393) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-page-preparation-runtime.mjs
+production adjacent measurement isolation, cancellation and rejected admission: PASS
+production current snapshot remains bound to physical slot after promotion: PASS
+async texture copy preserves lifetime and rejects superseded capture: PASS
+(node:47409) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production evicted previous chapter: demand refill, coalescing, stale/failed replies and explicit retry: PASS
+production promotion preparation honors requested direction and stale callback guard: PASS
+production image snapshot admission: cold decode, no blank publication, bounded retry, stale/held cancellation and one disposal: PASS
+single offscreen snapshot tree: detach immediately, dispose once after outstanding capture: PASS
+snapshot publication interruption: pointer retains exact pixels; new page/exit drops them; UP revalidates upload: PASS
+DIAGNOSTIC ENTRY tools/test-reader-page-progress-runtime.mjs
+(node:47417) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production page commit reply-loss reconciliation and unknown-result retention: PASS
+DIAGNOSTIC ENTRY tools/test-reader-page-settlement-runtime.mjs
+production flat settle/regrab continuity and transaction boundary: PASS
+production simulation mode-switch teardown and capability recovery: PASS
+queued tap cue and physical velocity settlement use independent durations: PASS
+(node:47441) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-page-turn-pipeline.mjs
+reader page-turn pipeline contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-page-turn-stage.mjs
+reader page-turn stable slot geometry and role transition: PASS
+(node:47473) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-paragraph-indent.mjs
+reader paragraph indentation projection: PASS
+DIAGNOSTIC ENTRY tools/test-reader-physical-reading-repair.mjs
+PH reading: 4 production clocks, nonintersecting footer, native Builder layers, cancelled hold, closing capsule, Core original text PASS
+(node:47477) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-physical-window-bookmark-refresh.mjs
+PASS PH56–59 production SDK methods/Builders: measured regions/API fallback, reader underlay, bookmark threshold+ACK ordering, safe force refresh and two-action More; OEM pixels are not asserted
+PASS PH59 real Index write/projection acknowledgments: success and both failure boundaries
+PASS PH57 actual Window position/display listeners, equality dedup, rotation invalidation and resource release
+PASS PH59 confirmed Core write with unavailable projection retains actual filled Builder and locks repeat writes
+(node:47505) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-presentation-recovery.mjs
+production target-revision and stale-generation release guards: PASS
+production dropped-native-ACK, unadmitted revision and stable 2D recovery: PASS
+(node:47533) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-product-scope.mjs
+reader product scope contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-progress-observation.mjs
+(node:47540) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production finite unknown observation, queued query expiry, late durable and continuous single drain: PASS
+DIAGNOSTIC ENTRY tools/test-reader-quick-search-auto-header.mjs
+PH50/51 actual SDK: Query bounds, first result, button outline, submit; Quick/source headers and reversible progress PASS
+(node:47565) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-rapid-page-turn-state.mjs
+reader rapid page-turn dynamic target: PASS
+DIAGNOSTIC ENTRY tools/test-reader-render-work.mjs
+PASS rendering work: empty 24-fragment page 1 clear/0 id scans; active marks 1 frame; duplicate/lifecycle/resize guards; Unicode 700 scan steps; 120 settings poses 0 paths; directory no-op correction 0
+(node:47572) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-replace-editor-feedback.mjs
+{"name":"actual TextInput uses explicit compact geometry and live app-theme text without repeating label","status":"PASS"}
+{"name":"actual editor has distinct back and fixed bottom save/cancel outside scrolling fields","status":"PASS"}
+{"name":"actual reading draft uses real book/source defaults and editing/global creation remain independent","status":"PASS"}
+{"name":"save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss","status":"PASS"}
+{"name":"same mounted footer reacts to mutation, uncertain writes and endpoint input guards","status":"PASS"}
+{"name":"actual standalone settings Add action has no inherited reading scope","status":"PASS"}
+PH52–54 actual SDK editor and business behavior PASS (6 groups); no device evidence.
+(node:47598) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-replace-quick.mjs
+reader Quick Replace pure/static contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-runtime-owner-lifecycle.mjs
+ReaderRuntimeOwner Ability lease lifecycle: PASS
+DIAGNOSTIC ENTRY tools/test-reader-screen-awake-lease.mjs
+reader screen-awake lease: PASS
+DIAGNOSTIC ENTRY tools/test-reader-search-highlight.mjs
+reader search highlight: PASS
+DIAGNOSTIC ENTRY tools/test-reader-selection-copy.mjs
+reader copy: native selection maps to original UTF-16 text, synchronous INAPP write and failure recovery PASS
+(node:47628) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-session-capsule.mjs
+reader session capsule projection: PASS
+DIAGNOSTIC ENTRY tools/test-reader-session-launch-recovery.mjs
+Reader session recovery: PASS (actual control pose rebase, source-ready generations, pure SDK source Builders, More actions)
+(node:47633) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-session-launch.mjs
+reader session launch: PASS (48 archived Figma actors, 54000 property comparisons; ownership/ACK/release/Reduce Motion)
+DIAGNOSTIC ENTRY tools/test-reader-session-morph-state.mjs
+reader session source identity: PASS
+DIAGNOSTIC ENTRY tools/test-reader-settings-rounded-clip.mjs
+Settings real SDK Builder hierarchy: separate rounded paint and cached dynamic mask; 42 reversible width/theme poses + partial scroll + mutation PASS
+(node:47676) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-settings.mjs
+reader settings pure/static contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-source-category.mjs
+bundled category coverage: {
+  novel: 875,
+  comic: 107,
+  music: 22,
+  download: 25,
+  other: 3,
+  external: 14
+}
+reader source category isolation: PASS
+(node:47702) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-source-failure-p0.mjs
+reader source-failure P0 route contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-status-measurement.mjs
+PASS status height: hidden rotate, exact-window/split isolation, visible zero, replacement reset
+DIAGNOSTIC ENTRY tools/test-reader-system-event-host.mjs
+reader physical-key and screen-off Host contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-text-selection-lifecycle.mjs
+reader text-selection lifecycle contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-theme-host.mjs
+PASS production theme host: same-scheme restart, system linkage, app chrome, restore barrier failure/retry ordering and stale owner isolation
+(node:47712) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-theme-paper-origin.mjs
+PASS PH67: four approved light bases and four unchanged Make night bases drive preview, ReadingSurface and system chrome; historical PH43 source, ink and effects retained.
+(node:47715) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-theme-selection.mjs
+PASS theme truth table, migrations, sync fallback, atomic publication, old failure isolation and current failure durable rollback
+PASS removed local theme falls back to matching configured day/night default
+DIAGNOSTIC ENTRY tools/test-reader-tts-audition.mjs
+PASS audition/formal mutual exclusion, no Core progress, synthesis-vs-audio completion, stale callbacks, candidate failure restoration, cancel and resume
+PASS missing native acceptance cannot block audition cancellation; invalid pitch fails before host mutation
+DIAGNOSTIC ENTRY tools/test-reader-tts-config-interaction.mjs
+PASS TTS config interaction: real Builder callbacks, choices, empty states, input gates, slider commits, draft races, stale overlays and audio strategy adapter methods; VM/native audio remain separate.
+(node:47748) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-tts-gateway.mjs
+reader TTS strict gateway: PASS
+reader TTS precise rate round trip: PASS
+DIAGNOSTIC ENTRY tools/test-reader-tts-launch-intent.mjs
+PASS TTS launch intent at all 7 asynchronous preparation boundaries, readyPaused, resume, and two-click acknowledgement race
+DIAGNOSTIC ENTRY tools/test-reader-tts-preferences.mjs
+reader TTS voice and persisted Host preferences: PASS
+DIAGNOSTIC ENTRY tools/test-reader-tts-product-surface.mjs
+reader TTS system and HttpTTS product surface: PASS
+DIAGNOSTIC ENTRY tools/test-reader-tts-quick-preparation.mjs
+PH44 TTS Quick preparation PASS: deferred ready/single-flight/zero audio+queue/independent metadata/obsolete+newer intent guards/active session/SDK first frame/retry; omission negative control rejected
+(node:47779) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-tts-session-coordinator.mjs
+reader TTS fake-host coordinator: PASS
+DIAGNOSTIC ENTRY tools/test-reader-tts-short-window.mjs
+PASS TTS short window: 0–844vp budgets, whole-form scroll fallback, unchanged 44vp Save/Cancel SDK actions
+(node:47825) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-tts-state-machine.mjs
+[ReaderTTS] stage=probe code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=startCallbackTimeout code=OPERATION_FAILED
+reader TTS state machine transactions and isolation: PASS
+DIAGNOSTIC ENTRY tools/test-reader-tts-state.mjs
+reader TTS pure state: PASS
+DIAGNOSTIC ENTRY tools/test-reader-tts-waveform.mjs
+Make V17 24-bar CSS track parity, alternate/delay/transitions, shared frame clock and frozen source: PASS
+(node:47856) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-reader-typography-architecture.mjs
+reader typography architecture contract: PASS
+DIAGNOSTIC ENTRY tools/test-reader-window-chrome-p0.mjs
+reader window chrome P0 contract: PASS
+DIAGNOSTIC ENTRY tools/test-reading-chapter-window.mjs
+reading chapter window: PASS
+DIAGNOSTIC ENTRY tools/test-reading-document-projection.mjs
+reading document projection: PASS
+DIAGNOSTIC ENTRY tools/test-reading-offline-gateway.mjs
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+reading offline gateway deterministic runtime: PASS
+offline canonical volume projection, range guard, readable totals and lease rejection: PASS
+DIAGNOSTIC ENTRY tools/test-reading-offline-image-cache.mjs
+reading offline image cache architecture: PASS
+DIAGNOSTIC ENTRY tools/test-reading-pagination-index.mjs
+reading pagination index: PASS
+DIAGNOSTIC ENTRY tools/test-reading-pagination-integration.mjs
+reading pagination integration contract: PASS
+DIAGNOSTIC ENTRY tools/test-reading-phone-tablet-shared-architecture.mjs
+reading Phone/TabletExpanded shared architecture contract: PASS
+DIAGNOSTIC ENTRY tools/test-reading-record-accumulation.mjs
+reading record accumulation contract: PASS
+DIAGNOSTIC ENTRY tools/test-reading-session-routing.mjs
+reading session local/remote routing contract: PASS
+DIAGNOSTIC ENTRY tools/test-reading-whole-book-progress.mjs
+reading whole-book processed-scalar progress: PASS
+(node:47921) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-remote-content-admission.mjs
+remote content admission contract: PASS
+DIAGNOSTIC ENTRY tools/test-remote-position-migration.mjs
+PH75 Host: captured anchor context, forced/cache validation, typed receipt rejection, prepared bypass prevention, window ownership, scoped progress/bookmarks PASS
+PH75 directory chapter-start proof: exact cache read, source/index binding, cancellation/CAS failure preservation, no fetch inputs, unscoped stored offsets untouched PASS
+DIAGNOSTIC ENTRY tools/test-remote-position-reader.mjs
+PH75 actual reader restore, explicit anchor, preservation, late selection, window proof and TTS write ownership PASS
+PH75 unproven persistent offset never borrows current body proof PASS
+(node:47931) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-remote-reading-evidence.mjs
+(node:47961) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+R1/R9 actual session ownership, stale verdict/directory rejection and validated chapter handoff: PASS
+DIAGNOSTIC ENTRY tools/test-remote-reading-flow-gateway.mjs
+remote reading flow gateway contract: PASS
+DIAGNOSTIC ENTRY tools/test-remote-reading-flow-runtime.mjs
+reading image resolve failed: OPERATION_FAILED
+remote reading flow deterministic runtime: PASS
+PASS PH58 actual remote/reading-session adapters: optional force flag, offline refresh, identity and failure propagation
+DIAGNOSTIC ENTRY tools/test-responsive-surface-widths.mjs
+responsive surface width regression matrix: PASS
+DIAGNOSTIC ENTRY tools/test-rss-discover-responsive-layout.mjs
+RSS and Discover responsive layout regressions: PASS
+DIAGNOSTIC ENTRY tools/test-rss-page-architecture.mjs
+rss page architecture contract: PASS
+DIAGNOSTIC ENTRY tools/test-rss-subscription-management-page.mjs
+rss subscription management page contract: PASS
+DIAGNOSTIC ENTRY tools/test-rule-entity-management.mjs
+rule entity management Core ownership contract: PASS
+DIAGNOSTIC ENTRY tools/test-search-candidate-acquisition.mjs
+(node:48003) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "evidenceLayer": "SDK-extracted production methods and actual Coordinator/Gateway; synthetic RPC boundary, no device",
+  "outcomes": [
+    {
+      "name": "visible groups cap six, concurrency two; speculative work has no progress/body/verdict-success",
+      "status": "PASS"
+    },
+    {
+      "name": "visible failed catalog tries another same-book candidate without body work",
+      "status": "PASS"
+    },
+    {
+      "name": "unknown network candidates capped at three; successful known catalog beyond them has priority",
+      "status": "PASS"
+    },
+    {
+      "name": "cancelled stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "identityMismatch stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "sourceVersionChanged stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "storageFailure stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "unsupportedHostCapability stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "hidden source-wait pauses and resumes same visible group once without cancellation",
+      "status": "PASS"
+    },
+    {
+      "name": "query replacement drops old waiting groups; old admitted work cannot enqueue old fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "fresh prepared reused; stale catalog refresh failure handled and original promise rejects",
+      "status": "PASS"
+    },
+    {
+      "name": "change notification batches actual identities and source mutation resets",
+      "status": "PASS"
+    },
+    {
+      "name": "real selected search group primary empty TOC admits second and probes only selected body; no shelf write",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "visible range callback bounds group count, skips unchanged rows and clears stopped view",
+      "status": "PASS"
+    }
+  ]
+}
+DIAGNOSTIC ENTRY tools/test-search-detail-cache-first.mjs
+search detail shared cache admission wiring: PASS
+DIAGNOSTIC ENTRY tools/test-search-gateway.mjs
+PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS
+(node:48032) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+R5/R6 query=1000 unrelated=0: metadata RPC=1 returned=1 projected=1 captured=1 PASS
+R5/R6 query=1000 unrelated=9000: metadata RPC=1 returned=1 projected=1 captured=1 PASS
+R5/R6 partition isolation, exact missing, related admission, stable merge/split, stale cursor and ownership PASS
+R5/R6 130-identity atomic source partition and complete 131-member two-page relation PASS
+DIAGNOSTIC ENTRY tools/test-search-history-layout-lifecycle.mjs
+{"name":"initial history Scroll uses the top of the content viewport","status":"PASS"}
+{"name":"one history item appears after the independently measurable outer container reports its real width","status":"PASS"}
+{"name":"empty first paint still provides width before asynchronous history arrives","status":"PASS"}
+{"name":"two measured rows adapt to real width, long chips, tablet padding and late replacement","status":"PASS"}
+{"name":"one or two complete rows have no collapse action","status":"PASS"}
+{"name":"actual SDK action preserves matching expand and collapse intents","status":"PASS"}
+Search History actual SDK container/width lifecycle and production two-row measurement PASS; native pixels remain a separate gate.
+(node:48034) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-search-orchestrator.mjs
+(node:48058) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search orchestrator bounded concurrency and retained lifecycle: PASS
+PH65 in-flight canonical merge becomes visible before sweep completion PASS
+PH65 stale metadata/work guards, 39 counter updates and canonical grouping retention PASS
+PH68 incremental deltas: failure retention without retry loop, hidden IO pause/resume, and busy union PASS
+PH68 stopped query retains completed metadata without restarting source search PASS
+R3 independent branches, stop pending-delta flush, retained failure recovery and query/history identity PASS
+R3 failed local branch retries while online remains active; repeated retry does not duplicate work PASS
+R6 actual empty source → publication → page/list: 1000 retained rows, zero flatten/index lookup/group rebuild/notice; populated-bucket deletion still invalidates PASS
+DIAGNOSTIC ENTRY tools/test-search-physical-layout.mjs
+PASS PH63 real SDK result tags share typography, padding and wrapping; live metadata and selection retained
+(node:48147) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-search-publication-state.mjs
+search publication identity contract: PASS
+DIAGNOSTIC ENTRY tools/test-search-settings-physical-feedback.mjs
+{"name":"PH24 native loading indicator preserves 13/36 sizes and responds without remounting","status":"PASS"}
+{"name":"PH37 four Toggle states retain geometry, track role, click and thumb position","status":"PASS"}
+{"name":"PH7 real theme actions signal accepted defaults and reject wrong day/night type explicitly","status":"PASS"}
+{"name":"PH67 SDK previews use four approved light bases and retain four original night bases","status":"PASS"}
+{"name":"PH36 real Index Back returns General to Settings before Bookshelf and preserves overlay priority","status":"PASS"}
+{"name":"PH34 actual General and Rules Scrolls align short contents at the top","status":"PASS"}
+{"name":"PH35 real cache action has intrinsic height, bounded width and retained pending/result label","status":"PASS"}
+search/settings physical feedback production/SDK regression PASS (7 groups); native pixels/device acceptance remain separate.
+(node:48154) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-search-trial-reading-return.mjs
+(node:48187) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "source": "file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+  "evidenceLayer": "production methods parsed by Harmony SDK; no device or Core I/O",
+  "outcomes": [
+    {
+      "name": "first source parses: search -> preview -> reading -> detail -> exact search state",
+      "status": "PASS"
+    },
+    {
+      "name": "failed first source -> replacement source -> trial -> detail -> original search",
+      "status": "PASS"
+    },
+    {
+      "name": "repeated preview replacements keep the original search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "late failed first admission cannot replace a new preview or its return target",
+      "status": "PASS"
+    },
+    {
+      "name": "leaving preview during replacement rejects late success without changing the new route",
+      "status": "PASS"
+    },
+    {
+      "name": "late replacement failure cannot reopen an old detail or replace a newer search",
+      "status": "PASS"
+    },
+    {
+      "name": "a failed replacement preserves the current detail and the search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf direct resume retains its own return semantics",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf explicit info retains its own return semantics",
+      "status": "PASS"
+    }
+  ]
+}
+DIAGNOSTIC ENTRY tools/test-search-view-state.mjs
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 notifications=1 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+(node:48212) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-select-semantics.mjs
+select semantic contract: PASS
+DIAGNOSTIC ENTRY tools/test-settings-cache-cleanup.mjs
+settings cache cleanup contract: PASS checks=9
+DIAGNOSTIC ENTRY tools/test-settings-select-overlay.mjs
+settings responsive select overlay contract: PASS
+DIAGNOSTIC ENTRY tools/test-shelf-source-name-resolution.mjs
+(node:48244) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"missing/invalid name is unknown, not evidence of source removal","status":"PASS"}
+{"name":"unready in-memory registries preserve caller supplied persisted identity label","status":"PASS"}
+{"name":"temporary unknown Core name cannot erase cached exact-source name or progress","status":"PASS"}
+{"name":"successful but unmatched/filtered source list does not prove deletion","status":"PASS"}
+{"name":"late old hydration cannot overwrite newer successful name","status":"PASS"}
+{"name":"Core deletion admitted while name lookup is pending is never resurrected","status":"PASS"}
+{"name":"runtime/route-generation changes reject old results without borrowing another identity","status":"PASS"}
+{"name":"source-name-only change invalidates the actual mounted row key while identity stays exact","status":"PASS"}
+PH45 source name projection and actual Host hydration regressions PASS (8 groups); no device identity is inferred.
+DIAGNOSTIC ENTRY tools/test-source-check-progress.mjs
+(node:48250) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+source check streaming progress contract: PASS
+DIAGNOSTIC ENTRY tools/test-source-product-tools.mjs
+Source product tools static boundary: PASS
+DIAGNOSTIC ENTRY tools/test-source-supply-chain.mjs
+source supply chain: PASS
+DIAGNOSTIC ENTRY tools/test-source-switch-gateway.mjs
+(node:48279) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+source-switch gateway contract: PASS
+PH70 known candidate first paint, delta projection, registry deletion and missing-only discovery PASS
+PH70 real Index source-switch entry paints known candidates before cache RPC PASS
+PH70 actual Index/Gateway retain failed delta/reset without automatic retry loops PASS
+R5 SourceSwitch relation pagination, stale retry, continuation, scoped verdict and deletion preservation PASS
+DIAGNOSTIC ENTRY tools/test-source-switch-transaction.mjs
+source-switch post-commit transaction contract: PASS
+DIAGNOSTIC ENTRY tools/test-surface-horizontal-geometry.mjs
+surface horizontal geometry: PASS (10 viewport widths)
+DIAGNOSTIC ENTRY tools/test-surface-repair.mjs
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+(node:48323) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-surface-transition-p0.mjs
+surface transition P0: PASS
+DIAGNOSTIC ENTRY tools/test-svg-provenance.mjs
+svg provenance: 352 assets verified
+DIAGNOSTIC ENTRY tools/test-sync-host-configuration.mjs
+PASS WebDAV Host production recovery: durable choices, allow-list, compensated flush, journal ownership, crash boundary, old backup, lost apply/commit response and idempotent completion
+(node:48382) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-sync-webdav-product.mjs
+WebDAV product boundary/static contract: PASS
+(node:48408) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-theme-appearance-controls.mjs
+PASS Appearance fields: retained SDK Day/Night/Day stepper and open/closed trigger paint, menu surface/border roles
+(node:48410) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-theme-dynamic-icons.mjs
+PASS dynamic theme icons: 6 computed $r sites, 101 actual state/paint cases, retained SDK Builders and all resource geometry/alpha.
+(node:48434) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-theme-local-consumers.mjs
+PASS 76 local-color bindings / 46 roles: authored Day and alpha, reactive App scope, distinct production status states and action foregrounds.
+(node:48464) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-theme-primary-text.mjs
+PASS Night primary text: 41 production AST foregrounds, 21 retained Builder states; Day/solid fill/alpha/layout retained.
+(node:48473) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-toc-repair-regressions.mjs
+durable catalog admission, source isolation and protected failures: PASS
+DIAGNOSTIC ENTRY tools/test-webdav-credential-queue.mjs
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+(node:48506) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+DIAGNOSTIC ENTRY tools/test-window-flicker-dedup.mjs
+window flicker dedup contracts: PASS
+DIAGNOSTIC REMAINING ENTRIES PASS

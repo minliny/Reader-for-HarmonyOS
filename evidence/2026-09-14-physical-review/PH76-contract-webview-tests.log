@@ -1,0 +1,81 @@
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 12.40s
+     Running unittests src/lib.rs (target/debug/deps/reader_contract-52ef3f22e1122ebd)
+
+running 5 tests
+test host::tests::host_lane_required_capabilities_distinguish_webview_from_anti_bot ... ok
+test host::tests::webview_resource_capture_contract_validates_matcher_and_observed_url ... ok
+test host::tests::webview_evaluate_javascript_request_and_response_fixtures_parse ... ok
+test host::tests::webview_evaluate_javascript_contract_rejects_invalid_boundaries ... ok
+test tests::schemas_define_webview_evaluate_javascript_contract ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 224 filtered out; finished in 0.01s
+
+     Running tests/cache_command_dto_round_trip.rs (target/debug/deps/cache_command_dto_round_trip-8eda41d5d83e7f10)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/host_capability_ios_adapter_coverage.rs (target/debug/deps/host_capability_ios_adapter_coverage-c1ddb85f38f37a54)
+
+running 2 tests
+test webview_render_lane_requires_webview_and_http_capabilities ... ok
+test webview_login_semantics_via_url_document_round_trip ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/host_capability_round_trip.rs (target/debug/deps/host_capability_round_trip-36a303a158763139)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 44 filtered out; finished in 0.00s
+
+     Running tests/http_transport_conformance.rs (target/debug/deps/http_transport_conformance-3fe32133cacd0f0b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/parse_result_round_trip.rs (target/debug/deps/parse_result_round_trip-78ce31572580914c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+     Running tests/playback_dto_round_trip.rs (target/debug/deps/playback_dto_round_trip-4d47821b432f2a90)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/reader_ui_favorite_dto_round_trip.rs (target/debug/deps/reader_ui_favorite_dto_round_trip-42783c1c8679014b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/reader_ui_import_dto_round_trip.rs (target/debug/deps/reader_ui_import_dto_round_trip-d11c1ce643afc849)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/remote_dto_round_trip.rs (target/debug/deps/remote_dto_round_trip-7dac10c560addbba)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.00s
+
+     Running tests/rss_subscription_create_dto.rs (target/debug/deps/rss_subscription_create_dto-c7b5bfd8acc3655c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/tts_method_round_trip.rs (target/debug/deps/tts_method_round_trip-c501415e92bb805e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 19 filtered out; finished in 0.00s
+

@@ -1,0 +1,604 @@
+    Blocking waiting for file lock on build directory
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 28.45s
+     Running unittests src/lib.rs (target/debug/deps/reader_contract-52ef3f22e1122ebd)
+
+running 229 tests
+test config::tests::parses_runtime_directories ... ok
+test config::tests::rejects_config_before_json_parse_when_over_limit ... ok
+test command::tests::defaults_missing_params_to_object ... ok
+test config::tests::conformance_invalid_config_fixtures_return_expected_codes ... ok
+test command::tests::rejects_command_envelope_before_json_parse_when_over_limit ... ok
+test config::tests::conformance_valid_config_fixtures_parse ... ok
+test command::tests::rejects_unknown_top_level_field ... ok
+test config::tests::rejects_unknown_runtime_config_field ... ok
+test command::tests::no_param_control_methods_accept_empty_and_reject_unknown_fields ... ok
+test command::tests::conformance_valid_command_fixtures_parse ... ok
+test command::tests::conformance_invalid_command_fixtures_return_expected_codes ... ok
+test core_info::tests::core_build_identity_rejects_untraceable_shape ... ok
+test error::tests::core_error_rejects_non_object_details ... ok
+test error::tests::core_error_accepts_missing_or_object_details ... ok
+test error::tests::core_error_rejects_unknown_fields ... ok
+test core_info::tests::core_info_data_parses_builder_output_and_rejects_invalid_shape ... ok
+test event::tests::error_event_deserialize_allows_process_level_zero_request_id ... ok
+test error::tests::transaction_pending_is_retryable_and_machine_readable ... ok
+test event::tests::event_deserialize_rejects_unknown_top_level_fields ... ok
+test event::tests::event_deserialize_rejects_zero_request_id_for_non_error_events ... ok
+test event::tests::event_deserialize_rejects_unsupported_protocol_version ... ok
+test event::tests::host_request_event_accepts_object_params ... ok
+test event::tests::host_request_event_deserialize_rejects_unsupported_capability ... ok
+test event::tests::result_event_accepts_object_data ... ok
+test host::tests::host_capability_manifest_rejects_unknown_fields ... ok
+test host::tests::conformance_host_param_fixtures_parse ... ok
+test event::tests::host_request_event_rejects_zero_operation_id - should panic ... ok
+test event::tests::host_request_event_rejects_zero_request_id - should panic ... ok
+test event::tests::result_event_rejects_zero_request_id - should panic ... ok
+test event::tests::result_event_rejects_non_object_data - should panic ... ok
+test host::tests::host_capability_manifest_round_trips_through_serde ... ok
+test host::tests::host_capability_manifest_supports_capability ... ok
+test event::tests::host_request_event_rejects_non_object_params - should panic ... ok
+test host::tests::host_capability_manifest_supports_lane_derived_from_capabilities ... ok
+test host::tests::host_capability_manifest_supports_lane_explicit_overrides_capabilities ... ok
+test host::tests::file_cache_contract_rejects_invalid_boundaries ... ok
+test host::tests::host_capability_manifest_unsupported_lanes ... ok
+test host::tests::file_cache_request_and_response_fixtures_parse ... ok
+test host::tests::host_error_code_challenge_required_serde_round_trip ... ok
+test host::tests::host_completion_params_reject_zero_operation_id_and_unknown_fields ... ok
+test host::tests::host_error_diagnostics_capability_unavailable ... ok
+test host::tests::host_error_diagnostics_challenge_required ... ok
+test host::tests::host_error_diagnostics_lane_unavailable ... ok
+test host::tests::host_lane_all_round_trip_serialization ... ok
+test host::tests::host_lane_as_str_matches_v89_disposition_buckets ... ok
+test host::tests::host_lane_from_failure_reason_classifies_known_host_markers ... ok
+test host::tests::host_lane_from_failure_signature_matches_v89_27_sources ... ok
+test host::tests::host_lane_is_supported_by ... ok
+test host::tests::host_lane_required_capabilities_are_non_empty_and_owned_by_host ... ok
+test host::tests::host_lane_required_capabilities_distinguish_webview_from_anti_bot ... ok
+test host::tests::host_smoke_params_reject_invalid_media_download_request ... ok
+test host::tests::host_smoke_capability_accepts_known_capability_and_rejects_unsupported_names ... ok
+test host::tests::media_download_capability_rejects_unknown_strings ... ok
+test host::tests::host_smoke_params_validate_media_download_request ... ok
+test host::tests::media_download_capability_round_trips_through_parse ... ok
+test host::tests::media_download_request_full_get_validates ... ok
+test host::tests::media_download_request_head_probe_validates ... ok
+test host::tests::media_download_request_range_get_with_cache_key_validates ... ok
+test host::tests::media_download_request_rejects_blank_url ... ok
+test host::tests::media_download_request_rejects_non_http_scheme ... ok
+test host::tests::media_download_request_rejects_post_method ... ok
+test host::tests::media_download_request_rejects_range_end_below_start ... ok
+test host::tests::media_download_request_rejects_range_end_without_start ... ok
+test host::tests::media_download_request_rejects_zero_max_bytes_and_timeout ... ok
+test host::tests::media_download_request_serde_rejects_unknown_fields ... ok
+test host::tests::media_download_response_full_200_validates ... ok
+test host::tests::media_download_request_serde_round_trip_camel_case ... ok
+test host::tests::media_download_response_not_modified_304_from_cache_validates ... ok
+test host::tests::media_download_response_partial_206_validates ... ok
+test host::tests::media_download_response_rejects_blank_resource_id ... ok
+test host::tests::media_download_response_rejects_zero_status_code ... ok
+test host::tests::media_download_response_serde_round_trip_minimal ... ok
+test host::tests::pending_host_operation_status_requires_known_host_capability ... ok
+test host::tests::pending_host_operation_status_requires_pending_state ... ok
+test host::tests::pending_host_operation_status_requires_positive_ids ... ok
+test host::tests::runtime_cancel_data_accepts_boolean_result_and_rejects_invalid_shape ... ok
+test host::tests::runtime_cancel_params_parse_and_reject_unknown_fields ... ok
+test host::tests::runtime_cancel_rejects_zero_target_request_id ... ok
+test host::tests::runtime_ping_data_requires_true_pong_and_runtime_ping_method ... ok
+test host::tests::runtime_set_host_capabilities_params_rejects_unknown_fields ... ok
+test host::tests::runtime_set_host_capabilities_params_parse ... ok
+test host::tests::runtime_set_host_capabilities_params_to_manifest ... ok
+test host::tests::runtime_shutdown_data_requires_true_shutdown_and_positive_cancelled_ids ... ok
+test host::tests::runtime_shutdown_params_accept_empty_and_reject_unknown_fields ... ok
+test host::tests::runtime_status_params_accept_empty_and_reject_unknown_fields ... ok
+test host::tests::runtime_status_requires_positive_active_request_ids ... ok
+test host::tests::runtime_storage_snapshot_manifest_rejects_invalid_integrity_fields ... ok
+test host::tests::runtime_storage_snapshot_manifest_validates_sha256_contract ... ok
+test host::tests::webview_evaluate_javascript_contract_rejects_invalid_boundaries ... ok
+test host::tests::webview_evaluate_javascript_request_and_response_fixtures_parse ... ok
+test host::tests::webview_resource_capture_contract_validates_matcher_and_observed_url ... ok
+test remote::scoped_search_contract_tests::scoped_search_contract_round_trips_exact_identity_and_optional_relation ... ok
+test remote::tests::build_multipart_body_empty_files_only_fields ... ok
+test remote::tests::build_multipart_body_empty_fields_only_files ... ok
+test remote::tests::book_detail_params_parse_fixture_and_reject_unknown_fields ... ok
+test remote::tests::build_multipart_body_produces_correct_structure ... ok
+test remote::tests::book_toc_data_parses_result_and_rejects_invalid_shape ... ok
+test remote::tests::book_search_data_parses_result_and_rejects_invalid_shape ... ok
+test remote::tests::book_detail_data_parses_result_and_rejects_invalid_shape ... ok
+test remote::tests::book_toc_params_parse_fixture_and_reject_unknown_fields ... ok
+test remote::tests::host_http_request_rejects_blank_url ... ok
+test remote::tests::host_http_request_defaults_method_and_rejects_blank_method ... ok
+test remote::tests::host_http_diagnostic_is_optional_and_strict ... ok
+test remote::tests::chapter_content_data_parses_result_and_rejects_invalid_shape ... ok
+test remote::tests::host_http_request_rejects_invalid_retry_and_session ... ok
+test remote::tests::book_search_params_parse_fixture_and_reject_unknown_fields ... ok
+test remote::tests::host_http_request_rejects_non_object_headers ... ok
+test remote::tests::chapter_content_params_parse_fixture_and_reject_unknown_fields ... ok
+test remote::tests::host_http_response_accepts_metadata_and_extra_fields ... ok
+test remote::tests::host_http_response_rejects_invalid_headers_shape ... ok
+test remote::tests::host_http_response_rejects_invalid_redirect_and_cookie_metadata ... ok
+test remote::tests::host_http_response_rejects_invalid_status ... ok
+test remote::tests::http_body_form_deserializes_from_json_object_without_files ... ok
+test remote::tests::http_body_raw_deserializes_from_json_string ... ok
+test remote::tests::http_body_multipart_deserializes_from_json_object ... ok
+test remote::tests::http_body_raw_serializes_back_to_json_string ... ok
+test remote::tests::multipart_content_type_returns_correct_header ... ok
+test remote::tests::manga_pages_extract_params_accept_variables_and_reject_unknown_fields ... ok
+test remote::tests::reader_location_resolve_data_parses_result_and_rejects_invalid_shape ... ok
+test remote::tests::reading_progress_update_data_parses_result_and_rejects_invalid_shape ... ok
+test remote::tests::reading_progress_update_params_parse_fixture_and_reject_unknown_fields ... ok
+test remote::tests::source_import_params_accepts_legado_native_form_without_name ... ok
+test remote::tests::source_import_data_parses_result_and_rejects_invalid_shape ... ok
+test remote::tests::reader_location_resolve_params_parse_fixture_and_reject_invalid_shape ... ok
+test remote::tests::source_import_params_parse_fixture_and_reject_unknown_fields ... ok
+test tests::command_schema_binds_backup_restore_scope_plan_to_strict_params ... ok
+test tests::command_schema_allows_source_import_raw_legado_book_source ... ok
+test tests::command_schema_binds_book_search_to_param_def ... ok
+test tests::command_schema_binds_backup_content_plan_to_strict_params ... ok
+test tests::command_schema_binds_auto_backup_decision_to_strict_params ... ok
+test tests::command_schema_binds_book_toc_to_param_def ... ok
+test tests::command_schema_binds_book_detail_to_param_def ... ok
+test remote::scoped_search_contract_tests::scoped_search_schema_exposes_bounded_params_and_versioned_results ... ok
+test tests::command_and_event_schema_bind_bookshelf_book_update_contract ... ok
+test tests::command_schema_binds_bookshelf_group_assign_to_strict_params ... ok
+test tests::command_schema_binds_generic_webdav_directory_commands_to_strict_params ... ok
+test tests::command_schema_binds_host_bus_methods_to_param_defs ... ok
+test tests::command_and_event_schema_bind_atomic_bookshelf_remove_batch_contract ... ok
+test tests::command_schema_binds_cache_methods_to_strict_param_defs ... ok
+test tests::command_schema_binds_chapter_content_to_param_def ... ok
+test tests::command_schema_binds_cover_dict_and_content_edit_methods_to_param_defs ... ok
+test tests::command_schema_binds_materialized_local_book_reading_commands ... ok
+test tests::command_schema_binds_manga_pages_extract_to_param_def ... ok
+test tests::command_schema_binds_product_webdav_transaction_commands_to_strict_params ... ok
+test tests::command_schema_binds_no_param_control_methods_to_empty_params ... ok
+test tests::command_schema_binds_reader_ui_replace_methods_and_undo_token ... ok
+test tests::command_schema_binds_reader_location_resolve_to_param_def ... ok
+test tests::command_schema_binds_reading_progress_commands_to_param_defs ... ok
+test tests::command_schema_binds_real_source_check_run_to_strict_params ... ok
+test tests::command_schema_binds_real_rss_subscription_vertical ... ok
+test tests::command_schema_binds_remote_book_planner_commands_to_strict_params ... ok
+test tests::command_schema_binds_runtime_lifecycle_methods_to_param_defs ... ok
+test tests::command_schema_binds_search_content_and_core_only_source_tools_to_strict_params ... ok
+test tests::command_schema_binds_source_import_to_param_def ... ok
+test tests::command_schema_binds_source_switch_transaction_commands ... ok
+test tests::command_schema_binds_source_list_delete_and_change_book_source_to_param_defs ... ok
+test tests::command_schema_binds_webdav_progress_commands_to_strict_params ... ok
+test tests::command_schema_binds_tts_methods_to_param_defs ... ok
+test tests::command_schema_bounds_reading_progress_update_progress ... ok
+test tests::command_schema_capability_extension_matches_core_info ... ok
+test tests::command_schema_defines_book_toc_url_and_variables ... ok
+test tests::command_schema_defines_chapter_content_override_and_url_params ... ok
+test tests::command_schema_defines_host_http_response_redirect_cookie_metadata ... ok
+test tests::command_schema_defines_host_error_diagnostics_contract ... ok
+test tests::command_schema_defines_manga_pages_variables ... ok
+test tests::command_schema_defines_optional_strict_http_diagnostic_context ... ok
+test tests::command_schema_defines_tts_data_model_defs ... ok
+test tests::command_schema_defines_tts_param_contracts ... ok
+test tests::command_schema_defines_tts_queue_control_params ... ok
+test tests::command_schema_method_examples_are_current_v1_methods ... ok
+test tests::command_schema_rejects_blank_host_http_request_method ... ok
+test tests::command_schema_rejects_blank_source_import_name ... ok
+test tests::command_schema_requires_host_http_request_headers_object ... ok
+test tests::event_schema_binds_auto_backup_decision_result_data ... ok
+test tests::command_schema_requires_host_smoke_params_object ... ok
+test tests::command_schema_requires_book_detail_book_object ... ok
+test tests::event_schema_binds_backup_content_plan_result_data ... ok
+test tests::command_schema_rejects_blank_host_http_request_url ... ok
+test tests::command_schema_requires_host_complete_result_object ... ok
+test tests::command_schema_requires_source_import_rules_object_or_null ... ok
+test tests::event_schema_binds_backup_restore_scope_plan_result_data ... ok
+test tests::command_schema_requires_remote_inline_source_object_or_null ... ok
+test tests::event_schema_binds_product_webdav_transaction_result_data ... ok
+test tests::event_schema_binds_cache_and_replace_result_data_to_contract_dtos ... ok
+test tests::event_schema_binds_generic_webdav_result_data_to_contract_dtos ... ok
+test tests::event_schema_defines_book_detail_data_contract ... ok
+test tests::event_schema_binds_remote_book_planner_result_data ... ok
+test tests::event_schema_binds_webdav_progress_result_data ... ok
+test tests::event_schema_defines_book_search_data_contract ... ok
+test tests::event_schema_defines_book_toc_data_contract ... ok
+test tests::event_schema_defines_chapter_content_data_contract ... ok
+test tests::event_schema_defines_materialized_local_book_reading_data_contracts ... ok
+test tests::event_schema_defines_host_capability_enum ... ok
+test tests::event_schema_defines_core_info_data_contract ... ok
+test tests::event_schema_defines_reading_progress_data_contracts ... ok
+test tests::event_schema_defines_real_rss_subscription_data_contracts ... ok
+test tests::event_schema_defines_search_content_data_contract ... ok
+test tests::event_schema_defines_runtime_ping_data_contract ... ok
+test tests::event_schema_defines_runtime_cancel_data_contract ... ok
+test tests::event_schema_defines_tts_data_contracts ... ok
+test tests::event_schema_defines_source_list_delete_and_change_book_source_data_contracts ... ok
+test tests::event_schema_defines_source_update_result_data ... ok
+test tests::event_schema_error_codes_match_error_code_enum ... ok
+test tests::event_schema_defines_source_import_data_contract ... ok
+test tests::event_schema_rejects_core_error_unknown_fields ... ok
+test tests::event_schema_rejects_unknown_top_level_fields ... ok
+test tests::event_schema_requires_core_error_details_object ... ok
+test tests::event_schema_requires_current_protocol_version ... ok
+test tests::event_schema_requires_host_request_operation_id_minimum ... ok
+test tests::event_schema_requires_host_request_params_object ... ok
+test tests::event_schema_requires_non_error_event_request_ids_positive ... ok
+test tests::event_schema_requires_pending_host_operation_positive_ids ... ok
+test tests::event_schema_requires_pending_host_operation_state_pending ... ok
+test tts::tests::tts_chapter_transition_round_trips_with_and_without_next ... ok
+test tts::tests::tts_queue_control_data_types_round_trip_with_snapshot ... ok
+test tts::tests::tts_queue_control_params_round_trip_with_chapter ... ok
+test tests::event_schema_requires_result_data_object ... ok
+test tts::tests::tts_queue_play_params_rejects_unknown_fields ... ok
+test tts::tests::tts_queue_snapshot_idle_omits_optional_fields ... ok
+test tts::tests::tts_queue_play_params_round_trips_and_defaults_start_index_to_zero ... ok
+test tts::tests::tts_queue_snapshot_round_trips_and_state_enums_serialize_as_lowercase ... ok
+test tts::tests::tts_slice_plan_round_trips_through_json ... ok
+test tests::event_schema_requires_runtime_shutdown_data_contract_bounds ... ok
+test tests::event_schema_requires_runtime_status_active_request_ids_positive ... ok
+test tests::event_schema_uses_host_capability_for_pending_host_operations ... ok
+test tests::schema_host_capability_extensions_match_contract_enum ... ok
+test tests::schemas_define_webview_evaluate_javascript_contract ... ok
+test tests::schemas_bind_global_bookmark_and_read_record_contracts ... ok
+test tests::schemas_define_remaining_host_capability_contracts ... ok
+
+test result: ok. 229 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/cache_command_dto_round_trip.rs (target/debug/deps/cache_command_dto_round_trip-8eda41d5d83e7f10)
+
+running 5 tests
+test cache_wire_enums_and_prefetch_result_use_camel_case ... ok
+test cache_prefetch_range_is_exactly_two_endpoints ... ok
+test cache_clear_params_support_all_cache_and_exact_book_scopes ... ok
+test cache_book_params_are_strict_and_source_scoped ... ok
+test cache_materialization_report_is_strict_and_token_scoped ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/host_capability_ios_adapter_coverage.rs (target/debug/deps/host_capability_ios_adapter_coverage-c1ddb85f38f37a54)
+
+running 7 tests
+test ios_host_adapter_required_capabilities_are_in_all_set ... ok
+test login_cookie_lane_requires_exactly_http_and_cookie_capabilities ... ok
+test webview_render_lane_requires_webview_and_http_capabilities ... ok
+test ios_host_adapter_required_capabilities_parse_round_trip ... ok
+test file_import_semantics_via_file_read_round_trip ... ok
+test webview_login_semantics_via_url_document_round_trip ... ok
+test cookie_login_sync_chain_round_trip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/host_capability_round_trip.rs (target/debug/deps/host_capability_round_trip-36a303a158763139)
+
+running 44 tests
+test host_cookie_record_minimal_round_trip ... ok
+test host_cookie_record_rejects_blank_name ... ok
+test host_cookie_set_request_minimal_round_trip ... ok
+test host_cookie_record_full_round_trip ... ok
+test host_cookie_record_rejects_unknown_field ... ok
+test host_cookie_get_response_empty_round_trip ... ok
+test host_cookie_set_request_round_trip ... ok
+test host_cookie_get_request_minimal_round_trip ... ok
+test host_cookie_get_request_full_round_trip ... ok
+test host_cookie_get_response_with_records_round_trip ... ok
+test host_cookie_set_response_round_trip ... ok
+test host_cookie_set_response_validate_rejects_false ... ok
+test host_log_emit_request_full_round_trip ... ok
+test host_log_emit_request_minimal_round_trip ... ok
+test host_log_emit_request_rejects_blank_message ... ok
+test host_log_emit_request_rejects_unknown_field ... ok
+test host_log_emit_response_round_trip ... ok
+test host_log_emit_response_validate_rejects_false ... ok
+test host_log_level_round_trip_all_variants ... ok
+test host_persistence_get_request_rejects_blank_namespace ... ok
+test host_persistence_get_request_rejects_unknown_field ... ok
+test host_persistence_get_request_round_trip ... ok
+test host_persistence_get_response_hit_must_have_value_or_value_base64 ... ok
+test host_persistence_get_response_hit_with_value_base64_round_trip ... ok
+test host_persistence_get_response_hit_with_value_round_trip ... ok
+test host_persistence_get_response_miss_round_trip ... ok
+test host_persistence_put_request_rejects_both_value_and_value_base64 ... ok
+test host_persistence_put_request_rejects_neither_value_nor_value_base64 ... ok
+test host_persistence_put_request_with_value_base64_round_trip ... ok
+test host_persistence_put_request_with_value_round_trip ... ok
+test host_persistence_put_response_minimal_round_trip ... ok
+test host_persistence_put_response_round_trip ... ok
+test host_persistence_put_response_validate_rejects_false ... ok
+test host_system_info_request_empty_keys_round_trip ... ok
+test host_system_info_request_rejects_blank_key ... ok
+test host_system_info_request_with_keys_round_trip ... ok
+test host_system_info_response_rejects_unknown_field ... ok
+test host_system_info_response_round_trip ... ok
+test host_time_now_request_empty_round_trip ... ok
+test host_time_now_request_full_round_trip ... ok
+test host_time_now_response_full_round_trip ... ok
+test host_time_now_response_minimal_round_trip ... ok
+test host_time_now_response_rejects_blank_iso8601 ... ok
+test host_time_now_response_rejects_unknown_field ... ok
+
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/http_transport_conformance.rs (target/debug/deps/http_transport_conformance-3fe32133cacd0f0b)
+
+running 1 test
+test shared_http_transport_vectors_match_reference_policy ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/parse_result_round_trip.rs (target/debug/deps/parse_result_round_trip-78ce31572580914c)
+
+running 8 tests
+test parse_error_serializes_with_camel_case_fields ... ok
+test toc_entry_serializes_with_camel_case ... ok
+test search_book_entry_optional_fields_skip_when_none ... ok
+test parse_error_kind_serializes_to_snake_case ... ok
+test chapter_content_round_trip ... ok
+test chapter_list_round_trip ... ok
+test book_detail_round_trip ... ok
+test search_result_round_trip ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/playback_dto_round_trip.rs (target/debug/deps/playback_dto_round_trip-4d47821b432f2a90)
+
+running 2 tests
+test reader_location_resolve_params_and_result_round_trip ... ok
+test tts_slice_play_report_next_and_stop_dtos_round_trip ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/reader_ui_favorite_dto_round_trip.rs (target/debug/deps/reader_ui_favorite_dto_round_trip-42783c1c8679014b)
+
+running 3 tests
+test favorite_identity_and_timestamp_round_trip_exactly ... ok
+test favorite_dtos_reject_missing_unknown_and_nested_fields ... ok
+test canonical_favorite_list_dto_is_optional_strict_and_typed ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/reader_ui_import_dto_round_trip.rs (target/debug/deps/reader_ui_import_dto_round_trip-d11c1ce643afc849)
+
+running 5 tests
+test nested_kind_input_rejects_cross_kind_and_unknown_fields ... ok
+test missing_wrong_or_unknown_kind_fields_fail_closed ... ok
+test persist_and_rollback_outer_contracts_reject_missing_or_extra_fields ... ok
+test all_import_kinds_decode_with_one_unambiguous_tag ... ok
+test parsed_preview_persist_and_rollback_token_round_trip_losslessly ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/remote_content_position_contract.rs (target/debug/deps/remote_content_position_contract-df80a052fb9d3a5d)
+
+running 5 tests
+test remote_position_legacy_payloads_do_not_require_guessed_versions ... ok
+test remote_position_malformed_or_incomplete_scope_is_not_accepted_as_legacy ... ok
+test remote_position_commands_retain_their_exact_content_scope ... ok
+test remote_position_result_fixtures_preserve_migration_anchors_and_read_scopes ... ok
+test remote_position_schema_contract_reaches_all_read_and_write_methods ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/remote_dto_round_trip.rs (target/debug/deps/remote_dto_round_trip-7dac10c560addbba)
+
+running 186 tests
+test book_chapter_review_entry_data_round_trip ... ok
+test book_group_delete_params_round_trip ... ok
+test book_group_delete_data_round_trip ... ok
+test book_chapter_review_params_round_trip ... ok
+test book_group_data_round_trip ... ok
+test book_group_create_params_round_trip ... ok
+test book_group_create_data_round_trip ... ok
+test book_chapter_review_data_round_trip ... ok
+test book_group_list_data_round_trip ... ok
+test book_chapter_review_data_with_http_round_trip ... ok
+test book_group_list_params_round_trip ... ok
+test book_group_update_data_round_trip ... ok
+test book_group_update_params_round_trip ... ok
+test book_highlight_defaults_preserve_unknown_title_length ... ok
+test bookmark_delete_data_round_trip ... ok
+test bookmark_create_params_round_trip ... ok
+test bookmark_create_data_round_trip ... ok
+test bookmark_data_round_trip ... ok
+test bookmark_delete_params_round_trip ... ok
+test bookmark_list_data_round_trip ... ok
+test bookmark_list_params_round_trip ... ok
+test bookmark_update_data_round_trip ... ok
+test bookmark_update_params_round_trip ... ok
+test book_highlight_dtos_round_trip ... ok
+test bookshelf_add_data_round_trip ... ok
+test bookshelf_add_params_round_trip ... ok
+test bookshelf_book_update_params_preserve_omitted_set_and_clear_states ... ok
+test bookshelf_get_data_round_trip ... ok
+test bookshelf_book_update_data_round_trip ... ok
+test bookshelf_entry_data_round_trip ... ok
+test bookshelf_entry_data_durable_source_name_round_trip ... ok
+test bookshelf_get_params_round_trip ... ok
+test bookshelf_group_assign_data_round_trip ... ok
+test bookshelf_list_data_round_trip ... ok
+test bookshelf_group_assign_params_round_trip ... ok
+test bookshelf_list_params_defaults_round_trip ... ok
+test bookshelf_list_params_false_progress_filter_round_trips ... ok
+test bookshelf_list_params_full_round_trip ... ok
+test bookshelf_remove_batch_data_round_trip ... ok
+test bookshelf_remove_batch_params_reject_empty_or_malformed_targets ... ok
+test bookshelf_remove_batch_params_round_trip ... ok
+test bookshelf_remove_batch_target_round_trip ... ok
+test bookshelf_remove_data_round_trip ... ok
+test bookshelf_remove_params_round_trip ... ok
+test change_book_source_data_round_trip ... ok
+test change_book_source_candidate_round_trip ... ok
+test change_book_source_params_round_trip ... ok
+test change_cover_data_round_trip ... ok
+test change_cover_params_reject_schema_invalid_values ... ok
+test change_cover_params_round_trip ... ok
+test content_edit_data_round_trip ... ok
+test content_edit_delete_data_round_trip ... ok
+test content_edit_delete_params_round_trip ... ok
+test content_edit_get_data_round_trip ... ok
+test content_edit_get_params_round_trip ... ok
+test content_edit_list_data_round_trip ... ok
+test content_edit_list_params_round_trip ... ok
+test content_edit_params_reject_blank_books_and_negative_indexes ... ok
+test content_edit_put_data_round_trip ... ok
+test content_edit_put_params_round_trip ... ok
+test dict_rule_query_data_round_trip ... ok
+test dict_rule_query_params_reject_blank_identifiers ... ok
+test debug_log_entry_round_trip ... ok
+test dict_rule_query_params_round_trip ... ok
+test highlight_rule_create_defaults_match_legado ... ok
+test http_tts_delete_data_round_trip ... ok
+test http_tts_build_request_rejects_unbounded_or_control_text ... ok
+test http_tts_delete_params_round_trip ... ok
+test http_tts_data_round_trip ... ok
+test http_tts_get_data_round_trip ... ok
+test http_tts_get_params_round_trip ... ok
+test http_tts_list_data_round_trip ... ok
+test http_tts_list_params_round_trip ... ok
+test http_tts_put_data_round_trip ... ok
+test http_tts_put_params_round_trip ... ok
+test local_book_catalog_data_round_trip ... ok
+test highlight_rule_dtos_round_trip ... ok
+test local_book_catalog_params_round_trip ... ok
+test local_book_chapter_content_params_and_data_round_trip ... ok
+test local_book_import_params_round_trip_uses_parse_wire_shape ... ok
+test local_book_import_data_round_trip ... ok
+test local_book_parse_data_round_trip ... ok
+test local_book_parse_params_binary_round_trip ... ok
+test local_book_parse_params_file_path_round_trip ... ok
+test local_book_parse_params_text_round_trip ... ok
+test local_book_toc_params_and_data_round_trip ... ok
+test manga_page_data_round_trip ... ok
+test manga_pages_extract_data_round_trip ... ok
+test local_book_integrity_round_trip_preserves_evidence_and_missing_legacy_state ... ok
+test manga_pages_extract_params_round_trip ... ok
+test read_record_accumulate_params_and_data_round_trip ... ok
+test read_record_bulk_delete_dtos_round_trip ... ok
+test read_record_create_data_round_trip ... ok
+test read_record_create_params_round_trip ... ok
+test read_record_data_defaults_legacy_missing_author ... ok
+test read_record_data_round_trip ... ok
+test read_record_delete_data_round_trip ... ok
+test read_record_delete_params_round_trip ... ok
+test read_record_list_data_round_trip ... ok
+test read_record_list_params_round_trip ... ok
+test read_record_summary_dtos_round_trip ... ok
+test read_record_update_data_round_trip ... ok
+test read_record_update_params_round_trip ... ok
+test reading_progress_get_empty_result_is_explicit ... ok
+test reading_progress_get_rejects_ambiguous_empty_or_hit_data ... ok
+test reading_progress_get_params_and_current_data_round_trip ... ok
+test reading_progress_update_data_round_trip ... ok
+test reading_progress_update_params_round_trip ... ok
+test replace_rule_create_params_round_trip ... ok
+test replace_rule_create_data_round_trip ... ok
+test replace_rule_data_round_trip ... ok
+test replace_rule_delete_data_round_trip ... ok
+test replace_rule_delete_params_round_trip ... ok
+test replace_rule_list_data_round_trip ... ok
+test replace_rule_list_params_round_trip ... ok
+test replace_rule_update_data_round_trip ... ok
+test replace_rule_update_params_round_trip ... ok
+test rss_item_read_scoped_params_and_data_round_trip ... ok
+test rss_parse_data_round_trip ... ok
+test rss_parse_entry_data_round_trip ... ok
+test rss_parse_params_round_trip ... ok
+test rss_read_record_data_round_trip ... ok
+test rss_read_record_delete_data_round_trip ... ok
+test rss_read_record_delete_params_round_trip ... ok
+test rss_read_record_list_data_round_trip ... ok
+test rss_read_record_list_params_round_trip ... ok
+test rss_read_record_put_data_round_trip ... ok
+test rss_read_record_put_params_round_trip ... ok
+test rss_refresh_data_round_trip ... ok
+test rss_refresh_params_round_trip ... ok
+test rss_subscription_items_params_round_trip ... ok
+test rss_subscription_refresh_params_round_trip ... ok
+test rss_subscription_refresh_data_round_trip ... ok
+test search_content_data_round_trip ... ok
+test search_content_params_round_trip ... ok
+test search_content_result_round_trip ... ok
+test search_cover_data_round_trip ... ok
+test search_cover_params_reject_schema_invalid_values ... ok
+test search_cover_params_round_trip ... ok
+test source_check_input_round_trip ... ok
+test source_check_params_round_trip ... ok
+test source_check_result_data_round_trip ... ok
+test source_check_result_round_trip ... ok
+test source_check_result_with_failure_round_trip ... ok
+test source_check_run_params_round_trip ... ok
+test source_debug_data_round_trip ... ok
+test source_debug_params_round_trip ... ok
+test source_delete_data_round_trip ... ok
+test source_delete_params_round_trip ... ok
+test source_explore_data_round_trip ... ok
+test source_explore_kinds_data_round_trip ... ok
+test source_explore_kinds_params_round_trip ... ok
+test source_explore_params_round_trip ... ok
+test source_export_data_round_trip ... ok
+test source_export_params_defaults_round_trip ... ok
+test source_export_params_round_trip ... ok
+test source_image_request_params_round_trip ... ok
+test source_list_params_round_trip ... ok
+test source_list_data_round_trip ... ok
+test sync_backup_auto_decision_dto_round_trip ... ok
+test sync_backup_content_plan_dto_round_trip ... ok
+test sync_backup_data_round_trip ... ok
+test sync_backup_params_round_trip ... ok
+test sync_backup_restore_scope_plan_dto_round_trip ... ok
+test sync_merge_data_round_trip ... ok
+test sync_merge_params_round_trip ... ok
+test sync_webdav_progress_merge_dto_round_trip ... ok
+test sync_theme_runtime_observation_and_migration_diagnostic_round_trip ... ok
+test sync_webdav_progress_push_plan_dto_round_trip ... ok
+test sync_webdav_remote_book_local_import_plan_dto_round_trip ... ok
+test sync_webdav_remote_book_plan_dto_round_trip ... ok
+test sync_webdav_remote_book_result_dto_round_trip ... ok
+test tts_config_data_round_trip ... ok
+test tts_config_get_data_round_trip ... ok
+test toc_response_summaries_accept_empty_bytes_and_reject_plaintext_digests ... ok
+test tts_config_put_data_round_trip ... ok
+test tts_config_put_params_round_trip ... ok
+test txt_toc_rule_create_data_round_trip ... ok
+test txt_toc_rule_create_params_round_trip ... ok
+test txt_toc_rule_data_round_trip ... ok
+test txt_toc_rule_delete_data_round_trip ... ok
+test txt_toc_rule_delete_params_round_trip ... ok
+test txt_toc_rule_list_data_round_trip ... ok
+test txt_toc_rule_list_params_round_trip ... ok
+test txt_toc_rule_update_data_round_trip ... ok
+test txt_toc_rule_update_params_round_trip ... ok
+
+test result: ok. 186 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/rss_subscription_create_dto.rs (target/debug/deps/rss_subscription_create_dto-c7b5bfd8acc3655c)
+
+running 3 tests
+test create_params_default_optional_fields_and_reject_caller_owned_identity ... ok
+test create_conformance_fixtures_match_the_typed_params_contract ... ok
+test create_data_round_trips_created_or_existing_outcome ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tts_method_round_trip.rs (target/debug/deps/tts_method_round_trip-c501415e92bb805e)
+
+running 19 tests
+test tts_chapter_plan_params_full_round_trip ... ok
+test tts_chapter_plan_data_terminal_via_struct ... ok
+test tts_queue_status_data_idle_via_struct ... ok
+test tts_queue_status_params_minimal_chapter_round_trip ... ok
+test tts_chapter_plan_data_terminal_transition_round_trip ... ok
+test tts_chapter_plan_params_rejects_unknown_field ... ok
+test tts_chapter_plan_params_defaults_drain_behavior_to_stop_on_boundary ... ok
+test tts_queue_status_data_round_trip ... ok
+test tts_chapter_plan_data_with_next_round_trip ... ok
+test tts_queue_status_data_idle_snapshot_round_trip ... ok
+test tts_queue_status_params_rejects_unknown_field ... ok
+test tts_queue_status_params_round_trip ... ok
+test tts_slice_data_round_trip_via_struct ... ok
+test tts_slice_data_round_trip ... ok
+test tts_slice_data_with_empty_slices_round_trip ... ok
+test tts_slice_params_defaults_strategy_to_paragraph ... ok
+test tts_slice_params_full_round_trip ... ok
+test tts_slice_params_rejects_blank_content ... ok
+test tts_slice_params_rejects_unknown_field ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests reader_contract
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

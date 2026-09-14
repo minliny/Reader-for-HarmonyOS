@@ -1,0 +1,21 @@
+    Checking stable_deref_trait v1.2.1
+    Checking percent-encoding v2.3.2
+    Checking serde_json v1.0.150
+    Checking serde v1.0.228
+    Checking zerofrom v0.1.8
+    Checking yoke v0.8.3
+    Checking form_urlencoded v1.2.2
+    Checking zerovec v0.11.6
+    Checking zerotrie v0.2.4
+    Checking reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+    Checking tinystr v0.8.3
+    Checking potential_utf v0.1.5
+    Checking icu_collections v2.2.0
+    Checking icu_locale_core v2.2.0
+    Checking icu_provider v2.2.0
+    Checking icu_properties v2.2.0
+    Checking icu_normalizer v2.2.0
+    Checking idna_adapter v1.2.2
+    Checking idna v1.1.0
+    Checking url v2.5.8
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.59s

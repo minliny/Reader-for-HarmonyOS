@@ -1,0 +1,6 @@
+    Checking reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Checking reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+    Checking reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Checking reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 18.00s

@@ -1,0 +1,9 @@
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.97s
+     Running tests/independent_entities_crud_v4.rs (target/debug/deps/independent_entities_crud_v4-e73bc2c10a0bb19c)
+
+running 1 test
+test tts_v17_migration_preserves_legacy_rows_and_is_repeatable ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.01s
+

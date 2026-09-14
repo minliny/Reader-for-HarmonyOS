@@ -1,0 +1,25 @@
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+error[E0063]: missing field `position_basis` in initializer of `remote::SourceFetchMeta`
+   --> crates/reader-runtime/src/remote/acquisition.rs:612:20
+    |
+612 |         let meta = SourceFetchMeta {
+    |                    ^^^^^^^^^^^^^^^ missing `position_basis`
+
+error[E0063]: missing field `position_basis` in initializer of `remote::SourceFetchMeta`
+     --> crates/reader-runtime/src/remote.rs:19767:26
+      |
+19767 |             source_meta: SourceFetchMeta {
+      |                          ^^^^^^^^^^^^^^^ missing `position_basis`
+
+error[E0063]: missing field `position_basis` in initializer of `remote::SourceFetchMeta`
+    --> crates/reader-runtime/src/runtime.rs:6030:17
+     |
+6030 |                 SourceFetchMeta {
+     |                 ^^^^^^^^^^^^^^^ missing `position_basis`
+
+For more information about this error, try `rustc --explain E0063`.
+error: could not compile `reader-runtime` (lib test) due to 3 previous errors

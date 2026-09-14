@@ -1,0 +1,28 @@
+Diff in /Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime/src/runtime.rs:6028:
+                     page: Some(1),
+                 },
+                 SourceFetchMeta {
+-                position_basis: None,
++                    position_basis: None,
+                     expected_source_version: None,
+                     initiated_at_millis: 0,
+                 },
+Diff in /Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime/tests/pagination.rs:335:
+         pages_fetched: 2,
+         visited_urls: visited,
+         source_meta: reader_runtime::remote::SourceFetchMeta {
+-                position_basis: None,
++            position_basis: None,
+             expected_source_version: None,
+             initiated_at_millis: 0,
+         },
+Diff in /Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime/tests/pagination.rs:560:
+     let source = inline_source_with_content_pagination("https://books.example.test");
+ 
+     let params = reader_contract::remote::ChapterContentParams {
+-                position_context: None, upgrade_cached_content: false,
++        position_context: None,
++        upgrade_cached_content: false,
+         force_refresh: false,
+         source_id: "src-1".to_string(),
+         book_id: "b1".to_string(),

@@ -1,0 +1,103 @@
+{
+  "recordedAtUtc": "2026-09-14T15:32:38.719505+00:00",
+  "command": "CARGO_NET_OFFLINE=true CARGO_TARGET_DIR=target/check ./scripts/check-local.sh",
+  "cwd": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+  "exitCode": 0,
+  "checkedSource": {
+    "baseCommit": "5c4506737827c5c387236fe74804d93ddc6b35d4",
+    "description": "base commit plus frozen repair files; no source edits during the official check",
+    "repairFileSha256": {
+      "crates/reader-storage/src/sqlite_backend.rs": "3e7bc736fe9f5c6e24f699a2eb74544f15d6ef6a30422e788375edb325a91d5b",
+      "crates/reader-storage/src/sqlite_backend/acquisition.rs": "1235700c5937d0224a582b26302b4f04c83383d292aa5560ea061523c417d326",
+      "crates/reader-storage/tests/independent_entities_crud_v4.rs": "6ee77f3089721dbd45f5c83a3f2fa50b0e6a1c49d7d1a559e73c8e4f8f6c95ab",
+      "crates/reader-storage/tests/search_history_storage.rs": "181bfe9af4bb15b5d24c336489708dbf2f99b0d51e5e11344b0860276dd518f3",
+      "crates/reader-storage/tests/sqlite_backend.rs": "25e1eab512d0011a879ac5569ec0ba0fcef21645c8de21f7bee5798df8df5c4f",
+      "crates/reader-storage/tests/support/legacy_sqlite_schema.rs": "f5d7cb378a0fcd21d30dd7d5ebddd740dbb27e31eeea430aad3bb9ab56aef886",
+      "tests/fixtures/host_replay/legado_desensitized_corpus_suite.json": "9fd6bd94195d93a5f425295c82c075c6c87558e28cebd3b2a6eb7c2ec387fd94",
+      "tests/fixtures/host_replay/remote_reading_e2e_suite.json": "c0c69ddeac7106c4de61d29d26da2c1fd696fef4c150b54966db4f617236fa1b",
+      "tools/reader-cli/src/main.rs": "dccc4579a99549c5f2301f35c85c302d8a565190ca1753dc2703883247786669",
+      "tools/reader-cli/tests/host_replay.rs": "d89ce3e02a3c74d4b3286aa465d7068f81919148d3cfcc8e240fd0584f578c59"
+    },
+    "finalCommit": "61a2f86e7287fb276757706ba436a8103dcb3d37",
+    "finalCommitRepairFileHashesMatch": true,
+    "repairCommits": [
+      "66074eddab8a01d066f40dfed075fcb2f668eed0",
+      "20c938711d7a4c474a08d85bcb8be8f45357553c",
+      "61a2f86e7287fb276757706ba436a8103dcb3d37"
+    ]
+  },
+  "executionBoundary": {
+    "offlineDependencies": true,
+    "localLoopbackAllowed": true,
+    "deviceAccess": false
+  },
+  "results": {
+    "format": "PASS",
+    "workspaceAllTargetsClippy": "PASS",
+    "nextest": {
+      "passed": 3811,
+      "failed": 0,
+      "skipped": 0
+    },
+    "conformance": {
+      "passed": 210,
+      "failed": 0
+    },
+    "strictDrift": "PASS",
+    "cAbiSmoke": "PASS",
+    "cppAbiSmoke": "PASS"
+  },
+  "priorDiagnostic": {
+    "log": "core-full-diagnostic-3809.log",
+    "exitCode": 100,
+    "passed": 3796,
+    "failed": 13,
+    "skipped": 0,
+    "failureGroups": {
+      "cliReplay": 3,
+      "legacyMigrationFixtures": 7,
+      "sandboxLoopbackPermission": 3
+    }
+  },
+  "targetedFixtures": {
+    "hostReplay": 5,
+    "catalogTimestampRule": 1,
+    "acquisitionTransaction": 6,
+    "historicalSchemaUnit": 15,
+    "historicalTts": 1,
+    "historicalSearch": 1,
+    "historicalBody": 1
+  },
+  "logSha256": {
+    "core-official-final.log": "606286f10bea385f7866e2bcafa3427f28ff1a0fc6bc7a9872539515d3bc1f9d",
+    "core-replay-fixtures-final.log": "9ef911e9ab0aab63466ddd0961de326e35bba59df4e45556be222fde185ffc00",
+    "core-replay-timestamp-final.log": "b0cd5c979e18cf002b48007d783c250fc79f96f418412349754fda48dce3cb4b",
+    "core-search-empty-identity-final.log": "d6407a369af47092567f38e8ee209267defdb298d7c92efaf9db6eb1dcf87990",
+    "core-legacy-fixtures-unit-final.log": "d59ee4291c8ac7fff2b18c813d79e274c38a6283d0cecd71c10d1121e8a47028",
+    "core-legacy-fixtures-tts-final.log": "1d3878e8aa734a10c11b1394237eae819cbf1ce7634bf5d745abe427f3c315d5",
+    "core-legacy-fixtures-search-final.log": "4edf1767586d26871037fa5f828e230a5a699b2fe0e68ca2d8cf54fbbd3c01a7",
+    "core-legacy-fixtures-body-final.log": "3abe32b9d17f9555e540e690cf1f814da48b83aa53e51b69f4f0e84476c0e9d8"
+  },
+  "deliveryBoundary": {
+    "harmonyLocalChecks": {
+      "passed": 250,
+      "log": "check-local-sdk-final.log",
+      "sha256": "3bbafcac30b1ffc298ab25ebe1aa5ef1550d7d7d966feaa0f6c32ac1bc7bca95"
+    },
+    "finalNative": "BUILDING:61a2f86e7",
+    "hap": "PENDING",
+    "vm": "PENDING",
+    "physicalDeviceAcceptance": "OPEN",
+    "userAcceptance": "OPEN",
+    "order": [
+      "physical-device-preserve-data",
+      "vm-preserve-data"
+    ],
+    "previousCompletedPackage": {
+      "id": "3399326a",
+      "installation": "IN_PROGRESS on physical device as reported by root; not final repaired source delivery"
+    },
+    "trackedNativeLibrary": "entry/libs/arm64-v8a/libreader_core_napi.so",
+    "trackedNativeLibraryStatus": "M in Harmony worktree; tracked, not ignored"
+  }
+}

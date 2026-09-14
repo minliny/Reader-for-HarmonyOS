@@ -1,0 +1,17 @@
+   Compiling rusqlite v0.31.0
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-domain v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-domain)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.11s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_storage-6582e3cf32965be5)
+
+running 6 tests
+test sqlite_backend::acquisition::tests::response_duplicate_identity_reads_its_prior_transaction_write_without_reentry ... ok
+test sqlite_backend::acquisition::tests::whole_source_response_rolls_back_both_tables_on_late_write_failure ... ok
+test sqlite_backend::acquisition::tests::whole_source_response_final_cancellation_rolls_back_every_item ... ok
+test sqlite_backend::acquisition::tests::catalog_publication_commits_context_toc_facts_and_remapped_position_together ... ok
+test sqlite_backend::acquisition::tests::response_without_identity_keeps_valid_siblings_in_the_same_transaction ... ok
+test sqlite_backend::acquisition::tests::catalog_failure_at_every_publication_boundary_preserves_complete_snapshot ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 164 filtered out; finished in 0.21s
+

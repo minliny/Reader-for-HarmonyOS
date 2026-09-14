@@ -1,0 +1,9 @@
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.19s
+     Running tests/search_history_storage.rs (target/debug/deps/search_history_storage-3a8a5ff1369feccb)
+
+running 1 test
+test sqlite_v16_migration_keeps_legacy_candidate_payload_and_new_composite_key ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.02s
+

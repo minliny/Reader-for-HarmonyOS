@@ -1,0 +1,810 @@
+Reader HAP build-system docs and skills contract: PASS
+app shell safe geometry: PASS
+(node:5637) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope
+PASS actual resource callbacks: first full match before page-ready, no timeline or refetch
+PASS serialized matching preserves callback order across delayed evaluations
+PASS source initialization runs once and its real resource event completes capture
+PASS an earlier admitted match wins over a later resource-budget terminal marker
+PASS terminal cleanup and late callback suppression: timeout
+PASS terminal cleanup and late callback suppression: cancel
+PASS terminal cleanup and late callback suppression: detach
+PASS terminal cleanup and late callback suppression: cookie-generation
+PASS terminal cleanup and late callback suppression: network
+PASS terminal cleanup and late callback suppression: budget
+PASS terminal cleanup and late callback suppression: invalid-matcher
+PASS source profiles retain isolated cookie hydration/capture and generation
+PASS POST HTML capture, bounded matcher admission and production callback wiring
+PASS execution failure is terminal with bounded cleanup: matcher-reject
+PASS execution failure is terminal with bounded cleanup: matcher-sync-throw
+PASS execution failure is terminal with bounded cleanup: initialization-reject
+PASS execution failure is terminal with bounded cleanup: load-throw
+PASS late asynchronous matcher completion cannot publish into the next source profile
+PASS quotes and executable-looking text in observed URLs remain JSON-encoded data
+PH76 Host production-path resource capture: 19 scenarios passed; VM/platform callback behavior remains unverified
+(node:5657) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+PASS diagnostic attributes old resource token during new job: lateOld=false
+PASS diagnostic attributes old resource token during new job: lateOld=true
+PASS disposing the pilot cancels only owned jobs and clears response timers/observer
+PASS diagnostic execution errors retain a failure receipt
+PH76 diagnostic runner: 5 scenario groups plus production default/policy wiring passed; these are unit checks, not VM evidence
+(node:5663) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared book acquisition lifecycle, identities, and scheduling: PASS
+PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS
+R1/R2 cache-refresh separation, original freshness, dispatch consumers and scoped facts: PASS
+(node:5698) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:5870) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+PASS PH60 shelf filters: independent dimensions, real SDK live chips/toggles, shared order, legacy data and hidden batch-selection safety
+(node:5915) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf management Core ownership contract: PASS
+(node:5923) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manual update bypasses prepared sessions and executes real Gateway detail/TOC","status":"PASS"}
+{"name":"manual update also bypasses durable catalog cache after prepared eviction","status":"PASS"}
+{"name":"manual request waits for a cache-only in-flight acquisition then refreshes","status":"PASS"}
+{"name":"per-book failure/empty results preserve old records, settle flags and continue bounded batch","status":"PASS"}
+{"name":"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions","status":"PASS"}
+{"name":"multiple force waiters share one refresh after the nonforce admission settles","status":"PASS"}
+{"name":"force waiting revalidates cancel before new network work","status":"PASS"}
+{"name":"force waiting revalidates close before new network work","status":"PASS"}
+{"name":"force waiting revalidates source-delete before new network work","status":"PASS"}
+PH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS
+PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update
+(node:5949) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS TXT uses format identity without changing Core metadata
+PASS default group retains empty and explicit default identities without mutating legacy groups
+PASS real section settings callback opens the default selector without navigating to another settings surface
+PASS PH61 progress/source retain equal left/right slots and live progress after row reuse
+PASS day: detail metadata shares source typography, label and moving source action
+PASS night: detail metadata shares source typography, label and moving source action
+PASS PH46/47 original author typography and the entire five-line block align with the cover
+PASS missing synopsis is explained without contaminating the metadata projection
+PASS empty chapters expose status: 暂无章节信息
+PASS empty chapters expose status: 正在读取本地目录…
+PASS empty chapters expose status: 目录读取失败，请重试
+PASS source name/category/URL remain distinct and login precedes detect (no login)
+PASS source name/category/URL remain distinct and login precedes detect (login)
+PASS single-book sheet matches cover frame and both layers have straight lower corners
+PASS 44vp source SVG stays 44vp in the single-book more action
+(node:5974) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5980) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS
+(node:6005) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection
+bookshelf tablet navigation contract: PASS
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation
+(node:6013) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS bookshelf route return: identity+item offset, list/filter/group state, reordered books, late callback isolation
+(node:6037) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1046 tested records, 919 unique identities)
+cookie exact-host and HttpOnly script-isolation policy: PASS
+core build identity startup contract: PASS
+(node:6104) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+PASS: deterministic import.persist rejection discards staged input without recovery orphan
+PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation
+PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (118 sources swept)
+(node:6135) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony HttpTTS credential URL encoding and expansion bounds: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:6162) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6164) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+PASS: HTTPS-only requests reject cleartext redirect downgrades
+PASS: same-origin comparison normalizes host case and default HTTPS port
+PASS: credential-bearing URL redirects stay on the same effective origin
+PASS: custom credential-header redirects stay on the same effective origin
+Host staging recovery retry: PASS
+(node:6167) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:6169) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+PASS import refresh: Figma C arc/source unchanged, 18vp slot, 23.754vp paint, 1.5vp stroke; retained Day/Night/Day.
+(node:6175) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 notifications=1 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+Legado product behavior contract: PASS
+(node:6197) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+local book format picker contract: PASS
+(node:6208) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.
+local EPUB resource architecture: PASS
+local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)
+(node:6242) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /private async pollNativeQueue[\s\S]*await this\.pollNativeOnce\(\)[\s\S]*await delay\(waitMs\)[\s\S]*await this\.pollNativeOnce\(\)/. Input:
+
+'export type JsonObject = { [key: string]: unknown };\n' +
+  '\n' +
+  'export type NativeRuntimeHandle = unknown;\n' +
+  '\n' +
+  'export type NativeReaderCoreModule = {\n' +
+  '  abiVersion(): number;\n' +
+  '  lastError(): { code: number; message: string };\n' +
+  '  readEpubEntry(archivePath: string, entryPath: string, maxBytes: number): Uint8Array;\n' +
+  '  readEpubEntryAsync(archivePath: string, entryPath: string, maxBytes: number): Promise<Uint8Array>;\n' +
+  '  encodeText(text: string, charset: string, maxBytes: number): Uint8Array;\n' +
+  '  createRuntime(config?: JsonObject | string): NativeRuntimeHandle;\n' +
+  '  releaseRuntime(runtime: NativeRuntimeHandle): void;\n' +
+  '  sendCommand(runtime: NativeRuntimeHandle, command: JsonObject | string): void;\n' +
+  '  cancelRequest(runtime: NativeRuntimeHandle, requestId: number): void;\n' +
+  '  readEvent(runtime: NativeRuntimeHandle, timeoutMs?: number): string | null;\n' +
+  '  pendingEventCount(runtime: NativeRuntimeHandle): number;\n' +
+  '  completeHostRequest(\n' +
+  '    runtime: NativeRuntimeHandle,\n' +
+  '    operationId: number,\n' +
+  '    result: JsonObject | string,\n' +
+  '    requestId?: number\n' +
+  '  ): void;\n' +
+  '  failHostRequest(\n' +
+  '    runtime: NativeRuntimeHandle,\n' +
+  '    operationId: number,\n' +
+  '    error: ReaderCoreError | JsonObject | string,\n' +
+  '    requestId?: number\n' +
+  '  ): void;\n' +
+  '  pingSmoke(): string;\n' +
+  '  hostSmoke(): string;\n' +
+  '  lifecycleSmoke(iterations?: number): string;\n' +
+  '};\n' +
+  '\n' +
+  'export type ReaderCoreLastError = { code: number; message: string };\n' +
+  '\n' +
+  'export type ReaderCoreCommand = {\n' +
+  '  protocolVersion: 1;\n' +
+  '  requestId: number;\n' +
+  '  method: string;\n' +
+  '  params?: JsonObject;\n' +
+  '};\n' +
+  '\n' +
+  'export type ReaderCoreResultEvent = {\n' +
+  '  protocolVersion: 1;\n' +
+  '  requestId: number;\n' +
+  '  type: "result";\n' +
+  '  data: JsonObject;\n' +
+  '};\n' +
+  '\n' +
+  'export type ReaderCoreError = {\n' +
+  '  code: string;\n' +
+  '  message: string;\n' +
+  '  retryable: boolean;\n' +
+  '  details?: JsonObject;\n' +
+  '};\n' +
+  '\n' +
+  'export type ReaderCoreErrorEvent = {\n' +
+  '  protocolVersion: 1;\n' +
+  '  requestId: number;\n' +
+  '  type: "error";\n' +
+  '  error: ReaderCoreError;\n' +
+  '};\n' +
+  '\n' +
+  'export type ReaderCoreTransactionKind =\n' +
+  '  | "storageApply"\n' +
+  '  | "persistenceMutation"\n' +
+  '  | "hostOperationDrain";\n' +
+  '\n' +
+  'export type ReaderCoreTransactionPendingDetails = {\n' +
+  '  transactionKind: ReaderCoreTransactionKind;\n' +
+  '  pendingHostOperationCount: number;\n' +
+  '  retryAfterMillis: number;\n' +
+  '};\n' +
+  '\n' +
+  'export type ReaderCoreHostRequestEvent = {\n' +
+  '  protocolVersion: 1;\n' +
+  '  requestId: number;\n' +
+  '  type: "host.request";\n' +
+  '  operationId: number;\n' +
+  '  capability: string;\n' +
+  '  params: JsonObject;\n' +
+  '};\n' +
+  '\n' +
+  'export type ReaderCoreEvent =\n' +
+  '  | ReaderCoreResultEvent\n' +
+  '  | ReaderCoreErrorEvent\n' +
+  '  | ReaderCoreHostRequestEvent;\n' +
+  '\n' +
+  'export type HostRequestHandler = (\n' +
+  '  event: ReaderCoreHostRequestEvent\n' +
+  ') => JsonObject | Promise<JsonObject>;\n' +
+  '\n' +
+  'export type RequestOptions = {\n' +
+  '  timeoutMs?: number;\n' +
+  '  pollMs?: number;\n' +
+  '  hostRequest?: HostRequestHandler;\n' +
+  '  /**\n' +
+  '   * Polled while waiting for Core or an active Host capability. Returning\n' +
+  '   * true cancels both layers before this Promise rejects, so obsolete route,\n' +
+  '   * source, or chapter work cannot continue behind the replacement request.\n' +
+  '   */\n' +
+  '  shouldCancel?: () => boolean;\n' +
+  '};\n' +
+  '\n' +
+  'export type CapabilityHandler = (\n' +
+  '  event: ReaderCoreHostRequestEvent\n' +
+  ') => JsonObject | Promise<JsonObject>;\n' +
+  '\n' +
+  'export type CapabilityCancellationHandler = (\n' +
+  '  event: ReaderCoreHostRequestEvent\n' +
+  ') => void;\n' +
+  '\n' +
+  '/**\n' +
+  ' * Host-owned HTTP fetch mechanism. The adapter calls this to actually perform\n' +
+  ' * the network operation for an `http.execute` host request.\n' +
+  ' *\n' +
+  ' * Response contract:\n' +
+  ' *   - `status` (number, required): HTTP status code.\n' +
+  ' *   - `body` (string, required): response body as UTF-8 text.\n' +
+  ' *   - `headers` (Record<string, string>, optional): response headers.\n' +
+  " *   - `finalUrl` (string, optional): resolved URL after redirects. Core's\n" +
+  ' *     `HostHttpResponse.final_url` reads this key (camelCase) to back the\n' +
+  ' *     Legado idiom `resp.raw().request().url()`. Omit when no redirect was\n' +
+  ' *     observed and Core will fall back to the request URL.\n' +
+  ' */\n' +
+  'export interface HttpFetch {\n' +
+  '  fetch(request: {\n' +
+  '    url: string;\n' +
+  '    method: string;\n' +
+  '    headers: Record<string, string>;\n' +
+  '    body?: string;\n' +
+  '  }): Promise<JsonObject>;\n' +
+  '}\n' +
+  '\n' +
+  'export class CapabilityRouter {\n' +
+  '  static readonly httpExecuteCapability = "http.execute";\n' +
+  '\n' +
+  '  private readonly handlers = new Map<string, CapabilityHandler>();\n' +
+  '  private readonly cancellationHandlers = new Map<string, CapabilityCancellationHandler>();\n' +
+  '  private readonly httpFetch: HttpFetch | null;\n' +
+  '\n' +
+  '  constructor(options: { httpFetch?: HttpFetch } = {}) {\n' +
+  '    this.httpFetch = options.httpFetch ?? null;\n' +
+  '    if (this.httpFetch !== null) {\n' +
+  '      this.register(\n' +
+  '        CapabilityRouter.httpExecuteCapability,\n' +
+  '        this.handleHttpExecute.bind(this)\n' +
+  '      );\n' +
+  '    }\n' +
+  '  }\n' +
+  '\n' +
+  '  register(\n' +
+  '    capability: string,\n' +
+  '    handler: CapabilityHandler,\n' +
+  '    cancellationHandler?: CapabilityCancellationHandler\n' +
+  '  ): void {\n' +
+  '    if (typeof capability !== "string" || capability.length === 0) {\n' +
+  '      throw new Error("capability must be a non-empty string");\n' +
+  '    }\n' +
+  '    if (typeof handler !== "function") {\n' +
+  '      throw new Error("handler must be a function");\n' +
+  '    }\n' +
+  '    if (cancellationHandler !== undefined && typeof cancellationHandler !== "function") {\n' +
+  '      throw new Error("cancellationHandler must be a function");\n' +
+  '    }\n' +
+  '    this.handlers.set(capability, handler);\n' +
+  '    if (cancellationHandler === undefined) {\n' +
+  '      this.cancellationHandlers.delete(capability);\n' +
+  '    } else {\n' +
+  '      this.cancellationHandlers.set(capability, cancellationHandler);\n' +
+  '    }\n' +
+  '  }\n' +
+  '\n' +
+  '  has(capability: string): boolean {\n' +
+  '    return this.handlers.has(capability);\n' +
+  '  }\n' +
+  '\n' +
+  '  async route(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {\n' +
+  '    const handler = this.handlers.get(event.capability);\n' +
+  '    if (handler === undefined) {\n' +
+  '      throw new Error(`no handler registered for capability: ${event.capability}`);\n' +
+  '    }\n' +
+  '    return handler(event);\n' +
+  '  }\n' +
+  '\n' +
+  '  cancel(event: ReaderCoreHostRequestEvent): void {\n' +
+  '    this.cancellationHandlers.get(event.capability)?.(event);\n' +
+  '  }\n' +
+  '\n' +
+  '  private async handleHttpExecute(\n' +
+  '    event: ReaderCoreHostRequestEvent\n' +
+  '  ): Promise<JsonObject> {\n' +
+  '    if (this.httpFetch === null) {\n' +
+  '      throw new Error("http.execute requested but no httpFetch configured");\n' +
+  '    }\n' +
+  '    const params = event.params;\n' +
+  '    const url = typeof params.url === "string" ? params.url : "";\n' +
+  '    if (url.length === 0) {\n' +
+  '      throw new Error("http.execute requires non-empty url");\n' +
+  '    }\n' +
+  '    const method = typeof params.method === "string" ? params.method : "GET";\n' +
+  '    const headers: Record<string, string> = {};\n' +
+  '    if (isJsonObject(params.headers)) {\n' +
+  '      for (const [key, value] of Object.entries(params.headers)) {\n' +
+  '        headers[key] = typeof value === "string" ? value : String(value);\n' +
+  '      }\n' +
+  '    }\n' +
+  '    const body = typeof params.body === "string" ? params.body : undefined;\n' +
+  '    return this.httpFetch.fetch({ url, method, headers, body });\n' +
+  '  }\n' +
+  '}\n' +
+  '\n' +
+  'type QueuedReaderCoreEvent = {\n' +
+  '  event: ReaderCoreEvent;\n' +
+  '};\n' +
+  '\n' +
+  'type ResultWaiter = {\n' +
+  '  requestId: number;\n' +
+  '  interruption?: Error;\n' +
+  '  wake?: () => void;\n' +
+  '};\n' +
+  '\n' +
+  'export class ReaderCoreRuntime {\n' +
+  '  static readonly protocolVersion = 1;\n' +
+  '\n' +
+  '  private readonly native: NativeReaderCoreModule;\n' +
+  '  private readonly runtime: NativeRuntimeHandle;\n' +
+  '  // Both indexes own only unread events. Ordered sets let either reader remove\n' +
+  '  // a payload from both indexes immediately, without scans or retained tombstones.\n' +
+  '  private readonly pendingEvents = new Set<QueuedReaderCoreEvent>();\n' +
+  '  private readonly pendingEventsByRequest = new Map<number, Set<QueuedReaderCoreEvent>>();\n' +
+  '  private pendingEventCountValue = 0;\n' +
+  '  /** One shared native-event poll lane for all concurrent request waiters. */\n' +
+  '  private pollTail: Promise<void> = Promise.resolve();\n' +
+  '  /** Requests whose waiter has already returned after timeout/cancellation. */\n' +
+  '  private readonly abandonedRequestIds = new Set<number>();\n' +
+  '  private nextRequestId = 1;\n' +
+  '  private closed = false;\n' +
+  '  private capabilityRouter: CapabilityRouter | null = null;\n' +
+  '  private readonly activeHostRequests = new Map<number, ReaderCoreHostRequestEvent>();\n' +
+  '  private readonly resultWaiters = new Map<number, Set<ResultWaiter>>();\n' +
+  '\n' +
+  '  constructor(nativeModule: NativeReaderCoreModule, config: JsonObject = {}) {\n' +
+  '    this.native = nativeModule;\n' +
+  '    this.runtime = nativeModule.createRuntime(config);\n' +
+  '  }\n' +
+  '\n' +
+  '  setCapabilityRouter(router: CapabilityRouter | null): void {\n' +
+  '    this.capabilityRouter = router;\n' +
+  '  }\n' +
+  '\n' +
+  '  get abiVersion(): number {\n' +
+  '    return this.native.abiVersion();\n' +
+  '  }\n' +
+  '\n' +
+  '  lastError(): ReaderCoreLastError {\n' +
+  '    return this.native.lastError();\n' +
+  '  }\n' +
+  '\n' +
+  '  get pendingEventCount(): number {\n' +
+  '    this.discardAbandonedPendingEvents();\n' +
+  '    return this.pendingEventCountValue + this.native.pendingEventCount(this.runtime);\n' +
+  '  }\n' +
+  '\n' +
+  '  close(): void {\n' +
+  '    if (this.closed) {\n' +
+  '      return;\n' +
+  '    }\n' +
+  '    this.closed = true;\n' +
+  '    const active = Array.from(this.activeHostRequests.values());\n' +
+  '    for (const waiters of this.resultWaiters.values()) {\n' +
+  '      for (const waiter of waiters) {\n' +
+  '        this.interruptWaiter(waiter, new Error("Reader-Core runtime is closed"));\n' +
+  '      }\n' +
+  '    }\n' +
+  '    this.resultWaiters.clear();\n' +
+  '    for (const event of active) {\n' +
+  '      try {\n' +
+  '        this.capabilityRouter?.cancel(event);\n' +
+  '      } catch (_) {\n' +
+  '        // A failed platform abort must not retain the other waiters/runtime.\n' +
+  '      }\n' +
+  '    }\n' +
+  '    this.pendingEvents.clear();\n' +
+  '    this.pendingEventsByRequest.clear();\n' +
+  '    this.pendingEventCountValue = 0;\n' +
+  '    this.activeHostRequests.clear();\n' +
+  '    this.abandonedRequestIds.clear();\n' +
+  '    this.native.releaseRuntime(this.runtime);\n' +
+  '  }\n' +
+  '\n' +
+  '  send(method: string, params: JsonObject = {}, requestId = this.allocateRequestId()): number {\n' +
+  '    this.ensureOpen();\n' +
+  '    assertCommandMethod(method);\n' +
+  '    assertJsonObjectValue(params, "params");\n' +
+  '    assertNonNegativeSafeInteger(requestId, "requestId");\n' +
+  '    const command: ReaderCoreCommand = {\n' +
+  '      protocolVersion: ReaderCoreRuntime.protocolVersion,\n' +
+  '      requestId,\n' +
+  '      method,\n' +
+  '      params,\n' +
+  '    };\n' +
+  '    this.abandonedRequestIds.delete(requestId);\n' +
+  '    this.native.sendCommand(this.runtime, command);\n' +
+  '    return requestId;\n' +
+  '  }\n' +
+  '\n' +
+  '  cancel(requestId: number): void {\n' +
+  '    this.ensureOpen();\n' +
+  '    assertNonNegativeSafeInteger(requestId, "requestId");\n' +
+  '    this.cancelPendingRequest(requestId);\n' +
+  '  }\n' +
+  '\n' +
+  '  '... 19498 more characters
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-performance-regressions.mjs:45:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'export type JsonObject = { [key: string]: unknown };\n' +
+    '\n' +
+    'export type NativeRuntimeHandle = unknown;\n' +
+    '\n' +
+    'export type NativeReaderCoreModule = {\n' +
+    '  abiVersion(): number;\n' +
+    '  lastError(): { code: number; message: string };\n' +
+    '  readEpubEntry(archivePath: string, entryPath: string, maxBytes: number): Uint8Array;\n' +
+    '  readEpubEntryAsync(archivePath: string, entryPath: string, maxBytes: number): Promise<Uint8Array>;\n' +
+    '  encodeText(text: string, charset: string, maxBytes: number): Uint8Array;\n' +
+    '  createRuntime(config?: JsonObject | string): NativeRuntimeHandle;\n' +
+    '  releaseRuntime(runtime: NativeRuntimeHandle): void;\n' +
+    '  sendCommand(runtime: NativeRuntimeHandle, command: JsonObject | string): void;\n' +
+    '  cancelRequest(runtime: NativeRuntimeHandle, requestId: number): void;\n' +
+    '  readEvent(runtime: NativeRuntimeHandle, timeoutMs?: number): string | null;\n' +
+    '  pendingEventCount(runtime: NativeRuntimeHandle): number;\n' +
+    '  completeHostRequest(\n' +
+    '    runtime: NativeRuntimeHandle,\n' +
+    '    operationId: number,\n' +
+    '    result: JsonObject | string,\n' +
+    '    requestId?: number\n' +
+    '  ): void;\n' +
+    '  failHostRequest(\n' +
+    '    runtime: NativeRuntimeHandle,\n' +
+    '    operationId: number,\n' +
+    '    error: ReaderCoreError | JsonObject | string,\n' +
+    '    requestId?: number\n' +
+    '  ): void;\n' +
+    '  pingSmoke(): string;\n' +
+    '  hostSmoke(): string;\n' +
+    '  lifecycleSmoke(iterations?: number): string;\n' +
+    '};\n' +
+    '\n' +
+    'export type ReaderCoreLastError = { code: number; message: string };\n' +
+    '\n' +
+    'export type ReaderCoreCommand = {\n' +
+    '  protocolVersion: 1;\n' +
+    '  requestId: number;\n' +
+    '  method: string;\n' +
+    '  params?: JsonObject;\n' +
+    '};\n' +
+    '\n' +
+    'export type ReaderCoreResultEvent = {\n' +
+    '  protocolVersion: 1;\n' +
+    '  requestId: number;\n' +
+    '  type: "result";\n' +
+    '  data: JsonObject;\n' +
+    '};\n' +
+    '\n' +
+    'export type ReaderCoreError = {\n' +
+    '  code: string;\n' +
+    '  message: string;\n' +
+    '  retryable: boolean;\n' +
+    '  details?: JsonObject;\n' +
+    '};\n' +
+    '\n' +
+    'export type ReaderCoreErrorEvent = {\n' +
+    '  protocolVersion: 1;\n' +
+    '  requestId: number;\n' +
+    '  type: "error";\n' +
+    '  error: ReaderCoreError;\n' +
+    '};\n' +
+    '\n' +
+    'export type ReaderCoreTransactionKind =\n' +
+    '  | "storageApply"\n' +
+    '  | "persistenceMutation"\n' +
+    '  | "hostOperationDrain";\n' +
+    '\n' +
+    'export type ReaderCoreTransactionPendingDetails = {\n' +
+    '  transactionKind: ReaderCoreTransactionKind;\n' +
+    '  pendingHostOperationCount: number;\n' +
+    '  retryAfterMillis: number;\n' +
+    '};\n' +
+    '\n' +
+    'export type ReaderCoreHostRequestEvent = {\n' +
+    '  protocolVersion: 1;\n' +
+    '  requestId: number;\n' +
+    '  type: "host.request";\n' +
+    '  operationId: number;\n' +
+    '  capability: string;\n' +
+    '  params: JsonObject;\n' +
+    '};\n' +
+    '\n' +
+    'export type ReaderCoreEvent =\n' +
+    '  | ReaderCoreResultEvent\n' +
+    '  | ReaderCoreErrorEvent\n' +
+    '  | ReaderCoreHostRequestEvent;\n' +
+    '\n' +
+    'export type HostRequestHandler = (\n' +
+    '  event: ReaderCoreHostRequestEvent\n' +
+    ') => JsonObject | Promise<JsonObject>;\n' +
+    '\n' +
+    'export type RequestOptions = {\n' +
+    '  timeoutMs?: number;\n' +
+    '  pollMs?: number;\n' +
+    '  hostRequest?: HostRequestHandler;\n' +
+    '  /**\n' +
+    '   * Polled while waiting for Core or an active Host capability. Returning\n' +
+    '   * true cancels both layers before this Promise rejects, so obsolete route,\n' +
+    '   * source, or chapter work cannot continue behind the replacement request.\n' +
+    '   */\n' +
+    '  shouldCancel?: () => boolean;\n' +
+    '};\n' +
+    '\n' +
+    'export type CapabilityHandler = (\n' +
+    '  event: ReaderCoreHostRequestEvent\n' +
+    ') => JsonObject | Promise<JsonObject>;\n' +
+    '\n' +
+    'export type CapabilityCancellationHandler = (\n' +
+    '  event: ReaderCoreHostRequestEvent\n' +
+    ') => void;\n' +
+    '\n' +
+    '/**\n' +
+    ' * Host-owned HTTP fetch mechanism. The adapter calls this to actually perform\n' +
+    ' * the network operation for an `http.execute` host request.\n' +
+    ' *\n' +
+    ' * Response contract:\n' +
+    ' *   - `status` (number, required): HTTP status code.\n' +
+    ' *   - `body` (string, required): response body as UTF-8 text.\n' +
+    ' *   - `headers` (Record<string, string>, optional): response headers.\n' +
+    " *   - `finalUrl` (string, optional): resolved URL after redirects. Core's\n" +
+    ' *     `HostHttpResponse.final_url` reads this key (camelCase) to back the\n' +
+    ' *     Legado idiom `resp.raw().request().url()`. Omit when no redirect was\n' +
+    ' *     observed and Core will fall back to the request URL.\n' +
+    ' */\n' +
+    'export interface HttpFetch {\n' +
+    '  fetch(request: {\n' +
+    '    url: string;\n' +
+    '    method: string;\n' +
+    '    headers: Record<string, string>;\n' +
+    '    body?: string;\n' +
+    '  }): Promise<JsonObject>;\n' +
+    '}\n' +
+    '\n' +
+    'export class CapabilityRouter {\n' +
+    '  static readonly httpExecuteCapability = "http.execute";\n' +
+    '\n' +
+    '  private readonly handlers = new Map<string, CapabilityHandler>();\n' +
+    '  private readonly cancellationHandlers = new Map<string, CapabilityCancellationHandler>();\n' +
+    '  private readonly httpFetch: HttpFetch | null;\n' +
+    '\n' +
+    '  constructor(options: { httpFetch?: HttpFetch } = {}) {\n' +
+    '    this.httpFetch = options.httpFetch ?? null;\n' +
+    '    if (this.httpFetch !== null) {\n' +
+    '      this.register(\n' +
+    '        CapabilityRouter.httpExecuteCapability,\n' +
+    '        this.handleHttpExecute.bind(this)\n' +
+    '      );\n' +
+    '    }\n' +
+    '  }\n' +
+    '\n' +
+    '  register(\n' +
+    '    capability: string,\n' +
+    '    handler: CapabilityHandler,\n' +
+    '    cancellationHandler?: CapabilityCancellationHandler\n' +
+    '  ): void {\n' +
+    '    if (typeof capability !== "string" || capability.length === 0) {\n' +
+    '      throw new Error("capability must be a non-empty string");\n' +
+    '    }\n' +
+    '    if (typeof handler !== "function") {\n' +
+    '      throw new Error("handler must be a function");\n' +
+    '    }\n' +
+    '    if (cancellationHandler !== undefined && typeof cancellationHandler !== "function") {\n' +
+    '      throw new Error("cancellationHandler must be a function");\n' +
+    '    }\n' +
+    '    this.handlers.set(capability, handler);\n' +
+    '    if (cancellationHandler === undefined) {\n' +
+    '      this.cancellationHandlers.delete(capability);\n' +
+    '    } else {\n' +
+    '      this.cancellationHandlers.set(capability, cancellationHandler);\n' +
+    '    }\n' +
+    '  }\n' +
+    '\n' +
+    '  has(capability: string): boolean {\n' +
+    '    return this.handlers.has(capability);\n' +
+    '  }\n' +
+    '\n' +
+    '  async route(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {\n' +
+    '    const handler = this.handlers.get(event.capability);\n' +
+    '    if (handler === undefined) {\n' +
+    '      throw new Error(`no handler registered for capability: ${event.capability}`);\n' +
+    '    }\n' +
+    '    return handler(event);\n' +
+    '  }\n' +
+    '\n' +
+    '  cancel(event: ReaderCoreHostRequestEvent): void {\n' +
+    '    this.cancellationHandlers.get(event.capability)?.(event);\n' +
+    '  }\n' +
+    '\n' +
+    '  private async handleHttpExecute(\n' +
+    '    event: ReaderCoreHostRequestEvent\n' +
+    '  ): Promise<JsonObject> {\n' +
+    '    if (this.httpFetch === null) {\n' +
+    '      throw new Error("http.execute requested but no httpFetch configured");\n' +
+    '    }\n' +
+    '    const params = event.params;\n' +
+    '    const url = typeof params.url === "string" ? params.url : "";\n' +
+    '    if (url.length === 0) {\n' +
+    '      throw new Error("http.execute requires non-empty url");\n' +
+    '    }\n' +
+    '    const method = typeof params.method === "string" ? params.method : "GET";\n' +
+    '    const headers: Record<string, string> = {};\n' +
+    '    if (isJsonObject(params.headers)) {\n' +
+    '      for (const [key, value] of Object.entries(params.headers)) {\n' +
+    '        headers[key] = typeof value === "string" ? value : String(value);\n' +
+    '      }\n' +
+    '    }\n' +
+    '    const body = typeof params.body === "string" ? params.body : undefined;\n' +
+    '    return this.httpFetch.fetch({ url, method, headers, body });\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'type QueuedReaderCoreEvent = {\n' +
+    '  event: ReaderCoreEvent;\n' +
+    '};\n' +
+    '\n' +
+    'type ResultWaiter = {\n' +
+    '  requestId: number;\n' +
+    '  interruption?: Error;\n' +
+    '  wake?: () => void;\n' +
+    '};\n' +
+    '\n' +
+    'export class ReaderCoreRuntime {\n' +
+    '  static readonly protocolVersion = 1;\n' +
+    '\n' +
+    '  private readonly native: NativeReaderCoreModule;\n' +
+    '  private readonly runtime: NativeRuntimeHandle;\n' +
+    '  // Both indexes own only unread events. Ordered sets let either reader remove\n' +
+    '  // a payload from both indexes immediately, without scans or retained tombstones.\n' +
+    '  private readonly pendingEvents = new Set<QueuedReaderCoreEvent>();\n' +
+    '  private readonly pendingEventsByRequest = new Map<number, Set<QueuedReaderCoreEvent>>();\n' +
+    '  private pendingEventCountValue = 0;\n' +
+    '  /** One shared native-event poll lane for all concurrent request waiters. */\n' +
+    '  private pollTail: Promise<void> = Promise.resolve();\n' +
+    '  /** Requests whose waiter has already returned after timeout/cancellation. */\n' +
+    '  private readonly abandonedRequestIds = new Set<number>();\n' +
+    '  private nextRequestId = 1;\n' +
+    '  private closed = false;\n' +
+    '  private capabilityRouter: CapabilityRouter | null = null;\n' +
+    '  private readonly activeHostRequests = new Map<number, ReaderCoreHostRequestEvent>();\n' +
+    '  private readonly resultWaiters = new Map<number, Set<ResultWaiter>>();\n' +
+    '\n' +
+    '  constructor(nativeModule: NativeReaderCoreModule, config: JsonObject = {}) {\n' +
+    '    this.native = nativeModule;\n' +
+    '    this.runtime = nativeModule.createRuntime(config);\n' +
+    '  }\n' +
+    '\n' +
+    '  setCapabilityRouter(router: CapabilityRouter | null): void {\n' +
+    '    this.capabilityRouter = router;\n' +
+    '  }\n' +
+    '\n' +
+    '  get abiVersion(): number {\n' +
+    '    return this.native.abiVersion();\n' +
+    '  }\n' +
+    '\n' +
+    '  lastError(): ReaderCoreLastError {\n' +
+    '    return this.native.lastError();\n' +
+    '  }\n' +
+    '\n' +
+    '  get pendingEventCount(): number {\n' +
+    '    this.discardAbandonedPendingEvents();\n' +
+    '    return this.pendingEventCountValue + this.native.pendingEventCount(this.runtime);\n' +
+    '  }\n' +
+    '\n' +
+    '  close(): void {\n' +
+    '    if (this.closed) {\n' +
+    '      return;\n' +
+    '    }\n' +
+    '    this.closed = true;\n' +
+    '    const active = Array.from(this.activeHostRequests.values());\n' +
+    '    for (const waiters of this.resultWaiters.values()) {\n' +
+    '      for (const waiter of waiters) {\n' +
+    '        this.interruptWaiter(waiter, new Error("Reader-Core runtime is closed"));\n' +
+    '      }\n' +
+    '    }\n' +
+    '    this.resultWaiters.clear();\n' +
+    '    for (const event of active) {\n' +
+    '      try {\n' +
+    '        this.capabilityRouter?.cancel(event);\n' +
+    '      } catch (_) {\n' +
+    '        // A failed platform abort must not retain the other waiters/runtime.\n' +
+    '      }\n' +
+    '    }\n' +
+    '    this.pendingEvents.clear();\n' +
+    '    this.pendingEventsByRequest.clear();\n' +
+    '    this.pendingEventCountValue = 0;\n' +
+    '    this.activeHostRequests.clear();\n' +
+    '    this.abandonedRequestIds.clear();\n' +
+    '    this.native.releaseRuntime(this.runtime);\n' +
+    '  }\n' +
+    '\n' +
+    '  send(method: string, params: JsonObject = {}, requestId = this.allocateRequestId()): number {\n' +
+    '    this.ensureOpen();\n' +
+    '    assertCommandMethod(method);\n' +
+    '    assertJsonObjectValue(params, "params");\n' +
+    '    assertNonNegativeSafeInteger(requestId, "requestId");\n' +
+    '    const command: ReaderCoreCommand = {\n' +
+    '      protocolVersion: ReaderCoreRuntime.protocolVersion,\n' +
+    '      requestId,\n' +
+    '      method,\n' +
+    '      params,\n' +
+    '    };\n' +
+    '    this.abandonedRequestIds.delete(requestId);\n' +
+    '    this.native.sendCommand(this.runtime, command);\n' +
+    '    return requestId;\n' +
+    '  }\n' +
+    '\n' +
+    '  cancel(requestId: number): void {\n' +
+    '    this.ensureOpen();\n' +
+    '    assertNonNegativeSafeInteger(requestId, "requestId");\n' +
+    '    this.cancelPendingRequest(requestId);\n' +
+    '  }\n' +
+    '\n' +
+    '  '... 19498 more characters,
+  expected: /private async pollNativeQueue[\s\S]*await this\.pollNativeOnce\(\)[\s\S]*await delay\(waitMs\)[\s\S]*await this\.pollNativeOnce\(\)/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
+/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/scripts/check-local.sh failed (1): <no output>

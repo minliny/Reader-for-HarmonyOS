@@ -1,0 +1,13 @@
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.57s
+     Running unittests src/lib.rs (target/debug/deps/reader_runtime-47fbc363ec3cde2d)
+
+running 4 tests
+test host_callback_bridge::tests::resource_capture_bridge_rejects_unsupported_regex_before_any_host_request ... ok
+test remote::resource_capture::tests::resource_capture_unsupported_regex_and_missing_callback_receipts_fail_explicitly ... ok
+test host_callback_bridge::tests::resource_capture_bridge_requires_real_callback_receipt_and_preserves_session ... ok
+test remote::resource_capture::tests::resource_capture_regex_is_full_match_and_regex_text_is_only_json_data ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 367 filtered out; finished in 0.03s
+

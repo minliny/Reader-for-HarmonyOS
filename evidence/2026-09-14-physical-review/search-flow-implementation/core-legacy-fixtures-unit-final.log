@@ -1,0 +1,23 @@
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.57s
+     Running unittests src/lib.rs (target/debug/deps/reader_storage-6582e3cf32965be5)
+
+running 15 tests
+test sqlite_backend::tests::v2_creates_bookmarks_and_replace_rules_indexes ... ok
+test sqlite_backend::tests::v15_migration_adds_scope_source_without_changing_legacy_rules ... ok
+test sqlite_backend::tests::v13_migration_adds_highlight_rules_and_unique_uuid_index ... ok
+test sqlite_backend::tests::v14_migration_adds_author_without_losing_legacy_read_records ... ok
+test sqlite_backend::tests::v3_creates_book_group_and_read_record_tables ... ok
+test sqlite_backend::tests::v12_migration_adds_book_highlights_table_and_book_url_index ... ok
+test sqlite_backend::tests::v2_table_columns_match_domain_model ... ok
+test sqlite_backend::tests::v1_to_v2_migration_adds_entity_tables ... ok
+test sqlite_backend::tests::v4_creates_four_entity_tables ... ok
+test sqlite_backend::tests::v2_creates_four_entity_tables ... ok
+test sqlite_backend::tests::v5_migration_recovers_pre_release_v0_schema_that_already_has_columns ... ok
+test sqlite_backend::tests::v8_migration_invalidates_ambiguous_remote_cache_but_keeps_local ... ok
+test sqlite_backend::tests::v4_creates_search_books_origin_index ... ok
+test sqlite_backend::tests::v6_to_v7_migration_initializes_existing_replace_rule_generation ... ok
+test sqlite_backend::tests::v9_migration_scopes_remote_books_and_keeps_only_local_legacy_evidence ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 155 filtered out; finished in 0.21s
+

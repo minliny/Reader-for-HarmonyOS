@@ -1,0 +1,8 @@
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+PASS diagnostic attributes old resource token during new job: lateOld=false
+PASS diagnostic attributes old resource token during new job: lateOld=true
+PASS disposing the pilot cancels only owned jobs and clears response timers/observer
+PASS diagnostic execution errors retain a failure receipt
+PH76 diagnostic runner: 5 scenario groups plus production default/policy wiring passed; these are unit checks, not VM evidence
+(node:68620) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

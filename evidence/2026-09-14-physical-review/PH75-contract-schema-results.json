@@ -1,0 +1,128 @@
+{
+  "validator": "jsonschema 4.25.1",
+  "draft": "2020-12",
+  "passed": 25,
+  "validations": [
+    {
+      "fixture": "invalid-ph75-missing-processing-version.json",
+      "expectedValid": false,
+      "valid": false
+    },
+    {
+      "fixture": "invalid-ph75-negative-offset.json",
+      "expectedValid": false,
+      "valid": false
+    },
+    {
+      "fixture": "invalid-ph75-unknown-scope-field.json",
+      "expectedValid": false,
+      "valid": false
+    },
+    {
+      "fixture": "valid-ph75-bookmark-create-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-bookmark-create.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-bookmark-list-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-bookmark-update-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-bookmark-update.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-chapter-committed-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-chapter-preserved-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-chapter-unchanged-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-chapter-upgrade.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-highlight-create-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-highlight-create.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-highlight-list-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-highlight-update-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-highlight-update.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-progress-get-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-progress-update-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-progress-update.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "fixture": "valid-ph75-search-content-result.json",
+      "expectedValid": true,
+      "valid": true
+    },
+    {
+      "mutation": "unknown-status",
+      "valid": false
+    },
+    {
+      "mutation": "negative-offset",
+      "valid": false
+    },
+    {
+      "mutation": "missing-processing",
+      "valid": false
+    },
+    {
+      "mutation": "too-many-anchors",
+      "valid": false
+    }
+  ]
+}

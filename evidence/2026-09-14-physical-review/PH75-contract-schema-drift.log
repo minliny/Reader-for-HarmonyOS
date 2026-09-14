@@ -1,0 +1,25 @@
+== contract drift check ==
+core methods:       187
+rui commands:       78
+overlap (exact):    32
+mapped (via table): 44
+UI composites:      1
+invalid composites: 0
+owner entries:      30
+implemented owners: 30
+release blockers:   0
+runtime dispatch off:0
+invalid owners:     0
+metadata errors:    0
+unmapped core-only: 0
+unmapped rui-only:  0
+acknowledged core:  111
+acknowledged rui:   6
+ui events:          300
+new ui events:      30
+implemented actions:0
+planned bindings:   56
+event ownership err:0
+event categories:   {'composite': 23, 'core-command': 66, 'core-initiated-host': 38, 'reducer-host': 26, 'ui-only': 147}
+
+PASS: no structural drift or release blockers

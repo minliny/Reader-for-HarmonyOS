@@ -1,0 +1,17 @@
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.64s
+     Running unittests src/lib.rs (target/debug/deps/reader_storage-6582e3cf32965be5)
+
+running 9 tests
+test sqlite_backend::remote_content_positions::tests::remote_position_owner_queries_use_indexes_and_scope_reads_skip_all_position_rows ... ok
+test sqlite_backend::remote_content_positions::tests::remote_mark_proof_is_in_complete_cas_and_stale_body_cannot_issue_new_fact ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_plan_cannot_change_non_coordinate_user_data ... ok
+test sqlite_backend::remote_content_positions::tests::remote_mark_fact_create_update_and_migration_roll_back_with_user_rows_on_fact_write_failure ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_commit_preserves_notes_timestamps_and_history_membership ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_download_completion_commits_with_body_and_rolls_back_on_queue_failure ... ok
+test sqlite_backend::remote_content_positions::tests::remote_cache_clear_fact_and_body_deletion_are_one_transaction_and_compare_complete_state ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_cas_rejects_body_progress_new_bookmark_source_and_processing_changes ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_write_faults_and_cancellation_roll_back_body_and_all_positions ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 160 filtered out; finished in 0.33s
+
