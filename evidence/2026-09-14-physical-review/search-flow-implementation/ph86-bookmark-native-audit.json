@@ -1,0 +1,122 @@
+{
+  "issue": "PH86 bookmark gesture stable marker unresolved",
+  "artifactRun": "20260914T171802Z-aa387f08-71c7172c",
+  "harmonyCommit": "aa387f08dceef4592c6bf642ca7bd351de1b0f8c",
+  "coreCommit": "28369db9405822f4b8277eb95ad94057f177b7bb",
+  "new646eArtifact": "Not installed to VM at start of this audit; no results attributed to it.",
+  "auditMode": "No device, build or Git. Parent authorized the proven LRE transient fix, its bookmark regression and the existing motion fixture dependency update.",
+  "status": "OPEN VM release-to-persisted-state sequence. A separate proven transient preview inversion is fixed locally; it is not established as cause of the 54-second stable missing marker.",
+  "timelineUTC": [
+    {
+      "at": "2026-09-14T18:03:48.107Z",
+      "action": "drag 640 750 -> 640 1450, speed 600",
+      "observed": "frame 5 native selected character 用 and selection overlay; bookmark-added filename is not proof of bookmark creation"
+    },
+    {
+      "at": "2026-09-14T18:04:30.668Z",
+      "action": "click 1100 1200 then immediate swipe at 18:04:30.886",
+      "observed": "Page turn to chapter17 page2; immediate swipe occurred during settlement. Parent classified as settlement gate rejection; not a bookmark failure sample."
+    },
+    {
+      "at": "2026-09-14T18:05:17.493Z",
+      "action": "swipe 640 800 -> 640 1650, speed1500",
+      "observed": "after-swipe screenshot capture18:05:18.299-18.512 shows filled marker, displaced page body/title/time and rebound still in flight"
+    },
+    {
+      "at": "2026-09-14T18:06:12.200Z",
+      "action": "stable screenshot capture18:06:12.200-18:06:12.412 before next swipe",
+      "observed": "No marker, visible chapter17 page2; same body segment04/05/06 and footer第2/4页"
+    },
+    {
+      "at": "2026-09-14T18:06:12.451Z",
+      "action": "Second identical swipe then bookmark-removed dump; later click6401400 opens controls",
+      "observed": "bookmark-removed filename alone does not prove successful deletion; controls-home is a later state"
+    },
+    {
+      "at": "2026-09-14T18:08:16.103Z",
+      "action": "Later PH89 frame10, after second swipe and controls",
+      "observed": "Filled marker at rest on same visible chapter17 page2; actual CRUD sequence remains unproven."
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "ph86-selection-frame-5.png",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-1c5aa6be-3abe-4513-9218-6526459999a5-frame-5.png",
+      "sha256": "96737dd8ddef7234fe242acd2df41d79acd17c3d9a395214f1a513a9b25d70d1",
+      "meaning": "Long drag activated native text selection, not evidence of a bookmark mutation."
+    },
+    {
+      "file": "ph86-bookmark-rebound.png",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-ph7791-bookmark-after-swipe.png",
+      "sha256": "419caf8ecf9f95934b4ad0c3a88feded8b05bb595bbafcbe0a7df6d052ab3b9e",
+      "meaning": "Filled marker visible while page is displaced during rebound."
+    },
+    {
+      "file": "ph86-bookmark-stable-no-marker.png",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-ph7791-bookmark-filled-stable.png",
+      "sha256": "63f0f0bb919b7fedd3cbfe1ba0f7c50bf2560667595c77f2bbe6eecceb52c939",
+      "meaning": "No marker in stable screenshot, same visible chapter 17 page 2; captured before second swipe."
+    },
+    {
+      "file": "ph86-after-second-swipe-frame-10.png",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-1c5aa6be-3abe-4513-9218-6526459999a5-frame-10.png",
+      "sha256": "3072fe14d936427178f69a18008d8800e77ee5b0900bc915fa18725c7f4b0f58",
+      "meaning": "Later PH89 frame after second swipe and control open/close. Filled marker at rest on chapter17 page2. It does not establish which mutation succeeded."
+    }
+  ],
+  "limits": [
+    "No write success/error ACK is included in these screenshot observations.",
+    "Native dump retains multiple Stage actors/page texts; leaf presence alone is not the currently painted page.",
+    "No native frame latency or device performance measurement.",
+    "Source audit and existing production-method regressions will be recorded separately; no root cause asserted yet."
+  ],
+  "sourceAudit": {
+    "currentPageAndStage": "LRE:11246 promotion clears frozen projection, updates visiblePage/fragments, toggles currentSlot and increments renderRevision; Stage:354-425 retains outgoing slot hidden. Two page text trees do not prove wrong current page.",
+    "cache": "LRE:10540 uses directory array reference plus chapter/start/end. ReaderControlBookmarkLoad.ts:11-26 merge returns a new array. Pending target additionally carries source/book identity and mutation generation. No confirmed cache invalidation defect found.",
+    "admissionAndWrite": "LRE:10282 and11690 gates unknown/pending/commit states; InteractionLayer:354-379 rejected pointer does not emit bookmark release. Index:3847-3891 and3986-4018 validates identity and sends confirmed-write ACK. Existing hilog has no bookmark ACK/error fields.",
+    "transientBeforeFix": {
+      "trigger": "ACK and canonical projection both precede normal rollback completion",
+      "location": "LocalReadingExperience.ets:10573-10581",
+      "sequence": "create true->false->true, delete false->true->false",
+      "reproduction": "ph86-bookmark-lifecycle-probe.jsonl: 2 of 6 completion orders; all 12 terminal states correct",
+      "limit": "Transient method state does not prove the long-lived missing marker cause."
+    },
+    "minimalFix": "Retain same-page target while preview owns rebound; after normal/cancelled rebound or runtime invalidation clears preview, reconcile only against matching canonical projection. Preserve failure recovery, page/book generation and duplicate gesture guard.",
+    "changedProduction": [
+      "entry/src/main/ets/features/reading/LocalReadingExperience.ets"
+    ],
+    "changedTest": [
+      "tools/test-reader-bookmark-top-info.mjs",
+      "tools/test-reader-motion-repair.mjs"
+    ],
+    "fixedSourceSha256": "064a014c33e012d4d65ad3eac017769b0d14728c34d077938d4c3b0dbfcb88ec"
+  },
+  "localVerification": [
+    {
+      "log": "ph86-bookmark-top-info-local.log",
+      "result": "Before fix: existing 2 groups PASS. Normal-motion interleavings not covered there."
+    },
+    {
+      "log": "ph86-bookmark-lifecycle-probe.jsonl",
+      "result": "Before fix: real methods, 6 orders/12 lifecycles. Terminal correct, intermediate inversion in 2 orders. Controlled animation/ACK, not native observers or paint."
+    },
+    {
+      "log": "ph86-bookmark-top-info-fixed.log",
+      "result": "After fix: 3 groups PASS. 6 orders/12 lifecycles without intermediate inversion; cancelled/failed/invalidated-page/duplicate/old ACK cases; 20 SDK Builder geometries and Stage boundary chain."
+    },
+    {
+      "log": "ph86-page-turn-pipeline-fixed.log",
+      "result": "After fix: existing page-turn pipeline contract PASS."
+    },
+    {
+      "log": "ph86-motion-repair-fixture.log",
+      "result": "PASS existing production motion repair after adding the actual reconcilePageBookmarkFeedback dependency to the method extraction; no production or assertion weakening."
+    }
+  ],
+  "remainingEvidence": [
+    "Correlate release commit, captured page identity, write ACK and resulting directory projection for each actual swipe. Existing hilog lacks these events.",
+    "If canonical bookmark exists but icon is missing, compare pending/preview/cache/current slot and native paint; screenshots alone cannot distinguish them.",
+    "Do not treat bookmark-added/removed filenames, absence of logged errors, or one filled frame as stable CRUD acceptance.",
+    "No new fixed-package device verification performed by this audit."
+  ]
+}

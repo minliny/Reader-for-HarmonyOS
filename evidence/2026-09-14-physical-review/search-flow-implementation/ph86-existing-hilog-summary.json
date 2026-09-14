@@ -1,0 +1,8 @@
+{
+  "source": "/private/tmp/ph86-vm-reader-hilog.log",
+  "sha256": "1186f60f391d18b65488da75cc624d77e62eb4dcc1603afc497fae6cbee4465d",
+  "totalLines": 10,
+  "bookmarkAckOrErrorFields": false,
+  "relevantPageCommit": "09-15 02:04:32.410 PAGETURN_PERF style=simulation path=prepared dir=next outcome=committed totalMs=422",
+  "limit": "No logged bookmark error is not success evidence."
+}

@@ -1,0 +1,113 @@
+09-15 01:50:52.249  2145  2145 W A05244/Reader: Search source 101kanshu.net failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.294  2145  2145 W A05244/Reader: Search source 444.1006sd.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.331  2145  2145 W A05244/Reader: Search source 66shuba.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.367  2145  2145 W A05244/Reader: Search source 69shuba.tw failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.393  2145  2145 W A05244/Reader: Search source api-bc.wtzw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.403  2145  2145 W A05244/Reader: Search source api-bc.wtzw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.405  2145  2145 W A05244/Reader: Search source api-bc.wtzw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.405  2145  2145 W A05244/Reader: Search source api-bc.wtzw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.419  2145  2145 W A05244/Reader: Search source api-bc.wtzw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.462  2145  2145 W A05244/Reader: Search source apiwz.midukanshu.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.489  2145  2145 W A05244/Reader: Search source bbxxxx.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.535  2145  2145 W A05244/Reader: Search source bcshuku.com failed: AnalyzeUrl failed: URL JS execution failed: HostCallback: host callback java.get failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.572  2145  2145 W A05244/Reader: Search source book.eayue.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.613  2145  2145 W A05244/Reader: Search source bookshelf.html5.qq.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.615  2145  2145 W A05244/Reader: Search source bookshelf.html5.qq.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.649  2145  2145 W A05244/Reader: Search source cn.zhys.tw failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.689  2145  2145 W A05244/Reader: Search source crxs.me failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.715  2145  2145 W A05244/Reader: Search source dushu.baidu.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.763  2145  2145 W A05244/Reader: Search source g.hongshu.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.790  2145  2145 W A05244/Reader: Search source h5.reader.qq.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.838  2145  2145 W A05244/Reader: Search source ik8.net failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.874  2145  2145 W A05244/Reader: Search source ixdzs8.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.914  2145  2145 W A05244/Reader: Search source kakuyomu.jp failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.955  2145  2145 W A05244/Reader: Search source lnovel.org failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:52.984  2145  2145 W A05244/Reader: Search source lnovel.tw failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.010  2145  2145 W A05244/Reader: Search source m.23mhx.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.058  2145  2145 W A05244/Reader: Search source m.ayushuwu.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.080  2145  2145 W A05244/Reader: Search source m.douyinxs.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.118  2145  2145 W A05244/Reader: Search source m.idejian.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.169  2145  2145 W A05244/Reader: Search source m.jhsssd.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.204  2145  2145 W A05244/Reader: Search source m.jjwxc.net failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.245  2145  2145 W A05244/Reader: Search source m.lulushu18.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.281  2145  2145 W A05244/Reader: Search source m.po18as.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.306  2145  2145 W A05244/Reader: Search source m.qidian.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.317  2145  2145 W A05244/Reader: Search source m.popofree.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.355  2145  2145 W A05244/Reader: Search source m.powenwu16.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.392  2145  2145 W A05244/Reader: Search source m.qidian.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.429  2145  2145 W A05244/Reader: Search source m.rousewu.cc failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.430  2145  2145 W A05244/Reader: Search source m.rousewu.cc failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.457  2145  2145 W A05244/Reader: Search source m.sfacg.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.493  2145  2145 W A05244/Reader: Search source m.xyuzhaiwu.xyz failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.542  2145  2145 W A05244/Reader: Search source m.yswnovel.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.567  2145  2145 W A05244/Reader: Search source m.xyuzhaiwu1.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.612  2145  2145 W A05244/Reader: Search source m.yushuwu.asia failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.640  2145  2145 W A05244/Reader: Search source m.yushuwu.club failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.689  2145  2145 W A05244/Reader: Search source m.yuzhaiwuvip.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.725  2145  2145 W A05244/Reader: Search source m.zjsw.org failed: AnalyzeUrl failed: URL JS execution failed: HostCallback: host callback java.post failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.766  2145  2145 W A05244/Reader: Search source mm.xyuzhaiwu.xyz failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.805  2145  2145 W A05244/Reader: Search source novel.cooks.tw failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.841  2145  2145 W A05244/Reader: Search source novel.html5.qq.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.879  2145  2145 W A05244/Reader: Search source novel.seseclub.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.890  2145  2145 W A05244/Reader: Search source qd9.net failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 01:50:53.908  2145  2145 W A05244/Reader: Search source pre-api.tuishujun.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.917  2145  2145 W A05244/Reader: Search source pre-api.tuishujun.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.918  2145  2145 W A05244/Reader: Search source pre-api.tuishujun.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.927  2145  2145 W A05244/Reader: Search source ruarourou.top failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 01:50:53.948  2145  2145 W A05244/Reader: Search source ubook.reader.qq.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.954  2145  2145 W A05244/Reader: Search source readnovelfull.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.954  2145  2145 W A05244/Reader: Search source readnovelfull.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:53.988  2145  2145 W A05244/Reader: Search source sesebooks.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.028  2145  2145 W A05244/Reader: Search source ubook.reader.qq.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.051  2145  2145 W A05244/Reader: Search source w2.heiyan.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.101  2145  2145 W A05244/Reader: Search source www.52dzxy.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.127  2145  2145 W A05244/Reader: Search source www.52shuku123.cc failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.174  2145  2145 W A05244/Reader: Search source www.aaqqcc.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.217  2145  2145 W A05244/Reader: Search source www.alicesw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.217  2145  2145 W A05244/Reader: Search source www.alicesw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.256  2145  2145 W A05244/Reader: Search source www.biquge345.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.283  2145  2145 W A05244/Reader: Search source www.biquge78.cc failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.332  2145  2145 W A05244/Reader: Search source www.chamabooks.net failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.360  2145  2145 W A05244/Reader: Search source www.bzbz1024.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.392  2145  2145 W A05244/Reader: Search source www.ciyuanji.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.403  2145  2145 W A05244/Reader: Search source www.ciyuanji.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.439  2145  2145 W A05244/Reader: Search source www.dbxsn.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.477  2145  2145 W A05244/Reader: Search source www.dcrbk.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.503  2145  2145 W A05244/Reader: Search source www.deqixs.co failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.548  2145  2145 W A05244/Reader: Search source www.douyinxs.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.586  2145  2145 W A05244/Reader: Search source www.feifanks.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.615  2145  2145 W A05244/Reader: Search source www.hqrgjtcw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.650  2145  2145 W A05244/Reader: Search source www.ibus233.com failed: AnalyzeUrl failed: URL JS execution failed: HostCallback: host callback java.ajax failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.687  2145  2145 W A05244/Reader: Search source www.jhssd.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.735  2145  2145 W A05244/Reader: Search source www.kadokado.cn failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.759  2145  2145 W A05244/Reader: Search source www.liyuxiangku.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.803  2145  2145 W A05244/Reader: Search source www.min-yuan.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.832  2145  2145 W A05244/Reader: Search source www.po18m.vip failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.883  2145  2145 W A05244/Reader: Search source www.pofans.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.928  2145  2145 W A05244/Reader: Search source www.powenwu15.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.953  2145  2145 W A05244/Reader: Search source www.qiluwx.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:54.991  2145  2145 W A05244/Reader: Search source www.quanwenyuedu.io failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.028  2145  2145 W A05244/Reader: Search source www.shenhuazhihou.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.063  2145  2145 W A05244/Reader: Search source www.souhh.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.099  2145  2145 W A05244/Reader: Search source www.sto66.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.138  2145  2145 W A05244/Reader: Search source www.tatays.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.174  2145  2145 W A05244/Reader: Search source www.wanwx.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.202  2145  2145 W A05244/Reader: Search source www.wtzw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.218  2145  2145 W A05244/Reader: Search source www.wtzw.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.251  2145  2145 W A05244/Reader: Search source www.xn--7dv141d.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.292  2145  2145 W A05244/Reader: Search source www.xtyxsw.org failed: AnalyzeUrl failed: URL JS execution failed: HostCallback: host callback java.post failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.320  2145  2145 W A05244/Reader: Search source www.ybswa.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.358  2145  2145 W A05244/Reader: Search source www.yeshuyuan.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.395  2145  2145 W A05244/Reader: Search source www.yiyechunxiao.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.421  2145  2145 W A05244/Reader: Search source www.yodu.org failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.433  2145  2145 W A05244/Reader: Search source www.yodu.org failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.433  2145  2145 W A05244/Reader: Search source www.zggdwx.com failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 01:50:55.461  2145  2145 W A05244/Reader: Search source www.yuwangshe.net failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.521  2145  2145 W A05244/Reader: Search source www.yysk.net failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.544  2145  2145 W A05244/Reader: Search source xn--vcsx64d.als3.sbs failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.579  2145  2145 W A05244/Reader: Search source www.zongheng.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:50:55.606  2145  2145 W A05244/Reader: Search source zhidao.baidu.com failed: http.execute: url resolves to a private, loopback, or link-local address and is not allowed
+09-15 01:57:28.354  4521  4521 I A05244/Reader: Core build identity: {"schemaVersion":1,"buildId":"5ffa51028024982bce9a607e5c3c88b69126d709e980a2823e1e7d2888f6c3fd","gitCommit":"28369db9405822f4b8277eb95ad94057f177b7bb","gitDirty":false,"cargoLockSha256":"75caf6fe50715e509d86b7ed1c37ec7155f73671820be10a8ad283f38a0158e4","protocolSha256":"52b45af80756f0210d58a3af429eb0ff23f2ba14b9b31bf08bdf427b62552eda","rustProfile":"release"}
+09-15 01:57:28.364  4521  4521 I A05244/Reader: Core source-switch startup recovery count: 0
+09-15 01:57:32.196  4521  4521 I A05244/Reader: Bundled source collection completed: records=1046 unique=919 processed=919 imported=0 failed=0 interrupted=false
+09-15 01:59:23.527  4521  4521 I A05244/ReaderPh76Pilot: READER_PH76_RESULT {"scenario":"early","pass":false,"runToken":"1789408759514-1","measurements":{"code":"TIMEOUT","reason":"execution-failed-or-fixture-callback-missing"},"events":[{"kind":"start","at":1789408759516,"requestId":7600001},{"kind":"pageBegin","at":1789408759553,"requestId":7600001,"resource":"unlabelled-document"},{"kind":"pageEnd","at":1789408759555,"requestId":7600001,"resource":"unlabelled-document"},{"kind":"end","at":1789408763518,"requestId":7600001}],"network":"in-memory-only","scope":"one controlled run; not proof of all native callback schedules"}

@@ -1,0 +1,2374 @@
+{
+  "schemaVersion": 1,
+  "artifactRun": "20260914T171802Z-aa387f08-71c7172c",
+  "harmonyCommit": "aa387f08dceef4592c6bf642ca7bd351de1b0f8c",
+  "coreCommit": "28369db9405822f4b8277eb95ad94057f177b7bb",
+  "signedHapSha256": "720e4709979005f8dc785c768bcb76208a8ea6ebcc250a05dfa88a818861cc98",
+  "targetRef": "6460677a198b",
+  "deviceKind": "VM",
+  "imageDimensionsPx": [
+    1280,
+    2832
+  ],
+  "click": {
+    "coordinatesPx": [
+      548,
+      1982
+    ],
+    "commandStartedAtUtc": "2026-09-14T18:08:11.601Z",
+    "meaning": "sampled click wrapper, command duration includes screenshot collection; not UI response latency"
+  },
+  "productionTimeScale": 0.5,
+  "samplingMeaning": "screenCap trigger relative to click command start, not exact rendered-frame timestamp; snapshots are sparse and not FPS/continuous motion evidence",
+  "frames": [
+    {
+      "frame": 6,
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-1c5aa6be-3abe-4513-9218-6526459999a5-frame-6.png",
+      "copy": "frame-6.png",
+      "sha256": "9feeb2ae99a1cd1f812ab9199c81113e1641d62f5036f3013002e03571aa2330",
+      "bytes": 598517,
+      "requestedDelayMs": 300,
+      "actualTriggerAfterMs": 300.6135840000352,
+      "captureStartedAtUtc": "2026-09-14T18:08:11.902Z",
+      "captureCompletedAtUtc": "2026-09-14T18:08:12.149Z",
+      "screenCapElapsedMs": 247.11462500004563,
+      "visualObservation": "控制栏收起交接中，卡片仍有未开始和播放三角；页码还在右侧；无右下完整胶囊。"
+    },
+    {
+      "frame": 7,
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-1c5aa6be-3abe-4513-9218-6526459999a5-frame-7.png",
+      "copy": "frame-7.png",
+      "sha256": "92b42c0407d5a8eec394b7a57d508cc582746b08f4787606476040662130b17b",
+      "bytes": 628592,
+      "requestedDelayMs": 1700,
+      "actualTriggerAfterMs": 1702.1360420000274,
+      "captureStartedAtUtc": "2026-09-14T18:08:13.304Z",
+      "captureCompletedAtUtc": "2026-09-14T18:08:13.475Z",
+      "screenCapElapsedMs": 170.9547920000041,
+      "visualObservation": "正文可见；完整胶囊倒计时7、自动翻页和暂停图标；页码在胶囊左侧；系统状态栏未显示。"
+    },
+    {
+      "frame": 8,
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-1c5aa6be-3abe-4513-9218-6526459999a5-frame-8.png",
+      "copy": "frame-8.png",
+      "sha256": "7fb53495a8179170b327d2cbd442da6104ab6a7bd24ca8d0bcd0a649bcc482ba",
+      "bytes": 629032,
+      "requestedDelayMs": 2300,
+      "actualTriggerAfterMs": 2300.952500000014,
+      "captureStartedAtUtc": "2026-09-14T18:08:13.902Z",
+      "captureCompletedAtUtc": "2026-09-14T18:08:14.052Z",
+      "screenCapElapsedMs": 148.99991700000828,
+      "visualObservation": "与上一采样相同的正文/几何，倒计时6；系统状态栏未显示。"
+    },
+    {
+      "frame": 9,
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-1c5aa6be-3abe-4513-9218-6526459999a5-frame-9.png",
+      "copy": "frame-9.png",
+      "sha256": "8f69fe4a25a5cda2a85cfe4ca2f2dd83559a6a2e69007f947bc93bb9def00627",
+      "bytes": 628868,
+      "requestedDelayMs": 3500,
+      "actualTriggerAfterMs": 3501.3982500000275,
+      "captureStartedAtUtc": "2026-09-14T18:08:15.103Z",
+      "captureCompletedAtUtc": "2026-09-14T18:08:15.296Z",
+      "screenCapElapsedMs": 193.08016599999974,
+      "visualObservation": "同页正文和稳定胶囊，倒计时5；系统状态栏重新显示。"
+    },
+    {
+      "frame": 10,
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-1c5aa6be-3abe-4513-9218-6526459999a5-frame-10.png",
+      "copy": "frame-10.png",
+      "sha256": "3072fe14d936427178f69a18008d8800e77ee5b0900bc915fa18725c7f4b0f58",
+      "bytes": 628698,
+      "requestedDelayMs": 4500,
+      "actualTriggerAfterMs": 4501.7426250000135,
+      "captureStartedAtUtc": "2026-09-14T18:08:16.103Z",
+      "captureCompletedAtUtc": "2026-09-14T18:08:16.254Z",
+      "screenCapElapsedMs": 150.82487499999115,
+      "visualObservation": "同页正文和稳定胶囊，倒计时4；圆形、文字、页码目视中心高度对齐；系统状态栏显示。"
+    }
+  ],
+  "layouts": [
+    {
+      "name": "auto-quick",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-ph7791-auto-quick.json",
+      "sha256": "5a3c9ef229a9049194b18b163d203d2d6a14dde473184927807fbdbaed0a04b2",
+      "bytes": 144403,
+      "captureStartedAtUtc": "2026-09-14T18:07:41.985Z",
+      "captureCompletedAtUtc": "2026-09-14T18:07:42.718Z",
+      "nodes": [
+        {
+          "type": "Text",
+          "text": "第 1 / 4 页",
+          "bounds": "[1011,2684][1193,2734]",
+          "origBounds": "[1011,2684][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "第 2 / 4 页",
+          "bounds": "[1011,2684][1193,2734]",
+          "origBounds": "[1011,2684][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[134,1743][867,1788]",
+          "origBounds": "[134,1743][867,1788]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[867,1745][973,1786]",
+          "origBounds": "[867,1745][973,1786]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页控制",
+          "bounds": "[148,1906][853,1955]",
+          "origBounds": "[148,1906][853,1955]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Row",
+              "bounds": "[148,1905][959,1955]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[853,1910][959,1951]",
+          "origBounds": "[853,1910][959,1951]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Row",
+              "bounds": "[148,1905][959,1955]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "停止",
+          "bounds": "[660,2054][723,2086]",
+          "origBounds": "[660,2054][723,2086]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[178,1737][1010,1797]",
+          "origBounds": "[178,1737][1010,1797]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[92,1646][1190,1751]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        }
+      ],
+      "meaning": "Selected raw node attributes with ancestor opacity. Node presence/visible=true alone does not prove painting; hidden retained animation actors are preserved in this excerpt."
+    },
+    {
+      "name": "auto-capsule",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-ph7791-auto-capsule.json",
+      "sha256": "0076c7a44e22f3ed492a10b222cceafcc02083d148467652956dc409d72a77f0",
+      "bytes": 152549,
+      "captureStartedAtUtc": "2026-09-14T18:08:16.294Z",
+      "captureCompletedAtUtc": "2026-09-14T18:08:16.951Z",
+      "nodes": [
+        {
+          "type": "Text",
+          "text": "第 1 / 4 页",
+          "bounds": "[1011,2684][1193,2734]",
+          "origBounds": "[1011,2684][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "第 2 / 4 页",
+          "bounds": "[657,2667][839,2717]",
+          "origBounds": "[657,2667][839,2717]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "true",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Row",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#FAFFFAF4",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "0.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Row",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[853,2658][938,2719]",
+          "origBounds": "[853,2658][938,2719]",
+          "opacity": "0.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[853,2658][938,2719]",
+          "origBounds": "[853,2658][938,2719]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "false",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[857,2664][925,2668]",
+          "origBounds": "[857,2664][925,2668]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[925,2664][934,2668]",
+          "origBounds": "[925,2664][934,2668]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2671][934,2719]",
+          "origBounds": "[857,2671][934,2811]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2671][934,2704]",
+          "origBounds": "[857,2671][934,2704]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#A3EEE6DB",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页控制",
+          "bounds": "[859,2679][923,2683]",
+          "origBounds": "[859,2679][923,2683]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Row",
+              "bounds": "[859,2679][933,2683]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[923,2679][933,2683]",
+          "origBounds": "[923,2679][933,2683]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Row",
+              "bounds": "[859,2679][933,2683]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "停止",
+          "bounds": "[906,2692][911,2695]",
+          "origBounds": "[906,2692][911,2695]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[853,2658][938,2719]",
+          "origBounds": "[853,2658][938,2719]",
+          "opacity": "0.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[853,2658][938,2719]",
+          "origBounds": "[853,2658][938,2719]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "false",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[857,2664][925,2668]",
+          "origBounds": "[857,2664][925,2668]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[925,2664][934,2668]",
+          "origBounds": "[925,2664][934,2668]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2671][934,2719]",
+          "origBounds": "[857,2671][934,2811]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2671][934,2704]",
+          "origBounds": "[857,2671][934,2704]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#A3EEE6DB",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页控制",
+          "bounds": "[859,2679][923,2683]",
+          "origBounds": "[859,2679][923,2683]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Row",
+              "bounds": "[859,2679][933,2683]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[923,2679][933,2683]",
+          "origBounds": "[923,2679][933,2683]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Row",
+              "bounds": "[859,2679][933,2683]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "停止",
+          "bounds": "[906,2692][911,2695]",
+          "origBounds": "[906,2692][911,2695]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "__Common__",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Row",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[878,2664][934,2720]",
+          "origBounds": "[878,2664][934,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#FF2F6373",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "3",
+          "bounds": "[878,2664][934,2720]",
+          "origBounds": "[878,2664][934,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[948,2664][1095,2720]",
+          "origBounds": "[948,2664][1095,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "__Common__",
+          "text": "",
+          "bounds": "[1123,2664][1179,2720]",
+          "origBounds": "[1123,2664][1179,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[1123,2664][1179,2720]",
+          "origBounds": "[1123,2664][1179,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#FF2F6373",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "第 2 / 4 页",
+          "bounds": "[657,2667][839,2717]",
+          "origBounds": "[657,2667][839,2717]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        }
+      ],
+      "meaning": "Selected raw node attributes with ancestor opacity. Node presence/visible=true alone does not prove painting; hidden retained animation actors are preserved in this excerpt."
+    },
+    {
+      "name": "auto-paused",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-ph7791-auto-paused.json",
+      "sha256": "ffc50d0ec62c7e820fcf6882da9afb2fa2f502d37c30a53bbedbfb9646dfaad6",
+      "bytes": 153309,
+      "captureStartedAtUtc": "2026-09-14T18:08:46.093Z",
+      "captureCompletedAtUtc": "2026-09-14T18:08:46.762Z",
+      "nodes": [
+        {
+          "type": "Text",
+          "text": "第 3 / 4 页",
+          "bounds": "[657,2667][839,2717]",
+          "origBounds": "[657,2667][839,2717]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "第 2 页",
+          "bounds": "[714,2667][839,2717]",
+          "origBounds": "[714,2667][839,2717]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "true",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Row",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#FAFFFAF4",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "0.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Row",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[853,2658][938,2719]",
+          "origBounds": "[853,2658][938,2719]",
+          "opacity": "0.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[853,2658][938,2719]",
+          "origBounds": "[853,2658][938,2719]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "false",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[857,2664][925,2668]",
+          "origBounds": "[857,2664][925,2668]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[925,2664][934,2668]",
+          "origBounds": "[925,2664][934,2668]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2671][934,2719]",
+          "origBounds": "[857,2671][934,2811]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2671][934,2704]",
+          "origBounds": "[857,2671][934,2704]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#A3EEE6DB",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页控制",
+          "bounds": "[859,2679][923,2683]",
+          "origBounds": "[859,2679][923,2683]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Row",
+              "bounds": "[859,2679][933,2683]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[923,2679][933,2683]",
+          "origBounds": "[923,2679][933,2683]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Row",
+              "bounds": "[859,2679][933,2683]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "停止",
+          "bounds": "[906,2692][911,2695]",
+          "origBounds": "[906,2692][911,2695]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[853,2658][938,2719]",
+          "origBounds": "[853,2658][938,2719]",
+          "opacity": "0.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[853,2658][938,2719]",
+          "origBounds": "[853,2658][938,2719]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "false",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[857,2664][925,2668]",
+          "origBounds": "[857,2664][925,2668]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[925,2664][934,2668]",
+          "origBounds": "[925,2664][934,2668]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2671][934,2719]",
+          "origBounds": "[857,2671][934,2811]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2671][934,2704]",
+          "origBounds": "[857,2671][934,2704]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#A3EEE6DB",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页控制",
+          "bounds": "[859,2679][923,2683]",
+          "origBounds": "[859,2679][923,2683]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Row",
+              "bounds": "[859,2679][933,2683]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[923,2679][933,2683]",
+          "origBounds": "[923,2679][933,2683]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Row",
+              "bounds": "[859,2679][933,2683]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "停止",
+          "bounds": "[906,2692][911,2695]",
+          "origBounds": "[906,2692][911,2695]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[857,2650][1193,2734]",
+              "opacity": "0.000000",
+              "visible": "true"
+            },
+            {
+              "type": "Stack",
+              "bounds": "[853,2658][938,2719]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "__Common__",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Row",
+          "text": "",
+          "bounds": "[857,2650][1193,2734]",
+          "origBounds": "[857,2650][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[878,2664][934,2720]",
+          "origBounds": "[878,2664][934,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#FF2F6373",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "8",
+          "bounds": "[878,2664][934,2720]",
+          "origBounds": "[878,2664][934,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[948,2664][1095,2720]",
+          "origBounds": "[948,2664][1095,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "__Common__",
+          "text": "",
+          "bounds": "[1123,2664][1179,2720]",
+          "origBounds": "[1123,2664][1179,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Stack",
+          "text": "",
+          "bounds": "[1123,2664][1179,2720]",
+          "origBounds": "[1123,2664][1179,2720]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#FF2F6373",
+          "nonOpaqueAncestors": [
+            {
+              "type": "__Common__",
+              "bounds": "[0,0][0,0]",
+              "opacity": "1.000000",
+              "visible": "false"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "第 3 / 4 页",
+          "bounds": "[657,2667][839,2717]",
+          "origBounds": "[657,2667][839,2717]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        }
+      ],
+      "meaning": "Selected raw node attributes with ancestor opacity. Node presence/visible=true alone does not prove painting; hidden retained animation actors are preserved in this excerpt."
+    },
+    {
+      "name": "auto-stop-controls",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-ph7791-auto-stop-controls.json",
+      "sha256": "59dc58e16d16c5b8046f1e8d0bbf832b4ada41e214357dc0e7a7fca5f6f7e731",
+      "bytes": 145161,
+      "captureStartedAtUtc": "2026-09-14T18:08:46.971Z",
+      "captureCompletedAtUtc": "2026-09-14T18:08:47.642Z",
+      "nodes": [
+        {
+          "type": "Text",
+          "text": "第 3 / 4 页",
+          "bounds": "[1011,2684][1193,2734]",
+          "origBounds": "[1011,2684][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "第 2 页",
+          "bounds": "[714,2667][839,2717]",
+          "origBounds": "[714,2667][839,2717]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[134,1743][867,1788]",
+          "origBounds": "[134,1743][867,1788]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "已暂停",
+          "bounds": "[867,1745][973,1786]",
+          "origBounds": "[867,1745][973,1786]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页控制",
+          "bounds": "[148,1906][853,1955]",
+          "origBounds": "[148,1906][853,1955]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Row",
+              "bounds": "[148,1905][959,1955]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "已暂停",
+          "bounds": "[853,1910][959,1951]",
+          "origBounds": "[853,1910][959,1951]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Row",
+              "bounds": "[148,1905][959,1955]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "停止",
+          "bounds": "[660,2054][723,2086]",
+          "origBounds": "[660,2054][723,2086]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[178,1737][1010,1797]",
+          "origBounds": "[178,1737][1010,1797]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[92,1646][1190,1751]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        }
+      ],
+      "meaning": "Selected raw node attributes with ancestor opacity. Node presence/visible=true alone does not prove painting; hidden retained animation actors are preserved in this excerpt."
+    },
+    {
+      "name": "auto-stopped",
+      "source": "/private/tmp/reader-ph7791-controls/reader-control-ph7791-auto-stopped.json",
+      "sha256": "cf3551c155ba7c84f5bd619317578e5800e604de93926da3ad08ac7ee3d5986f",
+      "bytes": 145163,
+      "captureStartedAtUtc": "2026-09-14T18:09:51.260Z",
+      "captureCompletedAtUtc": "2026-09-14T18:09:51.984Z",
+      "nodes": [
+        {
+          "type": "Text",
+          "text": "第 3 / 4 页",
+          "bounds": "[1011,2684][1193,2734]",
+          "origBounds": "[1011,2684][1193,2734]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "第 2 页",
+          "bounds": "[714,2667][839,2717]",
+          "origBounds": "[714,2667][839,2717]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[0,137][1280,2832]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[134,1743][867,1788]",
+          "origBounds": "[134,1743][867,1788]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[867,1745][973,1786]",
+          "origBounds": "[867,1745][973,1786]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页控制",
+          "bounds": "[148,1906][853,1955]",
+          "origBounds": "[148,1906][853,1955]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Row",
+              "bounds": "[148,1905][959,1955]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "未开始",
+          "bounds": "[853,1910][959,1951]",
+          "origBounds": "[853,1910][959,1951]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Row",
+              "bounds": "[148,1905][959,1955]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "停止",
+          "bounds": "[660,2054][723,2086]",
+          "origBounds": "[660,2054][723,2086]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": []
+        },
+        {
+          "type": "Text",
+          "text": "自动翻页",
+          "bounds": "[178,1737][1010,1797]",
+          "origBounds": "[178,1737][1010,1797]",
+          "opacity": "1.000000",
+          "visible": "true",
+          "clickable": "false",
+          "enabled": "true",
+          "id": "",
+          "backgroundColor": "#00000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[92,1646][1190,1751]",
+              "opacity": "0.000000",
+              "visible": "true"
+            }
+          ]
+        }
+      ],
+      "meaning": "Selected raw node attributes with ancestor opacity. Node presence/visible=true alone does not prove painting; hidden retained animation actors are preserved in this excerpt."
+    }
+  ],
+  "geometryPx": {
+    "capsuleShell": [
+      857,
+      2650,
+      1193,
+      2734
+    ],
+    "countdown": [
+      878,
+      2664,
+      934,
+      2720
+    ],
+    "label": [
+      948,
+      2664,
+      1095,
+      2720
+    ],
+    "pauseTarget": [
+      1123,
+      2664,
+      1179,
+      2720
+    ],
+    "footer": [
+      657,
+      2667,
+      839,
+      2717
+    ],
+    "commonCenterY": 2692,
+    "countdownAspect": 1,
+    "footerToShellGap": 18,
+    "scope": "auto-capsule layout snapshot after frame10; centers are geometric bounds, not glyph ink bounds; native frame10 also visually inspected"
+  },
+  "limits": [
+    "Only this automatic page turn quick-entry run, not TTS/full-entry/stop-interruption matrices.",
+    "No frames between about547ms and1702ms; first callback delivery and actor handoff timing not measured.",
+    "Frame6 retained 未开始 is an observed presentation state, not proof the Core timer has not started.",
+    "No FPS/zero flicker/continuous frame synchronization/full Figma timeline conformance claim.",
+    "System status bar reappears in frames9/10 after absent in7/8; preserve separately for code-first diagnosis.",
+    "auto-stop-controls is paused state with controls reopened; only later auto-stopped confirms 未开始 after stop action.",
+    "No new device operation, production change, Git mutation, build, install or physical device acceptance performed by this evidence pass."
+  ]
+}

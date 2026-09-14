@@ -62,7 +62,7 @@ Host 测试直接载入生产 TS 实现，以确定性时钟和平台 controller
 
 原试点的 Foliate Web 与 PH76 模式分别挂载。PH76 模式挂载同一个生产 `ArkWebExecutionHost`，直接调用真实 `ArkWebExecutor.execute/cancel`；不伪造 `onResourceLoad`，不使用 performance timeline。原 Core→Host 合同与桥接已经有独立本地回归，此 VM 切片只回答两个 ArkWeb 平台回调问题。
 
-**受控响应与数据边界。** 固定 `https://93.184.216.34` 仅作为内存文档 origin；每次生成独立 `/reader-ph76/<time>-<run>/` 路径。不是私网豁免，不修改现有网络判定，也不实际访问该 IP：生产 Host 仍先调用 `blockNetworkUrl`；随后仅 pilot 传入的 provider 使用平台 `WebResourceResponse` 返回固定 CSS/脚本，其他请求全部 403。没有本地服务器、端口映射、域名解析、Cookie profile 或书源导入。异步响应使用目标 SDK 已声明的 `setResponseIsReady(false/true)`，实际资源请求与回调仍由 Web 内核完成。
+**受控响应与数据边界。** 固定 `https://93.184.216.34` 仅作为内存文档 origin；每次生成独立 `/reader-ph76/<time>-<run>/` 路径。不是私网豁免，不修改现有网络判定，也不实际访问该 IP：生产 Host 仍先调用 `blockNetworkUrl`；随后仅 pilot 传入的 provider 使用平台 `WebResourceResponse` 返回固定 CSS/脚本。最初遗漏了主文档准入，2026-09-15 补正后仅本轮精确主文档获准（见下文），其他请求保持 403。没有本地服务器、端口映射、域名解析、Cookie profile 或书源导入。异步响应使用目标 SDK 已声明的 `setResponseIsReady(false/true)`，实际资源请求与回调仍由 Web 内核完成。
 
 provider 默认 undefined，在 pilot 分支生命周期内才挂载，Host 卸载时同步清除。新增 runner 的 dispose 同步移除自己的 observer、释放待返回的内存响应和定时器，仅取消固定请求 7600001/7600002；没有遍历/取消非 runner 请求、关闭全局 runtime 或清理用户持久数据。正式单测保留一个非 runner 请求并断言其未被取消。整块 Host 组件卸载仍使用原有 detachController 生命周期（失效控制器上的当前任务会按既有合同取消），本轮未改；这里是独占 debug 冷启动页，不将 runner 的有界清理扩大承诺为任意普通 Web 请求在控制器卸载后还能继续。测试还覆盖 observer 抛错不改变生产选择结果。observer 仅在执行受控样本时挂载；日志包含生成 token、时间、请求 ID、有限资源标签，任何不受控 URL 不输出。
 
@@ -92,7 +92,7 @@ PH76_HDC=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolch
 
 共同键：`scenario`（early/cancel）、`pass`、`runToken`、`measurements`、`events`、`network: "in-memory-only"`、`scope`。每个事件包含 `kind`、毫秒 `at`、可选 `requestId` 和受控资源 `resource` 标签。`resource` 事件的 requestId 表示**收到事件时的 active job**，不是声称平台提供了原始导航 ID；原生事件只提供 URL，正因如此用 old/new 资源标签交叉判断。
 
-- **early**：内存 HTML 同时请求 `early.css` 与延迟 700 ms 的 `hold.js`；匹配 early.css。通过要求返回真实 `resourceUrl` 正确，且存在该资源的 `resource`/`matched` 事件；匹配发生在该任务 pageEnd 之前，或完成时尚无 pageEnd。输出 `callbackToMatchMs`、`matchedBeforePageEnd`。事件中实际 `matcherStart`/`matched` 用于判断控制器在早期回调阶段能否求值，不能只拿总耗时猜测。收到非受控形态的页面事件仅记 `unlabelled-document`，不会因隐藏 URL 而悄悄删掉 pageEnd。
+- **early**：内存 HTML 同时请求 `early.css` 与延迟 700 ms 的 `hold.js`；匹配 early.css。通过要求返回真实 `resourceUrl` 正确，且存在该资源的 `resource`/`matched` 事件；匹配发生在该任务 pageEnd 之前，或完成时尚无 pageEnd。输出 `callbackToMatchMs`、`matchedBeforePageEnd`。事件中实际 `matcherStart`/`matched` 用于判断控制器在早期回调阶段能否求值，不能只拿总耗时猜测。最初非受控形态的页面事件仅记 `unlabelled-document`；2026-09-15 起区分 about-blank、data-document、blob-document、other-http-document、other-document，仍不输出地址，也不会因隐藏 URL 而删除 pageEnd。
 - **cancel**：第一任务请求延迟 700 ms 的 old.js，但使用永不匹配的目标；收到真实拦截后主动取消，必须实际得到 CANCELLED，才能启动第二任务。第二任务请求延迟 1000 ms 的 new.js，其 matcher 故意同时允许 old/new，确保旧 URL 误归属能被检测。通过要求返回 new.js，且第二任务 active 期间没有 old.js 的真实资源回调。输出 `returnedResource: "new.js"`、`observedLateOldCallbacks: 0`、`callbackToMatchMs`。
 - 执行器/控制器失败、无受控请求、错误旧任务终态等，返回 `pass:false`，`measurements` 包含 `code`/`reason`，仍保留事件轨迹。不能将“未收到回调”当作资源已经正确隔离。
 
@@ -104,3 +104,22 @@ PH76_HDC=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolch
 - 原 `test-arkweb-resource-capture.mjs` 19 场景再次通过，并加入 observer 抛错不影响选择的断言；原 network policy 与 debug 冷启动门禁通过。
 - 新 TS helper 用目标平台 API 形状声明做普通 TypeScript strict 检查通过；不是 ArkTS 或 HAP 编译结果。最终 ArkTS/HAP/VM 由根任务补齐。
 - 日志：`PH76-diagnostic-runner-tests.log`、`PH76-host-after-diagnostics.log`、`PH76-diagnostic-network-policy.log`、`PH76-pilot-launch-test.log`、`PH76-diagnostic-typecheck.log`。
+
+## 首次真实 VM early 失败（2026-09-15，代码定位中）
+
+Root 在 aa387 包的隔离 pilot 执行 early，得到 `TIMEOUT`。现有 `/private/tmp/ph76-vm-early-hilog.log` 的本次 `READER_PH76_RESULT`（runToken `1789408759514-1`）只有 start、pageBegin(unlabelled-document)、pageEnd(unlabelled-document)、end，约4秒后失败，无资源/intercept/matcher事件；UI回执为 `/private/tmp/reader-ph76-vm/reader-control-ph76-early-result.json`。日志中较早的在线搜索记录不属于本次受控样本。
+
+本次失败表明受控资源并未进入已观测的回调链，不能说早期JS求值或跨导航归属已经通过；也不能先断言失败来自正则或DNS。当前先核对真实 `loadData` HTML/baseURL、Web初始导航与组件控制器生命周期。Root 正在构建 acbea857 产物，生产修改须先告知并协调冻结；本节记录时尚未修改生产或进行额外设备操作。
+
+
+## 主文档诊断准入修正（2026-09-15，本地冻结，VM 待有效重验）
+
+**代码已确认的缺口与未决因果。** 原 provider 仅让 `about:blank` 返回 null，只有 early.css/hold.js/old.js/new.js 返回 200；本轮 `loadData` 的精确 HTML 如果以 data 主文档或 base/history URL 的 page 进入拦截，就被返回空 403。原拒绝分支没有事件，因此首次 VM 的“无 intercept”不能推出 native 从未调用拦截。原测试直接提供四个资源再手动注入模拟回调，跳过主文档边界。新断言在修改前退出 1（runner 捕获内部主文档准入断言，early 的 pass 为 false）；失败日志保留为 `ph76-document-admission-before.log`。**旧 VM 日志没有原始文档 URL/拒绝标签，尚不能据此确认该缺口就是本次超时的唯一根因。**
+
+**已排查且未改的路径。** 本地 SDK `WebviewController.loadData(data,mimeType,encoding,baseUrl,historyUrl)` 与当前 Executor 参数顺序一致；捕获 promise 在 loadData 前建立；pilot 的 Foliate 与 PH76 Web 分支互斥；资源 handler 先经过既有网络政策。Executor 的导航、初始化、页面完成、匹配与清理逻辑没有被本次推测性改写，Host 生产网络政策也没有放宽。早期 runJavaScript 是否可执行、原生跨导航迟到事件是否可能出现，仍是最初两个未决平台问题。
+
+**有限修正。** 仅修改 `app/ArkWebResourceDiagnostic.ts`：params 保留当前生成的精确 HTML；匹配该轮 page URL 时返回该 HTML 内存响应，绝不返回 null 触发真实 HTTP；匹配有限 text/html data 形态且正文与当前 HTML 完全相同才交回 native。编码复用平台 Base64Helper/TextEncoder 与标准 decodeURIComponent，不新增编码算法；任意 data、正文篡改、旧轮次地址/HTML、非受控 HTTP 继续 403。取消后第二任务重新指定当前 HTML；完成/失败/dispose 清除主文档准入。日志增加 documentProvided/documentAllowed/interceptDenied，并使用固定文档种类标签，256 事件上限不变，不输出原始 URL/HTML。当前变化不修改 `ArkWebExecutor.ts` 或 `ArkWebExecutionHost.ets`。
+
+**本地回归（非 native 内核执行）。** `node tools/test-arkweb-resource-diagnostic.mjs` 7 组通过，覆盖当前 raw/percent/base64 HTML、base URL 内存响应、篡改与坏编码、非 HTML data、上轮文档、完成后迟到请求、取消/卸载清理；同时用实际 SDK 编译的 Host `onInterceptRequest` 闭包验证政策先行与 provider 接线，平台网络/响应对象仍由本地替身承担。`node tools/test-arkweb-resource-capture.mjs` 原 19 场景通过，`node tools/test-arkweb-network-policy.mjs` 3 组通过。日志为 `ph76-document-admission-after.log`、`ph76-document-resource-regression.log`、`ph76-document-network-regression.log`。未做 HAP 构建、Git 操作或设备操作。
+
+**后续最小 VM 目的。** Root 在 acbea857 已构建后授权此诊断修正；该旧产物不包含本节变化。新产物只需一次 early 记录，先判主文档为哪种标签、有无 documentAllowed/documentProvided/interceptDenied，再判 CSS/JS native 回调与 matcher；不能沿用旧日志的无标签结论。原始失败保留为 `ph76-vm-early-hilog.log` / `ph76-vm-early-result.json`；同一 hilog 中此前公网搜索失败不是此样本的网络事实。early 有效后再按既定 cancel 样本验证迟到归属，未通过不宣称 PH76 native 验收完成。

@@ -12,6 +12,7 @@
 | HAP 编译/签名/校验 | PASS，iteration | ArkTS、非增量、签名、内置源字节检查通过；[verify](ph77-91-hap-verify.log)。`acceptanceEligible=false`，编译警告保留 |
 | VM 安装与启动 | PASS，保留数据 | 2026-09-14 17:20:51 UTC，[同 run 部署回执](ph77-91-vm-deployment.json)，签名包 SHA `720e4709979005f8dc785c768bcb76208a8ea6ebcc250a05dfa88a818861cc98` |
 | VM 本地功能 | 已列操作与 PH90 收起终态符合约定；精确中途 paint 未验 | PH80 现场历史、PH81 重入键盘、PH82 光标、PH83 20 章预览、PH84 外部目录/返回、PH87 稳定菜单、PH91 图标及 PH90 输入/加载/滚动已有事实；范围与初判撤回说明见 [VM_VALIDATION.md](VM_VALIDATION.md) |
+| PH86 追加书签审计 | 独立中间反转已修、本地回归通过；旧 VM 稳定缺图标原因 OPEN | 6 种 ACK/投影/正常回弹顺序、12 次添加删除全程无反转；不把该瞬态修复归因为旧 54 秒缺图标。[专项记录](ph86-bookmark-native-audit.json)、[回归](ph86-bookmark-top-info-fixed.log)；新修复尚无设备验收 |
 | 在线闭环与 PH76 | 未通过，原因定位中 | 本次在线搜索 109 源约 3 秒全部失败，不是速度 PASS；停止重试/详情/换源/试读/返回、松鹤响应及资源捕获仍未通过 |
 | 本包真机行为/用户验收 | OPEN | 本记录无同 run 真机部署回执；旧包安装、VM 安装及桌面测试均不替代最终真机行为或用户验收 |
 
