@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 import {
   validateContentMetricsAgainstToc,
@@ -74,8 +75,24 @@ assert.match(experienceSource, /if \(metrics !== undefined\) \{[\s\S]*wholeBookA
   'local slider seeking must continue to prefer exact Core scalar anchors');
 assert.match(experienceSource, /Remote sessions[\s\S]*must not download the whole[\s\S]*book/,
   'the chapter-position fallback must be documented and limited to unopened remote bodies');
-assert.doesNotMatch(experienceSource, /loadChapter\([^\n]*for|Promise\.all\([^)]*loadChapter/,
-  'whole-book progress must not bulk-load chapter bodies in ArkUI');
+// Exercise the actual metric admission path. A global text search for "for"
+// accidentally classified the new forceRefresh argument as bulk chapter I/O.
+const MetricOwner = productionMotionMethods(
+  new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  ['loadContentMetricsIfNeeded'], { validateContentMetricsAgainstToc });
+for (const exact of [false, true]) {
+  let metricReads = 0, bodyReads = 0;
+  const gateway = { supportsExactContentMetrics: () => exact,
+    loadContentMetrics: async () => { metricReads++; return metrics; },
+    loadChapter: async () => { bodyReads++; throw Error('body must not load for progress'); } };
+  const owner = Object.assign(new MetricOwner(), { bookId: 'book-1', tocEntries: toc,
+    contentMetrics: undefined, contentMetricsLoading: false, chapter: undefined, chapterLayoutMap: undefined,
+    isSessionActive: () => true, isMountedToken: () => true, activeGateway: () => gateway });
+  await owner.loadContentMetricsIfNeeded(1);
+  assert.equal(metricReads, exact ? 1 : 0); assert.equal(bodyReads, 0);
+  assert.equal(owner.contentMetrics, exact ? metrics : undefined);
+  await owner.loadContentMetricsIfNeeded(1); assert.equal(metricReads, exact ? 1 : 0);
+}
 const initialStart = experienceSource.indexOf('private async loadInitialChapter(');
 const initialEnd = experienceSource.indexOf('private loadInitialToc(', initialStart);
 assert.ok(initialStart >= 0 && initialEnd > initialStart);
