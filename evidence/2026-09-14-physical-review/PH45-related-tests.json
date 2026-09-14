@@ -1,0 +1,79 @@
+[
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "test-bookshelf-source-name-durability.mjs",
+      "chunk_id": "635da7",
+      "wall_time_seconds": 1.341843791,
+      "exit_code": 0,
+      "original_token_count": 84,
+      "output": "(node:67965) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection\n"
+    }
+  },
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "test-surface-repair.mjs",
+      "chunk_id": "492332",
+      "wall_time_seconds": 1.27956575,
+      "exit_code": 0,
+      "original_token_count": 86,
+      "output": "PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership\n(node:67968) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "test-dynamic-list-refresh.mjs",
+      "chunk_id": "61e356",
+      "wall_time_seconds": 0.000001792,
+      "exit_code": 0,
+      "original_token_count": 11,
+      "output": "dynamic ArkUI list refresh contracts: PASS\n"
+    }
+  },
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "test-bookshelf-viewport-return.mjs",
+      "chunk_id": "d32f55",
+      "wall_time_seconds": 1.02343,
+      "exit_code": 0,
+      "original_token_count": 75,
+      "output": "PASS bookshelf route return: identity+item offset, list/filter/group state, reordered books, late callback isolation\n(node:67975) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    }
+  },
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "test-bookshelf-reading-entry.mjs",
+      "chunk_id": "ad4545",
+      "wall_time_seconds": 1.6138654159999999,
+      "exit_code": 0,
+      "original_token_count": 104,
+      "output": "(node:67966) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nbookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)\nReader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS\n"
+    }
+  },
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "test-bookshelf-detail-removal.mjs",
+      "chunk_id": "f38515",
+      "wall_time_seconds": 0.000001209,
+      "exit_code": 0,
+      "original_token_count": 8,
+      "output": "bookshelf detail removal: PASS\n"
+    }
+  },
+  {
+    "status": "fulfilled",
+    "value": {
+      "name": "test-window-flicker-dedup.mjs",
+      "chunk_id": "5a9b2e",
+      "wall_time_seconds": 0.00000225,
+      "exit_code": 0,
+      "original_token_count": 10,
+      "output": "window flicker dedup contracts: PASS\n"
+    }
+  }
+]

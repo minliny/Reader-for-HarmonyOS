@@ -1,0 +1,11 @@
+(node:61575) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"missing/invalid name is unknown, not evidence of source removal","status":"PASS"}
+{"name":"unready in-memory registries preserve caller supplied persisted identity label","status":"PASS"}
+{"name":"temporary unknown Core name cannot erase cached exact-source name or progress","status":"PASS"}
+{"name":"successful but unmatched/filtered source list does not prove deletion","status":"PASS"}
+{"name":"late old hydration cannot overwrite newer successful name","status":"PASS"}
+{"name":"Core deletion admitted while name lookup is pending is never resurrected","status":"PASS"}
+{"name":"runtime/route-generation changes reject old results without borrowing another identity","status":"PASS"}
+{"name":"source-name-only change invalidates the actual mounted row key while identity stays exact","status":"PASS"}
+PH45 source name projection and actual Host hydration regressions PASS (8 groups); no device identity is inferred.

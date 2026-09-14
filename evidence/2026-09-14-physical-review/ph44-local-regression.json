@@ -1,0 +1,77 @@
+{
+  "capturedAt": "2026-09-14T00:47:27.213423+00:00",
+  "evidenceLayer": "local production methods plus SDK-generated Builder observers; not native layout or audio acceptance",
+  "installedFeedbackVersion": "643bcaf5",
+  "results": [
+    {
+      "test": "test-reader-tts-quick-preparation.mjs",
+      "exitCode": 0,
+      "stdout": "PH44 TTS Quick preparation PASS: deferred ready/single-flight/zero audio+queue/independent metadata/obsolete+newer intent guards/active session/SDK first frame/retry; omission negative control rejected\n",
+      "stderr": "(node:74519) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "test": "test-reader-tts-product-surface.mjs",
+      "exitCode": 0,
+      "stdout": "reader TTS system and HttpTTS product surface: PASS\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-reader-control-playback-content.mjs",
+      "exitCode": 0,
+      "stdout": "Actual SDK Auto/TTS mounted Builder observers: reversible actor geometry + live strings/numbers/booleans/child Prop payloads PASS\nReader control playback: live-track geometry, child clipping/min-height, persistent content, actual measurement identity, SDK syntax and 5 mutations PASS\n",
+      "stderr": "(node:74518) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "test": "test-reader-control-playback-host-intents.mjs",
+      "exitCode": 0,
+      "stdout": "Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 350/1750 ownership)\n",
+      "stderr": "(node:74521) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "test": "test-reader-tts-config-interaction.mjs",
+      "exitCode": 0,
+      "stdout": "PASS TTS config interaction: real Builder callbacks, choices, empty states, input gates, slider commits, draft races, stale overlays and audio strategy adapter methods; VM/native audio remain separate.\n",
+      "stderr": "(node:74549) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "test": "test-navigation-performance.mjs",
+      "exitCode": 0,
+      "stdout": "navigation performance static contract: PASS\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-reader-tts-session-coordinator.mjs",
+      "exitCode": 0,
+      "stdout": "reader TTS fake-host coordinator: PASS\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-reader-tts-launch-intent.mjs",
+      "exitCode": 0,
+      "stdout": "PASS TTS launch intent at all 7 asynchronous preparation boundaries, readyPaused, resume, and two-click acknowledgement race\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-reader-tts-preferences.mjs",
+      "exitCode": 0,
+      "stdout": "reader TTS voice and persisted Host preferences: PASS\n",
+      "stderr": ""
+    },
+    {
+      "test": "test-reader-tts-waveform.mjs",
+      "exitCode": 0,
+      "stdout": "Make V17 24-bar CSS track parity, alternate/delay/transitions, shared frame clock and frozen source: PASS\n",
+      "stderr": "(node:74581) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+    },
+    {
+      "test": "test-reader-tts-audition.mjs",
+      "exitCode": 0,
+      "stdout": "PASS audition/formal mutual exclusion, no Core progress, synthesis-vs-audio completion, stale callbacks, candidate failure restoration, cancel and resume\nPASS missing native acceptance cannot block audition cancellation; invalid pitch fails before host mutation\n",
+      "stderr": ""
+    }
+  ],
+  "sourceSha256": {
+    "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "70cc4c68efbe05bfcf332d2cd17c905bac4ef4b597cdd44ca1273d1ce4da7e2e",
+    "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets": "a0ecc8fc42af0d67054acab95e7b0d0648931e0bffe7ef7fb87b2bb9ff5be868"
+  }
+}

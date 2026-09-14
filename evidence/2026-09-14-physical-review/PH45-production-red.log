@@ -1,0 +1,10 @@
+(node:59243) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"missing/invalid name is unknown, not evidence of source removal","status":"FAIL","message":"Expected values to be strictly equal:\n+ actual - expected\n\n+ '书源已移除'\n- '书源名称暂不可用'\n     ^\n"}
+{"name":"unready in-memory registries preserve caller supplied persisted identity label","status":"FAIL","message":"Expected values to be strictly equal:\n+ actual - expected\n\n+ '书源已移除'\n- '书源名称暂不可用'\n     ^\n"}
+{"name":"temporary unknown Core name cannot erase cached exact-source name or progress","status":"FAIL","message":"Expected values to be strictly equal:\n\n'书源名称暂不可用' !== '缓存名称'\n"}
+{"name":"successful but unmatched/filtered source list does not prove deletion","status":"FAIL","message":"Expected values to be strictly equal:\n+ actual - expected\n\n+ '书源已移除'\n- 'Core持久名称'\n"}
+{"name":"late old hydration cannot overwrite newer successful name","status":"FAIL","message":"Expected values to be strictly equal:\n\n'过期名称' !== '最新名称'\n"}
+{"name":"Core deletion admitted while name lookup is pending is never resurrected","status":"FAIL","message":"Expected values to be strictly equal:\n\n'过期内存名称' !== '书源已移除'\n"}
+{"name":"runtime/route-generation changes reject old results without borrowing another identity","status":"FAIL","message":"Expected values to be strictly equal:\n\n'旧Owner名称' !== '有效名称'\n"}
+{"name":"source-name-only change invalidates the actual mounted row key while identity stays exact","status":"FAIL","message":"Expected \"actual\" to be strictly unequal to:\n\n'bookshelf-row-0|source-a:book-a:Controlled fixture:A::::0:4520'"}
