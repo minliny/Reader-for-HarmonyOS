@@ -35,3 +35,12 @@
 
 
 最终Core标准门禁：316ed8362 clean，3742项全过、210项协议回归、严格漂移、Clippy/格式及C/C++ ABI smoke通过；[回执](ph71-core/final-core-gate.json)。Harmony本地245组通过；正式平台编译与签名产物仍单独登记。此前间歇失败日志均保留，不能称其根因已经查清。
+
+
+## 最终可安装产物
+
+本轮完整实现包已生成并独立复验通过：**245组Harmony检查、3742项Core全量、210项协议回归、ArkTS与非增量编译、signed debug及包校验全部通过**。构建源码Harmony `3399326a` / Core `316ed8362` 均clean；run `20260914T115844Z-3399326a-fde4dfee`，signed SHA256 `64b9167ed72de28177f420f50466f00dfedd1b9a557dfb71253a9416d2b7c2df`，完整身份见[包回执](PH68-74-package-receipt.json)。本包也包含此前批准的PH60书架入口和PH67浅色阅读主题修复。
+
+本轮没有安装、VM、真机操作或交互验收，物理设备最后确认仍为84cdc4ef。iteration且acceptanceEligible=false；不能把可安装包写成设备已验收。旧缓存不自动重写、PH75/76及上文具体个案/原全量缺口仍保留。
+
+执行记录：Native对比的首次辅助脚本错误地要求本就不同的SDK package main/types元数据逐字节相同，触发断言；已核实仅为历史Index.ets→Index.ts适配且其余SDK完全一致，未修改SDK元数据。Native原始库与Core package一致，HAP中的strip结果单独记录。其失败未掩盖为产品错误。最终HAP流水线一次通过，无失败包发布。

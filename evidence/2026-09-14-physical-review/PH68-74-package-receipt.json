@@ -1,0 +1,90 @@
+{
+  "runId": "20260914T115844Z-3399326a-fde4dfee",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T115844Z-3399326a-fde4dfee/manifest.json",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "harmony": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+    "commit": "3399326ab0e17ca5b33f5d6428da75c4fb978bbe",
+    "dirty": false,
+    "status": []
+  },
+  "core": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+    "commit": "316ed8362d4d820756f22f22bee35fd4d5f932a9",
+    "dirty": false,
+    "status": []
+  },
+  "harmonyChecks": 245,
+  "coreFullChecks": 3742,
+  "coreConformance": 210,
+  "coreStandardGate": "PASS",
+  "nonIncrementalCompileSeconds": 15.014,
+  "signed": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 167071523,
+    "sha256": "64b9167ed72de28177f420f50466f00dfedd1b9a557dfb71253a9416d2b7c2df",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 14589008,
+      "sha256": "41b17c5e4683c0818f8881abf2eb2cdf1a9edd2529d0e8ddd338df315942f193"
+    }
+  },
+  "nativeInput": {
+    "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+    "bytes": 19128864,
+    "sha256": "4f737d12dd6dd0a7f92d812c362714bbc011ca097ba6467034fbe49c671738a0"
+  },
+  "independentVerify": {
+    "status": "PASS",
+    "runId": "20260914T115844Z-3399326a-fde4dfee",
+    "artifacts": [
+      {
+        "kind": "signed",
+        "path": "entry-default-signed.hap",
+        "sha256": "64b9167ed72de28177f420f50466f00dfedd1b9a557dfb71253a9416d2b7c2df",
+        "signature": {
+          "status": "signed",
+          "verified": true,
+          "profileType": "debug",
+          "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+          "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+          "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+        }
+      },
+      {
+        "kind": "unsigned",
+        "path": "entry-default-unsigned.hap",
+        "sha256": "f689f0413526303533f1736aee0ea7527d161ce991331c6587e3e310758619aa",
+        "signature": {
+          "status": "unsigned",
+          "verified": false,
+          "profileType": "none"
+        }
+      }
+    ]
+  },
+  "deviceOperations": "NONE",
+  "priorPhysicalBuild": "84cdc4ef",
+  "dataModifiedOnDevice": false,
+  "remaining": [
+    "specific live Minglong responses and device frame timing",
+    "PH75 automatic old remote cache and anchor migration",
+    "PH76 WebView sourceRegex resource interception",
+    "previous full repair plan outstanding gates"
+  ]
+}
