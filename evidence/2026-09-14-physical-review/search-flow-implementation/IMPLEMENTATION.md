@@ -85,3 +85,7 @@ PH75的保守边界是明确的失败合同：历史mark无原始fact不猜归�
 ## 最终 Native 输入
 
 Core `61a2f86e7` clean 的 Native/SDK 构建通过，50 项 SDK smoke 通过；已从 canonical package 同步 SDK/facade 和未剥离 Native，并核对字节一致。身份与构建日志见 native-final-identity.json / native-final.log。HAP 流水线将自行剥离并绑定 manifest，尚不代表安装或 VM 通过。
+
+## 最终 ArkTS 编译发现
+
+250 个本地入口全通过后，首次最终 ArkTS 编译拒绝 ETS 中的对象展开、Map 解构声明，以及 List 的 onDisappear 拼写。未发布 HAP。保留 hap-attempt2-arkts-failure.log；Index 会话浅拷贝移入既有 TypeScript 证据模块，LRE 显式保留完整进度字段，搜索组件由其 owner 修复。R1/R9、PH75 reader、候选16场景、书架入口及试读9条生产方法回归已通过。收尾复核另确认 R3 本地/来源清单错误原因仅保留布尔值，正在补原因生命周期与 stop/重试回归；未把旧250 PASS当作该补丁已验证。
