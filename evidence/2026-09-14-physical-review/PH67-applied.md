@@ -29,3 +29,6 @@
 **SVG 没有生成或改色。** 由于现有 SVG provenance 把整个 theme adapter SHA 当依赖，本次仅刷新其中166条 `themeRegistrySha256`。352个SVG逐字节均未改变，没有运行图标生成器。`PH67-provenance-metadata.json` 记录旧/新依赖SHA、条目数与0图标变更；正式来源校验已通过。
 
 待提交文件：Reader-UI 的 canonical registry 和生成 adapter；HarmonyOS 的生成 adapter、三份上述主题/外观测试、SVG provenance 元数据；本报告与PH67证据。没有修改共享总账或 READER_REPAIR_SPEC，没有提交、构建HAP或操作设备。生产和测试已冻结，最终完整构建/安装/用户实际观感由根任务分层记录。
+
+
+根完整门禁补充：首轮在 test-search-settings-physical-feedback 的另一处SDK色块探针停止。该测试仍读取原Make浅色期望，实际为本次批准新色；已更新为四个批准浅色独立锚点+四原夜间锚点，保留原Make证据。不是生产背景/色块不一致。该失败没有发布包；专项重跑及下一轮完整门禁另记。

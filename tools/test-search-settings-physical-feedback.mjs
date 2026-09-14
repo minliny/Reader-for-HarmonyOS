@@ -91,7 +91,7 @@ await check('PH7 real theme actions signal accepted defaults and reject wrong da
   day.onClick(); assert.equal(notices.at(-1), '请先选择日间阅读主题'); assert.equal(requests.length, 2);
   owner.fullInput = () => false; night.onClick(); assert.equal(requests.length, 2, 'morphing cannot dispatch default updates');
 });
-await check('PH43 SDK previews retain the original Make swatch colors instead of following erroneous paper fills', () => {
+await check('PH67 SDK previews use four approved light bases and retain four original night bases', () => {
   const reference = JSON.parse(readFileSync(new URL('../evidence/2026-09-11-appearance-make-v9/make-v9-reference.json', import.meta.url), 'utf8'));
   const source = read('features/reading/ReaderControlAppearanceContent.ets');
   const { owner } = createReaderBuilderProbe(source, ['themeSwatch'], style);
@@ -99,10 +99,11 @@ await check('PH43 SDK previews retain the original Make swatch colors instead of
     appThemeScheme: 'day', themeColor: style.readerControlAppearanceThemeSwatch, themeLabel: style.readerControlAppearanceThemeLabel,
     presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), actorPosition: a => ({ x: a.x, y: a.y }),
     sharedClip: () => 'clip', fullInput: () => true, sharedInput: () => true, onThemeChange() {} });
+  const approvedLight = { day: '#F7F3EA', warm: '#F2E8D3', paper: '#EEE4D0', green: '#E3EBDD' };
   READER_THEME_DEFINITIONS.forEach((theme, index) => {
     owner.themeSwatch(theme.id, index);
     const row = [...owner.nodes.values()].filter(n => n.type === 'Row').at(-1);
-    const expected = '#FF' + reference.themes.find(value => value.id === theme.id).swatch.slice(1);
+    const expected = '#FF' + (approvedLight[theme.id] ?? reference.themes.find(value => value.id === theme.id).swatch).slice(1);
     assert.equal(row.backgroundColor, expected);
     assert.equal(row.linearGradient, undefined);
   });
