@@ -141,6 +141,7 @@ export function readerControlTtsTimerVisibleRects(rects: ReaderControlTtsClipRec
 }
 
 export interface ReaderControlAutoPageFrame {
+  quickHeader: ReaderControlActorFrame;
   content: ReaderControlActorFrame;
   control: ReaderControlActorFrame;
   controlHeader: ReaderControlActorFrame;
@@ -211,6 +212,9 @@ export function sampleReaderControlAutoPage(progress: number,
     readerControlActor(224.25, 5, 72, 52), p);
   next.x += widthDelta; toggle.x += widthDelta / 2;
   return {
+    // The original Quick header is a 24vp row above playback. The user removed
+    // its Back button, not the row; keep a named module/status header there.
+    quickHeader: readerControlActor(content.x, readerControlLerp(12, 26, p), content.width, 24, 1 - p),
     content: content,
     control: readerControlActor(0, 0, content.width, 104.391),
     controlHeader: readerControlActor(4, readerControlLerp(24, 10, p), Math.max(0, content.width - 8), 14.3906, p),

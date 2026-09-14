@@ -271,8 +271,7 @@ export struct ReaderControlSearchContent {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // Static Query border under the same source parent, not an invented
-      // animated separator or a mask hiding the recovered trajectories.
+      // Query bottom follows the actual input row in both forms.
       Row().height(this.frame().queryDivider.height).width(this.frame().queryDivider.width)
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: this.frame().queryDivider.x, y: this.frame().queryDivider.y });
@@ -308,7 +307,8 @@ export struct ReaderControlSearchContent {
     }
     .width(this.frame().field.width).height(this.frame().field.height)
     .padding({ left: 9, right: 9 }).alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) }).borderRadius(8)
     .position({ x: this.frame().field.x, y: this.frame().field.y })
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
   }
@@ -316,12 +316,14 @@ export struct ReaderControlSearchContent {
   @Builder
   private searchAction() {
     Stack({ alignContent: Alignment.Center }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'))).width(16).height(16);
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'))).width(16).height(16)
+        .opacity(this.canSearch() ? 1 : .4);
     }
     .width(this.frame().action.width).height(this.frame().action.height)
-    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) }).borderRadius(8)
     .position({ x: this.frame().action.x, y: this.frame().action.y })
-    .opacity((this.canSearch() ? 1 : .4) * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
+    .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     .enabled(this.canSearch())
     .accessibilityText('搜索正文').onClick((): void => this.submit());
   }

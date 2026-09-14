@@ -202,6 +202,7 @@ export struct ReaderControlAutoPageContent {
       if (this.sourceOnly === 'full') {
         this.controlSection();
       } else {
+        this.quickHeader();
         Stack({ alignContent: Alignment.TopStart }) {
           this.controlSection();
           this.timerSection();
@@ -224,10 +225,7 @@ export struct ReaderControlAutoPageContent {
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appScheme) }).borderRadius(12).hitTestBehavior(HitTestMode.None);
       Scroll(this.scroller) {
         Stack({ alignContent: Alignment.TopStart }) {
-          // Quick endpoint intentionally has no in-panel Back affordance.
-          // System back and the shared control-bar collapse affordance remain
-          // the navigation paths; removing this actor also recovers its 58vp
-          // footprint from the compact layout.
+          this.quickHeader();
           Stack({ alignContent: Alignment.TopStart }) {
             this.controlSection();
             this.timerSection();
@@ -250,6 +248,22 @@ export struct ReaderControlAutoPageContent {
       .opacity(this.sourceDetached && this.form === 'quick' ? 0 : 1)
       .id(this.actorId(false)).onAreaChange((_old: Area, area: Area): void => this.measureActor(false, area))
       .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => this.reportActorVisible(false, visible, ratio));
+  }
+
+  @Builder
+  private quickHeader() {
+    Row() {
+      Text('自动翻页').layoutWeight(1).fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
+        .fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
+      Text(this.headerMeta('control')).fontFamily('ReaderInter').fontSize(10)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme)).maxLines(1);
+    }.width(this.frame().quickHeader.width).height(this.frame().quickHeader.height)
+      .alignItems(VerticalAlign.Center)
+      .position({ x: this.frame().quickHeader.x, y: this.frame().quickHeader.y })
+      .translate({ y: readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'quickOnly') })
+      .opacity(this.frame().quickHeader.opacity * this.presentation().contentOpacity)
+      .blur(this.presentation().contentBlur).hitTestBehavior(HitTestMode.None)
+      .accessibilityLevel(this.p() === 0 ? 'auto' : 'no-hide-descendants');
   }
 
   @Builder

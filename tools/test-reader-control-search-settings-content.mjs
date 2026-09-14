@@ -77,13 +77,14 @@ assert.equal(searchMotion.some(n => n.nodeId === resultsParent.id || n.nodeId ==
 for (const p of points) {
   const f = sampleReaderControlSearch(p, 286 + 52 * p, 190 + 476 * p);
   const shell = track(searchMotion, '1938:5074', 'translate', p);
-  near(89 + 406 * (1 - p) + 29 + 28 * p + f.results.y,
-    89 + shell[1] + 58 + 1 + resultsParent.y,
-    'Results clipping viewport must stay at its own source parent, not the moving first actor');
+  near(f.queryDivider.y - (f.field.y + f.field.height), 5 + 4 * p,
+    'PH50 Query bottom stays adjacent to the actual field in both forms');
   near(f.queryDivider.y + f.queryDivider.height, f.results.y,
     'inside Query bottom border ends where the clipped Results viewport begins');
   const motion = track(searchMotion, firstResultActor.id, 'translate', p);
-  near(f.firstResult.y, firstResultActor.y + motion[1], 'first actor retains its negative-to-positive local Y');
+  const sourceResultsY = 2 + 28.443 * (1 - p) + resultsParent.y;
+  near(f.results.y + f.firstResult.y, sourceResultsY + firstResultActor.y + motion[1],
+    'viewport adaptation preserves the authored first result screen path');
   near(f.firstResult.x, firstResultActor.x + motion[0]);
 }
 for (const p of points) {
@@ -464,7 +465,8 @@ if (readerBuilderSdkAvailable) {
         assert.equal(native.width, '100%'); assert.equal(native.height, '100%');
         near(owner.resultViewportHeight, parent.height, 'native measurement refers to the real parent viewport');
         near(rows.position.x, f.firstResult.x);
-        near(rows.position.y, -38.45 + 43.45 * p, 'authored child C is retained inside the fixed parent');
+        near(rows.position.y + parent.position.y, 42.993 + 15.007 * p,
+          'authored child C screen position survives viewport correction');
         near(rows.width, f.firstResult.width); near(rows.height, 13 * f.rowHeight);
         const projection = owner.resultScrollFrame();
         near(rows.translate.y, 121 - projection.offsetVp, 'only B-O is runtime compensation; it never cancels C');
@@ -475,8 +477,8 @@ if (readerBuilderSdkAvailable) {
         near(firstY, f.firstResult.y - projection.offsetVp, 'source C survives the actual native scroll chain');
         if (rememberedRows === 0) {
           near(firstY, f.firstResult.y);
-          if (p === 0) { assert.ok(firstY < 0); near(firstY + f.rowHeight, 15.55,
-            'Quick top clips the authored negative origin, not an invented full first row'); }
+          if (p === 0) { near(firstY, 0); near(firstY + f.rowHeight, 54,
+            'PH50 Query no longer clips most of the first result'); }
           if (p === 1) near(firstY, 5, 'Full top retains source py5');
         }
         if (rememberedRows === 50) near(lastBottom, parent.height - 5,

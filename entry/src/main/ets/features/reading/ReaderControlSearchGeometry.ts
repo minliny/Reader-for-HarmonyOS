@@ -5,7 +5,7 @@ export interface ReaderControlSearchFrame {
   field: ReaderControlActorFrame;
   action: ReaderControlActorFrame;
   back: ReaderControlActorFrame;
-  /** Real source Results parent. Its clip does not follow the first row. */
+  /** Results viewport begins immediately below the current query row. */
   results: ReaderControlActorFrame;
   /** First row in Results-local coordinates, including its authored motion. */
   firstResult: ReaderControlActorFrame;
@@ -43,7 +43,12 @@ export function sampleReaderControlSearch(p: number, availableWidth: number,
   const field = readerControlSearchSourceField(progress);
   const action = sample(actor(236.55, -17.45, 36, 24), actor(292, 9, 32, 32), progress);
   const first = readerControlSearchSourceResult(0, progress);
-  const resultsY = basisY + 51;
+  // The unanimated Full Query parent left a 38.45vp empty band in Quick,
+  // and clipped most of the first result. Adapt the viewport to the query
+  // row while compensating its children so their authored screen paths stay.
+  const queryBottom = basisY + field.y + field.height + lerp(5, 9, progress);
+  const resultsY = queryBottom + 1;
+  const resultOriginCorrection = basisY + 51 - resultsY;
   return {
     field: actor(basisX + field.x, basisY + field.y,
       Math.max(0, field.width + widthDelta), field.height),
@@ -51,16 +56,16 @@ export function sampleReaderControlSearch(p: number, availableWidth: number,
       Math.min(width, action.width), action.height),
     // Back is a screen-level sibling, NOT under the moving source shell.
     back: sample(actor(10.1, 12.99, 51, 24), actor(10.1, 404.99, 51, 24, 0), progress),
-    // Results 1938:5101 is a clipped parent at (0,51), not an animated row.
-    // Full canonical slot 338x666 maps to (2,53,334,612). The remaining 1vp
-    // is the source Viewport/Section edge; row padding belongs inside Results.
+    // Full 1938:5101 remains (2,53,334,612) in its canonical 338x666 slot.
+    // Quick adapts this viewport to the query instead of retaining Full's
+    // empty band; compensate the row origin below to preserve screen paths.
     results: actor(basisX, resultsY, Math.max(0, width - 4), Math.max(0, height - resultsY - 1)),
-    firstResult: actor(first.x, first.y, Math.max(0, first.width + widthDelta), first.height),
+    firstResult: actor(first.x, first.y + resultOriginCorrection,
+      Math.max(0, first.width + widthDelta), first.height),
     rowHeight: first.height,
     // Source Results inner wrapper uses py-[5px]. The first row's static y=5
     // already contains its top padding; retain the bottom padding separately.
     resultEndPadding: 5,
-    // The source Query border is static under Query; no invented fade/mask.
-    queryDivider: actor(basisX, basisY + 50, Math.max(0, width - 4), 1),
+    queryDivider: actor(basisX, queryBottom, Math.max(0, width - 4), 1),
   };
 }
