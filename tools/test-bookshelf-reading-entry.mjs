@@ -53,7 +53,7 @@ function create(remote = false) {
     'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel',
     'remoteReadingFailureKindOf', 'verdictForFailureKind', 'isRemoteSourceFailureKind',
     'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord', 'searchCandidateRank',
-    'sameRemoteSessionEvidence','preparedRemoteChapterMatches','withPreparedRemoteChapter',
+    'sameRemoteSessionEvidence','preparedRemoteChapterMatches','withPreparedRemoteChapter','copyRemoteReadingSession',
     `${harnessCode}; return Harness;`,
   )(
     'local', { current: () => ({ bookAcquisitions: () => ({ readingProjectionRevision:()=>0, endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: () => catalog.promise.then(session => ({ session })), recentFailures: () => [] }) }) },
@@ -69,7 +69,7 @@ function create(remote = false) {
     { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',
     error => error.kind ?? 'NETWORK_FAILED', () => 'networkFailed',
     kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}), searchCandidateRank,
-    readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.withPreparedRemoteChapter,
+    readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,
   );
   const h = new Harness(), routes = [], alerts = [];
   let route = 'bookshelf';

@@ -46,3 +46,8 @@ export function withPreparedRemoteChapter(session: RemoteReadingSession, chapter
   }
   return { ...snapshot, preparedChapter: prepared };
 }
+
+/** Shallow immutable replacement retains every canonical session field. */
+export function copyRemoteReadingSession(session: RemoteReadingSession): RemoteReadingSession {
+  return { ...session };
+}

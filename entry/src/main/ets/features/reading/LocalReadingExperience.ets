@@ -3162,8 +3162,10 @@ export struct ReadingExperience {
           if (mapped === undefined) throw new Error('READING_POSITION_MIGRATION_ANCHOR_MISSING');
           if (anchor.id === 'requested') requestedOffset = mapped.offset;
           if (anchor.id === 'restored' && restored !== undefined) this.restoredProgress = {
-            kind: 'restored', progress: { ...restored, chapterOffset: mapped.offset,
-              bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion } };
+            kind: 'restored', progress: { bookId: restored.bookId, chapterIndex: restored.chapterIndex,
+              chapterOffset: mapped.offset, chapterProgress: restored.chapterProgress, updatedAt: restored.updatedAt,
+              locationRevision: restored.locationRevision, bodyVersion: chapter.bodyVersion,
+              processingVersion: chapter.processingVersion } };
         }
       }
       const chapterMap = new ReadingSurfaceLayoutMap(chapter.content);

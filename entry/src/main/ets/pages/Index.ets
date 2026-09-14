@@ -69,7 +69,7 @@ import {
   type RemoteReadingProgressState,
   type RemoteReadingSession,
 } from '../features/reading/RemoteReadingFlowGateway';
-import { sameRemoteSessionEvidence, preparedRemoteChapterMatches, withPreparedRemoteChapter } from '../features/reading/RemoteReadingEvidence';
+import { sameRemoteSessionEvidence, preparedRemoteChapterMatches, withPreparedRemoteChapter, copyRemoteReadingSession } from '../features/reading/RemoteReadingEvidence';
 import type { ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import { ReadingOfflineGateway } from '../features/reading/ReadingOfflineGateway';
 import {
@@ -2249,8 +2249,10 @@ struct Index {
       if (previous !== undefined && previous.catalogVersion !== undefined && previous.contextVersion !== undefined &&
         facts['catalogVersion'] === previous.catalogVersion && facts['contextVersion'] === previous.contextVersion &&
         facts['sourceVersion'] === previous.sourceVersion) {
-        this.installRemoteReadingSession({ ...previous, book: { title, author, intro: this.detailBook.intro,
-          coverUrl: this.detailBook.coverUrl, kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter } });
+        const merged = copyRemoteReadingSession(previous);
+        merged.book = { title, author, intro: this.detailBook.intro,
+          coverUrl: this.detailBook.coverUrl, kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter };
+        this.installRemoteReadingSession(merged);
         if (previous.preparedChapter !== undefined && this.remoteReadingSession?.preparedChapter === undefined) {
           void this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), this.remoteReadingSession ?? previous, current);
         }
@@ -2263,9 +2265,10 @@ struct Index {
       if (!current()) return;
       const entries = await this.loadRemoteDirectoryProjection(new ReadingOfflineGateway(owner), owner, session, current);
       if (!current()) return;
-      this.installRemoteReadingSession({ ...session,
-        book: { title, author, intro: this.detailBook.intro, coverUrl: this.detailBook.coverUrl,
-          kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter } });
+      const merged = copyRemoteReadingSession(session);
+      merged.book = { title, author, intro: this.detailBook.intro, coverUrl: this.detailBook.coverUrl,
+        kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter };
+      this.installRemoteReadingSession(merged);
       this.detailToc = entries;
       this.detailLoadingMessage = '';
       if (this.remoteContentVerdict !== 'readable') {
@@ -4652,8 +4655,13 @@ struct Index {
     const revision = ReaderRuntimeOwner.current().bookAcquisitions().readingProjectionRevision();
     const prepared = session.preparedChapter ?? (same ? previous?.preparedChapter : undefined);
     const valid = preparedRemoteChapterMatches(prepared, session, undefined, revision);
-    this.remoteReadingSession = prepared !== session.preparedChapter || (!valid && session.preparedChapter !== undefined) ?
-      { ...session, preparedChapter: valid ? prepared : undefined } : session;
+    if (prepared !== session.preparedChapter || (!valid && session.preparedChapter !== undefined)) {
+      const installed = copyRemoteReadingSession(session);
+      installed.preparedChapter = valid ? prepared : undefined;
+      this.remoteReadingSession = installed;
+    } else {
+      this.remoteReadingSession = session;
+    }
     if (valid) this.remoteContentVerdict = 'readable';
     else if (!same || previous?.preparedChapter !== undefined) this.remoteContentVerdict = 'verifying';
   }
