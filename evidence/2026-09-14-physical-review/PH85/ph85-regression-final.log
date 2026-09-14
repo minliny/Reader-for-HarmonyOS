@@ -1,0 +1,19 @@
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.49s
+     Running unittests src/lib.rs (target/debug/deps/reader_content-dd92e2a3824a4829)
+
+running 3 tests
+test tests::ph85_songhe_original_rule_projects_json_paragraphs_without_serialization_artifacts ... ok
+test tests::ph85_final_replacement_getstring_uses_first_response_and_restores_result ... ok
+test tests::ph85_text_fields_and_js_getstring_join_arrays_without_changing_request_templates ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 197 filtered out; finished in 0.22s
+
+     Running unittests src/lib.rs (target/debug/deps/reader_rule-0b10beaa2f69a070)
+
+running 2 tests
+test rule_input_session_tests::ph85_jsonpath_text_projection_precedes_source_replacements_and_preserves_combinations ... ok
+test rule_input_session_tests::ph85_jsonpath_text_projection_preserves_typed_structure_and_literal_strings ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 22 filtered out; finished in 0.21s
+

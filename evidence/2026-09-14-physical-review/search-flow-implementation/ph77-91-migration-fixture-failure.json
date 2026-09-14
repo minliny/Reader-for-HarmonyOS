@@ -1,0 +1,11 @@
+{
+  "originalFailureLog": "/private/tmp/ph77-91-core-official-final.log",
+  "coreHead": "61a2f86e7287fb276757706ba436a8103dcb3d37",
+  "failedTests": [
+    "sqlite_backend::scoped_search::tests::scoped_search_v19_migration_backfills_without_rewriting_facts_and_is_repeatable"
+  ],
+  "trigger": "Fixture opens schema 21 then removes only schema 20 objects and sets user_version=19. Schema 21 table, three triggers and two indexes remain.",
+  "conclusion": "Historical fixture is inconsistent; strict CREATE TABLE correctly rejects future derived table already present.",
+  "audit": "Other user_version setters build from empty database using bounded historical DDL. The v21 migration atomicity test intentionally adds a conflicting index to verify rollback; retain that failure injection.",
+  "fixBoundary": "Only scoped_search.rs cfg(test) historical fixture; drop all six schema 21 objects before setting version 19. No production migration/comparator changes."
+}

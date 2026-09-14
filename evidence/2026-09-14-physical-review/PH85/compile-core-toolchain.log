@@ -1,0 +1,53 @@
+error[E0308]: mismatched types
+   --> /private/tmp/songhe-content-audit/probe.rs:6:109
+    |
+  6 | ..._book_source(&semantics,input,&BookSourceRequestContext::for_semantics(&semantics)).expect("extract").content
+    |                                   --------------------------------------- ^^^^^^^^^^ expected `reader_domain::BookSourceSemantics`, found `BookSourceSemantics`
+    |                                   |
+    |                                   arguments to this function are incorrect
+    |
+note: there are multiple different versions of crate `reader_domain` in the dependency graph
+   --> crates/reader-domain/src/lib.rs:259:1
+    |
+259 | pub struct BookSourceSemantics {
+    | ------------------------------ this is the found type
+    |
+   ::: crates/reader-domain/src/lib.rs:259:1
+    |
+259 | pub struct BookSourceSemantics {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+    = help: you can use `cargo tree` to explore your dependency tree
+note: associated function defined here
+   --> crates/reader-content/src/lib.rs:245:12
+    |
+245 |     pub fn for_semantics(semantics: &BookSourceSemantics) -> Self {
+    |            ^^^^^^^^^^^^^
+
+error[E0308]: mismatched types
+    --> /private/tmp/songhe-content-audit/probe.rs:6:51
+     |
+   6 | ...ine::new().content_book_source(&semantics,input,&BookSourceRequestContext::for_semantics(&semantics)).expect("extract").content
+     |               ------------------- ^^^^^^^^^^ expected `reader_domain::BookSourceSemantics`, found `BookSourceSemantics`
+     |               |
+     |               arguments to this method are incorrect
+     |
+note: there are multiple different versions of crate `reader_domain` in the dependency graph
+    --> crates/reader-domain/src/lib.rs:259:1
+     |
+ 259 | pub struct BookSourceSemantics {
+     | ------------------------------ this is the found type
+     |
+    ::: crates/reader-domain/src/lib.rs:259:1
+     |
+ 259 | pub struct BookSourceSemantics {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+     = help: you can use `cargo tree` to explore your dependency tree
+note: method defined here
+    --> crates/reader-content/src/lib.rs:3504:12
+     |
+3504 |     pub fn content_book_source(
+     |            ^^^^^^^^^^^^^^^^^^^
+
+error: aborting due to 2 previous errors
+
+For more information about this error, try `rustc --explain E0308`.

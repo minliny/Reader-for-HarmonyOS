@@ -1,0 +1,15 @@
+{
+  "coreHeadAtAudit": "61a2f86e7287fb276757706ba436a8103dcb3d37",
+  "legadoHead": "6763d061bc92b2164ac274363a807e4ed4be34e2",
+  "sourceId": "corpus-9f23ceb11a82",
+  "bookSourceName": "松鹤阅读",
+  "sourceFile": "tests/fixtures/corpus/sources/src-2869-9f23ceb11a82.json",
+  "sourceFileSha256": "ea71c921f229f6328223174f0e149bbad6ce0db59fe5b5295de5b84ab6945f42",
+  "contentRule": "<p>{{$.data.Content[0].Content}}</p>",
+  "bundledContentRuleMatches": true,
+  "bundledFingerprint": "d53a66cfd1feee274fe905d507fbc67c4931ca6e3cb4e3a44b4f7b638227f7d8",
+  "evidenceLayer": "current-Core production method with synthetic response shaped for exact bundled rule",
+  "deviceRawResponseCaptured": false,
+  "networkRequests": 0,
+  "deviceOperations": 0
+}

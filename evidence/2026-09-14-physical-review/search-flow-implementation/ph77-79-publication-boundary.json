@@ -1,0 +1,35 @@
+{
+  "scope": {
+    "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib",
+    "classesSha256": "41ece7cba3f807e336504e582eed056349af2a552949979c6d6f69080e2fda86",
+    "layer": "actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"
+  },
+  "sourceSha256": {
+    "features/search/SearchPublication.ts": "5ca92512975fd4569b72a8de330dee15ea52efb5832db7f195e94a4f106804b7",
+    "features/search/SearchPage.ets": "3d5aeb188f41cea38b273b3b612d68e894d03f8cc3d2eea457f9e315691aab5d",
+    "features/search/SearchOrchestrator.ets": "eb3e49154ff3de094f24b5360313a1aae121e85c5ce27ce6b4f526c59debdc91",
+    "pages/Index.ets": "c8b9df732f5ca69e54512e2b425fefd511e4ad3517616872e111f8753f49830f"
+  },
+  "queryBooks": 1000,
+  "progressOnly": {
+    "retainedBookReferences": 1000,
+    "newGroups": 0,
+    "changedGroups": 0,
+    "parentUpdates": 1,
+    "copiedObjectProps": 0,
+    "listReplacements": 0,
+    "listOperations": 0,
+    "status": " · 正在搜索 2/3 个书源,已返回 1000 个",
+    "acceptedStateReadDependencyTracked": true
+  },
+  "compiledParentSha256": "96f9f3fea9d04af0dcbe2f44d2f7a91e56e4abdec692b0f4318f9ff504f74d8b",
+  "compiledChildSha256": "f6476f55f171ee43fd34779e3405cae7f79e748e7ecbfe6be39dae16fdfa4105",
+  "legacyCounterexample": {
+    "copiedObjects": 3005,
+    "copiedSlots": 18018,
+    "newGroups": 1000
+  },
+  "shelfPublication": "add/remove reflected through scalar",
+  "newQueryAndRemount": "current exact payload",
+  "nativeFrameStability": "NOT MEASURED"
+}

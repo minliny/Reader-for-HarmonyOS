@@ -1,0 +1,18 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+────────────
+ Nextest run ID d2ff4cc6-18cb-4f4a-9ad1-88d21ae26108 with nextest profile: default
+    Starting 5 tests across 1 binary
+        PASS [   3.497s] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   3.501s] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   3.586s] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   3.592s] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   3.663s] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+────────────
+     Summary [   3.664s] 5 tests run: 5 passed, 0 skipped
+        PASS [   3.586s] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   3.592s] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   3.497s] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   3.663s] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   3.501s] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e

@@ -1,0 +1,52 @@
+{
+  "method": "Read-only lsof process/parent/descriptor/PIPE endpoint snapshots during existing host_replay tests. IDs and endpoint addresses replaced by stable labels within each observation; paths and unrelated environment fields omitted.",
+  "observations": [
+    {
+      "observation": "A",
+      "holders": [
+        {
+          "process": "test-A",
+          "parent": "runner",
+          "executable": "host_replay",
+          "fd": 31,
+          "endpoint": "pipe-A"
+        },
+        {
+          "process": "test-B",
+          "parent": "runner",
+          "executable": "host_replay",
+          "fd": 1,
+          "endpoint": "pipe-A"
+        }
+      ]
+    },
+    {
+      "observation": "B",
+      "holders": [
+        {
+          "process": "test-C",
+          "parent": "runner",
+          "executable": "host_replay",
+          "fd": 28,
+          "endpoint": "pipe-B"
+        },
+        {
+          "process": "test-D",
+          "parent": "runner",
+          "executable": "host_replay",
+          "fd": 2,
+          "endpoint": "pipe-B"
+        },
+        {
+          "process": "cli-C",
+          "parent": "test-C",
+          "executable": "reader-cli",
+          "fd": 28,
+          "endpoint": "pipe-B"
+        }
+      ]
+    }
+  ],
+  "interpretation": "Separate sibling test processes share an output endpoint. Observation B additionally shows propagation from one sibling into its own CLI child.",
+  "limit": "Snapshots establish simultaneous endpoint ownership; they do not establish a >=200ms interval in the same run as a LEAK marker."
+}

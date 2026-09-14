@@ -1,0 +1,40 @@
+[
+  {
+    "sourceId": "remote-replay-src",
+    "contentUnchanged": true,
+    "blocksUnchanged": true,
+    "changes": {
+      "contentFormatVersion": {
+        "expected": "<ABSENT>",
+        "actual": 2
+      },
+      "bodyVersion": {
+        "expected": "04cc9e72bc87fef3396fb41f573c2d9edbad7ac71121b12af480302309185ca0",
+        "actual": "9ac4783aa357113d6cc9b1e461d53a04a24fa7d3cedd245a702c3091e2ce0257"
+      },
+      "contentRefreshRequired": {
+        "expected": "<ABSENT>",
+        "actual": false
+      }
+    }
+  },
+  {
+    "sourceId": "legado-alpha-desensitized",
+    "contentUnchanged": true,
+    "blocksUnchanged": true,
+    "changes": {
+      "contentFormatVersion": {
+        "expected": "<ABSENT>",
+        "actual": 2
+      },
+      "bodyVersion": {
+        "expected": "bfb240321b2bc2682b60fbc55033a24d3fdebacc31f3c30447d93963e6d7d619",
+        "actual": "f1d273582990b37878f4ed20fbaa0ea815f4dc6871fe28cb0ef9d3a50f373c60"
+      },
+      "contentRefreshRequired": {
+        "expected": "<ABSENT>",
+        "actual": false
+      }
+    }
+  }
+]

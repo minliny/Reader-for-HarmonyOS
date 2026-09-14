@@ -1,0 +1,5 @@
+PASS PH77/79 actual SDK Index→SearchPage scalar reset→Watch→grouping→tracked status Text: 1000 refs, 0 new/change groups, 0 copied DTO Props
+PASS legacy SDK deep-copy counterexample: 3005 objects/18018 slots, 1000 new groups
+PASS actual shelf callback, fresh query and compiled remount retain current payload; native frames are not measured
+(node:53042) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

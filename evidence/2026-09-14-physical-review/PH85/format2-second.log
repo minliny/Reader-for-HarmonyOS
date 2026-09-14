@@ -1,0 +1,12 @@
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.17s
+     Running unittests src/lib.rs (target/debug/deps/reader_runtime-47fbc363ec3cde2d)
+
+running 4 tests
+test remote::remote_content_positions::tests::format2_first_download_and_ad_hoc_preview_hash_the_same_canonical_format ... ok
+test remote::remote_content_positions::tests::format2_old_cache_is_read_only_until_explicit_upgrade_and_current_cache_does_not_refetch ... ok
+test remote::remote_content_positions::tests::format2_explicit_refresh_maps_format1_array_and_only_the_requested_chapter ... ok
+test remote::remote_content_positions::tests::format2_explicit_refresh_preserves_format1_array_when_wrapper_anchor_cannot_map ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 395 filtered out; finished in 0.28s
+

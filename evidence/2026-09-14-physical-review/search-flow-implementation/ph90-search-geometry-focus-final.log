@@ -1,0 +1,5 @@
+Actual SDK Results parent clip + child origin + native extent: same-instance roundtrip and 5 mutations PASS
+Actual SDK Search/Settings mounted Builder observers: live payload/geometry/capability/switch changes PASS
+PASS Search/Settings real actor geometry + production callback methods; not native/visual acceptance
+(node:84899) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

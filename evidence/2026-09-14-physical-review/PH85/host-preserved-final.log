@@ -1,0 +1,5 @@
+PH75 actual reader restore, explicit anchor, preservation, late selection, window proof and TTS write ownership PASS
+PH75 unproven persistent offset never borrows current body proof PASS
+PH85 actual LRE preserved-refresh notice: 14 admission, intent, status, generation and presentation-failure scenarios PASS
+(node:44934) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

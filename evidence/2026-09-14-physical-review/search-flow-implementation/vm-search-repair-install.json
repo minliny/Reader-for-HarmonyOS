@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "name": "reader-harmonyos-deployment-receipt",
+  "runId": "20260914T154527Z-1d1f47e5-41357e27",
+  "targetKind": "vm",
+  "targetRef": "6460677a198b",
+  "artifact": {
+    "kind": "signed",
+    "sha256": "1771b5ad75b42c6f56704adbf1f722788816dd840163ff5cda69adab99aa5def",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    }
+  },
+  "dataPolicy": "preserve",
+  "install": "PASS",
+  "launch": "PASS",
+  "preInstall": {
+    "bundlePresent": true,
+    "bundleName": "io.reader.harmonyos",
+    "versionName": "1.0.0",
+    "versionCode": 1000000,
+    "appSignType": "none",
+    "appProvisionType": "debug",
+    "cpuAbi": "arm64-v8a",
+    "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+    "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b"
+  },
+  "postInstall": {
+    "bundlePresent": true,
+    "bundleName": "io.reader.harmonyos",
+    "versionName": "1.0.0",
+    "versionCode": 1000000,
+    "appSignType": "none",
+    "appProvisionType": "debug",
+    "cpuAbi": "arm64-v8a",
+    "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+    "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b"
+  },
+  "completedAt": "2026-09-14T15:47:03.300Z",
+  "evidenceBoundary": {
+    "installAndLaunch": "PASS",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  }
+}

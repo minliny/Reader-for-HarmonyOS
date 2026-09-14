@@ -1,0 +1,4 @@
+{"case":"array_strings_crlf","input":{"data":{"Content":[{"Content":["第一段\r\n第二行","第三段"]}]}},"output":"第一段\n第二行\n第三段"}
+{"case":"single_string_crlf","input":{"data":{"Content":[{"Content":"第一段\r\n第二行"}]}},"output":"第一段\n第二行"}
+{"case":"array_literal_code","input":{"data":{"Content":[{"Content":["代码字符：\\r\\n","另一段"]}]}},"output":"代码字符：\\r\\n\n另一段"}
+{"case":"array_html","input":{"data":{"Content":[{"Content":["<p>第一段</p>","<p>第二段</p>"]}]}},"output":"第一段\n第二段"}

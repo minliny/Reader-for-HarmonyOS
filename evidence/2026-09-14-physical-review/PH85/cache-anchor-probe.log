@@ -1,0 +1,4 @@
+offset=0;result=Err("text_anchor_missing_or_ambiguous");resolved=None
+offset=30;result=Err("text_anchor_missing_or_ambiguous");resolved=None
+offset=50;result=Ok(());resolved=Some((0, 48, 117))
+offset=123;result=Err("text_anchor_missing_or_ambiguous");resolved=None

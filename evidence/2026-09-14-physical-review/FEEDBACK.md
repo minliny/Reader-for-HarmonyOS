@@ -83,3 +83,43 @@ PH29已向用户提出“保留固定加底部分隔线/整行随列表滚动”
 - 本次仅登记文档；不修改生产/测试，不构建、不提交、不操作设备。真机安装由root独占执行，以其正式回执另行更新，登记不阻塞安装。原完整实施计划所有OPEN继续保留。
 
 最新安装状态见 [实施状态末节](IMPLEMENTATION_STATUS.md)：643bcaf5已保数据安装并启动；PH42仅登记，未实施。
+
+## 最新真机反馈：PH77–PH91（2026-09-14）
+
+用户在本轮安装后报告以下15项。已确认最终真机安装包 run `20260914T154527Z-1d1f47e5-41357e27`，Harmony `1d1f47e5` / Core `61a2f86e7`，签名HAP SHA `1771b5ad75b42c6f56704adbf1f722788816dd840163ff5cda69adab99aa5def`；真机15:46:24 UTC安装/启动PASS，VM同包15:47:03 UTC安装/启动PASS，均保数据。现象来源是用户人工反馈，未取得逐帧/请求trace，不将其虚构为独立复现或唯一根因。先记录和代码审计，暂停原计划VM交互，待确定最小验证问题后继续；真机操作已释放。
+
+| ID | 用户序号 | 现象/要求 | 范围 | 当前状态 |
+|---|---|---|---|---|
+| PH77 | 1 | 搜索加载缓慢，底部搜索动效数秒才变化一次 | 搜索/SDK/主线程 | 已去除大对象跨 Prop 深复制；真实 SDK 边界回归通过，设备耗时/帧率待验证 |
+| PH78 | 2 | 约30秒完成30个书源，目标书2分钟未展示 | 搜索调度/来源/候选发布 | Core 私有轮转队列改共享 FIFO，慢 worker 不阻塞其他空闲 worker；正式回归通过，真实来源耗时待验证 |
+| PH79 | 3 | 正在搜索时全应用卡顿，翻页等数秒 | 共享执行/锁/渲染 | 已修 Prop 复制及 PH90 全局锁阻塞路径，本地通过；不能宣称解释全部物理设备卡顿 |
+| PH80 | 4 | 删除历史搜索展开功能 | 全部历史直接展示；保留滚动 | 已删除折叠和测宽，全部历史可滚动；生命周期/Builder 回归通过，新 VM 待验 |
+| PH81 | 5 | 进入搜索时直接唤起输入法 | 搜索入口焦点/键盘生命周期 | 已接一次性布局后焦点，离屏/返回不抢焦点；本地通过，新 VM 待验 |
+| PH82 | 6 | 搜索框光标像左括号而非竖线 | 输入控件/绘制与焦点 | 旧包 VM 已复现原生圆角裁切及隐藏 Web 抢焦点；修复/SDK 回归完成，新包像素待验 |
+| PH83 | 7 | 详情目录预览不应仅4章，历史为20或30且可翻动 | 已确认历史20章及内部滚动 | 已恢复20章 Scroll；本地回归通过，新 VM 待验 |
+| PH84 | 8 | 详情完整目录误接阅读完整控制栏目录 | 已定外部完整目录入口 | 已直接挂外部目录，不先解析正文；精确章节点击后才阅读，关闭回详情；实际 Index/Builder 回归通过，新 VM 待验 |
+| PH85 | 9 | 《鸣龙》松鹤阅读正文残留方括号及字面反斜杠r/n等 | 原始数据类型/源规则/规范化 | 已修 JSONPath 数组文本提取，正文格式升2并沿 PH75 保护位置；Core 回归通过，原书呈现待验 |
+| PH86 | 10 | 常态无书签不显示图标；已有书签才显示填充；镂空仅下拉反馈且不入正文 | 沉浸顶层书签反馈 | 已落实状态/ACK与顶栏独立槽，保留时钟并避开正文/安全区；实际 Builder/手势回归通过，新 VM 待验 |
+| PH87 | 11 | 阅读更多新增下载全部章节；弹窗缺指向凸起、应右对齐且宽度适应文本 | 复用离线下载；对照Figma菜单 | 已接下载全部、右锚菜单/凸起/文本宽度，本地禁用下载；正式回归通过，新包交互待验 |
+| PH88 | 12 | 亮度/自动按钮没有对齐轨道上下圆角圆心，轨道偏短 | 几何共享/用户明确增长轨道 | 已改38×190、轨道104、间隔14及圆心19/171，扣除原生边框内缩；实际 SDK/公式通过，新包像素待验 |
+| PH89 | 13 | 自动翻页胶囊内部元素高度不齐，倒计时圆形轮廓形变/尺寸和文字高度错误 | 胶囊布局/用户明确16×16圆 | 已改圆与数字16×16、标签高16、24高行居中；字号8/10与motion不变，实际 SDK通过，新包像素待验 |
+| PH90 | 14 | 完整内容搜索打开后卡顿，键盘延迟，后续点击无响应 | 内容搜索扫描/共享锁/原生列表/输入 | 一致快照分批扫描释放全局锁；去二次方查找/Prop复制；List+LazyForEach代码及50/2000/10000回归完成，原生paint待VM |
+| PH91 | 15 | 内容搜索快/完整两处重复搜索图标；输入框内不应有图标；右侧按钮颜色和轮廓异常 | 共享搜索输入和按钮主题/Figma | 已删除框内重复图标、恢复右侧单图标及青色资源角色；实际 SDK通过，新包像素待验 |
+
+本次用户明确删除展开，覆盖旧“两行+展开”规则；书签显示按本次明确状态规则执行。目录数量/外部入口查已有规划；视觉问题先对照Figma，不把过去错误实现当设计基准。不关闭§16联合VM/帧率/用户验收。
+
+PH82 的初始代码审计无法区分 caret、选择手柄与圆角裁切，随后在已安装旧 run `20260914T154527Z-1d1f47e5-41357e27` 做了最小 VM 取证：空输入左边界 caret 被原生默认圆角裁成月牙，非空末尾为直线；同时发现隐藏 Web 可抢焦点。见[空输入截图](search-flow-implementation/ph82-focused.png)、[有文字截图](search-flow-implementation/ph82-text.png)、[固定上游绘制源码](search-flow-implementation/ph82-text-field-overlay.cpp)。修复为 ReaderSearchField 两个 TextInput 及内容搜索唯一 TextInput 内部 `borderRadius(0)`，外层圆角不变；ArkWeb 的 `focusable/focusOnTouch` 仅随 interactive 开启。[SDK 回归](search-flow-implementation/ph82-native-focus-test.log)通过，新包原生像素/输入法仍待 VM，旧包复现不代替修复验收。
+
+### PH77–91 当前整合身份与证据边界（2026-09-15）
+
+Core 已提交 `28369db9405822f4b8277eb95ad94057f177b7bb`；[官方检查](search-flow-implementation/ph77-91-core-official-final2.log)3832项测试通过，其中1项标记 leaky，为退出后输出管道未及时关闭的警告，非应用堆泄漏证明；[独立复核及未决边界](search-flow-implementation/ph77-91-leak-summary.json)保留，未放宽超时。新 Native [构建](search-flow-implementation/ph77-91-native.log)完成，[身份](search-flow-implementation/ph77-91-core-build-identity.json)为 clean/release，buildId `5ffa51028024982bce9a607e5c3c88b69126d709e980a2823e1e7d2888f6c3fd`，已同步 Harmony 受版本管理的 `.so`。
+
+Root 已完成分项提交，Harmony 当前代码 `1b6328c8`，仅证据文档尚未提交；早先“生产工作树未提交”的阶段已结束。Root 确认 Harmony 全部门禁 **260项 PASS**。此时尚不宣称本轮后续 HAP 构建、签名、新安装或新 VM 通过。各分报告旧基线保留为历史，不替代本节当前身份。
+
+原因与正式回归入口：PH77/79 的 `SearchPublication` 稳定 holder + revision 修复真实 ArkUI Prop 深复制，见[属性边界证据](search-flow-implementation/ph77-79-publication-boundary.json)及 `test-search-publication-boundary.mjs`；PH78 的源 worker 共享队列见[阻塞回归](search-flow-implementation/ph78-shared-source-queue.log)。R8 空队列有等待、连续即时轮有让出，未发现无等待 busy-loop；FIFO不保证来源完成顺序或网络耗时。PH80/81 见 `test-search-history-layout-lifecycle.mjs`；PH83/84 见 `LocalBookDetail`、Index外部目录分支及 `test-detail-external-directory.mjs`；PH85 见[规则与格式升级报告](PH85/REPORT.md)，普通旧缓存不自动升级、歧义保留旧文旧位置。PH86 的顶栏槽/手势/ACK见 `test-reader-bookmark-top-info.mjs`；PH87见 `test-reader-more-popup.mjs`；PH88见 `test-reader-brightness-perception.mjs`；PH89/91见 `test-reader-physical-control-details.mjs`。16×16圆覆盖旧 Figma 1164:10275 的18×16椭圆，增长亮度条也是用户明确要求，不重新列为产品待决。
+
+PH90 Core 在源/正文/处理配置一致快照后释放全局 publication 锁，分批扫描、取消并返回前校验，防止错误 positionScope。桌面生产 C ABI 探针中并发进度等待约293ms降至约0.7ms，只证明该锁链解除，不证明真机全部卡顿消失。Host 去二次方查找、稳定发布与焦点修复及原生 List 主链详见[专项证据](search-flow-implementation/ph90-content-open.md)。72vp仅为内部坐标标尺，实际54→72行高及14/10字号不变；完整数据源不截短，使用真实 native offset 回执补偿并复用既有 scroll policy，每侧缓存2行。`test-reader-content-search-native-list.mjs`覆盖50/2000/10000、深偏移往返、负origin、追加/替换、迟到回执和用户中断；SDK探针注入8个请求索引只证明按需生成，不能当Ace可见范围或native paint验证。新包真实 materialization/回执/paint同帧、触摸和帧率仍待VM；[最小清单](search-flow-implementation/ph77-91-vm-minimal-checklist.md)明确现有pilot不是2000行内容搜索样本。
+
+失败历史继续保留：Core [初轮](search-flow-implementation/ph77-91-core-official.log)/[中间轮](search-flow-implementation/ph77-91-core-official-final.log)、[旧迁移fixture失败](search-flow-implementation/ph77-91-migration-fixture-failure.json)、[回放字段差异](search-flow-implementation/ph77-91-host-replay-fixture-delta.json)，Harmony [第一轮](search-flow-implementation/ph77-91-harmony-check-first.log)/[第二轮](search-flow-implementation/ph77-91-harmony-check-second.log)/[第三轮](search-flow-implementation/ph77-91-harmony-check-third.log)。第三轮旧探针引用已移除的 `resultRowsHeight`，最终探针已接List主链，未用无效方法兼容测试。以上本地检查与旧包VM复现均不关闭新包VM、真机或用户验收。
+
+PH77–91 首次 HAP 编译失败：260 组本地检查通过后，正式 ArkTS 编译拒绝新增 TS 文件导入 ETS 类型（SearchPublication、ReaderContentSearchPublication、ReaderPageChromeTextMeasurement）；新增 List DataSource 的 ArkUI 全局接口在 TS 文件中也不可见。正在纠正模块归属/共享类型，不放宽编译或测试，不改功能要求。原始日志 `search-flow-implementation/ph77-91-hap-build-first-failure.log` 已保留；本次没有生成发布 manifest、没有安装。

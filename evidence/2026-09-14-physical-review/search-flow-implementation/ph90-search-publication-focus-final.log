@@ -1,0 +1,3 @@
+{"passed":true,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"41ece7cba3f807e336504e582eed056349af2a552949979c6d6f69080e2fda86","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"rows":2000,"morphSamples":21,"payloadPropCopies":0,"boundary":"actual SDK compiler + property/proxy dispatch; no native List/IME/renderer timing"}
+(node:84947) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

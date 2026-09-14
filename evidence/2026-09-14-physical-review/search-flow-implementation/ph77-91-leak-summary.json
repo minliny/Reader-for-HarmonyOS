@@ -1,0 +1,29 @@
+{
+  "scope": "Read-only review of Core shared source FIFO commit 28369db94 and intermittent host replay LEAK",
+  "productionChanges": false,
+  "deviceOperations": false,
+  "sourceQueueReview": "No definite regression found in dequeue lock lifetime, cancel/claim ordering, shutdown messages, reaper lock scope, or separation of main/latency receivers. FIFO orders dequeue only, not completion or worker scheduling fairness.",
+  "runner": {
+    "name": "cargo-nextest",
+    "version": "0.9.138"
+  },
+  "originalEvidence": "ph77-91-core-official-final2.log:62",
+  "reproduction": {
+    "test": "host_record_suite_outputs_replayable_comparison_fixture",
+    "groupExecutions": 50,
+    "ordinaryPass": 49,
+    "leakyPass": 1,
+    "iteration": 8,
+    "observedSeconds": 0.324
+  },
+  "pipeSampling": {
+    "groupExecutions": 200,
+    "leakyPass": 0,
+    "snapshots": 319,
+    "support": "ph77-91-leak-pipe-evidence.json"
+  },
+  "finding": "Sibling test processes inherited each other output pipe endpoints at additional descriptors; one endpoint was also inherited by a reader-cli child. Reader test success paths wait_with_output for both CLI processes and join their timeout watcher. No unwaited child success path was found.",
+  "open": "The sampled inheritance and the LEAK reproduction occurred in separate runs. A same-run endpoint retention interval beyond the leak timeout and the exact nextest/Rust/platform implementation defect remain unproven.",
+  "boundary": "LEAK concerns output-handle lifecycle and is not evidence of application heap leakage. No production change, runner upgrade or relaxed leak timeout was made.",
+  "reference": "https://nexte.st/docs/features/leaky-tests/"
+}

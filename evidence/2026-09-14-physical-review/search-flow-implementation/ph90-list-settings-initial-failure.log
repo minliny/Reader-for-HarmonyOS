@@ -1,0 +1,385 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /animateTo\(|\.animation\(|setTimeout\(|setInterval\(|\.scale\(/. Input:
+
+"import { readerAppColor } from '../common/ReaderThemeRegistry';\n" +
+  "import { PathShape } from '@ohos.arkui.shape';\n" +
+  'import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,\n' +
+  "  readerControlMotionVisibleRect, type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';\n" +
+  'import { readerControlMorphScrollPath, sampleReaderControlMorphScrollPath,\n' +
+  "  type ReaderControlMorphScrollPath } from './ReaderControlMorphScroll';\n" +
+  "import { registerReaderFonts } from '../common/ReaderFonts';\n" +
+  'import { TOK_BORDER_W, TOK_DANGER, TOK_LINE, TOK_LINE_STRONG, TOK_READ_INK,\n' +
+  "  TOK_READ_MUTED, TOK_READ_PRIMARY, TOK_SURFACE_PANEL, TOK_SURFACE_PANEL_SOFT } from '../common/ReaderTokens';\n" +
+  "import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';\n" +
+  "import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';\n" +
+  "import { ReaderContentSearchPublication } from './ReaderContentSearchPublication';\n" +
+  "import { ReaderContentSearchDataSource, readerContentSearchResultKey } from './ReaderContentSearchDataSource';\n" +
+  'import { READER_SEARCH_LIST_ITEM_HEIGHT, READER_SEARCH_LIST_CACHE_COUNT, readerControlSearchListProjection,\n' +
+  '  readerControlSearchListRowTranslation, readerControlSearchListScrollDelta,\n' +
+  "  type ReaderControlSearchListProjection } from './ReaderControlSearchListProjection';\n" +
+  "import { splitReaderSearchSnippet, type ReaderSearchSnippetParts } from './ReaderSearchHighlight';\n" +
+  "import { sampleReaderControlSearch, type ReaderControlSearchFrame } from './ReaderControlSearchGeometry';\n" +
+  'import { createReaderControlSearchScroll, resetReaderControlSearchScroll, sampleReaderControlSearchScroll,\n' +
+  '  observeReaderControlSearchScroll, prepareReaderControlSearchScrollRebase,\n' +
+  '  confirmReaderControlSearchScrollRebase, cancelReaderControlSearchScrollRebase,\n' +
+  '  type ReaderControlSearchScrollState, type ReaderControlSearchScrollLayout,\n' +
+  "  type ReaderControlSearchScrollProjection, type ReaderControlSearchScrollSource } from './ReaderControlSearchScroll';\n" +
+  '\n' +
+  'let readerContentSearchInputSequence: number = 0;\n' +
+  '\n' +
+  '/** Search 1938:4927 content only. One input and one result scroll tree survive\n' +
+  ' * Quick/Full; Stage owns the shell, header, p, whole visibility and timing.\n' +
+  " * The input primitive's real IME/caret semantics are retained here because the\n" +
+  ' * fixed-height ReaderSearchField variants cannot represent 24->32 geometry. */\n' +
+  '@Component\n' +
+  'export struct ReaderControlSearchContent {\n' +
+  "  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';\n" +
+  '\n' +
+  "  @Prop @Watch('onResultLayoutChanged') motionProgress: number = 0;\n" +
+  "  @Prop @Watch('onResultLayoutChanged') availableWidth: number = 286;\n" +
+  "  @Prop @Watch('onResultLayoutChanged') availableHeight: number = 190;\n" +
+  '  @Prop fullContentHeight: number = 666;\n' +
+  '  @Prop quickContentHeight: number = 190;\n' +
+  "  @Prop @Watch('onInputChanged') interactionEnabled: boolean = true;\n" +
+  "  @Prop @Watch('dismissTemporaryLayer') dismissTemporaryRevision: number = 0;\n" +
+  "  @Prop query: string = '';\n" +
+  '  searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();\n' +
+  "  @Prop @Watch('acceptSearchPublication') searchRevision: number = 0;\n" +
+  "  @State @Watch('onResultDataChanged') private state: ReaderQuickSearchState = { kind: 'idle' };\n" +
+  '  private acceptedSearchState: ReaderQuickSearchState | undefined = undefined;\n' +
+  '  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};\n' +
+  '  onBack: () => void = (): void => {};\n' +
+  '  onQueryChange: (query: string) => void = (_query: string): void => {};\n' +
+  '  onSearch: () => void = (): void => {};\n' +
+  '  onLoadMore: () => void = (): void => {};\n' +
+  '  onSelectResult: (result: ReadingContentSearchResult) => void =\n' +
+  '    (_result: ReadingContentSearchResult): void => {};\n' +
+  '  private inputController: TextInputController = new TextInputController();\n' +
+  '  private readonly queryInputId: string = `reader-content-search-input-${++readerContentSearchInputSequence}`;\n' +
+  '  private queryInputMounted: boolean = false;\n' +
+  '  private resultScroller: Scroller = new Scroller();\n' +
+  '  private readonly resultDataSource: ReaderContentSearchDataSource = new ReaderContentSearchDataSource();\n' +
+  '  @State private resultItemSizes: ChildrenMainSize = new ChildrenMainSize(READER_SEARCH_LIST_ITEM_HEIGHT);\n' +
+  '  private resultNativeFollowTimer: number = -1;\n' +
+  '  private resultNativeFollowLifecycle: number = 0;\n' +
+  '  private resultNativeRawBase: number = 0;\n' +
+  '  @State private resultScrollPosition: ReaderControlSearchScrollState = createReaderControlSearchScroll();\n' +
+  '  private resultScrollMounted: boolean = false;\n' +
+  '  private resultViewportHeight: number = 0;\n' +
+  '  private resultPointers: number[] = [];\n' +
+  '  private resultUserScrolling: boolean = false;\n' +
+  "  private resultScrollSource: ReaderControlSearchScrollSource = 'unknown';\n" +
+  '  private indexedResultRows: ReadingContentSearchResult[] | undefined = undefined;\n' +
+  '  private resultRowIndexes: Map<string, number> = new Map<string, number>();\n' +
+  '  private resultMotionPath: ReaderControlMorphScrollPath | undefined = undefined;\n' +
+  '  private resultRestingProgress: number = 0;\n' +
+  '  private resultRestingLayout: ReaderControlSearchScrollLayout | undefined = undefined;\n' +
+  '\n' +
+  '  aboutToAppear(): void {\n' +
+  '    this.queryInputMounted = true;\n' +
+  '    registerReaderFonts(this.getUIContext().getFont());\n' +
+  '    this.acceptSearchPublication();\n' +
+  '    this.onResultDataChanged();\n' +
+  '  }\n' +
+  '\n' +
+  '  aboutToDisappear(): void {\n' +
+  '    this.queryInputMounted = false;\n' +
+  '    this.dismissTemporaryLayer();\n' +
+  '    this.onResultScrollDisappear();\n' +
+  '  }\n' +
+  '\n' +
+  '  private acceptSearchPublication(): void {\n' +
+  '    const next = this.searchPublication.stateAt(this.searchRevision);\n' +
+  "    // Compare the raw owner snapshot, not ArkUI's top-level @State proxy.\n" +
+  '    if (this.acceptedSearchState === next) return;\n' +
+  '    this.acceptedSearchState = next;\n' +
+  '    this.state = next;\n' +
+  '  }\n' +
+  '\n' +
+  '  private dismissTemporaryLayer(): void {\n' +
+  '    this.inputController.stopEditing();\n' +
+  '    this.onTemporaryLayerChange(false);\n' +
+  '  }\n' +
+  '\n' +
+  '  private focusQueryField(): void {\n' +
+  '    if (!this.queryInputMounted || !this.interactionEnabled) return;\n' +
+  '    try {\n' +
+  '      this.getUIContext().getFocusController().requestFocus(this.queryInputId);\n' +
+  '    } catch (_) {\n' +
+  '      // A detached native focus context must not fail the retained search UI.\n' +
+  '    }\n' +
+  '  }\n' +
+  '\n' +
+  '  private onInputChanged(): void {\n' +
+  '    if (!this.interactionEnabled) this.dismissTemporaryLayer();\n' +
+  '    this.onResultLayoutChanged();\n' +
+  '  }\n' +
+  '\n' +
+  '  private frame(): ReaderControlSearchFrame {\n' +
+  '    return sampleReaderControlSearch(this.motionProgress, this.availableWidth, this.availableHeight);\n' +
+  '  }\n' +
+  '\n' +
+  '  private resultLayout(): ReaderControlSearchScrollLayout {\n' +
+  '    return { rowHeightVp: this.frame().rowHeight, viewportHeightVp: this.frame().results.height,\n' +
+  '      contentOriginVp: this.frame().firstResult.y, contentEndPaddingVp: this.frame().resultEndPadding,\n' +
+  "      resultCount: this.state.kind === 'results' ? this.state.results.length : 0 };\n" +
+  '  }\n' +
+  '\n' +
+  '  private resultListFrame(): ReaderControlSearchListProjection {\n' +
+  '    return readerControlSearchListProjection(this.resultLayout(), this.resultScrollFrame());\n' +
+  '  }\n' +
+  '\n' +
+  '  private resultRowTranslation(index: number): number {\n' +
+  '    const layout = this.resultLayout();\n' +
+  '    const scroll = this.resultScrollFrame();\n' +
+  '    const rawBase = this.resultScrollPosition.nativeOffsetVp * this.resultListFrame().visualToNativeRatio;\n' +
+  '    return readerControlSearchListRowTranslation(index, layout, scroll, rawBase);\n' +
+  '  }\n' +
+  '\n' +
+  '  private presentation(): ReaderControlMotionPresentation {\n' +
+  '    return sampleReaderControlMotionPresentation(this.motionProgress);\n' +
+  '  }\n' +
+  '  private resultClip(chapterIndex: number, chapterOffset: number): PathShape {\n' +
+  '    const index = this.currentResultIndex(chapterIndex, chapterOffset);\n' +
+  '    const f = sampleReaderControlSearch(1, this.availableWidth, this.fullContentHeight);\n' +
+  '    const q = sampleReaderControlSearch(0, this.availableWidth, this.quickContentHeight);\n' +
+  '    const b = this.frame();\n' +
+  '    const fullOffset = this.resultMotionPath?.fullOffset ?? (this.motionProgress === 1 ? this.resultScrollPosition.anchorRows : 0);\n' +
+  '    const quickOffset = this.resultMotionPath?.quickOffset ?? (this.motionProgress === 0 ? this.resultScrollPosition.anchorRows : 0);\n' +
+  '    const full: ReaderControlMotionClipRect = { x: f.firstResult.x, y: f.firstResult.y + (index - fullOffset) * f.rowHeight,\n' +
+  '      width: f.firstResult.width, height: f.rowHeight };\n' +
+  '    const current: ReaderControlMotionClipRect = { x: b.firstResult.x,\n' +
+  '      y: b.firstResult.y + index * b.rowHeight - this.resultScrollFrame().offsetVp,\n' +
+  '      width: b.firstResult.width, height: b.rowHeight };\n' +
+  '    const quick = readerControlMotionVisibleRect({ x: q.firstResult.x,\n' +
+  '      y: q.firstResult.y + (index - quickOffset) * q.rowHeight,\n' +
+  '      width: q.firstResult.width, height: q.rowHeight }, q.results.height);\n' +
+  '    return new PathShape().commands(readerControlMotionClipPath(readerControlMotionClipRects(this.motionProgress,\n' +
+  '      full, current, quick, f.results.height, 0), this.getUIContext().vp2px(1)));\n' +
+  '  }\n' +
+  '\n' +
+  '  private resultScrollFrame(): ReaderControlSearchScrollProjection {\n' +
+  '    return sampleReaderControlSearchScroll(this.resultScrollPosition, this.resultLayout());\n' +
+  '  }\n' +
+  '\n' +
+  '  private resultNativeRawOffset(): number {\n' +
+  '    if (!this.resultScrollMounted) return 0;\n' +
+  '    const offset = this.resultScroller.currentOffset().yOffset;\n' +
+  '    if (Number.isFinite(offset)) this.resultNativeRawBase = Math.max(0, offset);\n' +
+  '    return this.resultNativeRawBase;\n' +
+  '  }\n' +
+  '\n' +
+  '  private resultNativeOffset(layout: ReaderControlSearchScrollLayout = this.resultLayout()): number {\n' +
+  '    return this.resultNativeRawOffset() * layout.rowHeightVp / READER_SEARCH_LIST_ITEM_HEIGHT;\n' +
+  '  }\n' +
+  '\n' +
+  '  private onResultDataChanged(): void {\n' +
+  '    const state = this.state;\n' +
+  "    const change = this.resultDataSource.publish(state.kind === 'results' ? state.keyword : state.kind,\n" +
+  "      state.kind === 'results' ? state.results : []);\n" +
+  "    if (change !== 'replace') {\n" +
+  "      if (change === 'append') this.scheduleResultNativeFollow();\n" +
+  '      return;\n' +
+  '    }\n' +
+  '    this.cancelResultNativeFollow();\n' +
+  '    this.resultMotionPath = undefined;\n' +
+  '    this.resultRestingProgress = thi'... 22374 more characters
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-control-search-settings-content.mjs:193:10
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: "import { readerAppColor } from '../common/ReaderThemeRegistry';\n" +
+    "import { PathShape } from '@ohos.arkui.shape';\n" +
+    'import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,\n' +
+    "  readerControlMotionVisibleRect, type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';\n" +
+    'import { readerControlMorphScrollPath, sampleReaderControlMorphScrollPath,\n' +
+    "  type ReaderControlMorphScrollPath } from './ReaderControlMorphScroll';\n" +
+    "import { registerReaderFonts } from '../common/ReaderFonts';\n" +
+    'import { TOK_BORDER_W, TOK_DANGER, TOK_LINE, TOK_LINE_STRONG, TOK_READ_INK,\n' +
+    "  TOK_READ_MUTED, TOK_READ_PRIMARY, TOK_SURFACE_PANEL, TOK_SURFACE_PANEL_SOFT } from '../common/ReaderTokens';\n" +
+    "import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';\n" +
+    "import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';\n" +
+    "import { ReaderContentSearchPublication } from './ReaderContentSearchPublication';\n" +
+    "import { ReaderContentSearchDataSource, readerContentSearchResultKey } from './ReaderContentSearchDataSource';\n" +
+    'import { READER_SEARCH_LIST_ITEM_HEIGHT, READER_SEARCH_LIST_CACHE_COUNT, readerControlSearchListProjection,\n' +
+    '  readerControlSearchListRowTranslation, readerControlSearchListScrollDelta,\n' +
+    "  type ReaderControlSearchListProjection } from './ReaderControlSearchListProjection';\n" +
+    "import { splitReaderSearchSnippet, type ReaderSearchSnippetParts } from './ReaderSearchHighlight';\n" +
+    "import { sampleReaderControlSearch, type ReaderControlSearchFrame } from './ReaderControlSearchGeometry';\n" +
+    'import { createReaderControlSearchScroll, resetReaderControlSearchScroll, sampleReaderControlSearchScroll,\n' +
+    '  observeReaderControlSearchScroll, prepareReaderControlSearchScrollRebase,\n' +
+    '  confirmReaderControlSearchScrollRebase, cancelReaderControlSearchScrollRebase,\n' +
+    '  type ReaderControlSearchScrollState, type ReaderControlSearchScrollLayout,\n' +
+    "  type ReaderControlSearchScrollProjection, type ReaderControlSearchScrollSource } from './ReaderControlSearchScroll';\n" +
+    '\n' +
+    'let readerContentSearchInputSequence: number = 0;\n' +
+    '\n' +
+    '/** Search 1938:4927 content only. One input and one result scroll tree survive\n' +
+    ' * Quick/Full; Stage owns the shell, header, p, whole visibility and timing.\n' +
+    " * The input primitive's real IME/caret semantics are retained here because the\n" +
+    ' * fixed-height ReaderSearchField variants cannot represent 24->32 geometry. */\n' +
+    '@Component\n' +
+    'export struct ReaderControlSearchContent {\n' +
+    "  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';\n" +
+    '\n' +
+    "  @Prop @Watch('onResultLayoutChanged') motionProgress: number = 0;\n" +
+    "  @Prop @Watch('onResultLayoutChanged') availableWidth: number = 286;\n" +
+    "  @Prop @Watch('onResultLayoutChanged') availableHeight: number = 190;\n" +
+    '  @Prop fullContentHeight: number = 666;\n' +
+    '  @Prop quickContentHeight: number = 190;\n' +
+    "  @Prop @Watch('onInputChanged') interactionEnabled: boolean = true;\n" +
+    "  @Prop @Watch('dismissTemporaryLayer') dismissTemporaryRevision: number = 0;\n" +
+    "  @Prop query: string = '';\n" +
+    '  searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();\n' +
+    "  @Prop @Watch('acceptSearchPublication') searchRevision: number = 0;\n" +
+    "  @State @Watch('onResultDataChanged') private state: ReaderQuickSearchState = { kind: 'idle' };\n" +
+    '  private acceptedSearchState: ReaderQuickSearchState | undefined = undefined;\n' +
+    '  onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};\n' +
+    '  onBack: () => void = (): void => {};\n' +
+    '  onQueryChange: (query: string) => void = (_query: string): void => {};\n' +
+    '  onSearch: () => void = (): void => {};\n' +
+    '  onLoadMore: () => void = (): void => {};\n' +
+    '  onSelectResult: (result: ReadingContentSearchResult) => void =\n' +
+    '    (_result: ReadingContentSearchResult): void => {};\n' +
+    '  private inputController: TextInputController = new TextInputController();\n' +
+    '  private readonly queryInputId: string = `reader-content-search-input-${++readerContentSearchInputSequence}`;\n' +
+    '  private queryInputMounted: boolean = false;\n' +
+    '  private resultScroller: Scroller = new Scroller();\n' +
+    '  private readonly resultDataSource: ReaderContentSearchDataSource = new ReaderContentSearchDataSource();\n' +
+    '  @State private resultItemSizes: ChildrenMainSize = new ChildrenMainSize(READER_SEARCH_LIST_ITEM_HEIGHT);\n' +
+    '  private resultNativeFollowTimer: number = -1;\n' +
+    '  private resultNativeFollowLifecycle: number = 0;\n' +
+    '  private resultNativeRawBase: number = 0;\n' +
+    '  @State private resultScrollPosition: ReaderControlSearchScrollState = createReaderControlSearchScroll();\n' +
+    '  private resultScrollMounted: boolean = false;\n' +
+    '  private resultViewportHeight: number = 0;\n' +
+    '  private resultPointers: number[] = [];\n' +
+    '  private resultUserScrolling: boolean = false;\n' +
+    "  private resultScrollSource: ReaderControlSearchScrollSource = 'unknown';\n" +
+    '  private indexedResultRows: ReadingContentSearchResult[] | undefined = undefined;\n' +
+    '  private resultRowIndexes: Map<string, number> = new Map<string, number>();\n' +
+    '  private resultMotionPath: ReaderControlMorphScrollPath | undefined = undefined;\n' +
+    '  private resultRestingProgress: number = 0;\n' +
+    '  private resultRestingLayout: ReaderControlSearchScrollLayout | undefined = undefined;\n' +
+    '\n' +
+    '  aboutToAppear(): void {\n' +
+    '    this.queryInputMounted = true;\n' +
+    '    registerReaderFonts(this.getUIContext().getFont());\n' +
+    '    this.acceptSearchPublication();\n' +
+    '    this.onResultDataChanged();\n' +
+    '  }\n' +
+    '\n' +
+    '  aboutToDisappear(): void {\n' +
+    '    this.queryInputMounted = false;\n' +
+    '    this.dismissTemporaryLayer();\n' +
+    '    this.onResultScrollDisappear();\n' +
+    '  }\n' +
+    '\n' +
+    '  private acceptSearchPublication(): void {\n' +
+    '    const next = this.searchPublication.stateAt(this.searchRevision);\n' +
+    "    // Compare the raw owner snapshot, not ArkUI's top-level @State proxy.\n" +
+    '    if (this.acceptedSearchState === next) return;\n' +
+    '    this.acceptedSearchState = next;\n' +
+    '    this.state = next;\n' +
+    '  }\n' +
+    '\n' +
+    '  private dismissTemporaryLayer(): void {\n' +
+    '    this.inputController.stopEditing();\n' +
+    '    this.onTemporaryLayerChange(false);\n' +
+    '  }\n' +
+    '\n' +
+    '  private focusQueryField(): void {\n' +
+    '    if (!this.queryInputMounted || !this.interactionEnabled) return;\n' +
+    '    try {\n' +
+    '      this.getUIContext().getFocusController().requestFocus(this.queryInputId);\n' +
+    '    } catch (_) {\n' +
+    '      // A detached native focus context must not fail the retained search UI.\n' +
+    '    }\n' +
+    '  }\n' +
+    '\n' +
+    '  private onInputChanged(): void {\n' +
+    '    if (!this.interactionEnabled) this.dismissTemporaryLayer();\n' +
+    '    this.onResultLayoutChanged();\n' +
+    '  }\n' +
+    '\n' +
+    '  private frame(): ReaderControlSearchFrame {\n' +
+    '    return sampleReaderControlSearch(this.motionProgress, this.availableWidth, this.availableHeight);\n' +
+    '  }\n' +
+    '\n' +
+    '  private resultLayout(): ReaderControlSearchScrollLayout {\n' +
+    '    return { rowHeightVp: this.frame().rowHeight, viewportHeightVp: this.frame().results.height,\n' +
+    '      contentOriginVp: this.frame().firstResult.y, contentEndPaddingVp: this.frame().resultEndPadding,\n' +
+    "      resultCount: this.state.kind === 'results' ? this.state.results.length : 0 };\n" +
+    '  }\n' +
+    '\n' +
+    '  private resultListFrame(): ReaderControlSearchListProjection {\n' +
+    '    return readerControlSearchListProjection(this.resultLayout(), this.resultScrollFrame());\n' +
+    '  }\n' +
+    '\n' +
+    '  private resultRowTranslation(index: number): number {\n' +
+    '    const layout = this.resultLayout();\n' +
+    '    const scroll = this.resultScrollFrame();\n' +
+    '    const rawBase = this.resultScrollPosition.nativeOffsetVp * this.resultListFrame().visualToNativeRatio;\n' +
+    '    return readerControlSearchListRowTranslation(index, layout, scroll, rawBase);\n' +
+    '  }\n' +
+    '\n' +
+    '  private presentation(): ReaderControlMotionPresentation {\n' +
+    '    return sampleReaderControlMotionPresentation(this.motionProgress);\n' +
+    '  }\n' +
+    '  private resultClip(chapterIndex: number, chapterOffset: number): PathShape {\n' +
+    '    const index = this.currentResultIndex(chapterIndex, chapterOffset);\n' +
+    '    const f = sampleReaderControlSearch(1, this.availableWidth, this.fullContentHeight);\n' +
+    '    const q = sampleReaderControlSearch(0, this.availableWidth, this.quickContentHeight);\n' +
+    '    const b = this.frame();\n' +
+    '    const fullOffset = this.resultMotionPath?.fullOffset ?? (this.motionProgress === 1 ? this.resultScrollPosition.anchorRows : 0);\n' +
+    '    const quickOffset = this.resultMotionPath?.quickOffset ?? (this.motionProgress === 0 ? this.resultScrollPosition.anchorRows : 0);\n' +
+    '    const full: ReaderControlMotionClipRect = { x: f.firstResult.x, y: f.firstResult.y + (index - fullOffset) * f.rowHeight,\n' +
+    '      width: f.firstResult.width, height: f.rowHeight };\n' +
+    '    const current: ReaderControlMotionClipRect = { x: b.firstResult.x,\n' +
+    '      y: b.firstResult.y + index * b.rowHeight - this.resultScrollFrame().offsetVp,\n' +
+    '      width: b.firstResult.width, height: b.rowHeight };\n' +
+    '    const quick = readerControlMotionVisibleRect({ x: q.firstResult.x,\n' +
+    '      y: q.firstResult.y + (index - quickOffset) * q.rowHeight,\n' +
+    '      width: q.firstResult.width, height: q.rowHeight }, q.results.height);\n' +
+    '    return new PathShape().commands(readerControlMotionClipPath(readerControlMotionClipRects(this.motionProgress,\n' +
+    '      full, current, quick, f.results.height, 0), this.getUIContext().vp2px(1)));\n' +
+    '  }\n' +
+    '\n' +
+    '  private resultScrollFrame(): ReaderControlSearchScrollProjection {\n' +
+    '    return sampleReaderControlSearchScroll(this.resultScrollPosition, this.resultLayout());\n' +
+    '  }\n' +
+    '\n' +
+    '  private resultNativeRawOffset(): number {\n' +
+    '    if (!this.resultScrollMounted) return 0;\n' +
+    '    const offset = this.resultScroller.currentOffset().yOffset;\n' +
+    '    if (Number.isFinite(offset)) this.resultNativeRawBase = Math.max(0, offset);\n' +
+    '    return this.resultNativeRawBase;\n' +
+    '  }\n' +
+    '\n' +
+    '  private resultNativeOffset(layout: ReaderControlSearchScrollLayout = this.resultLayout()): number {\n' +
+    '    return this.resultNativeRawOffset() * layout.rowHeightVp / READER_SEARCH_LIST_ITEM_HEIGHT;\n' +
+    '  }\n' +
+    '\n' +
+    '  private onResultDataChanged(): void {\n' +
+    '    const state = this.state;\n' +
+    "    const change = this.resultDataSource.publish(state.kind === 'results' ? state.keyword : state.kind,\n" +
+    "      state.kind === 'results' ? state.results : []);\n" +
+    "    if (change !== 'replace') {\n" +
+    "      if (change === 'append') this.scheduleResultNativeFollow();\n" +
+    '      return;\n' +
+    '    }\n' +
+    '    this.cancelResultNativeFollow();\n' +
+    '    this.resultMotionPath = undefined;\n' +
+    '    this.resultRestingProgress = thi'... 22374 more characters,
+  expected: /animateTo\(|\.animation\(|setTimeout\(|setInterval\(|\.scale\(/,
+  operator: 'doesNotMatch',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

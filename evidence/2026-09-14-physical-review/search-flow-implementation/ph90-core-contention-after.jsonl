@@ -1,0 +1,4 @@
+{"chapters": 1200, "bodyBytes": 24192000, "sendSyncMs": {"search": 0.048792000000297264, "progress": 0.013791999999845928, "ping": 0.001708000000100185}, "results": {"search": {"type": "result", "elapsed_ms": 267.52, "error": null}, "progress": {"type": "result", "elapsed_ms": 0.697, "error": null}, "ping": {"type": "result", "elapsed_ms": 0.786, "error": null}}}
+{"hostBodyBytes": 100000, "sendSyncMs": [0.027874999999788486, 0.022916999999900156, 0.019249999999804146]}
+{"hostBodyBytes": 1000000, "sendSyncMs": [0.1317090000001464, 0.1249579999997863, 0.1228750000001888]}
+{"hostBodyBytes": 8000000, "sendSyncMs": [0.9777089999998267, 0.9642919999999222, 0.9504579999997098]}

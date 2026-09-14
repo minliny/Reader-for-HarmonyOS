@@ -1,0 +1,23 @@
+error[E0514]: found crate `reader_content` compiled by an incompatible version of rustc
+ --> /private/tmp/songhe-content-audit/probe.rs:1:5
+  |
+1 | use reader_content::{BookSourceRequestContext, RemoteContentPipeline};
+  |     ^^^^^^^^^^^^^^
+  |
+  = note: the following crate versions were found:
+          crate `reader_content` compiled by rustc 1.97.1 (8bab26f4f 2026-07-14): /Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps/libreader_content-1c8d104f553a9f03.rlib
+  = help: please recompile that crate using this compiler (rustc 1.96.0 (ac68faa20 2026-05-25)) (consider running `cargo clean` first)
+
+error[E0514]: found crate `reader_domain` compiled by an incompatible version of rustc
+ --> /private/tmp/songhe-content-audit/probe.rs:2:5
+  |
+2 | use reader_domain::{BookSourceContentSemantics, BookSourcePipelineRules, BookSourceSemantics};
+  |     ^^^^^^^^^^^^^
+  |
+  = note: the following crate versions were found:
+          crate `reader_domain` compiled by rustc 1.97.1 (8bab26f4f 2026-07-14): /Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps/libreader_domain-042bd315bb08f4b9.rlib
+  = help: please recompile that crate using this compiler (rustc 1.96.0 (ac68faa20 2026-05-25)) (consider running `cargo clean` first)
+
+error: aborting due to 2 previous errors
+
+For more information about this error, try `rustc --explain E0514`.

@@ -1,0 +1,33 @@
+   Compiling reader-rule v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-rule)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 16.28s
+     Running unittests src/lib.rs (target/debug/deps/reader_runtime-47fbc363ec3cde2d)
+
+running 4 tests
+
+thread 'remote::remote_content_positions::tests::format2_old_cache_is_read_only_until_explicit_upgrade_and_current_cache_does_not_refetch' (66268297) panicked at crates/reader-runtime/src/remote/remote_content_positions.rs:1066:20:
+called `Result::unwrap()` on an `Err` value: CoreError { code: InvalidParams, message: "remote content position identity is stale; old content and positions were preserved", retryable: false, details: Object {"reason": String("chapter_identity_conflict"), "recoverable": Bool(true), "requiresPositionMigration": Bool(true)} }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'remote::remote_content_positions::tests::format2_explicit_refresh_preserves_format1_array_when_wrapper_anchor_cannot_map' (66268295) panicked at crates/reader-runtime/src/remote/remote_content_positions.rs:1066:20:
+called `Result::unwrap()` on an `Err` value: CoreError { code: InvalidParams, message: "remote content position identity is stale; old content and positions were preserved", retryable: false, details: Object {"reason": String("chapter_identity_conflict"), "recoverable": Bool(true), "requiresPositionMigration": Bool(true)} }
+
+thread 'remote::remote_content_positions::tests::format2_explicit_refresh_maps_format1_array_and_only_the_requested_chapter' (66268294) panicked at crates/reader-runtime/src/remote/remote_content_positions.rs:1066:20:
+called `Result::unwrap()` on an `Err` value: CoreError { code: InvalidParams, message: "remote content position identity is stale; old content and positions were preserved", retryable: false, details: Object {"reason": String("chapter_identity_conflict"), "recoverable": Bool(true), "requiresPositionMigration": Bool(true)} }
+test remote::remote_content_positions::tests::format2_explicit_refresh_maps_format1_array_and_only_the_requested_chapter ... FAILED
+test remote::remote_content_positions::tests::format2_old_cache_is_read_only_until_explicit_upgrade_and_current_cache_does_not_refetch ... FAILED
+test remote::remote_content_positions::tests::format2_explicit_refresh_preserves_format1_array_when_wrapper_anchor_cannot_map ... FAILED
+test remote::remote_content_positions::tests::format2_first_download_and_ad_hoc_preview_hash_the_same_canonical_format ... ok
+
+failures:
+
+failures:
+    remote::remote_content_positions::tests::format2_explicit_refresh_maps_format1_array_and_only_the_requested_chapter
+    remote::remote_content_positions::tests::format2_explicit_refresh_preserves_format1_array_when_wrapper_anchor_cannot_map
+    remote::remote_content_positions::tests::format2_old_cache_is_read_only_until_explicit_upgrade_and_current_cache_does_not_refetch
+
+test result: FAILED. 1 passed; 3 failed; 0 ignored; 0 measured; 395 filtered out; finished in 0.24s
+
+error: test failed, to rerun pass `-p reader-runtime --lib`

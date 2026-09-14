@@ -1,0 +1,27 @@
+   Compiling reader-rule v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-rule)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.78s
+     Running unittests src/lib.rs (target/debug/deps/reader_content-dd92e2a3824a4829)
+
+running 3 tests
+test tests::ph85_text_fields_and_js_getstring_join_arrays_without_changing_request_templates ... FAILED
+test tests::ph85_songhe_original_rule_projects_json_paragraphs_without_serialization_artifacts ... ok
+test tests::ph85_final_replacement_getstring_uses_first_response_and_restores_result ... ok
+
+failures:
+
+---- tests::ph85_text_fields_and_js_getstring_join_arrays_without_changing_request_templates stdout ----
+
+thread 'tests::ph85_text_fields_and_js_getstring_join_arrays_without_changing_request_templates' (66181845) panicked at crates/reader-content/src/lib.rs:14804:13:
+assertion `left == right` failed: {$.value}
+  left: ""
+ right: "甲\n乙\n丙"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tests::ph85_text_fields_and_js_getstring_join_arrays_without_changing_request_templates
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 197 filtered out; finished in 0.14s
+
+error: test failed, to rerun pass `-p reader-content --lib`

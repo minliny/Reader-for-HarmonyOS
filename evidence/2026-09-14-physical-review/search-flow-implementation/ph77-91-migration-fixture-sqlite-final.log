@@ -1,0 +1,42 @@
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.59s
+────────────
+ Nextest run ID 9961832f-6dad-4ddb-aaa1-ce482155c2f6 with nextest profile: default
+    Starting 35 tests across 12 binaries (262 tests skipped)
+        PASS [   0.022s] reader-storage sqlite_backend::content_search::tests::content_search_v21_migration_is_atomic_and_preserves_old_body_positions
+        PASS [   0.031s] reader-storage sqlite_backend::content_search::tests::content_search_pages_are_bounded_ordered_scoped_and_do_not_materialize_tail
+        PASS [   0.031s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_empty_author_identity_fallback_and_disabled_bridge_are_exact
+        PASS [   0.031s] reader-storage sqlite_backend::content_search::tests::content_search_snapshot_ignores_other_book_body_and_keeps_all_processing_inputs
+        PASS [   0.032s] reader-storage sqlite_backend::content_search::tests::content_search_generation_covers_same_stamp_writes_clear_and_rollback
+        PASS [   0.011s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_normalization_matches_recorded_javascript_unicode_fixtures
+        PASS [   0.033s] reader-storage sqlite_backend::content_search::tests::content_search_scope_queries_use_indexes
+        PASS [   0.035s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_alias_closure_expands_splits_and_ignores_metadata_updates
+        PASS [   0.036s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_alias_history_is_bounded_and_raw_facts_survive
+        PASS [   0.038s] reader-storage sqlite_backend::remote_content_positions::tests::remote_mark_fact_create_update_and_migration_roll_back_with_user_rows_on_fact_write_failure
+        PASS [   0.025s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_normalizer_version_rebuild_preserves_facts_and_invalidates_snapshot
+        PASS [   0.025s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_snapshot_restore_and_direct_sql_delete_keep_derived_rows_consistent
+        PASS [   0.024s] reader-storage sqlite_backend::tests::v13_migration_adds_highlight_rules_and_unique_uuid_index
+        PASS [   0.023s] reader-storage sqlite_backend::tests::v14_migration_adds_author_without_losing_legacy_read_records
+        PASS [   0.027s] reader-storage sqlite_backend::tests::v12_migration_adds_book_highlights_table_and_book_url_index
+        PASS [   0.031s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_source_delete_restore_reports_missing_and_invalidates_old_cursors
+        PASS [   0.034s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_v19_migration_backfills_without_rewriting_facts_and_is_repeatable
+        PASS [   0.010s] reader-storage tests::source_switch_progress_migration_fails_without_matched_chapter
+        PASS [   0.017s] reader-storage sqlite_backend::tests::v8_migration_invalidates_ambiguous_remote_cache_but_keeps_local
+        PASS [   0.018s] reader-storage sqlite_backend::tests::v9_migration_scopes_remote_books_and_keeps_only_local_legacy_evidence
+        PASS [   0.025s] reader-storage sqlite_backend::tests::v15_migration_adds_scope_source_without_changing_legacy_rules
+        PASS [   0.019s] reader-storage sqlite_backend::tests::v6_to_v7_migration_initializes_existing_replace_rule_generation
+        PASS [   0.026s] reader-storage sqlite_backend::tests::v1_to_v2_migration_adds_entity_tables
+        PASS [   0.024s] reader-storage sqlite_backend::tests::v5_migration_recovers_pre_release_v0_schema_that_already_has_columns
+        PASS [   0.009s] reader-storage tests::source_switch_progress_migration_resets_matched_chapter_position
+        PASS [   0.011s] reader-storage tests::source_switch_progress_migration_validates_storage_progress_boundary
+        PASS [   0.013s] reader-storage::import_transaction_storage in_memory_position_migration_is_atomic_and_checks_concurrent_edits
+        PASS [   0.019s] reader-storage::rss_subscription_create legacy_duplicate_urls_return_stable_smallest_id_without_migration
+        PASS [   0.025s] reader-storage::independent_entities_crud_v4 tts_v17_migration_preserves_legacy_rows_and_is_repeatable
+        PASS [   0.026s] reader-storage::import_transaction_storage sqlite_position_migration_is_atomic_and_checks_concurrent_edits
+        PASS [   0.023s] reader-storage::search_history_storage sqlite_v16_migration_keeps_legacy_candidate_payload_and_new_composite_key
+        PASS [   0.040s] reader-storage::sqlite_backend remote_content_format_upgrade_keeps_old_body_and_adds_only_version_metadata
+        PASS [   0.107s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_page_source_snapshot_is_bounded_to_the_page_and_requested_identity
+        PASS [   0.175s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_indexed_scope_does_not_scan_unrelated_library_growth
+        PASS [   0.296s] reader-storage sqlite_backend::scoped_search::tests::scoped_search_pages_cover_beyond_128_and_invalidate_on_source_changes
+────────────
+     Summary [   0.329s] 35 tests run: 35 passed, 262 skipped

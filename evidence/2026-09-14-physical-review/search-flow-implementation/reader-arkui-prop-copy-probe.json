@@ -1,0 +1,31 @@
+{
+  "createdAt": "2026-09-14T15:59:04.274Z",
+  "source": "actual SDK libace_compatible.dylib embedded JS",
+  "methodSha256": "efc3e8d6029e233c63e53acca366d5292b094c4b38a77264abb9de115306a974",
+  "plainDtoScope": "ObservedObject wrapper excluded; original recursive traversal unmodified",
+  "beforeBoundary": {
+    "samePresentation": false,
+    "sameResults": true,
+    "sameBook": true
+  },
+  "cases": [
+    {
+      "candidates": 1000,
+      "serializedBytes": 725386,
+      "copiedObjects": 3005,
+      "copiedSlots": 22018,
+      "resultsReferencePreserved": false,
+      "bookReferencePreserved": false,
+      "ms": {
+        "p50": 0.8698749999999791,
+        "p95": 1.1582499999999527,
+        "p99": 1.3859999999999673,
+        "max": 1.9905840000000126
+      }
+    }
+  ],
+  "pageAfterDeepCopy": {
+    "newGroups": 1000,
+    "changedGroups": 1000
+  }
+}

@@ -1,0 +1,83 @@
+    Blocking waiting for file lock on build directory
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.07s
+     Running tests/runtime_integration.rs (target/debug/deps/runtime_integration-05d616ca5bbc2627)
+
+running 74 tests
+test cache_commands::clear_book_is_source_scoped_and_cache_mutation_classification_is_exact ... ok
+test cache_commands::invalid_initial_checkpoint_completion_rolls_prefetch_back_to_its_before_image ... ok
+test cache_commands::initial_checkpoint_host_error_rolls_prefetch_back_before_any_http ... ok
+test cache_commands::malformed_host_results_retry_exact_task_then_leave_terminal_failure ... ok
+test cache_commands::status_reports_per_chapter_queue_states_and_global_cache_stats ... ok
+test cache_commands::cancellation_and_capability_rejection_leave_no_prefetch_mutation ... ok
+test cache_commands::cache_and_all_clear_preserve_imported_local_reading_and_rollback ... ok
+test local_book_catalog_commands::catalog_chapter_with_mismatched_book_id_returns_error ... ok
+test cache_commands::runtime_host_error_retries_the_same_chapter_then_can_succeed ... ok
+test cache_commands::storage_full_report_keeps_body_failed_and_retries_without_http ... ok
+test cache_commands::invalid_final_persistence_completion_rolls_back_completed_body_and_queue ... ok
+test cache_commands::final_persistence_host_error_rolls_back_completed_body_and_queue ... ok
+test cache_commands::persistent_runtime_checkpoints_queue_before_first_http_and_flushes_final_body ... ok
+test local_book_catalog_commands::catalog_invalid_schema_version_returns_error ... ok
+test local_book_catalog_commands::catalog_non_object_catalog_returns_invalid_params ... ok
+test local_book_catalog_commands::catalog_resource_with_mismatched_book_id_returns_error ... ok
+test local_book_catalog_commands::catalog_non_object_entry_returns_invalid_params ... ok
+test local_book_catalog_commands::catalog_upsert_adds_chapters_and_resources ... ok
+test local_book_catalog_commands::catalog_upsert_into_empty_snapshot_adds_entry ... ok
+test local_book_catalog_commands::catalog_upsert_removes_old_chapters_for_same_book_id ... ok
+test local_book_catalog_commands::catalog_upsert_preserves_other_books_chapters_and_resources ... ok
+test local_book_catalog_commands::catalog_upsert_removes_old_resources_for_same_book_id ... ok
+test local_book_catalog_commands::catalog_upsert_replaces_existing_entry_with_same_stable_book_id ... ok
+test local_book_content_metrics::metrics_fail_closed_for_a_book_that_was_not_materialized ... ok
+test local_book_content_metrics::metrics_match_exact_processed_chapter_bodies_and_cumulative_intervals ... ok
+test pagination::book_toc_no_pagination_when_no_next_toc_url ... ok
+test cache_commands::prefetch_executes_cached_toc_range_serially_and_materializes_every_body ... ok
+test pagination::chapter_content_no_pagination_when_no_next_content_url ... ok
+test pagination::book_toc_pagination_starts_when_next_toc_url_present ... ok
+test pagination::book_toc_pagination_stops_on_cycle ... ok
+test pagination::chapter_content_pagination_starts_when_next_content_url_present ... ok
+test pagination::book_toc_pagination_merges_three_pages_in_order ... ok
+test pagination::chapter_content_pagination_stops_on_cycle ... ok
+test pagination::chapter_content_pagination_concatenates_three_pages ... ok
+test pagination::final_replacement_images_resolve_against_first_page_and_keep_existing_absolute_images ... ok
+test search_content_commands::dispatch_search_content_book_name_empty_when_not_on_shelf ... ok
+test search_content_commands::dispatch_search_content_empty_keyword_returns_invalid_params_error ... ok
+test search_content_commands::dispatch_search_content_filtered_by_book_id ... ok
+test search_content_commands::dispatch_search_content_max_results_truncates ... ok
+test pagination::merged_chapter_replacement_runs_once_and_keeps_first_analyzer_context ... ok
+test search_content_commands::canonical_remote_cache_is_reprocessed_for_read_and_search_without_refetch ... ok
+test search_content_commands::dispatch_search_content_missing_keyword_param_returns_invalid_params_error ... ok
+test search_content_commands::dispatch_search_content_returns_every_occurrence_within_one_chapter ... ok
+test search_content_commands::dispatch_search_content_no_match_returns_empty_array ... ok
+test search_content_commands::dispatch_search_content_offset_pages_stably_and_marks_terminal_page ... ok
+test search_content_commands::dispatch_search_content_returns_finished_with_results ... ok
+test search_content_commands::dispatch_search_content_source_filter_keeps_duplicate_book_ids_unambiguous ... ok
+test search_content_commands::dispatch_search_content_snippet_includes_keyword_and_context ... ok
+test search_content_commands::legacy_chapter_cache_remains_readable_without_reexecuting_source_rules ... ok
+test sync_backup_commands::backup_duplicate_relative_paths_return_error ... ok
+test sync_backup_commands::backup_full_restore_no_filter_returns_all_entries ... ok
+test sync_backup_commands::backup_dry_run_returns_all_entries_ignoring_filter ... ok
+test sync_backup_commands::backup_full_restore_with_selected_book_ids_filters_entries ... ok
+test search_content_commands::scoped_replacement_uses_source_scoped_book_name ... ok
+test sync_backup_commands::backup_invalid_package_total_bytes_returns_error ... ok
+test sync_backup_commands::backup_multi_file_manifest_with_directory_structure_round_trips ... ok
+test pagination::final_replacement_failure_preserves_the_previous_cached_body_and_version ... ok
+test sync_backup_commands::backup_non_object_policy_returns_invalid_params ... ok
+test sync_backup_commands::backup_non_object_package_returns_invalid_params ... ok
+test sync_backup_commands::backup_multi_file_selective_filter_preserves_unfiltered_entries ... ok
+test sync_backup_commands::backup_result_entries_are_sorted_by_relative_path ... ok
+test sync_backup_commands::backup_selective_restore_filters_entries ... ok
+test sync_backup_commands::backup_selective_with_empty_selected_book_ids_returns_error ... ok
+test sync_backup_commands::backup_selective_without_selected_book_ids_returns_error ... ok
+test sync_webdav_product_commands::product_webdav_rejects_cleartext_base_url_before_attaching_authorization ... ok
+test sync_webdav_product_commands::connection_test_needs_no_encryption_key_and_rejects_wrong_status ... ok
+test sync_webdav_product_commands::restore_accepts_multistatus_hrefs_beneath_a_base_url_path ... ok
+test sync_webdav_product_commands::host_config_rejects_definitions_secrets_invalid_modes_and_oversized_ids ... ok
+test pagination::chapter_pagination_consumes_the_limit_page_and_rejects_incomplete_content ... ok
+test pagination::toc_pagination_consumes_all_fetched_responses_and_rejects_truncation ... ok
+test sync_webdav_product_commands::abort_discards_the_pending_transaction ... ok
+test sync_webdav_product_commands::restore_commit_succeeds_only_after_live_storage_matches_candidate ... ok
+test sync_webdav_product_commands::host_only_restore_conflict_is_manual_encrypted_and_requires_durable_receipt ... ok
+test sync_webdav_product_commands::backup_restore_conflict_and_repeat_restore_stay_core_owned ... ok
+
+test result: ok. 74 passed; 0 failed; 0 ignored; 0 measured; 560 filtered out; finished in 27.07s
+
