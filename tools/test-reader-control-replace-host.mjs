@@ -15,11 +15,12 @@ const { ReaderControlReplaceGatewayError } =
 const { copyReaderControlSessionState } =
   await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
 const {readerControlHostClosing}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
+const {ReaderContentSearchPublication}=await import('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ts');
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
 const names = ['openQuickReplace', 'controlReplaceCurrent', 'reloadControlReplace', 'runControlReplaceMutation',
   'beginReplaceMutation', 'isReplaceMutationCurrent', 'finishReplaceMutation', 'invalidateReplaceMutationOwner',
-  'onControlSessionChanged','admitSessionControlClosing'];
+  'onControlSessionChanged','admitSessionControlClosing','publishQuickSearchState'];
 function method(name) {
   const match = new RegExp('  private (?:async )?' + name + '\\(').exec(source);
   assert.ok(match, 'real Host method ' + name);
@@ -66,6 +67,7 @@ function owner(Type = Host()) {
     latestControlVisualSession: { closeRevision: 0, location: { level: 'secondary', module: 'replace' } },
     observedControlPage: 'quickReplace', observedControlModule: 'replace', observedControlCloseRevision: 0,
     searchGeneration: 0, quickSearchQuery: '', quickSearchState: { kind: 'idle' },
+    quickSearchPublication: new ReaderContentSearchPublication(), quickSearchRevision: 0,
     reloadBookCalls: 0, loadCalls: 0,
     applyWindowPolicyForChromeOwner() {},
     controlVisible() { return this.visible; }, controlPage() { return this.page; },

@@ -9,6 +9,11 @@ import { TOK_BORDER_W, TOK_DANGER, TOK_LINE, TOK_LINE_STRONG, TOK_READ_INK,
   TOK_READ_MUTED, TOK_READ_PRIMARY, TOK_SURFACE_PANEL, TOK_SURFACE_PANEL_SOFT } from '../common/ReaderTokens';
 import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';
 import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';
+import { ReaderContentSearchPublication } from './ReaderContentSearchPublication';
+import { ReaderContentSearchDataSource, readerContentSearchResultKey } from './ReaderContentSearchDataSource';
+import { READER_SEARCH_LIST_ITEM_HEIGHT, READER_SEARCH_LIST_CACHE_COUNT, readerControlSearchListProjection,
+  readerControlSearchListRowTranslation, readerControlSearchListScrollDelta,
+  type ReaderControlSearchListProjection } from './ReaderControlSearchListProjection';
 import { splitReaderSearchSnippet, type ReaderSearchSnippetParts } from './ReaderSearchHighlight';
 import { sampleReaderControlSearch, type ReaderControlSearchFrame } from './ReaderControlSearchGeometry';
 import { createReaderControlSearchScroll, resetReaderControlSearchScroll, sampleReaderControlSearchScroll,
@@ -16,6 +21,8 @@ import { createReaderControlSearchScroll, resetReaderControlSearchScroll, sample
   confirmReaderControlSearchScrollRebase, cancelReaderControlSearchScrollRebase,
   type ReaderControlSearchScrollState, type ReaderControlSearchScrollLayout,
   type ReaderControlSearchScrollProjection, type ReaderControlSearchScrollSource } from './ReaderControlSearchScroll';
+
+let readerContentSearchInputSequence: number = 0;
 
 /** Search 1938:4927 content only. One input and one result scroll tree survive
  * Quick/Full; Stage owns the shell, header, p, whole visibility and timing.
@@ -33,7 +40,10 @@ export struct ReaderControlSearchContent {
   @Prop @Watch('onInputChanged') interactionEnabled: boolean = true;
   @Prop @Watch('dismissTemporaryLayer') dismissTemporaryRevision: number = 0;
   @Prop query: string = '';
-  @Prop @Watch('onResultDataChanged') state: ReaderQuickSearchState = { kind: 'idle' };
+  searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
+  @Prop @Watch('acceptSearchPublication') searchRevision: number = 0;
+  @State @Watch('onResultDataChanged') private state: ReaderQuickSearchState = { kind: 'idle' };
+  private acceptedSearchState: ReaderQuickSearchState | undefined = undefined;
   onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};
   onBack: () => void = (): void => {};
   onQueryChange: (query: string) => void = (_query: string): void => {};
@@ -42,31 +52,59 @@ export struct ReaderControlSearchContent {
   onSelectResult: (result: ReadingContentSearchResult) => void =
     (_result: ReadingContentSearchResult): void => {};
   private inputController: TextInputController = new TextInputController();
+  private readonly queryInputId: string = `reader-content-search-input-${++readerContentSearchInputSequence}`;
+  private queryInputMounted: boolean = false;
   private resultScroller: Scroller = new Scroller();
+  private readonly resultDataSource: ReaderContentSearchDataSource = new ReaderContentSearchDataSource();
+  @State private resultItemSizes: ChildrenMainSize = new ChildrenMainSize(READER_SEARCH_LIST_ITEM_HEIGHT);
+  private resultNativeFollowTimer: number = -1;
+  private resultNativeFollowLifecycle: number = 0;
+  private resultNativeRawBase: number = 0;
   @State private resultScrollPosition: ReaderControlSearchScrollState = createReaderControlSearchScroll();
   private resultScrollMounted: boolean = false;
   private resultViewportHeight: number = 0;
   private resultPointers: number[] = [];
   private resultUserScrolling: boolean = false;
   private resultScrollSource: ReaderControlSearchScrollSource = 'unknown';
-  private resultDataIdentity: string = '';
+  private indexedResultRows: ReadingContentSearchResult[] | undefined = undefined;
+  private resultRowIndexes: Map<string, number> = new Map<string, number>();
   private resultMotionPath: ReaderControlMorphScrollPath | undefined = undefined;
   private resultRestingProgress: number = 0;
   private resultRestingLayout: ReaderControlSearchScrollLayout | undefined = undefined;
 
   aboutToAppear(): void {
+    this.queryInputMounted = true;
     registerReaderFonts(this.getUIContext().getFont());
+    this.acceptSearchPublication();
     this.onResultDataChanged();
   }
 
   aboutToDisappear(): void {
+    this.queryInputMounted = false;
     this.dismissTemporaryLayer();
     this.onResultScrollDisappear();
+  }
+
+  private acceptSearchPublication(): void {
+    const next = this.searchPublication.stateAt(this.searchRevision);
+    // Compare the raw owner snapshot, not ArkUI's top-level @State proxy.
+    if (this.acceptedSearchState === next) return;
+    this.acceptedSearchState = next;
+    this.state = next;
   }
 
   private dismissTemporaryLayer(): void {
     this.inputController.stopEditing();
     this.onTemporaryLayerChange(false);
+  }
+
+  private focusQueryField(): void {
+    if (!this.queryInputMounted || !this.interactionEnabled) return;
+    try {
+      this.getUIContext().getFocusController().requestFocus(this.queryInputId);
+    } catch (_) {
+      // A detached native focus context must not fail the retained search UI.
+    }
   }
 
   private onInputChanged(): void {
@@ -84,15 +122,22 @@ export struct ReaderControlSearchContent {
       resultCount: this.state.kind === 'results' ? this.state.results.length : 0 };
   }
 
-  private resultRowsHeight(): number {
-    return this.state.kind === 'results' ? this.state.results.length * this.frame().rowHeight : 0;
+  private resultListFrame(): ReaderControlSearchListProjection {
+    return readerControlSearchListProjection(this.resultLayout(), this.resultScrollFrame());
   }
+
+  private resultRowTranslation(index: number): number {
+    const layout = this.resultLayout();
+    const scroll = this.resultScrollFrame();
+    const rawBase = this.resultScrollPosition.nativeOffsetVp * this.resultListFrame().visualToNativeRatio;
+    return readerControlSearchListRowTranslation(index, layout, scroll, rawBase);
+  }
+
   private presentation(): ReaderControlMotionPresentation {
     return sampleReaderControlMotionPresentation(this.motionProgress);
   }
   private resultClip(chapterIndex: number, chapterOffset: number): PathShape {
-    const index = this.state.kind === 'results' ? this.state.results.findIndex((r: ReadingContentSearchResult): boolean =>
-      r.chapterIndex === chapterIndex && r.chapterOffset === chapterOffset) : -1;
+    const index = this.currentResultIndex(chapterIndex, chapterOffset);
     const f = sampleReaderControlSearch(1, this.availableWidth, this.fullContentHeight);
     const q = sampleReaderControlSearch(0, this.availableWidth, this.quickContentHeight);
     const b = this.frame();
@@ -114,26 +159,32 @@ export struct ReaderControlSearchContent {
     return sampleReaderControlSearchScroll(this.resultScrollPosition, this.resultLayout());
   }
 
-  private resultNativeOffset(): number {
+  private resultNativeRawOffset(): number {
     if (!this.resultScrollMounted) return 0;
     const offset = this.resultScroller.currentOffset().yOffset;
-    return Number.isFinite(offset) ? Math.max(0, offset) : this.resultScrollPosition.nativeOffsetVp;
+    if (Number.isFinite(offset)) this.resultNativeRawBase = Math.max(0, offset);
+    return this.resultNativeRawBase;
+  }
+
+  private resultNativeOffset(layout: ReaderControlSearchScrollLayout = this.resultLayout()): number {
+    return this.resultNativeRawOffset() * layout.rowHeightVp / READER_SEARCH_LIST_ITEM_HEIGHT;
   }
 
   private onResultDataChanged(): void {
-    // Owner/Prop copies at every morph frame are not a new search. A changed
-    // result identity (or loading/empty phase) invalidates only this scroll run.
-    const identity = this.state.kind === 'results' ? JSON.stringify({ keyword: this.state.keyword,
-      keys: this.state.results.map((result: ReadingContentSearchResult): string =>
-        JSON.stringify([result.sourceId, result.bookId, String(result.chapterIndex), String(result.chapterOffset)])) }) : this.state.kind;
-    if (identity === this.resultDataIdentity) return;
-    this.resultDataIdentity = identity;
+    const state = this.state;
+    const change = this.resultDataSource.publish(state.kind === 'results' ? state.keyword : state.kind,
+      state.kind === 'results' ? state.results : []);
+    if (change !== 'replace') {
+      if (change === 'append') this.scheduleResultNativeFollow();
+      return;
+    }
+    this.cancelResultNativeFollow();
     this.resultMotionPath = undefined;
     this.resultRestingProgress = this.motionProgress === 1 ? 1 : 0;
     this.resultRestingLayout = this.resultLayout();
     this.resultScrollPosition = resetReaderControlSearchScroll(this.resultScrollPosition, this.resultNativeOffset());
     this.resultScrollSource = 'unknown';
-    this.tryResultScrollRebase();
+    this.scheduleResultNativeFollow();
   }
 
   private onResultLayoutChanged(): void {
@@ -143,10 +194,10 @@ export struct ReaderControlSearchContent {
       if (this.resultScrollMounted && this.resultRestingLayout !== undefined) {
         // Handoff samples the native last frame before canceling inertia.
         this.resultScrollPosition = observeReaderControlSearchScroll(this.resultScrollPosition,
-          this.resultRestingLayout, { nativeOffsetVp: this.resultNativeOffset(),
+          this.resultRestingLayout, { nativeOffsetVp: this.resultNativeOffset(this.resultRestingLayout),
             source: this.resultScrollPosition.pendingRebase === undefined ? 'fling' : 'layout',
             progress: this.resultRestingProgress, inputEnabled: true });
-        this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.resultNativeOffset(), animation: false });
+        this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.resultNativeRawOffset(), animation: false });
       }
       this.resultMotionPath = readerControlMorphScrollPath(this.resultRestingProgress,
         this.resultScrollPosition.anchorRows);
@@ -166,7 +217,7 @@ export struct ReaderControlSearchContent {
     }
     if (!this.resultScrollMounted) return;
     this.syncResultNativeOffset('layout');
-    this.tryResultScrollRebase();
+    this.scheduleResultNativeFollow();
   }
 
   private syncResultNativeOffset(source: ReaderControlSearchScrollSource): void {
@@ -177,13 +228,15 @@ export struct ReaderControlSearchContent {
   }
 
   private onResultScrollAppear(): void {
+    this.resultNativeFollowLifecycle += 1;
     this.resultScrollMounted = true;
     this.syncResultNativeOffset('layout');
-    this.tryResultScrollRebase();
+    this.scheduleResultNativeFollow();
   }
 
   private onResultScrollDisappear(): void {
     this.resultScrollMounted = false;
+    this.cancelResultNativeFollow();
     this.resultViewportHeight = 0;
     this.resultPointers = [];
     this.resultUserScrolling = false;
@@ -196,7 +249,7 @@ export struct ReaderControlSearchContent {
     if (!Number.isFinite(height) || height <= 0) return;
     this.resultViewportHeight = height;
     this.syncResultNativeOffset('layout');
-    this.tryResultScrollRebase();
+    this.scheduleResultNativeFollow();
   }
 
   private onResultWillScroll(y: number, source: ScrollSource): OffsetResult {
@@ -215,7 +268,8 @@ export struct ReaderControlSearchContent {
       this.resultUserScrolling = true;
       this.resultScrollPosition = cancelReaderControlSearchScrollRebase(this.resultScrollPosition);
     }
-    return { xOffset: 0, yOffset: y };
+    return { xOffset: 0, yOffset: readerControlSearchListScrollDelta(
+      this.resultNativeRawOffset(), y, this.resultListFrame().maxOffsetVp) };
   }
 
   private onResultDidScroll(): void {
@@ -228,6 +282,7 @@ export struct ReaderControlSearchContent {
       this.resultScrollPosition = confirmReaderControlSearchScrollRebase(
         this.resultScrollPosition, pending, this.resultNativeOffset());
     }
+    this.scheduleResultNativeFollow();
   }
 
   private onResultTouch(event: TouchEvent): void {
@@ -242,6 +297,11 @@ export struct ReaderControlSearchContent {
       });
     }
     if (event.type === TouchType.Down) {
+      this.cancelResultNativeFollow();
+      // Supersede queued controller movement before the new drag owns input.
+      if (this.resultScrollMounted) {
+        this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.resultNativeRawOffset(), animation: false });
+      }
       this.resultScrollPosition = cancelReaderControlSearchScrollRebase(this.resultScrollPosition);
     } else this.tryResultScrollRebase();
   }
@@ -254,19 +314,47 @@ export struct ReaderControlSearchContent {
 
   private tryResultScrollRebase(): void {
     if (!this.resultScrollMounted || this.state.kind !== 'results' ||
-      Math.abs(this.resultViewportHeight - this.frame().results.height) > 0.5) return;
+      Math.abs(this.resultViewportHeight - this.resultListFrame().viewportHeightVp) > 0.5) return;
     const next = prepareReaderControlSearchScrollRebase(this.resultScrollPosition, this.resultLayout(), {
       progress: this.motionProgress, inputEnabled: this.interactionEnabled,
       userScrolling: this.resultUserScrolling || this.resultPointers.length > 0,
     });
     this.resultScrollPosition = next.state;
     if (next.command === undefined) return;
-    // One non-animated endpoint normalization makes both native edges reachable.
-    // Never run per frame or under a held pointer. Until real offset confirms,
-    // retain B-O compensation; programmatic events cannot rewrite the row anchor.
-    this.resultScroller.scrollTo({ xOffset: 0, yOffset: next.command.targetOffsetVp, animation: false });
+    // Stable endpoints still normalize through the existing receipt policy.
+    // The List uses a fixed ruler; only a real readback confirms the command.
+    this.resultScroller.scrollTo({ xOffset: 0,
+      yOffset: next.command.targetOffsetVp * this.resultListFrame().visualToNativeRatio, animation: false });
     this.resultScrollPosition = confirmReaderControlSearchScrollRebase(
       this.resultScrollPosition, next.command, this.resultNativeOffset());
+  }
+
+  private cancelResultNativeFollow(): void {
+    this.resultNativeFollowLifecycle += 1;
+    if (this.resultNativeFollowTimer >= 0) clearTimeout(this.resultNativeFollowTimer);
+    this.resultNativeFollowTimer = -1;
+  }
+
+  private scheduleResultNativeFollow(): void {
+    if (!this.resultScrollMounted || this.resultNativeFollowTimer >= 0) return;
+    const lifecycle = this.resultNativeFollowLifecycle;
+    // Coalesce property Watch deliveries outside native List reconciliation.
+    // Read the latest p/query/layout at dispatch, never an obsolete sample.
+    this.resultNativeFollowTimer = setTimeout((): void => {
+      if (lifecycle !== this.resultNativeFollowLifecycle || !this.resultScrollMounted) return;
+      this.resultNativeFollowTimer = -1;
+      if (this.state.kind !== 'results' || this.resultPointers.length > 0 || this.resultUserScrolling ||
+        this.resultListFrame().viewportHeightVp <= 0 || Math.abs(this.resultViewportHeight - this.resultListFrame().viewportHeightVp) > 0.5) return;
+      const endpoint = this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1);
+      if (endpoint) { this.tryResultScrollRebase(); return; }
+      const target = this.resultListFrame().targetOffsetVp;
+      if (Math.abs(this.resultNativeRawOffset() - target) <= 0.5) return;
+      // Native virtualization must follow the visual row range during morphs.
+      // B is observed, never assigned to target optimistically. Late receipts
+      // remain layout/programmatic observations and cannot rewrite the anchor.
+      this.resultScroller.scrollTo({ xOffset: 0, yOffset: target, animation: false });
+      this.syncResultNativeOffset('programmatic');
+    }, 0);
   }
 
   build() {
@@ -289,12 +377,12 @@ export struct ReaderControlSearchContent {
   @Builder
   private searchField() {
     Row({ space: 5 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'))).width(16).height(16).margin({ right: 2 });
       TextInput({ placeholder: '搜索正文内容', text: this.query, controller: this.inputController })
+        .id(this.queryInputId).enableKeyboardOnFocus(true)
         // This is a 14vp text line inside the authored 24->32vp field. Clear
         // native vertical content insets explicitly; horizontal-only padding
         // leaves the platform's TextInput top/bottom defaults unspecified.
-        .layoutWeight(1).height(14).padding({ left: 2, right: 2, top: 0, bottom: 0 })
+        .layoutWeight(1).height(14).padding({ left: 2, right: 2, top: 0, bottom: 0 }).borderRadius(0)
         .fontFamily('ReaderNotoSansSC').fontSize(10).fontWeight(FontWeight.Regular)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).backgroundColor(Color.Transparent)
         .caretColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).placeholderColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
@@ -310,13 +398,14 @@ export struct ReaderControlSearchContent {
     .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) }).borderRadius(8)
     .position({ x: this.frame().field.x, y: this.frame().field.y })
-    .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
+    .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
+    .onClick((): void => this.focusQueryField());
   }
 
   @Builder
   private searchAction() {
     Stack({ alignContent: Alignment.Center }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'))).width(16).height(16)
+      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search'))).width(16).height(16)
         .opacity(this.canSearch() ? 1 : .4);
     }
     .width(this.frame().action.width).height(this.frame().action.height)
@@ -353,28 +442,31 @@ export struct ReaderControlSearchContent {
   private resultsBody() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.state.kind === 'results') {
-        Scroll(this.resultScroller) {
-          // Native extent and the row layout are different boxes: the authored
-          // negative first-row Y must not squeeze the rows or move their clip.
-          Stack({ alignContent: Alignment.TopStart }) {
-            Column() {
-              ForEach(this.state.results, (result: ReadingContentSearchResult) => {
-                this.resultRow(result.chapterIndex, result.chapterOffset);
-              }, (result: ReadingContentSearchResult): string =>
-                `reader-control-search-${result.chapterIndex}-${result.chapterOffset}`);
-            }.width(this.frame().firstResult.width).height(this.resultRowsHeight())
-              .position({ x: this.frame().firstResult.x, y: this.frame().firstResult.y })
-              .translate({ y: this.resultScrollFrame().translateYVp }).alignItems(HorizontalAlign.Start);
-          }.width('100%').height(this.resultScrollFrame().minContentHeightVp);
+        List({ space: 0, scroller: this.resultScroller }) {
+          LazyForEach(this.resultDataSource, (result: ReadingContentSearchResult, index: number) => {
+            ListItem() {
+              this.resultRow(result.chapterIndex, result.chapterOffset, result.sourceId, result.bookId);
+            }
+            .width('100%').height(READER_SEARCH_LIST_ITEM_HEIGHT)
+            .translate({ y: this.resultRowTranslation(this.currentResultIndex(result.chapterIndex, result.chapterOffset)) }).clip(false);
+          }, (result: ReadingContentSearchResult): string => readerContentSearchResultKey(result));
         }
-        .width('100%').height('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
+        .width(this.frame().firstResult.width).height(this.resultListFrame().viewportHeightVp)
+        .position({ x: this.frame().firstResult.x, y: 0 })
+        .childrenMainSize(this.resultItemSizes).cachedCount(READER_SEARCH_LIST_CACHE_COUNT, true)
+        .contentEndOffset(this.resultListFrame().contentEndOffsetVp)
+        .maintainVisibleContentPosition(true)
+        // Rows retain authored geometry outside their normalized native item.
+        // The parent Results viewport owns the only visual/input clipping box.
+        .clip(false).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
         .enableScrollInteraction(this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1))
         .onAppear((): void => this.onResultScrollAppear())
         .onDisAppear((): void => this.onResultScrollDisappear())
         .onAreaChange((_old: Area, area: Area): void => this.onResultScrollArea(area))
         .onTouch((event: TouchEvent): void => this.onResultTouch(event))
-        .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult => this.onResultWillScroll(y, source))
-        .onDidScroll((_x: number, _y: number, _state: ScrollState): void => this.onResultDidScroll())
+        .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): ScrollResult =>
+          ({ offsetRemain: this.onResultWillScroll(offset, source).yOffset }))
+        .onDidScroll((_offset: number, _state: ScrollState): void => this.onResultDidScroll())
         .onScrollStop((): void => this.onResultScrollStop());
         this.loadMoreAction();
       } else {
@@ -420,7 +512,7 @@ export struct ReaderControlSearchContent {
   }
 
   @Builder
-  private resultRow(chapterIndex: number, chapterOffset: number) {
+  private resultRow(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = '') {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.resultTitle(this.currentResult(chapterIndex, chapterOffset)))
         .width(Math.max(0, this.frame().firstResult.width - 18)).height(13)
@@ -435,7 +527,7 @@ export struct ReaderControlSearchContent {
     .clipShape(this.resultClip(chapterIndex, chapterOffset))
     .borderRadius(6).clip(false)
     .accessibilityText(`${this.resultTitle(this.currentResult(chapterIndex, chapterOffset))}，搜索结果`)
-    .onClick((): void => this.selectCurrentResult(chapterIndex, chapterOffset));
+    .onClick((): void => this.selectCurrentResult(chapterIndex, chapterOffset, sourceId, bookId));
   }
 
   @Builder
@@ -463,12 +555,33 @@ export struct ReaderControlSearchContent {
     if (this.canSearch()) this.onSearch();
   }
 
-  // ForEach identity is stable, but a later result set may replace its payload.
+  // LazyForEach identity is stable, but a later result set may replace its payload.
   // Builder update closures resolve current owner data, never the first object.
+  private currentResultIndex(chapterIndex: number, chapterOffset: number): number {
+    if (this.state.kind !== 'results') {
+      this.indexedResultRows = undefined;
+      this.resultRowIndexes.clear();
+      return -1;
+    }
+    const rows = this.state.results;
+    if (this.indexedResultRows !== rows) {
+      // A result publication may replace the array. Index it once instead of scanning
+      // all rows for every title, snippet span, clip and accessibility label.
+      // Keys only locate the current payload; they never capture an old row.
+      const indexes = new Map<string, number>();
+      rows.forEach((result: ReadingContentSearchResult, index: number): void => {
+        const key = `${result.chapterIndex}:${result.chapterOffset}`;
+        if (!indexes.has(key)) indexes.set(key, index);
+      });
+      this.resultRowIndexes = indexes;
+      this.indexedResultRows = rows;
+    }
+    return this.resultRowIndexes.get(`${chapterIndex}:${chapterOffset}`) ?? -1;
+  }
+
   private currentResult(chapterIndex: number, chapterOffset: number): ReadingContentSearchResult | undefined {
-    if (this.state.kind !== 'results') return undefined;
-    return this.state.results.find((result: ReadingContentSearchResult): boolean =>
-      result.chapterIndex === chapterIndex && result.chapterOffset === chapterOffset);
+    const index = this.currentResultIndex(chapterIndex, chapterOffset);
+    return this.state.kind === 'results' && index >= 0 ? this.state.results[index] : undefined;
   }
 
   private currentSnippet(chapterIndex: number, chapterOffset: number): ReaderSearchSnippetParts {
@@ -477,9 +590,11 @@ export struct ReaderControlSearchContent {
     return splitReaderSearchSnippet(result.snippet, result.snippetStart, result.chapterOffset, result.matchLength);
   }
 
-  private selectCurrentResult(chapterIndex: number, chapterOffset: number): void {
+  private selectCurrentResult(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = ''): void {
     const result = this.currentResult(chapterIndex, chapterOffset);
-    if (this.interactionEnabled && result !== undefined) this.onSelectResult(result);
+    if (this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1) &&
+      result !== undefined && (sourceId.length === 0 || result.sourceId === sourceId) &&
+      (bookId.length === 0 || result.bookId === bookId)) this.onSelectResult(result);
   }
 
   private resultTitle(result: ReadingContentSearchResult | undefined): string {

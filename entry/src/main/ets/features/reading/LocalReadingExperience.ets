@@ -195,6 +195,7 @@ import {
   type ReaderAutoPageFullConfiguration,
 } from './ReaderAutoPageFullState';
 import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';
+import { ReaderContentSearchPublication } from './ReaderContentSearchPublication';
 import type {
   ReaderDirectoryChapterStartBookmarkRequest,
   ReaderPageBookmarkToggleRequest,
@@ -1121,7 +1122,9 @@ export struct ReadingExperience {
   @State private controlTemporaryLayer: boolean = false;
   @State private dismissControlTemporaryRevision: number = 0;
   @State private quickSearchQuery: string = '';
-  @State private quickSearchState: ReaderQuickSearchState = { kind: 'idle' };
+  private quickSearchState: ReaderQuickSearchState = { kind: 'idle' };
+  private readonly quickSearchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
+  @State private quickSearchRevision: number = 0;
   @State private brightnessPercent: number = 50;
   @State private brightnessAutomatic: boolean = true;
   @State private brightnessRevision: number = 0;
@@ -1778,7 +1781,8 @@ export struct ReadingExperience {
         bookmarkLoadMessage: this.bookmarkLoadMessage,
         onRetryBookmarkLoad: (): void => this.loadControlBookmarks(),
         searchQuery: this.quickSearchQuery,
-        searchState: this.quickSearchState,
+        searchPublication: this.quickSearchPublication,
+        searchRevision: this.quickSearchRevision,
         brightnessPercent: this.brightnessPercent,
         brightnessAutomatic: this.brightnessAutomatic,
         brightnessRevision: this.brightnessRevision,
@@ -8614,7 +8618,7 @@ export struct ReadingExperience {
     this.searchGeneration += 1;
     this.replacePanelGeneration += 1;
     this.quickSearchQuery = '';
-    this.quickSearchState = { kind: 'idle' };
+    this.publishQuickSearchState({ kind: 'idle' });
     this.replaceState = createHiddenReaderReplaceQuickState();
     // Reading/TTS/auto-page/selection ownership is not reset by closing UI.
     if (this.mounted && !this.exitRequested) this.drainPageTurnPreparationQueue();
@@ -9167,13 +9171,19 @@ export struct ReadingExperience {
       });
   }
 
+  private publishQuickSearchState(state: ReaderQuickSearchState): void {
+    this.quickSearchState = state;
+    this.quickSearchPublication.publish(state);
+    this.quickSearchRevision += 1;
+  }
+
   private updateQuickSearchQuery(query: string): void {
     if (query === this.quickSearchQuery) {
       return;
     }
     this.searchGeneration += 1;
     this.quickSearchQuery = query;
-    this.quickSearchState = { kind: 'idle' };
+    this.publishQuickSearchState({ kind: 'idle' });
   }
 
   private runQuickSearch(): void {
@@ -9185,7 +9195,7 @@ export struct ReadingExperience {
     const lifecycleToken = this.lifecycleToken;
     const searchGeneration = this.searchGeneration + 1;
     this.searchGeneration = searchGeneration;
-    this.quickSearchState = { kind: 'loading', keyword };
+    this.publishQuickSearchState({ kind: 'loading', keyword });
     const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) &&
       searchGeneration === this.searchGeneration && this.controlVisible() &&
       (this.controlPage() === 'quickSearch' || this.controlPage() === 'fullSearch');
@@ -9195,22 +9205,22 @@ export struct ReadingExperience {
           return;
         }
         const results = page.results;
-        this.quickSearchState = results.length === 0 ?
-          { kind: 'empty', keyword } : { kind: 'results', keyword, results };
-        if (results.length > 0) {
-          this.quickSearchState = {
+        if (results.length === 0) {
+          this.publishQuickSearchState({ kind: 'empty', keyword });
+        } else {
+          this.publishQuickSearchState({
             kind: 'results', keyword, results,
             offset: page.offset + results.length,
             hasMore: page.hasMore,
             loadingMore: false,
-          };
+          });
         }
       })
       .catch((error: Error): void => {
         if (!isCurrent()) {
           return;
         }
-        this.quickSearchState = { kind: 'error', message: error.message };
+        this.publishQuickSearchState({ kind: 'error', message: error.message });
       });
   }
 
@@ -9227,7 +9237,7 @@ export struct ReadingExperience {
       searchGeneration === this.searchGeneration && this.controlVisible() &&
       (this.controlPage() === 'quickSearch' || this.controlPage() === 'fullSearch') &&
       this.quickSearchState.kind === 'results' && this.quickSearchState.keyword === keyword;
-    this.quickSearchState = {
+    this.publishQuickSearchState({
       kind: 'results',
       keyword: current.keyword,
       results: current.results,
@@ -9250,17 +9260,17 @@ export struct ReadingExperience {
           seen.add(key);
           merged.push(result);
         }
-        this.quickSearchState = {
+        this.publishQuickSearchState({
           kind: 'results', keyword, results: merged,
           offset: offset + page.results.length,
           hasMore: page.hasMore,
           loadingMore: false,
-        };
+        });
       })
       .catch((error: Error): void => {
         const latest = this.quickSearchState;
         if (!isCurrent() || latest.kind !== 'results') return;
-        this.quickSearchState = {
+        this.publishQuickSearchState({
           kind: 'results',
           keyword: latest.keyword,
           results: latest.results,

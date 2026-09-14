@@ -122,7 +122,7 @@ import { DEBUG, BUILD_MODE_NAME } from '../../../../../build/default/generated/p
 import { ReaderControlDirectoryContent } from './ReaderControlDirectoryContent';
 import { ReaderControlAppearanceContent } from './ReaderControlAppearanceContent';
 import type { ReaderControlPage } from './ReaderControlRouting';
-import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';
+import { ReaderContentSearchPublication } from './ReaderContentSearchPublication';
 import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
 import {
   copyReaderControlSessionState, createReaderControlSessionState, readerControlContentLocation,
@@ -248,7 +248,8 @@ export struct ReaderControlPanel {
   @Prop bookmarkLoadMessage: string = '';
   onRetryBookmarkLoad: () => void = (): void => {};
   @Prop searchQuery: string = '';
-  @Prop searchState: ReaderQuickSearchState = { kind: 'idle' };
+  searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
+  @Prop searchRevision: number = 0;
   @Prop brightnessPercent: number = 100;
   @Prop brightnessAutomatic: boolean = true;
   @Prop @Watch('onBrightnessConfirmed') brightnessRevision: number = 0;
@@ -1250,7 +1251,8 @@ export struct ReaderControlPanel {
       dismissTemporaryRevision: this.dismissTemporaryRevision,
       onTemporaryLayerChange: (active: boolean): void => this.onTemporaryLayerChange(active),
       query: this.searchQuery,
-      state: this.searchState,
+      searchPublication: this.searchPublication,
+      searchRevision: this.searchRevision,
       onBack: (): void => this.requestPage('home'),
       onQueryChange: (query: string): void => this.onSearchQueryChange(query),
       onSearch: (): void => this.onSearch(),

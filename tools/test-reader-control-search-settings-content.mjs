@@ -19,6 +19,7 @@ import { splitReaderSearchSnippet } from '../entry/src/main/ets/features/reading
 import { createReaderBuilderProbe, readerBuilderSdkAvailable } from './lib/reader-control-builder-probe.mjs';
 import { productionSettingsOptionModifier } from './lib/reader-control-option-modifier-probe.mjs';
 import * as searchScroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
+import { assertSearchListBuilderGeometry } from './lib/reader-content-search-list-probe.mjs';
 
 const read = path => themeDayDesignSource(readFileSync(new URL('../' + path, import.meta.url), 'utf8'));
 const fixture = JSON.parse(read('tools/fixtures/reader-control-search-settings-live-20260905.json'));
@@ -190,19 +191,24 @@ for (const p of points) {
 const searchUI = read('entry/src/main/ets/features/reading/ReaderControlSearchContent.ets');
 const settingsUI = read('entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets');
 for (const ui of [searchUI, settingsUI]) {
-  assert.doesNotMatch(ui, /animateTo\(|\.animation\(|setTimeout\(|setInterval\(|\.scale\(/);
+  assert.doesNotMatch(ui, /animateTo\(|\.animation\(|setInterval\(|\.scale\(/);
   assert.doesNotMatch(ui, /Reader(?:Search|Settings)FullPanel\(/);
   assert.doesNotMatch(ui, /private get /, 'ArkUI component state must use actual methods');
   assert.match(ui, /@Prop(?: @Watch\('(?:onResultLayoutChanged|onMotionChanged)'\))? motionProgress: number/);
 }
 assert.equal((searchUI.match(/TextInput\(\{/g) ?? []).length, 1, 'one real input across morph');
-assert.equal((searchUI.match(/Scroll\(this\.resultScroller\)/g) ?? []).length, 1);
+assert.equal((searchUI.match(/List\(\{ space: 0, scroller: this\.resultScroller \}\)/g) ?? []).length, 1);
+assert.doesNotMatch(searchUI, /Scroll\(this\.resultScroller\)/);
+assert.equal((searchUI.match(/setTimeout\(/g) ?? []).length, 1,
+  'one coalesced native-layout admission timer, not an independent animation clock');
+assert.match(searchUI, /this\.resultNativeFollowTimer = setTimeout\([\s\S]*?\}, 0\);/);
+assert.doesNotMatch(settingsUI, /setTimeout\(/);
 assert.match(searchUI, /onEditChange\(\(editing: boolean\): void => this\.onTemporaryLayerChange\(editing\)\)/);
 assert.match(searchUI, /@Watch\('dismissTemporaryLayer'\)/);
 assert.match(searchUI, /\.stopEditing\(\)/);
 assert.match(searchUI, /\.fontColor\(TOK_DANGER\)/, 'match highlight uses the restored danger token');
-assert.match(searchUI, /width\(16\)\.height\(16\)\.margin\(\{ right: 2 \}\)/,
-  '16vp glyph occupies the source 18vp icon column before the 5vp gap');
+assert.doesNotMatch(searchUI, /reader_directory_input_search/,
+  'PH91 removes the redundant search icon inside the text field');
 assert.equal((settingsUI.match(/Scroll\(this\.scroller\)/g) ?? []).length, 1);
 assert.match(settingsUI, /\.height\(this\.scrollContentHeight\(\)\)/);
 assert.match(settingsUI, /\.translate\(\{ y: this\.sharedScrollTranslation\(\) \}\)/);
@@ -307,97 +313,14 @@ assert.equal(search.query, ' 雨夜 ');
 assert.equal(search.state, resultState, 'morph input protection does not replace query/results');
 assert.equal(search.resultScroller, scroller, 'keyboard dismissal never recreates/reset the result Scroller');
 assert.deepEqual(scroller, { x: 0, y: 108 });
-// Execute the actual Content event adapter as well as the independent pure
-// policy tests. Controller commands deliberately remain asynchronous until the
-// test delivers their real offset, matching the native readback boundary.
-const scrollSource = { DRAG: 0, FLING: 1, EDGE_EFFECT: 2, OTHER_USER_INPUT: 3,
-  SCROLL_BAR: 4, SCROLL_BAR_FLING: 5, SCROLLER: 6, SCROLLER_ANIMATION: 7 };
-const touchType = { Down: 0, Up: 1, Move: 2, Cancel: 3 };
-const contentScrollMethods = ['frame', 'resultLayout', 'resultScrollFrame', 'resultRowsHeight', 'resultNativeOffset',
-  'onResultDataChanged', 'onResultLayoutChanged', 'syncResultNativeOffset', 'onResultScrollAppear',
-  'onResultScrollDisappear', 'onResultScrollArea', 'onResultWillScroll', 'onResultDidScroll',
-  'onResultTouch', 'onResultScrollStop', 'tryResultScrollRebase'];
-const SearchScroll = new Function('sampleReaderControlSearch', 'ScrollSource', 'TouchType', ...Object.keys(searchScroll), ...Object.keys(morphScroll),
-  stripTypeScriptTypes('class ContentScrollProbe {' + contentScrollMethods.map(n => method(searchUI, n)).join('\n') + '}') +
-  ';return ContentScrollProbe;')(sampleReaderControlSearch, scrollSource, touchType, ...Object.values(searchScroll), ...Object.values(morphScroll));
-function scrollOwner() {
-  const value = new SearchScroll(), controller = { offset: 0, commands: [],
-    currentOffset() { return { xOffset: 0, yOffset: this.offset }; },
-    scrollTo(command) { this.commands.push(command); } };
-  Object.assign(value, { motionProgress: 0, availableWidth: 286, availableHeight: 190, interactionEnabled: true,
-    resultScroller: controller, resultScrollMounted: false, resultViewportHeight: 0,
-    resultPointers: [], resultUserScrolling: false, resultScrollSource: 'unknown', resultDataIdentity: '',
-    resultScrollPosition: searchScroll.createReaderControlSearchScroll(),
-    state: { kind: 'results', keyword: '他', results: Array.from({ length: 50 }, (_, i) =>
-      ({ sourceId: 's', bookId: 'b', chapterIndex: i, chapterOffset: 2 })) } });
-  value.onResultDataChanged(); value.onResultScrollAppear(); value.onResultScrollArea({ height: value.frame().results.height });
-  return value;
-}
-function nativeScroll(owner, offset, source = scrollSource.DRAG) {
-  owner.onResultWillScroll(offset - owner.resultScroller.offset, source); owner.resultScroller.offset = offset; owner.onResultDidScroll();
-}
-function resizeResults(owner, p) {
-  Object.assign(owner, { motionProgress: p, availableWidth: 286 + 52 * p, availableHeight: 190 + 476 * p });
-  owner.onResultLayoutChanged(); owner.onResultScrollArea({ height: owner.frame().results.height });
-}
-const anchored = scrollOwner();
-nativeScroll(anchored, 426 / 3.5); anchored.onResultScrollStop();
-const anchor = anchored.resultScrollPosition.anchorRows;
-near(anchor, (426 / 3.5) / 54);
-anchored.interactionEnabled = false;
-for (const p of [.25, .5, .75, 1, .5, 0, .5, 1]) {
-  resizeResults(anchored, p);
-  near(anchored.resultScrollFrame().offsetVp / anchored.frame().rowHeight, anchor * (1 - p),
-    'new expansion moves from current Quick row to Full top; held reversal stays on the same path');
-}
-assert.equal(anchored.resultScroller.commands.length, 1, 'one inertia handoff, no per-frame scrolling');
-anchored.interactionEnabled = true; resizeResults(anchored, 1);
-assert.equal(anchored.resultScroller.commands.length, 2, 'one endpoint normalization after release');
-assert.equal(anchored.resultScroller.commands.at(-1).yOffset, 0);
-assert.ok(anchored.resultScrollPosition.pendingRebase, 'old readback does not confirm asynchronous reset');
-nativeScroll(anchored, 20, scrollSource.SCROLLER);
-assert.ok(anchored.resultScrollPosition.pendingRebase);
-near(anchored.resultScrollPosition.anchorRows, 0);
-nativeScroll(anchored, 0, scrollSource.SCROLLER);
-assert.equal(anchored.resultScrollPosition.pendingRebase, undefined);
-nativeScroll(anchored, 300); anchored.onResultScrollStop();
-const fullAnchor = anchored.resultScrollPosition.anchorRows;
-anchored.interactionEnabled = false;
-for (const p of [.8, .4, 0, .4, 1, .4, 0]) {
-  resizeResults(anchored, p);
-  near(anchored.resultScrollFrame().offsetVp / anchored.frame().rowHeight, fullAnchor * p);
-}
-anchored.interactionEnabled = true; resizeResults(anchored, 0);
-const cancelledTarget = anchored.resultScroller.commands.at(-1).yOffset;
-assert.equal(cancelledTarget, 0);
-anchored.interactionEnabled = false; resizeResults(anchored, .4);
-assert.equal(anchored.resultScrollPosition.pendingRebase, undefined);
-nativeScroll(anchored, cancelledTarget, scrollSource.SCROLLER);
-near(anchored.resultScrollPosition.anchorRows, 0, 'late old reset cannot revive old row anchor');
-const beforeCopy = anchored.resultScrollPosition;
-anchored.state = structuredClone(anchored.state); anchored.onResultDataChanged();
-assert.equal(anchored.resultScrollPosition, beforeCopy, 'same-value owner props during morph do not reset results');
-anchored.state = { ...anchored.state, keyword: '新检索' }; anchored.onResultDataChanged();
-near(anchored.resultScrollPosition.anchorRows, 0, 'new search invalidates the old row anchor');
-anchored.onResultScrollDisappear();
-const disappeared = anchored.resultScrollPosition;
-nativeScroll(anchored, 80);
-assert.equal(anchored.resultScrollPosition, disappeared, 'unmounted native callbacks cannot acquire stale scrolling ownership');
-const actualResultExtent = searchUI.match(/\.height\((this\.resultScrollFrame\(\)\.[A-Za-z]+)\)/)?.[1];
-assert.ok(actualResultExtent, 'actual Scroll child extent binding exists');
-const actualExtentFor = new Function('return ' + actualResultExtent);
-const tail = scrollOwner();
-nativeScroll(tail, tail.resultScrollFrame().maxOffsetVp); tail.onResultScrollStop();
-resizeResults(tail, 1);
-nativeScroll(tail, tail.resultScrollFrame().maxOffsetVp); tail.onResultScrollStop();
-resizeResults(tail, 0);
-assert.ok(actualExtentFor.call(tail) >= tail.frame().results.height + tail.resultScrollPosition.nativeOffsetVp,
-  'actual rendered child extent keeps the Full-tail native base reachable during Quick shrink');
-assert.ok(tail.resultScrollFrame().contentHeightVp < tail.frame().results.height + tail.resultScrollPosition.nativeOffsetVp,
-  'this case would fail with natural business height instead of the real min-extent binding');
-assert.match(searchUI, /\.height\(this\.resultScrollFrame\(\)\.minContentHeightVp\)/);
-assert.match(searchUI, /\.translate\(\{ y: this\.resultScrollFrame\(\)\.translateYVp \}\)/);
-assert.match(searchUI, /\.onWillScroll\([^\n]+this\.onResultWillScroll\(y, source\)/);
+// Full event/receipt ownership and 50/2000/10000-row native-range regressions
+// now live in test-reader-content-search-native-list.mjs. The semantic Scroll
+// policy retains its independent tests; Scroll-specific min-extent assumptions
+// are replaced by the actual normalized List bindings below.
+assert.match(searchUI, /\.childrenMainSize\(this\.resultItemSizes\)\.cachedCount\(READER_SEARCH_LIST_CACHE_COUNT, true\)/);
+assert.match(searchUI, /\.height\(this\.resultListFrame\(\)\.viewportHeightVp\)/);
+assert.match(searchUI, /\.contentEndOffset\(this\.resultListFrame\(\)\.contentEndOffsetVp\)/);
+assert.match(searchUI, /offsetRemain: this\.onResultWillScroll\(offset, source\)\.yOffset/);
 assert.match(searchUI, /\.onDidScroll\([^\n]+this\.onResultDidScroll\(\)/);
 assert.match(searchUI, /\.edgeEffect\(EdgeEffect\.None\)/);
 if (readerBuilderSdkAvailable) {
@@ -422,99 +345,20 @@ if (readerBuilderSdkAvailable) {
   assert.throws(() => checkMountedInputInsets(searchUI.replace(
     '.padding({ left: 2, right: 2, top: 0, bottom: 0 })', '.padding({ left: 2, right: 2 })')),
   /compact input explicitly/, 'reject returning to unspecified platform vertical padding');
-  const resultTreeMembers = [...contentScrollMethods, 'resultsBody', 'loadMoreAction', 'resultRow', 'resultSnippet',
-    'resultTitle', 'currentResult', 'currentSnippet', 'selectCurrentResult', 'statusText', 'presentation', 'resultClip'];
-  function checkMountedResultsClip(source) {
-    const { owner } = createReaderBuilderProbe(source, resultTreeMembers,
-      { sampleReaderControlSearch, splitReaderSearchSnippet, ...searchScroll, ...motionDeps,
-        ScrollSource: scrollSource, TouchType: touchType });
-    const controller = { offset: 0, commands: [],
-      currentOffset() { return { xOffset: 0, yOffset: this.offset }; },
-      scrollTo(command) { this.commands.push(command); } };
-    Object.assign(owner, { ...motionProps, motionProgress: 0, availableWidth: 286, availableHeight: 190,
-      interactionEnabled: true, resultScroller: controller, resultScrollMounted: false,
-      resultViewportHeight: 0, resultPointers: [], resultUserScrolling: false,
-      resultScrollSource: 'unknown', resultDataIdentity: '',
-      resultScrollPosition: searchScroll.createReaderControlSearchScroll(),
-      state: { kind: 'results', keyword: '他', results: Array.from({ length: 13 }, (_, i) =>
-        ({ sourceId: 's', bookId: 'b', chapterIndex: i, chapterOffset: 2,
-          chapterTitle: `第${i + 1}章`, snippet: '甲乙他', snippetStart: 0, matchLength: 1 })) } });
-    owner.resultsBody();
-    const parent = owner.nodes.get(0);
-    const native = [...owner.nodes.values()].find(n => n.type === 'Scroll');
-    const rows = [...owner.nodes.values()].find(n => n.type === 'Column');
-    const extent = [...owner.nodes.values()].find(n => n.type === 'Stack' && n.width === '100%');
-    assert.ok(native && rows && extent, 'real Builder mounts one native window, extent wrapper and rows tree');
-    assert.equal([...owner.nodes.values()].filter(n => n.type === 'Scroll').length, 1);
-    native.onAppear();
-    for (const rememberedRows of [0, 2.25, 50]) {
-      const poses = new Map();
-      for (const p of [0, .25, .5, .75, 1, .75, .5, .25, 0]) {
-        Object.assign(owner, { motionProgress: p, availableWidth: 286 + 52 * p,
-          availableHeight: 190 + 476 * p,
-          resultScrollPosition: { anchorRows: rememberedRows, nativeOffsetVp: 121, revision: 0 } });
-        controller.offset = 121;
-        owner.replay();
-        const f = owner.frame();
-        native.onAreaChange({}, { height: parent.height });
-        owner.replay();
-        assert.equal(parent.clip, true, 'the actual Results parent clips its moving descendants');
-        assert.deepEqual(parent.position, { x: f.results.x, y: f.results.y });
-        near(parent.position.y, f.queryDivider.y + 1, 'query border never enters the Results clipping window');
-        near(parent.width, f.results.width); near(parent.height, f.results.height);
-        assert.equal(native.width, '100%'); assert.equal(native.height, '100%');
-        near(owner.resultViewportHeight, parent.height, 'native measurement refers to the real parent viewport');
-        near(rows.position.x, f.firstResult.x);
-        near(rows.position.y + parent.position.y, 42.993 + 15.007 * p,
-          'authored child C screen position survives viewport correction');
-        near(rows.width, f.firstResult.width); near(rows.height, 13 * f.rowHeight);
-        const projection = owner.resultScrollFrame();
-        near(rows.translate.y, 121 - projection.offsetVp, 'only B-O is runtime compensation; it never cancels C');
-        near(extent.height, Math.max(13 * f.rowHeight + f.firstResult.y + 5, parent.height + 121),
-          'actual native extent contains the authored origin and bottom py5');
-        const firstY = rows.position.y + rows.translate.y - 121;
-        const lastBottom = firstY + rows.height;
-        near(firstY, f.firstResult.y - projection.offsetVp, 'source C survives the actual native scroll chain');
-        if (rememberedRows === 0) {
-          near(firstY, f.firstResult.y);
-          if (p === 0) { near(firstY, 0); near(firstY + f.rowHeight, 54,
-            'PH50 Query no longer clips most of the first result'); }
-          if (p === 1) near(firstY, 5, 'Full top retains source py5');
-        }
-        if (rememberedRows === 50) near(lastBottom, parent.height - 5,
-          'tail actor reaches the real viewport bottom with exactly the source trailing inset');
-        const pose = { firstY, lastBottom, height: parent.height, width: parent.width };
-        if (poses.has(p)) assert.deepEqual(pose, poses.get(p), 'same mounted actors return to the identical same-p pose');
-        poses.set(p, pose);
-      }
-    }
-  }
-  checkMountedResultsClip(searchUI);
-  for (const [from, to, expected] of [
-    ['.position({ x: this.frame().results.x, y: this.frame().results.y }).clip(true)',
-      '.position({ x: this.frame().results.x, y: this.frame().results.y }).clip(false)', /actual Results parent clips/],
-    ['.position({ x: this.frame().firstResult.x, y: this.frame().firstResult.y })',
-      '.position({ x: this.frame().firstResult.x, y: 0 })', /authored child C/],
-    ['.translate({ y: this.resultScrollFrame().translateYVp })',
-      '.translate({ y: this.resultScrollFrame().translateYVp - this.frame().firstResult.y })', /never cancels C/],
-    ['contentOriginVp: this.frame().firstResult.y', 'contentOriginVp: 0', /actual native extent/],
-    ['contentEndPaddingVp: this.frame().resultEndPadding', 'contentEndPaddingVp: 0', /actual native extent/],
-  ]) {
-    assert.ok(searchUI.includes(from), 'mutation targets a real production expression');
-    assert.throws(() => checkMountedResultsClip(searchUI.replace(from, to)), expected);
-  }
-  console.log('Actual SDK Results parent clip + child origin + native extent: same-instance roundtrip and 5 mutations PASS');
-  const searchMembers = ['frame', 'resultRow', 'resultSnippet', 'resultTitle', 'currentResult',
+  assertSearchListBuilderGeometry(searchUI);
+  console.log('Actual SDK normalized List: parent clip, authored child origin, extent, same-instance roundtrip PASS');
+  const searchMembers = ['frame', 'resultRow', 'resultSnippet', 'resultTitle', 'currentResult', 'currentResultIndex',
     'currentSnippet', 'selectCurrentResult', 'presentation', 'resultClip', 'resultScrollFrame', 'resultLayout'];
   function checkMountedSearchResults(source, frozen = false) {
     const { owner } = createReaderBuilderProbe(source, searchMembers, { sampleReaderControlSearch, splitReaderSearchSnippet, ...searchScroll, ...motionDeps });
-    const result = { chapterIndex: 9, chapterOffset: 2, chapterTitle: '旧标题', snippet: '甲乙他旧',
+    const result = { sourceId: 's', bookId: 'b', chapterIndex: 9, chapterOffset: 2, chapterTitle: '旧标题', snippet: '甲乙他旧',
       snippetStart: 0, matchLength: 1 };
     Object.assign(owner, { motionProgress: 0, availableWidth: 286, availableHeight: 190,
       ...motionProps, resultScrollPosition: searchScroll.createReaderControlSearchScroll(),
       interactionEnabled: true, state: { kind: 'results', keyword: '他', results: [result] } });
     const selected = []; owner.onSelectResult = value => selected.push(value);
-    owner.resultRow(9, 2, result);
+    if (frozen) owner.resultRow(9, 2, result.sourceId, result.bookId, result);
+    else owner.resultRow(9, 2, result.sourceId, result.bookId);
     const row = owner.nodes.get(0), click = row.onClick;
     assert.equal(owner.nodes.get(1).create, '旧标题');
     const next = { ...result, chapterTitle: '新标题', snippet: '甲乙他新尾' };
@@ -534,11 +378,11 @@ if (readerBuilderSdkAvailable) {
   }
   checkMountedSearchResults(searchUI);
   const staleSearch = searchUI
-    .replace('private resultRow(chapterIndex: number, chapterOffset: number)',
-      'private resultRow(chapterIndex: number, chapterOffset: number, capturedResult: ReadingContentSearchResult)')
+    .replace("private resultRow(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = '')",
+      "private resultRow(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = '', capturedResult: ReadingContentSearchResult)")
     .replace('Text(this.resultTitle(this.currentResult(chapterIndex, chapterOffset)))', 'Text(this.resultTitle(capturedResult))');
   assert.notEqual(staleSearch, searchUI);
-  assert.throws(() => checkMountedSearchResults(staleSearch), /same-key replacement/,
+  assert.throws(() => checkMountedSearchResults(staleSearch, true), /same-key replacement/,
     'SDK-mounted observer regression rejects an old ForEach result object captured by value');
 
   // Settings Builder args are already stable group/key/index identities. Do
