@@ -10,6 +10,8 @@ import {ReaderControlMotionFrameCache} from '../entry/src/main/ets/features/read
 import {ReaderSessionMorphSourceMeasurement} from '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
 import {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} from '../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts';
 import {readerControlPlaybackSourceKind} from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
+import {sampleReaderControlAutoPage} from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
+import {createReaderControlMorphScroll,readerControlMorphScrollTranslation} from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
 const file=name=>new URL(`../entry/src/main/ets/features/reading/${name}`,import.meta.url);
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
 const g=buildReaderSessionLaunchGeometry({source:new ReaderSessionMorphSourceMeasurement('quickTts','tts',30,510,286,190,1),targetLeft:260,targetTop:790,topBarExitDistance:90,dockExitDistance:330});
@@ -46,16 +48,22 @@ for(const [name,module] of [['ReaderControlTtsContent.ets','tts'],['ReaderContro
  const source=readFileSync(file(name),'utf8');
  for(const m of source.matchAll(/@Builder\s+private (\w+)\(/g)) require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(m[1]);
  for(const form of ['quick','full']){
-  const {owner}=createReaderBuilderProbe(source,['launchSourceContent']);
+  const members=module==='autoPage'?['launchSourceContent','quickHeader','headerMeta']:['launchSourceContent'];
+  const {owner}=createReaderBuilderProbe(source,members,{readerControlMorphScrollTranslation});
   const sections=[];
-  Object.assign(owner,{sourceOnly:form,availableWidth:286,availableHeight:190,
+  Object.assign(owner,{sourceOnly:form,availableWidth:286,availableHeight:190,appScheme:'day',status:'stopped',
+   motionProgress:form==='quick'?0:1,p:()=>form==='quick'?0:1,scrollMotion:createReaderControlMorphScroll(),
+   presentation:()=>({contentOpacity:1,contentBlur:0}),
    frame:()=>({playback:{x:8,y:24,width:280,height:128},control:{width:280,height:100},
     content:{x:0,y:0,width:286,height:190},details:{x:5,y:100,width:270,height:70}}),
    playback:()=>sections.push('playback'),timer:()=>sections.push('timer'),speed:()=>sections.push('speed'),
    controlSection:()=>sections.push('playback'),timerSection:()=>sections.push('timer'),moduleHeader:()=>{},speedRow:()=>sections.push('speed'),followHighlightRow:()=>{}});
+  if(module==='autoPage')owner.frame=()=>sampleReaderControlAutoPage(form==='quick'?0:1,form==='quick'?286:338);
   owner.launchSourceContent();
   assert.equal(sections.filter(x=>x==='playback').length,1);assert.equal(sections.includes('timer'),form==='quick');
   assert.ok([...owner.nodes.values()].every(n=>n.type!=='Scroll'));
+  if(module==='autoPage')assert.equal([...owner.nodes.values()].filter(n=>n.type==='Text'&&n.create==='自动翻页').length,
+   form==='quick'?1:0,'PH51 retained Quick source executes its real header Builder, Full source only contains playback');
   const root=[...owner.nodes.values()][0];assert.equal(root.enabled,false);assert.equal(root.accessibilityLevel,'no-hide-descendants');
  }
  const C=productionMotionMethods(file(name),['onMotionChanged','measureActor','reportMorphActor','onFullDidScroll','onSourceDetachedChanged'],{readerControlPlaybackSourceKind});

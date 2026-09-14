@@ -31,3 +31,9 @@
 搜索/自动顶部见[PH50/51](PH50-51-QUICK-HEADER.md)，规则表单见[PH52–54](PH52-54-replace-editor-audit.md)。定向SDK属性/业务方法回归已通过；完整构建及签名由全部生产和测试冻结后的统一pipeline负责。未操作真机/VM，原已装643bcaf5和历史OPEN不变。
 
 PH49回归中又发现同一路径的反向边界：Quick下拉隐藏、向上回拉、再次下拉会过早进入展开段，生成退化的隐藏→隐藏段，导致松手回Quick。已在现有Session分段条件中要求先回到捕获的可见度再跨段，不另写手势引擎。7模块×Quick/Full及28条跨18vp后停住2秒仍按着→Up/Cancel均通过，Full下拉/Cancel/点击含义与既定规则一致。Panel→LRE→ReaderShell祖先审计没有第二处visibility=0门禁。
+
+## 首次全量门禁失败记录
+
+全部生产/测试冻结并提交44d2e39b后，首次pipeline在`test-reader-session-launch-recovery.mjs`中止：旧探针只装载`launchSourceContent`及旧section桩，遗漏PH51新增`quickHeader`成员，触发`Cannot read properties of undefined (reading 'bind')`。不是原生运行错误，也未进入构建/签名/设备部署。root的定向范围遗漏了此独立夹具，因此统一门禁发现缺口。
+
+修补测试加载真实quickHeader/headerMeta和生产Auto几何；新增断言Quick源恰有一份顶部，Full源仅含播放区，继续检查无Scroll、禁止输入/无障碍副本。该测试已PASS，生产代码未改变；再次冻结并统一重跑。PH48/49/55独立报告见[阅读控制审计](PH48-49-55-READING-CONTROL.md)。
