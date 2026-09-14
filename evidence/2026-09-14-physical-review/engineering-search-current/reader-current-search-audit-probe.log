@@ -1,0 +1,5 @@
+{"case":"barrier","blocked":"bookshelf.list","before":{"onlineCalls":0,"localVisible":false},"after":{"onlineCalls":1,"finalKind":"results","results":2}}
+{"case":"barrier","blocked":"source.list","before":{"onlineCalls":0,"localVisible":false},"after":{"onlineCalls":1,"finalKind":"results","results":2}}
+{"case":"one-book-delta","cacheRows":2000,"queryBooks":1000,"rpc":["search-book.get"],"clonedMapEntries":2000,"identityLookups":1000,"replacedBooks":1}
+(node:16546) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

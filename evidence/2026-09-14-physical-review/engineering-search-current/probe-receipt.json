@@ -1,0 +1,46 @@
+{
+  "scope": "current Reader engineering audit, no production edits or device operations",
+  "harmonyCommit": "99cdeb02e3d80f3dd73d15d6fdd80826a8ab952b",
+  "coreCommit": "316ed8362d4d820756f22f22bee35fd4d5f932a9",
+  "probes": [
+    {
+      "probe": "reader-current-search-audit-probe.mjs",
+      "exitCode": 0,
+      "log": "reader-current-search-audit-probe.log"
+    },
+    {
+      "probe": "reader-current-search-page-audit-probe.mjs",
+      "exitCode": 0,
+      "log": "reader-current-search-page-audit-probe.log"
+    },
+    {
+      "probe": "reader-current-search-status-audit-probe.mjs",
+      "exitCode": 0,
+      "log": "reader-current-search-status-audit-probe.log"
+    },
+    {
+      "probe": "reader-acquisition-review-probe.mjs",
+      "exitCode": 0,
+      "log": "reader-acquisition-review-probe.log"
+    },
+    {
+      "probe": "reader-current-verdict-session-probe.mjs",
+      "exitCode": 0,
+      "log": "reader-current-verdict-session-probe.log"
+    }
+  ],
+  "boundary": "Mock Host/local CLI failure injection verifies mechanisms; not device frame rate or real site timing.",
+  "additionalEvidence": [
+    "sdk-host-wakeup.json",
+    "core-publication-failure.json"
+  ],
+  "existingChecks": [
+    "tools/test-search-orchestrator.mjs PASS",
+    "tools/test-search-gateway.mjs PASS",
+    "tools/test-search-view-state.mjs PASS",
+    "tools/test-book-acquisition-coordinator.mjs PASS",
+    "bindings/harmony/sdk/reader_core.test.ts 14 PASS"
+  ],
+  "sdkSourceSha256": "6010196cead18c6a3bf2413267af39c8c2c2a999db3261766209e8dbbe1a8aa5",
+  "sdkVendorMatchesCore": true
+}

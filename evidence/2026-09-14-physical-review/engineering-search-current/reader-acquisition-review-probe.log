@@ -1,0 +1,4 @@
+CONFIRMED: second foreground admission waits for running background refresh although first cached session remains usable
+CONFIRMED: 46-hour-old durable catalog is read as same prepared session with refreshRecommended=false, no refresh
+CONFIRMED: speculative detail queued before network dispatch still starts and completes TOC after search exit
+CONFIRMED: background detail failure rejects second foreground admission even while prepared cached session still exists

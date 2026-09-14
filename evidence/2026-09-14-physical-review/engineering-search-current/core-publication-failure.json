@@ -1,0 +1,26 @@
+{
+  "kind": "current Core CLI; isolated SQLite; injected second-candidate write failure; no network",
+  "coreCommit": "316ed8362d4d820756f22f22bee35fd4d5f932a9",
+  "dataDirectory": "/tmp/reader-engineering-audit/reader-core-publication-yfo7kbcm",
+  "result": {
+    "exit": 0,
+    "stdout": "{\"type\":\"error\",\"protocolVersion\":1,\"requestId\":2,\"error\":{\"code\":\"INTERNAL\",\"message\":\"storage operation failed\",\"retryable\":true,\"details\":{\"category\":\"STORAGE_FAILURE\"}}}",
+    "stderr": ""
+  },
+  "sourceBooks": [
+    [
+      "probe-source",
+      "/b1"
+    ],
+    [
+      "probe-source",
+      "/b2"
+    ]
+  ],
+  "searchBooks": [
+    [
+      "probe-source",
+      "/b1"
+    ]
+  ]
+}

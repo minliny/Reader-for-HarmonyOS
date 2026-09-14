@@ -1,0 +1,6 @@
+{"case":"grouping-one-book-delta","queryBooks":1000,"changedBooks":1,"newGroupObjects":1000}
+{"case":"existing-rows-reverse-relevance","rows":1000,"indexOfCalls":999,"scannedPrefix":999000,"notifications":1998}
+{"case":"existing-rows-reverse-relevance","rows":2000,"indexOfCalls":1999,"scannedPrefix":3998000,"notifications":3998}
+{"case":"existing-rows-reverse-relevance","rows":4000,"indexOfCalls":3999,"scannedPrefix":15996000,"notifications":7998}
+(node:16571) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

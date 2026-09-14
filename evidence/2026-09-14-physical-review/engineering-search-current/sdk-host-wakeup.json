@@ -1,0 +1,38 @@
+{
+  "source": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/vendor/core-harmony/sdk/reader_core.ts",
+  "kind": "production SDK with zero latency fake Host; not device performance",
+  "results": [
+    {
+      "hops": 1,
+      "pollMs": 10,
+      "elapsedMs": 10.11,
+      "handlerMs": 0.001,
+      "completions": 1,
+      "readCalls": 2
+    },
+    {
+      "hops": 5,
+      "pollMs": 10,
+      "elapsedMs": 53.52,
+      "handlerMs": 0.003,
+      "completions": 5,
+      "readCalls": 6
+    },
+    {
+      "hops": 10,
+      "pollMs": 10,
+      "elapsedMs": 105.24,
+      "handlerMs": 0.005,
+      "completions": 10,
+      "readCalls": 11
+    },
+    {
+      "hops": 10,
+      "pollMs": 1,
+      "elapsedMs": 11.28,
+      "handlerMs": 0.001,
+      "completions": 10,
+      "readCalls": 11
+    }
+  ]
+}

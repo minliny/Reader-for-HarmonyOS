@@ -1,0 +1,6 @@
+{"case":"old-success-after-refresh","sameNavigationBeforeStart":true,"probes":[{"url":"/old/0","session":"old"}],"newSessionActive":true,"globalVerdict":"readable","requestedChapterIndex":1,"readingSessionActive":true}
+{"case":"old-failure-overwrites-new-success","newSessionActive":true,"finalVerdict":"networkFailed"}
+{"case":"navigation-change","staleVerdictRejected":true}
+{"case":"direct-chapter-gate","globalVerdict":"networkFailed","readingSessionActive":true}
+(node:18854) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
