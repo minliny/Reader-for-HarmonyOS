@@ -24,7 +24,7 @@ const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderUIFrameCallb
   ReaderHttpTtsGateway: class { constructor(owner) { return owner.http; } },
   hilog: { error: () => {} } };
 const methods = ['notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
-  'loadTtsPresentationMetadata', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
+  'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
   'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate'];
 function fixture(file = lre) {
   const Owner = productionMotionMethods(file, methods, dependencies);
@@ -34,6 +34,8 @@ function fixture(file = lre) {
   host.listSystemVoices = () => { events.push('voices'); return voice.promise; };
   runtime = { gateway, getTtsHost: () => host, http: { list: () => { events.push('http'); return http.promise; } } };
   Object.assign(owner, { mounted: true, exitRequested: false, lifecycleToken: 1, phase: 'ready', sourceId: 'source', bookId: 'book',
+    chapter: { chapterIndex: 0, chapterTitle: 'chapter' }, visiblePage: { startScalar: 0 },
+    chapterSelectionToken: 1, visiblePageSelectionToken: 1,
     ttsWarmupScheduled: false, ttsInitialization: undefined, ttsPresentationMetadata: undefined, ttsAvailabilityResolved: false,
     ttsPreferenceMutationGeneration: 0, ttsConfigMutationGeneration: 0,
     ttsState: state.createReaderTtsState(), ttsEngine: 'system', ttsHttpEngines: [], ttsVoiceOptions: [],
@@ -62,12 +64,14 @@ function readySchedulesAfterObservers(file = lre) {
 // Negative control reconstructs the installed omission: ready never scheduled
 // preparation. This must fail the same production-method assertion.
 const mutant = '/private/tmp/reader-ph44-no-ready-preparation.ets';
-writeFileSync(mutant, source.replace('    this.scheduleTtsPresentationWarmup();\n', ''));
+const warmupCall = 'this.scheduleTtsPresentationWarmup();';
+assert.equal(source.split(warmupCall).length, 2, 'the negative control removes the one production scheduling call');
+writeFileSync(mutant, source.replace(warmupCall, 'void 0;'));
 assert.throws(() => readySchedulesAfterObservers(mutant), /ready schedules one deferred TTS preflight/);
 
 {
   const f = readySchedulesAfterObservers();
-  for (let i = 0; i < 100; i++) f.owner.notifyControlSelectionReadingReady(i, 'chapter');
+  for (let i = 0; i < 100; i++) { f.owner.chapter.chapterIndex=i; f.owner.notifyControlSelectionReadingReady(i, 'chapter'); }
   assert.equal(f.frames.length, 1, 'repeated ready/turn notifications cannot enqueue duplicate work');
   f.frames.shift().onFrame(); await drain();
   assert.deepEqual(f.events.filter(x => ['http', 'prefs', 'voices'].includes(x)), ['http', 'prefs', 'voices'], 'independent requests all start without waiting on a predecessor');
@@ -139,6 +143,7 @@ for (const invalidate of [o => { o.exitRequested = true; }, o => { o.lifecycleTo
   await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 1, scalarPosition: 0 });
   f.host.emit({ type: 'start', requestId: f.host.requests[0].requestId }); await coordinator.whenSettled();
   const before = coordinator.getState(), hostCount = f.host.calls.length, coreCount = f.gateway.calls.length;
+  f.owner.chapter.chapterIndex=1;
   f.owner.notifyControlSelectionReadingReady(1, 'next chapter');
   assert.equal(f.frames.length, 0); assert.deepEqual(coordinator.getState(), before);
   assert.equal(f.host.calls.length, hostCount); assert.equal(f.gateway.calls.length, coreCount);

@@ -990,8 +990,9 @@ export struct ReadingExperience {
   onExitCancelled: () => void = (): void => {};
   /**
    * The parent may expose the static Figma ReadingSurface only after this
-   * first real page has been measured and written to Core.  This is a route
-   * readiness signal, not a new visual loading/error state.
+   * first real page has been measured, written to Core, and its page/slot
+   * revision published by this owner. This route signal is not native content
+   * delivery or a paint acknowledgement, nor a new visual loading/error state.
   */
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
@@ -4433,13 +4434,16 @@ export struct ReadingExperience {
         this.cancelFirstPageCompletionDeadline();
         this.firstPageCompletionRetryCount = 0;
         this.chapterTitle = chapter.chapterTitle;
+        // Publish the committed page before route/control observers can reveal
+        // it. This is owner publication, not a native paint acknowledgement.
+        this.schedulePageTurnPreparation();
         this.admitCommittedProgress(stored);
         this.completeControlSelectionAfterCommit(stored, visiblePage, selectionToken, lifecycleToken);
         // Observer failures after a durable commit must not be interpreted as
         // a failed write or prevent selection ownership from being released.
-        this.notifyControlSelectionReadingReady(chapter.chapterIndex, chapter.chapterTitle);
+        if (!this.notifyControlSelectionReadingReady(chapter.chapterIndex, chapter.chapterTitle,
+          visiblePage, selectionToken, lifecycleToken)) return;
         this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);
-        this.schedulePageTurnPreparation();
         this.completeRapidPageTurnTransaction();
         this.drainRapidPageTurn();
         this.onAutoPagePageCommitted();
@@ -9660,6 +9664,7 @@ export struct ReadingExperience {
       this.setContinuousInitialAnchor(stored.chapterOffset);
     }
     this.phase = 'ready';
+    this.schedulePageTurnPreparation();
     this.admitCommittedProgress(stored);
     if (action === 'target') {
       this.completeControlSelectionAfterCommit(stored, display.page,
@@ -9671,17 +9676,29 @@ export struct ReadingExperience {
       // Keep the captured retry request for the error dialog only.
       this.showControlSelectionFailure(ticket, error, '已核实并保留原阅读位置');
     }
-    this.notifyControlSelectionReadingReady(stored.chapterIndex, display.context.chapter.chapterTitle);
-    this.schedulePageTurnPreparation();
+    if (!this.notifyControlSelectionReadingReady(stored.chapterIndex, display.context.chapter.chapterTitle,
+      display.page, ticket.selectionToken, ticket.lifecycleToken)) return;
     this.releaseUnretainedReadingImages();
   }
 
-  private notifyControlSelectionReadingReady(chapterIndex: number, chapterTitle: string): void {
+  private notifyControlSelectionReadingReady(chapterIndex: number, chapterTitle: string,
+    page: PhysicalReadingPage | undefined = this.visiblePage,
+    selectionToken: number = this.chapterSelectionToken,
+    lifecycleToken: number = this.lifecycleToken): boolean {
+    const chapter = this.chapter;
+    const isCurrent = (): boolean => page !== undefined && chapter !== undefined &&
+      chapter.chapterIndex === chapterIndex && this.phase === 'ready' &&
+      this.isStableVisiblePageOwner(page, chapter, selectionToken, lifecycleToken);
+    if (!isCurrent()) return false;
     try { this.onChapterCommitted(chapterIndex, chapterTitle); }
     catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience chapter observer failed: ${this.errorMessage(error as Error)}`); }
+    if (!isCurrent()) return false;
     try { this.onReadingReady(chapterIndex); }
     catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience ready observer failed: ${this.errorMessage(error as Error)}`); }
-    this.scheduleTtsPresentationWarmup();
+    if (!isCurrent()) return false;
+    try { this.scheduleTtsPresentationWarmup(); }
+    catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience TTS warmup scheduling failed: ${this.errorMessage(error as Error)}`); }
+    return isCurrent();
   }
 
   private showControlSelectionFailure(ticket: ReaderControlSelectionTicket, error: Error, detail: string): void {
@@ -11222,6 +11239,8 @@ export struct ReadingExperience {
   }
 
   private promotePreparedPageTurn(prepared: PreparedReaderPageTurn, stored: LocalReadingProgress): void {
+    const lifecycleToken = this.lifecycleToken;
+    const selectionToken = this.chapterSelectionToken;
     this.clearPageTurnProjection();
     const originContext = this.captureMaterializedChapterContext();
     const originPage = this.visiblePage as PhysicalReadingPage;
@@ -11239,11 +11258,6 @@ export struct ReadingExperience {
     this.chapterTitle = context.chapter.chapterTitle;
     this.phase = 'ready';
     this.releaseUnretainedReadingImages();
-    this.onChapterCommitted(context.chapter.chapterIndex, context.chapter.chapterTitle);
-    this.onReadingReady(context.chapter.chapterIndex);
-    this.admitCommittedProgress(stored);
-    this.prefetchNextChapter(context.chapter, this.lifecycleToken, this.chapterSelectionToken);
-    this.onAutoPagePageCommitted();
     this.schedulePageTurnPreparation();
     const reverseDirection: ReaderPageTurnDirection = prepared.direction === 'next' ? 'previous' : 'next';
     const reverse = new PreparedReaderPageTurn(
@@ -11267,6 +11281,11 @@ export struct ReadingExperience {
     // completes, so this toggle never causes a role-keyed remount.
     this.pageTurnCurrentSlot = this.pageTurnCurrentSlot === 'a' ? 'b' : 'a';
     this.pageTurnRenderRevision += 1;
+    this.admitCommittedProgress(stored);
+    if (!this.notifyControlSelectionReadingReady(context.chapter.chapterIndex, context.chapter.chapterTitle,
+      prepared.page, selectionToken, lifecycleToken)) return;
+    this.prefetchNextChapter(context.chapter, lifecycleToken, selectionToken);
+    this.onAutoPagePageCommitted();
   }
 
   private requestPageTurn(direction: ReaderPageTurnDirection): ReaderPageTurnOutcome {
