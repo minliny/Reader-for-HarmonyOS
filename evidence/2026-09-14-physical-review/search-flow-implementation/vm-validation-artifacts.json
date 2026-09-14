@@ -1,0 +1,2072 @@
+{
+  "runId": "20260914T171802Z-aa387f08-71c7172c",
+  "scope": "Local existing-book VM captures through 2026-09-14T17:46:30.974Z. Full-to-Quick terminal state was initially misclassified as anchor loss; historical user contract review corrected it to expected behavior. Exact intermediate paint is not verified.",
+  "copiedArtifacts": [
+    {
+      "artifact": "ph77-91-hap-manifest.json",
+      "original": ".reader-artifacts/hap/20260914T171802Z-aa387f08-71c7172c/manifest.json",
+      "sha256": "ec27314da6210f638b6cd6b12f6d6c339b07455f2417543b4dc1f1f9ce92027a",
+      "bytes": 4260
+    },
+    {
+      "artifact": "ph77-91-vm-deployment.json",
+      "original": ".reader-artifacts/hap/20260914T171802Z-aa387f08-71c7172c/deploy-vm-6460677a198b-20260914T172051Z.json",
+      "sha256": "b456e1357a86a28ffe3d29274765f3bac5b6ba11a7cfc1b632d9b3907a8bd4b6",
+      "bytes": 1755
+    },
+    {
+      "artifact": "ph77-91-hap-build-second.log",
+      "original": "/private/tmp/ph77-91-hap-build-second.log",
+      "sha256": "e45be616ad0180efc452bcfb19959d989f94c67871f2fabedc035fc7b7a74e3a",
+      "bytes": 141422
+    },
+    {
+      "artifact": "ph77-91-hap-verify.log",
+      "original": "/private/tmp/ph77-91-hap-verify.log",
+      "sha256": "f9bc97f6922f55a99e0c2640fb6edfeced24deb8a7e2c0ee49a37eb06a69b3bc",
+      "bytes": 736
+    },
+    {
+      "artifact": "ph77-91-vm-install.log",
+      "original": "/private/tmp/ph77-91-vm-install.log",
+      "sha256": "67ffb83ff679a384f5043615db211f79b8f8f98e6713131b9bf8a1fcf4b09c5f",
+      "bytes": 206
+    },
+    {
+      "artifact": "ph77-91-vm-inspect.log",
+      "original": "/private/tmp/ph77-91-vm-inspect.log",
+      "sha256": "039ace8d7e7655d06e7f0c3a6c3e20b5c81cb4350bfebdea5a58b8a2a1574810",
+      "bytes": 1173
+    },
+    {
+      "artifact": "ph77-91-core-official-final2.log",
+      "original": "/private/tmp/ph77-91-core-official-final2.log",
+      "sha256": "c670b2d25cedd08b0e53311e0d208ea87582dd5aff5b833f060994596b0302d8",
+      "bytes": 455683
+    },
+    {
+      "artifact": "ph77-91-native.log",
+      "original": "/private/tmp/ph77-91-native.log",
+      "sha256": "0d4b14712556539e0d9b6fb82db11c7b10689c3d0e911e159fda9df2e5cd5b6c",
+      "bytes": 4193
+    },
+    {
+      "artifact": "vm-preview-end.png",
+      "original": "/private/tmp/reader-ph77-91-vm/reader-control-ph7791-preview-end.png",
+      "sha256": "733eb9d7759d4a353ddce77eafb4f4556737354b951ac1c8f41a0dde6dbe412c",
+      "bytes": 277666
+    },
+    {
+      "artifact": "vm-external-toc-correct.png",
+      "original": "/private/tmp/reader-ph77-91-vm/reader-control-ph7791-external-toc-correct.png",
+      "sha256": "091d7fb91ef24057b2d5c7875d14650e8c871285ed1c1986db60d5c00d680dce",
+      "bytes": 288000
+    },
+    {
+      "artifact": "vm-content-search-full.png",
+      "original": "/private/tmp/reader-ph77-91-vm/reader-control-ph7791-content-search-full.png",
+      "sha256": "4a0336ee7fd90d9f026fc363bb4309208fd4c36db04cc675a655faf5eea6802b",
+      "bytes": 411087
+    },
+    {
+      "artifact": "vm-content-morph-quick-failed.png",
+      "original": "/private/tmp/reader-ph77-91-vm/reader-control-6779d286-321b-4423-ae88-38d7a1bdcb46-frame-14.png",
+      "sha256": "93b26aa3f5d2793a3e1472259edcc9ca267395cb5f07fb4a20c5b172df6ef0ce",
+      "bytes": 634987
+    }
+  ],
+  "nativeDumpProjections": [
+    {
+      "originalArtifact": "reader-control-ph7791-detail.json",
+      "sha256": "9f6239768f229871ef174f128169608b0b5c5ef291f948f305f96ae97e9d846d",
+      "bytes": 60491,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:29:52.225Z",
+          "recordedAt": "2026-09-14T17:29:52.942Z",
+          "elapsedMs": 716.4689999999828
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 21,
+        "Column": 7,
+        "Row": 19,
+        "Image": 2,
+        "Text": 24,
+        "Scroll": 2,
+        "Button": 1,
+        "Web": 1,
+        "WindowScene": 1,
+        "__Common__": 2,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "书籍详情",
+          "bounds": "[259,180][1210,296]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "完整目录",
+          "bounds": "[969,1442][1138,1491]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[122,1624][1159,1683]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[122,1827][1159,1886]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第3章 连续翻页验证",
+          "bounds": "[122,2030][1159,2089]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第4章 连续翻页验证",
+          "bounds": "[122,2233][1159,2292]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-preview-scroll.json",
+      "sha256": "22afe672950168d3718f0f3babd6835b75d43d07b228d7828611436a830d78bd",
+      "bytes": 61779,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:30:28.783Z",
+          "recordedAt": "2026-09-14T17:30:29.424Z",
+          "elapsedMs": 640.9887080000481
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 21,
+        "Column": 7,
+        "Row": 21,
+        "Image": 2,
+        "Text": 24,
+        "Scroll": 2,
+        "Button": 1,
+        "Web": 1,
+        "WindowScene": 1,
+        "__Common__": 2,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "书籍详情",
+          "bounds": "[259,180][1210,296]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "完整目录",
+          "bounds": "[969,1442][1138,1491]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第10章 连续翻页验证",
+          "bounds": "[122,1594][1159,1653]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第11章 连续翻页验证",
+          "bounds": "[122,1797][1159,1856]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第12章 连续翻页验证",
+          "bounds": "[122,2000][1159,2059]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第13章 连续翻页验证",
+          "bounds": "[122,2203][1159,2262]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-external-toc-correct.json",
+      "sha256": "2b9a4f5fd5e0727077991b61979754347c4bb097069ae8fc2cfde0ce76ca3e29",
+      "bytes": 119947,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:32:50.042Z",
+          "recordedAt": "2026-09-14T17:32:50.774Z",
+          "elapsedMs": 732.0261660000542
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 51,
+        "__Common__": 3,
+        "Row": 44,
+        "Image": 22,
+        "Column": 8,
+        "Text": 28,
+        "TextInput": 1,
+        "List": 1,
+        "ListItem": 12,
+        "WindowScene": 1,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1055,433][1195,482]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "",
+          "text": "",
+          "bounds": "[233,749][609,833]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "List",
+          "id": "",
+          "text": "",
+          "bounds": "[93,867][1192,2475]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[128,931][1055,978]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[128,1071][1055,1118]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第3章 连续翻页验证",
+          "bounds": "[128,1211][1055,1258]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第4章 连续翻页验证",
+          "bounds": "[128,1351][1055,1398]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第5章 连续翻页验证",
+          "bounds": "[128,1491][1055,1538]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第6章 连续翻页验证",
+          "bounds": "[128,1631][1055,1678]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第7章 连续翻页验证",
+          "bounds": "[128,1771][1055,1818]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第8章 连续翻页验证",
+          "bounds": "[128,1911][1055,1958]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第9章 连续翻页验证",
+          "bounds": "[128,2051][1055,2098]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第10章 连续翻页验证",
+          "bounds": "[128,2191][1055,2238]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第11章 连续翻页验证",
+          "bounds": "[128,2331][1055,2378]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第12章 连续翻页验证",
+          "bounds": "[128,2471][1055,2475]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-toc-return.json",
+      "sha256": "f36ca9836d7d17345ec85289ff6ebced6568b54b1cf220a865d2f16e26f36108",
+      "bytes": 60491,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:33:58.986Z",
+          "recordedAt": "2026-09-14T17:33:59.639Z",
+          "elapsedMs": 652.0569169999799
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 21,
+        "Column": 7,
+        "Row": 19,
+        "Image": 2,
+        "Text": 24,
+        "Scroll": 2,
+        "Button": 1,
+        "Web": 1,
+        "WindowScene": 1,
+        "__Common__": 2,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "书籍详情",
+          "bounds": "[259,180][1210,296]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "完整目录",
+          "bounds": "[969,1442][1138,1491]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[122,1624][1159,1683]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[122,1827][1159,1886]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第3章 连续翻页验证",
+          "bounds": "[122,2030][1159,2089]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第4章 连续翻页验证",
+          "bounds": "[122,2233][1159,2292]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-reader-return.json",
+      "sha256": "a8caf4f34589a0799d0aa14216efb42225fae4e3aee069b4d1a2d5666ea9ccb1",
+      "bytes": 60491,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:32:12.407Z",
+          "recordedAt": "2026-09-14T17:32:13.065Z",
+          "elapsedMs": 657.7130409999518
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 21,
+        "Column": 7,
+        "Row": 19,
+        "Image": 2,
+        "Text": 24,
+        "Scroll": 2,
+        "Button": 1,
+        "Web": 1,
+        "WindowScene": 1,
+        "__Common__": 2,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "书籍详情",
+          "bounds": "[259,180][1210,296]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "完整目录",
+          "bounds": "[969,1442][1138,1491]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[122,1624][1159,1683]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[122,1827][1159,1886]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第3章 连续翻页验证",
+          "bounds": "[122,2030][1159,2089]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第4章 连续翻页验证",
+          "bounds": "[122,2233][1159,2292]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-content-search-quick.json",
+      "sha256": "613fe60238859f26195cd22c26261c6953238d29846c9f9c794fca6b4b933527",
+      "bytes": 106285,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:35:44.869Z",
+          "recordedAt": "2026-09-14T17:35:45.517Z",
+          "elapsedMs": 648.4004580000183
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 62,
+        "__Common__": 4,
+        "Column": 11,
+        "Text": 36,
+        "Blank": 2,
+        "Canvas": 2,
+        "XComponent": 1,
+        "Row": 16,
+        "Image": 11,
+        "TextInput": 1,
+        "WindowScene": 1,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[78,300][1202,401]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "reader-content-search-input-1",
+          "text": "",
+          "bounds": "[357,1744][789,1793]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "输入关键词搜索正文内容",
+          "bounds": "[97,2059][999,2115]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "返回",
+          "bounds": "[208,1748][279,1789]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "内容搜索",
+          "bounds": "[178,1737][1010,1797]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1080,1746][1150,1788]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-content-search-full.json",
+      "sha256": "de35e6e8f57c3bd69215bdff59060662285134140cd74c963d752cbbcc7dbd0f",
+      "bytes": 104918,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:38:57.559Z",
+          "recordedAt": "2026-09-14T17:38:58.227Z",
+          "elapsedMs": 668.3183750000317
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 61,
+        "__Common__": 4,
+        "Column": 11,
+        "Text": 36,
+        "Blank": 2,
+        "Canvas": 2,
+        "XComponent": 1,
+        "Row": 15,
+        "Image": 11,
+        "TextInput": 1,
+        "WindowScene": 1,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[78,300][1202,401]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "reader-content-search-input-1",
+          "text": "",
+          "bounds": "[168,659][985,708]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "输入关键词搜索正文内容",
+          "bounds": "[99,1702][1183,1758]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "返回",
+          "bounds": "[208,2027][279,2068]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "内容搜索",
+          "bounds": "[179,481][1011,541]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1081,490][1151,532]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-content-input.json",
+      "sha256": "04925538759ad3aa06c881231e50c32b7a859b17e2a439463ea371ee16abbdba",
+      "bytes": 123962,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:44:07.341Z",
+          "recordedAt": "2026-09-14T17:44:08.213Z",
+          "elapsedMs": 872.2616250000428
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 2,
+        "Stack": 73,
+        "__Common__": 7,
+        "Column": 18,
+        "Text": 27,
+        "Blank": 1,
+        "Canvas": 3,
+        "XComponent": 1,
+        "Row": 17,
+        "Image": 17,
+        "TextInput": 1,
+        "WindowScene": 3,
+        "RelativeContainer": 4,
+        "Flex": 2,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1,
+        "Grid": 1,
+        "GridItem": 2
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,1733]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[78,300][1202,401]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "reader-content-search-input-1",
+          "text": "段",
+          "bounds": "[168,659][985,708]",
+          "focused": "true",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "输入关键词搜索正文内容",
+          "bounds": "[99,1202][1183,1258]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "内容搜索",
+          "bounds": "[180,482][1012,542]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1082,491][1152,533]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "com.huawei.hmos.inputmethod"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-content-results50.json",
+      "sha256": "c559630636fe397259a5c5352670da017edf4be3331aa764c2b3874e1721faec",
+      "bytes": 137333,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:44:51.460Z",
+          "recordedAt": "2026-09-14T17:44:52.110Z",
+          "elapsedMs": 649.565792000154
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 2,
+        "Stack": 77,
+        "__Common__": 7,
+        "Column": 18,
+        "Text": 35,
+        "Blank": 1,
+        "Canvas": 3,
+        "XComponent": 1,
+        "Row": 17,
+        "Image": 17,
+        "TextInput": 1,
+        "List": 1,
+        "ListItem": 4,
+        "WindowScene": 3,
+        "RelativeContainer": 4,
+        "Flex": 2,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1,
+        "Grid": 1,
+        "GridItem": 2
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,1733]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[78,300][1202,401]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "reader-content-search-input-1",
+          "text": "段",
+          "bounds": "[168,659][985,708]",
+          "focused": "true",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "List",
+          "id": "",
+          "text": "",
+          "bounds": "[134,774][1148,1685]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,823][1117,869]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "【章001段01】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,900][1117,998]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1075][1117,1121]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "【章001段01】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,1152][1117,1250]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1327][1117,1373]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段02】晨光从窗边照进阅",
+          "bounds": "[166,1404][1117,1502]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1579][1117,1625]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段02】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,1656][1117,1685]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "加载更多结果",
+          "bounds": "[864,1603][1054,1649]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "内容搜索",
+          "bounds": "[180,482][1012,542]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1082,491][1152,533]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "com.huawei.hmos.inputmethod"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-content-keyboard-closed.json",
+      "sha256": "312f1af3fcaa6f1473b4ddde6526bedfe4ac22000f5e4637721c12ba47470854",
+      "bytes": 131397,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:45:21.440Z",
+          "recordedAt": "2026-09-14T17:45:22.144Z",
+          "elapsedMs": 704.1417499999516
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 69,
+        "__Common__": 4,
+        "Column": 11,
+        "Text": 52,
+        "Blank": 2,
+        "Canvas": 2,
+        "XComponent": 1,
+        "Row": 15,
+        "Image": 11,
+        "TextInput": 1,
+        "List": 1,
+        "ListItem": 8,
+        "WindowScene": 1,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[78,300][1202,401]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "reader-content-search-input-1",
+          "text": "段",
+          "bounds": "[168,659][985,708]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "List",
+          "id": "",
+          "text": "",
+          "bounds": "[134,774][1148,2686]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,823][1117,869]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "【章001段01】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,900][1117,998]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1075][1117,1121]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "【章001段01】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,1152][1117,1250]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1327][1117,1373]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段02】晨光从窗边照进阅",
+          "bounds": "[166,1404][1117,1502]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1579][1117,1625]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段02】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,1656][1117,1754]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1831][1117,1877]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "编号是测试文本的一部分。\n\n【章001段02】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,1908][1117,2006]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,2083][1117,2129]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段03】晨光从窗边照进阅",
+          "bounds": "[166,2160][1117,2258]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,2335][1117,2381]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段03】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,2412][1117,2510]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,2587][1117,2633]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "编号是测试文本的一部分。\n\n【章001段03】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,2664][1117,2686]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "加载更多结果",
+          "bounds": "[864,2604][1054,2650]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "返回",
+          "bounds": "[208,2027][279,2068]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "内容搜索",
+          "bounds": "[180,482][1012,542]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1082,491][1152,533]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-content-results200-scroll.json",
+      "sha256": "b881a629bd905d6077e03988a85fbf2a8fe839d964519ea78cf7392b868a6844",
+      "bytes": 131735,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:45:50.575Z",
+          "recordedAt": "2026-09-14T17:45:51.223Z",
+          "elapsedMs": 648.317750000162
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 69,
+        "__Common__": 4,
+        "Column": 11,
+        "Text": 52,
+        "Blank": 2,
+        "Canvas": 2,
+        "XComponent": 1,
+        "Row": 15,
+        "Image": 11,
+        "TextInput": 1,
+        "List": 1,
+        "ListItem": 8,
+        "WindowScene": 1,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[78,300][1202,401]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "reader-content-search-input-1",
+          "text": "段",
+          "bounds": "[168,659][985,708]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "List",
+          "id": "",
+          "text": "",
+          "bounds": "[134,774][1148,2686]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,777][1117,823]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段04】晨光从窗边照进阅",
+          "bounds": "[166,854][1117,952]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1029][1117,1075]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段04】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,1106][1117,1204]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1281][1117,1327]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "编号是测试文本的一部分。\n\n【章001段04】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,1358][1117,1456]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1533][1117,1579]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段05】晨光从窗边照进阅",
+          "bounds": "[166,1610][1117,1708]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,1785][1117,1831]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段05】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,1862][1117,1960]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,2037][1117,2083]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "编号是测试文本的一部分。\n\n【章001段05】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,2114][1117,2212]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,2289][1117,2335]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段06】晨光从窗边照进阅",
+          "bounds": "[166,2366][1117,2464]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[166,2541][1117,2587]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章001段06】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,2618][1117,2686]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "加载更多结果",
+          "bounds": "[864,2604][1054,2650]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "返回",
+          "bounds": "[208,2027][279,2068]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "内容搜索",
+          "bounds": "[180,482][1012,542]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1082,491][1152,533]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-content-deep.json",
+      "sha256": "04e9724c5fb8e1f71dc73f85de437e4f336a67930e58c0d732c46b58173a7b56",
+      "bytes": 132560,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:46:26.352Z",
+          "recordedAt": "2026-09-14T17:46:27.032Z",
+          "elapsedMs": 680.4009170001373
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 70,
+        "__Common__": 4,
+        "Column": 11,
+        "Text": 51,
+        "Blank": 2,
+        "Canvas": 2,
+        "XComponent": 1,
+        "Row": 15,
+        "Image": 11,
+        "TextInput": 1,
+        "List": 1,
+        "ListItem": 10,
+        "WindowScene": 1,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[78,300][1202,401]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "reader-content-search-input-1",
+          "text": "段",
+          "bounds": "[168,659][985,708]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "List",
+          "id": "",
+          "text": "",
+          "bounds": "[134,774][1148,2686]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章002段09】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,774][1117,864]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[166,941][1117,987]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "编号是测试文本的一部分。\n\n【章002段09】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,1018][1117,1116]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[166,1193][1117,1239]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章002段10】晨光从窗边照进阅",
+          "bounds": "[166,1270][1117,1368]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[166,1445][1117,1491]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章002段10】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,1522][1117,1620]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[166,1697][1117,1743]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "编号是测试文本的一部分。\n\n【章002段10】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,1774][1117,1872]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第2章 连续翻页验证",
+          "bounds": "[166,1949][1117,1995]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。",
+          "bounds": "[166,2026][1117,2124]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第3章 连续翻页验证",
+          "bounds": "[166,2201][1117,2247]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "【章003段01】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[166,2278][1117,2376]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第3章 连续翻页验证",
+          "bounds": "[166,2453][1117,2499]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "【章003段01】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[166,2530][1117,2628]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "加载更多结果",
+          "bounds": "[864,2604][1054,2650]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "返回",
+          "bounds": "[208,2027][279,2068]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "内容搜索",
+          "bounds": "[180,482][1012,542]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1082,491][1152,533]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    },
+    {
+      "originalArtifact": "reader-control-ph7791-content-morph-quick.json",
+      "sha256": "fd96e9e4a3ff1d5dbe117bba69a4476294e45da17c5e18fe2f1d2a3b8418261b",
+      "bytes": 115130,
+      "captureCommandWindow": [
+        {
+          "startedAt": "2026-09-14T17:46:30.291Z",
+          "recordedAt": "2026-09-14T17:46:30.940Z",
+          "elapsedMs": 649.1454169999342
+        }
+      ],
+      "nativeNodeTypeCounts": {
+        "": 1,
+        "root": 1,
+        "Stack": 65,
+        "__Common__": 4,
+        "Column": 11,
+        "Text": 41,
+        "Blank": 2,
+        "Canvas": 2,
+        "XComponent": 1,
+        "Row": 16,
+        "Image": 11,
+        "TextInput": 1,
+        "List": 1,
+        "ListItem": 3,
+        "WindowScene": 1,
+        "RelativeContainer": 2,
+        "Flex": 1,
+        "TextClock": 2,
+        "SymbolGlyph": 4,
+        "metaballNode": 1
+      },
+      "selectedNativeAttributes": [
+        {
+          "type": "root",
+          "id": "",
+          "text": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "true",
+          "scrollable": "false",
+          "visible": "true",
+          "bundleName": "io.reader.harmonyos"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[78,300][1202,401]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "TextInput",
+          "id": "reader-content-search-input-1",
+          "text": "段",
+          "bounds": "[357,1744][789,1793]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "List",
+          "id": "",
+          "text": "",
+          "bounds": "[130,1831][962,2343]",
+          "focused": "false",
+          "scrollable": "true",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[162,1895][931,1941]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "【章001段01】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页",
+          "bounds": "[162,1972][931,2070]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[162,2084][931,2130]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "【章001段01】晨光从窗边照进阅览室，纸上的文字依次展开。记录者把这一段的位置写进册子，用来核对翻到前页和后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的",
+          "bounds": "[162,2161][931,2259]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "第1章 连续翻页验证",
+          "bounds": "[162,2273][931,2319]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "加载更多结果",
+          "bounds": "[680,2260][870,2306]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "返回",
+          "bounds": "[208,1748][279,1789]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "内容搜索",
+          "bounds": "[177,1737][1009,1797]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        },
+        {
+          "type": "Text",
+          "id": "",
+          "text": "收起",
+          "bounds": "[1079,1746][1149,1788]",
+          "focused": "false",
+          "scrollable": "false",
+          "visible": "true"
+        }
+      ]
+    }
+  ],
+  "operationExcerpt": "vm-directory-content-operation-excerpt.jsonl",
+  "operationExcerptRecords": 132,
+  "excludedMisnamedArtifact": {
+    "artifact": "reader-control-ph7791-external-toc.json",
+    "sha256": "7a471dd72b7a513761592d1b708469bb39befa167b4e86c4a0053539b8c133c1",
+    "reason": "Earlier mistaken chapter-17 row click opened the reader. This is not the external directory; use external-toc-correct for PH84."
+  },
+  "status": {
+    "PH80": "PASS_FOR_EXISTING_SINGLE_HISTORY",
+    "PH81": "PASS_REENTRY_COLD_LATENCY_OPEN",
+    "PH82": "PASS_OBSERVED_CARET",
+    "PH83": "PASS_20_CHAPTER_SCROLL",
+    "PH84": "PASS_EXTERNAL_ENTRY_AND_RETURN",
+    "PH87": "PASS_STABLE_MENU_VISUALS_ACTION_DISPATCH_NOT_ASSESSED",
+    "PH90": "INPUT_LOAD_SCROLL_PASS_TERMINAL_MATCHES_EXISTING_CONTRACT_INTERMEDIATE_PAINT_NOT_VERIFIED",
+    "PH91": "PASS_OBSERVED_QUICK_FULL_SEARCH_FIELD"
+  },
+  "timingBoundary": "Capture scheduling and HDC command durations are not exact native response times or frame-rate measurements. Native ListItem node counts in a dump are not a proven total result count or complete materialization measurement.",
+  "productionModifiedByDocumentationTask": false,
+  "deviceCommandsIssuedByDocumentationTask": false,
+  "ph90InterpretationHistory": {
+    "initial": "Quick returned to chapter 1 segment 1 after Full had scrolled to chapter 2 segment 9 through chapter 3 segment 1; initially misclassified as lost anchor.",
+    "corrected": "Execution reference lines 196–214 requires Search to discard the old Full scroll position after complete collapse and start a new expansion toward the page top. The observed terminal state matches this existing contract. Do not add a new Full-to-Quick anchor-retention requirement.",
+    "reference": "docs/READER_CONTROL_BAR_EXECUTION_REFERENCE_2026-09-05.md:196-214",
+    "productionProbe": "ph90-vm-collapse-anchor-current.jsonl",
+    "localLogs": [
+      "ph90-vm-contract-native-list.log",
+      "ph90-vm-contract-search-scroll.log",
+      "ph90-vm-contract-search-settings.log"
+    ],
+    "remaining": "Exact intermediate paint, Ace visible-range/native-readback synchronization and intermediate reversal behavior require appropriate device evidence.",
+    "artifactNameNote": "vm-content-morph-quick-failed.png retains its initial filename for evidence continuity, not a current failure verdict.",
+    "productionChangedForThisCorrection": false
+  },
+  "onlineFollowup": {
+    "reportedBy": "root",
+    "observation": "109 sources all failed in approximately 3 seconds. Root is investigating existing runtime logs.",
+    "searchSuccess": "NOT_PASSED",
+    "speedPass": false,
+    "boundary": "No source success or performance pass inferred from failure-completion time; raw source-specific diagnosis not concluded in this record."
+  }
+}

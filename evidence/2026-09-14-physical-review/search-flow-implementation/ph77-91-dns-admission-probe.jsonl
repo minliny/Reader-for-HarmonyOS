@@ -1,0 +1,8 @@
+{"addresses":["198.18.0.1"],"denied":"http.execute: url resolves to a private, loopback, or link-local address and is not allowed","boundary":"synthetic DNS answers; unchanged production admission method, no network"}
+{"addresses":["198.19.255.254"],"denied":"http.execute: url resolves to a private, loopback, or link-local address and is not allowed","boundary":"synthetic DNS answers; unchanged production admission method, no network"}
+{"addresses":["10.0.2.2"],"denied":"http.execute: url resolves to a private, loopback, or link-local address and is not allowed","boundary":"synthetic DNS answers; unchanged production admission method, no network"}
+{"addresses":["93.184.216.34","198.18.0.1"],"denied":"http.execute: url resolves to a private, loopback, or link-local address and is not allowed","boundary":"synthetic DNS answers; unchanged production admission method, no network"}
+{"addresses":["93.184.216.34"],"allowed":["93.184.216.34"],"boundary":"synthetic DNS answers; unchanged production admission method, no network"}
+{"addresses":["2001:4860:4860::8888"],"allowed":["2001:4860:4860::8888"],"boundary":"synthetic DNS answers; unchanged production admission method, no network"}
+(node:16316) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

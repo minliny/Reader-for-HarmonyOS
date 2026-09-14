@@ -1,0 +1,371 @@
+{
+  "runId": "20260914T171802Z-aa387f08-71c7172c",
+  "phenomenon": "Initial screenshot after opening More showed very faint book-info text and no clear popup surface. A later dump contained the full native popup. Follow-up sampled re-entry shows transition transparency and then a complete opaque popup.",
+  "status": {
+    "vmPopupStableRendering": "PASS",
+    "localSdkBuilderAndLifecycle": "PASS",
+    "exactNativeOpeningLatency": "NOT_MEASURED",
+    "physicalDevice": "NOT_ASSESSED",
+    "menuActionDeviceDispatch": "NOT_ASSESSED"
+  },
+  "initialTrigger": "2026-09-14T17:35:31.621Z click reading More (1120,265)",
+  "followupTrigger": "2026-09-14T17:38:00.040Z click reading More (1120,265)",
+  "conclusion": "The visible faint initial state was an opening transition capture, not a demonstrated persistent popup failure. Follow-up frame 3 shows the menu during transparency transition; frames 4 and 5 show the background, border, arrow and all three labels. Download is disabled for the local book. No production modification is warranted.",
+  "artifacts": [
+    {
+      "artifact": "ph87-vm-popup-initial.png",
+      "originalArtifact": "reader-control-ph7791-reader-more.png",
+      "sha256": "82926a1f1cf3918a223220007ca76400351bba7bdde6fb36b1c5a721ddc6077d",
+      "screenCapStartedAt": "2026-09-14T17:35:31.840Z",
+      "screenCapCompletedAt": "2026-09-14T17:35:32.316Z",
+      "screenCapCommandDurationMs": 475.6918750000186
+    },
+    {
+      "artifact": "ph87-vm-popup-frame-3.png",
+      "originalArtifact": "reader-control-6779d286-321b-4423-ae88-38d7a1bdcb46-frame-3.png",
+      "sha256": "adca3df43f2c75f7442eda28e46c176e2a501c786ffb8e6fda570e88f4567422",
+      "screenCapStartedAt": "2026-09-14T17:38:00.341Z",
+      "screenCapCompletedAt": "2026-09-14T17:38:00.512Z",
+      "screenCapCommandDurationMs": 171.2538329999661,
+      "requestedSampleDelayMs": 300,
+      "actualSampleTriggerAfterMs": 300.0886659999378
+    },
+    {
+      "artifact": "ph87-vm-popup-frame-4.png",
+      "originalArtifact": "reader-control-6779d286-321b-4423-ae88-38d7a1bdcb46-frame-4.png",
+      "sha256": "38004a42f1fc391de929e49cdc965ebe3cfdd35638bcc5685c685eee1417eb3d",
+      "screenCapStartedAt": "2026-09-14T17:38:01.042Z",
+      "screenCapCompletedAt": "2026-09-14T17:38:01.184Z",
+      "screenCapCommandDurationMs": 142.19099999999162,
+      "requestedSampleDelayMs": 1000,
+      "actualSampleTriggerAfterMs": 1001.4119159999536
+    },
+    {
+      "artifact": "ph87-vm-popup-frame-5.png",
+      "originalArtifact": "reader-control-6779d286-321b-4423-ae88-38d7a1bdcb46-frame-5.png",
+      "sha256": "38004a42f1fc391de929e49cdc965ebe3cfdd35638bcc5685c685eee1417eb3d",
+      "screenCapStartedAt": "2026-09-14T17:38:03.041Z",
+      "screenCapCompletedAt": "2026-09-14T17:38:03.181Z",
+      "screenCapCommandDurationMs": 140.31970899994485,
+      "requestedSampleDelayMs": 3000,
+      "actualSampleTriggerAfterMs": 3000.656040999922
+    }
+  ],
+  "operationExcerpt": "ph87-vm-popup-operation-excerpt.jsonl",
+  "operationExcerptRecords": 20,
+  "nativeDumpEvidence": {
+    "originalArtifact": "reader-control-ph7791-reader-more.json",
+    "sha256": "505195fd62714e6a5dd3912a017bd2ebad3b76e41666a49aff2e1ecd4144ef8a",
+    "selectedAncestorPaths": [
+      [
+        {
+          "type": "root",
+          "bounds": "[0,137][1280,2832]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Popup",
+          "bounds": "[0,137][1280,2832]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        }
+      ],
+      [
+        {
+          "type": "root",
+          "bounds": "[0,137][1280,2832]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Popup",
+          "bounds": "[0,137][1280,2832]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[694,367][1223,976]",
+          "opacity": "1.000000",
+          "backgroundColor": "#FFFFFCF8",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Scroll",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Stack",
+          "bounds": "[736,409][1181,584]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Row",
+          "bounds": "[736,409][1181,584]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Text",
+          "bounds": "[799,458][1010,535]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": "书籍信息"
+        }
+      ],
+      [
+        {
+          "type": "root",
+          "bounds": "[0,137][1280,2832]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Popup",
+          "bounds": "[0,137][1280,2832]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[694,367][1223,976]",
+          "opacity": "1.000000",
+          "backgroundColor": "#FFFFFCF8",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Scroll",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Stack",
+          "bounds": "[736,584][1181,759]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Row",
+          "bounds": "[736,584][1181,759]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Text",
+          "bounds": "[799,633][1010,710]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": "刷新本章"
+        }
+      ],
+      [
+        {
+          "type": "root",
+          "bounds": "[0,137][1280,2832]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Popup",
+          "bounds": "[0,137][1280,2832]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[694,367][1223,976]",
+          "opacity": "1.000000",
+          "backgroundColor": "#FFFFFCF8",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Scroll",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Column",
+          "bounds": "[736,409][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Stack",
+          "bounds": "[736,759][1181,934]",
+          "opacity": "0.450000",
+          "backgroundColor": "#00000000",
+          "enabled": "false",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Row",
+          "bounds": "[736,759][1181,934]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": ""
+        },
+        {
+          "type": "Text",
+          "bounds": "[799,808][1115,885]",
+          "opacity": "1.000000",
+          "backgroundColor": "#00000000",
+          "enabled": "true",
+          "visible": "true",
+          "text": "下载全部章节"
+        }
+      ]
+    ]
+  },
+  "codeAudit": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets:993",
+      "finding": "Opening only sets moreMenuVisible and reports the temporary layer; it does not mutate the control session or motion visibility."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets:1770",
+      "finding": "Temporary-layer callback only assigns controlTemporaryLayer. isControlInputEnabled:8598 does not depend on it; Back explicitly dismisses temporary layers before changing the control session."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets:1507",
+      "finding": "bindPopup owns the native menu, arrow, application surface and border. No custom opacity transition is supplied; the only row opacity reduction is 0.45 when disabled."
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets:511",
+      "finding": "Menu dismissal follows a fully hidden runtime endpoint, disabled/obscured controls, page disappearance, native dismissal or explicit action. No verified feedback path hides controls merely because a menu opens."
+    },
+    {
+      "path": "reader-control-ph7791-reader-more.json",
+      "finding": "Native Popup is a direct application-root child, not nested beneath the control top-bar opacity ancestor; enabled book-info/refresh ancestor opacities are all 1. The native body has #FFFFFCF8 background. This later dump is separate from the initial screenshot."
+    }
+  ],
+  "localProbe": {
+    "entry": "node tools/test-reader-more-popup.mjs",
+    "log": "ph87-native-popup-local-probe.log",
+    "results": [
+      "PASS PH87 day: actual SDK anchored popup, three guarded actions, application colors and dismissal",
+      "PASS PH87 night: actual SDK anchored popup, three guarded actions, application colors and dismissal",
+      "PASS PH87 disabled download/refresh, obscured and hidden controls cannot dispatch",
+      "PASS PH87 adaptive text/window geometry and popup lifecycle; native pixels/placement remain a platform gate"
+    ],
+    "boundary": "Actual SDK-emitted production Builder and ordinary production-method checks. This does not emulate the native popup compositor or measure animation frame timing."
+  },
+  "timingBoundary": "Requested 300/1000/3000 ms samples and actual screenshot triggers are command timings, not exact native presentation timestamps. screenCap duration and total HDC sampled-action duration are not menu response latency.",
+  "open": [
+    "Physical-device rendering and user acceptance are separate gates.",
+    "These screenshots do not validate device dispatch of book-info/refresh/download actions."
+  ],
+  "productionChanged": false,
+  "deviceCommandsIssuedByAudit": false
+}

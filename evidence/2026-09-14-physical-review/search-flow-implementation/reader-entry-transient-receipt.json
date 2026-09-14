@@ -1,0 +1,35 @@
+{
+  "sourceCommit": "aa387f08dceef4592c6bf642ca7bd351de1b0f8c",
+  "files": [
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "sha256": "c8b9df732f5ca69e54512e2b425fefd511e4ad3517616872e111f8753f49830f"
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/ReaderShell.ets",
+      "sha256": "84885723dce208a522ff107ed27d84b85c6ba9740106b301e7f4c85e09b3d52a"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "sha256": "04ece0459b01c1b04f78697d611f3b29f9c9d2aaee99d1e6776178d3cea2aa93"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "sha256": "f761fc397100c1205c18fcea711285f95ba2f22339144541a2083b0110444e20"
+    }
+  ],
+  "artifactRunId": "20260914T171802Z-aa387f08-71c7172c",
+  "signedHapSha256": "720e4709979005f8dc785c768bcb76208a8ea6ebcc250a05dfa88a818861cc98",
+  "observation": {
+    "provider": "root existing VM capture; no device operation by this agent",
+    "capture": "/private/tmp/reader-ph77-91-vm/reader-control-ph7791-reader.png",
+    "sha256": "1be6ee5eafecb994d7d82655c7bb12319b4e5b103b2b689ad1fe15b321693b8b",
+    "click": "17:33:59.679",
+    "captureStart": "17:33:59.852",
+    "captureEnd": "17:34:00.042",
+    "bodyLaterObserved": "17:34:17 control screenshot per root",
+    "timeZone": "host log timestamp as reported; no conversion inferred"
+  },
+  "productionChanged": false,
+  "probeExitCode": 0
+}

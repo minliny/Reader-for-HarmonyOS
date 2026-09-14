@@ -1,0 +1,3 @@
+{"mode":"publish-first","ready":{"route":"reading","writes":1,"phase":"ready","ownerFragments":1,"ownerRevision":6,"stageCachedFragments":0,"stageRevision":5},"afterFunction":{"ownerRevision":6,"stageFragmentsAfterScalarDelivery":1,"queuedPreparationTasks":1},"boundary":"Unchanged ordinary production methods with mocked persistence and explicit scalar delivery; confirms call order only, not native reactive/frame interleaving or capture duration."}
+(node:97743) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,8 +1,29 @@
 # 搜索至试读实施记录
 
-本轮执行 READER_REPAIR_SPEC §16；基准 Harmony 99cdeb02、Core 316ed836。当前 Core 官方完整门禁 PASS、Harmony 本地 250 项 PASS；最终 Native、HAP、VM 待完成，不代表已交付或设备验收。
+本轮执行 READER_REPAIR_SPEC §16 及 PH77–91 反馈修复。当前绑定产物为 `20260914T171802Z-aa387f08-71c7172c`：Harmony `aa387f08`、Core `28369db94`，构建时两仓 clean；Core 官方 **3832 项 PASS（1 leaky）/0 skipped**，本次 HAP 入口 Harmony **260 项 PASS**，Native、HAP 编译/签名/校验及 VM 保数据安装与启动通过。**PH90 收起回首条的终态符合用户原约定，初判“位置丢失”已撤回；精确中途 paint 未验。在线搜索 109 源约 3 秒全部失败正在定位，不能记为速度 PASS；当前不是全部交付或用户验收通过。**
 
 ## 当前证据状态
+
+| 层级 | 当前状态 | 证据边界 |
+|---|---|---|
+| Core 官方完整检查 | 3832/3832 PASS，0 skipped，含 1 leaky | 210 conformance、0 drift、C/C++ ABI smoke；[最终日志](ph77-91-core-official-final2.log)与[管道 LEAK 审计](ph77-91-leak-summary.json)。不隐去 leaky，也未把它定为应用内存泄漏 |
+| Harmony 本地检查 | 本次 HAP 入口 260 项 PASS | [本次完整日志](ph77-91-hap-build-second.log)；旧 250 项属于早期历史 |
+| 最终 Native 输入 | PASS，与 manifest 输入 SHA 一致 | Core `28369db94`；[Native 日志](ph77-91-native.log)、[HAP manifest](ph77-91-hap-manifest.json) |
+| HAP 编译/签名/校验 | PASS，iteration | ArkTS、非增量、签名、内置源字节检查通过；[verify](ph77-91-hap-verify.log)。`acceptanceEligible=false`，编译警告保留 |
+| VM 安装与启动 | PASS，保留数据 | 2026-09-14 17:20:51 UTC，[同 run 部署回执](ph77-91-vm-deployment.json)，签名包 SHA `720e4709979005f8dc785c768bcb76208a8ea6ebcc250a05dfa88a818861cc98` |
+| VM 本地功能 | 已列操作与 PH90 收起终态符合约定；精确中途 paint 未验 | PH80 现场历史、PH81 重入键盘、PH82 光标、PH83 20 章预览、PH84 外部目录/返回、PH87 稳定菜单、PH91 图标及 PH90 输入/加载/滚动已有事实；范围与初判撤回说明见 [VM_VALIDATION.md](VM_VALIDATION.md) |
+| 在线闭环与 PH76 | 未通过，原因定位中 | 本次在线搜索 109 源约 3 秒全部失败，不是速度 PASS；停止重试/详情/换源/试读/返回、松鹤响应及资源捕获仍未通过 |
+| 本包真机行为/用户验收 | OPEN | 本记录无同 run 真机部署回执；旧包安装、VM 安装及桌面测试均不替代最终真机行为或用户验收 |
+
+当前记录截至 2026-09-14 17:46:30 UTC 的本地书 VM 操作。构建 manifest 的安装 OPEN 是生成时快照；后续安装以部署回执为准，不修改不可变 manifest。PH90 经执行参考第 196–214 行和真实方法探针复核，Quick 回首条是既定终态，已撤回“锚点丢失”初判；未改生产，也不新增保锚需求。中途 paint 和动态帧仍未验。随后在线搜索全失败已由根任务另行定位，不将其耗时记为性能通过。
+
+## 早期状态快照（保留历史，不代表当前状态）
+
+下文保留此前 250/3811 门禁和构建/安装进度的原始记录；早期“最终”“正在”“待完成”均按当时阶段理解。当前状态仅以上表和 VM_VALIDATION.md 为准。
+
+本轮执行 READER_REPAIR_SPEC §16；基准 Harmony 99cdeb02、Core 316ed836。当前 Core 官方完整门禁 PASS、Harmony 本地 250 项 PASS；最终 Native、HAP、VM 待完成，不代表已交付或设备验收。
+
+### 当时证据状态（旧表）
 
 | 层级 | 当前状态 | 证据边界 |
 |---|---|---|
@@ -89,3 +110,17 @@ Core `61a2f86e7` clean 的 Native/SDK 构建通过，50 项 SDK smoke 通过；�
 ## 最终 ArkTS 编译发现
 
 250 个本地入口全通过后，首次最终 ArkTS 编译拒绝 ETS 中的对象展开、Map 解构声明，以及 List 的 onDisappear 拼写。未发布 HAP。保留 hap-attempt2-arkts-failure.log；Index 会话浅拷贝移入既有 TypeScript 证据模块，LRE 显式保留完整进度字段，搜索组件由其 owner 修复。R1/R9、PH75 reader、候选16场景、书架入口及试读9条生产方法回归已通过。收尾复核另确认 R3 本地/来源清单错误原因仅保留布尔值，正在补原因生命周期与 stop/重试回归；未把旧250 PASS当作该补丁已验证。
+
+## PH77–79 新包 VM 在线搜索：地址准入拒绝（2026-09-15）
+
+Root 在本轮新包 VM 搜索109个书源，最终明确以 `hdc -t 127.0.0.1:5555` 绑定目标重读的[hilog](ph77-91-online-reader-hilog-targeted.log)包含109条来源失败：**106条 DNS 解析后地址准入拒绝，3条 `source.searchUrl is empty`**；日志从01:50:52.249至01:50:55.606，跨度3.357秒。该时间是失败日志区间，不是109源成功联网搜索的耗时，不能作为PH77–79性能PASS或来源能力PASS。
+
+Root 在同一明确绑定目标执行的[解析回执](ph7791-vm-dns-targeted.txt)显示 `www.zongheng.com → 198.18.0.189`。这里只用其解析结果；36秒ICMP往返不代表Reader HTTP延迟。该地址落在Host明确拒绝的198.18/15范围，支持VM解析受fake-IP环境影响的判断；本回执只直接证明此域名，不虚构其余105个请求的具体IP，也不从日志猜代理软件身份或配置。
+
+确证调用链为 `HttpExecuteHost.singleHop` → `rejectPrivateNetworkTarget`：`HttpExecuteHost.ts:985` 调用平台 `connection.getAddressesByName`，`:994–1002`检查**所有**返回地址，任何一个非公网/不合法地址即拒绝；`HttpTransportPolicy.ts:234`明确拒绝198.18与198.19。拒绝发生在 `addCustomDnsRule` 和 `singleHopTransport` 前，未执行目标HTTP传输；重定向同样先过门禁。公网地址通过后才在每host互斥租期内固定已验DNS地址，并保持原URL、Host与TLS身份。ArkWeb的顶层文档域名也经同一字节判定后才 `setHostIP`，不能把切换网页模式作为这个顶层目标被拒绝的绕过办法。
+
+未修改生产的[实际方法探针](ph77-91-dns-admission-probe.jsonl)用合成DNS答案验证：198.18.0.1、198.19.255.254、10.0.2.2以及“公网+198.18”混合答案均被原 `rejectPrivateNetworkTarget` 拒绝；纯公网IPv4/IPv6通过。探针未联网，不能代替VM真实解析；它证明已观测198.18地址的拒绝符合现有安全合同。本次不放宽198.18、不修改代理或全局DNS，也不以关闭安全检查恢复测试。
+
+诊断边界：HTTP抛出的当前文本笼统称private/loopback/link-local，也覆盖198.18等非公网保留范围；未附具体解析IP或typed地址分类。`recordSourceDiagnostic`按需保留经过脱敏的请求host/阶段/时长/错误，但没有resolved-address字段。SearchOrchestrator保留逐源原因并在私密hilog记录；SearchPage呈现失败数量和通用“可重试或检查书源状态”，未把这批共享网络准入原因单独呈现。因此用户界面本身不能区分109源失效与统一解析环境被拒绝；当前结论来自明确目标的hilog、单域名解析回执和代码核对，不把缺少UI解释误判为搜索调度失败。
+
+取证归属更正：前两个本地wrapper的 `--target` 仅用于锁，不会自动向其内部hdc补 `-t`；初始hilog/ping曾漏传设备目标，另一次小写 `-t` 被hilog解释为日志类型。[初始hilog](ph77-91-online-reader-hilog.log)、[未明确绑定重读](ph77-91-online-reader-hilog-correct.log)、[初始解析](ph7791-vm-dns.txt)与[hilog帮助](ph7791-hilog-help.txt)保留，**不作为最终设备事实**；本节只采用上面带 `targeted` 的两份明确绑定目标重读。设备操作均由root执行，本审计只读既有回执/代码并写证据，没有新增设备或环境操作。后续是否继续联网性能验证由root基于现有环境处理；在环境不变时重复整批搜索只会重复准入拒绝，没有必要据此继续测网络性能。

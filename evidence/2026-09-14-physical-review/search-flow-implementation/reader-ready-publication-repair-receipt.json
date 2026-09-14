@@ -1,0 +1,33 @@
+{
+  "baseCommit": "aa387f08dceef4592c6bf642ca7bd351de1b0f8c",
+  "scope": "LRE three publication/ready/prefetch order sites and two formal regression files",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "sha256": "3bc372a896a4deef0e0a974493401913d20f740ec54466c6913b5061604aa16e"
+    },
+    {
+      "path": "tools/test-reader-reading-ready-publication.mjs",
+      "sha256": "40077d108281de85f1bf94045ffd0481691a1a91e506dc51f2e259281ba4edc5"
+    },
+    {
+      "path": "tools/test-reader-tts-quick-preparation.mjs",
+      "sha256": "b0bd655f939e37517e7e095bd8c08cc862e483c14face1cb9d02164038c8b383"
+    }
+  ],
+  "newProductionMethodScenarios": 44,
+  "additionalPassedTests": [
+    "reader-page-preparation-runtime",
+    "reader-page-turn-pipeline",
+    "reader-control-selection-transaction",
+    "reader-first-page-sdk",
+    "reader-cold-entry-recovery",
+    "bookshelf-reading-entry",
+    "reader-tts-quick-preparation"
+  ],
+  "temporaryBaselineFailuresPreserved": true,
+  "deviceOperations": false,
+  "gitMutations": false,
+  "nativeOrHapBuild": false,
+  "vmTransientRootCauseProven": false
+}

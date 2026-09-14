@@ -124,3 +124,15 @@ node --experimental-strip-types tools/test-reader-content-search-focus.mjs
 定向重跑 6 项全部 exit 0：open-cost、publication、focus、replace-host、page-chrome、bookmark-top-info。输出为本目录 `ph90-ets-reader-*.log`，文件 SHA 与清单在 `ph90-ets-module-receipt.json`。此轮组件 SHA 为 `b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159`，仍有 2000 条/指定 8 行、21 采样对象 Prop copy=0，metadata/append/idle、20 组顶栏几何、真实 Stage/slot/Chrome 属性链通过。时长随并行负载变化，前述性能原始记录没有覆盖。
 
 未运行 HAP、Native、设备或 Git 操作；正式 HAP 重建是 root 后续门禁，本处不声称构建已通过。
+
+## 新包 VM 收起后回到首条（2026-09-15，现象与合同核对）
+
+Root 在当前新包 VM 先将完整内容搜索滚至第2章段09至第3章段01，再点击收起（1118,511）；约3秒后的 Quick 显示第1章段01的前两条匹配，未保持原结果锚点。原始证据为 `/private/tmp/reader-ph77-91-vm/reader-control-ph7791-content-deep.json`、`reader-control-ph7791-content-morph-quick.json`、`reader-control-6779d286-321b-4423-ae88-38d7a1bdcb46-frame-14.png`，产物身份沿 root 的同批 VM 回执，不另猜源码/包身份。
+
+初步将此现象视作锚点丢失，进一步核对后修正：Content 在形变开始调用 `readerControlMorphScrollPath(start, anchorRows)`，从 Full 出发明确设置 `quickOffset=0`，p=0 回首条；这与现行 `docs/READER_CONTROL_BAR_EXECUTION_REFERENCE_2026-09-05.md:206–212` 的用户确认约定一致：搜索完整收起后丢弃旧完整页滚动位置，下一次新展开到顶部；快捷态可滚动并从当前位置连续展开至完整页顶部。未完成动作的反向/重抓则必须保留轨迹。因此不能只凭本次 Quick 首条终态判定错误，也不能把目录/书签的同列表位置规则擅自套给搜索。
+
+未修改生产的[真实方法探针](ph90-vm-collapse-anchor-current.jsonl)复现：50条完整数据，Full起点26.25行，p为1/.75/.5/.25/0时锚点为26.25/19.6875/13.125/6.5625/0，模拟控制器提供的原生回执为1890/1417.5/945/472.5/0；同一DataSource全程无reload/change/add。这是生产方法配测试回执的本地验证，不是实测设备offset或paint。剩余需按既有约定区分的是：是否在收起开始前可见跳顶、是否途中空白或原生回执/paint不同步、未完成反向是否连续。
+
+Root 已复核执行参考196–214并撤销“锚点丢失”判断：**本次 Quick 回首条终态判为预期，不修生产、不更改既有交互约定。** 同UUID的frame编号跨不同测试场景（frame-0/1/2为书籍搜索IME，frame-14为内容搜索Quick），不是收起过程连续帧，不能拼接成260ms中间绘制证据。
+
+本地复核三项均exit 0：`test-reader-content-search-native-list.mjs`（[日志](ph90-vm-contract-native-list.log)）验证50/2000/10000结果、中途反向与持指端点、重抓撤销旧跟随、晚到回执不改新query锚点、请求不伪造回执以及坐标等式；`test-reader-control-search-scroll.mjs`（[日志](ph90-vm-contract-search-scroll.log)）验证真实方法的异步rebase/回执归属与边界；`test-reader-control-search-settings-content.mjs`（[日志](ph90-vm-contract-search-settings.log)）验证实际SDK Builder的行轨迹、裁剪和回调接线。没有修改生产或测试，也没有新增设备操作。精确动态帧、Ace可见区与paint同帧仍保持设备证据边界，不因这次终态符合预期而宣称全部动态验收通过。

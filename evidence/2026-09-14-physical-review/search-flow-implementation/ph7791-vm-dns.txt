@@ -1,0 +1,6 @@
+Ping www.zongheng.com (198.18.0.189): 56(84) bytes.
+64 bytes from 198.18.0.189: icmp_seq=0 ttl=255 time=21981 ms
+
+--- 198.18.0.189 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss
+round-trip min/avg/max = 21981/21981/21981 ms

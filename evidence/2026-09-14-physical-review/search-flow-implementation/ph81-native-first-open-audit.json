@@ -1,0 +1,191 @@
+{
+  "runId": "20260914T171802Z-aa387f08-71c7172c",
+  "phenomenon": "First book-search entry screenshot shows search header with empty body and no keyboard; early layout dump contains SceneBoard only. Later pre-manual-click dump contains focused input, search history and input-method window.",
+  "trigger": "Bookshelf search action, 2026-09-14T17:22:15.323Z",
+  "evidenceBoundary": "Existing VM captures and operation records read and copied only; no device command issued by this audit. The early dump and screenshot are sequential captures. Re-entry screenshots support visible behavior, not exact native-frame latency.",
+  "timing": {
+    "earlyDumpCommand": [
+      "2026-09-14T17:22:15.667Z",
+      "2026-09-14T17:22:16.741Z"
+    ],
+    "earlyScreenshotCommand": [
+      "2026-09-14T17:22:16.793Z",
+      "2026-09-14T17:22:17.883Z"
+    ],
+    "stableDumpCommand": [
+      "2026-09-14T17:23:17.152Z",
+      "2026-09-14T17:23:17.862Z"
+    ],
+    "firstManualInputClick": "2026-09-14T17:23:17.902Z"
+  },
+  "artifacts": [
+    {
+      "artifact": "reader-control-ph7791-search-open.json",
+      "sha256": "37edd4ce641c482c0b9a7a2abc68f4640ba4bfd73f5bddf0d72b78c5ce76b305",
+      "nodes": [
+        {
+          "type": "WindowScene",
+          "bundleName": "com.ohos.sceneboard",
+          "text": "",
+          "id": "session21",
+          "bounds": "[0,0][1280,136]",
+          "focused": "false"
+        }
+      ]
+    },
+    {
+      "artifact": "reader-control-ph7791-search-stable.json",
+      "sha256": "ea637df9093bbe83800243507e9dd61e07e6a301533f2ef8ec1bebf7eadf5496",
+      "nodes": [
+        {
+          "type": "root",
+          "bundleName": "io.reader.harmonyos",
+          "text": "",
+          "id": "",
+          "bounds": "[0,137][1280,1733]",
+          "focused": "true"
+        },
+        {
+          "type": "TextInput",
+          "bundleName": null,
+          "text": "",
+          "id": "reader-book-search-input",
+          "bounds": "[322,177][957,303]",
+          "focused": "true"
+        },
+        {
+          "type": "Text",
+          "bundleName": null,
+          "text": "诡秘之主",
+          "id": "",
+          "bounds": "[63,486][352,612]",
+          "focused": "false"
+        },
+        {
+          "type": "WindowScene",
+          "bundleName": "com.ohos.sceneboard",
+          "text": "",
+          "id": "session21",
+          "bounds": "[0,0][1280,136]",
+          "focused": "false"
+        },
+        {
+          "type": "root",
+          "bundleName": "com.huawei.hmos.inputmethod",
+          "text": "",
+          "id": "",
+          "bounds": "[0,137][1280,2832]",
+          "focused": "false"
+        },
+        {
+          "type": "WindowScene",
+          "bundleName": "com.ohos.sceneboard",
+          "text": "",
+          "id": "keyboardPanel41",
+          "bounds": "[0,137][1280,1733]",
+          "focused": "false"
+        }
+      ]
+    }
+  ],
+  "conclusion": "VM re-entry automatically opens the keyboard after only the bookshelf search action, without tapping the input: frame 0 shows the sliding IME, straight caret and search history; frames 1 and 2 show the complete keyboard. The original first-open captures are retained: they do not locate the cold first-entry delay or measure its latency. No production change is justified by this evidence.",
+  "open": [
+    "Cold first-entry time to keyboard/history was not precisely measured; the initial sequential capture cannot locate the delay cause.",
+    "VM screenshots are not a physical-device performance measurement or user acceptance."
+  ],
+  "productionChanged": false,
+  "codeAudit": [
+    {
+      "path": "entry/src/main/ets/pages/Index.ets:2331",
+      "finding": "openSearch resets then requests the one-shot input focus before setting route and opening the orchestrator; no history/source await gates focus."
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets:335",
+      "finding": "aboutToAppear consumes the focus request before accepting the current stable publication; searchBar passes the resulting State boolean to ReaderSearchField."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderSearchField.ets:65",
+      "finding": "The mounted/generation-guarded FrameCallback.onIdle requests the native id; TextInput explicitly enables keyboard on focus. Local SDK API defines onIdle at the next idle-frame end, requesting a frame if absent. No determined lost-focus defect from current artifacts."
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchOrchestrator.ets:170",
+      "finding": "open publishes initial and dispatches source/history independently; history completion publishes only for the current untouched initial session. Sources do not gate this callback."
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchGateway.ts:129",
+      "finding": "History decode waits only for search.history.list, then validates returned keywords. Source projection yields every 32 rows. Runtime request/IME/frame latency is not measured by these source facts."
+    },
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets:541",
+      "finding": "Empty initial history intentionally renders no history body; later native history text proves initial publication is not permanently frozen."
+    },
+    {
+      "path": "entry/src/main/ets/features/common/ReaderFonts.ets:27",
+      "finding": "Module latch prevents repeated font registration; BookshelfPage:196 and BookshelfEmptyPage:56 invoke this same function before entering search. This excludes re-registering the font set on ordinary search entry, not native glyph or input-method cold loading."
+    }
+  ],
+  "sourceSha256": {
+    "entry/src/main/ets/features/common/ReaderSearchField.ets": "9d8d6421d8ec11d7a0b7da4fbd074bb34b878fd19419261501f72b1f9d5bc0e7",
+    "entry/src/main/ets/features/common/ReaderFonts.ets": "90a2c69aa06b6e713df640885fd3a768d08062a95a846f6f6dd2e65b8c470f69",
+    "entry/src/main/ets/features/search/SearchPage.ets": "43c159a59d0982db1b30c18ff3c1f6ae4d6fe4f9ac387a97fb7fa48bd929ddd1",
+    "entry/src/main/ets/features/search/SearchViewState.ts": "6f7fa706dd5b1cf8b948cf133e9117f7efc483fe9fa35f46934954b1ae5e354f",
+    "entry/src/main/ets/features/search/SearchOrchestrator.ets": "eb3e49154ff3de094f24b5360313a1aae121e85c5ce27ce6b4f526c59debdc91",
+    "entry/src/main/ets/features/search/SearchGateway.ts": "9e02f3761239469d1a12be7095e8eedf07025656234dead4c2e921b1ad8c4709",
+    "entry/src/main/ets/features/search/SearchPublication.ts": "d8f20f493d7011d393e0bb8cb87d5633c03c0db4c2a2dc99fa26383fbaa3d429"
+  },
+  "minimalRemainingEvidence": "No further VM probing is required for the automatic-keyboard re-entry behavior. Cold first-entry latency remains OPEN; any later measurement must distinguish action dispatch, actual native presentation and screenshot-command overhead.",
+  "status": {
+    "vmReentryAutomaticKeyboard": "PASS",
+    "coldFirstEntryLatency": "OPEN",
+    "physicalDevice": "NOT_ASSESSED",
+    "userAcceptance": "OPEN"
+  },
+  "reentryEvidence": {
+    "sampleId": "6779d286-321b-4423-ae88-38d7a1bdcb46",
+    "action": "Return to bookshelf, then click the bookshelf search button at (916,247); no input-field click during these samples.",
+    "actionCommandStartedAt": "2026-09-14T17:28:45.094Z",
+    "operationExcerpt": "ph81-vm-reentry-operation-excerpt.jsonl",
+    "operationExcerptSha256": "ccfecaad30ba9ff9f66628b208c39abac7db5ccc730dac04065c0c211ce28456",
+    "operationExcerptRecords": 14,
+    "samples": [
+      {
+        "artifact": "ph81-vm-reentry-frame-0.png",
+        "originalArtifact": "reader-control-6779d286-321b-4423-ae88-38d7a1bdcb46-frame-0.png",
+        "sha256": "b49911a0e9e98cf960fb8bb1fba2d04a6da1d7be9caacf7d6a1ffbe5405b5a22",
+        "bytes": 177847,
+        "requestedSampleDelayMs": 300,
+        "actualScreenshotTriggerAfterMs": 300.8399999999674,
+        "screenshotCommandStartedAt": "2026-09-14T17:28:45.395Z",
+        "screenshotCommandCompletedAt": "2026-09-14T17:28:45.568Z",
+        "screenshotCommandDurationMs": 172.99237499997253,
+        "visibleObservation": "Native keyboard partly slid into view; straight caret and search history visible."
+      },
+      {
+        "artifact": "ph81-vm-reentry-frame-1.png",
+        "originalArtifact": "reader-control-6779d286-321b-4423-ae88-38d7a1bdcb46-frame-1.png",
+        "sha256": "e80cad34e48b0a3001f08330e9a525012540f2be88d141eccb82e7e170a6348f",
+        "bytes": 231279,
+        "requestedSampleDelayMs": 1000,
+        "actualScreenshotTriggerAfterMs": 1002.3227499999921,
+        "screenshotCommandStartedAt": "2026-09-14T17:28:46.097Z",
+        "screenshotCommandCompletedAt": "2026-09-14T17:28:46.233Z",
+        "screenshotCommandDurationMs": 135.83358399994904,
+        "visibleObservation": "Complete native keyboard and search history visible."
+      },
+      {
+        "artifact": "ph81-vm-reentry-frame-2.png",
+        "originalArtifact": "reader-control-6779d286-321b-4423-ae88-38d7a1bdcb46-frame-2.png",
+        "sha256": "e80cad34e48b0a3001f08330e9a525012540f2be88d141eccb82e7e170a6348f",
+        "bytes": 231279,
+        "requestedSampleDelayMs": 3000,
+        "actualScreenshotTriggerAfterMs": 3001.54458300001,
+        "screenshotCommandStartedAt": "2026-09-14T17:28:48.096Z",
+        "screenshotCommandCompletedAt": "2026-09-14T17:28:48.242Z",
+        "screenshotCommandDurationMs": 145.49729199998546,
+        "visibleObservation": "Complete native keyboard and search history visible."
+      }
+    ],
+    "timingBoundary": "300/1000/3000 ms are requested screenshot-command sample delays. Actual trigger times and screenshot-command durations are retained separately; none is an exact native-frame timestamp or a measured keyboard response latency. The 3184.1137909999816 ms HDC operation duration includes this sampling operation and must not be reported as keyboard response time.",
+    "validation": "Three original images visually inspected; copied-image checksums match the original probe capture-integrity records."
+  }
+}

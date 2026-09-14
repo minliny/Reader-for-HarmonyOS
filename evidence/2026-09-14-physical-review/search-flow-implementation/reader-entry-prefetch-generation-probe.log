@@ -1,0 +1,3 @@
+{"current":{"order":"prefetch-then-prepare","validAtStart":true,"validAfterDispatch":false,"pageTurnGeneration":6},"proposed":{"order":"prepare-then-prefetch","validAtStart":true,"validAfterDispatch":true,"pageTurnGeneration":6},"boundary":"Unchanged production prefetch/request/preparation methods; no network or body callbacks; specific generation-admission proof only."}
+(node:98490) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

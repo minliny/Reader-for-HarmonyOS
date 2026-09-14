@@ -1,0 +1,4 @@
+PASS PH87 day: actual SDK anchored popup, three guarded actions, application colors and dismissal
+PASS PH87 night: actual SDK anchored popup, three guarded actions, application colors and dismissal
+PASS PH87 disabled download/refresh, obscured and hidden controls cannot dispatch
+PASS PH87 adaptive text/window geometry and popup lifecycle; native pixels/placement remain a platform gate

@@ -1,0 +1,8 @@
+{"p":1,"anchorRows":26.25,"rawOffset":1890,"target":1890,"path":{"quickOffset":0,"fullOffset":26.25},"dataSourceSame":true,"rows":50,"notices":[]}
+{"p":0.75,"anchorRows":19.6875,"rawOffset":1417.5,"target":1417.5,"path":{"quickOffset":0,"fullOffset":26.25},"dataSourceSame":true,"rows":50,"notices":[]}
+{"p":0.5,"anchorRows":13.125,"rawOffset":945,"target":945,"path":{"quickOffset":0,"fullOffset":26.25},"dataSourceSame":true,"rows":50,"notices":[]}
+{"p":0.25,"anchorRows":6.5625,"rawOffset":472.5,"target":472.5,"path":{"quickOffset":0,"fullOffset":26.25},"dataSourceSame":true,"rows":50,"notices":[]}
+{"p":0,"anchorRows":0,"rawOffset":0,"target":0,"path":{"quickOffset":0,"fullOffset":26.25},"dataSourceSame":true,"rows":50,"notices":[]}
+{"settled":true,"anchorRows":0,"rawOffset":0,"notices":[]}
+(node:3046) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
