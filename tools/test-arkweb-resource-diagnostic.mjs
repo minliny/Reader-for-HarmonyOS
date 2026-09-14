@@ -51,8 +51,8 @@ for(const lateOld of [false,true]){
  console.log('PASS diagnostic attributes old resource token during new job: lateOld='+lateOld);
 }
 {
- const h=harness();const pending=h.diagnostic.run('cancel');await ticks();h.emit('resource',123,'https://user.example/private-token');h.diagnostic.dispose();await pending;
- assert.equal(h.timers.size,0);assert.equal(h.jobs.size,0);assert.equal(h.observer(),undefined);assert.ok(!JSON.stringify(h.logs).includes('private-token'));
+ const h=harness();const pending=h.diagnostic.run('cancel');await ticks();h.emit('resource',123,'https://user.example/private-token');h.jobs.set(123,{reject:()=>{throw new Error('non-runner request must not be cancelled');}});h.diagnostic.dispose();await pending;
+ assert.equal(h.timers.size,0);assert.equal(h.jobs.size,1);assert.ok(h.jobs.has(123));h.jobs.delete(123);assert.equal(h.observer(),undefined);assert.ok(!JSON.stringify(h.logs).includes('private-token'));
  assert.equal(h.diagnostic.provide('https://93.184.216.34/anything').code,403);
  console.log('PASS disposing the pilot cancels only owned jobs and clears response timers/observer');
 }
