@@ -5,6 +5,7 @@ import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSele
 import { BookshelfManagementGateway } from '../features/bookshelf/BookshelfManagementGateway';
 import type { JsonObject } from '@reader/core-harmony';
 import { SearchViewState } from '../features/search/SearchViewState';
+import { SearchPublication } from '../features/search/SearchPublication';
 import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { errorMessageOf } from '../app/ErrorMessage';
@@ -360,8 +361,10 @@ struct Index {
   @State private directoryCurrentChapterIndex: number = -1;
   @State private directoryChapterTitle: string = '';
   @State private directoryReturnTarget: DirectoryReturnTarget = 'detail';
-  @State private searchPresentation: SearchPresentation = { kind: 'initial', history: [] };
-  @State private searchSources: SearchSource[] = [];
+  private searchPresentation: SearchPresentation = { kind: 'initial', history: [] };
+  private searchSources: SearchSource[] = [];
+  private searchPublication: SearchPublication = new SearchPublication();
+  @State private searchPublicationRevision: number = 0;
   @State private rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
   @State private selectedRssSubscription: RssSubscription | undefined = undefined;
   @State private selectedRssItems: RssItem[] = [];
@@ -747,10 +750,9 @@ struct Index {
       } else if (this.route === 'search') {
         SearchPage({
           viewState: this.searchViewState,
-          presentation: this.searchPresentation,
+          publication: this.searchPublication,
+          publicationRevision: this.searchPublicationRevision,
           reduceMotion: this.settingsSnapshot.reduceMotion,
-          sources: this.searchSources,
-          shelfBooks: this.shelfBooks,
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToBookshelf(),
           onSearch: (keyword: string, scopeSourceIds?: string[]): void =>
@@ -2285,6 +2287,7 @@ struct Index {
 
   private openSearch(): void {
     this.searchViewState.reset();
+    this.searchViewState.requestInputFocus();
     this.nextNavigationGeneration();
     this.resetSearchDetailWarmups();
     this.readingSessionActive = false;
@@ -2311,6 +2314,8 @@ struct Index {
       this.searchOrchestrator = new SearchOrchestrator(
         (presentation: SearchPresentation): void => {
           this.searchPresentation = presentation;
+          this.searchPublication.publish(presentation);
+          this.searchPublicationRevision += 1;
         },
         (sources: SearchSource[]): void => {
           this.searchSources = sources;
@@ -5249,6 +5254,8 @@ struct Index {
       return this.copyShelfBookWithSourceName(book, name);
     });
     this.hydrateShelfSourceNames(this.bookshelfLoadGeneration);
+    this.searchPublication.updateShelf(this.shelfBooks);
+    this.searchPublicationRevision += 1;
     this.continueReading = state.continueReading;
     if (state.kind !== 'populated') {
       this.isBookshelfVisualAdmitted = false;
@@ -5289,7 +5296,11 @@ struct Index {
           changed = true;
           return this.copyShelfBookWithSourceName(book, name);
         });
-        if (changed) this.shelfBooks = projected;
+        if (changed) {
+          this.shelfBooks = projected;
+          this.searchPublication.updateShelf(projected);
+          this.searchPublicationRevision += 1;
+        }
       })
       .catch((): void => {
         // A transient source.list failure preserves Core's persisted name.

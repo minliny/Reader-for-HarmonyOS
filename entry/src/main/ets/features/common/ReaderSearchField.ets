@@ -1,3 +1,4 @@
+import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from './ReaderThemeRegistry';
 import {
   ReaderTextStyle,
@@ -36,6 +37,13 @@ export type ReaderSearchFieldMode = 'submit' | 'live' | 'passive';
  * actions, not properties of an input field. A typed variant selects one
  * audited visual contract; callers cannot compose contradictory boolean flags.
  */
+class ReaderSearchFocusFrame extends FrameCallback {
+  private action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(): void {}
+  onIdle(): void { this.action(); }
+}
+
 @Component
 export struct ReaderSearchField {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -48,8 +56,24 @@ export struct ReaderSearchField {
   @Prop isTablet: boolean = false;
   @Prop clearable: boolean = false;
   @Prop submitEnabled: boolean = true;
+  @Prop focusOnAppear: boolean = false;
+  private mounted: boolean = false;
+  private focusGeneration: number = 0;
   onTextChange: (value: string) => void = (_value: string): void => {};
   onSubmit: () => void = (): void => {};
+
+  aboutToAppear(): void {
+    this.mounted = true;
+    const generation = ++this.focusGeneration;
+    if (!this.focusOnAppear || this.variant !== 'bookPage' || this.mode === 'passive') return;
+    this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
+      if (!this.mounted || generation !== this.focusGeneration) return;
+      // FocusController and TextInput own native keyboard/selection behavior.
+      this.getUIContext().getFocusController().requestFocus('reader-book-search-input');
+    }));
+  }
+
+  aboutToDisappear(): void { this.mounted = false; this.focusGeneration += 1; }
 
   build() {
     if (this.mode === 'passive' || this.variant === 'rssPassive') {
@@ -68,9 +92,15 @@ export struct ReaderSearchField {
         .width(this.iconSize())
         .height(this.iconSize());
       TextInput({ placeholder: this.placeholder, text: this.text })
+        .id('reader-book-search-input')
+        .enableKeyboardOnFocus(true)
         .layoutWeight(1)
         .height(this.inputHeight())
         .padding(0)
+        // The outer field owns its rounded outline. Native TextInput clips
+        // its caret to its own default radius even with a clear background;
+        // zero padding otherwise clips the empty/start caret into a crescent.
+        .borderRadius(0)
         .fontFamily(TYPE_SEARCH_BOOK_INPUT.fontFamily)
         .fontWeight(TYPE_SEARCH_BOOK_INPUT.fontWeight)
         .fontSize(TYPE_SEARCH_BOOK_INPUT.fontSizeFp)
@@ -114,6 +144,7 @@ export struct ReaderSearchField {
         .layoutWeight(1)
         .height(this.inputHeight())
         .padding(0)
+        .borderRadius(0)
         .fontFamily(this.textStyle().fontFamily)
         .fontWeight(this.textStyle().fontWeight)
         .fontSize(this.textStyle().fontSizeFp)

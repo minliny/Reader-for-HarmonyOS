@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { SearchPublication } from '../entry/src/main/ets/features/search/SearchPublication.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const Gateway = productionMotionMethods(file('app/ReaderCoreGateway.ts'), ['loadBookshelf','decodeShelfBook','requiredString','requiredNumber','optionalString','optionalNumber','optionalNonNegativeInteger']);
@@ -18,7 +19,7 @@ const owner = {};
 const Host=productionMotionMethods(file('pages/Index.ets'),['applyBookshelfState','hydrateShelfSourceNames','copyShelfBookWithSourceName'],{
   ReaderRuntimeOwner:{current:()=>owner},LOCAL_SOURCE_ID:'local',SourceGateway:class{async loadSources(){if(sources===undefined)throw Error('source.list failed');return sources;}}
 });
-const host=Object.assign(new Host(),{shelfBooks:[],bookshelfLoadGeneration:1,bookshelfSourceNameRequest:0,sourceDisplayName:()=> '旧内存名称',scheduleBookshelfBackgroundRefresh(){}});
+const host=Object.assign(new Host(),{searchPublication:new SearchPublication(),searchPublicationRevision:0,shelfBooks:[],bookshelfLoadGeneration:1,bookshelfSourceNameRequest:0,sourceDisplayName:()=> '旧内存名称',scheduleBookshelfBackgroundRefresh(){}});
 const populated={kind:'populated',shelf,continueReading:undefined};
 host.applyBookshelfState(populated);await new Promise(resolve=>setImmediate(resolve));
 assert.equal(host.shelfBooks[0].sourceName,'持久名称','source.list failure preserves cold Core name rather than an older registry');

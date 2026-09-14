@@ -10,7 +10,7 @@ export const readerBuilderSdkAvailable = existsSync(`${sdkRoot}/lib/process_comp
 /** Run the actual SDK-emitted observer closures, mounting each Builder once.
  * This models closure lifetime, not ArkUI's dependency scheduling/native layout.
  * No source files, compiler cache, HAP or device are written by this helper. */
-export function createReaderBuilderProbe(source, names, dependencies = {}) {
+export function createReaderBuilderProbe(source, names, dependencies = {}, hooks = {}) {
   assert.ok(readerBuilderSdkAvailable, 'SDK required for the real Builder closure probe');
   const require = createRequire(import.meta.url);
   const ts = require(`${sdkRoot}/node_modules/typescript`);
@@ -42,12 +42,25 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
   syntax.componentCollection.customComponents.add(childName);
   syntax.propCollection.set(childName, new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
   const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
+  // The full SDK frontend collects declared method names before transforming
+  // @Watch. Preserve that prepass for fixtures that include real decorated fields.
+  syntax.classMethodCollection.set(file.fileName, new Map([['ReaderBuilderProbe', new Set(
+    file.statements[0].members.filter(node => ts.isMethodDeclaration(node)).map(node => node.name.getText(file)),
+  )]]));
+  const properties = file.statements[0].members.filter(node => ts.isPropertyDeclaration(node));
+  syntax.regularCollection.set('ReaderBuilderProbe', new Set(properties.filter(node =>
+    ts.getAllDecorators(node).length === 0).map(node => node.name.getText(file))));
+  syntax.componentCollection.currentClassName = 'ReaderBuilderProbe';
   require(`${sdkRoot}/lib/process_ui_syntax.js`).transformLog.sourceFile = file;
   const diagnostics = [];
   let transformed;
   const result = ts.transform(file, [context => node => {
     require(`${sdkRoot}/lib/process_ui_syntax.js`).contextGlobal = context;
     transformed = compiler.processComponentClass(node.statements[0], context, diagnostics, false);
+    // The normal emitter visits the returned class after the component pass;
+    // this removes omitted lifecycle statements for undecorated fields.
+    const visit = child => ts.visitEachChild(child, visit, context);
+    transformed = ts.visitNode(transformed, visit);
     return node;
   }]);
   result.dispose();
@@ -69,8 +82,13 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
     };
   } }); return instance; };
   class ViewPU {
-    constructor() { this.observers = []; this.nodes = new Map(); this.children = new Map(); this.keys = new Map(); this.attributeCalls = []; }
+    constructor(parent, _storage, id = -1) {
+      this.owner = parent; this.id = id;
+      this.observers = []; this.nodes = new Map(); this.children = new Map(); this.keys = new Map(); this.attributeCalls = [];
+      this.watches = new Map();
+    }
     finalizeConstruction() {}
+    declareWatch(name, callback) { this.watches.set(name, callback); }
     observeComponentCreation2(callback, component) {
       const id = this.observers.length;
       this.observers.push(callback);
@@ -79,9 +97,11 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
     }
     runObserver(id, initial) {
       activeOwner = this; activeId = id;
-      this.observers[id](id, initial);
-      activeOwner = undefined;
+      hooks.onObserverEnter?.(this, id);
+      try { this.observers[id](id, initial); }
+      finally { hooks.onObserverExit?.(this, id); activeOwner = undefined; }
     }
+    replayOnly(ids) { for (const id of ids) this.runObserver(id, false); }
     replay() {
       const before = this.observers.length;
       for (let id = 0; id < before; id++) this.runObserver(id, false);
@@ -99,7 +119,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
     }
     updateStateVarsOfChildByElmtId(id, params) {
       const record = this.children.get(id); assert.ok(record, 'native child retained');
-      Object.assign(record.params, params);
+      hooks.onChildUpdate?.(record, params);
+      if (typeof record.updateStateVars === 'function') record.updateStateVars(params);
+      else Object.assign(record.params, params);
     }
     static create(child) { child.owner.children.set(child.id, child); }
   }
@@ -107,12 +129,12 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
   }
   const globals = { readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
-    ...Object.fromEntries(['Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
+    ...Object.fromEntries(['Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
-      'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
+      'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...dependencies };
   const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));
-  return { owner: new Component(undefined, {}), output };
+  return { owner: new Component(undefined, {}), Component, output };
 }

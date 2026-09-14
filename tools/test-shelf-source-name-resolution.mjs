@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { SearchPublication } from '../entry/src/main/ets/features/search/SearchPublication.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 import { classifyReaderSource } from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
@@ -19,7 +20,7 @@ function fixture(initial = []) {
       LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
       SourceGateway: class { loadSources() { const request = pending(); requests.push(request); return request.promise; } },
     });
-  const host = Object.assign(new Host(), { shelfBooks: initial, bookshelfLoadGeneration: 1, bookshelfSourceNameRequest: 0,
+  const host = Object.assign(new Host(), { searchPublication:new SearchPublication(),searchPublicationRevision:0,shelfBooks: initial, bookshelfLoadGeneration: 1, bookshelfSourceNameRequest: 0,
     searchSources: [], sourceSources: [], sourceToolsSnapshot: {sources: []}, scheduleBookshelfBackgroundRefresh() {} });
   return {host, requests, changeOwner: () => { owner = {}; }, apply: books => host.applyBookshelfState({kind:'populated',shelf:{books,total:books.length},continueReading:undefined})};
 }

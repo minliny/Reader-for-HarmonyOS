@@ -53,6 +53,10 @@ export struct ArkWebExecutionHost {
         .width('100%')
         .height('100%')
         .opacity(this.interactive ? 1 : 0.001)
+        // Background source execution must not acquire keyboard/navigation
+        // focus. Hit-test exclusion alone only excludes pointer events.
+        .focusable(this.interactive)
+        .focusOnTouch(this.interactive)
         .hitTestBehavior(this.interactive ? HitTestMode.Default : HitTestMode.None)
         .onControllerAttached((): void => {
           this.currentUrl = '';

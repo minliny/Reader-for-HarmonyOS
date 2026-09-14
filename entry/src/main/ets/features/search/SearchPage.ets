@@ -2,8 +2,8 @@ import { FrameCallback } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { SearchSpinner } from './SearchSpinner';
-import { collapsedHistoryCount } from './SearchHistoryLayout';
 import { SearchViewState } from './SearchViewState';
+import { SearchPublication } from './SearchPublication';
 import { bookIntroText } from '../common/BookIntroText';
 import {
   type SearchBook,
@@ -347,9 +347,14 @@ class SearchResultDataSource implements IDataSource {
 export struct SearchPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') @Watch('measureHistory') private readerWindowMetricsRevision: number = 0;
-  @Prop @Watch('refreshVisibleResults') presentation: SearchPresentation;
-  @Prop sources: SearchSource[];
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @Prop @Watch('acceptPublication') publicationRevision: number = 0;
+  publication: SearchPublication = new SearchPublication();
+  // @State observes the top-level reference without @Prop's recursive copy.
+  // Status Builders receive native dependency updates; nested immutable books
+  // retain their identities for the incremental projection.
+  @State private presentation: SearchPresentation = { kind: 'initial', history: [] };
+  private shelfBooks: ShelfBook[] = [];
   viewState: SearchViewState = new SearchViewState();
   private resultScroller: Scroller = new Scroller();
   private restoreKey: string = '';
@@ -357,11 +362,9 @@ export struct SearchPage {
   private restoreItemY: number = 0;
   private scrollRestored: boolean = false;
   private viewStateRevision: number = -1;
-  @Prop @Watch('refreshVisibleResults') shelfBooks: ShelfBook[] = [];
   @Prop isTablet: boolean;
   @Prop reduceMotion: boolean = false;
   @State private historyWidth: number = 0;
-  @State private historyCollapsedCount: number = 0;
   @State private spinnerRunKey: number = 0;
   onBack: () => void = (): void => {};
   /**
@@ -383,11 +386,12 @@ export struct SearchPage {
   onRetry: () => void = (): void => {};
   onManageSources: () => void = (): void => {};
   @State keyword: string = '';
-  @State historyExpanded: boolean = false;
+  @State private focusInputOnAppear: boolean = false;
   // Product result categories filter one session; changing a chip never
   // starts another network sweep.
   @State selectedGroupName: string = '全部';
   @State private visibleGroups: SearchBookGroup[] = [];
+  private acceptedVisibleGroups: SearchBookGroup[] | undefined = undefined;
   private resultDataSource: SearchResultDataSource = new SearchResultDataSource();
   private groupedCategory: string = '';
   private groupedResultsCache: SearchBookGroup[] = [];
@@ -406,6 +410,12 @@ export struct SearchPage {
   private userScrolling: boolean = false;
   private restoreScheduled: boolean = false;
 
+  private acceptPublication(): void {
+    this.presentation = this.publication.presentationAt(this.publicationRevision);
+    this.shelfBooks = this.publication.shelfAt(this.publicationRevision);
+    this.refreshVisibleResults();
+  }
+
   aboutToAppear(): void {
     this.pageMounted = true;
     this.pageEpoch = ++this.viewState.pageRevision;
@@ -416,9 +426,9 @@ export struct SearchPage {
     this.restoreItemY = this.viewState.anchorItemY;
     this.scrollRestored = false;
     this.selectedGroupName = this.viewState.category;
-    this.historyExpanded = this.viewState.historyExpanded;
+    this.focusInputOnAppear = this.viewState.consumeInputFocusRequest();
     this.keyword = this.viewState.keywordDraft;
-    this.refreshVisibleResults();
+    this.acceptPublication();
   }
 
   aboutToDisappear(): void {
@@ -548,6 +558,7 @@ export struct SearchPage {
         ReaderSearchField({
           variant: 'bookPage',
           mode: 'submit',
+          focusOnAppear: this.focusInputOnAppear,
           text: this.keyword,
           placeholder: '搜索书名、作者...',
           accessibilityLabel: '搜索书名或作者',
@@ -659,11 +670,9 @@ export struct SearchPage {
         .height(26)
         .alignItems(VerticalAlign.Center);
 
-        // Measured chips fill at most two rows. The matching expand/collapse
-        // action stays in its trailing row, independent of chip wrapping.
+        // All retained history is visible inside the existing page Scroll.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-          ForEach(this.historyExpanded ? this.presentation.history :
-            this.presentation.history.slice(0, this.historyCollapsedCount), (keyword: string) => {
+          ForEach(this.presentation.history, (keyword: string) => {
             Text(keyword)
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Medium)
@@ -675,7 +684,7 @@ export struct SearchPage {
               .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
               .borderRadius(999)
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .constraintSize({ maxWidth: Math.max(0, this.historyWidth - TOK_SPACE_XS) })
+              .constraintSize({ maxWidth: this.historyWidth > 0 ? Math.max(0, this.historyWidth - TOK_SPACE_XS) : '100%' })
               .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
               .onClick((): void => {
                 this.keyword = keyword;
@@ -685,15 +694,7 @@ export struct SearchPage {
         }
         .width('100%')
         .padding({ top: TOK_SPACE_CARD_PADDING });
-        if (this.historyWidth > 0 && this.presentation.history.length > this.historyCollapsedCount) {
-          Row() {
-            this.moreChip(this.historyExpanded ? 0 : this.presentation.history.length - this.historyCollapsedCount,
-              this.historyExpanded);
-          }
-          .width('100%')
-          .justifyContent(FlexAlign.End)
-          .margin({ top: TOK_SPACE_XS });
-        }
+
       }
     }
     .width('100%')
@@ -703,16 +704,13 @@ export struct SearchPage {
       top: TOK_SPACE_XS,
       bottom: 20,
     })
-    // This container exists before history loads and while the visible chip
-    // count is zero. Measuring the conditional empty Flex creates a cycle:
-    // chips need a measured width, but that width depends on those chips.
+    // Only constrain long chip width; history admission never depends on measurement.
     .onAreaChange((_old: Area, next: Area): void => {
       const outerWidth = Number(next.width);
       if (!Number.isFinite(outerWidth)) return;
       const width = Math.max(0, outerWidth - (this.isTablet ? 40 : 36));
       if (Math.abs(width - this.historyWidth) > .1) {
         this.historyWidth = width;
-        this.measureHistory();
       }
     });
   }
@@ -761,60 +759,16 @@ export struct SearchPage {
   }
 
   @Builder
-  private moreChip(count: number, expanded: boolean = false) {
-    Row({ space: TOK_SPACE_ROW_BLOCK }) {
-      Text(expanded ? '收起' : '展开')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
-        .lineHeight(18)
-        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(1);
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right')))
-        .width(12).height(12)
-        .rotate({ angle: expanded ? 270 : 0 });
-    }
-    .padding({ left: 12.5, right: 12.5, top: 7.5, bottom: 7.5 })
-    .alignItems(VerticalAlign.Center)
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
-    .borderRadius(999)
-    .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-    .onClick((): void => {
-      this.historyExpanded = !expanded;
-      this.viewState.historyExpanded = !expanded;
-    })
-    .accessibilityText(expanded ? '收起搜索历史' : `展开其余 ${count} 条搜索历史`);
-  }
-
-  @Builder
   private loadingContent() {
     Blank().width('100%').height('100%');
   }
 
-  private measureHistory(): void {
-    if (this.presentation.kind !== 'initial') return;
-    if (this.historyWidth <= 0) {
-      this.historyCollapsedCount = 0;
-      return;
-    }
-    const widths = this.presentation.history.map((keyword: string): number => {
-      const measured = this.getUIContext().getMeasureUtils().measureTextSize({
-        textContent: keyword, fontFamily: 'ReaderInter', fontSize: '13fp', fontWeight: '500',
-      });
-      return this.getUIContext().px2vp(Number(measured.width)) + 29 + 2 + TOK_SPACE_XS;
-    });
-    this.historyCollapsedCount = collapsedHistoryCount(widths, this.historyWidth, 0);
-  }
-
   private refreshVisibleResults(): void {
     this.spinnerRunKey = this.viewState.revision;
-    this.measureHistory();
     if (this.viewStateRevision !== this.viewState.revision) {
       this.viewStateRevision = this.viewState.revision;
       this.selectedGroupName = this.viewState.category;
       this.keyword = this.viewState.keywordDraft;
-      this.historyExpanded = this.viewState.historyExpanded;
       this.restoreKey = this.viewState.anchorKey;
       this.restoreOffset = this.viewState.anchorOffset;
       this.restoreItemY = this.viewState.anchorItemY;
@@ -829,15 +783,16 @@ export struct SearchPage {
     if (this.presentation.kind !== 'results') this.changedGroupKeys = new Set();
     const groups = this.presentation.kind === 'results'
       ? this.groupResults(this.presentation.results) : [];
-    if (this.visibleGroups !== groups || (this.changedGroupKeys?.size ?? 0) > 0) {
+    if (this.acceptedVisibleGroups !== groups || (this.changedGroupKeys?.size ?? 0) > 0) {
       if (this.listMounted && this.scrollRestored) {
         this.saveScrollAnchor();
-        if (this.visibleGroups !== groups) this.rememberAnchorNeighbors();
+        if (this.acceptedVisibleGroups !== groups) this.rememberAnchorNeighbors();
         this.restoreKey = this.viewState.anchorKey;
         this.restoreItemY = this.viewState.anchorItemY;
         this.restoreOffset = this.viewState.anchorOffset;
       }
       this.visibleGroups = groups;
+      this.acceptedVisibleGroups = groups;
       this.listEpoch = (this.listEpoch ?? 0) + 1;
       this.viewState.listRevision = this.listEpoch;
       this.restoreEpoch = (this.restoreEpoch ?? 0) + 1;

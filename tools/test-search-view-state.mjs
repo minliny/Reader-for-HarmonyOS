@@ -99,7 +99,7 @@ assert.equal(fallback.getData(0), fallbackRow, 'legacy aliases retain their norm
 const navigation = new SearchViewState();
 assert.deepEqual(['b', 'a', 'c'].map(key => navigation.rank(key)), [0, 1, 2]);
 assert.equal(navigation.rank('b'), 0, 'late source counts do not change first-seen order');
-navigation.category = '在线'; navigation.keywordDraft = '草稿'; navigation.historyExpanded = true;
+navigation.category = '在线'; navigation.keywordDraft = '草稿';
 navigation.anchorKey = 'b'; navigation.anchorIndex = 1; navigation.anchorItemY = -23;
 const remountedPageState = navigation;
 assert.equal(remountedPageState.anchorItemY, -23);
@@ -147,7 +147,7 @@ console.log('search relevance: late exact title, stable ties, canonical variants
 const t = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部',
   visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) { this.publishedGroups = groups; },
-  resultDataSource: new SearchResultDataSource(), measureHistory() {} });
+  resultDataSource: new SearchResultDataSource() });
 const tieA = book('tie-a', '诡秘之主·甲');
 const tieB = book('tie-b', '诡秘之主·乙');
 const ordered = t.groupResults([tieA, tieB]);

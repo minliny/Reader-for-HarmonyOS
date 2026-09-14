@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { collapsedHistoryCount } from '../entry/src/main/ets/features/search/SearchHistoryLayout.ts';
+import { SearchViewState } from '../entry/src/main/ets/features/search/SearchViewState.ts';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const source = readFileSync(process.env.READER_SEARCH_PAGE_SOURCE ??
   new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url), 'utf8');
@@ -32,14 +33,14 @@ function fixture(history, { width = 0, tablet = false, expanded = false, measure
     };
   } });
   ({ owner } = createReaderBuilderProbe(source,
-    ['stateContent', 'initialContent', 'moreChip', 'measureHistory', 'refreshVisibleResults', 'publishVisibleGroups'],
-    { collapsedHistoryCount, Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'),
+    ['stateContent', 'initialContent', 'refreshVisibleResults', 'publishVisibleGroups'],
+    { Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'),
       FlexAlign: enumValues('FlexAlign'), TOK_BORDER_W: 1, TOK_SPACE_XS: 8,
       TOK_SPACE_CARD_PADDING: 12, TOK_SPACE_ROW_BLOCK: 4 }));
   Object.assign(owner, {
     presentation: { kind: 'initial', history }, isTablet: tablet,
-    historyWidth: width, historyCollapsedCount: 0, historyExpanded: expanded,
-    viewState: { revision: 0, category: '全部', keywordDraft: '', historyExpanded: expanded },
+    historyWidth: width,
+    viewState: new SearchViewState(),
     viewStateRevision: -1, appThemeScheme: 'day',
     visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) {
       assert.deepEqual(groups, [], 'history view cannot admit online candidate preparation');
@@ -72,68 +73,45 @@ check('initial history Scroll uses the top of the content viewport', () => {
   assert.equal(f.nodes().find(node => node.type === 'Scroll').align, 'Alignment.TopStart');
   assert.equal(f.areas()[0].padding.top, 8, 'PH62 history uses one existing spacing token below input, not 28vp');
 });
-check('one history item appears after the independently measurable outer container reports its real width', () => {
-  const f = fixture(['唯一历史']);
-  assert.equal(f.owner.historyWidth, 0);
-  assert.ok(!f.nodes().some(node => String(node.accessibilityText ?? '').startsWith('展开其余')),
-    'unmeasured history must not be presented as wholly collapsed');
-  dispatchArea(f, 1280 / 3.5); // Existing VM width, converted to vp; 18vp padding per side.
-  assert.equal(f.owner.historyWidth, 1280 / 3.5 - 36);
-  assert.equal(f.owner.historyCollapsedCount, 1);
-  replayHistory(f);
-  assert.ok(f.nodes().some(node => node.type === 'Text' && node.create === '唯一历史'));
-  assert.equal(f.measurements.at(-1).fontSize, '13fp');
-  assert.equal(f.measurements.at(-1).fontFamily, 'ReaderInter');
+check('all history appears before layout without per-item measurement or expansion', () => {
+  const history=Array.from({length:35},(_,i)=>`书${i}`);
+  const f=fixture(history);assert.equal(f.owner.historyWidth,0);
+  for(const keyword of history)assert.ok(f.nodes().some(n=>n.type==='Text'&&n.create===keyword));
+  assert.equal(f.measurements.length,0);
+  assert.ok(!f.nodes().some(n=>/展开|收起/.test(String(n.create??''))));
+  dispatchArea(f,196);replayHistory(f);
+  assert.equal(f.measurements.length,0);
+  for(const keyword of history)assert.ok(f.nodes().some(n=>n.type==='Text'&&n.create===keyword));
 });
-check('empty first paint still provides width before asynchronous history arrives', () => {
-  const f = fixture([]);
-  dispatchArea(f, 390);
-  assert.equal(f.owner.historyWidth, 354);
-  f.owner.presentation = { kind: 'initial', history: ['加载后历史'] };
-  f.owner.refreshVisibleResults();
-  assert.equal(f.owner.historyCollapsedCount, 1);
-});
-check('two measured rows adapt to real width, long chips, tablet padding and late replacement', () => {
-  const history = Array.from({ length: 8 }, (_, i) => `书${i}`);
-  const f = fixture(history, { measureVp: () => 30 });
-  dispatchArea(f, 196); // 160vp contents: each chip 69vp including margin -> 2 per row.
-  assert.equal(f.owner.historyCollapsedCount, 4);
-  dispatchArea(f, 266); // 230vp -> 3 per row.
-  assert.equal(f.owner.historyCollapsedCount, 6);
-  dispatchArea(f, 196);
-  assert.equal(f.owner.historyCollapsedCount, 4, 'width contraction cannot retain the larger cut');
-  dispatchArea(f, 0);
-  assert.equal(f.owner.historyCollapsedCount, 0, 'zero-width layout cannot retain a stale cut');
-  dispatchArea(f, 196);
-  assert.equal(f.owner.historyCollapsedCount, 4);
-  f.owner.presentation = { kind: 'initial', history: ['替换的一项'] };
-  f.owner.refreshVisibleResults();
-  assert.equal(f.owner.historyCollapsedCount, 1);
-  const long = fixture(['非常长的历史', '短'], { tablet: true, measureVp: text => text === '短' ? 20 : 900 });
-  dispatchArea(long, 260);
-  assert.equal(long.owner.historyWidth, 220, 'tablet consumes 20vp on each side');
-  assert.equal(long.owner.historyCollapsedCount, 2, 'long item is clamped to one row');
-});
-check('one or two complete rows have no collapse action', () => {
-  for (const count of [1, 2, 3, 4]) {
-    const f = fixture(Array.from({ length: count }, (_, i) => `书${i}`), { width: 160, measureVp: () => 30 });
-    assert.equal(f.owner.historyCollapsedCount, count);
-    assert.ok(!f.nodes().some(n => String(n.accessibilityText ?? '').includes('搜索历史')));
+check('async history and narrow/tablet widths preserve every entry and existing scroll',()=>{
+  for(const tablet of [false,true]) {
+    const f=fixture([],{tablet});dispatchArea(f,260);
+    f.owner.presentation={kind:'initial',history:['加载后历史','很长'.repeat(80)]};
+    f.owner.refreshVisibleResults();f.owner.stateContent();
+    assert.equal(f.owner.historyWidth,260-(tablet?40:36));assert.equal(f.measurements.length,0);
+    assert.ok(f.nodes().some(n=>n.type==='Text'&&n.create==='加载后历史'));
+    assert.equal(f.nodes().find(n=>n.type==='Scroll').align,'Alignment.TopStart');
   }
 });
-check('actual SDK action preserves matching expand and collapse intents', () => {
-  const f = fixture(Array.from({ length: 8 }, (_, i) => `书${i}`), { width: 160, measureVp: () => 30 });
-  const expand = f.nodes().find(n => n.accessibilityText === '展开其余 4 条搜索历史');
-  assert.ok(expand); assert.ok(f.nodes().some(n => n.type === 'Text' && n.create === '展开'));
-  assert.ok(!f.nodes().some(n => n.type === 'Text' && /条更多/.test(String(n.create))));
-  expand.onClick();
-  assert.equal(f.owner.historyExpanded, true); assert.equal(f.owner.viewState.historyExpanded, true);
-  const expanded = fixture(Array.from({ length: 8 }, (_, i) => `书${i}`), { width: 160, expanded: true, measureVp: () => 30 });
-  const collapse = expanded.nodes().find(n => n.accessibilityText === '收起搜索历史');
-  assert.ok(collapse); assert.ok(expanded.nodes().some(n => n.type === 'Text' && n.create === '收起')); collapse.onClick();
-  assert.equal(expanded.owner.historyExpanded, false); assert.equal(expanded.owner.viewState.historyExpanded, false);
+check('fresh-entry focus is consumed once and reset/return cannot recreate it',()=>{
+  const state=new SearchViewState();assert.equal(state.consumeInputFocusRequest(),false);
+  state.requestInputFocus();assert.equal(state.consumeInputFocusRequest(),true);assert.equal(state.consumeInputFocusRequest(),false);
+  state.reset('新查询');assert.equal(state.consumeInputFocusRequest(),false);
+  state.requestInputFocus();state.reset();assert.equal(state.consumeInputFocusRequest(),false);
 });
-
+check('native focus waits for layout and a removed or returning page never steals it',()=>{
+  const path=new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets',import.meta.url);
+  const frames=[],focus=[];
+  const Field=productionMotionMethods(path,['aboutToAppear','aboutToDisappear'],{
+    ReaderSearchFocusFrame:class{constructor(action){this.action=action;}onIdle(){this.action();}}});
+  const owner=Object.assign(new Field(),{mounted:false,focusGeneration:0,variant:'bookPage',mode:'submit',focusOnAppear:true,
+    getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({requestFocus:id=>focus.push(id)})})});
+  owner.aboutToAppear();assert.equal(focus.length,0);frames.shift().onIdle();assert.deepEqual(focus,['reader-book-search-input']);
+  owner.aboutToAppear();owner.aboutToDisappear();frames.shift().onIdle();assert.equal(focus.length,1);
+  owner.focusOnAppear=false;owner.aboutToAppear();assert.equal(frames.length,0);
+  const fieldSource=readFileSync(path,'utf8');assert.match(fieldSource,/\.enableKeyboardOnFocus\(true\)/);
+  assert.match(source,/focusInputOnAppear = this\.viewState\.consumeInputFocusRequest\(\)/);
+});
 for (const result of results) console.log(JSON.stringify(result));
 if (results.some(result => result.status === 'FAIL')) process.exitCode = 1;
-else console.log('Search History actual SDK container/width lifecycle and production two-row measurement PASS; native pixels remain a separate gate.');
+else console.log('PH80/81 full scrollable history, zero text measurement and one-shot native focus lifecycle PASS; keyboard pixels remain a platform gate.');

@@ -3,7 +3,7 @@ export class SearchViewState {
   revision: number = 0;
   category: string = '全部';
   keywordDraft: string = '';
-  historyExpanded: boolean = false;
+  private inputFocusRequested: boolean = false;
   anchorKey: string = '';
   anchorIndex: number = 0;
   anchorOffset: number = 0;
@@ -18,7 +18,7 @@ export class SearchViewState {
     this.revision += 1;
     this.category = '全部';
     this.keywordDraft = keyword;
-    this.historyExpanded = false;
+    this.inputFocusRequested = false;
     this.anchorKey = '';
     this.anchorIndex = 0;
     this.anchorOffset = 0;
@@ -27,6 +27,14 @@ export class SearchViewState {
     this.anchorNeighbors = [];
     this.redirects.clear();
     this.order.clear();
+  }
+
+  requestInputFocus(): void { this.inputFocusRequested = true; }
+
+  consumeInputFocusRequest(): boolean {
+    const requested = this.inputFocusRequested;
+    this.inputFocusRequested = false;
+    return requested;
   }
 
   rank(key: string, admittedOrder?: number): number {

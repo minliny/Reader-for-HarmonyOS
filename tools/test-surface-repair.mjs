@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 import { localImportResultLayout } from '../entry/src/main/ets/features/bookshelf/LocalImportLayout.ts';
-import { collapsedHistoryCount } from '../entry/src/main/ets/features/search/SearchHistoryLayout.ts';
 const path=f=>new URL(`../entry/src/main/ets/${f}`,import.meta.url);
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<15;i++)await Promise.resolve();};
@@ -76,9 +75,6 @@ assert.equal(ShelfBookPresentation.source(books[1]),'真实书源');
 assert.equal(ShelfBookPresentation.latestChapter(books[0]),'暂无最新章节');
 assert.deepEqual(ShelfBookPresentation.visible(books,'默认'),[books[0]]);assert.deepEqual(ShelfBookPresentation.visible(books,''),books);
 assert.equal(ShelfBookPresentation.progress(books[1]),'已读 <1%');
-assert.equal(collapsedHistoryCount([48,48,48,48,48,48,48],160,8),6,'two packed rows, not fixed four');
-assert.equal(collapsedHistoryCount([500,30,30],100,8),3,'long chip is bounded to one full row');
-assert.equal(collapsedHistoryCount([48],0),0);
 for(const items of [0,61,122,427,3050]){const l=localImportResultLayout(500,62,68,76,items);assert.ok(l.height<=500&&l.listHeight>=0);if(items===61)assert.ok(l.height<300);}
 assert.equal(localImportResultLayout(140,62,68,76,300).compact,true);assert.equal(localImportResultLayout(0,62,68,76,300).listHeight,0);
 const Spinner=productionMotionMethods(path('features/search/SearchSpinner.ets'),['shouldAnimate']);
