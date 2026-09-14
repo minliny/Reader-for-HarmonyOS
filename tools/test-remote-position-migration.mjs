@@ -153,3 +153,18 @@ console.log('PH75 Host: captured anchor context, forced/cache validation, typed 
   assert.equal(list[0].bookmarks[0].chapterOffset,23);assert.equal(list[0].bookmarks[0].content,'保留备注');
 }
 console.log('PH75 directory chapter-start proof: exact cache read, source/index binding, cancellation/CAS failure preservation, no fetch inputs, unscoped stored offsets untouched PASS');
+
+{
+ const { classifyRemoteReadingCommandFailure, isRemoteReadingCacheFallbackEligible } = await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
+ const { remoteReadingFailureKindOf, isRemoteSourceFailureKind } = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
+ for (const reason of ['PROCESSING_CONTEXT_STALE','POSITION_CONTEXT_STALE','MISSING_OLD_BODY']) {
+  const cause={event:{error:{code:'INVALID_PARAMS',details:{reason,requiresPositionMigration:true}}}};
+  const failure=classifyRemoteReadingCommandFailure('chapter.content',cause);
+  assert.equal(failure.code,'positionContextStale');assert.equal(failure.category,'POSITION_CONTEXT_STALE');
+  assert.equal(failure.causeValue,cause);assert.equal(isRemoteReadingCacheFallbackEligible(failure),false);
+  assert.equal(isRemoteSourceFailureKind(remoteReadingFailureKindOf(failure)),false);
+  assert.match(failure.message,/原阅读位置|原位置/);
+  if(reason==='PROCESSING_CONTEXT_STALE')assert.match(failure.message,/恢复此前的简繁转换或正文替换设置/);
+ }
+ console.log('PH75 recoverable position conflicts are localized and never treated as source/network failures PASS');
+}

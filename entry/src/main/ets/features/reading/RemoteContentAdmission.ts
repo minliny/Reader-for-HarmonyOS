@@ -24,7 +24,8 @@ export type RemoteReadingFailureKind =
   | 'PAGINATION_FAILED'
   | 'LAYOUT_FAILED'
   | 'RENDER_FAILED'
-  | 'STORAGE_FAILED';
+  | 'STORAGE_FAILED'
+  | 'POSITION_CONTEXT_STALE';
 
 const SOURCE_FAILURE_KINDS: RemoteReadingFailureKind[] = [
   'SOURCE_HTTP_FAILED',
@@ -189,6 +190,8 @@ export function remoteReadingFailureKindOf(error: unknown): RemoteReadingFailure
   }
   if (error instanceof RemoteReadingGatewayError) {
     switch (error.code) {
+      case 'positionContextStale':
+        return 'POSITION_CONTEXT_STALE';
       case 'emptyToc':
         return 'SOURCE_TOC_EMPTY';
       case 'invalidResponse':

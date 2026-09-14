@@ -11,12 +11,12 @@ export type RemoteReadingErrorCode =
   'identityMismatch' | 'missingTocUrl' | 'emptyToc' |
   'chapterNotFound' | 'chapterNotDownloaded' | 'cachedSessionUnavailable' |
   'nonTextChapter' | 'commandFailed' | 'cancelled' | 'storageFailure' |
-  'sourceVersionChanged' | 'cacheDerivedCorrupt';
+  'sourceVersionChanged' | 'cacheDerivedCorrupt' | 'positionContextStale';
 
 export type RemoteReadingFailureCategory = 'CACHE_MISSING' | 'CACHE_DERIVED_CORRUPT' |
   'STORAGE_FAILURE' | 'CANCELLED' | 'IDENTITY_MISMATCH' | 'SOURCE_VERSION_CHANGED' |
   'SOURCE_HTTP_FAILED' | 'SOURCE_RESPONSE_FORMAT' | 'SOURCE_RULE_FAILED' |
-  'SOURCE_TOC_EMPTY' | 'SOURCE_CONTENT_EMPTY';
+  'SOURCE_TOC_EMPTY' | 'SOURCE_CONTENT_EMPTY' | 'POSITION_CONTEXT_STALE';
 
 export type RemoteReadingHostCapabilityId =
   'httpExecute' | 'responseCharsetDecoding' | 'platformCookieJar' |
@@ -110,6 +110,7 @@ export class RemoteReadingGatewayError extends Error {
 
 function remoteReadingCategoryForCode(code: RemoteReadingErrorCode): RemoteReadingFailureCategory {
   switch (code) {
+    case 'positionContextStale': return 'POSITION_CONTEXT_STALE';
     case 'cancelled': return 'CANCELLED';
     case 'storageFailure': return 'STORAGE_FAILURE';
     case 'sourceVersionChanged': return 'SOURCE_VERSION_CHANGED';
@@ -320,6 +321,13 @@ export function classifyRemoteReadingCommandFailure(
   const category = details?.['category'];
   if (code === 'CANCELLED' || /cancelled|canceled|已取消/i.test(message)) {
     return new RemoteReadingGatewayError('cancelled', message, command, undefined, diagnostic, error);
+  }
+  if (details?.['requiresPositionMigration'] === true || details?.['reason'] === 'POSITION_CONTEXT_STALE' ||
+    details?.['reason'] === 'PROCESSING_CONTEXT_STALE') {
+    const recovery = details?.['reason'] === 'PROCESSING_CONTEXT_STALE' ?
+      '正文处理设置已改变，原阅读位置已保留。请恢复此前的简繁转换或正文替换设置后重试。' :
+      '正文版本与原阅读位置暂时无法核对，已保留原位置。请重新打开章节，或从目录选择其他章节。';
+    return new RemoteReadingGatewayError('positionContextStale', recovery, command, undefined, diagnostic, error);
   }
   if (details?.['reason'] === 'sourceVersionDrift' || category === 'SOURCE_VERSION_CHANGED') {
     return new RemoteReadingGatewayError('sourceVersionChanged', message, command, undefined, diagnostic, error);
