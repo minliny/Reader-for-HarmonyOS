@@ -24,8 +24,9 @@ for(const source of [shelf,batch]) {
 for(const [size,lineHeight] of [[15,18.3],[12,15],[11,13.75],[10,12]]) {
  assert.match(list,new RegExp(`fontSize\\(${size}\\)[\\s\\S]*?lineHeight\\(${lineHeight}\\)`));
 }
-assert.match(list,/textAlign\(primary \? TextAlign.Center : TextAlign.Start\)/);
-assert.match(list,/layoutWeight\(primary \? 0 : 1\).flexShrink\(primary \? 0 : 1\)/,'the trailing progress retains intrinsic width while source takes the remaining space');
+assert.match(list,/textAlign\(TextAlign.Start\)/);
+assert.match(list,/this.statusPill\(true\);\s*this.statusPill\(false\)/,'progress left and source right');
+assert.match(list,/layoutWeight\(1\).constraintSize\(\{ minWidth: 0 \}\)/,'both slots divide available width independent of content');
 assert.match(list,/maxLines\(1\).textOverflow\(\{ overflow: TextOverflow.Ellipsis \}\)/);
 // Compile the exact production body with the SDK, then inspect its native
 // layout attributes. Empty Text does not acquire a glyph line from lineHeight.

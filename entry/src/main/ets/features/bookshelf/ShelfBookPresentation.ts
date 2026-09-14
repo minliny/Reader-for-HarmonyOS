@@ -19,9 +19,14 @@ export class ShelfBookPresentation {
   }
 
   static progress(book: ShelfBook): string {
-    const value = Math.max(0, Math.min(10000, book.readProgress ?? 0));
+    const value = this.progressPercent(book);
     if (value <= 0) return '未读';
-    return value < 100 ? '已读 <1%' : `已读 ${Math.floor(value / 100)}%`;
+    return value < 1 ? '已读 <1%' : `已读 ${Math.floor(value)}%`;
+  }
+
+  static progressPercent(book: ShelfBook): number {
+    const value = book.readProgress ?? 0;
+    return Number.isFinite(value) ? Math.max(0, Math.min(10000, value)) / 100 : 0;
   }
 
   static visible(books: ShelfBook[], selectedGroup: string): ShelfBook[] {

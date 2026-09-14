@@ -200,12 +200,12 @@ export struct LocalBookDetail {
 
           Stack({ alignContent: Alignment.Center }) {
             Text('更换书源')
-              .width('100%')
-              .height('100%')
+              .width(52)
+              .height(12)
               .fontFamily('ReaderInter')
               .fontWeight(900)
               .fontSize(9)
-              .lineHeight(18)
+              .lineHeight(12)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .maxLines(1);
@@ -225,7 +225,8 @@ export struct LocalBookDetail {
           });
         }
         .width('100%')
-        .height(18);
+        .height(18)
+        .alignItems(VerticalAlign.Center);
         Text('分组：默认')
           .width('100%').height(18)
           .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)

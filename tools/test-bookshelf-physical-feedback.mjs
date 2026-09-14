@@ -56,16 +56,31 @@ check('real section settings callback opens the default selector without navigat
   callback(); assert.equal(page.groupSelectorVisible, false);
 });
 const list = read('bookshelf/ShelfBookListDetails.ets').replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
-check('source owns remaining row width and progress retains intrinsic width at trailing edge', () => {
+check('PH61 progress/source retain equal left/right slots and live progress after row reuse', () => {
   const { owner } = createReaderBuilderProbe(list, ['shelfDetails', 'statusPill'], { ShelfBookPresentation: Projection, Blank: stub('Blank') });
   owner.book = { title: '书名', author: '', sourceId: 'online', sourceName: '非常长的实际书源名称', lastChapter: '最新章节', readProgress: 8765 };
   owner.appThemeScheme = 'day'; owner.shelfDetails();
   const nodes = texts(owner), source = nodes.find(n => n.create === '非常长的实际书源名称'), progress = nodes.find(n => n.create === '已读 87%');
-  assert.equal(source.layoutWeight, 1); assert.equal(progress.layoutWeight, 0);
-  assert.equal(progress.flexShrink, 0); assert.equal(source.flexShrink, 1);
-  assert.equal(progress.textAlign, 'TextAlign.Center'); assert.equal(source.textAlign, 'TextAlign.Start');
+  assert.ok(nodes.indexOf(progress) < nodes.indexOf(source));
+  assert.equal(progress.textAlign, 'TextAlign.Start'); assert.equal(source.textAlign, 'TextAlign.Start');
   assert.equal(source.maxLines, 1); assert.equal(source.textOverflow.overflow, 'TextOverflow.Ellipsis');
   assert.equal(nodes[1].constraintSize.minHeight, 15, 'empty author keeps its independent second line');
+  const slots = [...owner.nodes.values()].filter(n => n.type === 'Stack' && n.layoutWeight === 1);
+  assert.equal(slots.length, 2);
+  for (const slot of slots) {
+    assert.equal(slot.constraintSize.minWidth, 0); assert.equal(slot.height, 18);
+    assert.equal(slot.borderRadius, 9); assert.equal(slot.clip, true);
+    assert.equal(slot.create.alignContent, 'Alignment.Start');
+  }
+  const bar = [...owner.nodes.values()].find(n => n.type === 'Progress');
+  assert.equal(bar.create.value, 87.65); assert.equal(bar.create.total, 100);
+  assert.equal(bar.style.enableSmoothEffect, false, 'list recycling must not restart a progress animation');
+  for (const [input, percent, label] of [[0, 0, '未读'], [1, .01, '已读 <1%'], [10000, 100, '已读 100%'], [12000, 100, '已读 100%'], [-1, 0, '未读'], [NaN, 0, '未读']]) {
+    owner.book = { ...owner.book, sourceName: `源${input}`, readProgress: input }; owner.replay();
+    assert.equal(bar.create.value, percent);
+    assert.ok(texts(owner).some(n => n.create === label));
+    assert.ok(texts(owner).some(n => n.create === `源${input}`));
+  }
 });
 
 const detailSource = read('bookshelf/LocalBookDetail.ets');
@@ -83,10 +98,12 @@ for (const scheme of ['day', 'night']) {
     const source = metadata[1]; assert.equal(source.width, undefined); assert.equal(source.flexShrink, 1);
     assert.equal(source.textOverflow.overflow, 'TextOverflow.Ellipsis');
     const action = nodes.find(n => n.create === '更换书源');
-    assert.deepEqual([action.width, action.height, action.textAlign, action.maxLines], ['100%', '100%', 'TextAlign.Center', 1]);
+    assert.deepEqual([action.width, action.height, action.lineHeight, action.textAlign, action.maxLines], [52, 12, 12, 'TextAlign.Center', 1]);
     assert.equal(action.padding, undefined, 'the 52vp button must not lose 16vp to text padding');
     const hit = [...owner.nodes.values()].find(n => n.type === 'Stack' && n.width === 52);
     assert.equal(hit.flexShrink, 0); assert.equal(hit.height, 18);
+    assert.equal(hit.create.alignContent, 'Alignment.Center');
+    assert.equal((hit.height - action.height) / 2, 3, 'fixed 12vp line box leaves symmetric vertical space');
     let switches = 0; owner.onSwitchSource = () => switches++;
     hit.onClick(); assert.equal(switches, 1);
     owner.sourceSwitchEnabled = false; owner.replay(); hit.onClick(); assert.equal(switches, 1, 'local action stays disabled');
