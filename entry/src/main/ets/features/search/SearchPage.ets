@@ -130,7 +130,11 @@ export type SearchPresentation =
   | SearchSourceRequiredPresentation
   | SearchSourceLoadErrorPresentation;
 
-type SearchBookProjectionFacts = { key: string; titleKey: string; score: number };
+interface SearchBookProjectionFacts {
+  key: string;
+  titleKey: string;
+  score: number;
+}
 
 @Observed
 class SearchBookGroup {
