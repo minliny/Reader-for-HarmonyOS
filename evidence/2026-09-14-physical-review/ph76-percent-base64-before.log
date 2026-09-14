@@ -1,0 +1,19 @@
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(shapes.some(shape=>shape.metadataTruncated&&shape.metadata.length===96))
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-arkweb-resource-diagnostic.mjs:102:9 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

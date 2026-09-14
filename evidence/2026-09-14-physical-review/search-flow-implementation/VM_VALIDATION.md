@@ -1,10 +1,18 @@
 # HAP 与 VM 分包验证记录
 
-后续构建准备（不改变6863已安装身份）：Core `0c5a3956274197578554f36b1a7fed9e1977ea78` 时间修复已提交，正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift 0、C/C++ smoke PASS；Native已完成并由根任务集成，后续HAP尚待独立manifest/部署回执。首次门禁在3399通过/1失败后因沙盒禁止绑定localhost中止，437未运行；失败日志原样保留，授权本机测试端口后的全量结果另列。新Core不能倒写为6863内容；本包日期仍为旧显示、PH76仍OPEN。
+## 最新已验证安装：d5f13a96
+
+**`20260914T185653Z-d5f13a96-803a4b82`** 已在 **2026-09-14 18:58:57.400 UTC** 保数据安装到 VM `6460677a198b` 并启动，install/launch PASS。Harmony `d5f13a965adf07e6c36fd8ad7e7315cf2ae7d686`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名与安装身份准入通过。签名HAP **167841969 bytes**，SHA-256 `325cdd424b9dea2bb90ced607d87c5d3299f8248e8aa2376ac56ac76041d3004`。
+
+[Manifest](vm-d5f13a96/manifest.json)、[部署回执](vm-d5f13a96/deployment.json)、[构建](vm-d5f13a96/build.log)、[身份检查](vm-d5f13a96/inspect.log)、[安装](vm-d5f13a96/install.log)及[副本校验索引](vm-d5f13a96/receipt.json)已归档。新Core正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift0和C/C++smoke通过；首次因localhost端口权限失败的运行仍保留在下方Core门禁证据，不能冒称该次也通过。
+
+**本包新书签日期尚未VM验证，PH76实际回调结果仍OPEN。** 6863的书签保存/删除与PH88几何、aa387的胶囊及其他交互均保留原包身份，不因安装d5就算重复验证。此包仍为iteration / `acceptanceEligible=false`；在线动线、真机与用户验收不因此通过。
+
+启动预检曾误用`sys.boot_completed`，返回参数错误1002；随后使用规范`bootevent.boot.completed`确认`true`，SceneBoard仍为PID1529。三份原始回执在上述索引中；这是操作参数错误，不登记为VM启动故障或HDC断联。
 
 [后续Core门禁与Native证据](ph86-time-final-gates/receipt.json)、[正式全量](ph86-time-final-gates/ph86-time-core-final-unrestricted.log)、[环境失败原件](ph86-time-final-gates/ph86-time-core-final.log)。
 
-## 最新已验证安装：6863af5d（与下方 aa387 历史分包）
+## 6863af5d 阶段验证（历史包，保留独立实证）
 
 截至本节证据时点，最近取得正式 VM 部署回执的是 **`20260914T182625Z-6863af5d-ded2e152`**；只记录该包已发生的事实，不预称后续书签日期修复包已完成。Harmony `6863af5d4e9c5dac34e3ca74b120a7d5daa2952e`、Core `28369db9405822f4b8277eb95ad94057f177b7bb`，manifest 中两仓 clean。该包使用与 aa387 相同的 Core/Native；此前同 Core 的 3832 项官方检查（1 leaky、0 skipped）为沿用证据，本节没有重跑 Core 并冒报为新的全量门禁。
 

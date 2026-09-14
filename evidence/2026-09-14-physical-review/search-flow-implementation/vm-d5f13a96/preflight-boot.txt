@@ -1,0 +1,1 @@
+Get parameter "sys.boot_completed" fail! errNum is:1002!

@@ -1,0 +1,42 @@
+{
+  "issue": "Native percent-encoded Base64 main document was denied",
+  "observedArtifactRun": "20260914T185653Z-d5f13a96-803a4b82",
+  "diagnosticRun": "1789412418166-1",
+  "observedFacts": {
+    "metadata": "text/html;charset=utf-8;base64",
+    "bodyLength": 312,
+    "matchesCurrentBase64": false,
+    "uriDecodedMatchesCurrentBase64": true,
+    "interceptDenied": true
+  },
+  "fix": "Existing Base64 metadata branches retain direct equality; otherwise standard URI decoding must exactly equal the current generated Base64, malformed encoding returns false. Existing length/run/body/type gates remain.",
+  "sha256": {
+    "entry/src/main/ets/app/ArkWebResourceDiagnostic.ts": "e0b5f709a25f2cabb2ed47b722917b560ba0ad5de3d050544469c45ec76da96f",
+    "tools/test-arkweb-resource-diagnostic.mjs": "ad77851fd512dcc15976f4038e6a9f63f548af8c6b513ccdac30b22733abbe5b",
+    "entry/src/main/ets/app/ArkWebExecutor.ts": "eb237b943a2713c936e126451dfb9fbc40a00192ae8899b3b280c7ecc5cc4e0c",
+    "entry/src/main/ets/app/ArkWebExecutionHost.ets": "f51379c05719cea2d50d170c541455f0c7a9ac7613c744214b04ddb1ff247d29"
+  },
+  "executorAndHostUnchangedComparedWithPreviousFreeze": {
+    "entry/src/main/ets/app/ArkWebExecutor.ts": true,
+    "entry/src/main/ets/app/ArkWebExecutionHost.ets": true
+  },
+  "tests": [
+    {
+      "entry": "test-arkweb-resource-diagnostic.mjs",
+      "groups": 8,
+      "exitCode": 0
+    },
+    {
+      "entry": "test-arkweb-resource-capture.mjs",
+      "scenarios": 19,
+      "exitCode": 0
+    },
+    {
+      "entry": "test-arkweb-network-policy.mjs",
+      "groups": 3,
+      "exitCode": 0
+    }
+  ],
+  "nativeAcceptance": "OPEN after fix: no new build or device run by this slice",
+  "frozen": true
+}

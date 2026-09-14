@@ -1,6 +1,14 @@
 # 2026-09-14 真机人工审视反馈
 
-后续构建准备（不改变6863已安装身份）：Core `0c5a3956274197578554f36b1a7fed9e1977ea78` 时间修复已提交，正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift 0、C/C++ smoke PASS；Native已完成并由根任务集成，后续HAP尚待独立manifest/部署回执。首次门禁在3399通过/1失败后因沙盒禁止绑定localhost中止，437未运行；失败日志原样保留，授权本机测试端口后的全量结果另列。新Core不能倒写为6863内容；本包日期仍为旧显示、PH76仍OPEN。
+## 最新已验证安装：d5f13a96
+
+**`20260914T185653Z-d5f13a96-803a4b82`** 已在 **2026-09-14 18:58:57.400 UTC** 保数据安装到 VM `6460677a198b` 并启动，install/launch PASS。Harmony `d5f13a965adf07e6c36fd8ad7e7315cf2ae7d686`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名与安装身份准入通过。签名HAP **167841969 bytes**，SHA-256 `325cdd424b9dea2bb90ced607d87c5d3299f8248e8aa2376ac56ac76041d3004`。
+
+[Manifest](search-flow-implementation/vm-d5f13a96/manifest.json)、[部署回执](search-flow-implementation/vm-d5f13a96/deployment.json)、[构建](search-flow-implementation/vm-d5f13a96/build.log)、[身份检查](search-flow-implementation/vm-d5f13a96/inspect.log)、[安装](search-flow-implementation/vm-d5f13a96/install.log)及[副本校验索引](search-flow-implementation/vm-d5f13a96/receipt.json)已归档。新Core正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift0和C/C++smoke通过；首次因localhost端口权限失败的运行仍保留在下方Core门禁证据，不能冒称该次也通过。
+
+**本包新书签日期尚未VM验证，PH76实际回调结果仍OPEN。** 6863的书签保存/删除与PH88几何、aa387的胶囊及其他交互均保留原包身份，不因安装d5就算重复验证。此包仍为iteration / `acceptanceEligible=false`；在线动线、真机与用户验收不因此通过。
+
+启动预检曾误用`sys.boot_completed`，返回参数错误1002；随后使用规范`bootevent.boot.completed`确认`true`，SceneBoard仍为PID1529。三份原始回执在上述索引中；这是操作参数错误，不登记为VM启动故障或HDC断联。
 
 [后续Core门禁与Native证据](search-flow-implementation/ph86-time-final-gates/receipt.json)、[正式全量](search-flow-implementation/ph86-time-final-gates/ph86-time-core-final-unrestricted.log)、[环境失败原件](search-flow-implementation/ph86-time-final-gates/ph86-time-core-final.log)。
 
@@ -118,7 +126,7 @@ PH82 的初始代码审计无法区分 caret、选择手柄与圆角裁切，随
 
 Core 已提交 `28369db9405822f4b8277eb95ad94057f177b7bb`；[官方检查](search-flow-implementation/ph77-91-core-official-final2.log)3832项测试通过，其中1项标记 leaky，为退出后输出管道未及时关闭的警告，非应用堆泄漏证明；[独立复核及未决边界](search-flow-implementation/ph77-91-leak-summary.json)保留，未放宽超时。新 Native [构建](search-flow-implementation/ph77-91-native.log)完成，[身份](search-flow-implementation/ph77-91-core-build-identity.json)为 clean/release，buildId `5ffa51028024982bce9a607e5c3c88b69126d709e980a2823e1e7d2888f6c3fd`，已同步 Harmony 受版本管理的 `.so`。
 
-最近取得正式 VM 部署回执的包是 **`20260914T182625Z-6863af5d-ded2e152`**（Harmony `6863af5d4e9c5dac34e3ca74b120a7d5daa2952e` / Core `28369db9405822f4b8277eb95ad94057f177b7bb`），261项Harmony门禁、ArkTS、签名及VM保数据安装/启动通过；18:28:21.450 UTC完成，targetRef `6460677a198b`，HAP SHA `3df455f5b6f0d13bafd09f2d15c3e3c456efc1642eb54ba6b8ccc103db2e0b8f`。见[manifest](search-flow-implementation/vm-6863af5d/manifest.json)、[回执](search-flow-implementation/vm-6863af5d/deployment.json)及[分包VM记录](search-flow-implementation/VM_VALIDATION.md)。aa387的先前部分交互、646e8634发布顺序修复、acbea857仅构建未部署均保留为各自历史；不得把它们改成6863重复验收。Core未变，沿用同提交3832项官方通过（含1 leaky）的门禁；6863仍为iteration，不代表全部计划或用户验收通过。后续日期修复若产生更末版包，须另绑回执，不能倒写6863。
+上一阶段取得正式 VM 部署回执的包是 **`20260914T182625Z-6863af5d-ded2e152`**（Harmony `6863af5d4e9c5dac34e3ca74b120a7d5daa2952e` / Core `28369db9405822f4b8277eb95ad94057f177b7bb`），261项Harmony门禁、ArkTS、签名及VM保数据安装/启动通过；18:28:21.450 UTC完成，targetRef `6460677a198b`，HAP SHA `3df455f5b6f0d13bafd09f2d15c3e3c456efc1642eb54ba6b8ccc103db2e0b8f`。见[manifest](search-flow-implementation/vm-6863af5d/manifest.json)、[回执](search-flow-implementation/vm-6863af5d/deployment.json)及[分包VM记录](search-flow-implementation/VM_VALIDATION.md)。aa387的先前部分交互、646e8634发布顺序修复、acbea857仅构建未部署均保留为各自历史；不得把它们改成6863重复验收。Core未变，沿用同提交3832项官方通过（含1 leaky）的门禁；6863仍为iteration，不代表全部计划或用户验收通过。后续日期修复若产生更末版包，须另绑回执，不能倒写6863。
 
 原因与正式回归入口：PH77/79 的 `SearchPublication` 稳定 holder + revision 修复真实 ArkUI Prop 深复制，见[属性边界证据](search-flow-implementation/ph77-79-publication-boundary.json)及 `test-search-publication-boundary.mjs`；PH78 的源 worker 共享队列见[阻塞回归](search-flow-implementation/ph78-shared-source-queue.log)。R8 空队列有等待、连续即时轮有让出，未发现无等待 busy-loop；FIFO不保证来源完成顺序或网络耗时。PH80/81 见 `test-search-history-layout-lifecycle.mjs`；PH83/84 见 `LocalBookDetail`、Index外部目录分支及 `test-detail-external-directory.mjs`；PH85 见[规则与格式升级报告](PH85/REPORT.md)，普通旧缓存不自动升级、歧义保留旧文旧位置。PH86 的顶栏槽/手势/ACK见 `test-reader-bookmark-top-info.mjs`；PH87见 `test-reader-more-popup.mjs`；PH88见 `test-reader-brightness-perception.mjs`；PH89/91见 `test-reader-physical-control-details.mjs`。16×16圆覆盖旧 Figma 1164:10275 的18×16椭圆，增长亮度条也是用户明确要求，不重新列为产品待决。
 

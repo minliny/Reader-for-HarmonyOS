@@ -148,3 +148,22 @@ Root 在 aa387 包的隔离 pilot 执行 early，得到 `TIMEOUT`。现有 `/pri
 下一次由根任务独占设备执行一个 `early` 样本即可先分辨：当前文档/长度界限是否成立，正文是否属于既有三种表示，以及被拒头部是否与原有限白名单不同。相等布尔值为 true 仍不自动放行；若全为 false，继续从已确定的不一致层查原生表示或正文变化，不能猜测忽略任意前后缀。该诊断本身不能证明 early matcher 或 cancel 归属已通过。
 
 `node tools/test-arkweb-resource-diagnostic.mjs` **8 组 PASS**，日志 [ph76-data-shape-diagnostic-tests.log](ph76-data-shape-diagnostic-tests.log)。新增真实 provider 回归覆盖 raw/URI/Base64 相等、未知头部仍 403、URI 转义 Base64 仍 403、坏编码、超长体不解码、96 字符上限、无逗号不泄露内容，以及正文和嵌入地址不出现在日志。原取消/卸载/旧轮拒绝与实际 SDK Host 政策先行接线继续通过。没有新构建、Git 或设备操作；第二次 VM 超时原件完整保留，当前只达到诊断本地冻结。
+
+
+## 第三次 VM 精确定位：Base64 正文被原生百分号编码
+
+包 `20260914T185653Z-d5f13a96-803a4b82` 的 early runToken `1789412418166-1` 再次 TIMEOUT。[原始日志](ph76-vm-percent-base64-denied-hilog.log)确证 `metadata=text/html;charset=utf-8;base64`、`bodyLength=312`、当前文档/长度界限均成立，`matchesCurrentBase64=false`，但 `uriDecodeSucceeded=true` 且 `uriDecodedMatchesCurrentBase64=true`；紧接同毫秒发生 interceptDenied，然后才 pageBegin/pageEnd。
+
+因此本次主文档拒绝原因已无歧义：原生回调将当前 Base64 正文做了百分号编码，旧 base64 分支仅直接字符串比较。该证据不包含原始 URL/HTML，也不需要猜测放行其他头部、旧轮次文档或任意 data。当前先最小修正这一精确分支，early matcher 与跨导航归属的 native 结论仍待该主文档可进入后独立验证。
+
+**最小修复已冻结。** `isCurrentDataDocument` 仍先检查原长度界限和两个既有 Base64 元信息值，仍先接受 `body === documentBodyBase64`；仅在直接比较不相等时，使用标准 `decodeURIComponent(body)`，结果必须与当前轮平台生成的 Base64 字符串完全相同。坏 URI 编码返回 false。没有新增 HTML 头部，没有忽略正文前后缀，也没有解码后宽松比较；旧轮次/正文篡改/完成后迟到请求继续拒绝。`ArkWebExecutor.ts` 与 `ArkWebExecutionHost.ets` 未改。
+
+测试将此前“URI 转义 Base64 拒绝”精确改为“当前文档接受”，同时增加篡改、坏编码、错误元信息与旧轮次拒绝，并通过实际 SDK Host 回调验证新形态接线与完成后拒绝。修复前运行失败保留于 [ph76-percent-base64-before.log](ph76-percent-base64-before.log)：provider 的预期接受断言被 runner 捕获后中止了后续形态采样，因此外层首先显示后续形态缺失；原生日志已独立给出准确的拒绝值与匹配布尔值，未把该外层断言当作另一根因。
+
+| 本次定向入口 | 实际结果 |
+|---|---|
+| `test-arkweb-resource-diagnostic.mjs` | 8 组 PASS；[日志](ph76-percent-base64-after.log) |
+| `test-arkweb-resource-capture.mjs` | 原 19 场景 PASS；[日志](ph76-percent-base64-resource-regression.log) |
+| `test-arkweb-network-policy.mjs` | 原 3 组 PASS；[日志](ph76-percent-base64-network-regression.log) |
+
+源码、测试与本节证据均冻结。新包仍需根任务的一次有效 early 原生回调观察，再按既定 cancel 场景验证资源归属；本地回归不替代这两个平台结论。本切片没有 Git、构建或设备操作。

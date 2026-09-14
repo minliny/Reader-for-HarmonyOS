@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260914T185653Z-d5f13a96-803a4b82",
+  "harmony": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+    "commit": "d5f13a965adf07e6c36fd8ad7e7315cf2ae7d686",
+    "dirty": false,
+    "status": []
+  },
+  "core": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+    "commit": "0c5a3956274197578554f36b1a7fed9e1977ea78",
+    "dirty": false,
+    "status": []
+  },
+  "signedSha256": "325cdd424b9dea2bb90ced607d87c5d3299f8248e8aa2376ac56ac76041d3004",
+  "signedBytes": 167841969,
+  "completedAt": "2026-09-14T18:58:57.400Z",
+  "targetRef": "6460677a198b",
+  "files": [
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T185653Z-d5f13a96-803a4b82/manifest.json",
+      "copy": "manifest.json",
+      "bytes": 4260,
+      "sha256": "fd45ee1a0213ae67b0512ef7f58ec6aca5d173b90bbcbd97d6e6491beb09b4f7"
+    },
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T185653Z-d5f13a96-803a4b82/deploy-vm-6460677a198b-20260914T185857Z.json",
+      "copy": "deployment.json",
+      "bytes": 1755,
+      "sha256": "1f0960ec2bb37392aefbaf58df0c7ae0e556bcbe1e53df70f6fa07139ea3b483"
+    },
+    {
+      "source": "/private/tmp/ph7791-latest-build.log",
+      "copy": "build.log",
+      "bytes": 144889,
+      "sha256": "1d646c06e9dc128acc14382c0c3c204366658bd01e0923c6c355475f1f274281"
+    },
+    {
+      "source": "/private/tmp/ph7791-latest-inspect.log",
+      "copy": "inspect.log",
+      "bytes": 1173,
+      "sha256": "1562ab5bc8a9fe9f9a8dd89349106d68ea842baa5456be013ec9ae9227671ba9"
+    },
+    {
+      "source": "/private/tmp/ph7791-latest-install.log",
+      "copy": "install.log",
+      "bytes": 206,
+      "sha256": "9ab672ab94131a723983d64bb121c8e7ac3a017b12452f1a8efee9d61e17a04d"
+    },
+    {
+      "source": "/private/tmp/ph7791-latest-vm-boot.txt",
+      "copy": "preflight-boot.txt",
+      "bytes": 57,
+      "sha256": "489cd12e625cbe366cb082dc051bc0bfe7f822950ebb5bb25023cf4496e6e16f"
+    },
+    {
+      "source": "/private/tmp/ph7791-latest-vm-boot-confirmed.txt",
+      "copy": "preflight-boot-confirmed.txt",
+      "bytes": 6,
+      "sha256": "3eec7ff83a05f54ec3ee3856db21a220928cc5b3fb96d0c47f2dcafd9022c506"
+    },
+    {
+      "source": "/private/tmp/ph7791-latest-vm-scene.txt",
+      "copy": "preflight-scene.txt",
+      "bytes": 5,
+      "sha256": "0f05fee8a9a5b059dad68b4cfd25cd25beb28df1770eedad325d8009a9c3e737"
+    }
+  ],
+  "preflight": "sys.boot_completed unknown parameter error1002 was an operator parameter mistake; proper bootevent.boot.completed returned true; SceneBoard PID1529. No VM boot-failure claim.",
+  "limits": [
+    "Date display and PH76 native callback still OPEN at archive time.",
+    "6863 bookmark/brightness and aa387 capsule/other observations remain tied to their original packages.",
+    "Iteration package, not physical-device or user acceptance."
+  ]
+}
