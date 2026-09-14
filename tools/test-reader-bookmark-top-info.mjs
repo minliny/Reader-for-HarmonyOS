@@ -9,6 +9,8 @@ const { measureReaderPageChromeText, readerPageChromeTextMeasurements } = await 
   readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ets', import.meta.url), 'utf8'))));
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import * as gesture from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
+import * as rapid from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
+import { mergeReaderControlBookmarkProjection } from '../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts';
 registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(`${s}.ts`, c); throw e;
 } } });
@@ -140,6 +142,95 @@ host.bookId = 'other'; entries = [{ index: 0, title: 'C', bookmarks: [] }]; pend
 assert.equal(host.pageBookmarkFeedbackFilled(), false, 'old book completion does not publish into new book');
 assert.equal(render(layout, { currentPageBookmarkStatus: () => 'empty' }).icon, undefined,
   'another mounted book has no shared bookmark visual state');
+// Normal-motion rebound holds the released target until both the animation
+// and canonical projection are complete. ACK/projection are controlled inputs;
+// the production methods, marker cache and merge remain unmodified.
+const Normal = productionMotionMethods(file('LocalReadingExperience.ets'), [
+  'onReaderBookmarkGestureStateChanged', 'onReaderBookmarkGestureReleased', 'finishBookmarkRollback',
+  'toggleCurrentPageBookmark', 'currentPageBookmarkStatus', 'pageBookmarkFeedbackAnchor',
+  'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback', 'canStartReaderBookmarkGesture',
+  'controlDirectorySourceEntries', 'controlDirectoryEntries', 'invalidatePageTurnRuntime',
+], { ...gesture, ...rapid, motionAnimateParam: (_key, onFinish) => ({ onFinish }) });
+function normalHost(bookmarked = false) {
+  const requests = [], animations = [];
+  const h = Object.assign(new Normal(), { mounted: true, sourceId: 'local', bookId: 'b', chapter: undefined,
+    visiblePage: { startScalar: 50, endScalar: 100 },
+    directoryEntries: [{ index: 16, title: 'chapter17', bookmarks: bookmarked ? [{ time: 10, chapterOffset: 50 }] : [] }],
+    tocEntries: [], currentChapterIndex: () => 16, currentPageBookmarkText: () => 'text', canTurnPage: () => true,
+    bookmarkPendingTarget: '', bookmarkPreviewChanged: false, bookmarkRollbackGeneration: 0, bookmarkMutationGeneration: 0,
+    reduceMotion: false, appForeground: false, flushDeferredPageChromeState() {},
+    onTogglePageBookmark: r => requests.push(r),
+    getUIContext: () => ({ animateTo: (options, closure) => { animations.push(options.onFinish); closure(); } }),
+    rapidPageTurnState: rapid.createReaderRapidPageTurnState(),
+    clearPageTurnProjection() {}, finishPageTurnPerf() {}, cancelPageTurnSettlementDeadline() {},
+    clearBookTurnCapturedIdentities() {}, releaseBookTurnTextureContent() {}, releaseBookTurnPendingSnapshot() {},
+    releaseUnretainedReadingImages() {},
+  });
+  return { h, requests, animations };
+}
+function normalRelease(h, cancelled = false) {
+  let state = gesture.beginReaderPageGesture(390, 200, 300, 0, 844);
+  state = gesture.moveReaderPageGesture(state, 0, 80);
+  const decision = gesture.settleReaderPageGesture(state, 0, cancelled ? 10 : 80);
+  h.pageTurnGestureState = decision.state;
+  h.onReaderBookmarkGestureStateChanged(decision.state);
+  h.onReaderBookmarkGestureReleased(decision.bookmarkChanged);
+}
+function publishBookmark(h, bookmarked) {
+  h.directoryEntries = mergeReaderControlBookmarkProjection(h.directoryEntries,
+    [{ index: 16, title: 'chapter17', bookmarks: bookmarked ? [{ time: 10, chapterOffset: 50 }] : [] }]);
+  h.reconcilePageBookmarkFeedback();
+}
+const completionOrders = [ ['ack', 'projection', 'rollback'], ['ack', 'rollback', 'projection'],
+  ['projection', 'ack', 'rollback'], ['projection', 'rollback', 'ack'],
+  ['rollback', 'ack', 'projection'], ['rollback', 'projection', 'ack'] ];
+for (const order of completionOrders) {
+  const { h, requests, animations } = normalHost();
+  for (const target of [true, false]) {
+    assert.equal(h.canStartReaderBookmarkGesture(), true);
+    normalRelease(h);
+    const request = requests.at(-1), done = animations.at(-1), requestCount = requests.length;
+    assert.equal(h.canStartReaderBookmarkGesture(), false, 'same-page mutation owns the gesture until reconciled');
+    h.toggleCurrentPageBookmark();
+    assert.equal(requests.length, requestCount, 'duplicate release cannot enqueue a second write');
+    for (const step of order) {
+      if (step === 'ack') request.onSettled(true);
+      if (step === 'projection') publishBookmark(h, target);
+      if (step === 'rollback') done();
+      assert.equal(h.pageBookmarkFeedbackFilled(), target, `${target ? 'add' : 'remove'} cannot invert at ${order}/${step}`);
+    }
+    assert.equal(h.bookmarkPendingTarget, '', 'matching projection and finished rebound release pending state');
+    assert.equal(h.canStartReaderBookmarkGesture(), true);
+  }
+}
+for (const bookmarked of [false, true]) {
+  const rejected = normalHost(bookmarked);
+  normalRelease(rejected.h); rejected.requests[0].onSettled(false);
+  assert.equal(rejected.h.pageBookmarkFeedbackFilled(), bookmarked, 'failed write restores canonical state');
+  rejected.animations[0]();
+  assert.equal(rejected.h.bookmarkPendingTarget, '');
+  assert.equal(rejected.h.pageBookmarkFeedbackFilled(), bookmarked);
+  const cancelled = normalHost(bookmarked);
+  normalRelease(cancelled.h, true);
+  assert.equal(cancelled.requests.length, 0, 'pull back before release cancels without writing');
+  cancelled.animations[0](); assert.equal(cancelled.h.pageBookmarkFeedbackFilled(), bookmarked);
+}
+const invalidated = normalHost();
+normalRelease(invalidated.h); publishBookmark(invalidated.h, true); invalidated.requests[0].onSettled(true);
+assert.equal(invalidated.h.bookmarkPendingTarget, 'bookmarked', 'early ACK holds target through rebound');
+invalidated.h.invalidatePageTurnRuntime();
+assert.equal(invalidated.h.bookmarkPendingTarget, '', 'runtime cancellation also reconciles confirmed projection');
+invalidated.h.visiblePage = { startScalar: 100, endScalar: 150 };
+invalidated.animations[0]();
+assert.equal(invalidated.h.pageBookmarkFeedbackFilled(), false, 'late old animation cannot mark the new page');
+const late = normalHost();
+normalRelease(late.h); late.animations[0](); publishBookmark(late.h, true); late.requests[0].onSettled(true);
+normalRelease(late.h); late.requests[0].onSettled(false);
+assert.equal(late.h.bookmarkPendingTarget, 'empty', 'old ACK cannot erase a newer remove intent');
+late.animations[1](); publishBookmark(late.h, false); late.requests[1].onSettled(true);
+assert.equal(late.h.pageBookmarkFeedbackFilled(), false);
+assert.equal(late.h.bookmarkPendingTarget, '');
+console.log('PASS PH86 normal motion: 6 completion orders/12 lifecycles without intermediate inversion; cancelled/failed/page-invalidated/duplicate/old ACK cases');
 console.log(`PASS PH86: ${cases.length} real chrome/bookmark Builder geometries, clock/title/cutout separation, native visibility, gesture threshold/rebound/ACK and page/book ownership`);
 
 // Execute the actual three component-call boundaries. Only native font/layout

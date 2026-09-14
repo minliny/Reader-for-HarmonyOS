@@ -9894,6 +9894,7 @@ export struct ReadingExperience {
     this.bookTurnAwaitingSlotCommit = false;
     this.bookmarkPageOffsetY = 0;
     this.bookmarkPreviewChanged = false;
+    if (this.bookmarkMutationConfirmed) this.reconcilePageBookmarkFeedback();
     this.bookTurnTextureCaptureGeneration += 1;
     this.bookTurnTextureCaptureScheduled = false;
     this.clearBookTurnCapturedIdentities();
@@ -10528,6 +10529,7 @@ export struct ReadingExperience {
     if (generation !== this.bookmarkRollbackGeneration || !this.mounted) return;
     this.bookmarkPageOffsetY = 0;
     this.bookmarkPreviewChanged = false;
+    this.reconcilePageBookmarkFeedback();
     if (this.pageTurnGestureState.owner !== 'bookmark') return;
     this.pageTurnGestureState = completeReaderPageGestureSettlement(this.pageTurnGestureState);
     this.pageTurnInputOwned = false;
@@ -10571,7 +10573,9 @@ export struct ReadingExperience {
   private reconcilePageBookmarkFeedback(): void {
     if (!this.bookmarkMutationConfirmed || this.bookmarkPendingTarget.length === 0) return;
     if (this.bookmarkPendingAnchor !== this.pageBookmarkFeedbackAnchor() ||
-      this.currentPageBookmarkStatus() === this.bookmarkPendingTarget) {
+      (!this.bookmarkPreviewChanged && this.currentPageBookmarkStatus() === this.bookmarkPendingTarget)) {
+      // Keep the released target through rebound. Once the canonical write
+      // arrives, applying the still-active drag preview would invert it twice.
       this.bookmarkPendingTarget = '';
       this.bookmarkMutationConfirmed = false;
     }
@@ -10763,6 +10767,7 @@ export struct ReadingExperience {
     this.bookTurnAwaitingSlotCommit = false;
     this.bookmarkPageOffsetY = 0;
     this.bookmarkPreviewChanged = false;
+    if (this.bookmarkMutationConfirmed) this.reconcilePageBookmarkFeedback();
     this.recoverBookTurnSurfaceIfIdle();
     this.flushDeferredPageChromeState();
     this.retryRapidPageTurnTransaction();
