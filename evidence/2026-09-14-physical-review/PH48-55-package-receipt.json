@@ -1,0 +1,68 @@
+{
+  "runId": "20260914T012243Z-84cdc4ef-eed02cc4",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T012243Z-84cdc4ef-eed02cc4/manifest.json",
+  "class": "iteration",
+  "acceptanceEligible": false,
+  "harmony": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+    "commit": "84cdc4ef6057d1ad1d1332a7e81f429a7770e19f",
+    "dirty": false,
+    "status": []
+  },
+  "core": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+    "commit": "952704bd57518af530a948dfd3408a119c20e276",
+    "dirty": false,
+    "status": []
+  },
+  "readerUiCommit": "73acab57",
+  "fingerprint": "eed02cc48cae9c21ebaa0b4ead44964d5540bf82ecd49b1128f49ca5ab851bb1",
+  "harmonyContractGroups": 238,
+  "arktsTypeCheck": "PASS",
+  "nonIncrementalBuild": "PASS",
+  "buildSeconds": 14.608,
+  "artifact": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 166916907,
+    "sha256": "4ff47a70d418e2edf65e527710752e94cd2d000df97e20d73a99218d5ae610e8",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 14582240,
+      "sha256": "31158c6357e93b86f32e0681f0be9921d4780de788727f646cffb95931e37abc"
+    }
+  },
+  "offlineVerify": "PASS",
+  "codeCommits": {
+    "quickSearchAuto": "abd22073",
+    "replaceEditor": "56e2e7d6",
+    "grabberAndChapterSelection": "6d7a8a44",
+    "sourceProjectionRegression": "84cdc4ef"
+  },
+  "firstGateAttempt": {
+    "source": "44d2e39b",
+    "result": "FAIL",
+    "stage": "local regression",
+    "reason": "session launch source probe omitted new quickHeader member",
+    "productionChangedToRepairThisFailure": false
+  },
+  "deviceOperationsThisFollowup": false,
+  "physicalInstalled": "643bcaf5",
+  "physicalInteraction": "OPEN",
+  "userAcceptance": "OPEN",
+  "grabberInstalledPixelOffsetCause": "UNCONFIRMED",
+  "historicalOpenGaps": "PRESERVED"
+}
