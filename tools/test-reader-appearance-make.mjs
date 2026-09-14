@@ -50,8 +50,9 @@ assert.ok(!content.selectOptions('pageTurn').includes('淡入'), 'visual update 
 assert.deepEqual(['fontSize', 'lineHeightMultiplier', 'paragraphSpacing', 'letterSpacing'].map(m => content.metricValue(m)),
   ['18px', '1.96', '16px', '0px']);
 
-// PH43 restores the original Make colors: the earlier paper-fill substitution was the wrong repair direction.
-const expected = ['#FFFCF8F0', '#FFF4E3BF', '#FF2B2823', '#FF413020', '#FFEBDABB', '#FFD7E8CF', '#FF26313F', '#FF24382C'];
+// PH43 restored original Make bases. User-approved PH67 now adjusts only four light
+// backgrounds; four Night anchors remain the original Make values.
+const expected = ['#FFF7F3EA', '#FFF2E8D3', '#FF2B2823', '#FF413020', '#FFEEE4D0', '#FFE3EBDD', '#FF26313F', '#FF24382C'];
 const SharedActors = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderAppearanceSharedActors.ets', import.meta.url),
   ['themeIds', 'themeLabel', 'themeColor'], { ...style });
 const shared = new SharedActors();

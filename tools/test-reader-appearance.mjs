@@ -151,8 +151,8 @@ assert.equal(setReaderAppearanceMetric(next, 'letterSpacing', -99).letterSpacing
 assert.equal(readerAppearanceCanStep({ ...initial, fontSize: 12 }, 'fontSize', -1), false);
 assert.equal(readerAppearanceCanStep({ ...initial, fontSize: 40 }, 'fontSize', 1), false);
 assert.deepEqual(readerAppearanceThemeStyle('paper'), {
-  paperStart: '#FFEBDABB',
-  paperEnd: '#FFEBDABB',
+  paperStart: '#FFEEE4D0',
+  paperEnd: '#FFEEE4D0',
   ink: '#FF2B241D',
   paperTexture: true,
   sourcePaperLighting: true,

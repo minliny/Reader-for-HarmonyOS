@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-09-14T10:39:32.709789+00:00",
+  "beforeAdapter": "FAIL: production generated adapter still #FFFCF8F0 versus independent approved #FFF7F3EA; historical source untouched",
+  "afterAdapter": {
+    "test-reader-theme-paper-origin": "PASS",
+    "test-reader-appearance-make": "PASS",
+    "test-reader-appearance": "PASS",
+    "test-reader-theme-selection": "PASS",
+    "test-reader-appearance-theme-extension": "PASS",
+    "test-svg-provenance": "PASS"
+  },
+  "generatorCheck": "PASS: 583 App roles x 2; 8 Reader themes; canonical hash and both adapters verified",
+  "iconGeneratorRun": false,
+  "deviceOperations": false,
+  "hapBuild": false
+}

@@ -1,0 +1,138 @@
+{
+  "source": "User approved PH67 proposal 2026-09-14: 按你的建议来吧",
+  "canonicalBeforeSha256": "0769a423fe7e135c9775cdb006a1529a9581d9921e26ad38a1fae9b5618f1126",
+  "canonicalAfterSha256": "24800a91cb39e4e4f9820e7087a5dcb25233a08beab5b0f904cf84597ab9a084",
+  "changedBackgroundRoles": [
+    {
+      "theme": "day",
+      "role": "paperStart",
+      "before": "#FCF8F0",
+      "after": "#F7F3EA"
+    },
+    {
+      "theme": "day",
+      "role": "paperEnd",
+      "before": "#FCF8F0",
+      "after": "#F7F3EA"
+    },
+    {
+      "theme": "day",
+      "role": "swatch",
+      "before": "#FCF8F0",
+      "after": "#F7F3EA"
+    },
+    {
+      "theme": "day",
+      "role": "statusBackground",
+      "before": "#FCF8F0",
+      "after": "#F7F3EA"
+    },
+    {
+      "theme": "day",
+      "role": "paperBack",
+      "before": "#FCF8F0",
+      "after": "#F7F3EA"
+    },
+    {
+      "theme": "warm",
+      "role": "paperStart",
+      "before": "#F4E3BF",
+      "after": "#F2E8D3"
+    },
+    {
+      "theme": "warm",
+      "role": "paperEnd",
+      "before": "#F4E3BF",
+      "after": "#F2E8D3"
+    },
+    {
+      "theme": "warm",
+      "role": "swatch",
+      "before": "#F4E3BF",
+      "after": "#F2E8D3"
+    },
+    {
+      "theme": "warm",
+      "role": "statusBackground",
+      "before": "#F4E3BF",
+      "after": "#F2E8D3"
+    },
+    {
+      "theme": "warm",
+      "role": "paperBack",
+      "before": "#F4E3BF",
+      "after": "#F2E8D3"
+    },
+    {
+      "theme": "paper",
+      "role": "paperStart",
+      "before": "#EBDABB",
+      "after": "#EEE4D0"
+    },
+    {
+      "theme": "paper",
+      "role": "paperEnd",
+      "before": "#EBDABB",
+      "after": "#EEE4D0"
+    },
+    {
+      "theme": "paper",
+      "role": "swatch",
+      "before": "#EBDABB",
+      "after": "#EEE4D0"
+    },
+    {
+      "theme": "paper",
+      "role": "statusBackground",
+      "before": "#EBDABB",
+      "after": "#EEE4D0"
+    },
+    {
+      "theme": "paper",
+      "role": "paperBack",
+      "before": "#EBDABB",
+      "after": "#EEE4D0"
+    },
+    {
+      "theme": "green",
+      "role": "paperStart",
+      "before": "#D7E8CF",
+      "after": "#E3EBDD"
+    },
+    {
+      "theme": "green",
+      "role": "paperEnd",
+      "before": "#D7E8CF",
+      "after": "#E3EBDD"
+    },
+    {
+      "theme": "green",
+      "role": "swatch",
+      "before": "#D7E8CF",
+      "after": "#E3EBDD"
+    },
+    {
+      "theme": "green",
+      "role": "statusBackground",
+      "before": "#D7E8CF",
+      "after": "#E3EBDD"
+    },
+    {
+      "theme": "green",
+      "role": "paperBack",
+      "before": "#D7E8CF",
+      "after": "#E3EBDD"
+    }
+  ],
+  "changedProvenanceThemes": [
+    "day",
+    "warm",
+    "paper",
+    "green"
+  ],
+  "unapprovedSemanticChanges": 0,
+  "appRegistryBytesUnchanged": true,
+  "nightThemesUnchanged": true,
+  "inkAndEffectsUnchanged": true,
+  "idsOrderDefaultsAndLinkageUnchanged": true
+}
