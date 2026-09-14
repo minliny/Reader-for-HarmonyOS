@@ -81,6 +81,12 @@ type SearchRequestGuard = () => boolean;
 export class SearchGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private searchRequestCounter: number = 0;
+  private cachedSources: SearchSource[] | undefined = undefined;
+  private cachedSourceRevision: number | undefined = undefined;
+
+  private sourceRevision(): number | undefined {
+    return this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision?.();
+  }
   private readonly bookIdentities = new CachedBookIdentityResolver();
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
@@ -179,7 +185,12 @@ export class SearchGateway {
         return { ok: false, error: 'book.search returned invalid books' };
       }
       const books: SearchBook[] = [];
+      let processed = 0;
       for (const raw of rawBooks) {
+        if (++processed % 32 === 0) {
+          await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
+          if (isCurrent?.() === false) return { ok: false, error: 'search superseded' };
+        }
         books.push(decodeBookSearchResult(raw, source, identity));
       }
       return { ok: true, results: books };
@@ -217,13 +228,16 @@ export class SearchGateway {
   }
 
   async loadSources(): Promise<SearchSource[]> {
+    const revision = this.sourceRevision();
     const result = await this.runtimeOwner.request('source.list', {});
     const rawSources = result.data['sources'];
     if (!Array.isArray(rawSources)) {
       throw new Error('source.list returned invalid data');
     }
     const sources: SearchSource[] = [];
+    let processed = 0;
     for (const raw of rawSources) {
+      if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
         throw new Error('source.list returned a non-object source');
       }
@@ -253,11 +267,16 @@ export class SearchGateway {
         sourceId, baseUrl });
       sources.push(decoded);
     }
+    if (revision !== this.sourceRevision()) throw new Error('source registry changed while loading');
+    this.cachedSources = sources;
+    this.cachedSourceRevision = revision;
     return sources;
   }
 
   async refreshBooks(books: SearchBook[]): Promise<SearchBook[]> {
-    const sources = await this.loadSources();
+    const revision = this.sourceRevision();
+    const sources = revision !== undefined && this.cachedSourceRevision === revision && this.cachedSources !== undefined
+      ? this.cachedSources : await this.loadSources();
     const enabledSources = new Map<string, SearchSource>();
     for (const source of sources) {
       if (source.enabled && readerSourceCategoryIsText(source.category)) enabledSources.set(source.sourceId, source);
@@ -297,7 +316,7 @@ export class SearchGateway {
         acquisition: facts } : { ...book };
       if (book.sourceId !== 'local' && !enabledSources.has(book.sourceId)) continue;
       refreshed.push(projected); seen.add(key);
-      if (book.sourceId === 'local') continue;
+      if (book.sourceId === 'local') { refreshed[refreshed.length - 1] = book; continue; }
       const component = identities.groupFor(book.sourceId, book.bookId) ??
         identities.groupForAlias(this.bookIdentities.aliasKey(book.title, book.author)) ?? key;
       const first = admittedGroups.get(component);
@@ -313,6 +332,15 @@ export class SearchGateway {
         projected.groupKey = groupKey;
         groupKeyOwners.set(groupKey, component);
         admittedGroups.set(component, projected);
+      }
+      // Preserve payload identity when a cache read adds no facts. This lets
+      // the page retain locale/relevance projections and observed row fields.
+      if (projected.title === book.title && projected.author === book.author &&
+        projected.coverUrl === book.coverUrl && projected.intro === book.intro &&
+        projected.kind === book.kind && projected.latestChapterTitle === book.latestChapterTitle &&
+        projected.groupKey === book.groupKey && (projected.acquisition === book.acquisition ||
+          JSON.stringify(projected.acquisition) === JSON.stringify(book.acquisition))) {
+        refreshed[refreshed.length - 1] = book;
       }
     }
     // A source discovered from another page joins only a book already admitted
@@ -342,7 +370,9 @@ export class SearchGateway {
         latestChapterTitle: optionalString(row, 'latestChapterTitle'), acquisition: facts, variables: decodedVariables });
       seen.add(key);
     }
-    return refreshed;
+    if (revision !== this.sourceRevision()) throw new Error('source registry changed during book projection');
+    return refreshed.length === books.length && refreshed.every((book: SearchBook, index: number): boolean => book === books[index])
+      ? books : refreshed;
   }
 
   private requestOptions(isCurrent: SearchRequestGuard | undefined, canDispatch?: SearchRequestGuard): BookRequestOptions {

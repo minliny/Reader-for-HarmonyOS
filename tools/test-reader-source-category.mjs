@@ -33,6 +33,10 @@ assert.equal(classifyReaderSource({ name: '有声听书' }), 'music');
 assert.equal(classifyReaderSource({ sourceId: 'https://download.example.test/source' }), 'download');
 assert.equal(classifyReaderSource({ name: '普通文本书源' }), 'novel');
 
+for (const name of ['百度图片（优）', '壁纸图库', '每日图集']) {
+  assert.equal(classifyReaderSource({ bookSourceType: 0, name }), 'other', 'explicit picture metadata is not a novel');
+}
+assert.equal(classifyReaderSource({ bookSourceType: 0, name: '普通小说', baseUrl: 'https://images.example.test' }), 'novel', 'image URL alone is not an image source');
 assert.equal(readerSourceCategoryIsText('novel'), true);
 for (const category of ['comic', 'music', 'download', 'external', 'other']) {
   assert.equal(readerSourceCategoryIsText(category), false);
@@ -70,6 +74,7 @@ for (const source of rows) {
   const category = classifyReaderSource({ bookSourceType: source.bookSourceType,
     name: source.bookSourceName, group: source.bookSourceGroup, sourceId: source.bookSourceUrl });
   counts[category] = (counts[category] ?? 0) + 1;
+  if (source.bookSourceName === '百度图片（优）') assert.equal(category, 'other');
   if (/漫画屋|爱奇艺漫画/.test(source.bookSourceName ?? '')) assert.notEqual(category, 'novel');
 }
 assert.equal(Object.values(counts).reduce((a, b) => a + b, 0), rows.length);

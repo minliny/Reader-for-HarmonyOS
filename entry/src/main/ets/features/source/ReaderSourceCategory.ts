@@ -36,6 +36,8 @@ export function classifyReaderSource(input: ReaderSourceCategoryInput): ReaderSo
   if (type.length > 0 && !['0', 'text', 'novel', '小说'].includes(type)) return 'other';
 
   const name = `${input.group ?? ''} ${input.name ?? ''}`.toLowerCase();
+  // Explicit picture metadata, not an image/CDN URL, rejects mislabeled type 0 sources.
+  if (containsAny(name, ['图片', '图库', '图集', '壁纸'])) return 'other';
   const url = `${input.sourceId ?? ''} ${input.baseUrl ?? ''}`.toLowerCase();
   const haystack = `${name} ${url}`;
   const comic = containsAny(haystack, ['漫画', '漫客', 'comic', 'manga', 'manhua', 'cartoon', 'ac.qq.com', 'mkzhan', 'baozimh', 'pixiv', '图站', '写真']);

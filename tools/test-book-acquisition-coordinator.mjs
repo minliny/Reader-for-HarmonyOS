@@ -215,3 +215,39 @@ function fixture() {
   scheduler.close();
 }
 console.log('shared book acquisition lifecycle, identities, and scheduling: PASS');
+
+// PH65: every source-changing entry, including WebDAV storage apply, invalidates both sides.
+for (const method of ['source.import', 'source.update', 'source.delete', 'runtime.storage.apply', 'runtime.storage.restore']) {
+  for (const fail of [false, true]) {
+    const gate = deferred();
+    const owner = new BookAcquisitionCoordinator(async command => {
+      if (command === method) { await gate.promise; if (fail) throw Error('uncertain mutation'); }
+      return { data: {} };
+    });
+    const before = owner.sourceRegistryRevision();
+    const pending = owner.request(method, {});
+    assert.ok(owner.sourceRegistryRevision() > before, `${method} invalidates reads admitted before the mutation`);
+    const during = owner.sourceRegistryRevision();
+    gate.resolve();
+    if (fail) await assert.rejects(pending, /uncertain mutation/); else await pending;
+    assert.ok(owner.sourceRegistryRevision() > during, `${method} invalidates reads admitted during the mutation`);
+    const after = owner.sourceRegistryRevision();
+    await owner.request('search-book.list');
+    assert.equal(owner.sourceRegistryRevision(), after, 'book metadata reads do not invalidate the source cache');
+    owner.close();
+  }
+}
+{
+  const list = deferred();
+  const owner = new BookAcquisitionCoordinator(async command => {
+    if (command === 'source.list') { await list.promise; return { data: { sources: [{ sourceId: 'removed', enabled: true, sourceVersion: 'old' }] } }; }
+    return { data: {} };
+  });
+  const pending = owner.request('source.list');
+  await owner.request('source.delete', { sourceIds: ['removed'] });
+  list.resolve(); await pending;
+  assert.equal(owner.versions.has('removed'), false, 'late registry response cannot resurrect a deleted identity');
+  assert.equal(owner.registryReady, false);
+  owner.close();
+}
+console.log('PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS');

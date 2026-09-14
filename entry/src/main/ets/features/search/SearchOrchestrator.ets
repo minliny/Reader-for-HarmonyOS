@@ -52,6 +52,7 @@ export class SearchOrchestrator {
   private unsubscribeBooks: (() => void) | undefined = undefined;
   private refreshPending: boolean = false;
   private refreshAgain: boolean = false;
+  private rawResultsInput: SearchBook[] | undefined = undefined;
   private owner: ReaderRuntimeOwner;
   /** Bumped on every entry into Search; stale-entry async work is dropped. */
   private session: number = 0;
@@ -250,13 +251,38 @@ export class SearchOrchestrator {
     const current = this.presentation;
     try {
       const results = await this.gateway.refreshBooks(current.results);
-      if (this.isCurrentWork(work, session) && this.presentation === current) {
-        this.present({ kind: 'results', keyword: current.keyword, results,
-          localSearchFailed: current.localSearchFailed, sourceListFailed: current.sourceListFailed,
-          searching: current.searching, stopped: current.stopped, totalSourceCount: current.totalSourceCount,
-          completedSourceCount: current.completedSourceCount, failedSourceCount: current.failedSourceCount }, false);
-      } else if (this.isCurrentWork(work, session)) {
-        this.refreshAgain = true;
+      if (this.isCurrentWork(work, session) && this.presentation.kind === 'results') {
+        const latest = this.presentation;
+        // Counters and later source arrivals must not invalidate completed
+        // canonical facts. Replace only the exact rows captured by this read;
+        // a newer identity payload remains owned by the newer publication.
+        const captured = new Map<string, SearchBook>();
+        const projected = new Map<string, SearchBook>();
+        for (const book of current.results) captured.set(`${book.sourceId}\u0000${book.bookId}`, book);
+        for (const book of results) projected.set(`${book.sourceId}\u0000${book.bookId}`, book);
+        const merged: SearchBook[] = [];
+        const seen = new Set<string>();
+        for (const book of latest.results) {
+          const key = `${book.sourceId}\u0000${book.bookId}`;
+          seen.add(key);
+          if (captured.get(key) === book) {
+            const refreshed = projected.get(key);
+            if (refreshed !== undefined) merged.push(refreshed);
+          } else {
+            merged.push(book);
+            this.refreshAgain = true;
+          }
+        }
+        for (const book of results) {
+          const key = `${book.sourceId}\u0000${book.bookId}`;
+          if (!seen.has(key) && !captured.has(key)) merged.push(book);
+        }
+        if (merged.length === latest.results.length &&
+          merged.every((book: SearchBook, index: number): boolean => book === latest.results[index])) return;
+        this.present({ kind: 'results', keyword: latest.keyword, results: merged,
+          localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
+          searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
+          completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount }, false);
       }
     } catch (_error) { /* Keep the latest live results when cache projection fails. */ }
     finally {
@@ -406,7 +432,11 @@ export class SearchOrchestrator {
       // sweep's searchRequestId: a superseded request's late payload must never
       // bleed into the live list.
       const admitsResult = (book: SearchBook): boolean => book.searchRequestId === searchRequestId;
+      let collectedRevision = 0;
+      let flattenedRevision = -1;
+      let flattened: SearchBook[] = [];
       const flattenCollected = (): SearchBook[] => {
+        if (flattenedRevision === collectedRevision) return flattened;
         const collected: SearchBook[] = localResults.slice();
         for (const bucket of collectedBySource) {
           if (bucket !== undefined) {
@@ -417,7 +447,9 @@ export class SearchOrchestrator {
             }
           }
         }
-        return collected;
+        flattenedRevision = collectedRevision;
+        flattened = collected;
+        return flattened;
       };
       // Streaming presentation: every finished source republishes the
       // accumulated, deduped results so cards, per-book source counts and the
@@ -483,6 +515,7 @@ export class SearchOrchestrator {
             continue;
           }
           collectedBySource[index] = this.dedupeSearchResults(outcome.results);
+          if ((collectedBySource[index]?.length ?? 0) > 0) collectedRevision += 1;
           successfulSourceCount += 1;
           schedulePartialPublish();
         }
@@ -694,27 +727,44 @@ export class SearchOrchestrator {
 
   private present(presentation: SearchPresentation, retainShared: boolean = true): void {
     const previous = this.presentation;
-    if (retainShared && presentation.kind === 'results' && previous.kind === 'results' &&
-      presentation.keyword === previous.keyword) {
-      const results: SearchBook[] = presentation.results.slice();
-      const positions = new Map<string, number>();
-      for (let index = 0; index < results.length; index += 1) {
-        positions.set(`${results[index].sourceId}\u0000${results[index].bookId}`, index);
+    let newIdentities = false;
+    if (retainShared && presentation.kind === 'results') {
+      const rawResults = presentation.results;
+      if (previous.kind === 'results' && previous.keyword === presentation.keyword) {
+        if (this.rawResultsInput === rawResults) {
+          // A failure/count/final-state update does not change card data.
+          presentation.results = previous.results;
+        } else {
+          const results: SearchBook[] = rawResults.slice();
+          const positions = new Map<string, number>();
+          for (let index = 0; index < results.length; index += 1) {
+            positions.set(`${results[index].sourceId}\u0000${results[index].bookId}`, index);
+          }
+          const previousKeys = new Set<string>();
+          for (const book of previous.results) {
+            const key = `${book.sourceId}\u0000${book.bookId}`;
+            previousKeys.add(key);
+            const position = positions.get(key);
+            if (position === undefined) results.push(book);
+            else if (book.sourceRuleVersion === results[position].sourceRuleVersion &&
+              book.searchRequestId === results[position].searchRequestId) results[position] = book;
+          }
+          newIdentities = rawResults.some((book: SearchBook): boolean =>
+            !previousKeys.has(`${book.sourceId}\u0000${book.bookId}`));
+          presentation.results = results;
+        }
+      } else {
+        newIdentities = rawResults.length > 0;
       }
-      for (const book of previous.results) {
-        const position = positions.get(`${book.sourceId}\u0000${book.bookId}`);
-        if (position === undefined) results.push(book);
-        else if (book.acquisition !== undefined && book.sourceRuleVersion === results[position].sourceRuleVersion) results[position] = book;
-      }
-      presentation.results = results;
+      this.rawResultsInput = rawResults;
+    } else if (presentation.kind !== 'results') {
+      this.rawResultsInput = undefined;
     }
     this.presentation = presentation;
     this.emitPresentation(presentation);
-    // Core may publish before the first partial result is visible. Refresh
-    // the newly admitted identities too, so that notification cannot be lost.
-    if (retainShared && presentation.kind === 'results' && this.unsubscribeBooks !== undefined) {
-      void this.refreshSharedBooks();
-    }
+    // Book-change notifications drive enrichment. A newly visible identity
+    // also needs one read when its Core event preceded the partial publish.
+    if (retainShared && newIdentities && this.unsubscribeBooks !== undefined) void this.refreshSharedBooks();
   }
 
   private presentSources(sources: SearchSource[]): void {

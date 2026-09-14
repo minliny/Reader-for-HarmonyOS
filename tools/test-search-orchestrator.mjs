@@ -884,3 +884,76 @@ for (const action of ['resume', 'close', 'stop']) {
 }
 
 console.log('search orchestrator bounded concurrency and retained lifecycle: PASS');
+
+// PH65: cache enrichment must become visible while later sources keep landing.
+{
+  let finish;
+  let reads = 0;
+  const gate = new Promise(resolve => { finish = resolve; });
+  const emitted = [];
+  const orches = new SearchOrchestrator(p => emitted.push(p), () => {}, () => true, {});
+  const a = { sourceId: 'a', bookId: '/a', title: '旧名', author: '作者', sourceRuleVersion: 'v1', searchRequestId: 's' };
+  const b = { ...a, sourceId: 'b', bookId: '/b', title: '稍后返回' };
+  const old = { kind: 'results', keyword: '书', results: [a], searching: true,
+    totalSourceCount: 40, completedSourceCount: 1, failedSourceCount: 0 };
+  Object.assign(orches, { sessionOpen: true, presentation: old, gateway: { refreshBooks() {
+    reads++; return reads === 1 ? gate : new Promise(() => {});
+  } } });
+  const pending = orches.refreshSharedBooks();
+  // A newly published source is not permission to discard completed metadata for A.
+  orches.presentation = { ...old, results: [a, b], completedSourceCount: 2 };
+  finish([{ ...a, title: '已证实详情书名', groupKey: 'canonical' }]);
+  await pending;
+  assert.equal(orches.presentation.results[0].title, '已证实详情书名');
+  assert.equal(orches.presentation.results[1], b, 'later source payload remains intact');
+  assert.equal(orches.presentation.completedSourceCount, 2);
+  assert.equal(orches.presentation.searching, true, 'merge is visible before all remaining sources finish');
+  assert.equal(emitted.length, 1, 'one completed projection is published, not discarded and restarted');
+  orches.close();
+}
+console.log('PH65 in-flight canonical merge becomes visible before sweep completion PASS');
+
+// PH65: the same merge must not overwrite a later payload or leak into a new keyword.
+for (const superseded of [false, true]) {
+  let finish;
+  const gate = new Promise(resolve => { finish = resolve; });
+  const emitted = [];
+  const o = new SearchOrchestrator(p => emitted.push(p), () => {}, () => true, {});
+  const oldBook = { sourceId: 'a', bookId: '/a', title: '旧', author: '作者', sourceRuleVersion: 'v1', searchRequestId: 's' };
+  const initial = { kind: 'results', keyword: '书', results: [oldBook], searching: true,
+    totalSourceCount: 10, completedSourceCount: 1, failedSourceCount: 0 };
+  Object.assign(o, { sessionOpen: true, presentation: initial, gateway: { refreshBooks: () => gate } });
+  const pending = o.refreshSharedBooks();
+  const newer = { ...oldBook, title: '较新请求正文', sourceRuleVersion: 'v2' };
+  o.presentation = { ...initial, keyword: superseded ? '其他书' : '书', results: [newer], completedSourceCount: 3 };
+  if (superseded) o.work++;
+  // Follow-up projection remains pending so this assertion observes the old read's own completion.
+  o.gateway = { refreshBooks: () => new Promise(() => {}) };
+  finish([{ ...oldBook, title: '旧请求详情' }]); await pending;
+  assert.equal(o.presentation.results[0], newer);
+  assert.equal(o.presentation.completedSourceCount, 3);
+  if (superseded) assert.equal(emitted.length, 0);
+  o.close();
+}
+{
+  let reads = 0;
+  const o = new SearchOrchestrator(() => {}, () => {}, () => true, {});
+  Object.assign(o, { sessionOpen: true, unsubscribeBooks: () => {},
+    gateway: { refreshBooks() { reads++; return new Promise(() => {}); } } });
+  const book = { sourceId: 'a', bookId: '/a', title: '旧', author: '作者', sourceRuleVersion: 'v1', searchRequestId: 's', groupKey: 'old' };
+  const raw = [book];
+  const p = { kind: 'results', keyword: '书', results: raw, searching: true,
+    totalSourceCount: 40, completedSourceCount: 1, failedSourceCount: 0 };
+  o.present(p);
+  const cardData = o.presentation.results;
+  for (let completed = 2; completed <= 40; completed++) o.present({ ...p, results: raw,
+    searching: completed < 40, completedSourceCount: completed, failedSourceCount: completed - 1 });
+  assert.equal(reads, 1, '39 counter updates do not re-read the whole cache');
+  assert.equal(o.presentation.results, cardData, '39 counter updates do not rebuild card grouping input');
+  const canonical = { ...book, groupKey: 'canonical' };
+  o.present({ ...p, results: [canonical] }, false);
+  o.present({ ...p, results: [book, { ...book, sourceId: 'b', bookId: '/b' }] });
+  assert.equal(o.presentation.results[0], canonical, 'later raw source batch retains established canonical grouping even without acquisition');
+  o.close();
+}
+console.log('PH65 stale metadata/work guards, 39 counter updates and canonical grouping retention PASS');

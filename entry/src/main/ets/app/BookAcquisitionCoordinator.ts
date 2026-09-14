@@ -36,6 +36,7 @@ export class BookAcquisitionCoordinator {
   private versions: Map<string, string> = new Map();
   private sourceLoad: Promise<void> | undefined = undefined;
   private registryReady: boolean = false;
+  private registryRevision: number = 0;
   private jobs: Map<string, BookJob> = new Map();
   private prepared: Map<string, PreparedSession> = new Map();
   private pending: Map<string, Preparation> = new Map();
@@ -62,6 +63,17 @@ export class BookAcquisitionCoordinator {
     return (): void => { this.listeners.delete(listener); };
   }
 
+  /** Changes on both sides of a source mutation, including uncertain restore failures. */
+  sourceRegistryRevision(): number { return this.registryRevision; }
+
+  private invalidateSourceRegistry(): void {
+    this.registryRevision += 1;
+    this.registryReady = false;
+    this.versions.clear();
+    this.prepared.clear();
+    this.attempted.clear();
+  }
+
   recentFailures(): RemoteReadingFailureRecord[] { return this.failures.map((record) => ({ ...record })); }
 
   recordFailure(error: RemoteReadingGatewayError, attemptId: number = this.beginAttempt(),
@@ -74,33 +86,35 @@ export class BookAcquisitionCoordinator {
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {},
     priority?: BookRequestPriority): Promise<ReaderCoreResultEvent> {
     if (this.closed) throw new Error('书籍任务已关闭');
-    const sourceId = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : '';
-    const network = method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
-      method === 'chapter.content' || method === 'change.bookSource';
-    const result = network ? await this.scheduler.request(method, params, options,
-      this.versions.get(sourceId) ?? '', priority ?? (method === 'book.search' || method === 'change.bookSource' ? 'search' : 'foreground')) :
-      await this.execute(method, params, options);
-    if (method === 'source.list') this.observeSources(result.data, params['enabledOnly'] !== true);
-    if (method === 'book.detail' || method === 'book.toc') {
-      const book = objectValue(params['book']);
-      const bookId = params['bookId'] ?? book?.['bookId'];
-      if (typeof bookId === 'string') {
-        for (const [key, ready] of this.prepared) {
-          if (ready.session.identity.sourceId === sourceId && ready.session.identity.bookId === bookId) this.prepared.delete(key);
+    const changesSources = method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
+      method === 'runtime.storage.apply' || method === 'runtime.storage.restore';
+    if (changesSources) this.invalidateSourceRegistry();
+    const registryAtStart = this.registryRevision;
+    try {
+      const sourceId = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : '';
+      const network = method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
+        method === 'chapter.content' || method === 'change.bookSource';
+      const result = network ? await this.scheduler.request(method, params, options,
+        this.versions.get(sourceId) ?? '', priority ?? (method === 'book.search' || method === 'change.bookSource' ? 'search' : 'foreground')) :
+        await this.execute(method, params, options);
+      if (method === 'source.list' && registryAtStart === this.registryRevision) {
+        this.observeSources(result.data, params['enabledOnly'] !== true);
+      }
+      if (method === 'book.detail' || method === 'book.toc') {
+        const book = objectValue(params['book']);
+        const bookId = params['bookId'] ?? book?.['bookId'];
+        if (typeof bookId === 'string') {
+          for (const [key, ready] of this.prepared) {
+            if (ready.session.identity.sourceId === sourceId && ready.session.identity.bookId === bookId) this.prepared.delete(key);
+          }
         }
       }
+      if (method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
+        method === 'search-book.put' || method === 'search-book.delete' || method === 'change.bookSource') this.changed();
+      return result;
+    } finally {
+      if (changesSources) { this.invalidateSourceRegistry(); this.changed(); }
     }
-    if (method === 'source.import' || method === 'source.update' || method === 'source.delete') {
-      if (method === 'source.import' || sourceId.length === 0) this.versions.clear();
-      else this.versions.delete(sourceId);
-      this.registryReady = false;
-      this.prepared.clear();
-      this.attempted.clear();
-      this.changed();
-    }
-    if (method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
-      method === 'search-book.put' || method === 'search-book.delete' || method === 'change.bookSource') this.changed();
-    return result;
   }
 
   beginSearch(): void {

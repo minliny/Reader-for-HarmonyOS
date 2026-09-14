@@ -31,7 +31,7 @@ assert.equal(visibleBook.book.title, '详情中的新书名');
 assert.equal(visibleBook.sourceCount, 2);
 assert.equal(visibleBook.variants[1].sourceId, 'source-b', 'clicks receive the new candidate too');
 assert.equal(visibleBook.inBookshelf, true);
-assert.deepEqual(events, [['change', 0], ['change', 1], ['change', 2], ['add', 3]]);
+assert.deepEqual(events, [['change', 1], ['add', 3]]);
 ds.replace([group('b'), group('d')]);
 assert.deepEqual(Array.from({ length: ds.totalCount() }, (_, i) => ds.getData(i).book.bookId), ['b', 'd']);
 assert.equal(ds.getData(0), visibleBook, 'removing earlier rows preserves the retained observed row');
@@ -149,3 +149,40 @@ t.viewStateRevision = -1; t.refreshVisibleResults();
 assert.equal(t.restoreKey, anchorBefore[0]); assert.equal(t.restoreOffset, 137); assert.equal(t.restoreItemY, -23);
 assert.equal(t.scrollRestored, false);
 console.log('progressive relevance ties, retained row identity, measured anchor and remount restoration PASS');
+
+// PH65: only one changed card in a broad unchanged projection can invalidate a lazy row.
+const incremental = new SearchResultDataSource();
+let changedRows = 0, addedRows = 0;
+incremental.registerDataChangeListener({ onDataChange() { changedRows++; }, onDataAdd() { addedRows++; },
+  onDataDelete() {}, onDataReloaded() { assert.fail('no full reload'); } });
+incremental.replace(Array.from({ length: 4000 }, (_, i) => group(`book-${i}`)));
+changedRows = 0; addedRows = 0;
+const batch = Array.from({ length: 4001 }, (_, i) => group(`book-${i}`));
+batch[211].sourceCount = 2;
+incremental.replace(batch);
+assert.equal(changedRows, 1); assert.equal(addedRows, 1);
+changedRows = 0; addedRows = 0;
+incremental.replace(batch);
+assert.equal(changedRows, 0); assert.equal(addedRows, 0);
+console.log('PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS');
+
+// PH65: locale/relevance work is limited to new identity payloads, not all retained cards.
+{
+  const owner = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '书' },
+    viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
+  const old = Array.from({ length: 4000 }, (_, i) => book(`source-${i}`, `书${i}`));
+  owner.groupResults(old);
+  let lowerCalls = 0;
+  String.prototype.toLocaleLowerCase = function (...args) { lowerCalls++; return originalLower.apply(this, args); };
+  try {
+    const newer = [...old, book('new', '书新')];
+    owner.groupResults(newer);
+    assert.ok(lowerCalls <= 5, `one new result normalizes only its own fields: ${lowerCalls}`);
+    lowerCalls = 0; owner.groupResults(newer); assert.equal(lowerCalls, 0, 'count-only publication reuses all projection facts');
+  } finally { String.prototype.toLocaleLowerCase = originalLower; }
+}
+// A canonical navigation key is not the shelf title/author matching key.
+p.shelfBooks = [book('shelf-other-source', '诡秘之主', '爱潜水的乌贼')];
+p.presentation = { kind: 'results', keyword: '诡秘之主' }; p.selectedGroupName = '全部';
+assert.equal(p.groupResults(aliases)[0].inBookshelf, true);
+console.log('PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS');

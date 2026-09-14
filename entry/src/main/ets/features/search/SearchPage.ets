@@ -130,6 +130,8 @@ export type SearchPresentation =
   | SearchSourceRequiredPresentation
   | SearchSourceLoadErrorPresentation;
 
+type SearchBookProjectionFacts = { key: string; titleKey: string; score: number };
+
 @Observed
 class SearchBookGroup {
   book: SearchBook;
@@ -184,12 +186,33 @@ class SearchResultDataSource implements IDataSource {
     return `online:${alias}`;
   }
 
-  private update(retained: SearchBookGroup, next: SearchBookGroup): void {
-    retained.book = next.book;
-    retained.sourceCount = next.sourceCount;
-    retained.inBookshelf = next.inBookshelf;
-    retained.sourceIds = next.sourceIds;
-    retained.variants = next.variants;
+  private sameBook(left: SearchBook, right: SearchBook): boolean {
+    return left === right || (left.sourceId === right.sourceId && left.bookId === right.bookId &&
+      left.groupKey === right.groupKey && left.title === right.title && left.author === right.author &&
+      left.sourceName === right.sourceName && left.coverUrl === right.coverUrl && left.intro === right.intro &&
+      left.kind === right.kind && left.latestChapterTitle === right.latestChapterTitle &&
+      left.category === right.category && left.detailUrl === right.detailUrl &&
+      left.searchRequestId === right.searchRequestId && left.sourceRuleVersion === right.sourceRuleVersion &&
+      left.bookSourceUrl === right.bookSourceUrl &&
+      (left.variables === right.variables || JSON.stringify(left.variables) === JSON.stringify(right.variables)) &&
+      (left.acquisition === right.acquisition || JSON.stringify(left.acquisition) === JSON.stringify(right.acquisition)));
+  }
+
+  private update(retained: SearchBookGroup, next: SearchBookGroup): boolean {
+    if (retained === next) return false;
+    let changed = false;
+    if (!this.sameBook(retained.book, next.book)) { retained.book = next.book; changed = true; }
+    if (retained.sourceCount !== next.sourceCount) { retained.sourceCount = next.sourceCount; changed = true; }
+    if (retained.inBookshelf !== next.inBookshelf) { retained.inBookshelf = next.inBookshelf; changed = true; }
+    if (retained.sourceIds.length !== next.sourceIds.length ||
+      retained.sourceIds.some((id: string, index: number): boolean => id !== next.sourceIds[index])) {
+      retained.sourceIds = next.sourceIds; changed = true;
+    }
+    if (retained.variants.length !== next.variants.length ||
+      retained.variants.some((book: SearchBook, index: number): boolean => !this.sameBook(book, next.variants[index]))) {
+      retained.variants = next.variants; changed = true;
+    }
+    return changed;
   }
 
   replace(items: SearchBookGroup[]): void {
@@ -214,8 +237,9 @@ class SearchResultDataSource implements IDataSource {
       const nextKey = nextKeys[index];
       if (this.items[index] !== undefined && this.keys[index] === nextKey) {
         const retained = this.items[index];
-        this.update(retained, next);
-        for (const listener of this.listeners) listener.onDataChange(index);
+        if (this.update(retained, next)) {
+          for (const listener of this.listeners) listener.onDataChange(index);
+        }
         continue;
       }
       const previous = knownKeys.has(nextKey) ? this.keys.indexOf(nextKey) : -1;
@@ -296,6 +320,7 @@ export struct SearchPage {
   private groupedResultsInput: SearchBook[] | undefined = undefined;
   private groupedShelfInput: ShelfBook[] | undefined = undefined;
   private groupedResultsCache: SearchBookGroup[] = [];
+  private groupedBookFacts: Map<SearchBook, SearchBookProjectionFacts> = new Map();
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -561,7 +586,7 @@ export struct SearchPage {
     .padding({
       left: this.isTablet ? 20 : 18,
       right: this.isTablet ? 20 : 18,
-      top: 28,
+      top: TOK_SPACE_XS,
       bottom: 20,
     })
     // This container exists before history loads and while the visible chip
@@ -686,8 +711,10 @@ export struct SearchPage {
     // array. Notify a lazy data source explicitly, as Source Management does.
     const groups = this.presentation.kind === 'results'
       ? this.groupResults(this.presentation.results) : [];
-    this.visibleGroups = groups;
-    this.resultDataSource.replace(groups);
+    if (this.visibleGroups !== groups) {
+      this.visibleGroups = groups;
+      this.resultDataSource.replace(groups);
+    }
   }
 
   // ArkUI does not track mutable @Builder value parameters. Read state at
@@ -818,6 +845,8 @@ export struct SearchPage {
       this.groupedCategory === this.selectedGroupName && this.groupedKeyword === keyword) {
       return this.groupedResultsCache;
     }
+    const previousFacts = this.groupedKeyword === keyword ? this.groupedBookFacts : undefined;
+    const nextFacts = new Map<SearchBook, SearchBookProjectionFacts>();
     const byBook = new Map<string, SearchBookGroup>();
     const relevance = new Map<string, number>();
     // The shelf is stable for this render pass. Build both identity views once
@@ -833,12 +862,18 @@ export struct SearchPage {
       const local = book.sourceId === 'local';
       if ((this.selectedGroupName === '本地' && !local) ||
         (this.selectedGroupName === '在线' && local)) continue;
-      const titleKey = book.groupKey ?? this.normalizedBookKey(book.title, book.author);
-      const key = this.resultGroupKey(book);
+      let facts = previousFacts?.get(book);
+      if (facts === undefined) {
+        const titleKey = this.normalizedBookKey(book.title, book.author);
+        facts = { key: local ? `local:${book.bookId}` : `online:${book.groupKey ?? titleKey}`,
+          titleKey, score: searchResultRelevance(book.title, book.author, keyword) };
+      }
+      nextFacts.set(book, facts);
+      const key = facts.key;
       this.viewState.rank(key);
       const inBookshelf = shelfIdentityKeys.has(`${book.sourceId}\u0000${book.bookId}`) ||
-        (!local && shelfBookKeys.has(titleKey));
-      const score = searchResultRelevance(book.title, book.author, keyword);
+        (!local && shelfBookKeys.has(facts.titleKey));
+      const score = facts.score;
       const existing = byBook.get(key);
       if (existing === undefined) {
         byBook.set(key, new SearchBookGroup(book, 1, inBookshelf));
@@ -854,11 +889,12 @@ export struct SearchPage {
     // Relevance precedes arrival order. First-seen rank breaks ties, while
     // retained identity/viewport anchors keep asynchronous enrichment stable.
     const grouped = Array.from(byBook.values()).sort((left: SearchBookGroup, right: SearchBookGroup): number => {
-      const leftKey = this.resultGroupKey(left.book);
-      const rightKey = this.resultGroupKey(right.book);
+      const leftKey = (nextFacts.get(left.book) as SearchBookProjectionFacts).key;
+      const rightKey = (nextFacts.get(right.book) as SearchBookProjectionFacts).key;
       return (relevance.get(leftKey) ?? 5) - (relevance.get(rightKey) ?? 5) ||
         this.viewState.rank(leftKey) - this.viewState.rank(rightKey);
     });
+    this.groupedBookFacts = nextFacts;
     this.groupedCategory = this.selectedGroupName;
     this.groupedKeyword = keyword;
     this.groupedResultsInput = results;
@@ -1281,35 +1317,30 @@ struct SearchResultCard {
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
 
-        Row({ space: 6 }) {
+        Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
           Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(10)
-            .lineHeight(10)
+            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4)
-            .maxLines(1);
+            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).margin({ right: 6, bottom: 2 });
           Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
+            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .maxLines(1);
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+            .borderRadius(4).maxLines(1).margin({ right: 6, bottom: 2 });
           if (this.group.inBookshelf) {
             Text('已在书架')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(10)
+              .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-              .maxLines(1);
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+              .borderRadius(4).maxLines(1).margin({ right: 6, bottom: 2 });
           }
         }
-        .width('100%')
-        .alignItems(VerticalAlign.Center);
+        .width('100%');
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);

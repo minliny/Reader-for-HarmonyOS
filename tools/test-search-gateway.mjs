@@ -286,3 +286,62 @@ console.log('search gateway broad projection responsiveness: PASS');
   assert.equal(captured.canDispatch(), false, 'route visibility reaches the global queue');
   assert.equal(captured.shouldCancel(), false, 'hiding never invalidates the retained query');
 }
+
+// PH65: cache projections reuse the source registry, but an identity mutation invalidates it.
+{
+  let revision = 0, sourceLoads = 0, enabled = true;
+  const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => revision }),
+    request: async method => {
+      if (method === 'source.list') { sourceLoads++; return { data: { sources: [{ ...source, enabled }] } }; }
+      if (method === 'search-book.list') return { data: { books: [] } };
+      throw Error(method);
+    } };
+  const gateway = new SearchGateway(owner);
+  const seed = validOutcome.results[0];
+  await gateway.loadSources();
+  await gateway.refreshBooks([seed]);
+  await gateway.refreshBooks([seed]);
+  assert.equal(sourceLoads, 1, 'cache projection cannot repeatedly parse the whole source registry');
+  enabled = false; revision++;
+  assert.deepEqual(await gateway.refreshBooks([seed]), [], 'disabled source is not revived from registry cache');
+  assert.equal(sourceLoads, 2);
+}
+console.log('PH65 source registry reuse and mutation invalidation PASS');
+
+// PH65: decoding a large source response yields rendering turns and rejects a superseded sweep.
+{
+  let turns = 0;
+  const timer = setInterval(() => { turns++; }, 0);
+  const gateway = new SearchGateway({ request: async () => ({ data: { sourceId: source.sourceId,
+    books: Array.from({ length: 1024 }, (_, i) => ({ bookId: `/large/${i}`, title: `书${i}`, author: '作者' })) } }) });
+  try {
+    const outcome = await gateway.searchBySource(source, '书', () => true, 'large');
+    assert.equal(outcome.ok, true); assert.equal(outcome.results.length, 1024);
+    assert.ok(turns >= 16, 'a broad source response must not monopolize one JS turn');
+    let current = true; setTimeout(() => { current = false; }, 0);
+    const stale = await gateway.searchBySource(source, '书', () => current, 'cancelled');
+    assert.equal(stale.ok, false, 'cancelled decoding does not release a partial stale source result');
+  } finally { clearInterval(timer); }
+}
+{
+  let revision = 0, release;
+  const cache = new Promise(resolve => { release = resolve; });
+  const gateway = new SearchGateway({ bookAcquisitions: () => ({ sourceRegistryRevision: () => revision }), request: async method => {
+    if (method === 'source.list') return { data: { sources: [source] } };
+    await cache; return { data: { books: [] } };
+  } });
+  await gateway.loadSources();
+  const projecting = gateway.refreshBooks([validOutcome.results[0]]);
+  revision++; release();
+  await assert.rejects(projecting, /source registry changed/, 'old projection cannot re-admit a deleted or replaced source');
+}
+console.log('PH65 yielding decode, superseded sweep and late source projection invalidation PASS');
+
+// PH65: unchanged canonical reads retain both payload and array identity for UI projection caches.
+{
+  const gateway = new SearchGateway({ request: async method => method === 'source.list'
+    ? { data: { sources: [source] } } : { data: { books: [] } } });
+  const books = [validOutcome.results[0]];
+  assert.equal(await gateway.refreshBooks(books), books, 'no new cache facts means no new UI payload');
+}
+console.log('PH65 no-op canonical refresh retains projection identity PASS');

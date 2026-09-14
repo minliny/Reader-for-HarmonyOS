@@ -67,6 +67,7 @@ function replayHistory(f) {
 check('initial history Scroll uses the top of the content viewport', () => {
   const f = fixture(['唯一历史']);
   assert.equal(f.nodes().find(node => node.type === 'Scroll').align, 'Alignment.TopStart');
+  assert.equal(f.areas()[0].padding.top, 8, 'PH62 history uses one existing spacing token below input, not 28vp');
 });
 check('one history item appears after the independently measurable outer container reports its real width', () => {
   const f = fixture(['唯一历史']);
