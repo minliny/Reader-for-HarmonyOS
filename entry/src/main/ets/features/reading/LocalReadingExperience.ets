@@ -3214,6 +3214,7 @@ export struct ReadingExperience {
       if (this.hasMeasuredViewport()) {
         this.beginMeasurement(lifecycleToken);
       }
+      this.notifyPreservedContentRefresh(chapter, refreshContent, lifecycleToken, selectionToken);
     } catch (error) {
       // A stale selection (or unmounted session) must not fail the current
       // reading flow; only a current request's error is surfaced.
@@ -3221,6 +3222,22 @@ export struct ReadingExperience {
         return;
       }
       this.fail(error as Error, lifecycleToken);
+    }
+  }
+
+  private notifyPreservedContentRefresh(chapter: ReadingSessionChapter, refreshContent: boolean,
+    lifecycleToken: number, selectionToken: number): void {
+    if (!refreshContent || chapter.positionMigration?.status !== 'preserved' ||
+      !this.isSelectionActive(lifecycleToken, selectionToken)) {
+      return;
+    }
+    try {
+      this.getUIContext().getPromptAction().showToast({
+        message: '为保留阅读位置和书签，本次未更新正文。原正文和阅读位置已保留。',
+      });
+    } catch (_) {
+      // Presentation failure cannot turn a preserved, readable chapter into a
+      // load failure. PromptAction.showToast is synchronous and returns void.
     }
   }
 
