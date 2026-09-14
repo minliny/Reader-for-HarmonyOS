@@ -26,3 +26,11 @@
 - PH46/47：实际SDK回归守住上一包作者Regular13/17.55及作者前缀，并验证右侧122、封面122、外卡152、五行剩余空间正值及SpaceBetween；原长源名/换源按钮/空态与夜间回归保持。
 
 首次统一pipeline的235组检查、ArkTS编译/签名通过，但controller/gate输入在构建期间变化（b13061c5→02bcd917），流水线拒绝发布产物。原因是root在最后一份回归脚本完全冻结前启动整合；这是操作与输入一致性问题，不是产品或设备失败。现全体生产/测试冻结，重新运行同一入口。没有安装失败包，也没有操作设备；原已装仍643bcaf5。
+
+## 最终构建与交付状态
+
+冻结后统一pipeline的235组检查、ArkTS非增量构建、signed debug签名及离线复验全部PASS，构建耗时27.926秒。构建源Harmony14e814fa、Core952704bd均clean，Reader-UI73acab57；Core未改，本轮未重跑Core全量。主题c0138afe、详情c293c3aa、书源6f9ca89e、TTS db5235c1分别提交。
+
+[不可变manifest](../../.reader-artifacts/hap/20260914T005236Z-14e814fa-e5c3ae1d/manifest.json)、[精简回执](PH43-47-package-receipt.json)、[复验](PH43-47-package-verify.log)。signed SHA256：`a8a47b2b287bef2441120247ac530c7e09f7c0370fdfb65ade2917ebd8d2c0b3`。iteration、acceptanceEligible=false，不能充当设备或用户验收。
+
+本轮不操作VM/真机、不覆盖安装。真机仍643bcaf5；PH43/44/46/47的设备视觉待验证，PH45仅通用代码修复通过，当前终宋具体源身份仍未确认。PH42及原功能/性能/导入/TOC等OPEN全部保留；不要求用户凭记忆提供未知书源。

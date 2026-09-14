@@ -1,0 +1,54 @@
+{
+  "runId": "20260914T005236Z-14e814fa-e5c3ae1d",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T005236Z-14e814fa-e5c3ae1d/manifest.json",
+  "class": "iteration",
+  "acceptanceEligible": false,
+  "harmony": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+    "commit": "14e814fa85f2156b4022e10f2cf9f176ac188477",
+    "dirty": false,
+    "status": []
+  },
+  "core": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+    "commit": "952704bd57518af530a948dfd3408a119c20e276",
+    "dirty": false,
+    "status": []
+  },
+  "readerUiCommit": "73acab57",
+  "fingerprint": "e5c3ae1dcabb6ce4ba1f7ab129a5da5d965e2880b15518f587937c12dbb9d90b",
+  "harmonyContractGroups": 235,
+  "arktsTypeCheck": "PASS",
+  "nonIncrementalBuild": "PASS",
+  "buildSeconds": 27.926,
+  "artifact": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 166900231,
+    "sha256": "a8a47b2b287bef2441120247ac530c7e09f7c0370fdfb65ade2917ebd8d2c0b3",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 14582240,
+      "sha256": "31158c6357e93b86f32e0681f0be9921d4780de788727f646cffb95931e37abc"
+    }
+  },
+  "offlineVerify": "PASS",
+  "deviceOperationsThisFollowup": false,
+  "physicalInstalled": "643bcaf5",
+  "physicalInteraction": "OPEN",
+  "userAcceptance": "OPEN",
+  "zhongsongSourceIdentity": "UNCONFIRMED"
+}
