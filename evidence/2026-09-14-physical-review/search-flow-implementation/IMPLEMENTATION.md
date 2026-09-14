@@ -81,3 +81,7 @@ PH75的保守边界是明确的失败合同：历史mark无原始fact不猜归�
 ## 先行真机安装
 
 按用户追加顺序，2026-09-14 15:33:08 UTC 已将当时最新已完成包 `20260914T115844Z-3399326a-fde4dfee` 保数据覆盖到真机并启动。签名/已安装身份相符，install/launch PASS，数据保留；包 SHA-256 `64b9167ed72de28177f420f50466f00dfedd1b9a557dfb71253a9416d2b7c2df`。此包早于本轮 §16 修复，不能记为本轮修复交付。最终新包完成后仍按真机先安装、VM后测试执行。
+
+## 最终 Native 输入
+
+Core `61a2f86e7` clean 的 Native/SDK 构建通过，50 项 SDK smoke 通过；已从 canonical package 同步 SDK/facade 和未剥离 Native，并核对字节一致。身份与构建日志见 native-final-identity.json / native-final.log。HAP 流水线将自行剥离并绑定 manifest，尚不代表安装或 VM 通过。

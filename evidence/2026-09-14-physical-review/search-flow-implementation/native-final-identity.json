@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "buildId": "90b74e8bba0d843e29c0b99e10b72d5506e997ebabdd98b9dbf59957bb2a3718",
+  "gitCommit": "61a2f86e7287fb276757706ba436a8103dcb3d37",
+  "gitDirty": false,
+  "cargoLockSha256": "75caf6fe50715e509d86b7ed1c37ec7155f73671820be10a8ad283f38a0158e4",
+  "protocolSha256": "52b45af80756f0210d58a3af429eb0ff23f2ba14b9b31bf08bdf427b62552eda",
+  "rustProfile": "release"
+}
