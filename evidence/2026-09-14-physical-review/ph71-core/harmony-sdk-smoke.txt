@@ -1,0 +1,7 @@
+name=reader-core-native-harmony-sdk-smoke
+status=pass
+tests=bindings/harmony/sdk
+test_files=bindings/harmony/sdk/capability_router.test.ts,bindings/harmony/sdk/minimal_reading_chain.test.ts,bindings/harmony/sdk/reader_core.test.ts,bindings/harmony/sdk/smoke_report.test.ts
+pass_count=39
+fail_count=0
+expect_count=171
