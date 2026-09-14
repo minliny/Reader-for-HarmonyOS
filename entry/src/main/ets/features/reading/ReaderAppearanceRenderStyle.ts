@@ -19,13 +19,10 @@ import {
 } from '../common/ReaderFontFamilies.ts';
 
 /**
- * Reading-surface values resolved from the authoritative Figma variables:
- * - `Reader · Reading Palette` (`245:4`)
- * - `Reader · Reading Scheme` (`245:5`)
- * - `Reader Appearance Choices` (`755:1164`)
- *
- * The control swatch color is not reused as the page fill. Paper, Warm and
- * Green have separate source-backed reading fills and ink values in Figma.
+ * Reading-surface values resolve from the shared registry. User correction
+ * PH43 makes the original Make V9 swatches authoritative for paper base
+ * colors; the earlier separate reading fills are superseded. Existing ink
+ * and paper texture effects remain attached to their stable theme IDs.
  */
 export type ReaderAppearanceThemeStyle = {
   paperStart: string;

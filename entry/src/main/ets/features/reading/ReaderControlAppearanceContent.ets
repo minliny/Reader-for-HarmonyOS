@@ -18,7 +18,7 @@ import { APPEARANCE_SELECT_MENU_WIDTH,
   appearanceSelectMenuPosition } from '../common/ReaderSelectAppearanceStyle';
 import { APPEARANCE_LAYOUT_SURFACE, APPEARANCE_LAYOUT_BORDER, APPEARANCE_LAYOUT_CAPTION,
   READER_CONTROL_APPEARANCE_THEMES, readerControlAppearanceThemeLabel,
-  readerControlAppearanceThemeSwatch, readerControlAppearanceThemeEnd,
+  readerControlAppearanceThemeSwatch,
   readerControlAppearanceThemeScheme } from './ReaderControlAppearanceStyle';
 import {
   TOK_BORDER_W, TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
@@ -409,7 +409,7 @@ export struct ReaderControlAppearanceContent {
   private themeSwatch(theme: ReaderAppearanceTheme, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
       Row().width(46).height(18).backgroundColor(this.themeColor(theme))
-        .linearGradient({ angle: 180, colors: [[this.themeColor(theme), 0], [readerControlAppearanceThemeEnd(theme), 1]] }).borderRadius(6)
+        .borderRadius(6)
         .border({ width: this.snapshot.activeTheme === theme ? 2 : TOK_BORDER_W,
           color: this.snapshot.activeTheme === theme ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
         .position({ x: 8.25, y: 2 })

@@ -91,7 +91,8 @@ await check('PH7 real theme actions signal accepted defaults and reject wrong da
   day.onClick(); assert.equal(notices.at(-1), '请先选择日间阅读主题'); assert.equal(requests.length, 2);
   owner.fullInput = () => false; night.onClick(); assert.equal(requests.length, 2, 'morphing cannot dispatch default updates');
 });
-await check('PH31 each SDK preview uses the same gradient endpoints as the actual reader definition', () => {
+await check('PH43 SDK previews retain the original Make swatch colors instead of following erroneous paper fills', () => {
+  const reference = JSON.parse(readFileSync(new URL('../evidence/2026-09-11-appearance-make-v9/make-v9-reference.json', import.meta.url), 'utf8'));
   const source = read('features/reading/ReaderControlAppearanceContent.ets');
   const { owner } = createReaderBuilderProbe(source, ['themeSwatch'], style);
   Object.assign(owner, { frame: () => sampleReaderControlAppearance(1, 338, 666), snapshot: createDefaultReaderAppearanceSnapshot(),
@@ -101,7 +102,9 @@ await check('PH31 each SDK preview uses the same gradient endpoints as the actua
   READER_THEME_DEFINITIONS.forEach((theme, index) => {
     owner.themeSwatch(theme.id, index);
     const row = [...owner.nodes.values()].filter(n => n.type === 'Row').at(-1);
-    assert.deepEqual(row.linearGradient, { angle: 180, colors: [[theme.paperStart, 0], [theme.paperEnd, 1]] });
+    const expected = '#FF' + reference.themes.find(value => value.id === theme.id).swatch.slice(1);
+    assert.equal(row.backgroundColor, expected);
+    assert.equal(row.linearGradient, undefined);
   });
 });
 await check('PH36 real Index Back returns General to Settings before Bookshelf and preserves overlay priority', () => {

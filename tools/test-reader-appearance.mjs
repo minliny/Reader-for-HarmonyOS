@@ -151,15 +151,15 @@ assert.equal(setReaderAppearanceMetric(next, 'letterSpacing', -99).letterSpacing
 assert.equal(readerAppearanceCanStep({ ...initial, fontSize: 12 }, 'fontSize', -1), false);
 assert.equal(readerAppearanceCanStep({ ...initial, fontSize: 40 }, 'fontSize', 1), false);
 assert.deepEqual(readerAppearanceThemeStyle('paper'), {
-  paperStart: '#FFFBF4E9',
-  paperEnd: '#FFEFE2D0',
+  paperStart: '#FFEBDABB',
+  paperEnd: '#FFEBDABB',
   ink: '#FF2B241D',
   paperTexture: true,
   sourcePaperLighting: true,
 });
 assert.deepEqual(readerAppearanceThemeStyle('paperNight'), {
-  paperStart: '#FF302B26',
-  paperEnd: '#FF211F1C',
+  paperStart: '#FF26313F',
+  paperEnd: '#FF26313F',
   ink: '#FFE9DECE',
   paperTexture: true,
   sourcePaperLighting: false,

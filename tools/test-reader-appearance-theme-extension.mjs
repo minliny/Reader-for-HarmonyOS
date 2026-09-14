@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
-import { readerControlAppearanceThemeEnd } from '../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts';
 import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
 
 const url = new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url);
@@ -61,7 +60,7 @@ assert.equal(native, 0); assert.equal(c.scrollInput(), true);
 // SDK-emitted swatches for added IDs still call the actual selection handler;
 // safe array length alone must not leave them disabled or without identity.
 const source = readFileSync(url, 'utf8');
-const { owner } = createReaderBuilderProbe(source, ['themeSwatch'], { readerControlAppearanceThemeEnd });
+const { owner } = createReaderBuilderProbe(source, ['themeSwatch']);
 const chosen = [];
 Object.assign(owner, { frame: () => geometry.sampleReaderControlAppearance(1, 338, 666, 12),
   snapshot: { activeTheme: 'theme-8' }, appThemeScheme: 'day', themeColor: () => '#FFFFFF',
