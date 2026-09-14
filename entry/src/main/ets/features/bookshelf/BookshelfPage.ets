@@ -122,7 +122,9 @@ export struct BookshelfPage {
   // Keep the user's projection choice in app storage so route recreation does
   // not silently restore the cover projection.
   @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
-  @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
+  @StorageLink('readerBookshelfSelectedGroup') @Watch('onShelfFiltersChanged') private storedSelectedGroup: string = '';
+  @StorageLink('readerBookshelfReadingFilter') @Watch('onShelfFiltersChanged') private readingFilter: string = 'all';
+  @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop continueReading: ShelfBook | undefined;
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
@@ -145,6 +147,7 @@ export struct BookshelfPage {
   // the intent and mirrors the sweep progress the host pushes back down.
   onCheckUpdatesRequested: () => void = (): void => {};
   @Prop updateRunning: boolean = false;
+  @Prop backgroundUpdateRunning: boolean = false;
   @Prop updateProgressDone: number = 0;
   @Prop updateProgressTotal: number = 0;
   @State private viewportWidth: number = 0;
@@ -159,6 +162,8 @@ export struct BookshelfPage {
   @State private groupSelectorVisible: boolean = false;
   @State private viewModeError: string = '';
   private mounted: boolean = false;
+  private projectionQueued: boolean = false;
+  private projectionGeneration: number = 0;
   private viewModeRevision: number = 0;
   private confirmedViewMode: BookshelfViewMode = 'cover';
   private requestedViewMode: BookshelfViewMode = 'cover';
@@ -170,7 +175,8 @@ export struct BookshelfPage {
   @State private moreAnchorBottom: number = 0;
   @State private overlayOriginX: number = 0;
   @State private overlayOriginY: number = 0;
-  @State private projectedGroups: string[] = [];
+  @State private visibleBookCount: number = 0;
+  @State private hasOnlineBooks: boolean = false;
   private readonly viewMotion: BookshelfViewMotionContract = bookshelfViewMotionContract();
   private pendingViewMode: BookshelfViewMode = 'cover';
   private viewSwitchToken: number = 0;
@@ -193,7 +199,7 @@ export struct BookshelfPage {
     this.confirmedViewMode = restoredMode;
     this.selectedGroup = this.storedSelectedGroup;
     this.filterRowVisible = this.viewState.filterExpanded;
-    this.groupSelectorVisible = this.viewState.groupExpanded;
+    this.groupSelectorVisible = !this.filterRowVisible && this.viewState.groupExpanded;
     this.viewportRestored = false;
     this.setRestingProjectionOpacity(restoredMode);
     this.rebuildShelfProjection();
@@ -226,6 +232,8 @@ export struct BookshelfPage {
   }
 
   aboutToDisappear(): void {
+    this.projectionGeneration += 1;
+    this.projectionQueued = false;
     this.saveShelfViewport();
     this.viewState.filterExpanded = this.filterRowVisible;
     this.viewState.groupExpanded = this.groupSelectorVisible;
@@ -275,6 +283,12 @@ export struct BookshelfPage {
           anchorRight: this.moreAnchorRight - this.overlayOriginX,
           anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
           reduceMotion: this.reduceMotion,
+          canCheckUpdates: this.hasOnlineBooks,
+          updateRunning: this.updateRunning,
+          backgroundUpdateRunning: this.backgroundUpdateRunning,
+          updateProgressDone: this.updateProgressDone,
+          updateProgressTotal: this.updateProgressTotal,
+          onCheckUpdates: (): void => this.requestCheckUpdates(),
           onBatchManage: (): void => {
             this.moreMenuVisible = false;
             this.onBatchManageRequested();
@@ -480,9 +494,11 @@ export struct BookshelfPage {
             });
             this.sectionAction('bookshelf_filter', (): void => {
               this.filterRowVisible = !this.filterRowVisible;
+              this.groupSelectorVisible = false;
             });
             this.sectionAction('bookshelf_settings', (): void => {
               this.groupSelectorVisible = !this.groupSelectorVisible;
+              this.filterRowVisible = false;
             });
           }
           .height(34);
@@ -495,12 +511,12 @@ export struct BookshelfPage {
 
       if (this.groupSelectorVisible) {
         ListItem() {
-          BookshelfGroupSelector({ selected: this.selectedGroup === '默认',
+          BookshelfGroupSelector({ selected: this.selectedGroup === '默认', activeGroup: this.selectedGroup,
             onSelect: (): void => {
               this.selectedGroup = '默认';
               this.storedSelectedGroup = '默认';
-              this.rebuildShelfProjection();
-            } });
+              this.queueShelfProjection();
+            }, onClear: (): void => this.clearGroup() });
         }
       }
 
@@ -514,6 +530,16 @@ export struct BookshelfPage {
         ListItem() {
           Text(this.viewModeError).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .onClick((): void => this.retryViewMode());
+        }
+      }
+
+      if (this.visibleBookCount === 0) {
+        ListItem() {
+          Column({ space: 8 }) {
+            Text('没有符合条件的书籍').fontSize(14).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+            Text('清除全部条件').fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+              .height(36).onClick((): void => { this.clearFilters(); this.clearGroup(); });
+          }.width('100%').padding({ top: 16, bottom: 16 });
         }
       }
 
@@ -589,84 +615,94 @@ export struct BookshelfPage {
     }));
   }
 
-  /**
-   * SHF-02/03 shelf tools row, raised by the previously dead filter action:
-   * group filters and a separate shelf-wide manual update action. The row is an
-   * approved product extension (no Figma frame). The resting surface follows
-   * the current four-action product decision: Cover/List/Filter/Management;
-   * search remains solely in the AppTopBar.
-   */
+  /** PH60: view-only state/type conditions; grouping and updates have separate owners. */
   @Builder
   private filterRow() {
-    Column() {
-      Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-        this.filterChip('全部', this.selectedGroup === '', (): void => {
-          this.selectedGroup = '';
-          this.storedSelectedGroup = '';
-          this.rebuildShelfProjection();
-        });
-        ForEach(this.projectedGroups, (group: string) => {
-          this.filterChip(group, this.selectedGroup === group, (): void => {
-            this.selectedGroup = group;
-            this.storedSelectedGroup = group;
-            this.rebuildShelfProjection();
-          });
-        }, (group: string): string => `shelf-group-${group}`);
-      }
-      .width('100%');
+    Column({ space: 4 }) {
       Row() {
-        Blank();
-        this.checkUpdatesAction();
-      }
-      .width('100%');
-    }
-    .width('100%');
+        Text('筛选').fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
+        Text('清除').fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+          .height(28).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
+          .onClick((): void => this.clearFilters()).accessibilityText('清除阅读状态和类型筛选');
+      }.width('100%');
+      Text('阅读状态').width('100%').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
+        this.filterChip('reading', 'all', '全部');
+        this.filterChip('reading', 'unread', '未读');
+        this.filterChip('reading', 'reading', '在读');
+        this.filterChip('reading', 'finished', '已读');
+      }.width('100%');
+      Text('书籍类型').width('100%').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
+        this.filterChip('source', 'all', '全部');
+        this.filterChip('source', 'local', '本地');
+        this.filterChip('source', 'online', '在线');
+      }.width('100%');
+    }.width('100%');
   }
 
   @Builder
-  private filterChip(label: string, selected: boolean, onToggle: () => void) {
+  private filterChip(dimension: string, value: string, label: string) {
     Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Medium)
-      .fontSize(12)
-      .lineHeight(18)
-      .fontColor(selected ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+      .fontFamily('ReaderInter').fontWeight(FontWeight.Medium).fontSize(12).lineHeight(18)
+      .fontColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
       .padding({ left: 12, right: 12, top: 5, bottom: 5 })
-      .backgroundColor(selected ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: selected ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(999)
-      .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .constraintSize({ maxWidth: 160 })
-      .onClick((): void => onToggle())
-      .accessibilityText(selected ? `当前筛选:${label}` : `筛选:${label}`);
+      .backgroundColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: this.isFilterSelected(dimension, value) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .borderRadius(999).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+      .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: 160 })
+      .onClick((): void => this.selectFilter(dimension, value))
+      .accessibilityText(`${dimension === 'reading' ? '阅读状态' : '书籍类型'}:${label}${this.isFilterSelected(dimension, value) ? '，已选' : ''}`);
   }
 
-  @Builder
-  private checkUpdatesAction() {
-    // Use a self-sized text actor instead of the platform Button, whose
-    // implicit minimum height/padding made this compact filter chip oversized.
-    Text(this.updateActionLabel())
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(12)
-      .lineHeight(18)
-      .fontColor(this.updateRunning ? readerAppColor('TOK_MUTED', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme))
-      .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: this.updateRunning ? readerAppColor('TOK_BORDER', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme) })
-      .borderRadius(TOK_RADIUS_MD)
-      .enabled(!this.updateRunning)
-      .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .onClick((): void => {
-        if (!this.updateRunning) {
-          this.onCheckUpdatesRequested();
-        }
-      })
-      .accessibilityText(this.updateRunning ? '正在检查更新' : '检查书架更新');
+  private isFilterSelected(dimension: string, value: string): boolean {
+    return (dimension === 'reading' ? this.readingFilter : this.sourceFilter) === value;
+  }
+
+  private hasActiveFilters(): boolean {
+    return this.readingFilter !== 'all' || this.sourceFilter !== 'all';
+  }
+
+  private selectFilter(dimension: string, value: string): void {
+    if (dimension === 'reading') this.readingFilter = value;
+    else this.sourceFilter = value;
+    this.queueShelfProjection();
+  }
+
+  private clearFilters(): void {
+    this.readingFilter = 'all';
+    this.sourceFilter = 'all';
+    this.queueShelfProjection();
+  }
+
+  private clearGroup(): void {
+    this.selectedGroup = '';
+    this.storedSelectedGroup = '';
+    this.queueShelfProjection();
+  }
+
+  private onShelfFiltersChanged(): void {
+    this.selectedGroup = this.storedSelectedGroup;
+    this.queueShelfProjection();
+  }
+
+  private queueShelfProjection(): void {
+    if (!this.mounted || this.projectionQueued) return;
+    this.projectionQueued = true;
+    const generation = this.projectionGeneration;
+    // StorageLink watchers and one user gesture can update several conditions.
+    // Publish only the final combination once, without a timer/frame delay.
+    void Promise.resolve().then((): void => {
+      if (!this.mounted || generation !== this.projectionGeneration) return;
+      this.projectionQueued = false;
+      this.rebuildShelfProjection();
+    });
+  }
+
+  private requestCheckUpdates(): void {
+    if (!this.hasOnlineBooks || this.updateRunning || this.backgroundUpdateRunning) return;
+    this.moreMenuVisible = false;
+    this.onCheckUpdatesRequested();
   }
 
   // @Builder value parameters are not observed: the active variant must be
@@ -679,9 +715,9 @@ export struct BookshelfPage {
       return this.viewMode === 'list';
     }
     if (assetName === 'bookshelf_filter') {
-      return this.filterRowVisible;
+      return this.filterRowVisible || this.hasActiveFilters();
     }
-    return false;
+    return assetName === 'bookshelf_settings' && (this.groupSelectorVisible || this.selectedGroup.length > 0);
   }
 
   // Keep the canonical active asset referenced for provenance and future
@@ -704,7 +740,7 @@ export struct BookshelfPage {
         ? (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_list_active_theme_night') : $r('app.media.bookshelf_list_active')) : (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_list_theme_night') : $r('app.media.bookshelf_list'));
     }
     if (assetName === 'bookshelf_filter') {
-      return this.filterRowVisible
+      return (this.filterRowVisible || this.hasActiveFilters())
         ? this.canonicalFilterActiveAsset()
         : (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_theme_night') : $r('app.media.bookshelf_filter'));
     }
@@ -998,9 +1034,9 @@ export struct BookshelfPage {
       return active ? '列表模式，当前已选' : '切换到列表模式';
     }
     if (assetName === 'bookshelf_filter') {
-      return active ? '筛选书架，当前已选' : '筛选书架';
+      return this.hasActiveFilters() ? '筛选书架，已有筛选条件' : this.filterRowVisible ? '筛选书架，已展开' : '筛选书架';
     }
-    return '整理分组';
+    return this.selectedGroup.length > 0 ? `整理分组，当前${this.selectedGroup}` : this.groupSelectorVisible ? '整理分组，已展开' : '整理分组';
   }
 
   private listCoverWidth(isTablet: boolean): number {
@@ -1148,26 +1184,18 @@ export struct BookshelfPage {
   }
 
   private onBooksChanged(): void {
-    this.rebuildShelfProjection();
+    this.queueShelfProjection();
   }
 
   private rebuildShelfProjection(): void {
-    const visible = ShelfBookPresentation.visible(this.books, this.selectedGroup);
-    // V1 exposes only the default selector. Historical groups remain intact.
-    const groups: string[] = ['默认'];
+    const visible = ShelfBookPresentation.visible(this.books, this.selectedGroup, this.readingFilter, this.sourceFilter);
+    this.visibleBookCount = visible.length;
+    this.hasOnlineBooks = this.books.some((book: ShelfBook): boolean => book.sourceId !== 'local');
     const rows: ShelfBook[][] = [];
     for (let index = 0; index < visible.length; index += 3) {
       rows.push(visible.slice(index, index + 3));
     }
     this.rowDataSource.replace(rows);
-    this.projectedGroups = groups;
-  }
-
-  private updateActionLabel(): string {
-    if (this.updateRunning) {
-      return `检查中 ${this.updateProgressDone}/${this.updateProgressTotal}`;
-    }
-    return '检查更新';
   }
 
   private bookRowRenderKey(row: ShelfBook[], rowIndex: number): string {

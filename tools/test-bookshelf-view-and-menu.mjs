@@ -11,7 +11,7 @@ const menu=read('features/bookshelf/BookshelfMoreMenu.ets');
 const action=read('features/bookshelf/BookshelfBookActionSheet.ets');
 const dialog=read('features/bookshelf/LocalImportDialog.ets');
 const index=read('pages/Index.ets');
-// Latest authorization supersedes the old tests' CRUD/four-More/201vp assumptions.
+// PH60 accepts four semantic More actions; V1 default-only grouping and geometry remain.
 assert.match(shelf,/sectionAction\('bookshelf_settings'[\s\S]*?groupSelectorVisible = !this.groupSelectorVisible/);
 assert.match(shelf,/BookshelfGroupSelector\(/);
 assert.doesNotMatch(shelf,/sectionAction\('bookshelf_search'/);
@@ -56,9 +56,9 @@ assert.match(shelf,/\.bindSheet\(this.actionBook !== undefined[\s\S]*?width: thi
 assert.match(shelf,/return this.shelfContentWidth\(this.isWideViewport\(\)\)/,'single-book sheet uses the same frame as the cover outside edges');
 assert.match(action,/BOOK_ACTION_SHEET_HEIGHT = 270/);assert.match(action,/'编辑分组'.*onEditGroup/);
 assert.match(action,/borderRadius\(\{ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 \}\)/);assert.match(action,/TOK_CARD_BG_HI/);
-for(const [name,value] of [['MENU_WIDTH',176],['POINTER_HEIGHT',12],['ACTION_HEIGHT',50],['ACTION_COUNT',3],['MENU_TRAILING_EXTENSION',11],['MENU_ANCHOR_OVERLAP',5]])assert.match(menu,new RegExp(`const ${name} = ${value}`));
-assert.equal((menu.match(/this.action\(/g)??[]).length,3);
-assert.doesNotMatch(menu,/'分组管理'/);for(const label of ['批量管理','本地导入','书架设置'])assert.ok(menu.includes(label));
+for(const [name,value] of [['MENU_WIDTH',176],['POINTER_HEIGHT',12],['ACTION_HEIGHT',50],['ACTION_COUNT',4],['MENU_TRAILING_EXTENSION',11],['MENU_ANCHOR_OVERLAP',5]])assert.match(menu,new RegExp(`const ${name} = ${value}`));
+assert.equal((menu.match(/this.action\(/g)??[]).length,4);
+assert.doesNotMatch(menu,/'分组管理'/);for(const label of ['批量管理','本地导入','检查更新','书架设置'])assert.ok(menu.includes(label));
 assert.match(menu,/Polygon\(/);assert.match(menu,/Polyline\(/);assert.match(menu,/borderRadius\(16\)/);
 assert.match(menu,/if \(this.reduceMotion\)[\s\S]*?this.panelHeight = MENU_HEIGHT/);
 assert.match(index,/onBookshelfSettingsRequested: \(\): void => this.openBookshelfSettings\(\)/);

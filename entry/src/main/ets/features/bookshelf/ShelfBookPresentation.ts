@@ -29,10 +29,18 @@ export class ShelfBookPresentation {
     return Number.isFinite(value) ? Math.max(0, Math.min(10000, value)) / 100 : 0;
   }
 
-  static visible(books: ShelfBook[], selectedGroup: string): ShelfBook[] {
+  static visible(books: ShelfBook[], selectedGroup: string,
+    readingState: string = 'all', sourceKind: string = 'all'): ShelfBook[] {
     return books.filter((book: ShelfBook): boolean => {
       const group = book.group?.trim() ?? '';
-      return selectedGroup === '' || (selectedGroup === '默认' ? group === '' || group === '默认' : group === selectedGroup);
+      const inGroup = selectedGroup === '' || (selectedGroup === '默认' ? group === '' || group === '默认' : group === selectedGroup);
+      const progress = this.progressPercent(book);
+      const inState = readingState === 'unread' ? progress === 0 :
+        readingState === 'reading' ? progress > 0 && progress < 100 :
+        readingState === 'finished' ? progress === 100 : true;
+      const inKind = sourceKind === 'local' ? book.sourceId === 'local' :
+        sourceKind === 'online' ? book.sourceId !== 'local' : true;
+      return inGroup && inState && inKind;
     });
   }
 }

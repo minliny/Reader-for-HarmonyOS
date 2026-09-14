@@ -31,8 +31,10 @@ export struct BookshelfMultiSelectPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
-  @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
-  @Prop books: ShelfBook[] = [];
+  @StorageLink('readerBookshelfSelectedGroup') @Watch('reconcileSelection') private storedSelectedGroup: string = '';
+  @StorageLink('readerBookshelfReadingFilter') @Watch('reconcileSelection') private readingFilter: string = 'all';
+  @StorageLink('readerBookshelfSourceFilter') @Watch('reconcileSelection') private sourceFilter: string = 'all';
+  @Prop @Watch('reconcileSelection') books: ShelfBook[] = [];
   @Prop initialSelectedKey: string = '';
   @Prop busy: boolean = false;
   onCancel: () => void = (): void => {};
@@ -219,11 +221,7 @@ export struct BookshelfMultiSelectPage {
       .width(74)
       .alignItems(HorizontalAlign.Center)
       .opacity(this.selectedKeys.length > 0 && !this.busy ? 1 : 0.38)
-      .onClick((): void => {
-        if (this.selectedKeys.length > 0 && !this.busy) {
-          this.onRemoveSelected(this.selectedKeys.slice());
-        }
-      });
+      .onClick((): void => this.removeVisibleSelection());
     }
     .width('100%')
     .padding({ top: 12, bottom: this.bottomInset() })
@@ -233,7 +231,21 @@ export struct BookshelfMultiSelectPage {
     .borderRadius({ topLeft: 24, topRight: 24 });
   }
 
+  private reconcileSelection(): void {
+    const visibleKeys = new Set(this.visibleBooks().map((book: ShelfBook): string => this.bookKey(book)));
+    this.selectedKeys = this.selectedKeys.filter((key: string): boolean => visibleKeys.has(key));
+  }
+
+  private removeVisibleSelection(): void {
+    if (this.busy) return;
+    // Protect a click delivered before the Prop watcher has reconciled a
+    // book whose progress/group changed underneath an active filter.
+    this.reconcileSelection();
+    if (this.selectedKeys.length > 0) this.onRemoveSelected(this.selectedKeys.slice());
+  }
+
   private toggleBook(book: ShelfBook): void {
+    if (!this.hasBookKey(this.bookKey(book))) return;
     const key = this.bookKey(book);
     if (this.selectedKeys.includes(key)) {
       this.selectedKeys = this.selectedKeys.filter((candidate: string): boolean => candidate !== key);
@@ -266,7 +278,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private visibleBooks(): ShelfBook[] {
-    return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup);
+    return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup, this.readingFilter, this.sourceFilter);
   }
 
   private bookKey(book: ShelfBook): string {

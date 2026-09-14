@@ -92,6 +92,7 @@ export struct BookshelfEmptyPage {
             anchorRight: this.moreAnchorRight - this.overlayOriginX,
             anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
             reduceMotion: this.reduceMotion,
+            canCheckUpdates: false,
             onBatchManage: (): void => {
               this.moreMenuVisible = false;
               this.onBatchManageRequested();

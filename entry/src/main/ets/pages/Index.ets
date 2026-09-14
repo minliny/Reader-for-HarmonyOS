@@ -639,6 +639,7 @@ struct Index {
           onBookRemoveRequested: (book: ShelfBook): void => this.requestRemoveShelfBook(book),
           onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
           updateRunning: this.bookshelfUpdateRunning,
+          backgroundUpdateRunning: this.bookshelfBackgroundRefreshRunning,
           updateProgressDone: this.bookshelfUpdateDone,
           updateProgressTotal: this.bookshelfUpdateTotal,
         })
@@ -5277,13 +5278,15 @@ struct Index {
       lastChapter: book.lastChapter,
     };
     try {
-      const session = await new RemoteReadingFlowGateway(ReaderRuntimeOwner.current()).openSession(seed);
+      // Both the explicit action and already-throttled automatic candidates
+      // require a fresh catalog, never a prepared/offline admission shortcut.
+      const session = await new RemoteReadingFlowGateway(ReaderRuntimeOwner.current()).openSession(seed, { forceRefresh: true });
       await this.prefetchReadingWindow(session);
     } catch (error) {
       // Per-book failures do not abort remaining bookshelf updates. Existing
       // local TOC/bodies stay authoritative and the next interval retries.
       hilog.warn(DOMAIN, 'Reader',
-        'Bookshelf background update failed for %{private}s: %{private}s',
+        'Bookshelf catalog update failed for %{private}s: %{private}s',
         book.bookId, (error as Error).message);
     }
   }

@@ -102,12 +102,12 @@ assert.doesNotMatch(shelf, /bookDataSource/,
   'SHF-02: cover/list switching must not duplicate the lazy data source');
 assert.match(shelf, /private rebuildShelfProjection\(\)/,
   'SHF-02: group filtering and row projection must be rebuilt once per input change');
-assert.match(shelf, /ShelfBookPresentation\.visible\(this\.books, this\.selectedGroup\)/,
+assert.match(shelf, /ShelfBookPresentation\.visible\(this\.books, this\.selectedGroup, this\.readingFilter, this\.sourceFilter\)/,
   'SHF-02 revised: default-group filtering shares the Core-ordered projection');
-assert.match(shelf, /检查更新/,
-  'SHF-03: the tools row must present a manual shelf-wide update entry');
+assert.match(shelfMoreMenu, /检查更新/,
+  'SHF-03: More must present a manual shelf-wide update entry');
 assert.match(shelf, /onCheckUpdatesRequested/,
-  'SHF-03: the update chip must emit an intent, not run the sweep itself');
+  'SHF-03: the update menu item must emit an intent, not run the sweep itself');
 assert.match(index, /private startManualBookshelfUpdate\(\)/,
   'SHF-03: Index must own the foreground update queue');
 assert.match(index, /onProgress\(completed, books\.length\)/,
@@ -117,7 +117,7 @@ assert.match(index, /bookshelfBackgroundRefreshRunning \|\| this\.bookshelfUpdat
 assert.match(shelf, /onBookGroupRequested/,
   'explicit per-book grouping is isolated from opening the shelf tool');
 assert.doesNotMatch(shelfMoreMenu, /分组管理/,
-  'the settled three-item More menu does not expose the legacy group editor');
+  'the approved four-item More menu does not expose the legacy group editor');
 
 assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
 assert.match(shelf, /Text\(this\.gridProgressLabel\(book\)\)/,

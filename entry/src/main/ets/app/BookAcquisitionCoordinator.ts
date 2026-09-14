@@ -13,7 +13,7 @@ import { decodeRemoteReadingVariables, RemoteReadingGatewayError, classifyRemote
 const PREPARED_SESSION_LIMIT = 32;
 const CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
 type Preparation = { seed: RemoteReadingBookSeed; scope: number; forceRefresh: boolean };
-type BookJob = { promise: Promise<RemoteReadingSession>; priority: BookRequestPriority };
+type BookJob = { promise: Promise<RemoteReadingSession>; priority: BookRequestPriority; forceRefresh: boolean };
 type PreparedSession = { session: RemoteReadingSession; at: number };
 
 export type BookAcquisitionAdmission = {
@@ -154,6 +154,13 @@ export class BookAcquisitionCoordinator {
     const job = this.jobs.get(key);
     if (job !== undefined) {
       if (priority === 'foreground') job.priority = priority;
+      if (options.forceRefresh && !job.forceRefresh) {
+        // A cache-only admission is not a refresh. Let its current consumers
+        // finish, then revalidate owner/source/cancellation and join or start
+        // one actual refresh. Never cancel shared work or clear durable data.
+        await job.promise.catch((_error: Error): void => {});
+        return this.acquireBook(seed, options, priority);
+      }
       return job.promise;
     }
     const ready = this.prepared.get(key);
@@ -162,7 +169,8 @@ export class BookAcquisitionCoordinator {
       this.prepared.set(key, ready);
       return ready.session;
     }
-    const next: BookJob = { priority, promise: Promise.resolve(undefined as unknown as RemoteReadingSession) };
+    const next: BookJob = { priority, forceRefresh: options.forceRefresh === true,
+      promise: Promise.resolve(undefined as unknown as RemoteReadingSession) };
     // The task's cancellation is process-owned. A page guard only controls its
     // subscriber; hiding/removing that page must not cancel a shared catalog.
     next.promise = this.openBook(seed, version, next, options.forceRefresh === true)

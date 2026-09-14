@@ -11,8 +11,8 @@ const state=new BookshelfViewState(); const frames=[]; const calls=[];
 const books=[{sourceId:'source',bookId:'first'},{sourceId:'another',bookId:'same'}];
 let rows=[books]; let offset=345;let itemY=-25;
 function page(){ return Object.assign(new Page(), {
- viewState:state,mounted:true,viewportRestored:true,viewportRestoreGeneration:0,firstVisibleItem:4,
- continueReading:{},filterRowVisible:true,groupSelectorVisible:true,viewModeError:'',viewModeRevision:0,
+ viewState:state,mounted:true,viewportRestored:true,viewportRestoreGeneration:0,firstVisibleItem:3,
+ continueReading:{},filterRowVisible:true,groupSelectorVisible:false,viewModeError:'',viewModeRevision:0,
  storedViewMode:'list',storedSelectedGroup:'默认',
  shelfScroller:{currentOffset:()=>({yOffset:offset}),getItemRect:()=>({y:itemY}),
   scrollTo:args=>calls.push(['offset',args.yOffset]),scrollToIndex:index=>{calls.push(['index',index]);itemY=0;},scrollBy:(_x,y)=>calls.push(['by',y])},
@@ -22,13 +22,13 @@ function page(){ return Object.assign(new Page(), {
 });}
 const first=page(); first.saveShelfViewport();first.aboutToDisappear();
 assert.equal(state.anchorKey,JSON.stringify(['source','first'])); assert.equal(state.anchorItemY,-25);
-assert.equal(state.filterExpanded,true);assert.equal(state.groupExpanded,true);assert.equal(state.anchorOffset,345);
+assert.equal(state.filterExpanded,true);assert.equal(state.groupExpanded,false);assert.equal(state.anchorOffset,345);
 const returned=page();returned.filterRowVisible=false;returned.groupSelectorVisible=false;returned.aboutToAppear();
-assert.equal(returned.viewMode,'list');assert.equal(returned.selectedGroup,'默认');assert.equal(returned.filterRowVisible,true);assert.equal(returned.groupSelectorVisible,true);
+assert.equal(returned.viewMode,'list');assert.equal(returned.selectedGroup,'默认');assert.equal(returned.filterRowVisible,true);assert.equal(returned.groupSelectorVisible,false);
 // Added books before the saved identity must not turn the restore into a raw offset.
 rows=[[{sourceId:'new',bookId:'first'}],books];returned.restoreShelfViewport();frames.shift()();
-assert.deepEqual(calls,[['index',5]]);returned.saveShelfViewport();assert.equal(state.anchorItemY,-25);
-frames.shift()();assert.deepEqual(calls,[['index',5],['by',25]]);assert.equal(returned.viewportRestored,true);
+assert.deepEqual(calls,[['index',4]]);returned.saveShelfViewport();assert.equal(state.anchorItemY,-25);
+frames.shift()();assert.deepEqual(calls,[['index',4],['by',25]]);assert.equal(returned.viewportRestored,true);
 // Late layout callbacks after leaving cannot mutate the next route's viewport.
 calls.length=0;returned.restoreShelfViewport();returned.aboutToDisappear();frames.shift()();assert.deepEqual(calls,[]);
 const missing=page();rows=[];missing.restoreShelfViewport();frames.shift()();assert.deepEqual(calls,[['offset',345]]);

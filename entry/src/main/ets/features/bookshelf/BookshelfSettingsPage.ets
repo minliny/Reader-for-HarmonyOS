@@ -3,7 +3,7 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_INK, TOK_MUTED, TOK_GREEN, TOK_CARD_BG, TOK_PAPER, TOK_BORDER } from '../common/ReaderTokens';
 import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';
 
-/** Shared destination for More and Settings > Bookshelf and search settings. */
+/** Persistent bookshelf preferences, shared by More and the settings route. */
 @Component
 export struct BookshelfSettingsPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -26,7 +26,7 @@ export struct BookshelfSettingsPage {
       Row() {
         Text('返回').fontSize(14).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).width(54).height(44)
           .onClick((): void => this.onBack());
-        Text('书架与搜索设置').layoutWeight(1).fontSize(20).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        Text('书架设置').layoutWeight(1).fontSize(20).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       }.width('100%');
       Column({ space: 16 }) {
         Row() {

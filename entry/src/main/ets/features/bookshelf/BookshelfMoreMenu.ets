@@ -5,7 +5,7 @@ import { registerReaderFonts } from '../common/ReaderFonts';
 const MENU_WIDTH = 176;
 const POINTER_HEIGHT = 12;
 const ACTION_HEIGHT = 50;
-const ACTION_COUNT = 3;
+const ACTION_COUNT = 4;
 const ACTIONS_HEIGHT = ACTION_HEIGHT * ACTION_COUNT;
 const MENU_HEIGHT = POINTER_HEIGHT + ACTIONS_HEIGHT;
 const MENU_COLLAPSED_HEIGHT = POINTER_HEIGHT + ACTION_HEIGHT;
@@ -35,6 +35,14 @@ export struct BookshelfMoreMenu {
   onBatchManage: () => void = (): void => {};
   onLocalImport: () => void = (): void => {};
   onBookshelfSettings: () => void = (): void => {};
+  onCheckUpdates: () => void = (): void => {};
+  @Prop canCheckUpdates: boolean = false;
+  @Prop updateRunning: boolean = false;
+  @Prop backgroundUpdateRunning: boolean = false;
+  @Prop updateProgressDone: number = 0;
+  @Prop updateProgressTotal: number = 0;
+  @State private overlayWidth: number = 0;
+  @State private overlayHeight: number = 0;
   onDismiss: () => void = (): void => {};
   @State private panelHeight: number = MENU_COLLAPSED_HEIGHT;
   @State private closeInFlight: boolean = false;
@@ -60,8 +68,8 @@ export struct BookshelfMoreMenu {
 
       Stack({ alignContent: Alignment.TopStart }) {
           Row()
-            .width(MENU_WIDTH)
-            .height(this.panelHeight - POINTER_HEIGHT)
+            .width(this.menuWidth())
+            .height(Math.max(0, this.visiblePanelHeight() - POINTER_HEIGHT))
             .backgroundColor(readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appThemeScheme))
             .border({ width: 1, color: readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appThemeScheme) })
             .borderRadius(16)
@@ -72,7 +80,7 @@ export struct BookshelfMoreMenu {
             .points(POINTER_POINTS)
             .fill(readerAppColor('app.BookshelfMoreMenu.build.fill.FFFFFCF8', this.appThemeScheme))
             .stroke(Color.Transparent)
-            .position({ x: 131, y: 0.5 });
+            .position({ x: this.pointerX(), y: 0.5 });
 
           // Cover the rounded body's top border beneath the pointer so the
           // pointer and body keep the reference asset's continuous outline.
@@ -80,7 +88,7 @@ export struct BookshelfMoreMenu {
             .width(24)
             .height(2)
             .backgroundColor(readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appThemeScheme))
-            .position({ x: 131, y: 11.5 });
+            .position({ x: this.pointerX(), y: 11.5 });
 
           Polyline({ width: 24, height: POINTER_HEIGHT + 1 })
             .points(POINTER_POINTS)
@@ -88,71 +96,120 @@ export struct BookshelfMoreMenu {
             .stroke(readerAppColor('app.BookshelfMoreMenu.build.stroke.FFE3DED6', this.appThemeScheme))
             .strokeWidth(1)
             .strokeLineJoin(LineJoinStyle.Round)
-            .position({ x: 131, y: 0.5 });
+            .position({ x: this.pointerX(), y: 0.5 });
 
-        Stack({ alignContent: Alignment.TopStart }) {
+        Scroll() {
           Column() {
-            this.action((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_batch_theme_night') : $r('app.media.bookshelf_more_batch')), '批量管理', true,
-              (): void => this.onBatchManage());
-            this.action((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_import_theme_night') : $r('app.media.bookshelf_more_import')), '本地导入', true,
-              (): void => this.onLocalImport());
-            this.action((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_settings_theme_night') : $r('app.media.bookshelf_more_settings')), '书架设置', false,
-              (): void => this.onBookshelfSettings());
+            this.action('batch', true, (): void => this.onBatchManage());
+            this.action('import', true, (): void => this.onLocalImport());
+            this.action('update', true, (): void => this.onCheckUpdates());
+            this.action('settings', false, (): void => this.onBookshelfSettings());
           }
-          .width(MENU_WIDTH)
+          .width(this.menuWidth())
           .height(ACTIONS_HEIGHT);
         }
-        .width(MENU_WIDTH)
-        .height(Math.max(0, this.panelHeight - POINTER_HEIGHT))
+        .width(this.menuWidth())
+        .height(Math.max(0, this.visiblePanelHeight() - POINTER_HEIGHT))
         .clip(true)
+        .scrollBar(BarState.Auto)
         .position({ x: 0, y: POINTER_HEIGHT });
       }
-      .width(MENU_WIDTH)
-      .height(MENU_HEIGHT)
+      .width(this.menuWidth())
+      .height(this.visiblePanelHeight())
+      .visibility(this.overlayWidth > 0 && this.overlayHeight > 0 ? Visibility.Visible : Visibility.Hidden)
       .clip(false)
       .position({
-        x: this.anchorRight + MENU_TRAILING_EXTENSION - MENU_WIDTH,
-        y: this.anchorBottom - MENU_ANCHOR_OVERLAP,
+        x: this.menuX(),
+        y: this.menuTop(),
       })
       .onAppear((): void => this.expandMenu());
     }
     .width('100%')
     .height('100%')
+    .onAreaChange((_oldValue: Area, area: Area): void => {
+      this.overlayWidth = Math.max(0, Number(area.width));
+      this.overlayHeight = Math.max(0, Number(area.height));
+    })
     .zIndex(20);
   }
 
   @Builder
-  private action(icon: Resource, label: string, showDivider: boolean, action: () => void) {
+  private action(key: string, showDivider: boolean, action: () => void) {
     Stack({ alignContent: Alignment.TopStart }) {
       Row({ space: 16 }) {
-        Image(icon)
+        Image(this.actionIcon(key))
           .width(24)
-          .height(24);
+          .height(24).opacity(this.actionEnabled(key) ? 1 : 0.45);
 
-        Text(label)
+        Text(this.actionLabel(key))
           .fontFamily('ReaderNotoSansSC')
           .fontWeight(FontWeight.Medium)
           .fontSize(15)
           .lineHeight(22)
-          .fontColor(readerAppColor('app.BookshelfMoreMenu.action.fontColor.FF1F1B17', this.appThemeScheme))
-          .maxLines(1);
+          .fontColor(this.actionEnabled(key) ? readerAppColor('app.BookshelfMoreMenu.action.fontColor.FF1F1B17', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
       }
-      .width(MENU_WIDTH)
+      .width(this.menuWidth())
       .height(ACTION_HEIGHT)
       .padding({ left: 18, right: 16 });
 
       if (showDivider) {
         Divider()
-          .width(144)
+          .width(Math.max(0, this.menuWidth() - 32))
           .height(1)
           .color(readerAppColor('app.BookshelfMoreMenu.action.color.FFE8E2DA', this.appThemeScheme))
           .position({ x: 16, y: ACTION_HEIGHT - 1 });
       }
     }
-    .width(MENU_WIDTH)
+    .width(this.menuWidth())
     .height(ACTION_HEIGHT)
     .backgroundColor(Color.Transparent)
-    .onClick((): void => this.commitAction(action));
+    .enabled(this.actionEnabled(key))
+    .accessibilityText(key === 'update' && !this.canCheckUpdates ? '检查更新，没有在线书籍' : this.actionLabel(key))
+    .onClick((): void => { if (this.actionEnabled(key)) this.commitAction(action); });
+  }
+
+  private actionEnabled(key: string): boolean {
+    return !this.closeInFlight && (key !== 'update' || (this.canCheckUpdates && !this.updateRunning && !this.backgroundUpdateRunning));
+  }
+
+  private actionLabel(key: string): string {
+    if (key === 'batch') return '批量管理';
+    if (key === 'import') return '本地导入';
+    if (key === 'settings') return '书架设置';
+    if (this.updateRunning) return `检查中 ${this.updateProgressDone}/${this.updateProgressTotal}`;
+    return this.backgroundUpdateRunning ? '正在自动检查' : '检查更新';
+  }
+
+  private actionIcon(key: string): Resource {
+    if (key === 'batch') return this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_batch_theme_night') : $r('app.media.bookshelf_more_batch');
+    if (key === 'import') return this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_import_theme_night') : $r('app.media.bookshelf_more_import');
+    if (key === 'update') return this.appThemeScheme === 'night' ? $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh');
+    return this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_settings_theme_night') : $r('app.media.bookshelf_more_settings');
+  }
+
+  // The parent is already inside Index's safe area and MainTabShell's nav.
+  // Clamp in its measured local frame; never add the system insets twice.
+  private menuWidth(): number {
+    return this.overlayWidth > 0 ? Math.min(MENU_WIDTH, Math.max(0, this.overlayWidth - 16)) : MENU_WIDTH;
+  }
+
+  private menuX(): number {
+    const preferred = this.anchorRight + MENU_TRAILING_EXTENSION - this.menuWidth();
+    return Math.max(8, Math.min(preferred, this.overlayWidth - this.menuWidth() - 8));
+  }
+
+  private menuTop(): number {
+    return Math.max(0, Math.min(this.anchorBottom - MENU_ANCHOR_OVERLAP,
+      this.overlayHeight - MENU_COLLAPSED_HEIGHT - 8));
+  }
+
+  private visiblePanelHeight(): number {
+    return Math.max(0, Math.min(this.panelHeight, this.overlayHeight - this.menuTop() - 8));
+  }
+
+  private pointerX(): number {
+    return Math.max(0, Math.min(this.menuWidth() - 24, this.anchorRight - 22 - this.menuX() - 12));
   }
 
   private expandMenu(): void {
