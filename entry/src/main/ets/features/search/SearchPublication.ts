@@ -1,4 +1,4 @@
-import type { SearchPresentation } from './SearchPage';
+import type { SearchPresentation } from './SearchPresentation';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 
 /** Navigation-owned immutable snapshots. Never pass the payload through @Prop:

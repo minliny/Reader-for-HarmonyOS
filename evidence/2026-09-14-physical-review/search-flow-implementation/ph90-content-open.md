@@ -111,3 +111,16 @@ node --experimental-strip-types tools/test-reader-content-search-focus.mjs
 ```
 
 对应输出：`ph90-search-open-native-list-final.jsonl`、`ph90-search-open-native-list-baseline-recheck.jsonl`、`ph90-search-publication-native-list-final.log`、`ph90-search-focus-native-list.log`。首次 open-cost 新 fixture 把 SDK 编译放在 find 计数区间里，空集也录到 2351 次编译器调用而失败；`ph90-search-open-native-list-first.jsonl` 保留。修正方式是把真实 SDK 编译移到生产调用计数之前，未改变生产查找断言或可见行约束。
+
+
+## 正式 HAP 模块边界失败与最小修复
+
+`/private/tmp/ph77-91-hap-build.log` 的 CompileArkTS 明确报错：`ReaderContentSearchPublication.ts:1` 类型引用 `ReaderQuickSearchPanel.ets`，`ReaderPageChromeTextMeasurement.ts:2` 类型引用 `ReaderTypography.ets`；Harmony 禁止 TS 导入 ETS，即使 type-only 也不能沿此边界。此前 Node 擦除类型后执行及 SDK Builder 方法探针无法代表完整 HAP 模块检查，这次失败保留。
+
+本 owner 把这两个平台 helper **原样迁至 `.ets`**。测量模块同时能在所属 ArkTS 域使用原生 Size/UIContext 类型。没有删类型、放宽检查、改状态模型或复制测量算法；所有生产调用都是无扩展名导入，无需改动。另两处 SearchPublication/DataSource 问题由各自 owner 修复，不计入本切片。
+
+5 个引用测试只更新精确模块路径：读取指定 `.ets`，由 Node 原生 `stripTypeScriptTypes` 擦除 type-only imports 后加载同一生产模块正文，不允许通配加载任意 ETS，也不替换实现。原真实 SDK Builder/Prop 链仍执行，未放宽性能、几何、数据通知或数据保护断言。
+
+定向重跑 6 项全部 exit 0：open-cost、publication、focus、replace-host、page-chrome、bookmark-top-info。输出为本目录 `ph90-ets-reader-*.log`，文件 SHA 与清单在 `ph90-ets-module-receipt.json`。此轮组件 SHA 为 `b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159`，仍有 2000 条/指定 8 行、21 采样对象 Prop copy=0，metadata/append/idle、20 组顶栏几何、真实 Stage/slot/Chrome 属性链通过。时长随并行负载变化，前述性能原始记录没有覆盖。
+
+未运行 HAP、Native、设备或 Git 操作；正式 HAP 重建是 root 后续门禁，本处不声称构建已通过。

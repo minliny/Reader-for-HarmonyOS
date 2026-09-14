@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { ReaderContentSearchPublication } from '../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ts';
+// This exact platform module contains only type imports; execute its real body.
+const { ReaderContentSearchPublication } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
+  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
 import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts';
 import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
 import { searchListDependencies, searchListMethods } from './lib/reader-content-search-list-probe.mjs';

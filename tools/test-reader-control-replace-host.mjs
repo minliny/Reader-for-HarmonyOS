@@ -15,7 +15,9 @@ const { ReaderControlReplaceGatewayError } =
 const { copyReaderControlSessionState } =
   await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
 const {readerControlHostClosing}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const {ReaderContentSearchPublication}=await import('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ts');
+// This exact platform module contains only type imports; execute its real body.
+const { ReaderContentSearchPublication } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
+  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
 const names = ['openQuickReplace', 'controlReplaceCurrent', 'reloadControlReplace', 'runControlReplaceMutation',

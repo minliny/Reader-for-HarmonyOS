@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 
@@ -15,6 +16,44 @@ const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
 const ts = require(`${sdkRoot}/node_modules/typescript`);
 const compilerOptions = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
+// Check the actual production .ts modules with the SDK TypeScript checker.
+// Supporting gateway declarations are type-only test boundaries; the page's
+// negative-control declaration keeps the actual SDK-resolved .ets extension.
+const checker = require(`${sdkRoot}/lib/ets_checker.js`);
+const publicationPath = fileURLToPath(new URL('features/search/SearchPublication.ts', prefix));
+const presentationPath = fileURLToPath(new URL('features/search/SearchPresentation.ts', prefix));
+const pagePath = fileURLToPath(new URL('features/search/SearchPage.ets', prefix));
+const boundaryDiagnostics = previousImport => {
+  const options = { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS,
+    moduleResolution: ts.ModuleResolutionKind.NodeJs, strict: true, noEmit: true,
+    allowNonTsExtensions: true, needDoArkTsLinter: true, isCompatibleVersion: false };
+  const sources = new Map([
+    [publicationPath, previousImport ? read('features/search/SearchPublication.ts')
+      .replace("from './SearchPresentation'", "from './SearchPage'") : read('features/search/SearchPublication.ts')],
+    [presentationPath, read('features/search/SearchPresentation.ts')],
+    [fileURLToPath(new URL('features/search/SearchGateway.ts', prefix)),
+      'export interface SearchBook {} export interface SearchResultDelta {}'],
+    [fileURLToPath(new URL('app/ReaderCoreGateway.ts', prefix)), 'export interface ShelfBook {}'],
+    [pagePath, 'export type { SearchPresentation } from "./SearchPresentation";'],
+  ]);
+  const host = ts.createCompilerHost(options);
+  const getSourceFile = host.getSourceFile;
+  host.getSourceFile = (name, languageVersion, ...rest) => sources.has(name)
+    ? ts.createSourceFile(name, sources.get(name), languageVersion, true,
+      name.endsWith('.ets') ? ts.ScriptKind.ETS : ts.ScriptKind.TS)
+    : getSourceFile(name, languageVersion, ...rest);
+  const originalResolution = compilerOptions.moduleResolution;
+  try {
+    compilerOptions.moduleResolution = ts.ModuleResolutionKind.NodeJs;
+    host.resolveModuleNames = (names, from) => checker.resolveModuleNames(names, from);
+    const program = ts.createProgram([publicationPath, presentationPath], options, host);
+    return program.getSyntacticDiagnostics().concat(program.getSemanticDiagnostics());
+  } finally { compilerOptions.moduleResolution = originalResolution; }
+};
+const formerDiagnostics = boundaryDiagnostics(true);
+assert.equal(formerDiagnostics.length, 1, 'negative control has exactly one SDK diagnostic');
+assert.equal(formerDiagnostics[0].code, 28017, 'SDK rejects TS→ETS type imports');
+assert.deepEqual(boundaryDiagnostics(false), [], 'SDK accepts actual pure-TS publication/presentation modules');
 const parse = source => ts.createSourceFile('/tmp/SearchPublicationBoundary.ets', source,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, compilerOptions);
 const pageSource = read('features/search/SearchPage.ets'), indexSource = read('pages/Index.ets');
@@ -184,7 +223,7 @@ assert.ok(remounted.presentation.results.every(book => book.searchRequestId === 
 assert.deepEqual(nativeRequests, []);
 const report = {
   scope: runtime.source,
-  sourceSha256: Object.fromEntries(['features/search/SearchPublication.ts', 'features/search/SearchPage.ets',
+  sourceSha256: Object.fromEntries(['features/search/SearchPublication.ts', 'features/search/SearchPresentation.ts', 'features/search/SearchPage.ets',
     'features/search/SearchOrchestrator.ets', 'pages/Index.ets'].map(name => [name, createHash('sha256').update(read(name)).digest('hex')])),
   queryBooks: 1000, progressOnly: { retainedBookReferences: 1000, newGroups: 0, changedGroups: 0,
     parentUpdates: progressUpdates.length, copiedObjectProps: progressCopies.filter(copy => copy.object).length,
@@ -195,8 +234,10 @@ const report = {
   legacyCounterexample: { copiedObjects, copiedSlots, newGroups: legacyNewGroups },
   shelfPublication: 'add/remove reflected through scalar', newQueryAndRemount: 'current exact payload',
   nativeFrameStability: 'NOT MEASURED',
+  sdkImportBoundary: { previousTsToEtsRejected: true, productionPureTsAccepted: true },
 };
 if (process.argv.includes('--record')) writeFileSync(process.argv[process.argv.indexOf('--record') + 1], JSON.stringify(report, null, 2) + '\n');
 console.log('PASS PH77/79 actual SDK Index→SearchPage scalar reset→Watch→grouping→tracked status Text: 1000 refs, 0 new/change groups, 0 copied DTO Props');
 console.log(`PASS legacy SDK deep-copy counterexample: ${copiedObjects} objects/${copiedSlots} slots, ${legacyNewGroups} new groups`);
 console.log('PASS actual shelf callback, fresh query and compiled remount retain current payload; native frames are not measured');
+console.log('PASS actual SDK import guard rejects old TS→ETS edge and accepts pure-TS presentation types');

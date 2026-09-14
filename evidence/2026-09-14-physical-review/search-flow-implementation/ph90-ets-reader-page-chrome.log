@@ -1,0 +1,7 @@
+reader page chrome dynamic layout: PASS
+page chrome/native snapshot invalidation: PASS
+page chrome complete layout reuse and safe-area/session invalidation: PASS
+mounted slot revision delivery gates current/adjacent chrome capture: PASS
+production texture refresh cache matrix: no idle frame waits; requested direction first; expensive captures remain spread: PASS
+(node:38080) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

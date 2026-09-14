@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { searchListFixture, searchListRows, searchListSources, searchListTouches,
-  searchListSource, assertSearchListBuilderGeometry } from './lib/reader-content-search-list-probe.mjs';
-import { ReaderContentSearchDataSource } from '../entry/src/main/ets/features/reading/ReaderContentSearchDataSource.ts';
+  searchListSource, searchListDependencies, assertSearchListBuilderGeometry } from './lib/reader-content-search-list-probe.mjs';
 import * as list from '../entry/src/main/ets/features/reading/ReaderControlSearchListProjection.ts';
 import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
 const near = (a, b, why) => assert.ok(Math.abs(a - b) < 1e-6, `${why}: ${a} != ${b}`);
+const { ReaderContentSearchDataSource } = searchListDependencies;
 assertSearchListBuilderGeometry();
 for (const [from, to, expected] of [
   ['.position({ x: this.frame().results.x, y: this.frame().results.y }).clip(true)',

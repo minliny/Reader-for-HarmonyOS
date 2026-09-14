@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
+import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -9,7 +10,9 @@ import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlS
 import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
 import * as motion from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
 import { splitReaderSearchSnippet } from '../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts';
-import { ReaderContentSearchPublication } from '../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ts';
+// This exact platform module contains only type imports; execute its real body.
+const { ReaderContentSearchPublication } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
+  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
 import { searchListDependencies, searchListMethods, searchListRowMembers, searchListLazyRequests } from './lib/reader-content-search-list-probe.mjs';
 
 const file=new URL('../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets',import.meta.url);

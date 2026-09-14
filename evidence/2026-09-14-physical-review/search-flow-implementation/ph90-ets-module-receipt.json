@@ -1,0 +1,48 @@
+{
+  "scope": "two platform modules moved unchanged to ETS; precise test import adapters",
+  "modules": [
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets",
+      "sha256": "5fdaa52eb7c0441bcad937befb0a045f39415e0bc598a1f436b8b9d47f5056d8",
+      "oldTsAbsent": true
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ets",
+      "sha256": "0079ec44b17c17b7287fcf92b2671c8b51355403d6982353548e77fdb006f7a8",
+      "oldTsAbsent": true
+    }
+  ],
+  "tests": [
+    {
+      "file": "tools/test-reader-content-search-open-cost.mjs",
+      "exitCode": 0,
+      "log": "ph90-ets-reader-content-search-open-cost.log"
+    },
+    {
+      "file": "tools/test-reader-content-search-publication.mjs",
+      "exitCode": 0,
+      "log": "ph90-ets-reader-content-search-publication.log"
+    },
+    {
+      "file": "tools/test-reader-content-search-focus.mjs",
+      "exitCode": 0,
+      "log": "ph90-ets-reader-content-search-focus.log"
+    },
+    {
+      "file": "tools/test-reader-control-replace-host.mjs",
+      "exitCode": 0,
+      "log": "ph90-ets-reader-control-replace-host.log"
+    },
+    {
+      "file": "tools/test-reader-page-chrome.mjs",
+      "exitCode": 0,
+      "log": "ph90-ets-reader-page-chrome.log"
+    },
+    {
+      "file": "tools/test-reader-bookmark-top-info.mjs",
+      "exitCode": 0,
+      "log": "ph90-ets-reader-bookmark-top-info.log"
+    }
+  ],
+  "formalHap": "root-owned subsequent gate; not run by this agent"
+}

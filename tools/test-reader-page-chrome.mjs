@@ -6,7 +6,9 @@ import {
   READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
 } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
-import { measureReaderPageChromeText } from '../entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ts';
+// This exact platform module contains only type imports; execute its real body.
+const { measureReaderPageChromeText } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
+  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ets', import.meta.url), 'utf8'))));
 import {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,

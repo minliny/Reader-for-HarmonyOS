@@ -1,0 +1,10 @@
+{
+  "status": "initial probe failed; corrected without changing production scope",
+  "sdkEntry": "fast_build/ark_compiler/check_import_module.checkIfJsImportingArkts",
+  "assertion": "actual SDK rejects the former TS\u2192ETS type import",
+  "expectedDiagnosticCount": 1,
+  "actualDiagnosticCount": 0,
+  "cause": "This SDK post-emitter function only checks .js/.cjs/.mjs module IDs, so a .ts ID does not execute its guard.",
+  "replacement": "Use SDK TypeScript semantic checker with needDoArkTsLinter=true. Exact old import has one diagnostic28017; actual new production TS models have zero diagnostics.",
+  "existingBoundaryAssertions": "All prior real SDK component/property tests remain unchanged."
+}

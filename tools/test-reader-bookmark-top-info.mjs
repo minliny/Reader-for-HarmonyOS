@@ -4,7 +4,9 @@ import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module'
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as chromeLayout from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
-import { measureReaderPageChromeText, readerPageChromeTextMeasurements } from '../entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ts';
+// This exact platform module contains only type imports; execute its real body.
+const { measureReaderPageChromeText, readerPageChromeTextMeasurements } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
+  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ets', import.meta.url), 'utf8'))));
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import * as gesture from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
 registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
