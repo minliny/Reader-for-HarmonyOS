@@ -621,11 +621,11 @@ export struct ReaderControlTtsContent {
       .backgroundColor(kind === 'stop' ? readerAppColor('TOK_TTS_CLAY_SOFT', this.appScheme) : Color.Transparent)
       .border({ width: kind === 'stop' ? 0.5 : 0, color: readerAppColor('TOK_TTS_CLAY_LINE', this.appScheme) }).borderRadius(999)
       .enabled(this.sharedInput() && !this.serviceBusy && !(this.onlineServicePage() && !this.isHttpEngineSelected()) && (kind === 'toggle' ?
-        this.state.status !== 'unavailable' && this.state.status !== 'stopping' : this.hasActiveQueue()))
-      .opacity((kind === 'toggle' ? this.state.status !== 'unavailable' : this.hasActiveQueue()) ? 1 : 0.42)
+        this.state.status !== 'stopping' : this.hasActiveQueue()))
+      .opacity((kind === 'toggle' || this.hasActiveQueue()) ? 1 : 0.42)
       .accessibilityText(this.controlText(kind)).onClick((): void => {
         if (!this.sharedInput() || this.serviceBusy || (this.onlineServicePage() && !this.isHttpEngineSelected())) return;
-        if (kind === 'toggle' && (this.state.status === 'unavailable' || this.state.status === 'stopping')) return;
+        if (kind === 'toggle' && this.state.status === 'stopping') return;
         if (kind !== 'toggle' && !this.hasActiveQueue()) return;
         if (kind === 'previous') this.onPrevious(); else if (kind === 'next') this.onNext();
         else if (kind === 'stop') this.onStop(); else this.onToggle();
@@ -1142,7 +1142,7 @@ export struct ReaderControlTtsContent {
     if (kind === 'previous') return '上一句';
     if (kind === 'next') return '下一句';
     if (kind === 'stop') return '停止朗读';
-    if (kind === 'toggle' && (this.state.status === 'error' || this.state.status === 'failed')) return '重试朗读';
+    if (kind === 'toggle' && (this.state.status === 'error' || this.state.status === 'failed' || this.state.status === 'unavailable')) return '重试朗读';
     return this.isActivelySpeaking() ? '暂停朗读' : '开始或继续朗读';
   }
 

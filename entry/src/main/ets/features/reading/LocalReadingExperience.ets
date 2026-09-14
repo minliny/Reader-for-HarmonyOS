@@ -1131,6 +1131,8 @@ export struct ReadingExperience {
   @State private ttsPerson: number = 0;
   /** Latest user-intent generation for transactional TTS preference writes. */
   private ttsPreferenceMutationGeneration: number = 0;
+  /** A late initial config must not replace a newer rate/engine choice. */
+  private ttsConfigMutationGeneration: number = 0;
   @State private pageChromeClockText: string = formatReaderPageClock(Date.now());
   @State private sessionCapsuleMeasuredWidth: number = 0;
   @State private sessionCapsuleMeasuredHeight: number = READER_SESSION_CAPSULE_HEIGHT;
@@ -1410,7 +1412,9 @@ export struct ReadingExperience {
   private controlDirectoryDataRetained: boolean = false;
   private lastCommittedProgress: ReadingCommit | undefined = undefined;
   private ttsInitialization: Promise<boolean> | undefined = undefined;
+  private ttsPresentationMetadata: Promise<void> | undefined = undefined;
   private ttsAvailabilityResolved: boolean = false;
+  private ttsWarmupScheduled: boolean = false;
   private chineseConversionLoaded: boolean = false;
   private readerSettingsLoaded: boolean = false;
   /** Layout facts admitted for the last window-metrics revision. */
@@ -1496,7 +1500,9 @@ export struct ReadingExperience {
     this.pendingControlSelectionRetry = undefined;
     this.controlSelectionReconciliationInFlight = false;
     this.ttsInitialization = undefined;
+    this.ttsPresentationMetadata = undefined;
     this.ttsAvailabilityResolved = false;
+    this.ttsWarmupScheduled = false;
     this.chineseConversionLoaded = false;
     this.readerSettingsLoaded = false;
     registerReaderFonts(this.getUIContext().getFont());
@@ -1557,7 +1563,9 @@ export struct ReadingExperience {
     this.ttsGateway = undefined;
     this.ttsHttpGateway = undefined;
     this.ttsInitialization = undefined;
+    this.ttsPresentationMetadata = undefined;
     this.ttsAvailabilityResolved = false;
+    this.ttsWarmupScheduled = false;
     this.previousChapterMeasurement = undefined;
     this.pendingControlSelection = undefined;
     this.pendingControlSelectionOrigin = undefined;
@@ -5807,19 +5815,42 @@ export struct ReadingExperience {
     return projection;
   }
 
-  private initializeTtsSession(lifecycleToken: number): Promise<boolean> {
-    if (this.ttsInitialization !== undefined) {
+  private scheduleTtsPresentationWarmup(): void {
+    if (!this.isSessionActive(this.lifecycleToken) || this.phase !== 'ready' ||
+      this.ttsWarmupScheduled || this.ttsInitialization !== undefined || this.ttsCoordinator !== undefined) return;
+    const lifecycleToken = this.lifecycleToken;
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    this.ttsWarmupScheduled = true;
+    // First-page admission/observers finish before any optional TTS work.
+    // This is one frame callback per reader owner, never a per-frame publisher.
+    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+      if (!this.isMountedToken(lifecycleToken) || sourceId !== this.sourceId || bookId !== this.bookId) return;
+      this.ttsWarmupScheduled = false;
+      if (!this.isSessionActive(lifecycleToken) || this.phase !== 'ready') return;
+      void this.initializeTtsSession(lifecycleToken);
+    }));
+  }
+
+  private initializeTtsSession(lifecycleToken: number, retry: boolean = false): Promise<boolean> {
+    if (this.ttsInitialization !== undefined && (!retry || !this.ttsAvailabilityResolved)) {
       return this.ttsInitialization;
     }
+    if (!this.isSessionActive(lifecycleToken)) return Promise.resolve(false);
+    const configGeneration = this.ttsConfigMutationGeneration;
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    const isOwnerCurrent = (): boolean => this.isSessionActive(lifecycleToken) &&
+      sourceId === this.sourceId && bookId === this.bookId;
     const owner = ReaderRuntimeOwner.current();
-    const gateway = new ReaderTtsGateway(owner);
-    const httpGateway = new ReaderHttpTtsGateway(owner);
-    const coordinator = new ReaderTtsSessionCoordinator(
+    const gateway = this.ttsGateway ?? new ReaderTtsGateway(owner);
+    const httpGateway = this.ttsHttpGateway ?? new ReaderHttpTtsGateway(owner);
+    const coordinator = this.ttsCoordinator ?? new ReaderTtsSessionCoordinator(
       gateway,
       owner.getTtsHost(),
       async (progress: ReaderTtsProgressCommit): Promise<void> => this.commitTtsProgress(progress, lifecycleToken),
       (state: ReaderTtsState): void => {
-        if (this.isMountedToken(lifecycleToken) && this.ttsCoordinator === coordinator) {
+        if (isOwnerCurrent() && this.ttsCoordinator === coordinator) {
           this.ttsState = state;
           this.onSessionLaunchTtsState(state);
         }
@@ -5830,34 +5861,46 @@ export struct ReadingExperience {
     this.ttsGateway = gateway;
     this.ttsHttpGateway = httpGateway;
     this.ttsCoordinator = coordinator;
+    this.ttsAvailabilityResolved = false;
     // Voice enumeration and HTTP-engine management populate the full settings
     // surface, but neither is required to start foreground system speech. Load
     // them independently so the first play tap is not held behind slow platform
     // discovery on a physical device.
-    void this.loadTtsPresentationMetadata(owner, coordinator, httpGateway, lifecycleToken);
+    if (this.ttsPresentationMetadata === undefined) {
+      const metadata = this.loadTtsPresentationMetadata(owner, coordinator, httpGateway, lifecycleToken);
+      this.ttsPresentationMetadata = metadata;
+      void metadata.then((): void => {
+        if (this.ttsPresentationMetadata === metadata) this.ttsPresentationMetadata = undefined;
+      });
+    }
     const initialization = coordinator.probeAvailability()
       .then(async (available: boolean): Promise<boolean> => {
-        if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return false;
+        if (!isOwnerCurrent() || this.ttsCoordinator !== coordinator) return false;
         const config = coordinator.getProbedConfig();
-        this.ttsConfig = config;
-        this.ttsEngine = config?.engine ?? 'system';
-        if (available && config !== undefined) {
+        if (configGeneration === this.ttsConfigMutationGeneration) {
+          this.ttsConfig = config;
+          this.ttsEngine = config?.engine ?? 'system';
+        }
+        if (available && config !== undefined && configGeneration === this.ttsConfigMutationGeneration) {
           try {
             // Prefer the versioned percentage field; legacy rate remains a
             // compatibility fallback and must not turn 0.75 into 0.8.
             await coordinator.setRate(this.multiplierForTtsConfig(config));
           } catch (error) {
-            this.logTtsFailure('initial-rate', error as Error);
+            if (isOwnerCurrent() && this.ttsCoordinator === coordinator) {
+              this.logTtsFailure('initial-rate', error as Error);
+            }
           }
         }
+        if (!isOwnerCurrent() || this.ttsCoordinator !== coordinator) return false;
         this.ttsAvailabilityResolved = true;
         return available;
       })
       .catch((error: Error): boolean => {
-        if (this.isMountedToken(lifecycleToken) && this.ttsCoordinator === coordinator) {
+        if (isOwnerCurrent() && this.ttsCoordinator === coordinator) {
           this.ttsAvailabilityResolved = true;
+          this.logTtsFailure('initialization', error);
         }
-        this.logTtsFailure('initialization', error);
         return false;
       });
     this.ttsInitialization = initialization;
@@ -5870,31 +5913,38 @@ export struct ReadingExperience {
     httpGateway: ReaderHttpTtsGateway,
     lifecycleToken: number,
   ): Promise<void> {
-    let httpEngines: ReaderHttpTtsConfig[] = [];
-    let preferences: ReaderTtsPreferencesSnapshot | undefined = undefined;
-    let voiceOptions: ReaderTtsVoiceOption[] = [];
-    try {
-      httpEngines = await httpGateway.list();
-    } catch (error) {
-      hilog.error(0x5244, 'Reader', '%{private}s', `Reader TTS optional HTTP engine list failed: ${this.errorMessage(error)}`);
-    }
-    try {
-      preferences = await this.ttsPreferencesGateway.load();
-    } catch (error) {
-      hilog.error(0x5244, 'Reader', '%{private}s', `Reader TTS optional preferences failed: ${this.errorMessage(error)}`);
-    }
-    try {
-      voiceOptions = await owner.getTtsHost().listSystemVoices();
-    } catch (error) {
-      hilog.error(0x5244, 'Reader', '%{private}s', `Reader TTS optional voice list failed: ${this.errorMessage(error)}`);
-    }
-    if (!this.isMountedToken(lifecycleToken) || this.ttsCoordinator !== coordinator) return;
-    this.ttsHttpEngines = httpEngines;
-    if (preferences !== undefined) {
-      this.admitTtsPreferences(preferences, voiceOptions);
-    } else {
-      this.ttsVoiceOptions = voiceOptions;
-    }
+    const preferenceGeneration = this.ttsPreferenceMutationGeneration;
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    const previousEngines = this.ttsHttpEngines;
+    let preferencesLoaded = false;
+    const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) && this.ttsCoordinator === coordinator &&
+      sourceId === this.sourceId && bookId === this.bookId;
+    // The three sources are independent. A slow provider list/voice enumeration
+    // cannot withhold saved UI preferences or another already-loaded result.
+    await Promise.all([
+      httpGateway.list().then((engines: ReaderHttpTtsConfig[]): void => {
+        if (isCurrent() && this.ttsHttpEngines === previousEngines) this.ttsHttpEngines = engines;
+      }).catch((error: Error): void => {
+        hilog.error(0x5244, 'Reader', '%{private}s', `Reader TTS optional HTTP list failed: ${error.message}`);
+      }),
+      this.ttsPreferencesGateway.load().then((preferences: ReaderTtsPreferencesSnapshot): void => {
+        if (!isCurrent() || preferenceGeneration !== this.ttsPreferenceMutationGeneration) return;
+        this.admitTtsPreferences(preferences, this.ttsVoiceOptions);
+        preferencesLoaded = true;
+      }).catch((error: Error): void => {
+        hilog.error(0x5244, 'Reader', '%{private}s', `Reader TTS optional preferences failed: ${error.message}`);
+      }),
+      owner.getTtsHost().listSystemVoices().then((voices: ReaderTtsVoiceOption[]): void => {
+        if (!isCurrent()) return;
+        this.ttsVoiceOptions = voices;
+        if (preferencesLoaded && preferenceGeneration === this.ttsPreferenceMutationGeneration) {
+          this.admitTtsPreferences(this.ttsPreferencesSnapshot(), voices);
+        }
+      }).catch((error: Error): void => {
+        hilog.error(0x5244, 'Reader', '%{private}s', `Reader TTS optional voices failed: ${error.message}`);
+      }),
+    ]);
   }
 
   private admitTtsPreferences(
@@ -6046,9 +6096,10 @@ export struct ReadingExperience {
     if (pendingIntent === undefined && startingNew && this.phase === 'ready' && this.chapter !== undefined && this.visiblePage !== undefined) {
       this.beginSessionCapsuleMorph('tts');
     }
-    if (!this.ttsAvailabilityResolved) {
+    const retryAvailability = this.ttsAvailabilityResolved && this.ttsState.status === 'unavailable';
+    if (!this.ttsAvailabilityResolved || retryAvailability) {
       const lifecycleToken = this.lifecycleToken;
-      void this.initializeTtsSession(lifecycleToken).then((available: boolean): void => {
+      void this.initializeTtsSession(lifecycleToken, retryAvailability).then((available: boolean): void => {
         if (available && this.isTtsPlayIntentCurrent(intent)) {
           this.toggleTts(intent);
         } else if (this.isTtsPlayIntentCurrent(intent)) this.cancelSessionLaunch('failure');
@@ -6188,6 +6239,7 @@ export struct ReadingExperience {
       Math.round(rate * READER_TTS_RATE_STEP_SCALE) / READER_TTS_RATE_STEP_SCALE));
     const coordinator = this.ttsCoordinator;
     if (coordinator === undefined) return;
+    this.ttsConfigMutationGeneration += 1;
     const previousRate = this.ttsState.rate;
     void coordinator.setRate(normalized)
       .then((): Promise<void> => this.persistTtsConfig(normalized))
@@ -6358,6 +6410,7 @@ export struct ReadingExperience {
     const coordinator = this.ttsCoordinator;
     if (gateway === undefined || coordinator === undefined) throw new Error('朗读服务正在初始化，请稍后重试');
     if (engine === this.ttsEngine) return;
+    this.ttsConfigMutationGeneration += 1;
     try {
       await coordinator.stop('user');
       const prior = this.ttsConfig;
@@ -9455,6 +9508,7 @@ export struct ReadingExperience {
     catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience chapter observer failed: ${this.errorMessage(error as Error)}`); }
     try { this.onReadingReady(chapterIndex); }
     catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience ready observer failed: ${this.errorMessage(error as Error)}`); }
+    this.scheduleTtsPresentationWarmup();
   }
 
   private showControlSelectionFailure(ticket: ReaderControlSelectionTicket, error: Error, detail: string): void {

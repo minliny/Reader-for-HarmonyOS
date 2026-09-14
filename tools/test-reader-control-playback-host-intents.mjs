@@ -53,6 +53,14 @@ for(const availabilityDelay of [false,true]){
  assert.equal(calls.includes('hide'),false,'business ACK cannot start an independent control hide clock');
 }
 {
+ const {host,calls,availability}=owner();host.ttsState.status='unavailable';
+ host.initializeTtsSession=(_token,retry)=>{calls.push(`retry:${retry}`);return availability.promise;};
+ host.toggleTts();assert.deepEqual(calls.slice(0,2),['visual:tts','retry:true']);
+ assert.equal(calls.some(c=>c.startsWith('start:')),false);
+ host.ttsState.status='idle';availability.resolve(true);await drain();
+ assert.equal(calls.filter(c=>c.startsWith('start:')).length,1,'failed background preflight can be retried only by explicit play');
+}
+{
  const {host,calls,availability}=owner();host.ttsAvailabilityResolved=false;host.toggleTts();
  host.toggleSessionCapsule();assert.equal(host.sessionLaunch.desiredPlaying,false);assert.equal(host.sessionLaunch.businessStatus,'preparing');
  host.ttsAvailabilityResolved=true;availability.resolve(true);await drain();

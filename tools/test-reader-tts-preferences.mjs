@@ -93,7 +93,8 @@ assert.match(panel, /this\.openConfiguration\(kind\)/, 'voice and other fields o
 assert.doesNotMatch(panel, /this\.selectNextVoice\(\)/);
 assert.doesNotMatch(panel, /this\.selectNextLanguage\(\)/,
   'language must not be changed by an undisclosed tap-to-cycle interaction');
-assert.match(experience, /await this\.ttsPreferencesGateway\.load\(\)/);
+assert.match(experience, /this\.ttsPreferencesGateway\.load\(\)\.then\(/,
+  'saved TTS preferences publish independently of optional provider and voice reads');
 assert.match(experience, /listSystemVoices\(\)/);
 assert.match(experience, /language: this\.ttsLanguage/);
 assert.match(experience, /person: this\.ttsPerson/);

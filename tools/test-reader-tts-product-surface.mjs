@@ -124,16 +124,18 @@ for (const callback of ['onTtsToggle', 'onTtsStop', 'onTtsPrevious', 'onTtsNext'
 assert.doesNotMatch(controls, /module === 'tts' && this\.ttsState\.status === 'unavailable'\) \{\s*return/);
 assert.match(experience, /new ReaderHttpTtsGateway\(owner\)/);
 assert.match(experience, /private async loadTtsPresentationMetadata\(/);
-assert.match(experience, /httpEngines = await httpGateway\.list\(\)/);
+assert.match(experience, /httpGateway\.list\(\)\.then\(/);
 assert.match(experience,
-  /void this\.loadTtsPresentationMetadata\([\s\S]{0,220}const initialization = coordinator\.probeAvailability\(\)/,
+  /const metadata = this\.loadTtsPresentationMetadata\([\s\S]{0,400}const initialization = coordinator\.probeAvailability\(\)/,
   'optional HTTP engine and voice discovery must not gate first-play admission');
 assert.match(experience, /const config = coordinator\.getProbedConfig\(\)/,
   'TTS initialization must reuse the config already read by the availability probe');
 assert.doesNotMatch(experience, /const config = await gateway\.getConfig\(\)/,
   'TTS initialization must not issue a duplicate config request');
 assert.match(experience, /page === 'moduleTts' \|\| page === 'fullTts'/,
-  'TTS initialization must be scoped to the user entering the TTS controls');
+  'TTS entry must retain the single-flight fallback while deferred ready preparation is pending');
+assert.match(experience, /this\.scheduleTtsPresentationWarmup\(\)/,
+  'TTS presentation is prepared after durable first-page readiness, before first module entry');
 assert.match(experience, /gateway\.putConfig\(\{/);
 assert.match(experience, /await coordinator\.probeAvailability\(\)/);
 assert.match(experience, /coordinator\.seek\(sliceIndex\)/);
