@@ -1347,6 +1347,7 @@ export struct ReadingExperience {
   /** Cold cross-chapter previous-page measurement; the old visible page stays mounted. */
   private previousChapterMeasurement: PreviousChapterMeasurement | undefined = undefined;
   private restoredProgress: LocalReadingProgressState | undefined = undefined;
+  private consumedBookmarkAnchorRequestId: number = -1;
   @State private tocEntries: LocalReadingTocEntry[] = [];
   private readingTocSource: LocalReadingTocEntry[] | undefined = undefined;
   private readingTocProjection: LocalReadingTocEntry[] = [];
@@ -2963,15 +2964,32 @@ export struct ReadingExperience {
         this.readingTocEntries().map((entry: LocalReadingTocEntry): number => entry.index),
       );
       const requested = this.normalizedRequestedChapter();
+      const bookmark = this.requestedBookmarkAnchor;
+      let bookmarkContext: RemoteReadingPositionContext | undefined = undefined;
+      if (bookmark !== undefined) {
+        if (!Number.isSafeInteger(bookmark.chapterOffset) || bookmark.chapterOffset < 0 ||
+          (requested !== undefined && requested !== bookmark.chapterIndex)) {
+          throw new Error('READING_POSITION_SCOPE_MISMATCH');
+        }
+        if (this.sourceId !== LOCAL_READING_SOURCE_ID && bookmark.chapterOffset > 0 &&
+          bookmark.positionScope === undefined) {
+          throw new Error('READING_POSITION_SCOPE_UNAVAILABLE');
+        }
+        bookmarkContext = this.positionContextForScope(bookmark.positionScope,
+          bookmark.chapterIndex, bookmark.chapterOffset);
+      }
       const restored = progress.kind === 'restored' ? progress.progress : undefined;
-      const target = requested === undefined ? restored?.chapterIndex : requested;
+      const target = bookmark?.chapterIndex ?? (requested === undefined ? restored?.chapterIndex : requested);
       const chapterIndex = this.requireKnownChapter(target);
-      this.restoredProgress = progress;
+      // An explicit directory/mark selection never borrows the old resume offset.
+      this.restoredProgress = bookmark !== undefined || requested !== undefined ? undefined : progress;
+      if (bookmark !== undefined) this.consumedBookmarkAnchorRequestId = bookmark.requestId;
       await layoutReady;
       if (!isCurrent()) {
         return;
       }
-      await this.openChapter(chapterIndex, true, lifecycleToken, selectionToken);
+      await this.openChapter(chapterIndex, true, lifecycleToken, selectionToken,
+        bookmark?.chapterOffset, undefined, false, bookmarkContext);
     } catch (error) {
       if (!isCurrent()) {
         return;
@@ -3033,6 +3051,10 @@ export struct ReadingExperience {
     if (anchor === undefined || !this.mounted) {
       return;
     }
+    if (Number.isSafeInteger(anchor.requestId) && anchor.requestId === this.consumedBookmarkAnchorRequestId) {
+      return;
+    }
+    this.consumedBookmarkAnchorRequestId = anchor.requestId;
     this.selectBookmarkAnchor(anchor.chapterIndex, anchor.chapterOffset, anchor.positionScope);
   }
 

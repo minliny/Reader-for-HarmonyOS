@@ -52,6 +52,7 @@ import {
   ReaderBookmarkAnchorRequest,
 } from '../features/reading/LocalReadingExperience';
 import { ReaderShell } from '../features/shell/ReaderShell';
+import { ReaderFullDirectory } from '../features/reading/ReaderFullDirectory';
 import {
   loadReaderControlBookmarkProjection, mergeReaderControlBookmarkProjection,
 } from '../features/reading/ReaderControlBookmarkLoad';
@@ -948,6 +949,9 @@ struct Index {
           .justifyContent(FlexAlign.Center)
           .backgroundColor(readerAppColor('app.Index.build.backgroundColor.FFF8F4EC', this.appThemeScheme));
         }
+      } else if (this.route === 'directory' && this.directoryReturnTarget === 'detail' &&
+        this.detailBook !== undefined) {
+        this.externalDirectory();
       } else if (this.detailBook !== undefined && (this.route === 'detail' ||
         (!this.readingSessionActive && (this.route === 'reading' || this.route === 'directory')))) {
         // P0 invariant: a stale reading route without an owning ReaderShell
@@ -992,8 +996,9 @@ struct Index {
           bookmarkIdentity: this.detailBookmarkIdentity(),
           isTablet: deviceInfo.deviceType === 'tablet',
           reduceMotion: this.settingsSnapshot.reduceMotion,
-          visible: this.route === 'reading' || this.route === 'directory',
-          route: this.route === 'directory' ? 'directory' : 'reading',
+          visible: this.route === 'reading' ||
+            (this.route === 'directory' && this.directoryReturnTarget === 'readerControl'),
+          route: this.route === 'directory' && this.directoryReturnTarget === 'readerControl' ? 'directory' : 'reading',
           tocEntries: this.detailToc,
           bookmarkLoadMessage: this.controlBookmarkProjectionMessage(),
           directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
@@ -1112,10 +1117,48 @@ struct Index {
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 
+  @Builder
+  private externalDirectory() {
+    if (this.detailBook !== undefined) {
+      ReaderFullDirectory({
+        bookTitle: this.detailBook.title,
+        chapterTitle: this.directoryChapterTitle,
+        entries: this.detailToc,
+        currentChapterIndex: this.directoryCurrentChapterIndex,
+        sourceId: this.detailBook.sourceId,
+        animateFromControl: false,
+        reduceMotion: this.settingsSnapshot.reduceMotion,
+        offlineBookOperationActive: this.offlineMutationActiveKey.length > 0,
+        bookmarkIdentity: this.detailBookmarkIdentity(),
+        onSelectChapter: (index: number): void => this.onDirectoryChapterSelected(index),
+        onSelectBookmark: (id: string, index: number, offset: number, scope?: RemoteReadingPositionScope): void =>
+          this.onReaderBookmarkSelected(id, index, offset, scope),
+        onDownloadChapter: (index: number): void => this.downloadDirectoryChapter(index),
+        onDownloadBook: (): void => this.downloadDirectoryBook(),
+        onClearBookOffline: (): void => this.requestClearDirectoryBookOffline(),
+        onDeleteBookmarks: (times: number[]): void => this.deleteDirectoryBookmarks(times),
+        chapterStartBookmarkCreationEnabled: true,
+        onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+          this.createDirectoryChapterStartBookmark(request),
+        onSwitchSource: (): void => {
+          if (!this.readingSessionActive) {
+            this.closeDirectory();
+            this.openDetailSourceSwitch();
+          }
+        },
+        onExit: (): void => this.closeDirectory(),
+      })
+        .width('100%')
+        .height('100%')
+        .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appThemeScheme))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]);
+    }
+  }
+
   private readerOwnsWindowEdges(): boolean {
     // The hidden reader warms behind its entry page before first-page admission.
     // Keep that page inside the app safe top until ReaderShell is visible.
-    return this.readingSessionActive && (this.route === 'reading' || this.route === 'directory');
+    return this.route === 'directory' || (this.readingSessionActive && this.route === 'reading');
   }
 
   private appContentTopInset(): number {
@@ -3520,6 +3563,7 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.requestedChapterIndex = chapterIndex;
+    this.requestedBookmarkAnchor = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
@@ -3534,6 +3578,11 @@ struct Index {
     // chapter rows). The Reader Control Home top-bar target is still gated
     // by `RC-READER-CONTROL-01` and is not fabricated here.
     if (!this.isKnownDetailChapter(chapterIndex)) {
+      return;
+    }
+    this.requestedBookmarkAnchor = undefined;
+    if (!this.readingSessionActive) {
+      this.openReading(chapterIndex);
       return;
     }
     if (chapterIndex === this.directoryCurrentChapterIndex) {
@@ -3561,7 +3610,10 @@ struct Index {
     if (!this.isKnownDetailChapter(chapterIndex)) {
       return;
     }
-    if (chapterIndex === this.directoryCurrentChapterIndex) {
+    if (!this.readingSessionActive) {
+      this.openReading(chapterIndex);
+      if (!this.readingSessionActive) return;
+    } else if (chapterIndex === this.directoryCurrentChapterIndex) {
       // 已提交章内的书签: 不重复准入, 只露出阅读区。精确偏移完全由下面的
       // requestedBookmarkAnchor 通道承载 (selectChapterAnchor 处理同章偏移跳转)。
       this.route = 'reading';
@@ -3571,6 +3623,7 @@ struct Index {
       // openChapter(chapterIndex, offset) 就是一次完整的跨章准入。
       this.nextNavigationGeneration();
       this.preparedReaderRoute = 'reading';
+      this.requestedChapterIndex = undefined;
     }
     this.bookmarkAnchorRequestId += 1;
     this.requestedBookmarkAnchor =
@@ -3578,22 +3631,21 @@ struct Index {
   }
 
   private openFullDirectory(): void {
-    if (this.detailBook === undefined || this.detailToc.length === 0 ||
-      this.bookshelfRemovalActiveKey.length > 0) {
+    if (this.route !== 'detail' || this.readingSessionActive || this.detailBook === undefined ||
+      this.detailToc.length === 0 || this.bookshelfRemovalActiveKey.length > 0) {
       return;
     }
-    this.nextNavigationGeneration();
+    // This is a view of the admitted detail catalog, not a reader launch.
+    // Retain its generation so pending detail/bookmark projections can settle.
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    // ReadingExperience resolves the real persisted chapter itself. The
-    // overlay gets that exact identity through onChapterMaterialized rather
-    // than choosing a Figma sample chapter or copying Core text into Index.
     this.requestedChapterIndex = undefined;
-    this.preparedReaderRoute = 'directory';
+    this.requestedBookmarkAnchor = undefined;
+    this.preparedReaderRoute = 'reading';
     this.directoryReturnTarget = 'detail';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
-    this.readingSessionActive = true;
+    this.route = 'directory';
   }
 
   private openReaderControlDirectory(): void {
@@ -3610,7 +3662,8 @@ struct Index {
     if (!this.readingSessionActive || this.detailBook === undefined) {
       return;
     }
-    if (this.route === 'directory' && this.requestedChapterIndex !== chapterIndex) {
+    const requested = this.requestedBookmarkAnchor?.chapterIndex ?? this.requestedChapterIndex;
+    if (this.route === 'directory' && requested !== chapterIndex) {
       return;
     }
     if (this.route !== 'detail' && this.route !== 'directory' &&
@@ -3695,6 +3748,11 @@ struct Index {
   }
 
   private closeDirectory(): void {
+    if (!this.readingSessionActive) {
+      this.preparedReaderRoute = 'reading';
+      this.route = 'detail';
+      return;
+    }
     if (this.directoryReturnTarget === 'readerControl' && this.readingSessionActive) {
       this.preparedReaderRoute = 'reading';
       this.route = 'reading';

@@ -84,6 +84,39 @@ check('PH61 progress/source retain equal left/right slots and live progress afte
 });
 
 const detailSource = read('bookshelf/LocalBookDetail.ets');
+check('PH83 detail preview exposes 20 chapters in the original four-row scroll viewport', () => {
+  for (const count of [0, 3, 20, 40]) {
+    const { owner } = createReaderBuilderProbe(detailSource,
+      ['chapterSection', 'chapterRow', 'visibleToc', 'chapterEmptyMessage'], {
+        CHAPTER_SECTION_HEIGHT: 282, CHAPTER_ROW_HEIGHT: 58, CHAPTER_PREVIEW_LIMIT: 20,
+        ButtonType: { Normal: 'Normal' },
+      });
+    const toc = Array.from({ length: count }, (_, index) => ({ index, title: `第${index + 1}章` }));
+    const selected = [];
+    Object.assign(owner, { appThemeScheme: 'day', book: { sourceId: 'source', bookId: 'book' },
+      toc, loadingMessage: '', readingBlockedReason: '', contentWidth: () => 326,
+      readingActionsReady: () => count > 0, onSelectChapter: index => selected.push(index) });
+    owner.chapterSection();
+    const nodes = [...owner.nodes.values()];
+    const chapterTexts = texts(owner).filter(node => /^第\d+章$/.test(node.create));
+    assert.equal(chapterTexts.length, Math.min(count, 20));
+    assert.deepEqual(owner.visibleToc(), toc.slice(0, 20), 'preview retains exact chapter identity/order');
+    for (const node of chapterTexts) assert.deepEqual([node.fontSize, node.fontWeight], [14, 'FontWeight.Regular']);
+    const viewport = nodes.find(node => node.type === 'Scroll');
+    assert.equal(viewport.height, count > 0 ? 232 : 0);
+    assert.equal(viewport.scrollBar, 'BarState.Auto');
+    assert.deepEqual(viewport.nestedScroll, {
+      scrollForward: 'NestedScrollMode.SELF_FIRST', scrollBackward: 'NestedScrollMode.SELF_FIRST',
+    });
+    assert.ok(nodes.some(node => node.type === 'Stack' && node.height === 282));
+    const rows = nodes.filter(node => node.type === 'Row' && node.height === 58 && node.onClick);
+    assert.equal(rows.length, Math.min(count, 20));
+    if (rows.length) {
+      rows.at(-1).onClick();
+      assert.deepEqual(selected, [Math.min(count, 20) - 1]);
+    }
+  }
+});
 for (const scheme of ['day', 'night']) {
   check(`${scheme}: detail metadata shares source typography, label and moving source action`, () => {
     const { owner } = createReaderBuilderProbe(detailSource, ['heroCard'], { NoCoverCover: Child, ImageFit: { Cover: 'Cover' } });

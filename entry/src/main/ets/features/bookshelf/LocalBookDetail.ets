@@ -43,6 +43,7 @@ const PHONE_SUMMARY_HEIGHT = 120.313;
 const TABLET_SUMMARY_HEIGHT = 98.875;
 const CHAPTER_SECTION_HEIGHT = 282;
 const CHAPTER_ROW_HEIGHT = 58;
+const CHAPTER_PREVIEW_LIMIT = 20;
 
 /**
  * Local-book detail, translated only from the two Final local variants:
@@ -323,9 +324,18 @@ export struct LocalBookDetail {
         .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
         .alignItems(VerticalAlign.Center);
 
-        ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
-          this.chapterRow(entry);
-        }, (entry: LocalReadingTocEntry): string => `book-detail-toc-${entry.index}`);
+        Scroll() {
+          Column() {
+            ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
+              this.chapterRow(entry);
+            }, (entry: LocalReadingTocEntry): string => `book-detail-toc-${this.book.sourceId}-${this.book.bookId}-${entry.index}`);
+          }
+          .width('100%');
+        }
+        .width('100%')
+        .height(this.toc.length > 0 ? CHAPTER_ROW_HEIGHT * 4 : 0)
+        .scrollBar(BarState.Auto)
+        .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
         if (this.toc.length === 0) {
           Text(this.chapterEmptyMessage())
             .width('100%')
@@ -524,9 +534,9 @@ export struct LocalBookDetail {
   }
 
   private visibleToc(): LocalReadingTocEntry[] {
-    // The Final Detail component draws exactly four 58px rows.  Expanding it
-    // into a scrolling or paged directory would create an unsourced state.
-    return this.toc.slice(0, 4);
+    // The four Figma sample rows define the viewport, not the preview limit.
+    // PH83 restores the confirmed 20-chapter preview within that scrollable viewport.
+    return this.toc.slice(0, CHAPTER_PREVIEW_LIMIT);
   }
 
   private readingActionsReady(): boolean {

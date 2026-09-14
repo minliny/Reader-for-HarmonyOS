@@ -71,7 +71,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   const h = new Index();
   const view = new SearchViewState();
   Object.assign(view, { keywordDraft: '鸣龙', category: '小说', anchorKey: '鸣龙\0关关公子',
-    anchorIndex: 4, anchorOffset: 29, anchorItemY: 83, historyExpanded: true });
+    anchorIndex: 4, anchorOffset: 29, anchorItemY: 83 });
   view.rank('other'); view.rank('鸣龙\0关关公子');
   const presentation = { kind: 'results', keyword: '鸣龙', results: [first, second, third], searching: false };
   const orchestrator = { resume: () => calls.push('search.resume'), close: () => calls.push('search.close'),
@@ -111,8 +111,8 @@ function assertSearchRetained(t) {
   assert.equal(t.h.route, 'search');
   assert.equal(t.h.searchViewState, t.view); assert.equal(t.h.searchPresentation, t.presentation);
   assert.deepEqual([t.view.keywordDraft, t.view.category, t.view.anchorKey, t.view.anchorIndex,
-    t.view.anchorOffset, t.view.anchorItemY, t.view.historyExpanded, [...t.view.order]],
-  ['鸣龙', '小说', '鸣龙\0关关公子', 4, 29, 83, true, [['other', 0], ['鸣龙\0关关公子', 1]]]);
+    t.view.anchorOffset, t.view.anchorItemY, [...t.view.order]],
+  ['鸣龙', '小说', '鸣龙\0关关公子', 4, 29, 83, [['other', 0], ['鸣龙\0关关公子', 1]]]);
   assert.equal(t.calls.filter(value => value === 'search.resume').length, 1);
   assert.equal(t.calls.includes('search.close'), false); noUnexpectedWrites(t);
 }

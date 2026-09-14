@@ -234,7 +234,7 @@ assert.match(shell, /\.opacity\(this\.visible \? 1 : 0\)/);
 
 const index = read('entry/src/main/ets/pages/Index.ets');
 assert.match(index, /if \(this\.route === 'directory'\) \{\s*this\.closeDirectory\(\)/);
-assert.match(index, /route: this\.route === 'directory' \? 'directory' : 'reading'/);
+assert.match(index, /route: this\.route === 'directory' && this\.directoryReturnTarget === 'readerControl' \? 'directory' : 'reading'/);
 assert.match(index, /private openReaderControlDirectory\(\): void/);
 assert.match(index, /this\.directoryReturnTarget === 'readerControl'/);
 assert.match(index, /reduceMotion: this\.settingsSnapshot\.reduceMotion/);

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 
@@ -32,9 +34,16 @@ assert.match(experience, /requestOverlayChrome\(chromeStyle\)/,
 assert.match(index,
   /padding\(\{ top: this\.readerOwnsWindowEdges\(\) \? 0 : this\.appContentTopInset\(\) \}\)/,
   'safe-top removal must depend on visible reader edge ownership');
-assert.match(index,
-  /readerOwnsWindowEdges\(\): boolean \{[\s\S]*this\.readingSessionActive && \(this\.route === 'reading' \|\| this\.route === 'directory'\)/,
-  'a hidden reader warming behind Detail must not remove the Detail safe top');
+const EdgeOwner = productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url)), ['readerOwnsWindowEdges']);
+for (const [route, readingSessionActive, expected] of [
+  ['detail', false, false], ['detail', true, false],
+  ['directory', false, true], ['directory', true, true],
+  ['reading', true, true], ['reading', false, false],
+]) {
+  const owner = Object.assign(new EdgeOwner(), { route, readingSessionActive });
+  assert.equal(owner.readerOwnsWindowEdges(), expected,
+    'external directory owns its safe geometry; hidden detail reader never removes app safe top');
+}
 assert.match(experience,
   /applyWindowPolicyForChromeOwner\(\)[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?applyReaderWindowPolicy[\s\S]*?requestAppWindowPolicy/,
   'a hidden reader warming behind Detail must not hide the app status bar');

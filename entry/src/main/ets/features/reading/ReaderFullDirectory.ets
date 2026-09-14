@@ -30,9 +30,9 @@ import { motionAnimateParam } from '../common/MotionSpec';
 /**
  * The non-body layers of the two Final Reader Full Directory variants.
  *
- * The owning Index keeps ReadingExperience mounted beneath this exact
- * overlay, so this component never substitutes its own body text, PaperLayer,
- * reading position, or a local directory fixture.
+ * Detail mounts this external catalog directly, without a reading instance.
+ * ReaderShell may also retain its existing reading instance beneath it. The
+ * component never creates body text, a reading position, or a local fixture.
  *
  * Figma source:
  * - Phone `943:11617`, Section `I943:11617;927:36` (left-14, top-18, 360×54)
