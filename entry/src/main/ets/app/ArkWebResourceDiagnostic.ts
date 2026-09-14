@@ -1,4 +1,5 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
 import { ArkWebExecutor, type ArkWebDiagnosticEvent } from './ArkWebExecutor';
 
@@ -21,6 +22,8 @@ export class ArkWebResourceDiagnostic {
   private running: boolean = false;
   private disposed: boolean = false;
   private runNumber: number = 0;
+  private documentBody: string = '';
+  private documentBodyBase64: string = '';
   private readonly observer = (event: ArkWebDiagnosticEvent): void => {
     const admittedJob = event.requestId === FIRST_ID || event.requestId === SECOND_ID;
     const controlledResource = event.url !== undefined && this.prefix.length > 0 && event.url.startsWith(this.prefix);
@@ -31,7 +34,7 @@ export class ArkWebResourceDiagnostic {
     const label = resource === undefined ? undefined :
       ['early.css', 'hold.js', 'old.js', 'new.js', 'page'].includes(resource) ? resource : 'other-controlled-resource';
     this.record(event.kind, event.requestId, label ??
-      (event.url === undefined ? undefined : 'unlabelled-document'), event.at);
+      (event.url === undefined ? undefined : this.documentLabel(event.url)), event.at);
   };
 
   readonly provide = (url: string): WebResourceResponse => {
@@ -41,9 +44,30 @@ export class ArkWebResourceDiagnostic {
     response.setReasonMessage('Diagnostic fixture only');
     response.setResponseMimeType('text/plain');
     response.setResponseData('');
-    if (this.disposed || !this.running || this.prefix.length === 0 || !url.startsWith(this.prefix)) return response;
+    const active = !this.disposed && this.running && this.prefix.length > 0 && this.documentBody.length > 0;
+    if (active && this.isCurrentDataDocument(url)) {
+      this.record('documentAllowed', undefined, 'data-document');
+      return null!;
+    }
+    if (active && url === `${this.prefix}page`) {
+      // If a native callback identifies loadData by its base/history URL,
+      // Serve our exact HTML here; returning null would permit real HTTP.
+      response.setResponseCode(200);
+      response.setReasonMessage('OK');
+      response.setResponseMimeType('text/html');
+      response.setResponseData(this.documentBody);
+      this.record('documentProvided', undefined, 'page');
+      return response;
+    }
+    if (!active || !url.startsWith(this.prefix)) {
+      if (this.running) this.record('interceptDenied', undefined, this.documentLabel(url));
+      return response;
+    }
     const resource = url.slice(this.prefix.length);
-    if (!['early.css', 'hold.js', 'old.js', 'new.js'].includes(resource)) return response;
+    if (!['early.css', 'hold.js', 'old.js', 'new.js'].includes(resource)) {
+      this.record('interceptDenied', undefined, 'other-controlled-resource');
+      return response;
+    }
     response.setResponseCode(200);
     response.setReasonMessage('OK');
     response.setResponseMimeType(resource === 'early.css' ? 'text/css' : 'application/javascript');
@@ -87,6 +111,7 @@ export class ArkWebResourceDiagnostic {
       this.clearPendingResponses();
       ArkWebExecutor.instance.detachDiagnosticObserver(this.observer);
       this.running = false;
+      this.clearDocument();
     }
   }
 
@@ -96,15 +121,47 @@ export class ArkWebResourceDiagnostic {
     ArkWebExecutor.instance.cancel(FIRST_ID);
     ArkWebExecutor.instance.cancel(SECOND_ID);
     this.clearPendingResponses();
+    this.clearDocument();
   }
 
   private params(body: string, pattern: string): JsonObject {
+    this.documentBody = body;
+    this.documentBodyBase64 = new util.Base64Helper().encodeToStringSync(new util.TextEncoder('utf-8').encode(body));
     const encoded = JSON.stringify(pattern);
     return {
       document: { kind: 'html', body, baseUrl: `${this.prefix}page` },
       javaScript: 'null', timeoutMillis: 4000,
       resourceUrlMatcherJavaScript: `(url) => { const match = new RegExp(${encoded}).exec(url); return match !== null && match.index === 0 && match[0].length === url.length; }`,
     };
+  }
+
+  private isCurrentDataDocument(url: string): boolean {
+    // This is an exact fixture identity check, not a general data-URL policy.
+    // Native codecs remain platform-owned; arbitrary HTML is never admitted.
+    if (url.length > this.documentBody.length * 4 + 128) return false;
+    const comma = url.indexOf(',');
+    if (comma < 0) return false;
+    const type = url.slice(0, comma).toLowerCase();
+    const body = url.slice(comma + 1);
+    if (type === 'data:text/html;base64' || type === 'data:text/html;charset=utf-8;base64') {
+      return body === this.documentBodyBase64;
+    }
+    if (type !== 'data:text/html' && type !== 'data:text/html;charset=utf-8') return false;
+    if (body === this.documentBody) return true;
+    try { return decodeURIComponent(body) === this.documentBody; } catch (_) { return false; }
+  }
+
+  private documentLabel(url: string): string {
+    if (url === 'about:blank') return 'about-blank';
+    if (url.startsWith('data:')) return 'data-document';
+    if (url.startsWith('blob:')) return 'blob-document';
+    if (url.startsWith('http:') || url.startsWith('https:')) return 'other-http-document';
+    return 'other-document';
+  }
+
+  private clearDocument(): void {
+    this.documentBody = '';
+    this.documentBodyBase64 = '';
   }
 
   private pattern(resource: string): string {
