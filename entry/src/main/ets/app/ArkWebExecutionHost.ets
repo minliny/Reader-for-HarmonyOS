@@ -10,6 +10,8 @@ import { redactedHttpUrl } from './HttpTransportPolicy';
  */
 @Component
 export struct ArkWebExecutionHost {
+  // Supplied only by the DEBUG/cold-start pilot; undefined on the app shell.
+  diagnosticResourceProvider: ((url: string) => WebResourceResponse) | undefined = undefined;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @State private interactive: boolean = false;
@@ -32,6 +34,7 @@ export struct ArkWebExecutionHost {
   }
 
   aboutToDisappear(): void {
+    this.diagnosticResourceProvider = undefined;
     ArkWebExecutor.instance.detachPresentation(this.presentationListener);
     ArkWebExecutor.instance.detachController(this.controller);
   }
@@ -60,7 +63,12 @@ export struct ArkWebExecutionHost {
         .onInterceptRequest((event): WebResourceResponse => {
           // API 23 documents null as "continue loading", but its callback
           // declaration omits null from the return type.
-          if (!ArkWebExecutor.instance.blockNetworkUrl(event.request.getRequestUrl())) return null!;
+          if (!ArkWebExecutor.instance.blockNetworkUrl(event.request.getRequestUrl())) {
+            if (this.diagnosticResourceProvider !== undefined) {
+              return this.diagnosticResourceProvider(event.request.getRequestUrl());
+            }
+            return null!;
+          }
           const denied = new WebResourceResponse();
           denied.setResponseCode(403);
           denied.setReasonMessage('Blocked by network policy');
@@ -69,10 +77,14 @@ export struct ArkWebExecutionHost {
           return denied;
         })
         .onPageBegin((event): void => {
+          ArkWebExecutor.instance.observeDiagnosticPageBegin(event.url);
           const pageUrl = event.url;
           if (pageUrl.length > 0 && pageUrl !== 'about:blank') {
             this.currentUrl = redactedHttpUrl(pageUrl);
           }
+        })
+        .onResourceLoad((event): void => {
+          ArkWebExecutor.instance.onResourceLoad(event.url);
         })
         .onPageEnd((event): void => {
           ArkWebExecutor.instance.onPageEnd(event.url);

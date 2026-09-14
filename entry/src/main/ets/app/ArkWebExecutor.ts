@@ -16,6 +16,24 @@ const MAX_REQUEST_HEADERS = 64;
 const MAX_HEADER_NAME_LENGTH = 256;
 const MAX_HEADER_VALUE_LENGTH = 16 * 1024;
 const MAX_HEADER_BYTES = 64 * 1024;
+const MAX_RESOURCE_EVENTS = 128;
+const MAX_RESOURCE_URL_CHARS = 16 * 1024;
+const MAX_RESOURCE_TOTAL_CHARS = 512 * 1024;
+const MAX_RESOURCE_MATCHER_CHARS = 64 * 1024;
+
+type ArkWebResourceCapture = {
+  promise: Promise<string>;
+  resolve: (url: string) => void;
+  reject: (error: unknown) => void;
+  tail: Promise<void>;
+  settled: boolean;
+  count: number;
+  totalChars: number;
+  deadlineTimer?: number;
+  initializationTimer?: number;
+  initializationScheduled: boolean;
+  overflowQueued: boolean;
+};
 
 type ArkWebDocument = {
   kind: 'html' | 'url';
@@ -41,11 +59,20 @@ type ArkWebJob = {
   interactive: boolean;
   presentationTitle: string;
   userFinished: boolean;
+  resourceUrlMatcherJavaScript?: string;
+  resourceCapture?: ArkWebResourceCapture;
 };
 
 export type ArkWebPresentation = {
   visible: boolean;
   title: string;
+};
+
+export type ArkWebDiagnosticEvent = {
+  kind: string;
+  at: number;
+  requestId?: number;
+  url?: string;
 };
 
 type ArkWebHostFailure = {
@@ -76,6 +103,25 @@ export class ArkWebExecutor {
   private active: ArkWebJob | undefined = undefined;
   private tail: Promise<void> = Promise.resolve();
   private presentationListener: ((presentation: ArkWebPresentation) => void) | undefined = undefined;
+  private diagnosticObserver: ((event: ArkWebDiagnosticEvent) => void) | undefined = undefined;
+
+  attachDiagnosticObserver(observer: (event: ArkWebDiagnosticEvent) => void): void {
+    this.diagnosticObserver = observer;
+  }
+
+  detachDiagnosticObserver(observer: (event: ArkWebDiagnosticEvent) => void): void {
+    if (this.diagnosticObserver === observer) this.diagnosticObserver = undefined;
+  }
+
+  observeDiagnosticPageBegin(url: string): void {
+    this.emitDiagnostic('pageBegin', this.active, url);
+  }
+
+  private emitDiagnostic(kind: string, job?: ArkWebJob, url?: string): void {
+    // Optional observer is mounted only by the guarded diagnostic page. It
+    // must never change production completion or selection behavior.
+    try { this.diagnosticObserver?.({ kind, at: Date.now(), requestId: job?.requestId, url }); } catch (_) {}
+  }
 
   attachPresentation(listener: (presentation: ArkWebPresentation) => void): void {
     this.presentationListener = listener;
@@ -102,6 +148,7 @@ export class ArkWebExecutor {
     this.controller = undefined;
     if (this.active !== undefined) {
       this.active.cancelled = true;
+      this.rejectResourceCapture(this.active, this.hostFailure('CANCELLED', 'ArkWeb controller detached', false, { phase: 'resource' }));
     }
   }
 
@@ -118,6 +165,7 @@ export class ArkWebExecutor {
       admittedHost === undefined || host !== admittedHost;
     if (blocked && this.active !== undefined) {
       this.active.networkDenied = true;
+      this.rejectResourceCapture(this.active, this.hostFailure('NETWORK_POLICY_DENIED', '书源网页请求了不允许的网络地址', false, { phase: 'resource' }));
       try { this.controller?.stop(); } catch (_) {}
     }
     return blocked;
@@ -148,6 +196,7 @@ export class ArkWebExecutor {
 
   onPageEnd(url: string): void {
     const job = this.active;
+    this.emitDiagnostic('pageEnd', job, url);
     if (job === undefined || job.cancelled) {
       return;
     }
@@ -156,6 +205,67 @@ export class ArkWebExecutor {
     }
     job.finalUrl = url;
     job.pageReadyAt = Date.now() + PAGE_SETTLE_MS + job.settleDelayMillis;
+    const capture = job.resourceCapture;
+    if (capture !== undefined && !capture.settled && !capture.initializationScheduled) {
+      capture.initializationScheduled = true;
+      capture.initializationTimer = setTimeout((): void => {
+        capture.initializationTimer = undefined;
+        if (capture.settled || this.active !== job) return;
+        void this.runResourceInitialization(job).catch((error: unknown): void => this.rejectResourceCapture(job, error));
+      }, PAGE_SETTLE_MS + job.settleDelayMillis);
+    }
+  }
+
+  /** Actual ArkWeb resource callback; the Core-authored matcher runs in the
+   * existing browser JS engine. No ResourceTiming reconstruction or refetch. */
+  onResourceLoad(url: string): void {
+    const job = this.active;
+    this.emitDiagnostic('resource', job, url);
+    const capture = job?.resourceCapture;
+    if (job === undefined || capture === undefined || capture.settled || capture.overflowQueued) return;
+    if (url === 'about:blank' || url.trim().length === 0) return;
+    if (this.blockNetworkUrl(url)) return;
+    capture.count += 1;
+    capture.totalChars += url.length;
+    if (url.length > MAX_RESOURCE_URL_CHARS || capture.count > MAX_RESOURCE_EVENTS ||
+      capture.totalChars > MAX_RESOURCE_TOTAL_CHARS) {
+      capture.overflowQueued = true;
+      // Keep the budget terminal marker in callback order: an earlier match
+      // already admitted to the bounded queue still wins over a later burst.
+      capture.tail = capture.tail.then((): void => {
+        this.rejectResourceCapture(job, this.hostFailure('RESOURCE_LIMIT_EXCEEDED',
+          'WebView resource observation exceeded its bounded budget', false, { phase: 'resource' }));
+      });
+      return;
+    }
+    // Serialization preserves callback order even if JS evaluations resolve
+    // at different times. URLs remain arguments, never executable source.
+    capture.tail = capture.tail.then(async (): Promise<void> => {
+      if (capture.settled || this.active !== job) return;
+      this.assertCurrent(job);
+      const controller = this.controller;
+      if (controller === undefined) throw this.hostFailure('CANCELLED', 'ArkWeb controller detached', false, { phase: 'resource' });
+      let raw: string;
+      try {
+        this.emitDiagnostic('matcherStart', job, url);
+        raw = await controller.runJavaScript(`(${job.resourceUrlMatcherJavaScript})(${JSON.stringify(url)})`);
+      } catch (_) {
+        throw this.hostFailure('SCRIPT_EXECUTION_FAILED', 'WebView resource matcher execution failed', false,
+          { phase: 'script', reason: 'RESOURCE_MATCHER_EXECUTION_FAILED' });
+      }
+      if (capture.settled || this.active !== job) return;
+      this.assertCurrent(job);
+      const matched = this.parseJavaScriptValue(raw);
+      this.emitDiagnostic(matched === true ? 'matched' : 'unmatched', job, url);
+      if (typeof matched !== 'boolean') {
+        throw this.hostFailure('INVALID_RESOURCE_MATCHER', 'Resource matcher must return a boolean', false, { phase: 'resource' });
+      }
+      if (matched) {
+        capture.settled = true;
+        this.clearResourceTimers(capture);
+        capture.resolve(url);
+      }
+    }).catch((error: unknown): void => this.rejectResourceCapture(job, error));
   }
 
   execute(params: JsonObject, requestId: number): Promise<JsonObject> {
@@ -204,6 +314,8 @@ export class ArkWebExecutor {
       return;
     }
     job.cancelled = true;
+    this.emitDiagnostic('cancel', job);
+    this.rejectResourceCapture(job, this.hostFailure('CANCELLED', 'webview.evaluateJavaScript cancelled', false, { phase: 'resource' }));
     if (this.active === job) {
       try {
         this.controller?.stop();
@@ -217,6 +329,7 @@ export class ArkWebExecutor {
     this.assertCurrent(job);
     const controller = await this.waitForController(job);
     this.active = job;
+    this.emitDiagnostic('start', job);
     let seeds: ArkWebCookieSeed[] = [];
     try {
       webview.WebCookieManager.clearAllCookiesSync(true);
@@ -230,6 +343,7 @@ export class ArkWebExecutor {
       }
       this.assertCurrent(job);
       job.pageReadyAt = 0;
+      const resourceCapture = job.resourceUrlMatcherJavaScript === undefined ? undefined : this.prepareResourceCapture(job);
       if (job.document.kind === 'url') {
         controller.loadUrl(job.document.url!, job.headers);
       } else {
@@ -241,15 +355,22 @@ export class ArkWebExecutor {
           job.document.baseUrl,
         );
       }
-      await this.waitForStablePage(job);
-      if (job.interactive) {
-        this.publishPresentation(true, job.presentationTitle);
-        while (!job.userFinished) {
-          this.assertCurrent(job);
-          await delay(100);
+      let value: unknown;
+      if (resourceCapture !== undefined) {
+        // A resource can arrive before page-finished. Its real callback may
+        // complete immediately; source initialization is scheduled separately.
+        value = await resourceCapture.promise;
+      } else {
+        await this.waitForStablePage(job);
+        if (job.interactive) {
+          this.publishPresentation(true, job.presentationTitle);
+          while (!job.userFinished) {
+            this.assertCurrent(job);
+            await delay(100);
+          }
         }
+        value = await this.evaluateUntilReady(job, controller);
       }
-      const value = await this.evaluateUntilReady(job, controller);
       this.assertCurrent(job);
       const finalUrl = this.nonBlank(controller.getUrl()) ?? job.finalUrl ?? seedUrl;
       const title = this.nonBlank(controller.getTitle());
@@ -279,6 +400,7 @@ export class ArkWebExecutor {
         }
       }
       const result: JsonObject = { value };
+      if (resourceCapture !== undefined) result['resourceUrl'] = value;
       if (finalUrl !== undefined) {
         result['finalUrl'] = finalUrl;
       }
@@ -287,6 +409,9 @@ export class ArkWebExecutor {
       }
       return result;
     } finally {
+      this.emitDiagnostic('end', job);
+      this.rejectResourceCapture(job, this.hostFailure('CANCELLED', 'ArkWeb job ended', false, { phase: 'resource' }));
+      job.resourceCapture = undefined;
       if (job.interactive) {
         this.publishPresentation(false, '');
       }
@@ -304,6 +429,55 @@ export class ArkWebExecutor {
         this.active = undefined;
       }
     }
+  }
+
+  private prepareResourceCapture(job: ArkWebJob): ArkWebResourceCapture {
+    let resolveCapture: (url: string) => void = (): void => {};
+    let rejectCapture: (error: unknown) => void = (): void => {};
+    const promise = new Promise<string>((resolve, reject): void => {
+      resolveCapture = resolve;
+      rejectCapture = reject;
+    });
+    // A synchronous loadUrl/loadData failure can precede awaiting the signal.
+    void promise.catch((): void => {});
+    const capture: ArkWebResourceCapture = {
+      promise, resolve: resolveCapture, reject: rejectCapture, tail: Promise.resolve(),
+      settled: false, count: 0, totalChars: 0, initializationScheduled: false,
+      overflowQueued: false,
+    };
+    job.resourceCapture = capture;
+    capture.deadlineTimer = setTimeout((): void => {
+      this.rejectResourceCapture(job, this.hostFailure('TIMEOUT', 'WebView resource match timed out', true, { phase: 'resource' }));
+    }, Math.max(0, job.deadlineAt - Date.now()));
+    return capture;
+  }
+
+  private clearResourceTimers(capture: ArkWebResourceCapture): void {
+    if (capture.deadlineTimer !== undefined) clearTimeout(capture.deadlineTimer);
+    if (capture.initializationTimer !== undefined) clearTimeout(capture.initializationTimer);
+    capture.deadlineTimer = undefined;
+    capture.initializationTimer = undefined;
+  }
+
+  private rejectResourceCapture(job: ArkWebJob, error: unknown): void {
+    const capture = job.resourceCapture;
+    if (capture === undefined || capture.settled) return;
+    capture.settled = true;
+    this.clearResourceTimers(capture);
+    capture.reject(error);
+  }
+
+  private async runResourceInitialization(job: ArkWebJob): Promise<void> {
+    this.assertCurrent(job);
+    const controller = this.controller;
+    if (controller === undefined) throw this.hostFailure('CANCELLED', 'ArkWeb controller detached', false, { phase: 'resource' });
+    try {
+      await controller.runJavaScript(job.javaScript);
+    } catch (_) {
+      throw this.hostFailure('SCRIPT_EXECUTION_FAILED', 'WebView resource initialization failed', false,
+        { phase: 'script', reason: 'RESOURCE_INITIALIZATION_FAILED' });
+    }
+    if (this.active === job) this.assertCurrent(job);
   }
 
   private async waitForController(job: ArkWebJob): Promise<webview.WebviewController> {
@@ -419,6 +593,12 @@ export class ArkWebExecutor {
       throw new Error('webview.evaluateJavaScript document.kind must be html or url');
     }
     const javaScript = this.requiredString(params['javaScript'], 'javaScript');
+    const rawResourceMatcher = params['resourceUrlMatcherJavaScript'];
+    const resourceUrlMatcherJavaScript = rawResourceMatcher === undefined ? undefined :
+      this.requiredString(rawResourceMatcher, 'resourceUrlMatcherJavaScript');
+    if (resourceUrlMatcherJavaScript !== undefined && resourceUrlMatcherJavaScript.length > MAX_RESOURCE_MATCHER_CHARS) {
+      throw new Error('resourceUrlMatcherJavaScript exceeds its bounded size');
+    }
     const timeoutValue = params['timeoutMillis'];
     const timeoutMs = typeof timeoutValue === 'number' && Number.isFinite(timeoutValue) ?
       Math.floor(timeoutValue) : DEFAULT_TIMEOUT_MS;
@@ -436,6 +616,7 @@ export class ArkWebExecutor {
       requestId,
       document: parsedDocument,
       javaScript,
+      resourceUrlMatcherJavaScript,
       headers,
       settleDelayMillis,
       profileId,

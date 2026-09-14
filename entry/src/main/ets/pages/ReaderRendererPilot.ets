@@ -3,12 +3,34 @@
 import webview from '@ohos.web.webview';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { router } from '@kit.ArkUI';
+import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
+import { ArkWebResourceDiagnostic } from '../app/ArkWebResourceDiagnostic';
 
 @Entry
 @Component
 struct ReaderRendererPilot {
   @State private result: string = '隔离正文试点载入中';
+  @State private resourceMode: boolean = false;
+  @State private resourceBusy: boolean = false;
+  private resourceDiagnostic: ArkWebResourceDiagnostic = new ArkWebResourceDiagnostic();
   private readonly controller: webview.WebviewController = new webview.WebviewController('reader-oss-pilot');
+
+  aboutToDisappear(): void {
+    this.resourceDiagnostic.dispose();
+  }
+
+  private async runResourceDiagnostic(scenario: 'early' | 'cancel'): Promise<void> {
+    if (this.resourceBusy) return;
+    this.resourceBusy = true;
+    this.result = 'PH76 受控资源验证中（不访问外网）';
+    try {
+      this.result = await this.resourceDiagnostic.run(scenario);
+    } catch (error) {
+      this.result = `PH76 无法完成：${(error as Error).message}`;
+    } finally {
+      this.resourceBusy = false;
+    }
+  }
 
   build() {
     Column() {
@@ -16,6 +38,25 @@ struct ReaderRendererPilot {
         Button('返回书架').onClick((): void => { router.replaceUrl({ url: 'pages/Index' }); });
         Text(this.result).fontSize(12).layoutWeight(1).id('reader-oss-pilot-status');
       }.width('100%').padding(12)
+      if (this.resourceMode) {
+        Column({ space: 12 }) {
+          Text('PH76 · 真实 WebView 回调，内存响应样本；不读写用户书籍').fontSize(14);
+          Button('验证早期资源回调').enabled(!this.resourceBusy).id('reader-ph76-early')
+            .onClick((): void => { void this.runResourceDiagnostic('early'); });
+          Button('验证取消后资源归属').enabled(!this.resourceBusy).id('reader-ph76-cancel')
+            .onClick((): void => { void this.runResourceDiagnostic('cancel'); });
+          Button('返回正文试点').enabled(!this.resourceBusy).onClick((): void => {
+            this.resourceDiagnostic.dispose();
+            this.resourceMode = false;
+          });
+          ArkWebExecutionHost({ diagnosticResourceProvider: this.resourceDiagnostic.provide });
+        }.width('100%').layoutWeight(1);
+      } else {
+      Button('PH76 资源验证').id('reader-ph76-open').onClick((): void => {
+        this.resourceDiagnostic = new ArkWebResourceDiagnostic();
+        this.result = '选择一项 PH76 受控验证';
+        this.resourceMode = true;
+      });
       Web({ src: $rawfile('reader-oss-pilot/index.html'), controller: this.controller, incognitoMode: true })
         .javaScriptAccess(true)
         .domStorageAccess(false)
@@ -56,6 +97,7 @@ struct ReaderRendererPilot {
           }
           return false;
         })
+      }
     }.width('100%').height('100%').backgroundColor('#F7F4ED')
   }
 }
