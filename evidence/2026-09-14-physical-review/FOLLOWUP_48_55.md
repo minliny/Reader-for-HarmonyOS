@@ -46,3 +46,6 @@ PH49回归中又发现同一路径的反向边界：Quick下拉隐藏、向上�
 [不可变manifest](../../.reader-artifacts/hap/20260914T012243Z-84cdc4ef-eed02cc4/manifest.json)、[包身份回执](PH48-55-package-receipt.json)、[离线复验](PH48-55-package-verify.log)。signed SHA256：`4ff47a70d418e2edf65e527710752e94cd2d000df97e20d73a99218d5ae610e8`，166916907字节。iteration、acceptanceEligible=false。
 
 本轮未安装、不操作VM或真机，因此数据未因部署改变；真机仍643bcaf5。8项均已完成当前代码侧调整及本地回归，PH48实际设备像素偏移根因仍未证实，新包原生视觉/手势/键盘及用户验收保持OPEN。原完整计划的功能、性能、导入、TOC、PH42/PH30/PH45等缺口不因这238组通过而关闭。
+
+
+2026-09-14 12:25 CST安装更新：用户最新明确只安装、不测试。当前重新发现唯一Connected USB真机并确认启动完成；现成84cdc4ef signed包经身份预检、保数据覆盖安装和启动全部PASS，SHA256 4ff47a70d418e2edf65e527710752e94cd2d000df97e20d73a99218d5ae610e8。真机当前已从643bcaf5更新为84cdc4ef，未做交互测试，留给用户人工审计。部署回执：`Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T012243Z-84cdc4ef-eed02cc4/deploy-physical-b1f20b88963d-20260914T042550Z.json`；featureInteraction/userAcceptance仍OPEN。
