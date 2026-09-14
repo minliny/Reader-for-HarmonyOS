@@ -148,6 +148,8 @@ export struct ReaderShell {
           onSwitchSource: (): void => this.onSwitchSource(),
           onOpenRulesManagement: (): void => this.onOpenRulesManagement(),
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+          offlineBookOperationActive: this.offlineBookOperationActive,
+          onDownloadBook: (): void => this.onDownloadBook(),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void =>
             this.onDirectoryProjectionChanged(entries),

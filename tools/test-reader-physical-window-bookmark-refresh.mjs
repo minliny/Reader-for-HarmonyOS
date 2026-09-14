@@ -83,12 +83,12 @@ const refresh=Object.assign(new Refresh(),{isControlInputEnabled:()=>true,phase:
 refresh.refreshCurrentChapter();assert.deepEqual(calls[1],[3,71,false,true,undefined,-2,false,true]);
 assert.equal(await refresh.loadSessionChapter(3,()=>true),old);assert.equal((await refresh.loadSessionChapter(3,()=>true,true)).content,'new');assert.equal(calls.at(-1)[3],true);
 refresh.pageTurnInputOwned=true;const n=calls.length;refresh.refreshCurrentChapter();assert.equal(calls.length,n,'refresh does not compete with a held page gesture');
-const More=productionMotionMethods(panel,['performMoreAction']);let actions=[];const more=Object.assign(new More(),{moreMenuVisible:true,inputEnabled:true,chapterRefreshEnabled:false,
+const More=productionMotionMethods(panel,['performMoreAction','readerMoreActionEnabled']);let actions=[];const more=Object.assign(new More(),{moreMenuVisible:true,inputEnabled:true,chapterRefreshEnabled:false,bookDownloadEnabled:true,controlObscured:false,
  dismissMoreMenu(){this.moreMenuVisible=false;actions.push('dismiss');},onOpenBookInfo:()=>actions.push('info'),onRefreshChapter:()=>actions.push('refresh')});
 more.performMoreAction('refresh');assert.deepEqual(actions,[]);more.chapterRefreshEnabled=true;more.performMoreAction('refresh');more.performMoreAction('refresh');assert.deepEqual(actions,['dismiss','refresh']);
-const {owner:menu}=createReaderBuilderProbe(readFileSync(panel,'utf8'),['readerMoreMenu','readerMoreAction'],{});
-Object.assign(menu,{appScheme:'day',chapterRefreshEnabled:true,layout:{viewportWidth:390,viewportHeight:844,topBarTop:48,topBarWidth:340,dockBottomGap:24}});menu.readerMoreMenu();
-assert.deepEqual([...menu.nodes.values()].filter(n=>n.type==='Text').map(n=>n.create),['书籍信息','刷新本章']);
+const {owner:menu}=createReaderBuilderProbe(readFileSync(panel,'utf8'),['readerMoreMenu','readerMoreAction','readerMoreActionEnabled'],{});
+Object.assign(menu,{appScheme:'day',inputEnabled:true,controlObscured:false,chapterRefreshEnabled:true,bookDownloadEnabled:true,layout:{viewportWidth:390,viewportHeight:844,topBarTop:48,topBarWidth:340,dockBottomGap:24}});menu.readerMoreMenu();
+assert.deepEqual([...menu.nodes.values()].filter(n=>n.type==='Text').map(n=>n.create),['书籍信息','刷新本章','下载全部章节']);
 console.log('PASS PH56–59 production SDK methods/Builders: measured regions/API fallback, reader underlay, bookmark threshold+ACK ordering, safe force refresh and two-action More; OEM pixels are not asserted');
 
 const Index=productionMotionMethods(file('pages/Index.ets'),['performReaderPageBookmarkCreation','performDirectoryBookmarkDeletion'],
@@ -138,6 +138,7 @@ confirmed.toggleCurrentPageBookmark();unavailable=[{index:0,title:'C',bookmarks:
 assert.equal(confirmed.pageBookmarkFeedbackFilled(),true);assert.equal(confirmed.canStartReaderBookmarkGesture(),false,'confirmed write + failed projection retains marker but cannot repeat mutation');
 const {owner:confirmedView}=createReaderBuilderProbe(source,['bookmarkCornerFeedback','pageBookmarkFeedbackFilled','pageBookmarkFeedbackAnchor'],{});
 Object.assign(confirmedView,confirmed,{controlVisible:()=>false,controlObscured:false,bookmarkPageOffsetY:0,readerAppScheme:'day',viewportWidth:390,
- currentPageBookmarkStatus:()=> 'unknown',readingLayout:()=>({pageChromeVisualSafeTop:0,pageChromeTopRegionHeight:48})});
+ bookmarkCornerLayout:()=>({topAccessoryX:341,topAccessoryY:12,topAccessoryWidth:24,topAccessoryHeight:24}),
+ bookmarkFeedbackLabel:()=> 'bookmark',currentPageBookmarkStatus:()=> 'unknown',readingLayout:()=>({pageChromeVisualSafeTop:0,pageChromeTopRegionHeight:48})});
 confirmedView.bookmarkCornerFeedback();const painted=[...confirmedView.nodes.values()].filter(n=>n.type==='Image');assert.equal(painted.length,1);assert.match(painted[0].create,/reader_page_bookmark_filled/);
 console.log('PASS PH59 confirmed Core write with unavailable projection retains actual filled Builder and locks repeat writes');

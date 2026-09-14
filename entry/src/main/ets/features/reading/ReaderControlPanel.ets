@@ -287,8 +287,11 @@ export struct ReaderControlPanel {
   onSourceSwitch: () => void = (): void => {};
   onRefreshChapter: () => void = (): void => {};
   onOpenBookInfo: () => void = (): void => {};
+  onDownloadBook: () => void = (): void => {};
   @Prop chapterRefreshEnabled: boolean = false;
+  @Prop bookDownloadEnabled: boolean = false;
   @State private moreMenuVisible: boolean = false;
+  private moreMenuMeasuredWidth: number = 0;
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
@@ -507,6 +510,7 @@ export struct ReaderControlPanel {
       this.visualSession = update.session;
     }
     const visual = sampleReaderControlSession(update.session);
+    if (this.moreMenuVisible && visual.visibilityProgress <= 0) this.dismissMoreMenu();
     this.visualExpansionProgress = visual.expansionProgress;
     this.visualVisibilityProgress = visual.visibilityProgress;
     this.visualHeldPointerId = update.session.heldPointerId;
@@ -550,6 +554,7 @@ export struct ReaderControlPanel {
   }
 
   private onRuntimeEnabledChanged(): void {
+    if (this.moreMenuVisible && (!this.inputEnabled || this.controlObscured)) this.dismissMoreMenu();
     if (this.runtime !== undefined) {
       this.acceptRuntime(this.runtime.setEnabled((this.inputEnabled || this.launchRecovering) && !this.controlObscured));
     }
@@ -945,7 +950,6 @@ export struct ReaderControlPanel {
         .enabled(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0))
           .hitTestBehavior(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) ?
           HitTestMode.Transparent : HitTestMode.None);
-      if (this.moreMenuVisible) { this.readerMoreMenu(); }
       if (this.launchSample !== undefined) {
         ReaderSessionLaunchStage({
           sample: this.launchSample, sessionState: this.launchBusinessStatus,
@@ -987,52 +991,79 @@ export struct ReaderControlPanel {
   }
 
   private setMoreMenuVisible(visible: boolean): void {
-    if (visible && (!this.inputEnabled || this.frame().visibility <= 0)) return;
+    if (visible && (!this.inputEnabled || this.controlObscured || this.frame().visibility <= 0)) return;
     if (this.moreMenuVisible === visible) return;
+    if (visible) this.moreMenuMeasuredWidth = 0;
     this.moreMenuVisible = visible;
     this.onTemporaryLayerChange(visible);
   }
 
   private dismissMoreMenu(): void { this.setMoreMenuVisible(false); }
 
-  private performMoreAction(action: 'info' | 'refresh'): void {
-    if (!this.moreMenuVisible || !this.inputEnabled) return;
+  private performMoreAction(action: 'info' | 'refresh' | 'download'): void {
+    if (!this.moreMenuVisible || !this.inputEnabled || this.controlObscured) return;
     if (action === 'refresh' && !this.chapterRefreshEnabled) return;
+    if (action === 'download' && !this.bookDownloadEnabled) return;
     this.dismissMoreMenu();
     if (action === 'info') this.onOpenBookInfo();
-    else this.onRefreshChapter();
+    else if (action === 'refresh') this.onRefreshChapter();
+    else this.onDownloadBook();
+  }
+
+  private readerMoreMenuWidth(): number {
+    // Measure only on opening; progress/motion publications reuse this width.
+    // Native popup placement owns target tracking and window-edge avoidance.
+    if (this.moreMenuVisible && this.moreMenuMeasuredWidth <= 0) {
+      const context = this.getUIContext();
+      const labels: string[] = ['书籍信息', '刷新本章', '下载全部章节'];
+      let width: number = 0;
+      labels.forEach((label: string): void => {
+        const measured = context.getMeasureUtils().measureTextSize({
+          textContent: label, fontFamily: 'ReaderNotoSansSC', fontSize: '15fp', fontWeight: '500',
+        });
+        width = Math.max(width, context.px2vp(Number(measured.width)));
+      });
+      this.moreMenuMeasuredWidth = Math.ceil(width) + 36;
+    }
+    return Math.min(this.moreMenuMeasuredWidth > 0 ? this.moreMenuMeasuredWidth : 176,
+      Math.max(0, this.layout.viewportWidth - 24));
+  }
+
+  private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download'): boolean {
+    return this.inputEnabled && !this.controlObscured &&
+      (action !== 'refresh' || this.chapterRefreshEnabled) &&
+      (action !== 'download' || this.bookDownloadEnabled);
   }
 
   @Builder
-  private readerMoreAction(label: string, action: 'info' | 'refresh', enabled: boolean) {
-    Row() {
-      Text(label).fontFamily('ReaderNotoSansSC').fontSize(15)
-        .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
-    }.width('100%').height(50).padding({ left: 18, right: 18 })
-      .opacity(enabled ? 1 : 0.45).enabled(enabled)
+  private readerMoreAction(label: string, action: 'info' | 'refresh' | 'download') {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Row() {
+        Text(label).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(15).lineHeight(22)
+          .fontColor(readerAppColor('TOK_INK', this.appScheme)).maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+      }.width('100%').height(50).padding({ left: 18, right: 18 });
+      if (action !== 'download') {
+        Row().width('calc(100% - 32vp)').height(1)
+          .backgroundColor(readerAppColor('app.BookshelfMoreMenu.action.color.FFE8E2DA', this.appScheme))
+          .position({ x: 16, y: 49 });
+      }
+    }.width('100%').height(50)
+      .opacity(this.readerMoreActionEnabled(action) ? 1 : 0.45).enabled(this.readerMoreActionEnabled(action))
       .accessibilityText(label).onClick((): void => this.performMoreAction(action));
   }
 
   @Builder
   private readerMoreMenu() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Row().width('100%').height('100%').backgroundColor(Color.Transparent)
-        .accessibilityText('关闭阅读更多').onClick((): void => this.dismissMoreMenu());
-      Scroll() {
-        Column() {
-          this.readerMoreAction('书籍信息', 'info', true);
-          this.readerMoreAction('刷新本章', 'refresh', this.chapterRefreshEnabled);
-        }.width('100%');
-      }.width(Math.min(176, Math.max(0, this.layout.viewportWidth - 24)))
-        .height(Math.min(100,
-          Math.max(0, this.layout.viewportHeight - this.layout.topBarTop - 62 - this.layout.dockBottomGap)))
-        .scrollBar(BarState.Off).backgroundColor(readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appScheme))
-        .border({ width: 1, color: readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appScheme) })
-        .borderRadius(16).clip(true)
-        .shadow({ radius: 28, color: readerAppColor('app.BookshelfMoreMenu.build.color.292E261F', this.appScheme), offsetY: 10 })
-        .position({ x: Math.max(12, (this.layout.viewportWidth + this.layout.topBarWidth) / 2 - 176 - 13),
-          y: this.layout.topBarTop + 62 });
-    }.width('100%').height('100%').zIndex(12);
+    Scroll() {
+      Column() {
+        this.readerMoreAction('书籍信息', 'info');
+        this.readerMoreAction('刷新本章', 'refresh');
+        this.readerMoreAction('下载全部章节', 'download');
+      }.width('100%');
+    }.width('100%')
+      .height(Math.min(150, Math.max(0, this.layout.viewportHeight - 36)))
+      .scrollBar(BarState.Auto).align(Alignment.TopStart);
   }
 
   @Builder
@@ -1473,6 +1504,26 @@ export struct ReaderControlPanel {
       .height(42)
       .enabled(this.inputEnabled)
       .onClick((): void => this.setMoreMenuVisible(!this.moreMenuVisible))
+      .bindPopup(this.moreMenuVisible, {
+        builder: this.readerMoreMenu,
+        placement: Placement.BottomRight,
+        width: this.readerMoreMenuWidth(),
+        enableArrow: true, arrowWidth: 24, arrowHeight: 12, radius: 16,
+        arrowPointPosition: ArrowPointPosition.CENTER,
+        targetSpace: 8,
+        popupColor: readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appScheme),
+        backgroundBlurStyle: BlurStyle.NONE,
+        borderWidth: 1,
+        borderLinearGradient: { colors: [
+          [readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appScheme), 0],
+          [readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appScheme), 1],
+        ] },
+        shadow: { radius: 28, color: readerAppColor('app.BookshelfMoreMenu.build.color.292E261F', this.appScheme), offsetY: 10 },
+        autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
+        onStateChange: (event: PopupStateChangeParam): void => {
+          if (!event.isVisible) this.dismissMoreMenu();
+        },
+      })
       .accessibilityText('更多');
     }
     .width(this.layout.topBarWidth)
@@ -1695,9 +1746,12 @@ export struct ReaderControlPanel {
       Image($r(this.appScheme === 'night' ? 'app.media.rc_sun_theme_night' : 'app.media.rc_sun'))
         .width(READER_CONTROL_BRIGHTNESS_ICON_SIZE)
         .height(READER_CONTROL_BRIGHTNESS_ICON_SIZE)
-        .margin({ top: READER_CONTROL_BRIGHTNESS_ICON_TOP });
+        // Column content starts inside its 1vp border; endpoint geometry is
+        // measured from the outside of the rounded rail.
+        .margin({ top: READER_CONTROL_BRIGHTNESS_ICON_TOP - TOK_BORDER_W });
 
-      // BrightnessTrack 8×92 with a 24×92 pointer target. Gesture coordinates
+      // The 8vp track fills the gap between the cap-centred endpoint icons;
+      // its 24vp pointer target uses that same height. Gesture coordinates
       // are mapped to the whole authored track; an invisible OutSet slider
       // would retain an implicit thumb inset and shorten the usable range.
       Stack({ alignContent: Alignment.Center }) {

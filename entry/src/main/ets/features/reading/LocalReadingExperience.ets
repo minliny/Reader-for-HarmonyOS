@@ -1013,6 +1013,8 @@ export struct ReadingExperience {
   onOpenRulesManagement: () => void = (): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onDownloadBook: () => void = (): void => {};
+  @Prop offlineBookOperationActive: boolean = false;
   onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]) => void =
     (_entries: LocalReadingTocEntry[]): void => {};
   onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean) => Promise<void> =
@@ -1828,6 +1830,8 @@ export struct ReadingExperience {
           this.onSwitchSource();
         },
         onRefreshChapter: (): void => this.refreshCurrentChapter(),
+        bookDownloadEnabled: this.remoteSession !== undefined && this.totalChapters > 0 && !this.offlineBookOperationActive,
+        onDownloadBook: (): void => this.onDownloadBook(),
         onOpenBookInfo: (): void => this.onOpenBookInfo(),
         chapterRefreshEnabled: this.canRefreshCurrentChapter(),
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
@@ -9287,7 +9291,7 @@ export struct ReadingExperience {
       hasMore: current.hasMore,
       loadingMore: true,
       loadMoreError: undefined,
-    };
+    });
     void this.activeGateway().searchContentPage(this.bookId, keyword, READER_CONTENT_SEARCH_PAGE_SIZE,
       offset, isCurrent)
       .then((page): void => {
@@ -9320,7 +9324,7 @@ export struct ReadingExperience {
           hasMore: latest.hasMore,
           loadingMore: false,
           loadMoreError: error.message,
-        };
+        });
       });
   }
 

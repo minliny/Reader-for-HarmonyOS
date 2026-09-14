@@ -85,7 +85,7 @@ const flush = async()=>{for(let i=0;i<10;i++)await Promise.resolve();};
 // the low fill has no independent radius that can protrude beyond that track.
 const native=new Proxy({}, {get:()=>()=>{}});
 const {owner}=createReaderBuilderProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets',import.meta.url),'utf8'),
-  ['brightnessRail'],{...geometry,Gesture:native,GestureGroup:native,PanGesture:native,TapGesture:native,
+  ['brightnessRail'],{...geometry,TOK_BORDER_W:1,Gesture:native,GestureGroup:native,PanGesture:native,TapGesture:native,
     GesturePriority:{Low:0},GestureMode:{Exclusive:1},PanDirection:{Vertical:1}});
 Object.assign(owner,{appScheme:'day',brightnessAutomatic:true,effectiveBrightnessPercent:()=>1});
 const oldGesture=globalThis.Gesture;
@@ -95,5 +95,12 @@ const clip=[...owner.nodes.values()].find(n=>n.type==='Stack'&&n.width===8&&n.cl
 assert.ok(clip);assert.equal(clip.borderRadius,4);
 const fill=[...owner.nodes.values()].find(n=>n.type==='Row'&&n.height==='1%');
 assert.ok(fill);assert.equal(fill.borderRadius,undefined);
-assert.ok([...owner.nodes.values()].some(n=>n.width===24&&n.height===92));
+assert.ok([...owner.nodes.values()].some(n=>n.width===24&&n.height===geometry.READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT));
+const railRadius=geometry.READER_CONTROL_BRIGHTNESS_RAIL_WIDTH/2;
+const sun=[...owner.nodes.values()].find(n=>n.type==='Image');
+assert.equal(1+sun.margin.top+sun.height/2,railRadius,'native border inset is included in the upper cap centre');
+assert.equal(geometry.READER_CONTROL_BRIGHTNESS_ICON_TOP+geometry.READER_CONTROL_BRIGHTNESS_ICON_SIZE/2,railRadius);
+assert.equal(geometry.READER_CONTROL_BRIGHTNESS_ICON_TOP+geometry.READER_CONTROL_BRIGHTNESS_ICON_SIZE+
+  2*geometry.READER_CONTROL_BRIGHTNESS_CONTROL_GAP+geometry.READER_CONTROL_BRIGHTNESS_TRACK_HEIGHT+
+  geometry.READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE/2,geometry.READER_CONTROL_BRIGHTNESS_RAIL_HEIGHT-railRadius);
 console.log('PASS brightness: HLG low-range allocation, 991 inverse samples, two-way pending toggle, system observation races, and SDK shared track clip');

@@ -28,13 +28,13 @@ export struct ReaderSessionCapsuleLeading {
       if (this.type === 'autoPage') {
         Stack({ alignContent: Alignment.Center }) {
           Text(`${Math.max(0, Math.trunc(this.countdown))}`)
-            .width(18).height(8)
+            .width(16).height(16)
             .fontFamily(TYPE_READER_SESSION_COUNTDOWN.fontFamily)
             .fontWeight(TYPE_READER_SESSION_COUNTDOWN.fontWeight)
             .fontSize(TYPE_READER_SESSION_COUNTDOWN.fontSizeFp)
             .lineHeight(TYPE_READER_SESSION_COUNTDOWN.lineHeightFp)
             .fontColor(this.onPrimaryColor).textAlign(TextAlign.Center).maxLines(1);
-        }.width(18).height(16).backgroundColor(this.primaryColor).borderRadius(999);
+        }.width(16).height(16).backgroundColor(this.primaryColor).borderRadius(999);
       } else {
         Stack({ alignContent: Alignment.Center }) {
           Image(this.themeScheme === 'night' ? $r('app.media.reader_tts_headphones_theme_night') :
@@ -43,6 +43,7 @@ export struct ReaderSessionCapsuleLeading {
       }
       Text(this.type === 'autoPage' ? '自动翻页' : '朗读')
         .width(Math.max(42, this.capsuleWidth - readerSessionCapsuleMinimumWidth(this.type) + 42))
+        .height(16)
         .fontFamily(TYPE_READER_SESSION_LABEL.fontFamily)
         .fontWeight(TYPE_READER_SESSION_LABEL.fontWeight)
         .fontSize(TYPE_READER_SESSION_LABEL.fontSizeFp)
