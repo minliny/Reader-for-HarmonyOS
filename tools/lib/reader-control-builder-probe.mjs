@@ -58,6 +58,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
   const native = name => { const instance = new Proxy({ name }, { get(target, property) {
     if (property === 'name') return name;
     return (...args) => {
+      if (property === 'canRetake') return false; // Fresh native tree: no retained id may skip creation.
       if (property === 'pop' || activeOwner === undefined) return;
       const record = activeOwner.nodes.get(activeId);
       activeOwner.attributeCalls.push({ id: activeId, property, args });
@@ -106,10 +107,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}) {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
   }
   const globals = { readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
-    ...Object.fromEntries(['Button', 'Row', 'Column', 'Stack', 'Scroll', 'LoadingProgress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
+    ...Object.fromEntries(['Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
-      'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
+      'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...dependencies };
   const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));
