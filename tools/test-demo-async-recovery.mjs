@@ -1,3 +1,4 @@
+import * as readingEvidence from '../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -45,11 +46,12 @@ const admission=index.slice(index.indexOf('class RemoteDetailAdmission {'),index
 const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admission)+';return RemoteDetailAdmission;')();
 for(const stale of [false,true]) for(const fails of [false,true]) {
  const shared=deferred(),background=deferred(),calls=[],failures=[],refreshes=[];
- const coordinator={setPreparationVisible(value){assert.equal(value,false);},
+ const coordinator={readingProjectionRevision:()=>0,setPreparationVisible(value){assert.equal(value,false);},
    acquireBookWithBackgroundRefresh(seed,options){calls.push({seed,options});return shared.promise;},
    recentFailures:()=>[]};
  const CacheClass=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed'],{
+   ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
+     ...readingEvidence,
      ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>coordinator})},RemoteDetailAdmission,
      RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},
      ReaderCoreGateway:class{async loadShelfBook(){return undefined;}},
@@ -57,7 +59,7 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
    });
  const seed={sourceId:'s',bookId:'b',title:'预览',author:'作者'};
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
- const h=Object.assign(new CacheClass(),{route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
+ const h=Object.assign(new CacheClass(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
    remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',
    probeRemoteContentVerdict:async()=>0,loadRemoteDirectoryProjection:async()=>session.entries,
    showReadingFailure:(...args)=>failures.push(args),

@@ -39,7 +39,8 @@ assert.doesNotMatch(remoteOpen, /if \(resumeImmediately\) \{\s*this\.openReading
   'a shelf resume must never bypass chapter-body admission');
 assert.doesNotMatch(remoteOpen, /remoteShelf|remoteBookshelf|shelfBooks\s*=\s*new Map/,
   'remote books must not create a second UI-owned shelf store');
-assert.match(index, /this\.remoteReadingSession = session/);
+assert.match(remoteOpen, /this\.installRemoteReadingSession\(session\)/,
+  'all detail admission uses the shared session/evidence installation boundary');
 assert.match(index, /this\.detailToc = session\.entries\.map/);
 assert.ok(remoteOpen.indexOf('this.detailToc = session.entries.map') <
   remoteOpen.indexOf('void bookshelf.loadShelfBook'),

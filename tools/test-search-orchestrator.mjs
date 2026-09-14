@@ -25,8 +25,8 @@ const sourceCategoryImport =
 const sourceCategorySingleImport =
   /^import \{ readerSourceCategoryIsText \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
 const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
-  .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
-    read('entry/src/main/ets/features/common/CachedBookIdentity.ts').replace(/^import type .*;$/m, ''))
+  .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
+      readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
   .replace(errorMessageImport, '')
   .replace(sourceCategoryImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
@@ -782,7 +782,8 @@ for (const failList of [false, true]) {
   await waitUntil(owner.state, () => owner.state.calls.length === 4);
   visible = false; search.visibilityChanged();
   const sourceLoads = owner.state.sourceLoads;
-  await settle(owner.state, 4); await sleep(25);
+  await settle(owner.state, 4);
+  await waitUntil(owner.state, () => last(presentations).completedSourceCount === 4);
   assert.equal(owner.state.calls.length, 4, 'hidden search must leave five sources queued');
   const hidden = last(presentations);
   assert.equal(hidden.kind, 'results');
@@ -839,12 +840,14 @@ for (const action of ['resume', 'close', 'stop']) {
   let title = '早先详情';
   owner.bookAcquisitions = () => ({ subscribe: listener => { notify = listener; return () => { notify = () => {}; }; } });
   owner.request = async (method, ...args) => {
-    if (method !== 'search-book.list') return originalRequest(method, ...args);
+    if (method !== 'search-book.batch.get') return originalRequest(method, ...args);
     readCount += 1;
     const snapshot = title;
     if (readCount === 1) await firstRead;
     return { data: { books: [{ origin: 'source-0', bookUrl: '/book', name: snapshot, author: '作者',
-      acquisition: { schemaVersion: 1, sourceVersion: 'v1', detailAt: readCount } }] } };
+      relationKey: 'canonical', relationRevision: '1',
+      acquisition: { schemaVersion: 1, sourceVersion: 'v1', detailAt: readCount } }],
+      missing: [], complete: true, snapshotRevision: 'snapshot', sourceVersions: [{ sourceId: 'source-0', sourceVersion: 'v1', enabled: true }] } };
   };
   const { orchestrator, presentations } = capture();
   const search = orchestrator(owner);
@@ -1012,3 +1015,127 @@ console.log('PH68 incremental deltas: failure retention without retry loop, hidd
   assert.equal(o.presentation.results[0].title,'已确认标题');o.close();
 }
 console.log('PH68 stopped query retains completed metadata without restarting source search PASS');
+
+// R3: local and online completion are independent; a blocked branch is not a terminal verdict.
+{
+  const deferred=()=>{let release;const promise=new Promise(r=>{release=r;});return {promise,release};};
+  for(const blocked of ['bookshelf.list','source.list']) {
+    const gate=deferred();const owner=fakeOwner({sources:makeSources(1),resultsFor:()=>[{bookId:'/remote',title:'目标',author:'作者'}]});
+    owner.state.localBooks=[{sourceId:'local',bookId:'local-book',title:'目标',author:'作者'}];
+    const request=owner.request;owner.request=async(method,...args)=>{if(method===blocked)await gate.promise;return request(method,...args);};
+    const {orchestrator,presentations}=capture();const search=orchestrator(owner);search.open();search.search('目标');
+    await waitUntil(owner.state,()=>last(presentations).kind==='results');
+    const early=last(presentations);assert.equal(early.searching,true);
+    assert.deepEqual(early.results.map(b=>b.sourceId),blocked==='bookshelf.list'?['source-0']:['local']);
+    gate.release();await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+    assert.equal(last(presentations).results.length,2);search.close();
+  }
+}
+// R3: stop synchronously flushes an admitted source that has not reached its publication timer.
+{
+  const gates=Array.from({length:3},()=>{let release;const promise=new Promise(r=>{release=r;});return {promise,release};});
+  const owner=fakeOwner({sources:makeSources(3),resultsFor:id=>[{bookId:'/'+id,title:id,author:'作者'}]});
+  const request=owner.request;owner.request=async(method,params,...rest)=>{
+    if(method==='book.search')await gates[Number(params.sourceId.slice(7))].promise;
+    if(method==='bookshelf.list')throw Error('local read unavailable');
+    return request(method,params,...rest);
+  };
+  const {orchestrator,presentations}=capture();const search=orchestrator(owner);search.open();search.search('书');
+  gates[0].release();await waitUntil(owner.state,()=>last(presentations).kind==='results');
+  gates[1].release();await waitUntil(owner.state,()=>search.run.completed.size===2);
+  assert.equal(last(presentations).results.length,1,'second response remains in the batching window');
+  search.stop();assert.equal(last(presentations).results.length,2);assert.equal(last(presentations).completedSourceCount,2);
+  assert.equal(last(presentations).localSearchFailed,true);assert.equal(last(presentations).stopped,true);
+  gates[2].release();await sleep(130);assert.equal(last(presentations).results.length,2);search.close();
+}
+// R3: failure recovery retains successful identities/query/history and retries only failed work.
+{
+  let failing=true;let localReads=0;
+  const owner=fakeOwner({sources:makeSources(2),failFor:id=>failing&&id==='source-1',resultsFor:id=>[{bookId:'/'+id,title:'书',author:'作者'}]});
+  const request=owner.request;owner.request=async(method,...args)=>{if(method==='bookshelf.list'){localReads++;if(failing)throw Error('local read unavailable');}return request(method,...args);};
+  const {orchestrator,presentations}=capture();const search=orchestrator(owner);search.open();search.search('书');
+  await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+  const first=last(presentations).results[0], query=first.searchRequestId;
+  assert.equal(last(presentations).localSearchFailed,true);assert.equal(last(presentations).failedSourceCount,1);
+  failing=false;search.retry();await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+  assert.equal(last(presentations).localSearchFailed,false);assert.equal(last(presentations).failedSourceCount,0);
+  assert.equal(owner.state.calls.filter(c=>c.sourceId==='source-0').length,1);
+  assert.equal(owner.state.calls.filter(c=>c.sourceId==='source-1').length,2);
+  assert.equal(localReads,2);assert.equal(owner.state.historyWrites,1);
+  assert.ok(last(presentations).results.every(b=>b.searchRequestId===query));search.close();
+}
+console.log('R3 independent branches, stop pending-delta flush, retained failure recovery and query/history identity PASS');
+
+// Retry a failed local branch while an online source still owns its request.
+{
+  let release;const gate=new Promise(r=>release=r);let localReads=0;
+  const owner=fakeOwner({sources:makeSources(1),resultsFor:()=>[{bookId:'/remote',title:'书',author:'作者'}]});
+  owner.state.localBooks=[{sourceId:'local',bookId:'local',title:'书',author:'作者'}];
+  const request=owner.request;owner.request=async(method,...args)=>{
+    if(method==='book.search')await gate;
+    if(method==='bookshelf.list'&&++localReads===1)throw Error('local unavailable');
+    return request(method,...args);
+  };
+  const {orchestrator,presentations}=capture();const search=orchestrator(owner);search.open();search.search('书');
+  await waitUntil(owner.state,()=>search.run.localStatus==='failed');const work=search.work;
+  search.retry();search.retry();await waitUntil(owner.state,()=>last(presentations).kind==='results');
+  assert.equal(localReads,2);assert.equal(last(presentations).searching,true);assert.equal(search.sweepAlive,true);
+  assert.equal(search.work,work,'retry does not supersede the still-running healthy branch');
+  release();await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+  assert.equal(last(presentations).results.length,2);assert.equal(owner.state.calls.length,1);search.close();
+}
+console.log('R3 failed local branch retries while online remains active; repeated retry does not duplicate work PASS');
+
+// R6: exercise an actual successful empty source through the live worker,
+// publication, page projection, and native-notification preparation boundary.
+{
+  const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+  const execute = source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
+  const withoutImports = source => source.replace(/^import[\s\S]*?;\n/gm, '');
+  const pageSource = read('entry/src/main/ets/features/search/SearchPage.ets');
+  const classes = pageSource.slice(pageSource.indexOf('@Observed\nclass SearchBookGroup'),
+    pageSource.indexOf('/**\n * Figma-backed Book Search')).replace('@Observed\n', '');
+  const { SearchBookGroup, SearchResultDataSource, SearchViewState } = await execute(`
+    const DataOperationType = {ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};
+    ${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}
+    export { SearchBookGroup, SearchResultDataSource };`);
+  const { SearchResultProjection } = await execute(['features/search/SearchResultProjection.ts','features/search/SearchResultRelevance.ts',
+    'features/common/BookAcquisitionPresentation.ts','features/search/SearchCandidatePolicy.ts']
+    .map(path=>withoutImports(read('entry/src/main/ets/'+path))).join('\n'));
+  let counting = false;let groupBuilds = 0;let rowUpdates = 0;let notices = 0;let flattenRows = 0;let identityLookups = 0;
+  class CountedGroup extends SearchBookGroup { constructor(...args){super(...args);if(counting)groupBuilds++;} }
+  const Page = productionMotionMethods(resolve(repo,'entry/src/main/ets/features/search/SearchPage.ets'),['groupResults'],
+    {SearchBookGroup:CountedGroup,SearchResultProjection});
+  const page = Object.assign(new Page(),{shelfBooks:[],selectedGroupName:'全部',viewState:new SearchViewState()});
+  const ds = new SearchResultDataSource();ds.registerDataChangeListener({onDatasetChange(){if(counting)notices++;}});
+  const update = ds.update.bind(ds);ds.update=(...args)=>{if(counting)rowUpdates++;return update(...args);};
+  let release;const gate=new Promise(resolve=>release=resolve);
+  const owner=fakeOwner({sources:makeSources(2),resultsFor:id=>id==='source-0'
+    ?Array.from({length:1000},(_,i)=>({bookId:'/book-'+i,title:'书'+i,author:'作者'})):[]});
+  const request=owner.request;owner.request=async(method,params,...args)=>{
+    if(method==='book.search'&&params.sourceId==='source-1')await gate;
+    return request(method,params,...args);
+  };
+  const search=new SearchOrchestrator(presentation=>{
+    if(presentation.kind!=='results')return;
+    page.presentation=presentation;const groups=page.groupResults(presentation.results);ds.replace(groups,page.changedGroupKeys);
+  },()=>{},()=>true,owner);
+  search.open();search.search('书');await waitUntil(owner.state,()=>search.presentation.kind==='results');
+  const before=search.presentation;const run=search.run;const revision=run.revision;
+  const results=run.results.bind(run);run.results=()=>{
+    const changed=run.flattenedRevision!==run.revision;const rows=results();if(counting&&changed)flattenRows+=rows.length;return rows;
+  };
+  const get=search.resultIndex.get.bind(search.resultIndex);search.resultIndex.get=key=>{if(counting)identityLookups++;return get(key);};
+  counting=true;release();await waitUntil(owner.state,()=>search.presentation.kind==='results'&&!search.presentation.searching);counting=false;
+  assert.equal(search.presentation.completedSourceCount,2);assert.equal(search.presentation.failedSourceCount,0);
+  assert.equal(search.presentation.results,before.results);assert.equal(search.presentation.delta,before.delta);assert.equal(run.revision,revision);
+  assert.deepEqual({groupBuilds,rowUpdates,notices,flattenRows,identityLookups},
+    {groupBuilds:0,rowUpdates:0,notices:0,flattenRows:0,identityLookups:0});
+  assert.equal(ds.totalCount(),1000);
+  // Empty replacement of a previously populated bucket is a real deletion,
+  // and must not be mistaken for the no-entity-change completion fast path.
+  const previous=run.sourceResults.get('source-0');run.sourceResults.set('source-0',run.admit([],previous));
+  assert.equal(run.revision,revision+1);assert.equal(run.results().length,0);
+  search.publishRun(run);assert.equal(search.presentation.kind,'empty');search.close();
+}
+console.log('R6 actual empty source → publication → page/list: 1000 retained rows, zero flatten/index lookup/group rebuild/notice; populated-bucket deletion still invalidates PASS');

@@ -5,6 +5,8 @@ export interface ReaderTtsRuntime {
 }
 
 export type ReaderTtsChapterRef = {
+  bodyVersion?: string;
+  processingVersion?: string;
   sourceId: string;
   bookId: string;
   chapterIndex: number;

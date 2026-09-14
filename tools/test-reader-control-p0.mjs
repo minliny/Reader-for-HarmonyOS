@@ -82,7 +82,8 @@ assert.match(experience,
 assert.match(experience,
   /this\.controlPage\(\) === 'quickSearch' \|\| this\.controlPage\(\) === 'fullSearch'/,
   'a running search must remain live while Quick Search expands into Full Search');
-assert.match(experience, /this\.selectChapterAnchor\(result\.chapterIndex, result\.chapterOffset, false\)/);
+assert.match(experience, /this\.selectBookmarkAnchor\(result\.chapterIndex, result\.chapterOffset, result\.positionScope\)/,
+  'search positions pass through the shared persisted-anchor scope guard before selection');
 assert.match(experience, /onExpandDirectory: \(\): void => this\.expandControlDirectory\(\)/);
 assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
 assert.match(experience, /settingsSnapshot: this\.readerSettingsSnapshot/);

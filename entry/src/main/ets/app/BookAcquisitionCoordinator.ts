@@ -22,7 +22,9 @@ export interface BookAcquisitionCandidate {
   failed: boolean;
 }
 type Preparation = { candidates: BookAcquisitionCandidate[]; scope: number; forceRefresh: boolean };
-type BookJob = { promise: Promise<RemoteReadingSession>; priority: BookRequestPriority; forceRefresh: boolean };
+type BookConsumer = { active: boolean; isCurrent?: () => boolean; canDispatch?: () => boolean };
+type BookJob = { promise: Promise<RemoteReadingSession>; priority: BookRequestPriority; forceRefresh: boolean;
+  started: boolean; consumers: BookConsumer[] };
 type PreparedSession = { session: RemoteReadingSession; at: number };
 
 export type BookAcquisitionAdmission = {
@@ -46,7 +48,9 @@ export class BookAcquisitionCoordinator {
   private sourceLoad: Promise<void> | undefined = undefined;
   private registryReady: boolean = false;
   private registryRevision: number = 0;
+  private projectionRevision: number = 0;
   private jobs: Map<string, BookJob> = new Map();
+  private refreshes: Map<string, BookJob> = new Map();
   private prepared: Map<string, PreparedSession> = new Map();
   private pending: Map<string, Preparation> = new Map();
   private attempted: Set<string> = new Set();
@@ -79,6 +83,8 @@ export class BookAcquisitionCoordinator {
   /** Changes on both sides of a source mutation, including uncertain restore failures. */
   sourceRegistryRevision(): number { return this.registryRevision; }
 
+  readingProjectionRevision(): number { return this.projectionRevision; }
+
   private invalidateSourceRegistry(): void {
     this.registryRevision += 1;
     this.registryReady = false;
@@ -101,6 +107,12 @@ export class BookAcquisitionCoordinator {
     if (this.closed) throw new Error('书籍任务已关闭');
     const changesSources = method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
       method === 'runtime.storage.apply' || method === 'runtime.storage.restore';
+    const changesProjection = changesSources || method === 'reader.chinese-conversion.put' ||
+      method === 'replace.persist' || method === 'replace-rule.put' || method === 'replace-rule.delete' ||
+      method === 'dict-rule.put' || method === 'dict-rule.delete' || method === 'rule-bundle.import' ||
+      method === 'cache.clear' || method === 'cache.book.prefetch' ||
+      (method === 'chapter.content' && params['forceRefresh'] === true);
+    if (changesProjection) this.projectionRevision += 1;
     if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
     const registryAtStart = this.registryRevision;
     try {
@@ -113,12 +125,16 @@ export class BookAcquisitionCoordinator {
       if (method === 'source.list' && registryAtStart === this.registryRevision) {
         this.observeSources(result.data, params['enabledOnly'] !== true);
       }
-      if (method === 'book.detail' || method === 'book.toc') {
+      if (method === 'book.toc' && result.data['catalogInstalled'] !== false) {
         const book = objectValue(params['book']);
         const bookId = params['bookId'] ?? book?.['bookId'];
         if (typeof bookId === 'string') {
           for (const [key, ready] of this.prepared) {
-            if (ready.session.identity.sourceId === sourceId && ready.session.identity.bookId === bookId) this.prepared.delete(key);
+            // A detail alone is never a replacement for a complete session.
+            // Our own refresh publishes its new session only after the whole
+            // gateway has validated it. An external TOC invalidates projection.
+            if (ready.session.identity.sourceId === sourceId && ready.session.identity.bookId === bookId &&
+              !this.jobs.has(key) && !this.refreshes.has(key)) this.prepared.delete(key);
           }
         }
       }
@@ -129,6 +145,7 @@ export class BookAcquisitionCoordinator {
       }
       return result;
     } finally {
+      if (changesProjection) this.projectionRevision += 1;
       if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
     }
   }
@@ -139,6 +156,7 @@ export class BookAcquisitionCoordinator {
     this.attempted.clear();
     this.preparationGroups.clear();
     this.preparationVisible = true;
+    this.scheduler.visibilityChanged();
   }
 
   endSearch(): void {
@@ -169,11 +187,13 @@ export class BookAcquisitionCoordinator {
       if (!forceRefresh && this.attempted.has(key)) continue;
       this.pending.set(key, { candidates, scope: this.scope, forceRefresh });
     }
+    this.scheduler.visibilityChanged();
     this.drainPreparations();
   }
 
   setPreparationVisible(visible: boolean): void {
     this.preparationVisible = visible;
+    this.scheduler.visibilityChanged();
     if (visible) this.drainPreparations();
   }
 
@@ -219,32 +239,36 @@ export class BookAcquisitionCoordinator {
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     const version = this.versions.get(seed.sourceId);
     const key = JSON.stringify([seed.sourceId, seed.bookId, version]);
-    if (priority === 'foreground') {
-      this.pending.delete(acquisitionBookKey(seed.sourceId, seed.bookId));
-      this.scheduler.promote(seed.sourceId, seed.bookId);
-    }
-    const job = this.jobs.get(key);
-    if (job !== undefined) {
-      if (priority === 'foreground') job.priority = priority;
-      if (options.forceRefresh && !job.forceRefresh) {
-        // A cache-only admission is not a refresh. Let its current consumers
-        // finish, then revalidate owner/source/cancellation and join or start
-        // one actual refresh. Never cancel shared work or clear durable data.
-        await job.promise.catch((_error: Error): void => {});
-        return this.acquireBook(seed, options, priority);
-      }
-      return job.promise;
-    }
     const ready = this.prepared.get(key);
     if (!options.forceRefresh && ready !== undefined && Date.now() - ready.at < CACHE_FRESH_MS) {
+      const session = this.withCatalogFreshness(ready.session);
       this.prepared.delete(key);
-      this.prepared.set(key, ready);
-      return ready.session;
+      this.prepared.set(key, { session, at: ready.at });
+      return session;
+    }
+    const consumer: BookConsumer = { active: true, isCurrent: options.isCurrent, canDispatch: options.canDispatch };
+    const jobs = options.forceRefresh ? this.refreshes : this.jobs;
+    let job = jobs.get(key) ?? (!options.forceRefresh ? this.refreshes.get(key) : undefined);
+    if (options.forceRefresh && job === undefined && this.jobs.has(key)) {
+      // A cache admission cannot satisfy forceRefresh. Its complete session
+      // remains owned by its existing consumers; then start/join real refresh.
+      await this.jobs.get(key)?.promise.catch((_error: Error): void => {});
+      return this.acquireBook(seed, options, priority);
+    }
+    if (priority === 'foreground') {
+      if (job !== undefined) job.priority = priority;
+    }
+    if (job !== undefined) {
+      job.consumers.push(consumer);
+      if (priority === 'foreground') this.scheduler.promote(seed.sourceId, seed.bookId);
+      this.scheduler.visibilityChanged();
+      return this.consumeJob(job, consumer);
     }
     const next: BookJob = { priority, forceRefresh: options.forceRefresh === true,
+      started: false, consumers: [consumer],
       promise: Promise.resolve(undefined as unknown as RemoteReadingSession) };
-    // The task's cancellation is process-owned. A page guard only controls its
-    // subscriber; hiding/removing that page must not cancel a shared catalog.
+    // The first actual dispatch transfers the finite detail→TOC chain to the
+    // process. Before that boundary, an orphan can still leave the queue.
     next.promise = this.openBook(seed, version, next, options.forceRefresh === true)
       .then((session: RemoteReadingSession): RemoteReadingSession => {
         if (this.versions.get(seed.sourceId) === version && !this.closed) {
@@ -255,9 +279,26 @@ export class BookAcquisitionCoordinator {
           }
         }
         return session;
-      }).finally((): void => { if (this.jobs.get(key) === next) this.jobs.delete(key); });
-    this.jobs.set(key, next);
-    return next.promise;
+      }).finally((): void => { if (jobs.get(key) === next) jobs.delete(key); });
+    jobs.set(key, next);
+    return this.consumeJob(next, consumer);
+  }
+
+  private async consumeJob(job: BookJob, consumer: BookConsumer): Promise<RemoteReadingSession> {
+    try {
+      const session = await job.promise;
+      if (this.closed || consumer.isCurrent?.() === false) {
+        throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+      }
+      return session;
+    } finally { consumer.active = false; }
+  }
+
+  private withCatalogFreshness(session: RemoteReadingSession): RemoteReadingSession {
+    const at = session.catalogAt;
+    const now = Date.now();
+    const refreshRecommended = at === undefined || !Number.isFinite(at) || at > now || now - at >= CACHE_FRESH_MS;
+    return session.refreshRecommended === refreshRecommended ? session : { ...session, refreshRecommended };
   }
 
   /**
@@ -274,10 +315,8 @@ export class BookAcquisitionCoordinator {
     const session = await this.acquireBook(seed, options, priority);
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     if (session.refreshRecommended !== true || options.forceRefresh || this.closed || version === undefined) return { session };
-    // Do not pass the page's isCurrent guard to process-owned refresh work;
-    // the visible subscriber may disappear while the refresh updates the
-    // shared admission cache for the next opener.
-    const backgroundRefresh = this.acquireBook(seed, { forceRefresh: true }, 'background');
+    const backgroundRefresh = this.acquireBook(seed,
+      { forceRefresh: true, isCurrent: options.isCurrent, canDispatch: options.canDispatch }, 'background');
     // The process owns failure recording even if its page/viewport subscriber
     // has gone away. Keep the original promise rejectable for active callers.
     void backgroundRefresh.catch((_error: Error): void => {});
@@ -294,13 +333,19 @@ export class BookAcquisitionCoordinator {
     return this.attemptClock;
   }
 
-  async reportVerdict(session: RemoteReadingSession, chapterUrl: string, message?: string, checkedAt: number = this.beginAttempt()): Promise<void> {
+  async reportVerdict(session: RemoteReadingSession, chapterIndex: number, chapterUrl: string,
+    contentVersion: string, bodyVersion: string | undefined, processingVersion: string | undefined,
+    message?: string, checkedAt: number = this.beginAttempt()): Promise<void> {
     const version = session.sourceVersion;
-    if (version === undefined || version.length === 0 || session.acquisitionMode === 'offline') return;
-    const acquisition: JsonObject = { schemaVersion: 1, sourceVersion: version,
+    if (version === undefined || version.length === 0 || session.acquisitionMode === 'offline' ||
+      session.catalogVersion === undefined || session.contextVersion === undefined ||
+      bodyVersion === undefined || processingVersion === undefined) return;
+    const acquisition: JsonObject = { schemaVersion: 2, sourceVersion: version,
+      catalogVersion: session.catalogVersion, contextVersion: session.contextVersion,
+      chapterIndex, chapterUrl, contentVersion, projectionVersion: 'reader-document-v1',
+      bodyVersion, processingVersion,
       stage: message === undefined ? 'readable' : 'failed', checkedAt };
-    if (message === undefined) acquisition['chapterUrl'] = chapterUrl;
-    else acquisition['message'] = message;
+    if (message !== undefined) { acquisition['message'] = message; acquisition['failureStage'] = 'chapter'; }
     await this.request('search-book.put', { origin: session.identity.sourceId, bookUrl: session.identity.bookId, acquisition });
   }
 
@@ -310,6 +355,8 @@ export class BookAcquisitionCoordinator {
     this.pending.clear();
     this.scheduler.close();
     this.prepared.clear();
+    this.jobs.clear();
+    this.refreshes.clear();
     this.listeners.clear();
     this.failureIdentities.clear();
     if (this.notifyTimer >= 0) clearTimeout(this.notifyTimer);
@@ -366,11 +413,17 @@ export class BookAcquisitionCoordinator {
         actual.searchVariables = seed.sourceVersion === version ? seed.searchVariables : [];
       }
     }
+    const processCurrent = (): boolean => !this.closed && this.versions.get(seed.sourceId) === version;
+    const hasConsumer = (): boolean => job.consumers.some((consumer: BookConsumer): boolean =>
+      consumer.active && consumer.isCurrent?.() !== false);
+    const isCurrent = (): boolean => processCurrent() && (job.started || hasConsumer());
+    const canDispatch = (): boolean => job.started || job.consumers.some((consumer: BookConsumer): boolean =>
+      consumer.active && consumer.isCurrent?.() !== false && consumer.canDispatch?.() !== false);
     const gateway = new RemoteReadingFlowGateway({
       request: (method: string, params?: JsonObject, options?: RequestOptions): Promise<ReaderCoreResultEvent> =>
-        this.request(method, params, options, job.priority),
+        this.request(method, params, { ...options, shouldCancel: (): boolean => !isCurrent(),
+          canContinue: processCurrent, canDispatch, onDispatch: (): void => { job.started = true; } }, job.priority),
     });
-    const isCurrent = (): boolean => !this.closed && this.versions.get(seed.sourceId) === version;
     let cacheFailure: RemoteReadingGatewayError | undefined;
     if (!forceRefresh) {
       try {
@@ -379,8 +432,9 @@ export class BookAcquisitionCoordinator {
           await gateway.openCachedSession(actual, isCurrent);
         if (this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消', 'cache.book.status');
         if (!isCurrent()) throw new RemoteReadingGatewayError('sourceVersionChanged', '书源规则已更新，请重试', 'cache.book.status');
-        return { ...cached, sourceVersion: version, requiresContextRefresh: (!contextIsCurrent || cached.requiresContextRefresh === true) && version !== undefined,
-          refreshRecommended: !contextIsCurrent || Date.now() - (facts?.['catalogAt'] as number) >= CACHE_FRESH_MS };
+        return this.withCatalogFreshness({ ...cached, sourceVersion: version,
+          catalogAt: cached.catalogAt ?? (typeof facts?.['catalogAt'] === 'number' ? facts['catalogAt'] as number : undefined),
+          requiresContextRefresh: (!contextIsCurrent || cached.requiresContextRefresh === true) && version !== undefined });
       } catch (error) {
         const classified = classifyRemoteReadingCommandFailure('cache.book.status', error);
         this.recordFailure(classified, attemptId, failureContext(classified.code === 'cachedSessionUnavailable' ? 'miss' : classified.code === 'cacheDerivedCorrupt' ? 'derivedCorrupt' : 'blocked'));
@@ -403,7 +457,8 @@ export class BookAcquisitionCoordinator {
       if (isCurrent() && version !== undefined && this.canTryAnotherCandidate(failure)) {
         try {
           await this.request('search-book.put', { origin: seed.sourceId, bookUrl: seed.bookId,
-            acquisition: { schemaVersion: 1, sourceVersion: version, checkedAt: attemptId,
+            acquisition: { schemaVersion: 2, sourceVersion: version, checkedAt: attemptId,
+              failureStage: forceRefresh ? 'refresh' : failure.command === 'book.detail' ? 'detail' : 'catalog',
               stage: 'failed', message: errorMessageOf(failure) } });
         } catch (_publicationError) { /* A failed fact publication never erases the original source failure. */ }
       }
@@ -413,7 +468,7 @@ export class BookAcquisitionCoordinator {
       this.registryReady = false;
       throw new RemoteReadingGatewayError('sourceVersionChanged', '书源规则已更新，请重试');
     }
-    return { ...session, sourceVersion: version };
+    return this.withCatalogFreshness({ ...session, sourceVersion: version, catalogAt: session.catalogAt ?? started });
   }
 
   private drainPreparations(): void {
@@ -438,9 +493,9 @@ export class BookAcquisitionCoordinator {
   }
 
   private async prepareOne(task: Preparation, key: string): Promise<void> {
-    const isCurrent = (): boolean => !this.closed && task.scope === this.scope &&
-      this.preparationVisible && this.preparationGroups.has(key);
-    await this.acquireCandidateGroup(task.candidates, { forceRefresh: task.forceRefresh, isCurrent }, 'background');
+    const isCurrent = (): boolean => !this.closed && task.scope === this.scope && this.preparationGroups.has(key);
+    await this.acquireCandidateGroup(task.candidates, { forceRefresh: task.forceRefresh, isCurrent,
+      canDispatch: (): boolean => this.preparationVisible }, 'background');
   }
 
   private async ensureSources(): Promise<void> {

@@ -1,3 +1,5 @@
+import type { RemoteReadingPositionMigration } from './RemoteReadingPositionMigration';
+
 /**
  * One materialized chapter consumed by the native reading session.
  *
@@ -15,6 +17,10 @@ export type ReadingSessionChapter = {
   readonly content: string;
   readonly images: ReadingSessionImage[];
   readonly contentVersion: string;
+  /** Core canonical/processing evidence, distinct from the Host document hash. */
+  readonly bodyVersion?: string;
+  readonly processingVersion?: string;
+  readonly positionMigration?: RemoteReadingPositionMigration;
   readonly extractionVia: 'local' | 'rule' | 'js';
 };
 
@@ -201,6 +207,10 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
     content: chapter.content,
     images: chapter.images.map(copyImage),
     contentVersion: chapter.contentVersion,
+    bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
+    positionMigration: chapter.positionMigration === undefined ? undefined : { ...chapter.positionMigration,
+      anchors: chapter.positionMigration.anchors.map((anchor) => ({ ...anchor })),
+      progress: chapter.positionMigration.progress === undefined ? undefined : { ...chapter.positionMigration.progress } },
     extractionVia: chapter.extractionVia,
   };
 }

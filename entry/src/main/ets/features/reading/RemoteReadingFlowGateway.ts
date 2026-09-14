@@ -1,3 +1,4 @@
+import { appendExpectedPositionVersions, captureRemotePositionContext, decodeRemotePositionMigration, encodeRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import type {
   JsonObject,
   ReaderCoreResultEvent,
@@ -28,6 +29,7 @@ import type {
   ChapterBodyVerdict,
 } from './RemoteContentAdmission';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
+import type { RemoteReadingPreparedChapter } from './RemoteReadingEvidence';
 
 export type RemoteReadingBookSeed = {
   sourceVersion?: string;
@@ -63,6 +65,11 @@ export type RemoteReadingTocEntry = {
 
 export type RemoteReadingSession = {
   sourceVersion?: string;
+  /** Core-owned canonical catalog snapshot; absent on legacy caches. */
+  catalogAt?: number;
+  catalogVersion?: string;
+  contextVersion?: string;
+  preparedChapter?: RemoteReadingPreparedChapter;
   acquisitionMode: 'online' | 'offline';
   identity: RemoteReadingIdentity;
   detailUrl: string;
@@ -77,6 +84,8 @@ export type RemoteReadingSession = {
 };
 
 export type RemoteReadingProgress = {
+  bodyVersion?: string;
+  processingVersion?: string;
   sourceId: string;
   bookId: string;
   chapterIndex: number;
@@ -91,6 +100,8 @@ export type RemoteReadingProgressState =
   | { kind: 'restored'; progress: RemoteReadingProgress };
 
 export type RemoteReadingProgressUpdate = {
+  expectedBodyVersion?: string;
+  expectedProcessingVersion?: string;
   chapterIndex: number;
   chapterOffset: number;
   chapterProgress: number;
@@ -98,6 +109,8 @@ export type RemoteReadingProgressUpdate = {
 };
 
 export type RemoteReadingAnchor = {
+  bodyVersion?: string;
+  processingVersion?: string;
   chapterIndex: number;
   chapterOffset: number;
   chapterProgress: number;
@@ -137,6 +150,8 @@ export type RemoteReadingAtomicResolution = {
 export type RemoteReadingOpenOptions = {
   forceRefresh?: boolean;
   isCurrent?: () => boolean;
+  /** Pause an owned queued acquisition without cancelling a started chain. */
+  canDispatch?: () => boolean;
   /** Requirements known from source metadata; blocked Host semantics stop before I/O. */
   hostRequirements?: RemoteReadingHostCapabilityId[];
 };
@@ -220,6 +235,16 @@ export class RemoteReadingFlowGateway {
       variables: encodeRemoteReadingVariables(continuationVariables),
     }, options.isCurrent);
     this.assertIdentity(tocResult.data, identity, 'book.toc');
+    if (tocResult.data['catalogInstalled'] === false) {
+      throw new RemoteReadingGatewayError('sourceVersionChanged',
+        '目录已被更新的请求替换，请重试', 'book.toc');
+    }
+    const detailVersion = this.optionalString(detailResult.data, 'sourceVersion', 'book.detail') ?? seed.sourceVersion;
+    const tocVersion = this.optionalString(tocResult.data, 'sourceVersion', 'book.toc');
+    if (tocVersion !== undefined && detailVersion !== undefined && tocVersion !== detailVersion) {
+      throw new RemoteReadingGatewayError('sourceVersionChanged', '详情与目录的书源版本不一致', 'book.toc');
+    }
+    const snapshot = this.decodeCatalogSnapshot(tocResult.data, 'book.toc');
     const entries = this.decodeToc(tocResult.data['toc']);
     const readableEntryCount = entries.filter((entry): boolean => entry.url.trim().length > 0).length;
     if (readableEntryCount === 0) {
@@ -237,12 +262,14 @@ export class RemoteReadingFlowGateway {
     }
     return {
       acquisitionMode: 'online',
-      sourceVersion: typeof detailResult.data['sourceVersion'] === 'string' ? detailResult.data['sourceVersion'] as string : seed.sourceVersion,
+      sourceVersion: tocVersion ?? detailVersion,
+      ...snapshot,
       identity,
       detailUrl: seed.detailUrl,
       tocUrl,
       book,
-      continuationVariables,
+      continuationVariables: tocResult.data['continuationVariables'] === undefined ? continuationVariables :
+        decodeRemoteReadingVariables(tocResult.data['continuationVariables'], 'book.toc', true),
       entries,
       hostRequirements,
     };
@@ -304,6 +331,8 @@ export class RemoteReadingFlowGateway {
       catch (_) { invalidVariables = true; return []; }
     };
     const continuationVariables = cachedVariables(result.data['continuationVariables']);
+    const sourceVersion = this.optionalString(result.data, 'sourceVersion', 'cache.book.status') ?? seed.sourceVersion;
+    const snapshot = this.decodeCatalogSnapshot(result.data, 'cache.book.status');
     for (let position = 0; position < rawChapters.length; position += 1) {
       const raw = this.requireObject(rawChapters[position], 'cache.book.status chapter');
       const index = this.requireChapterIndex(raw, 'chapterIndex', 'cache.book.status chapter');
@@ -326,7 +355,8 @@ export class RemoteReadingFlowGateway {
     }
     return {
       acquisitionMode: 'offline',
-      sourceVersion: seed.sourceVersion,
+      sourceVersion,
+      ...snapshot,
       identity,
       detailUrl: seed.detailUrl,
       tocUrl: '',
@@ -338,13 +368,13 @@ export class RemoteReadingFlowGateway {
         kind: seed.kind,
         lastChapter: seed.lastChapter,
       },
-      continuationVariables: mergeRemoteReadingVariables(
+      continuationVariables: snapshot.contextVersion !== undefined ? continuationVariables : mergeRemoteReadingVariables(
         seed.searchVariables ?? [],
         continuationVariables,
       ),
       entries,
       hostRequirements: [],
-      requiresContextRefresh: invalidVariables,
+      requiresContextRefresh: invalidVariables || sourceVersion !== seed.sourceVersion,
     };
   }
 
@@ -360,14 +390,8 @@ export class RemoteReadingFlowGateway {
   ): Promise<RemoteReadingSession> {
     const cached = await this.openCachedSession(seed, isCurrent);
     return {
+      ...cached,
       acquisitionMode: contextIsCurrent && !cached.requiresContextRefresh ? 'online' : 'offline',
-      sourceVersion: cached.sourceVersion,
-      identity: cached.identity,
-      detailUrl: cached.detailUrl,
-      tocUrl: cached.tocUrl,
-      book: cached.book,
-      continuationVariables: cached.continuationVariables,
-      entries: cached.entries,
       hostRequirements: contextIsCurrent && !cached.requiresContextRefresh ? ['httpExecute'] : [],
       requiresContextRefresh: !contextIsCurrent || cached.requiresContextRefresh,
     };
@@ -389,6 +413,10 @@ export class RemoteReadingFlowGateway {
       includeGlobalStats: false,
     }, isCurrent);
     this.assertIdentity(result.data, identity, 'cache.book.status');
+    if ((session.catalogVersion !== undefined && result.data['catalogVersion'] !== session.catalogVersion) ||
+      (session.contextVersion !== undefined && result.data['contextVersion'] !== session.contextVersion)) {
+      throw new RemoteReadingGatewayError('sourceVersionChanged', '目录投影已更新', 'cache.book.status');
+    }
     const rawChapters = result.data['chapters'];
     if (!Array.isArray(rawChapters) || rawChapters.length !== session.entries.length) {
       throw new RemoteReadingGatewayError(
@@ -407,6 +435,9 @@ export class RemoteReadingFlowGateway {
           'cache.book.status',
         );
       }
+      if (raw['url'] !== session.entries[position].url) {
+        throw new RemoteReadingGatewayError('sourceVersionChanged', '目录章节已更新', 'cache.book.status');
+      }
       return {
         index,
         title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
@@ -421,7 +452,9 @@ export class RemoteReadingFlowGateway {
     chapterIndex: number,
     isCurrent?: () => boolean,
     forceRefresh: boolean = false,
+    capturedPosition?: RemoteReadingPositionContext,
   ): Promise<ReadingSessionChapter> {
+    const positionContext = captureRemotePositionContext(capturedPosition);
     const coordinator = this.runtimeOwner.bookAcquisitions?.();
     const attemptAt = coordinator?.beginAttempt() ?? Date.now();
     const identity = createRemoteReadingIdentity(session.identity.sourceId, session.identity.bookId);
@@ -434,13 +467,18 @@ export class RemoteReadingFlowGateway {
         `chapter ${chapterIndex} is not present in the remote session TOC`,
       );
     }
+    if (forceRefresh && coordinator !== undefined &&
+      await coordinator.currentSourceVersion(identity.sourceId) === undefined) {
+      throw new RemoteReadingGatewayError('cachedSessionUnavailable',
+        '书源已停用或删除，无法刷新；已保留本机正文', 'chapter.content');
+    }
     if (forceRefresh && session.requiresContextRefresh === true) {
       const fresh = await this.openSession({ ...session.book, ...identity, detailUrl: session.detailUrl,
         sourceVersion: session.sourceVersion, searchVariables: [] }, { forceRefresh: true, isCurrent });
       const refreshedEntry = fresh.entries.find((entry): boolean => entry.index === selected.index && entry.url === selected.url);
       if (refreshedEntry === undefined) throw new RemoteReadingGatewayError('sourceVersionChanged',
         '目录已更新，已保留当前阅读位置，请重新打开本书', 'book.toc');
-      return this.loadChapter(fresh, chapterIndex, isCurrent, true);
+      return this.loadChapter(fresh, chapterIndex, isCurrent, true, positionContext);
     }
     if (forceRefresh) assertRemoteReadingHostRequirements(['httpExecute']);
     if (session.acquisitionMode === 'online' && coordinator !== undefined) {
@@ -449,7 +487,7 @@ export class RemoteReadingFlowGateway {
         // A rule edit never invalidates downloaded bodies. Re-enter through
         // cache-only admission; only a missing body can request fresh rules.
         return this.loadChapter({ ...session, acquisitionMode: 'offline', hostRequirements: [],
-          sourceVersion: currentVersion, requiresContextRefresh: currentVersion !== undefined }, chapterIndex, isCurrent, forceRefresh);
+          sourceVersion: currentVersion, requiresContextRefresh: currentVersion !== undefined }, chapterIndex, isCurrent, forceRefresh, positionContext);
       }
     }
     if (session.acquisitionMode === 'offline' && !forceRefresh) {
@@ -464,7 +502,7 @@ export class RemoteReadingFlowGateway {
         if (refreshedEntry === undefined) {
           throw new RemoteReadingGatewayError('sourceVersionChanged', '目录已更新，请重新打开本书以恢复阅读位置', 'book.toc');
         }
-        return this.loadChapter(fresh, chapterIndex, isCurrent);
+        return this.loadChapter(fresh, chapterIndex, isCurrent, false, positionContext);
       }
     }
     assertRemoteReadingNonBlankString(selected.title, 'session chapter title');
@@ -479,8 +517,13 @@ export class RemoteReadingFlowGateway {
       variables: encodeRemoteReadingVariables(variables),
     };
     if (forceRefresh) params['forceRefresh'] = true;
+    if (positionContext !== undefined) params['positionContext'] = encodeRemotePositionContext(positionContext);
     const result = await this.request('chapter.content', params, isCurrent);
     this.assertIdentity(result.data, identity, 'chapter.content');
+    const bodyVersion = this.optionalString(result.data, 'bodyVersion', 'chapter.content');
+    const processingVersion = this.optionalString(result.data, 'processingVersion', 'chapter.content');
+    const positionMigration = decodeRemotePositionMigration(result.data['positionMigration'], identity.sourceId, identity.bookId,
+      bodyVersion, processingVersion, positionContext);
     // chapter index is the navigation identity; title is a Core-projected
     // display value and can legitimately change after a Chinese conversion
     // mode switch.
@@ -513,7 +556,10 @@ export class RemoteReadingFlowGateway {
     if (bodyVerdict.kind !== 'readable') {
       const rejected: ChapterBodyRejectedVerdict = bodyVerdict;
       if (coordinator !== undefined) {
-        void coordinator.reportVerdict(session, selected.url, rejected.reason, attemptAt).catch((): void => {});
+        void coordinator.reportVerdict(session, selected.index, selected.url, document.contentVersion,
+          this.optionalString(result.data, 'bodyVersion', 'chapter.content'),
+          this.optionalString(result.data, 'processingVersion', 'chapter.content'),
+          rejected.reason, attemptAt).catch((): void => {});
       }
       throw new RemoteReadingSourceError(
         rejected.kind,
@@ -522,7 +568,10 @@ export class RemoteReadingFlowGateway {
       );
     }
     if (coordinator !== undefined) {
-      void coordinator.reportVerdict(session, selected.url, undefined, attemptAt).catch((): void => {});
+      void coordinator.reportVerdict(session, selected.index, selected.url, document.contentVersion,
+        this.optionalString(result.data, 'bodyVersion', 'chapter.content'),
+        this.optionalString(result.data, 'processingVersion', 'chapter.content'),
+        undefined, attemptAt).catch((): void => {});
     }
     return {
       sourceId: identity.sourceId,
@@ -533,6 +582,7 @@ export class RemoteReadingFlowGateway {
       content: document.content,
       images: document.images,
       contentVersion: document.contentVersion,
+      bodyVersion, processingVersion, positionMigration,
       extractionVia: via === 'cache' ? 'rule' : via,
     };
   }
@@ -550,6 +600,18 @@ export class RemoteReadingFlowGateway {
       this.chapterByIndex = chapterByIndex;
     }
     return this.chapterByIndex.get(chapterIndex);
+  }
+
+  private decodeCatalogSnapshot(data: JsonObject, command: RemoteReadingCommand): {
+    catalogAt?: number; catalogVersion?: string; contextVersion?: string;
+  } {
+    const at = data['catalogAt'];
+    if (at !== undefined && (typeof at !== 'number' || !Number.isSafeInteger(at) || at < 0)) {
+      throw new RemoteReadingGatewayError('invalidResponse', `${command} returned invalid catalogAt`, command);
+    }
+    return { catalogAt: typeof at === 'number' ? at : undefined,
+      catalogVersion: this.optionalString(data, 'catalogVersion', command),
+      contextVersion: this.optionalString(data, 'contextVersion', command) };
   }
 
   private async assertOfflineChapterAvailable(
@@ -770,6 +832,8 @@ export class RemoteReadingFlowGateway {
       chapterOffset: update.chapterOffset,
       chapterProgress: update.chapterProgress,
     };
+    appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
+      update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);
     if (update.locationRevision !== undefined) {
       params['locationRevision'] = update.locationRevision;
     }
@@ -802,7 +866,9 @@ export class RemoteReadingFlowGateway {
         'reading.progress.update',
       );
     }
-    if (stored.chapterIndex !== update.chapterIndex || stored.chapterOffset !== update.chapterOffset ||
+    if ((params['expectedBodyVersion'] !== undefined && stored.bodyVersion !== params['expectedBodyVersion']) ||
+      (params['expectedProcessingVersion'] !== undefined && stored.processingVersion !== params['expectedProcessingVersion']) ||
+      stored.chapterIndex !== update.chapterIndex || stored.chapterOffset !== update.chapterOffset ||
       (update.locationRevision !== undefined && stored.locationRevision !== update.locationRevision)) {
       throw new RemoteReadingGatewayError(
         'identityMismatch',
@@ -935,6 +1001,11 @@ export class RemoteReadingFlowGateway {
       chapterProgress: this.requireProgress(progress, 'chapterProgress', command),
       updatedAt: this.requireNonNegativeInteger(progress, 'updatedAt', command),
     };
+    const bodyVersion = this.optionalString(progress, 'bodyVersion', command);
+    const processingVersion = this.optionalString(progress, 'processingVersion', command);
+    appendExpectedPositionVersions({}, bodyVersion, processingVersion);
+    if (bodyVersion !== undefined) decoded.bodyVersion = bodyVersion;
+    if (processingVersion !== undefined) decoded.processingVersion = processingVersion;
     const revision = this.optionalString(progress, 'locationRevision', command);
     if (revision !== undefined) {
       decoded.locationRevision = revision;

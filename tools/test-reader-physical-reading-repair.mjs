@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderSessionLaunchController } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts';
@@ -10,7 +10,9 @@ import { readerAppearanceCubicBezierProgress as b } from '../entry/src/main/ets/
 import * as motion from '../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts';
 import * as policy from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
 import { deriveReaderSessionCapsule } from '../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts';
-import { LocalReadingFlowGateway } from '../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts';
+registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
+  if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
+const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 import { projectReaderBookmarkRows } from '../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts';
 const file = n => new URL(`../entry/src/main/ets/features/reading/${n}`, import.meta.url);
 const mapCode=stripTypeScriptTypes(readFileSync(file('ReadingSurfaceLayoutMap.ts'),'utf8')

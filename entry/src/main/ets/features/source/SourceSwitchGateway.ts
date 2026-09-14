@@ -1,8 +1,8 @@
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
-import type { RemoteReadingIdentity, RemoteReadingVariable } from '../reading/RemoteReadingContract';
+import type { RemoteReadingVariable } from '../reading/RemoteReadingContract';
 import { errorMessageOf } from '../../app/ErrorMessage';
-import { CachedBookIdentityResolver } from '../common/CachedBookIdentity';
+import { acquisitionCandidateRank, acquisitionReadableCurrent, acquisitionBookFailureCurrent } from '../common/BookAcquisitionPresentation';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import {
@@ -184,11 +184,10 @@ export type PendingSourceSwitch = {
 export class SourceSwitchGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private readonly normalizedMatchText = new Map<string, string>();
-  private readonly bookIdentities = new CachedBookIdentityResolver();
   private cachedSources: Map<string, SourceSwitchRegistryEntry> | undefined;
   private cachedSourceRevision: number | undefined;
-  private cachedBooks: Map<string, JsonObject> | undefined;
-  private cachedBookRevision: number | undefined;
+  private confirmedScope: string = '';
+  private confirmedCandidates = new Set<string>();
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -203,75 +202,67 @@ export class SourceSwitchGateway {
     query: SourceSwitchProbeQuery,
     isCurrent: (() => boolean) | undefined = undefined,
     known: SourceSwitchCandidate[] = [],
-    change: BookAcquisitionChange | undefined = undefined,
+    _change: BookAcquisitionChange | undefined = undefined,
   ): Promise<SourceSwitchCandidate[]> {
     this.validateProbeQuery(query);
     const enabledSources = await this.loadEnabledSources(isCurrent);
+    const scope = sourceSwitchCandidateKey(query.sourceId, query.bookId);
+    const confirmed = new Set(this.confirmedScope === scope ? this.confirmedCandidates : []);
     const revision = this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision();
-    let rawBooks: unknown;
-    if (change !== undefined && !change.reset && this.cachedBooks !== undefined && this.cachedBookRevision === revision) {
-      const rows = new Map(this.cachedBooks);
-      const changes = new Map<string, RemoteReadingIdentity>();
-      for (const identity of change.identities) changes.set(sourceSwitchCandidateKey(identity.sourceId, identity.bookId), identity);
-      for (const [key, identity] of changes) {
-        if (isCurrent?.() === false) return [];
-        const result = await this.runtimeOwner.request('search-book.get',
-          { origin: identity.sourceId, bookUrl: identity.bookId }, this.requestOptions(isCurrent));
-        const row = result.data['book'];
-        if (row !== null && typeof row === 'object' && !Array.isArray(row)) {
-          const record = row as JsonObject;
-          if (record['origin'] !== identity.sourceId || record['bookUrl'] !== identity.bookId) throw new Error('候选缓存返回了不同的书籍身份');
-          rows.set(key, record);
-        } else rows.delete(key);
-      }
-      rawBooks = Array.from(rows.values());
-    } else {
-      const result = await this.runtimeOwner.request('search-book.list', {}, this.requestOptions(isCurrent));
-      rawBooks = result.data['books'];
-    }
-    if (!Array.isArray(rawBooks)) {
-      throw new Error('search-book.list returned invalid data');
-    }
-    const records: JsonObject[] = [];
-    let processed = 0;
-    for (const raw of rawBooks) {
-      if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-      if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('search-book.list returned a non-object row');
-      records.push(raw as JsonObject);
-    }
-    if (isCurrent?.() === false || revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) return [];
-    this.cachedBooks = new Map<string, JsonObject>();
-    for (const row of records) this.cachedBooks.set(
-      sourceSwitchCandidateKey(this.optionalString(row, 'origin') ?? '', this.optionalString(row, 'bookUrl') ?? ''), row);
-    this.cachedBookRevision = revision;
-    const identities = await this.bookIdentities.build(records, new Set(enabledSources.keys()));
-    const group = identities.groupFor(query.sourceId, query.bookId) ??
-      identities.groupForAlias(this.bookIdentities.aliasKey(query.bookName, query.author));
+    // Core owns the indexed alias closure. Stage a complete, version-consistent
+    // relation before replacing the pane; a partial page never means deletion.
+    const records = await this.loadRelatedBooks(query, enabledSources, isCurrent);
+    if (isCurrent?.() === false) return [];
     const candidates: SourceSwitchCandidate[] = [];
-    for (const raw of rawBooks) {
-      if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-        throw new Error('search-book.list returned a non-object row');
-      }
-      const book = raw as JsonObject;
-      if (group === undefined || identities.groupFor(this.optionalString(book, 'origin') ?? '', this.optionalString(book, 'bookUrl') ?? '') !== group) {
-        continue;
-      }
-      const bookUrl = this.requireString(book, 'bookUrl', 'search-book.list');
-      const checkedAt = this.optionalNumber(book, 'time') ?? 0;
-      const sourceId = this.requireString(book, 'origin', 'search-book.list');
+    for (const book of records) {
+      const sourceId = this.requireString(book, 'origin', 'search-book.related');
       const source = enabledSources.get(sourceId);
-      if (source === undefined) {
-        continue;
-      }
-      candidates.push(this.decodeCachedCandidate(book, query, checkedAt, source));
+      confirmed.add(sourceSwitchCandidateKey(sourceId, this.requireString(book, 'bookUrl', 'search-book.related')));
+      if (source !== undefined) candidates.push(this.decodeCachedCandidate(
+        book, query, this.optionalNumber(book, 'time') ?? 0, source));
     }
     const keys = new Set(candidates.map((candidate: SourceSwitchCandidate): string =>
       sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
+    // A live Search seed may lead its durable publication. Explicitly missing
+    // rows may survive that race; persisted rows outside this relation may not.
+    const unpersisted = new Set<string>();
+    const extras = known.filter((candidate: SourceSwitchCandidate): boolean =>
+      enabledSources.has(query.sourceId) && enabledSources.has(candidate.sourceId) &&
+      !keys.has(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
+    for (let start = 0; start < extras.length; start += 128) {
+      const batch = extras.slice(start, start + 128);
+      const expected = new Set(batch.map((candidate: SourceSwitchCandidate): string =>
+        sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
+      const result = await this.runtimeOwner.request('search-book.batch.get', { identities: batch.map(
+        (candidate: SourceSwitchCandidate): JsonObject => ({ sourceId: candidate.sourceId, bookId: candidate.bookUrl })) },
+        this.requestOptions(isCurrent));
+      if (isCurrent?.() === false) return [];
+      if (result.data['complete'] !== true || !Array.isArray(result.data['books']) || !Array.isArray(result.data['missing'])) {
+        throw new Error('候选身份快照不完整');
+      }
+      const returned = new Set<string>();
+      for (const raw of result.data['books']) {
+        if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('候选身份无效');
+        const row = raw as JsonObject;
+        const key = sourceSwitchCandidateKey(this.requireString(row, 'origin', 'search-book.batch.get'),
+          this.requireString(row, 'bookUrl', 'search-book.batch.get'));
+        if (!expected.has(key) || returned.has(key)) throw new Error('候选身份不匹配');
+        returned.add(key); confirmed.add(key);
+      }
+      for (const raw of result.data['missing']) {
+        if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('候选身份无效');
+        const row = raw as JsonObject;
+        const key = sourceSwitchCandidateKey(this.requireString(row, 'sourceId', 'search-book.batch.get'),
+          this.requireString(row, 'bookId', 'search-book.batch.get'));
+        if (!expected.has(key) || returned.has(key)) throw new Error('候选身份不匹配');
+        returned.add(key); if (!confirmed.has(key)) unpersisted.add(key);
+      }
+      if (returned.size !== expected.size) throw new Error('候选身份快照缺失');
+    }
     for (const candidate of known) {
       const source = enabledSources.get(candidate.sourceId);
       const key = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
-      if (source === undefined || keys.has(key)) continue;
+      if (source === undefined || keys.has(key) || !unpersisted.has(key)) continue;
       candidates.push({ ...candidate, sourceName: source.sourceName, sourceOrder: source.sourceOrder,
         acquisitionState: candidate.sourceVersion === source.sourceVersion ? candidate.acquisitionState : 'stale',
         isCurrent: candidate.sourceId === query.sourceId && candidate.bookUrl === query.bookId });
@@ -279,7 +270,83 @@ export class SourceSwitchGateway {
     }
     if (isCurrent?.() === false) return [];
     if (revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) throw new Error('书源配置已变更，请重试');
+    this.confirmedScope = scope; this.confirmedCandidates = confirmed;
     return this.sortCandidates(candidates);
+  }
+
+  private async loadRelatedBooks(
+    query: SourceSwitchProbeQuery,
+    sources: Map<string, SourceSwitchRegistryEntry>,
+    isCurrent: (() => boolean) | undefined,
+  ): Promise<JsonObject[]> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const records: JsonObject[] = [];
+      const identities = new Set<string>();
+      const cursors = new Set<string>();
+      const versions = new Map<string, string>();
+      let snapshot: string | undefined = undefined;
+      let relation: string | undefined = undefined;
+      let relationRevision: string | undefined = undefined;
+      let cursor: string | undefined = undefined;
+      try {
+        do {
+          if (isCurrent?.() === false) return [];
+          const params: JsonObject = { identity: { sourceId: query.sourceId, bookId: query.bookId },
+            name: query.bookName, author: query.author, limit: 128 };
+          if (cursor !== undefined) params['cursor'] = cursor;
+          const response = await this.runtimeOwner.request('search-book.related', params, this.requestOptions(isCurrent));
+          if (isCurrent?.() === false) return [];
+          const data = response.data;
+          if (!Array.isArray(data['books']) || data['books'].length > 128 ||
+            !Array.isArray(data['sourceVersions']) || typeof data['complete'] !== 'boolean') {
+            throw new Error('同书候选快照不完整');
+          }
+          const observed = this.requireString(data, 'snapshotRevision', 'search-book.related');
+          if (snapshot !== undefined && snapshot !== observed) throw new Error('同书候选快照已变更，请重试');
+          snapshot = observed;
+          for (const value of data['sourceVersions']) {
+            if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('候选书源版本无效');
+            const stamp = value as JsonObject;
+            const sourceId = this.requireString(stamp, 'sourceId', 'search-book.related');
+            const version = this.requireString(stamp, 'sourceVersion', 'search-book.related');
+            const old = versions.get(sourceId);
+            if (old !== undefined && old !== version) throw new Error('候选书源版本已变更');
+            const source = sources.get(sourceId);
+            if (source !== undefined && (stamp['enabled'] !== true ||
+              (source.sourceVersion !== undefined && source.sourceVersion !== version))) throw new Error('书源配置已变更，请重试');
+            versions.set(sourceId, version);
+          }
+          for (const raw of data['books']) {
+            if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('同书候选数据无效');
+            const book = raw as JsonObject;
+            const sourceId = this.requireString(book, 'origin', 'search-book.related');
+            const bookId = this.requireString(book, 'bookUrl', 'search-book.related');
+            const key = sourceSwitchCandidateKey(sourceId, bookId);
+            const bookRelation = this.requireString(book, 'relationKey', 'search-book.related');
+            const bookRevision = this.requireString(book, 'relationRevision', 'search-book.related');
+            if (!versions.has(sourceId) || identities.has(key) ||
+              (relation !== undefined && (relation !== bookRelation || relationRevision !== bookRevision))) {
+              throw new Error('同书候选身份或关系版本不一致');
+            }
+            identities.add(key); relation = bookRelation; relationRevision = bookRevision;
+            records.push(book);
+          }
+          cursor = data['complete'] === true ? undefined : this.requireString(data, 'nextCursor', 'search-book.related');
+          if (cursor !== undefined) {
+            if (cursors.has(cursor) || data['books'].length === 0) throw new Error('同书候选分页未推进');
+            cursors.add(cursor);
+            await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
+          }
+        } while (cursor !== undefined);
+        return records;
+      } catch (error) {
+        const failure = error as Record<string, unknown>;
+        const details = failure['details'] as Record<string, unknown> | undefined;
+        if (attempt === 0 && details?.['reason'] === 'CURSOR_STALE' && isCurrent?.() !== false) continue;
+        throw error;
+      }
+    }
+    throw new Error('同书候选快照已过期，请重试');
   }
 
   /**
@@ -899,9 +966,9 @@ export class SourceSwitchGateway {
     checkedAt: number,
     source: SourceSwitchRegistryEntry,
   ): SourceSwitchCandidate {
-    const sourceId = this.requireString(book, 'origin', 'search-book.list');
-    const bookUrl = this.requireString(book, 'bookUrl', 'search-book.list');
-    const bookName = this.requireString(book, 'name', 'search-book.list');
+    const sourceId = this.requireString(book, 'origin', 'search-book.related');
+    const bookUrl = this.requireString(book, 'bookUrl', 'search-book.related');
+    const bookName = this.requireString(book, 'name', 'search-book.related');
     const candidate: SourceSwitchCandidate = {
       sourceId,
       sourceName: source.sourceName,
@@ -916,15 +983,31 @@ export class SourceSwitchGateway {
     const facts = book['acquisition'] as JsonObject | undefined;
     const version = facts === undefined ? undefined : this.optionalString(facts, 'sourceVersion');
     candidate.sourceVersion = version;
-    const stale = checkedAt <= 0 || Date.now() - checkedAt >= SOURCE_SWITCH_CACHE_TTL_MS ||
+    const catalogAt = facts === undefined ? checkedAt : this.optionalNumber(facts, 'catalogAt') ?? checkedAt;
+    const stale = catalogAt <= 0 || Date.now() < catalogAt || Date.now() - catalogAt >= SOURCE_SWITCH_CACHE_TTL_MS ||
       facts?.['stale'] === true || (source.sourceVersion !== undefined && version !== source.sourceVersion);
     const failure = facts?.['failure'] as JsonObject | undefined;
-    const readableAt = facts === undefined ? 0 : this.optionalNumber(facts, 'readableAt') ?? 0;
-    const failureAt = failure === undefined ? 0 : this.optionalNumber(failure, 'at') ?? 0;
-    candidate.acquisitionState = stale ? 'stale' : failureAt > readableAt ? 'failed' : readableAt > 0 ? 'readable' :
-      (facts !== undefined && (this.optionalNumber(facts, 'catalogCount') ?? 0) > 0) ? 'catalogReady' : 'discovered';
-    candidate.verifiedChapterUrl = facts === undefined ? undefined : this.optionalString(facts, 'readableChapterUrl');
-    candidate.acquisitionMessage = failure === undefined ? undefined : this.optionalString(failure, 'message');
+    const rank = acquisitionCandidateRank(facts, source.sourceVersion ?? '');
+    candidate.acquisitionState = stale ? 'stale' : rank === 3 ? 'failed' : rank === 0 ? 'readable' :
+      rank === 1 ? 'catalogReady' : 'discovered';
+    candidate.verifiedChapterUrl = acquisitionReadableCurrent(facts, source.sourceVersion ?? '') && facts !== undefined ?
+      this.optionalString(facts, 'readableChapterUrl') : undefined;
+    candidate.acquisitionMessage = acquisitionBookFailureCurrent(facts, source.sourceVersion ?? '') && failure !== undefined ?
+      this.optionalString(failure, 'message') : undefined;
+    const variable = this.optionalString(book, 'variable');
+    if (variable !== undefined) {
+      try {
+        const parsed = JSON.parse(variable) as JsonObject;
+        if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const variables: RemoteReadingVariable[] = [];
+          for (const name of Object.keys(parsed)) {
+            if (typeof parsed[name] !== 'string') throw new Error('候选续传变量无效');
+            variables.push({ name, value: parsed[name] as string });
+          }
+          candidate.searchVariables = variables;
+        }
+      } catch (_error) { /* Legacy invalid variable JSON cannot authorize a request context. */ }
+    }
     const author = this.optionalString(book, 'author');
     const coverUrl = this.optionalString(book, 'coverUrl');
     const latestChapterTitle = this.optionalString(book, 'latestChapterTitle');

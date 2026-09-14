@@ -145,12 +145,12 @@ assert.match(fullDirectory,
 const gateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 assert.match(gateway, /async createChapterStartBookmark\(/);
 assert.match(gateway,
-  /createPositionBookmark\(\{[\s\S]*chapterOffset: 0,[\s\S]*chapterTitle: input\.chapterTitle/,
+  /const captured: LocalReadingPositionBookmarkInput = \{[\s\S]*?chapterOffset: 0, chapterTitle: input\.chapterTitle[\s\S]*?return this\.createPositionBookmark\(captured, isCurrent\)/,
   'chapter markers must reuse the general exact-position Core bookmark path');
 assert.match(gateway, /async loadBookmarkProjection\(/,
   'bookmark projection must be source-independent');
 assert.match(gateway, /async createPositionBookmark\(/);
-assert.match(gateway, /request\('bookmark\.create', \{\s*bookName: input\.bookName,\s*bookAuthor: input\.bookAuthor,\s*chapterIndex: input\.chapterIndex,\s*chapterPos: input\.chapterOffset,\s*chapterName: input\.chapterTitle,/);
+assert.match(gateway, /const params: JsonObject = \{\s*bookName: input\.bookName,\s*bookAuthor: input\.bookAuthor,\s*chapterIndex: input\.chapterIndex,\s*chapterPos: input\.chapterOffset,\s*chapterName: input\.chapterTitle,/);
 assert.match(gateway, /bookmark\.create returned a mismatched position bookmark/);
 assert.match(gateway, /async deleteBookmark\(\s*time: number,/);
 assert.match(gateway, /request\('bookmark\.delete', \{\s*time,/);

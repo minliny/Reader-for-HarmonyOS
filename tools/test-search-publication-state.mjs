@@ -20,14 +20,8 @@ assert.match(gateway, /sourceRuleVersion: identity\.sourceRuleVersion/,
 // The sweep id is generated per submit and travels into book.search.
 assert.match(orchestrator, /this\.gateway\.generateSearchRequestId\(keyword\)/,
   'each sweep generates one searchRequestId');
-assert.match(orchestrator, /const admitsResult = \(book: SearchBook\): boolean => book\.searchRequestId === searchRequestId;/,
-  'collected buckets must reject results from a superseded sweep');
-assert.match(orchestrator, /if \(admitsResult\(book\)\)/,
-  'flattenCollected must filter by the live sweep id');
-
-// Publication state: searching N/M, returned count, failed count.
-assert.match(orchestrator, /failedSourceCount: failures\.length/,
-  'every results publication carries the failed-source count');
+// Request ownership and retained failure counts are exercised by the
+// production-method lifecycle tests in test-search-orchestrator.mjs.
 assert.match(page, /正在搜索 \$\{this\.presentation\.completedSourceCount\}\/\$\{this\.presentation\.totalSourceCount\} 个书源,已返回 \$\{this\.visibleGroups\.length\} 个/,
   'the results header must state sweeping N/M and the returned count');
 assert.match(page, /失败 \$\{this\.presentation\.failedSourceCount\} 个书源/,

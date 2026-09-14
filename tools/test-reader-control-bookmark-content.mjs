@@ -202,7 +202,7 @@ if (readerBuilderSdkAvailable) {
       assert.ok(text, 'mounted title follows current business payload'); assert.equal(text.fontSize, 11); assert.equal(text.lineHeight, 14);
       for (const value of ['20%', '今天', '待确认']) assert.ok([...owner.nodes.values()].some(n => n.create === value));
     }
-    click(); assert.deepEqual(calls, [['b', 2, 8]], 'retained click selects the latest exact bookmark identity/offset');
+    click(); assert.deepEqual(calls, [['b', 2, 8, undefined]], 'retained click selects the latest exact bookmark identity/offset');
   }
   mounted(row);
   assert.throws(() => mounted(row.replace('.height(this.frame().card.height).clip(true)',

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { searchCandidateRank } from '../entry/src/main/ets/features/search/SearchCandidatePolicy.ts';
+import { registerHooks } from 'node:module';
+registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
+const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
+const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 import { SearchViewState } from '../entry/src/main/ets/features/search/SearchViewState.ts';
 
 // Only transport and Core persistence are fakes. Execute the unchanged Index
@@ -14,7 +17,7 @@ const deferred = () => {
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 };
-const methods = [
+const methods = ['installRemoteReadingSession',
   'onSearchResultSelected', 'searchAcquisitionCandidate', 'remoteSeedForSearchBook', 'openRemoteBookDetail',
   'openShelfBook', 'openShelfBookInfo', 'openDetailSourceSwitch', 'onPickSource', 'switchPreviewSource',
   'openReading', 'presentPreparedReading', 'onReaderExited', 'returnToReadingOrigin',
@@ -43,14 +46,14 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     return sessions.get(key(seed));
   };
   const owner = { bookAcquisitions: () => ({
-    acquireBook: seed => acquire(seed, 'switch.acquire'),
+    readingProjectionRevision:()=>0, acquireBook: seed => acquire(seed, 'switch.acquire'),
     acquireBookWithBackgroundRefresh: async seed => ({ session: await acquire(seed, 'detail.acquire') }),
     setPreparationVisible() {}, recentFailures: () => [], endSearch: () => calls.push('search.end'),
   }) };
   const Index = productionMotionMethods(source, methods, {
-    searchCandidateRank, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
+    ...readingEvidence, searchCandidateRank, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
     RemoteReadingFlowGateway: class {
-      async loadChapter(session) { calls.push(`chapter.probe:${session.identity.sourceId}`); return '正文'; }
+      async loadChapter(session) { calls.push(`chapter.probe:${session.identity.sourceId}`); return {sourceId:session.identity.sourceId,bookId:session.identity.bookId,chapterIndex:0,chapterUrl:session.entries[0].url,contentVersion:'body',content:'正文',images:[]}; }
     },
     ReadingOfflineGateway: class {},
     ReaderCoreGateway: class {
@@ -74,7 +77,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   const orchestrator = { resume: () => calls.push('search.resume'), close: () => calls.push('search.close'),
     open: () => calls.push('UNEXPECTED.search.open'), search: () => calls.push('UNEXPECTED.search.search') };
   Object.assign(h, {
-    route: origin, readingOriginRoute: 'detail', detailReturnRoute: 'bookshelf',
+    remoteSessionGeneration:0,remoteContentProbeGeneration:0,route: origin, readingOriginRoute: 'detail', detailReturnRoute: 'bookshelf',
     readingSessionActive: false, navigationGeneration: 0, shelfReadingPreparation: false,
     detailToc: [], detailInBookshelf: false, shelfBooks: [], searchDetailCandidates: [], remoteCatalogRefreshAt: new Map(),
     bookshelfRemovalActiveKey: '', offlineMutationGeneration: 0,

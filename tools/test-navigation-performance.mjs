@@ -30,7 +30,7 @@ assert.match(remoteDetail,
   /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
   'only an exact shelf identity may reuse the already admitted remote session');
 assert.match(remoteDetail,
-  /const sessionAdmission: Promise<RemoteDetailAdmission> = \(allowGroupFallback \?[\s\S]*?: owner\.bookAcquisitions\(\)\s*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
+  /const sessionAdmission: Promise<RemoteDetailAdmission> = suppliedSession !== undefined \?[\s\S]*?Promise\.resolve\(new RemoteDetailAdmission\(suppliedSession\)\) : \(allowGroupFallback \?[\s\S]*?: owner\.bookAcquisitions\(\)\s*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'shelf re-entry must reuse a live session or admit the durable Core catalog before any network refresh');
 assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
   'remote detail must project its inert shell before network/session admission');
@@ -48,7 +48,7 @@ const returnToShelf = method(index, 'private returnToBookshelf(', 'private apply
 assert.match(returnToShelf,
   /const retainedRemoteSession = this\.detailBook !== undefined &&[\s\S]*?this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&[\s\S]*?identity\.sourceId === this\.detailBook\.sourceId &&[\s\S]*?identity\.bookId === this\.detailBook\.bookId/,
   'leaving an exact remote detail may retain only its already admitted session');
-assert.match(returnToShelf, /this\.remoteReadingSession = retainedRemoteSession/);
+assert.match(returnToShelf, /this\.installRemoteReadingSession\(retainedRemoteSession\)/);
 assert.doesNotMatch(returnToShelf, /this\.remoteReadingSession = undefined/,
   'the exact remote session must not be discarded on an immediate shelf round-trip');
 
@@ -120,8 +120,11 @@ assert.match(search, /LazyForEach\(this\.resultDataSource,/,
 assert.doesNotMatch(search, /countBySource/,
   'raw result cards must not repeat an O(n) source scan for every row');
 const groupResults = method(search, 'private groupResults(', 'private normalizedBookKey(');
-assert.match(groupResults, /const shelfIdentityKeys = new Set<string>\(\)/);
-assert.match(groupResults, /const shelfBookKeys = new Set<string>\(\)/);
+const resultProjection = read('entry/src/main/ets/features/search/SearchResultProjection.ts');
+assert.match(groupResults, /this\.resultProjection\.update\(results, this\.shelfBooks/);
+assert.match(resultProjection, /private shelfIdentities: Set<string>/);
+assert.match(resultProjection, /private shelfTitles: Set<string>/);
+assert.match(resultProjection, /this\.shelfInput !== shelf/, 'unchanged shelf snapshots must reuse the indexed membership');
 assert.doesNotMatch(groupResults, /this\.shelfBooks\.some/,
   'search grouping must index the shelf once instead of scanning it for every result');
 

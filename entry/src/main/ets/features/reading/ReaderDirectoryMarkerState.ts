@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 
 /** Exact chapter-start anchor emitted by an empty directory bookmark marker. */
@@ -12,6 +13,7 @@ export type ReaderDirectoryChapterStartBookmarkRequest = {
  * list means the page-start scalar anchor must be created.
  */
 export type ReaderPageBookmarkToggleRequest = {
+  positionScope?: RemoteReadingPositionScope;
   chapterIndex: number;
   chapterOffset: number;
   chapterTitle: string;

@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import type { LocalReadingBookmark, LocalReadingTocEntry } from './LocalReadingFlowGateway';
 
 /**
@@ -17,6 +18,7 @@ export type ReaderBookmarkIdentityStatus = 'confirmed' | 'pendingConfirmation';
 
 /** Bookmark record with stable identity, produced by legacy data migration. */
 export type ReaderBookmarkRecord = {
+  positionScope?: RemoteReadingPositionScope;
   bookmarkId: string;
   identityStatus: ReaderBookmarkIdentityStatus;
   libraryBookId: string;
@@ -34,6 +36,7 @@ export type ReaderBookmarkRecord = {
 
 /** Legacy storage shape: ownership carried only by bookName+bookAuthor. */
 export type ReaderLegacyBookmark = {
+  positionScope?: RemoteReadingPositionScope;
   bookName: string;
   bookAuthor: string;
   time: number;
@@ -46,6 +49,7 @@ export type ReaderLegacyBookmark = {
 
 /** Row model rendered by ReaderBookmarkRow; pure data, no UI types. */
 export type ReaderBookmarkRowModel = {
+  positionScope?: RemoteReadingPositionScope;
   bookmarkId: string;
   identityStatus: ReaderBookmarkIdentityStatus;
   chapterIndex: number;
@@ -98,6 +102,7 @@ export function migrateLegacyBookmarks(
     if (identity === undefined) {
       records.push({
         bookmarkId,
+        ...(item.positionScope === undefined ? {} : { positionScope: item.positionScope }),
         identityStatus: 'pendingConfirmation',
         libraryBookId: '',
         sourceId: '',
@@ -115,6 +120,7 @@ export function migrateLegacyBookmarks(
     }
     records.push({
       bookmarkId,
+      ...(item.positionScope === undefined ? {} : { positionScope: item.positionScope }),
       identityStatus: 'confirmed',
       libraryBookId: identity.libraryBookId,
       sourceId: identity.sourceId,
@@ -185,6 +191,7 @@ function readerBookmarkRowFromBookmark(
 ): ReaderBookmarkRowModel {
   const chapterLength = chapterScalarLengths?.get(bookmark.chapterIndex);
   return {
+    ...(bookmark.positionScope === undefined ? {} : { positionScope: bookmark.positionScope }),
     bookmarkId: identity === undefined ?
       `session:${bookmark.chapterIndex}:${bookmark.chapterOffset}:${bookmark.time}` :
       readerBookmarkRecordId(
@@ -205,6 +212,7 @@ function readerBookmarkRowFromRecord(
 ): ReaderBookmarkRowModel {
   const chapterLength = chapterScalarLengths?.get(record.chapterIndex);
   return {
+    ...(record.positionScope === undefined ? {} : { positionScope: record.positionScope }),
     bookmarkId: record.bookmarkId,
     identityStatus: record.identityStatus,
     chapterIndex: record.chapterIndex,

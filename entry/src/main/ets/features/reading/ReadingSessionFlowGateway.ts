@@ -1,3 +1,4 @@
+import { decodeRemotePositionScope, type RemoteReadingPositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
@@ -20,6 +21,7 @@ import type { ReadingSessionChapter, ReadingSessionImage } from './ReadingChapte
 import { materializeReadingDocument } from './ReadingDocumentProjection';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { image } from '@kit.ImageKit';
+import { preparedRemoteChapterMatches } from './RemoteReadingEvidence';
 
 /**
  * The source-specific acquisition state admitted into one reader instance.
@@ -36,6 +38,7 @@ export type ReadingSessionSource =
  * materialized chapter occurrence and never changes acquisition state.
  */
 export type ReadingContentSearchResult = {
+  positionScope?: RemoteReadingPositionScope;
   sourceId: string;
   bookId: string;
   bookName: string;
@@ -70,6 +73,7 @@ export class ReadingSessionFlowGateway {
   private readonly local: LocalReadingFlowGateway;
   private readonly remote: RemoteReadingFlowGateway;
   private sourceSwitchTransactionId: string | undefined;
+  private preparedChapterConsumed: boolean = false;
 
   constructor(
     sourceId: string,
@@ -144,6 +148,7 @@ export class ReadingSessionFlowGateway {
         chapterProgress: state.progress.chapterProgress,
         updatedAt: state.progress.updatedAt,
         locationRevision: state.progress.locationRevision,
+        ...(state.progress.bodyVersion === undefined ? {} : { bodyVersion: state.progress.bodyVersion, processingVersion: state.progress.processingVersion }),
       },
     };
   }
@@ -164,10 +169,26 @@ export class ReadingSessionFlowGateway {
     chapterIndex: number,
     isCurrent?: () => boolean,
     forceRefresh: boolean = false,
+    positionContext?: RemoteReadingPositionContext,
   ): Promise<ReadingSessionChapter> {
     this.assertBook(bookId);
     if (this.source.kind === 'remote') {
-      return this.remote.loadChapter(this.source.session, chapterIndex, isCurrent, forceRefresh);
+      const session = this.source.session;
+      const prepared = session.preparedChapter;
+      const coordinator = this.runtimeOwner.bookAcquisitions?.();
+      if (positionContext === undefined && !forceRefresh && !this.preparedChapterConsumed && prepared !== undefined &&
+        preparedRemoteChapterMatches(prepared, session, chapterIndex, coordinator?.readingProjectionRevision() ?? 0)) {
+        const version = coordinator === undefined ? session.sourceVersion : await coordinator.currentSourceVersion(this.sourceId);
+        if (isCurrent?.() === false) throw new Error('reading chapter request was cancelled');
+        if (version === session.sourceVersion &&
+          preparedRemoteChapterMatches(prepared, session, chapterIndex, coordinator?.readingProjectionRevision() ?? 0)) {
+          this.preparedChapterConsumed = true;
+          return prepared.chapter;
+        }
+      }
+      const chapter = await this.remote.loadChapter(this.source.session, chapterIndex, isCurrent, forceRefresh, positionContext);
+      if (prepared?.chapter.chapterIndex === chapterIndex) this.preparedChapterConsumed = true;
+      return chapter;
     }
     const chapter = await this.local.loadChapter(bookId, chapterIndex, isCurrent);
     const documentData: JsonObject = { content: chapter.content };
@@ -298,6 +319,7 @@ export class ReadingSessionFlowGateway {
       chapterProgress: stored.chapterProgress,
       updatedAt: stored.updatedAt,
       locationRevision: stored.locationRevision,
+      ...(stored.bodyVersion === undefined ? {} : { bodyVersion: stored.bodyVersion, processingVersion: stored.processingVersion }),
     };
   }
 
@@ -313,6 +335,7 @@ export class ReadingSessionFlowGateway {
       chapterIndex: anchor.chapterIndex,
       chapterOffset: anchor.chapterOffset,
       chapterProgress: anchor.chapterProgress,
+      expectedBodyVersion: anchor.bodyVersion, expectedProcessingVersion: anchor.processingVersion,
     };
     const resolution = { chapterTitle, anchor, layout };
     if (this.source.kind === 'local') {
@@ -336,6 +359,7 @@ export class ReadingSessionFlowGateway {
       chapterProgress: stored.chapterProgress,
       updatedAt: stored.updatedAt,
       locationRevision: stored.locationRevision,
+      ...(stored.bodyVersion === undefined ? {} : { bodyVersion: stored.bodyVersion, processingVersion: stored.processingVersion }),
     };
   }
 
@@ -381,7 +405,11 @@ export class ReadingSessionFlowGateway {
       if (match['sourceId'] !== this.sourceId || match['bookId'] !== this.bookId) {
         throw new Error('search.content returned a mismatched reading identity');
       }
+      const positionScope = decodeRemotePositionScope(match['positionScope']);
+      if (positionScope !== undefined && (positionScope.sourceId !== this.sourceId || positionScope.bookId !== this.bookId ||
+        positionScope.chapterIndex !== match['chapterIndex'])) throw new Error('search.content returned a mismatched position scope');
       matches.push({
+        ...(positionScope === undefined ? {} : { positionScope }),
         sourceId: this.sourceId,
         bookId: this.bookId,
         bookName: requireString(match, 'bookName', 'search.content result'),

@@ -1,13 +1,14 @@
-import { searchResultRelevance } from './SearchResultRelevance';
+import { FrameCallback } from '@kit.ArkUI';
+import { SearchResultProjection } from './SearchResultProjection';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { SearchSpinner } from './SearchSpinner';
 import { collapsedHistoryCount } from './SearchHistoryLayout';
 import { SearchViewState } from './SearchViewState';
 import { bookIntroText } from '../common/BookIntroText';
-import { searchCandidateRank } from './SearchCandidatePolicy';
 import {
   type SearchBook,
   type SearchSource,
+  type SearchResultDelta,
 } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
@@ -63,6 +64,7 @@ export interface SearchLoadingPresentation {
 
 export interface SearchResultsPresentation {
   kind: 'results';
+  delta?: SearchResultDelta;
   localSearchFailed?: boolean;
   sourceListFailed?: boolean;
   keyword: string;
@@ -131,10 +133,11 @@ export type SearchPresentation =
   | SearchSourceRequiredPresentation
   | SearchSourceLoadErrorPresentation;
 
-interface SearchBookProjectionFacts {
-  key: string;
-  titleKey: string;
-  score: number;
+class SearchLayoutFrame extends FrameCallback {
+  private action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void {}
+  onIdle(_remaining: number): void { this.action(); }
 }
 
 @Observed
@@ -170,6 +173,8 @@ class SearchResultDataSource implements IDataSource {
   private items: SearchBookGroup[] = [];
   private keys: string[] = [];
   private listeners: DataChangeListener[] = [];
+  private input: SearchBookGroup[] | undefined = undefined;
+  private positions: Map<string, number> = new Map();
 
   totalCount(): number { return this.items.length; }
   getData(index: number): SearchBookGroup { return this.items[index]; }
@@ -220,53 +225,104 @@ class SearchResultDataSource implements IDataSource {
     return changed;
   }
 
-  replace(items: SearchBookGroup[]): void {
-    // Streaming additions are the common path. Compute each next key once;
-    // never scan existing groups (and invoke ICU) for a key not in the list.
-    const nextKeys = items.map((group: SearchBookGroup): string => this.key(group));
-    const nextKeySet = new Set<string>(nextKeys);
-    // Remove only disappeared rows first. A source/category removal leaves a
-    // subsequence, not thousands of artificial row moves and key scans.
-    for (let index = this.keys.length - 1; index >= 0; index -= 1) {
-      if (!nextKeySet.has(this.keys[index])) {
-        this.items.splice(index, 1);
-        this.keys.splice(index, 1);
-        for (const listener of this.listeners) listener.onDataDelete(index);
-      }
-    }
-    const knownKeys = new Set<string>(this.keys);
-    // Incremental notifications preserve visible lazy rows. Reloading the
-    // entire data source defeats ArkUI's visible-content-position guarantee.
-    for (let index = 0; index < items.length; index += 1) {
-      let next = items[index];
-      const nextKey = nextKeys[index];
-      if (this.items[index] !== undefined && this.keys[index] === nextKey) {
-        const retained = this.items[index];
-        if (this.update(retained, next)) {
-          for (const listener of this.listeners) listener.onDataChange(index);
+  replace(items: SearchBookGroup[], changedKeys?: Set<string>): boolean {
+    if (this.input === items && changedKeys !== undefined) {
+      const operations: DataOperation[] = [];
+      for (const key of changedKeys) {
+        const index = this.positions.get(key);
+        if (index !== undefined && this.update(this.items[index], items[index])) {
+          operations.push({ type: DataOperationType.CHANGE, index });
         }
-        continue;
       }
-      const previous = knownKeys.has(nextKey) ? this.keys.indexOf(nextKey) : -1;
-      if (previous >= 0) {
-        const retained = this.items[previous];
-        this.update(retained, next);
-        next = retained;
-        this.items.splice(previous, 1);
-        this.keys.splice(previous, 1);
-        for (const listener of this.listeners) listener.onDataDelete(previous);
+      if (operations.length > 0) for (const listener of this.listeners) listener.onDatasetChange(operations);
+      return false;
+    }
+    const oldItems = this.items;
+    const oldKeys = this.keys;
+    const previous = new Map<string, SearchBookGroup>();
+    for (let index = 0; index < oldKeys.length; index++) previous.set(oldKeys[index], oldItems[index]);
+    const nextKeys: string[] = [];
+    const nextItems: SearchBookGroup[] = [];
+    const changes: number[] = [];
+    const additions: number[] = [];
+    const nextSet = new Set<string>();
+    for (let index = 0; index < items.length; index++) {
+      const next = items[index]; const key = this.key(next);
+      nextKeys.push(key); nextSet.add(key);
+      const retained = previous.get(key);
+      if (retained === undefined) { nextItems.push(next); additions.push(index); }
+      else {
+        if (this.update(retained, next) || changedKeys?.has(key)) changes.push(this.positions.get(key) as number);
+        nextItems.push(retained);
       }
-      this.items.splice(index, 0, next);
-      this.keys.splice(index, 0, nextKey);
-      knownKeys.add(nextKey);
-      for (const listener of this.listeners) listener.onDataAdd(index);
     }
-    while (this.items.length > items.length) {
-      this.items.splice(items.length, 1);
-      this.keys.splice(items.length, 1);
-      for (const listener of this.listeners) listener.onDataDelete(items.length);
+    const retainedOld = oldKeys.filter((key: string): boolean => nextSet.has(key));
+    const retainedNext = nextKeys.filter((key: string): boolean => previous.has(key));
+    const reordered = retainedOld.some((key: string, index: number): boolean => key !== retainedNext[index]);
+    const operations: DataOperation[] = [];
+    if (reordered) {
+      const nextPositions = new Map<string, number>();
+      for (let index = 0; index < nextKeys.length; index++) nextPositions.set(nextKeys[index], index);
+      const moved: string[] = [];
+      for (const key of changedKeys ?? []) if (this.positions.has(key) &&
+        nextPositions.has(key) && this.positions.get(key) !== nextPositions.get(key)) moved.push(key);
+      const single = moved.length === 1 && oldKeys.length === nextKeys.length && additions.length === 0;
+      const oldRest = single ? oldKeys.filter((key: string): boolean => key !== moved[0]) : [];
+      const nextRest = single ? nextKeys.filter((key: string): boolean => key !== moved[0]) : [];
+      if (single && oldRest.every((key: string, index: number): boolean => key === nextRest[index])) {
+        // A known group changed relevance: SDK MOVE uses old and final
+        // positions. Legacy onDataMove is an exchange and is never used.
+        operations.push({ type: DataOperationType.MOVE, index: {
+          from: this.positions.get(moved[0]) as number, to: nextPositions.get(moved[0]) as number } });
+        for (const index of changes) if (index !== this.positions.get(moved[0]) && index !== nextPositions.get(moved[0])) {
+          operations.push({ type: DataOperationType.CHANGE, index });
+        }
+      } else {
+        // Arbitrary permutations belong to ArkUI's keyed comparison, not a
+        // second Reader diff engine. The page restores its measured anchor.
+        operations.push({ type: DataOperationType.RELOAD });
+      }
+    } else {
+      // A metadata update or insertion/deletion preserves the retained order.
+      // Build the next arrays once; no repeated indexOf/splice shifting.
+      for (let index = oldKeys.length - 1; index >= 0;) {
+        if (nextSet.has(oldKeys[index])) { index--; continue; }
+        const end = index;
+        while (index >= 0 && !nextSet.has(oldKeys[index])) index--;
+        operations.push({ type: DataOperationType.DELETE, index: index + 1, count: end - index });
+      }
+      // All SDK batch indexes refer to the original array, not sequential
+      // mutation positions. Added runs are anchored before the next old row.
+      const additionAnchors: Map<number, number> = new Map();
+      let nextOriginal = oldKeys.length;
+      for (let index = nextKeys.length - 1; index >= 0; index--) {
+        const original = this.positions.get(nextKeys[index]);
+        if (original !== undefined) nextOriginal = original;
+        else additionAnchors.set(index, nextOriginal);
+      }
+      const insertedAt = new Set<number>();
+      for (let position = 0; position < additions.length;) {
+        const start = additions[position]; let end = position + 1;
+        while (end < additions.length && additions[end] === additions[end - 1] + 1) end++;
+        const anchor = additionAnchors.get(start) as number; insertedAt.add(anchor);
+        operations.push({ type: DataOperationType.ADD, index: anchor, count: end - position,
+          key: nextKeys.slice(start, start + end - position) });
+        position = end;
+      }
+      // ArkUI admits only the first operation at an old index. The observed
+      // retained row already carries changed fields when an ADD owns its index.
+      for (const index of changes) if (!insertedAt.has(index)) operations.push({ type: DataOperationType.CHANGE, index });
     }
+    this.items = nextItems; this.keys = nextKeys;
+    this.input = items;
+    this.positions = new Map();
+    for (let index = 0; index < nextKeys.length; index++) this.positions.set(nextKeys[index], index);
+    if (operations.length > 0) for (const listener of this.listeners) {
+      listener.onDatasetChange(operations);
+    }
+    return reordered;
   }
+
 
 }
 
@@ -325,13 +381,26 @@ export struct SearchPage {
   @State private visibleGroups: SearchBookGroup[] = [];
   private resultDataSource: SearchResultDataSource = new SearchResultDataSource();
   private groupedCategory: string = '';
-  private groupedKeyword: string = '';
-  private groupedResultsInput: SearchBook[] | undefined = undefined;
-  private groupedShelfInput: ShelfBook[] | undefined = undefined;
   private groupedResultsCache: SearchBookGroup[] = [];
-  private groupedBookFacts: Map<SearchBook, SearchBookProjectionFacts> = new Map();
+  private resultProjection: SearchResultProjection | undefined = undefined;
+  private projectedGroups: Map<string, SearchBookGroup> = new Map();
+  private projectedGroupKeys: string[] = [];
+  private projectedGroupIndexes: Map<string, number> = new Map();
+  private changedGroupKeys: Set<string> = new Set();
+  private pageEpoch: number = 0;
+  private listEpoch: number = 0;
+  private restoreEpoch: number = 0;
+  private pageMounted: boolean = false;
+  private listMounted: boolean = false;
+  private restoreCancelled: boolean = false;
+  private userInteracting: boolean = false;
+  private userScrolling: boolean = false;
+  private restoreScheduled: boolean = false;
 
   aboutToAppear(): void {
+    this.pageMounted = true;
+    this.pageEpoch = ++this.viewState.pageRevision;
+    this.restoreCancelled = false;
     registerReaderFonts(this.getUIContext().getFont());
     this.restoreKey = this.viewState.anchorKey;
     this.restoreOffset = this.viewState.anchorOffset;
@@ -343,7 +412,14 @@ export struct SearchPage {
     this.refreshVisibleResults();
   }
 
-  aboutToDisappear(): void { this.onVisibleGroups([]); }
+  aboutToDisappear(): void {
+    this.rememberAnchorNeighbors();
+    this.pageMounted = false;
+    this.listMounted = false;
+    this.restoreEpoch += 1;
+    this.restoreScheduled = false;
+    this.onVisibleGroups([]);
+  }
 
   private publishVisibleGroups(start: number = this.visibleStart, end: number = this.visibleEnd): void {
     this.visibleStart = Math.max(0, start);
@@ -434,12 +510,16 @@ export struct SearchPage {
   }
 
   private selectGroup(name: string): void {
+    this.restoreEpoch += 1;
+    this.restoreCancelled = false;
     this.selectedGroupName = name;
     this.viewState.category = name;
     this.viewState.anchorKey = '';
     this.viewState.anchorOffset = 0;
     this.viewState.anchorIndex = 0;
     this.viewState.anchorItemY = 0;
+    this.restoreKey = ''; this.restoreOffset = 0; this.restoreItemY = 0;
+    this.viewState.anchorNeighbors = []; this.scrollRestored = false;
     this.resultScroller.scrollTo({ xOffset: 0, yOffset: 0 });
     this.refreshVisibleResults();
   }
@@ -730,15 +810,36 @@ export struct SearchPage {
       this.restoreOffset = this.viewState.anchorOffset;
       this.restoreItemY = this.viewState.anchorItemY;
       this.scrollRestored = false;
-      this.groupedResultsInput = undefined;
+      this.restoreEpoch += 1;
+      this.restoreCancelled = false;
+      this.resultProjection = undefined;
+      this.projectedGroups = new Map();
     }
     // API 23 can retain Repeat rows after replacement even with a state
     // array. Notify a lazy data source explicitly, as Source Management does.
+    if (this.presentation.kind !== 'results') this.changedGroupKeys = new Set();
     const groups = this.presentation.kind === 'results'
       ? this.groupResults(this.presentation.results) : [];
-    if (this.visibleGroups !== groups) {
+    if (this.visibleGroups !== groups || (this.changedGroupKeys?.size ?? 0) > 0) {
+      if (this.listMounted && this.scrollRestored) {
+        this.saveScrollAnchor();
+        if (this.visibleGroups !== groups) this.rememberAnchorNeighbors();
+        this.restoreKey = this.viewState.anchorKey;
+        this.restoreItemY = this.viewState.anchorItemY;
+        this.restoreOffset = this.viewState.anchorOffset;
+      }
       this.visibleGroups = groups;
-      this.resultDataSource.replace(groups);
+      this.listEpoch = (this.listEpoch ?? 0) + 1;
+      this.viewState.listRevision = this.listEpoch;
+      this.restoreEpoch = (this.restoreEpoch ?? 0) + 1;
+      this.restoreScheduled = false;
+      const reordered = this.resultDataSource.replace(groups, this.changedGroupKeys);
+      if (this.listMounted && !this.userInteracting && !this.userScrolling) {
+        this.restoreCancelled = false;
+        // Metadata can change the measured height of a visible row, while
+        // ArkUI only promises automatic preservation for offscreen add/delete.
+        if (reordered || !this.scrollRestored || (this.changedGroupKeys?.size ?? 0) > 0) this.scheduleScrollRestore();
+      }
     }
     this.publishVisibleGroups();
   }
@@ -773,7 +874,8 @@ export struct SearchPage {
           // pill does: the sweep counter must update live per source landing.
           if (this.presentation.kind === 'results') {
             if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
-              Text('部分搜索未完成，请重试').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+              Text(this.partialSearchFailure()).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+                .onClick((): void => this.onRetry());
             }
             if (this.presentation.stopped === true) {
               // ACQ-02: a stopped sweep keeps its partial results; the header
@@ -798,14 +900,15 @@ export struct SearchPage {
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
             if (this.presentation.failedSourceCount > 0) {
-              Text(` · 失败 ${this.presentation.failedSourceCount} 个书源`)
+              Text(` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`)
                 .fontFamily('ReaderInter')
                 .fontWeight(FontWeight.Regular)
                 .fontSize(11)
                 .lineHeight(16.5)
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis });
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .onClick((): void => this.onRetry());
             }
           }
         }
@@ -827,35 +930,17 @@ export struct SearchPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .maintainVisibleContentPosition(true)
-        .onScrollIndex((start: number, end: number): void => {
-          this.publishVisibleGroups(start, end);
-          if (!this.scrollRestored) return;
-          const group = this.visibleGroups[start];
-          if (group === undefined) return;
-          this.viewState.anchorIndex = start;
-          this.viewState.anchorKey = this.resultGroupKey(group.book);
-          this.saveScrollAnchor();
+        .onTouch((event: TouchEvent): void => {
+          if (event.type === TouchType.Down) { this.userInteracting = true; this.cancelScrollRestoreForUser(); }
+          else if (event.type === TouchType.Up || event.type === TouchType.Cancel) this.userInteracting = false;
         })
+        .onScrollStart((): void => { if (this.userInteracting) this.userScrolling = true; })
+        .onScrollStop((): void => { this.userScrolling = false; })
+        .onScrollIndex((start: number, end: number): void => this.onResultScrollIndex(start, end))
         .onScroll((): void => { if (this.scrollRestored) this.saveScrollAnchor(); })
-        .onAppear((): void => {
-          const anchor = this.visibleGroups.findIndex((group: SearchBookGroup): boolean =>
-            this.resultGroupKey(group.book) === this.restoreKey);
-          if (anchor >= 0) {
-            this.resultScroller.scrollToIndex(anchor, false, ScrollAlign.START);
-            // Correct by measured item coordinates after the indexed jump;
-            // metadata may have changed the heights of preceding cards.
-            setTimeout((): void => {
-              try {
-                const currentY = this.resultScroller.getItemRect(anchor).y;
-                this.resultScroller.scrollBy(0, currentY - this.restoreItemY);
-              } catch (_error) { /* The anchor may have disappeared after source deletion. */ }
-              this.scrollRestored = true;
-            }, 0);
-          } else {
-            this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.restoreOffset });
-            this.scrollRestored = true;
-          }
-        });
+        .onAppear((): void => { this.listMounted = true; this.scheduleScrollRestore(); })
+        .onDisappear((): void => { this.listMounted = false; this.restoreEpoch += 1; })
+        .onAreaChange((): void => { if (!this.scrollRestored) this.scheduleScrollRestore(); });
       }
       .width('100%')
       .height('100%');
@@ -866,75 +951,125 @@ export struct SearchPage {
   }
 
   private groupResults(results: SearchBook[]): SearchBookGroup[] {
-    const keyword = this.presentation.kind === 'results' || this.presentation.kind === 'loading' ||
-      this.presentation.kind === 'empty' || this.presentation.kind === 'error' ? this.presentation.keyword : '';
-    if (this.groupedResultsInput === results && this.groupedShelfInput === this.shelfBooks &&
-      this.groupedCategory === this.selectedGroupName && this.groupedKeyword === keyword) {
-      return this.groupedResultsCache;
+    const keyword = this.presentation.kind === 'results' ? this.presentation.keyword : '';
+    if (this.resultProjection === undefined) this.resultProjection = new SearchResultProjection();
+    if (this.projectedGroups === undefined) this.projectedGroups = new Map();
+    const delta = this.presentation.kind === 'results' ? this.presentation.delta : undefined;
+    const update = this.resultProjection.update(results, this.shelfBooks, keyword, this.viewState, delta);
+    this.changedGroupKeys = update.changedKeys;
+    for (const key of update.changedKeys) {
+      const row = update.rows.get(key);
+      if (row === undefined) { this.projectedGroups.delete(key); continue; }
+      const group = new SearchBookGroup(row.variants[0], 1, row.inBookshelf);
+      for (let index = 1; index < row.variants.length; index++) group.admit(row.variants[index], row.inBookshelf);
+      group.book = row.book;
+      this.projectedGroups.set(key, group);
     }
-    const previousFacts = this.groupedKeyword === keyword ? this.groupedBookFacts : undefined;
-    const nextFacts = new Map<SearchBook, SearchBookProjectionFacts>();
-    const byBook = new Map<string, SearchBookGroup>();
-    const relevance = new Map<string, number>();
-    // The shelf is stable for this render pass. Build both identity views once
-    // so every streamed search result uses O(1) membership instead of scanning
-    // the full shelf again.
-    const shelfIdentityKeys = new Set<string>();
-    const shelfBookKeys = new Set<string>();
-    for (const shelf of this.shelfBooks) {
-      shelfIdentityKeys.add(`${shelf.sourceId}\u0000${shelf.bookId}`);
-      shelfBookKeys.add(this.normalizedBookKey(shelf.title, shelf.author));
-    }
-    for (const book of results) {
-      const local = book.sourceId === 'local';
-      if ((this.selectedGroupName === '本地' && !local) ||
-        (this.selectedGroupName === '在线' && local)) continue;
-      let facts = previousFacts?.get(book);
-      if (facts === undefined) {
-        const titleKey = this.normalizedBookKey(book.title, book.author);
-        facts = { key: local ? `local:${book.bookId}` : `online:${book.groupKey ?? titleKey}`,
-          titleKey, score: searchResultRelevance(book.title, book.author, keyword) };
-      }
-      nextFacts.set(book, facts);
-      const key = facts.key;
-      this.viewState.rank(key);
-      const inBookshelf = shelfIdentityKeys.has(`${book.sourceId}\u0000${book.bookId}`) ||
-        (!local && shelfBookKeys.has(facts.titleKey));
-      const score = facts.score;
-      const existing = byBook.get(key);
-      if (existing === undefined) {
-        byBook.set(key, new SearchBookGroup(book, 1, inBookshelf));
-        relevance.set(key, score);
-      } else {
-        existing.admit(book, inBookshelf);
-        if (score < (relevance.get(key) ?? score) ||
-          (score === relevance.get(key) && searchCandidateRank(book) < searchCandidateRank(existing.book))) {
-          existing.book = book;
-          relevance.set(key, score);
-        }
+    const categoryChanged = this.groupedCategory !== this.selectedGroupName;
+    if (update.orderChanged || categoryChanged || this.projectedGroupKeys === undefined) {
+      this.projectedGroupKeys = update.orderedKeys.filter((key: string): boolean =>
+        this.selectedGroupName === '全部' || (this.selectedGroupName === '本地' ? key.startsWith('local:') : !key.startsWith('local:')));
+      this.groupedResultsCache = this.projectedGroupKeys.map((key: string): SearchBookGroup => this.projectedGroups.get(key) as SearchBookGroup);
+      this.projectedGroupIndexes = new Map();
+      for (let index = 0; index < this.projectedGroupKeys.length; index++) this.projectedGroupIndexes.set(this.projectedGroupKeys[index], index);
+    } else {
+      for (const key of update.changedKeys) {
+        const index = this.projectedGroupIndexes.get(key);
+        if (index !== undefined) this.groupedResultsCache[index] = this.projectedGroups.get(key) as SearchBookGroup;
       }
     }
-    // Relevance precedes arrival order. First-seen rank breaks ties, while
-    // retained identity/viewport anchors keep asynchronous enrichment stable.
-    const grouped = Array.from(byBook.values()).sort((left: SearchBookGroup, right: SearchBookGroup): number => {
-      const leftKey = (nextFacts.get(left.book) as SearchBookProjectionFacts).key;
-      const rightKey = (nextFacts.get(right.book) as SearchBookProjectionFacts).key;
-      return (relevance.get(leftKey) ?? 5) - (relevance.get(rightKey) ?? 5) ||
-        this.viewState.rank(leftKey) - this.viewState.rank(rightKey);
-    });
-    this.groupedBookFacts = nextFacts;
     this.groupedCategory = this.selectedGroupName;
-    this.groupedKeyword = keyword;
-    this.groupedResultsInput = results;
-    this.groupedShelfInput = this.shelfBooks;
-    this.groupedResultsCache = grouped;
-    return grouped;
+    return this.groupedResultsCache;
   }
 
   private saveScrollAnchor(): void {
     this.viewState.anchorOffset = this.resultScroller.currentOffset().yOffset;
     try { this.viewState.anchorItemY = this.resultScroller.getItemRect(this.viewState.anchorIndex).y; }
     catch (_error) { /* A lazy row can be between layout passes. */ }
+  }
+
+  private onResultScrollIndex(start: number, end: number): void {
+    this.publishVisibleGroups(start, end);
+    if (!this.scrollRestored) return;
+    const group = this.visibleGroups[start];
+    if (group === undefined) return;
+    this.viewState.anchorIndex = start;
+    this.viewState.anchorKey = this.resultGroupKey(group.book);
+    this.saveScrollAnchor();
+  }
+
+  private rememberAnchorNeighbors(): void {
+    const index = this.visibleGroups.findIndex((group: SearchBookGroup): boolean =>
+      this.resultGroupKey(group.book) === this.viewState.anchorKey);
+    if (index < 0) return;
+    const neighbors: string[] = [];
+    for (let distance = 1; distance < this.visibleGroups.length; distance++) {
+      if (index + distance < this.visibleGroups.length) neighbors.push(this.resultGroupKey(this.visibleGroups[index + distance].book));
+      if (index - distance >= 0) neighbors.push(this.resultGroupKey(this.visibleGroups[index - distance].book));
+    }
+    this.viewState.anchorNeighbors = neighbors;
+  }
+
+  private cancelScrollRestoreForUser(): void {
+    this.restoreCancelled = true;
+    this.restoreEpoch += 1;
+    this.restoreScheduled = false;
+    this.scrollRestored = true;
+  }
+
+  private scheduleScrollRestore(attempt: number = 0): void {
+    if (!this.pageMounted || !this.listMounted || this.restoreCancelled || this.restoreScheduled) return;
+    this.scrollRestored = false;
+    this.restoreScheduled = true;
+    const restore = ++this.restoreEpoch;
+    const page = this.pageEpoch;
+    const list = this.listEpoch;
+    const query = this.viewState.revision;
+    const current = (): boolean => this.pageMounted && this.listMounted && !this.restoreCancelled &&
+      restore === this.restoreEpoch && page === this.pageEpoch && page === this.viewState.pageRevision &&
+      list === this.listEpoch && query === this.viewState.revision;
+    // onIdle is after this frame's layout. It is not a display fence.
+    this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+      if (!current()) return;
+      let key = this.viewState.resolveKey(this.restoreKey);
+      let index = this.visibleGroups.findIndex((group: SearchBookGroup): boolean => this.resultGroupKey(group.book) === key);
+      if (index < 0) for (const neighbor of this.viewState.anchorNeighbors) {
+        key = this.viewState.resolveKey(neighbor);
+        index = this.visibleGroups.findIndex((group: SearchBookGroup): boolean => this.resultGroupKey(group.book) === key);
+        if (index >= 0) break;
+      }
+      if (index < 0) {
+        this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.restoreKey.length === 0 ? this.restoreOffset : 0 });
+        this.restoreScheduled = false;
+        this.scrollRestored = true;
+        return;
+      }
+      const anchorKey = key;
+      this.resultScroller.scrollToIndex(index, false, ScrollAlign.START);
+      this.getUIContext().postFrameCallback(new SearchLayoutFrame((): void => {
+        if (!current()) return;
+        // No captured numeric index survives asynchronous layout.
+        const actual = this.visibleGroups.findIndex((group: SearchBookGroup): boolean => this.resultGroupKey(group.book) === anchorKey);
+        try {
+          if (actual < 0) throw new Error('anchor removed');
+          const rect = this.resultScroller.getItemRect(actual);
+          if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) throw new Error('anchor not laid out');
+          const offset = Math.max(1 - rect.height, Math.min(0, this.restoreItemY));
+          this.resultScroller.scrollBy(0, rect.y - offset);
+          this.viewState.anchorKey = anchorKey;
+          this.viewState.anchorIndex = actual;
+          this.scrollRestored = true;
+          this.saveScrollAnchor();
+        } catch (_error) {
+          // Bounded retries cover lazy realization; area change can resume a
+          // later valid layout. User input always revokes this work.
+          this.restoreScheduled = false;
+          if (attempt < 2) this.scheduleScrollRestore(attempt + 1);
+          return;
+        }
+        this.restoreScheduled = false;
+      }));
+    }));
   }
 
   private resultGroupKey(book: SearchBook): string {
@@ -944,6 +1079,26 @@ export struct SearchPage {
 
   private normalizedBookKey(title: string, author: string): string {
     return `${title.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}\u0000${author.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`;
+  }
+
+  private partialSearchFailure(): string {
+    if (this.presentation.kind !== 'results') return '';
+    if (this.presentation.localSearchFailed && this.presentation.sourceListFailed) return '本地检索和书源列表读取失败，重试';
+    return this.presentation.localSearchFailed ? '本地检索失败，重试' : '书源列表读取失败，重试';
+  }
+
+  private searchFailureTitle(): string {
+    if (this.presentation.kind !== 'error') return '搜索失败';
+    if (this.presentation.localSearchFailed) return '本地检索未完成';
+    return this.presentation.sourceListFailed ? '书源列表加载失败' : '书源搜索失败';
+  }
+
+  private searchFailureMessage(): string {
+    if (this.presentation.kind !== 'error') return '';
+    if (this.presentation.localSearchFailed && this.presentation.sourceListFailed) return '本地书架与书源列表均未能读取，请重试';
+    if (this.presentation.localSearchFailed) return '本地书架读取失败，请重试；已完成的在线搜索结果会保留';
+    if (this.presentation.sourceListFailed) return '书源列表读取失败，请重试；本地搜索仍可使用';
+    return `${this.presentation.failedSourceCount ?? this.presentation.searchedSourceCount} 个书源请求失败，可重试或检查书源状态`;
   }
 
   @Builder
@@ -1166,7 +1321,7 @@ export struct SearchPage {
     Column({ space: 0 }) {
       Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error'))).width(80).height(80);
 
-      Text('书源搜索失败')
+      Text(this.searchFailureTitle())
         .margin({ top: 20 })
         .fontFamily('ReaderNotoSerifSCBold')
         .fontWeight(FontWeight.Bold)
@@ -1175,9 +1330,7 @@ export struct SearchPage {
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
-      Text(searchedSourceCount > 0
-        ? `${searchedSourceCount} 个书源均请求失败,可检查网络连接或书源状态`
-        : '书源请求失败,可检查网络连接或书源状态')
+      Text(this.searchFailureMessage())
         .margin({ top: TOK_SPACE_XS })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
@@ -1250,7 +1403,7 @@ struct SearchResultCard {
   // parent to pass an @Observed-owned object and the compiler otherwise
   // rejects this boundary; the data source emits an explicit row change when
   // an existing observed group is enriched in place.
-  @Prop group: SearchBookGroup;
+  @ObjectLink group: SearchBookGroup;
   @Prop isTablet: boolean = false;
   @Prop cardWidth: number = 0;
   onSelectResult: (book: SearchBook, variants: SearchBook[]) => void = (): void => {};

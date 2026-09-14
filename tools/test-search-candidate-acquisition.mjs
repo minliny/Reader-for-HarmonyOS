@@ -10,6 +10,8 @@ const {RemoteReadingFlowGateway}=await import(path('features/reading/RemoteReadi
 const {RemoteReadingGatewayError,remoteReadingFailureRecord}=await import(path('features/reading/RemoteReadingContract.ts'));
 const {remoteReadingFailureKindOf,verdictForFailureKind}=await import(path('features/reading/RemoteContentAdmission.ts'));
 const {searchCandidateRank}=await import(path('features/search/SearchCandidatePolicy.ts'));
+const {sameRemoteSessionEvidence,preparedRemoteChapterMatches,withPreparedRemoteChapter}=await import(path('features/reading/RemoteReadingEvidence.ts'));
+const {errorMessageOf}=await import(path('app/ErrorMessage.ts'));
 const {readerSourceCategoryIsText}=await import(path('features/source/ReaderSourceCategory.ts'));
 const pause=()=>new Promise(r=>setTimeout(r,0));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}};
@@ -73,10 +75,11 @@ for(const code of ['cancelled','identityMismatch','sourceVersionChanged','storag
  assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
  }finally{f.runtime.close()}});
 }
-await check('hidden source-wait cancellation restores same visible group once and does not loop',async()=>{
+await check('hidden source-wait pauses and resumes same visible group once without cancellation',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set('sources',gate);const groups=[[candidate(0)]];f.runtime.prepareGroups(groups);await pause();
- f.runtime.setPreparationVisible(false);gate.resolve();await until(()=>f.runtime.preparationActive===0);
- assert.equal(f.calls.some(c=>c.method==='book.detail'),false);assert.equal(f.runtime.attempted.size,0);
+ f.runtime.setPreparationVisible(false);gate.resolve();for(let i=0;i<6;i++)await pause();
+ assert.equal(f.calls.some(c=>c.method==='book.detail'),false,'hidden work stays paused');
+ assert.equal(f.runtime.preparationActive,1,'an admitted preparation keeps ownership while hidden');
  f.runtime.setPreparationVisible(true);await until(()=>f.runtime.preparationActive===0&&f.calls.some(c=>c.method==='book.toc'));
  f.runtime.prepareGroups(groups);await pause();assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);
  }finally{f.runtime.close()}
@@ -107,10 +110,10 @@ const indexSource=readFileSync(path('pages/Index.ets'),'utf8');
 const admissionSource=indexSource.slice(indexSource.indexOf('class RemoteDetailAdmission {'),indexSource.indexOf('class RemoteSessionAttemptOutcome {'));
 const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admissionSource)+';return RemoteDetailAdmission;')();
 function indexFixture(f){
- const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{
- ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
+ const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{
+ sameRemoteSessionEvidence,preparedRemoteChapterMatches,withPreparedRemoteChapter,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
  ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
- const page=Object.assign(new Index(),{route:'search',shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};
+ const page=Object.assign(new Index(),{route:'search',shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};
 }
 await check('real selected search group primary empty TOC admits second and probes only selected body; no shelf write',async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0),book(0,'s2')]);

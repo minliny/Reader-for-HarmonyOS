@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import {
@@ -79,7 +80,7 @@ export struct ReaderDirectoryModulePanel {
   bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   // Exact-offset bookmark selection. Undefined until the owner wires it; the
   // row tap then degrades to opening the chapter start (legacy behavior).
-  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number) => void) | undefined =
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
     undefined;
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
@@ -345,9 +346,9 @@ export struct ReaderDirectoryModulePanel {
     this.scheduleCenterScroll();
   }
 
-  private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number): void {
+  private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
     if (this.onSelectBookmark !== undefined) {
-      this.onSelectBookmark(bookmarkId, chapterIndex, chapterOffset);
+      this.onSelectBookmark(bookmarkId, chapterIndex, chapterOffset, positionScope);
       return;
     }
     // Legacy fallback until the owner wires exact-offset selection.
@@ -372,8 +373,8 @@ export struct ReaderDirectoryModulePanel {
         listPaddingX: DIRECTORY_LIST_PADDING_X,
         listPaddingY: READER_DIRECTORY_LIST_PADDING_Y,
         scroller: this.listScroller,
-        onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number): void => {
-          this.selectBookmark(bookmarkId, chapterIndex, chapterOffset);
+        onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void => {
+          this.selectBookmark(bookmarkId, chapterIndex, chapterOffset, positionScope);
         },
       });
     }

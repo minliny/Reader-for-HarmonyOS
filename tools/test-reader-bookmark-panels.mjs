@@ -43,10 +43,10 @@ for (const [name, panel] of [['module', modulePanel], ['full', fullPanel]]) {
   assert.doesNotMatch(panel, /\.onClick\(\(\): void => \{\s*this\.activeTab = /,
     `${name} tab onClick must not write activeTab inline`);
   assert.match(panel,
-    /onSelectBookmark: \(\(bookmarkId: string, chapterIndex: number, chapterOffset: number\) => void\) \| undefined/,
+    /onSelectBookmark: \(\(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope\?: RemoteReadingPositionScope\) => void\) \| undefined/,
     `${name} panel must expose the optional exact-offset bookmark callback`);
   assert.match(panel,
-    /private selectBookmark\(bookmarkId: string, chapterIndex: number, chapterOffset: number\): void \{[\s\S]*?if \(this\.onSelectBookmark !== undefined\) \{[\s\S]*?this\.onSelectBookmark\(bookmarkId, chapterIndex, chapterOffset\);[\s\S]*?this\.onSelectChapter\(chapterIndex\);/,
+    /private selectBookmark\(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope\?: RemoteReadingPositionScope\): void \{[\s\S]*?if \(this\.onSelectBookmark !== undefined\) \{[\s\S]*?this\.onSelectBookmark\(bookmarkId, chapterIndex, chapterOffset, positionScope\);[\s\S]*?this\.onSelectChapter\(chapterIndex\);/,
     `${name} bookmark tap must pass the exact anchor, degrading to chapter-open only while unwired`);
 
   assert.match(panel, /if \(this\.bookmarkLoadFailed\) \{\s*ReaderBookmarkErrorState\(/,
@@ -98,7 +98,7 @@ assert.match(bookmarkList, /ReaderBookmarkRow\(\{\s*row: repeatItem\.item,\s*onS
 
 // Bookmark row: exact-anchor tap plus the full field set.
 assert.match(bookmarkRow,
-  /onClick\(\(\): void =>\s*this\.onSelectBookmark\(this\.row\.bookmarkId, this\.row\.chapterIndex, this\.row\.chapterOffset\)\)/,
+  /onClick\(\(\): void =>\s*this\.onSelectBookmark\(this\.row\.bookmarkId, this\.row\.chapterIndex, this\.row\.chapterOffset, this\.row\.positionScope\)\)/,
   'row tap must emit the exact bookmark anchor');
 for (const field of ['chapterTitle', 'excerpt', 'positionLabel', 'timeLabel']) {
   assert.match(bookmarkRow, new RegExp(`this\\.row\\.${field}`), `row must render ${field}`);

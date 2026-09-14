@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
 import { BookshelfSettingsPage } from '../features/bookshelf/BookshelfSettingsPage';
 import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSelector';
@@ -68,6 +69,8 @@ import {
   type RemoteReadingProgressState,
   type RemoteReadingSession,
 } from '../features/reading/RemoteReadingFlowGateway';
+import { sameRemoteSessionEvidence, preparedRemoteChapterMatches, withPreparedRemoteChapter } from '../features/reading/RemoteReadingEvidence';
+import type { ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import { ReadingOfflineGateway } from '../features/reading/ReadingOfflineGateway';
 import {
   isRemoteSourceFailureKind,
@@ -346,6 +349,8 @@ struct Index {
   @State private remoteReadingSession: RemoteReadingSession | undefined = undefined;
   /** Readability verdict gating the remote detail "start reading" action. */
   @State private remoteContentVerdict: RemoteContentVerdict = 'readable';
+  private remoteContentProbeGeneration: number = 0;
+  private remoteSessionGeneration: number = 0;
   @State private requestedChapterIndex: number | undefined = undefined;
   // 书签 tab 精确锚点: 每次点击递增 requestId, 保证 @Prop @Watch 对连续点击的
   // 同值/等值请求都能重新触发 (deep-equal 相同的两个对象也会下发新实例)。
@@ -478,8 +483,12 @@ struct Index {
 
   aboutToAppear(): void {
     this.bookProjectionUnsubscribe?.();
-    this.bookProjectionUnsubscribe = ReaderRuntimeOwner.current().bookAcquisitions().subscribe((): void => {
-      void this.refreshDetailAcquisitionProjection();
+    this.bookProjectionUnsubscribe = ReaderRuntimeOwner.current().bookAcquisitions().subscribe((change: BookAcquisitionChange): void => {
+      const book = this.detailBook;
+      if (change.reset || (book !== undefined && change.identities.some((identity: RemoteReadingIdentity): boolean =>
+        identity.sourceId === book.sourceId && identity.bookId === book.bookId))) {
+        void this.refreshDetailAcquisitionProjection();
+      }
     });
     this.reconcileImportPresentation();
     // Shelf projection is safe to show immediately. Source-switch recovery
@@ -1007,8 +1016,8 @@ struct Index {
             this.applyDirectoryChapter(chapterIndex, chapterTitle);
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
-          onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number): void =>
-            this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset),
+          onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
+            this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset, positionScope),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
           onDownloadBook: (): void => this.downloadDirectoryBook(),
           onClearBookOffline: (): void => this.requestClearDirectoryBookOffline(),
@@ -2218,7 +2227,9 @@ struct Index {
     this.bookProjectionAgain = false;
     this.bookProjectionLoading = true;
     const generation = this.navigationGeneration;
+    const sessionGeneration = this.remoteSessionGeneration;
     const current = (): boolean => generation === this.navigationGeneration && !this.readingSessionActive &&
+      sessionGeneration === this.remoteSessionGeneration &&
       this.route === 'detail' && this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
     try {
       const owner = ReaderRuntimeOwner.current();
@@ -2234,22 +2245,33 @@ struct Index {
         coverUrl: typeof row['coverUrl'] === 'string' ? row['coverUrl'] as string : book.coverUrl,
         kind: typeof row['kind'] === 'string' ? row['kind'] as string : book.kind,
         lastChapter: typeof row['latestChapterTitle'] === 'string' ? row['latestChapterTitle'] as string : book.lastChapter };
+      const previous = this.remoteReadingSession;
+      if (previous !== undefined && previous.catalogVersion !== undefined && previous.contextVersion !== undefined &&
+        facts['catalogVersion'] === previous.catalogVersion && facts['contextVersion'] === previous.contextVersion &&
+        facts['sourceVersion'] === previous.sourceVersion) {
+        this.installRemoteReadingSession({ ...previous, book: { title, author, intro: this.detailBook.intro,
+          coverUrl: this.detailBook.coverUrl, kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter } });
+        if (previous.preparedChapter !== undefined && this.remoteReadingSession?.preparedChapter === undefined) {
+          void this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), this.remoteReadingSession ?? previous, current);
+        }
+        return;
+      }
       if (typeof facts['catalogAt'] !== 'number') return;
       const session = await new RemoteReadingFlowGateway(owner).openCachedCatalogSession({ sourceId: book.sourceId,
         bookId: book.bookId, detailUrl: book.bookId, title, author,
-        sourceVersion: typeof facts['sourceVersion'] === 'string' ? facts['sourceVersion'] as string : undefined }, current);
+        sourceVersion: typeof facts['sourceVersion'] === 'string' ? facts['sourceVersion'] as string : undefined }, current, true);
       if (!current()) return;
       const entries = await this.loadRemoteDirectoryProjection(new ReadingOfflineGateway(owner), owner, session, current);
       if (!current()) return;
-      this.remoteReadingSession = { acquisitionMode: session.acquisitionMode, sourceVersion: session.sourceVersion,
-        identity: session.identity, detailUrl: session.detailUrl, tocUrl: session.tocUrl,
-        continuationVariables: session.continuationVariables, entries: session.entries, hostRequirements: session.hostRequirements,
+      this.installRemoteReadingSession({ ...session,
         book: { title, author, intro: this.detailBook.intro, coverUrl: this.detailBook.coverUrl,
-          kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter } };
+          kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter } });
       this.detailToc = entries;
       this.detailLoadingMessage = '';
       if (this.remoteContentVerdict !== 'readable') {
-        void this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), this.remoteReadingSession, current);
+        const installed = this.remoteReadingSession;
+        if (installed !== undefined) void this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), installed,
+          (): boolean => generation === this.navigationGeneration && this.route === 'detail' && !this.readingSessionActive);
       }
     } catch (_error) { /* The current detail survives a failed background projection. */ }
     finally {
@@ -2443,7 +2465,7 @@ struct Index {
     this.shelfReadingPreparation = entryRoute === 'bookshelf';
     this.detailReturnRoute = originRoute === 'search' ? 'search' : 'bookshelf';
     this.readingSessionActive = false;
-    this.remoteReadingSession = undefined;
+    this.installRemoteReadingSession(undefined);
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     // Reuse the Core shelf projection for data admission. A shelf tap keeps
@@ -2525,6 +2547,7 @@ struct Index {
     fallbackSeeds: RemoteReadingBookSeed[] = [],
     fallbackSourceNames: string[] = [],
     retainedDetailReturnRoute: DetailReturnRoute | undefined = undefined,
+    validatedSession: RemoteReadingSession | undefined = undefined,
   ): void {
     const reusableRemoteSession = shelfSnapshot !== undefined &&
       this.remoteReadingSession?.identity.sourceId === seed.sourceId &&
@@ -2540,7 +2563,7 @@ struct Index {
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.remoteReadingSession = reusableRemoteSession;
+    this.installRemoteReadingSession(reusableRemoteSession);
     // The selected search/shelf item is already a validated Core projection.
     // Data admission is shared; the visible entry page is not. Search/info
     // shows detail immediately, while a shelf resume keeps the shelf mounted.
@@ -2587,7 +2610,12 @@ struct Index {
         book.sourceId === candidate.sourceId && book.bookId === candidate.bookId);
       return row === undefined ? { seed: candidate, catalogReady: false, failed: false } : this.searchAcquisitionCandidate(row);
     });
-    const sessionAdmission: Promise<RemoteDetailAdmission> = (allowGroupFallback ? owner.bookAcquisitions()
+    const suppliedSession = validatedSession !== undefined &&
+      validatedSession.identity.sourceId === seed.sourceId && validatedSession.identity.bookId === seed.bookId &&
+      preparedRemoteChapterMatches(validatedSession.preparedChapter, validatedSession, undefined,
+        owner.bookAcquisitions().readingProjectionRevision()) ? validatedSession : undefined;
+    const sessionAdmission: Promise<RemoteDetailAdmission> = suppliedSession !== undefined ?
+      Promise.resolve(new RemoteDetailAdmission(suppliedSession)) : (allowGroupFallback ? owner.bookAcquisitions()
       .acquireCandidateGroup(candidates, { isCurrent }) : owner.bookAcquisitions()
       .acquireBookWithBackgroundRefresh(seed, { isCurrent }))
       .then((admission): RemoteDetailAdmission =>
@@ -2623,8 +2651,7 @@ struct Index {
         const admittedSeedName = candidateNames.length > admittedIndex ? candidateNames[admittedIndex] : '';
         const admittedSourceName = admittedSeedName.trim().length > 0 ?
           admittedSeedName.trim() : session.identity.sourceId;
-        this.remoteReadingSession = session;
-        this.remoteContentVerdict = 'verifying';
+        this.installRemoteReadingSession(session);
         // A shelf resume must not enter ReadingExperience until the exact
         // persisted chapter (or the first readable leading chapter for a new
         // book) has passed body admission. This promise stays on the detail
@@ -2684,8 +2711,7 @@ struct Index {
         }
         void this.loadRemoteDirectoryProjection(offline, owner, session, isCurrent)
           .then((entries: LocalReadingTocEntry[]): void => {
-            const stillSame = this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-              this.remoteReadingSession?.identity.bookId === session.identity.bookId;
+            const stillSame = sameRemoteSessionEvidence(this.remoteReadingSession, session);
             if (isCurrent() && stillSame) {
               this.detailToc = entries;
             }
@@ -2760,7 +2786,7 @@ struct Index {
           this.detailToc = [];
           this.detailLoadingMessage = error.message;
           this.remoteContentVerdict = 'parseFailed';
-          this.remoteReadingSession = undefined;
+          this.installRemoteReadingSession(undefined);
           this.shelfReadingPreparation = false;
           this.route = resumeImmediately ? originRoute : 'detail';
           this.showReadingFailure(resumeImmediately ? '阅读加载失败' : '详情加载失败', error.message);
@@ -2776,18 +2802,24 @@ struct Index {
     backgroundRefresh?: Promise<RemoteReadingSession>,
   ): void {
     const owner = ReaderRuntimeOwner.current();
+    let displayedSession = cachedSession;
     const isCurrent = (): boolean => generation === this.navigationGeneration &&
       this.route === 'detail' && !this.readingSessionActive &&
       this.bookshelfRemovalActiveKey.length === 0 &&
-      this.remoteReadingSession?.identity.sourceId === cachedSession.identity.sourceId &&
-      this.remoteReadingSession?.identity.bookId === cachedSession.identity.bookId;
+      sameRemoteSessionEvidence(this.remoteReadingSession, displayedSession);
     void (backgroundRefresh ?? owner.bookAcquisitions().acquireBook(seed, { forceRefresh: true }))
       .then((refreshed: RemoteReadingSession): void => {
         if (!isCurrent() || refreshed.identity.sourceId !== cachedSession.identity.sourceId ||
           refreshed.identity.bookId !== cachedSession.identity.bookId) {
           return;
         }
-        this.remoteReadingSession = refreshed;
+        const changed = !sameRemoteSessionEvidence(this.remoteReadingSession, refreshed);
+        this.installRemoteReadingSession(refreshed);
+        displayedSession = refreshed;
+        const refreshedCurrent = (): boolean => isCurrent() && sameRemoteSessionEvidence(this.remoteReadingSession, refreshed);
+        if (changed || this.remoteContentVerdict !== 'readable') {
+          void this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), refreshed, refreshedCurrent);
+        }
         this.detailBook = {
           sourceId: refreshed.identity.sourceId,
           sourceName: sourceName.trim().length > 0 ? sourceName.trim() : refreshed.identity.sourceId,
@@ -2809,10 +2841,10 @@ struct Index {
           new ReadingOfflineGateway(owner),
           owner,
           refreshed,
-          isCurrent,
+          refreshedCurrent,
         )
           .then((entries: LocalReadingTocEntry[]): void => {
-            if (isCurrent()) {
+            if (refreshedCurrent()) {
               this.detailToc = entries;
             }
           })
@@ -3516,7 +3548,7 @@ struct Index {
     // until `onChapterCommitted` reports the new chapter.
   }
 
-  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number): void {
+  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
     // 书签 tab 的精确锚点回流, 镜像 onDirectoryChapterSelected 的准入与路由语义。
     if (!this.isKnownDetailChapter(chapterIndex)) {
       return;
@@ -3534,7 +3566,7 @@ struct Index {
     }
     this.bookmarkAnchorRequestId += 1;
     this.requestedBookmarkAnchor =
-      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset);
+      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset, positionScope);
   }
 
   private openFullDirectory(): void {
@@ -3864,7 +3896,7 @@ struct Index {
         bookAuthor: book.author,
         chapterIndex: request.chapterIndex,
         chapterTitle: request.chapterTitle,
-      }, isCurrent);
+      }, isCurrent, book.sourceId === LOCAL_SOURCE_ID ? undefined : { sourceId: book.sourceId, bookId: book.bookId });
       writeConfirmed = true;
       if (!isCurrent()) {
         return;
@@ -3902,6 +3934,7 @@ struct Index {
         chapterOffset: request.chapterOffset,
         chapterTitle: request.chapterTitle,
         bookText: request.bookText,
+        positionScope: request.positionScope,
       }, isCurrent);
       writeConfirmed = true;
       if (!isCurrent()) return;
@@ -4395,23 +4428,29 @@ struct Index {
       sourceVersion: candidate.sourceVersion, coverUrl: candidate.coverUrl, searchVariables: candidate.searchVariables };
     const session = await owner.bookAcquisitions().acquireBook(seed, { isCurrent });
     const gateway = new RemoteReadingFlowGateway(owner);
-    let readable = false;
+    let chapter: ReadingSessionChapter | undefined;
+    const projectionRevision = owner.bookAcquisitions().readingProjectionRevision();
     let failure: Error = new Error('没有可读章节');
     for (const entry of session.entries.filter((item): boolean => item.url.trim().length > 0).slice(0, 3)) {
-      try { await gateway.loadChapter(session, entry.index, isCurrent); readable = true; break; }
+      if (!isCurrent()) return;
+      try { chapter = await gateway.loadChapter(session, entry.index, isCurrent); break; }
       catch (error) {
         failure = new Error(errorMessageOf(error));
         if (remoteReadingFailureKindOf(error) !== 'SOURCE_CONTENT_EMPTY') break;
       }
     }
     if (!isCurrent()) return;
-    if (!readable) throw failure;
+    if (chapter === undefined) throw failure;
+    if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
+      throw new Error('正文显示配置已更新，请重新选择书源');
+    }
+    const validated = withPreparedRemoteChapter(session, chapter, projectionRevision);
     this.sourceSwitchUnsubscribe?.();
     this.sourceSwitchUnsubscribe = undefined;
     this.sourceSwitchVisible = false;
     this.sourceSwitchState = { kind: 'discovering' };
     this.openRemoteBookDetail(seed, candidate.sourceName ?? candidate.sourceId,
-      undefined, false, [], [], detailReturnRoute);
+      undefined, false, [], [], detailReturnRoute, validated);
   }
 
   private async reconcileUnknownSourceSwitchCommit(
@@ -4601,6 +4640,24 @@ struct Index {
     }
   }
 
+  /** All semantic session replacement passes this boundary. */
+  private installRemoteReadingSession(session: RemoteReadingSession | undefined): void {
+    const previous = this.remoteReadingSession;
+    const same = sameRemoteSessionEvidence(previous, session);
+    if (!same) {
+      this.remoteSessionGeneration += 1;
+      this.remoteContentProbeGeneration += 1;
+    }
+    if (session === undefined) { this.remoteReadingSession = undefined; return; }
+    const revision = ReaderRuntimeOwner.current().bookAcquisitions().readingProjectionRevision();
+    const prepared = session.preparedChapter ?? (same ? previous?.preparedChapter : undefined);
+    const valid = preparedRemoteChapterMatches(prepared, session, undefined, revision);
+    this.remoteReadingSession = prepared !== session.preparedChapter || (!valid && session.preparedChapter !== undefined) ?
+      { ...session, preparedChapter: valid ? prepared : undefined } : session;
+    if (valid) this.remoteContentVerdict = 'readable';
+    else if (!same || previous?.preparedChapter !== undefined) this.remoteContentVerdict = 'verifying';
+  }
+
   /**
    * Reuse the admitted session to probe the leading chapter bodies (no second
    * openSession). The verdict only gates the "start reading" action: the
@@ -4613,9 +4670,21 @@ struct Index {
     isCurrent: () => boolean,
     preferredChapterIndex?: number,
   ): Promise<number | undefined> {
-    if (!isCurrent()) {
+    if (!isCurrent() || !sameRemoteSessionEvidence(this.remoteReadingSession, session)) {
       return undefined;
     }
+    const generation = ++this.remoteContentProbeGeneration;
+    const coordinator = ReaderRuntimeOwner.current().bookAcquisitions();
+    const projectionRevision = coordinator.readingProjectionRevision();
+    const probeCurrent = (): boolean => isCurrent() && generation === this.remoteContentProbeGeneration &&
+      projectionRevision === coordinator.readingProjectionRevision() &&
+      sameRemoteSessionEvidence(this.remoteReadingSession, session);
+    const prepared = this.remoteReadingSession?.preparedChapter;
+    if (preparedRemoteChapterMatches(prepared, session, preferredChapterIndex, projectionRevision)) {
+      this.remoteContentVerdict = 'readable';
+      return prepared?.chapter.chapterIndex;
+    }
+    this.remoteContentVerdict = 'verifying';
     const readableEntries = session.entries.filter((entry): boolean => entry.url.trim().length > 0);
     let start = 0;
     let limit = Math.min(3, readableEntries.length);
@@ -4630,14 +4699,15 @@ struct Index {
     }
     for (let attempt = start; attempt < limit; attempt += 1) {
       try {
-        await gateway.loadChapter(session, readableEntries[attempt].index, isCurrent);
-        if (!isCurrent()) {
+        const chapter = await gateway.loadChapter(session, readableEntries[attempt].index, probeCurrent);
+        if (!probeCurrent()) {
           return undefined;
         }
+        this.installRemoteReadingSession(withPreparedRemoteChapter(this.remoteReadingSession ?? session, chapter, projectionRevision));
         this.remoteContentVerdict = 'readable';
         return readableEntries[attempt].index;
       } catch (error) {
-        if (!isCurrent()) {
+        if (!probeCurrent()) {
           return undefined;
         }
         const kind = remoteReadingFailureKindOf(error);
@@ -4650,7 +4720,7 @@ struct Index {
         return undefined;
       }
     }
-    if (isCurrent()) {
+    if (probeCurrent()) {
       this.remoteContentVerdict = 'contentUnavailable';
     }
     return undefined;
@@ -4811,7 +4881,7 @@ struct Index {
     // Leaving Detail strands any in-flight detail mutation (see the helper);
     // free the global gate before detailBook itself is cleared.
     this.detailBook = undefined;
-    this.remoteReadingSession = retainedRemoteSession;
+    this.installRemoteReadingSession(retainedRemoteSession);
     // The search orchestrator still owns the presented results; re-entering
     // must not call open() because that would reset them to the Initial state.
     this.route = 'search';
@@ -4838,7 +4908,7 @@ struct Index {
     // Leaving Detail strands any in-flight detail mutation (see the helper);
     // free the global gate before detailBook itself is cleared.
     this.detailBook = undefined;
-    this.remoteReadingSession = retainedRemoteSession;
+    this.installRemoteReadingSession(retainedRemoteSession);
     this.selectedRssSubscription = undefined;
     this.selectedRssItems = [];
     this.selectedRssItem = undefined;
@@ -4972,8 +5042,7 @@ struct Index {
     const endExclusive = Math.min(session.entries.length, boundedIndex + READING_CACHE_AFTER + 1);
     const entries = await new ReadingOfflineGateway(ReaderRuntimeOwner.current())
       .prefetchRange(session, startInclusive, endExclusive);
-    if (this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-      this.remoteReadingSession?.identity.bookId === session.identity.bookId) {
+    if (sameRemoteSessionEvidence(this.remoteReadingSession, session)) {
       this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
     }
   }
@@ -5011,7 +5080,7 @@ struct Index {
         if (!isCurrent()) {
           return;
         }
-        this.remoteReadingSession = refreshed;
+        this.installRemoteReadingSession(refreshed);
         this.detailToc = refreshed.entries.map((entry): LocalReadingTocEntry => ({
           index: entry.index,
           title: entry.title,

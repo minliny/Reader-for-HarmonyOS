@@ -1,9 +1,8 @@
 import type { JsonObject } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
-import type { CachedBookIdentityIndex } from '../common/CachedBookIdentity';
 import type { BookRequestOptions } from '../../app/BookRequestScheduler';
 import { errorMessageOf } from '../../app/ErrorMessage';
-import { CachedBookIdentityResolver } from '../common/CachedBookIdentity';
+import { SearchBookProjection, type SearchBookPatch } from './SearchBookProjection';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
   classifyReaderSource,
@@ -17,6 +16,8 @@ import {
  * the request that produced it, not guessed from a stale search cache.
  */
 export type SearchBook = {
+  /** Assigned when this exact identity first enters a query, before category filtering. */
+  admittedOrder?: number;
   acquisition?: JsonObject;
   groupKey?: string;
   sourceId: string;
@@ -49,6 +50,14 @@ export type SearchBookVariable = {
 export type SearchHistory = {
   keywords: string[];
   count: number;
+};
+
+export type SearchResultDelta = {
+  baseRevision: number;
+  revision: number;
+  reset: boolean;
+  upserted: SearchBook[];
+  removedKeys: string[];
 };
 
 /**
@@ -87,16 +96,12 @@ export class SearchGateway {
   private cachedSourceRevision: number | undefined = undefined;
   private loadingSources: Promise<SearchSource[]> | undefined = undefined;
   private loadingSourceRevision: number | undefined = undefined;
-  private projectedBookRows: Map<string, JsonObject> | undefined = undefined;
-  private projectedBookRevision: number | undefined = undefined;
-  private projectedBookEpoch: number = 0;
-  private projectedIdentityIndex: CachedBookIdentityIndex | undefined = undefined;
-  private projectedKeysByGroup: Map<string, string[]> | undefined = undefined;
+  private bookProjectionEpoch: number = 0;
+  private bookProjection: SearchBookProjection = new SearchBookProjection();
 
   private sourceRevision(): number | undefined {
     return this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision?.();
   }
-  private readonly bookIdentities = new CachedBookIdentityResolver();
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -300,221 +305,29 @@ export class SearchGateway {
     return sources;
   }
 
-  resetBookProjection(): void {
-    this.projectedBookEpoch += 1;
-    this.projectedBookRows = undefined;
-    this.projectedBookRevision = undefined;
-    this.projectedIdentityIndex = undefined;
-    this.projectedKeysByGroup = undefined;
-  }
+  resetBookProjection(): void { this.bookProjectionEpoch += 1; this.bookProjection.reset(); }
 
-  private aliasStamp(row: JsonObject | undefined): string {
-    if (row === undefined) return '';
-    const facts = row['acquisition'] as JsonObject | undefined;
-    return JSON.stringify([row['origin'], row['bookUrl'], row['name'], row['author'], facts?.['aliases']]);
-  }
-
-  private async readBookProjection(revision: number | undefined, epoch: number,
-    change?: BookAcquisitionChange): Promise<Map<string, JsonObject>> {
-    const full = change === undefined || change.reset || this.projectedBookRows === undefined ||
-      revision !== this.projectedBookRevision;
-    const rows = full ? new Map<string, JsonObject>() : new Map(this.projectedBookRows);
-    let aliasesChanged = full;
-    const current = (): void => {
-      if (epoch !== this.projectedBookEpoch || revision !== this.sourceRevision()) {
-        throw new Error('source registry changed or search projection superseded');
-      }
-    };
-    const admit = (row: JsonObject): void => {
-      const origin = optionalString(row, 'origin');
-      const bookUrl = optionalString(row, 'bookUrl');
-      if (origin === undefined || bookUrl === undefined) return;
-      const key = JSON.stringify([origin, bookUrl]);
-      const previous = rows.get(key);
-      if (this.aliasStamp(previous) !== this.aliasStamp(row)) aliasesChanged = true;
-      rows.set(key, previous !== undefined && JSON.stringify(previous) === JSON.stringify(row) ? previous : row);
-    };
-    current();
-    if (full) {
-      const result = await this.runtimeOwner.request('search-book.list', {});
-      current();
-      const values = result.data['books'];
-      if (!Array.isArray(values)) throw new Error('search-book.list returned invalid data');
-      let processed = 0;
-      for (const value of values) {
-        if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-        if (value !== null && typeof value === 'object' && !Array.isArray(value)) admit(value as JsonObject);
-      }
-    } else if (change !== undefined) {
-      const origins = new Map<string, Set<string>>();
-      for (const identity of change.identities) {
-        let urls = origins.get(identity.sourceId);
-        if (urls === undefined) { urls = new Set<string>(); origins.set(identity.sourceId, urls); }
-        urls.add(identity.bookId);
-      }
-      for (const [origin, urls] of origins) {
-        current();
-        // A source search can publish hundreds of identities at once. Reuse
-        // the indexed Core origin query rather than issue one RPC per result.
-        if (urls.size >= 8) {
-          const result = await this.runtimeOwner.request('search-book.list', { origin });
-          current();
-          const values = result.data['books'];
-          if (!Array.isArray(values)) throw new Error('search-book.list returned invalid data');
-          const retained = new Set<string>();
-          let processed = 0;
-          for (const value of values) {
-            if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-            if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-              const row = value as JsonObject;
-              if (row['origin'] !== origin) throw new Error('source-scoped book projection identity mismatch');
-              admit(row); retained.add(JSON.stringify([origin, row['bookUrl']]));
-            }
-          }
-          for (const [key, row] of rows) {
-            if (row['origin'] === origin && !retained.has(key)) { rows.delete(key); aliasesChanged = true; }
-          }
-        } else {
-          for (const bookUrl of urls) {
-            const result = await this.runtimeOwner.request('search-book.get', { origin, bookUrl });
-            current();
-            const value = result.data['book'];
-            const key = JSON.stringify([origin, bookUrl]);
-            if (value === null || value === undefined) { if (rows.delete(key)) aliasesChanged = true; }
-            else if (typeof value === 'object' && !Array.isArray(value)) {
-              const row = value as JsonObject;
-              if (row['origin'] !== origin || row['bookUrl'] !== bookUrl) throw new Error('book projection identity mismatch');
-              admit(row);
-            } else throw new Error('search-book.get returned invalid data');
-          }
-        }
-      }
-    }
-    current();
-    this.projectedBookRows = rows;
-    this.projectedBookRevision = revision;
-    if (aliasesChanged) {
-      this.projectedIdentityIndex = undefined;
-      this.projectedKeysByGroup = undefined;
-    }
-    return rows;
-  }
-
-  async refreshBooks(books: SearchBook[], change?: BookAcquisitionChange): Promise<SearchBook[]> {
-    const epoch = this.projectedBookEpoch;
+  async refreshBookDelta(books: Map<string, SearchBook>, change: BookAcquisitionChange): Promise<SearchBookPatch> {
+    const epoch = this.bookProjectionEpoch;
+    const sources = await this.loadSources();
+    if (epoch !== this.bookProjectionEpoch) throw new Error('search projection superseded');
     const revision = this.sourceRevision();
-    const sources = revision !== undefined && this.cachedSourceRevision === revision && this.cachedSources !== undefined
-      ? this.cachedSources : await this.loadSources();
-    const enabledSources = new Map<string, SearchSource>();
-    for (const source of sources) {
-      if (source.enabled && readerSourceCategoryIsText(source.category)) enabledSources.set(source.sourceId, source);
-    }
-    const byKey = await this.readBookProjection(revision, epoch, change);
-    let processed = 0;
-    const identities = this.projectedIdentityIndex ??
-      await this.bookIdentities.build(Array.from(byKey.values()), new Set(enabledSources.keys()));
-    if (epoch !== this.projectedBookEpoch) throw new Error('search projection superseded');
-    this.projectedIdentityIndex = identities;
-    let keysByGroup = this.projectedKeysByGroup;
-    if (keysByGroup === undefined) {
-      keysByGroup = new Map<string, string[]>();
-      for (const [key, row] of byKey) {
-        if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-        const sourceId = optionalString(row, 'origin');
-        const bookId = optionalString(row, 'bookUrl');
-        if (sourceId === undefined || bookId === undefined) continue;
-        const component = identities.groupFor(sourceId, bookId);
-        if (component === undefined) continue;
-        let keys = keysByGroup.get(component);
-        if (keys === undefined) { keys = []; keysByGroup.set(component, keys); }
-        keys.push(key);
-      }
-      if (epoch !== this.projectedBookEpoch || revision !== this.sourceRevision()) throw new Error('search projection superseded');
-      this.projectedKeysByGroup = keysByGroup;
-    }
-    const admittedGroups = new Map<string, SearchBook>();
-    const groupKeyOwners = new Map<string, string>();
-    const refreshed: SearchBook[] = [];
-    const seen = new Set<string>();
-    for (const book of books) {
-      if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-      const key = JSON.stringify([book.sourceId, book.bookId]);
-      const row = byKey.get(key);
-      const facts = row?.['acquisition'] as JsonObject | undefined;
-      const current = row !== undefined && facts?.['sourceVersion'] === book.sourceRuleVersion;
-      const projected: SearchBook = current ? { ...book, title: optionalString(row, 'name') || book.title,
-        author: optionalString(row, 'author') ?? book.author,
-        coverUrl: optionalString(row, 'coverUrl') ?? book.coverUrl,
-        intro: optionalString(row, 'intro') ?? book.intro,
-        kind: optionalString(row, 'kind') ?? book.kind,
-        latestChapterTitle: optionalString(row, 'latestChapterTitle') ?? book.latestChapterTitle,
-        acquisition: facts } : { ...book };
-      if (book.sourceId !== 'local' && !enabledSources.has(book.sourceId)) continue;
-      refreshed.push(projected); seen.add(key);
-      if (book.sourceId === 'local') { refreshed[refreshed.length - 1] = book; continue; }
-      const component = identities.groupFor(book.sourceId, book.bookId) ??
-        identities.groupForAlias(this.bookIdentities.aliasKey(book.title, book.author)) ?? key;
-      const first = admittedGroups.get(component);
-      if (first !== undefined) {
-        projected.groupKey = first.groupKey;
-      } else {
-        // Cache membership is canonical; card identity is navigation-owned.
-        // Retain the earliest admitted card when two aliases join, and avoid
-        // re-merging separate canonical books with the same old display key.
-        let groupKey = book.groupKey ?? this.bookIdentities.aliasKey(book.title, book.author);
-        const owner = groupKeyOwners.get(groupKey);
-        if (owner !== undefined && owner !== component) groupKey = JSON.stringify(['book', book.sourceId, book.bookId]);
-        projected.groupKey = groupKey;
-        groupKeyOwners.set(groupKey, component);
-        admittedGroups.set(component, projected);
-      }
-      // Preserve payload identity when a cache read adds no facts. This lets
-      // the page retain locale/relevance projections and observed row fields.
-      if (projected.title === book.title && projected.author === book.author &&
-        projected.coverUrl === book.coverUrl && projected.intro === book.intro &&
-        projected.kind === book.kind && projected.latestChapterTitle === book.latestChapterTitle &&
-        projected.groupKey === book.groupKey && (projected.acquisition === book.acquisition ||
-          JSON.stringify(projected.acquisition) === JSON.stringify(book.acquisition))) {
-        refreshed[refreshed.length - 1] = book;
-      }
-    }
-    // A source discovered from another page joins only a book already admitted
-    // to this query. Unrelated cached books never become search results.
-    const relatedKeys: string[] = [];
-    for (const component of admittedGroups.keys()) {
-      const keys = keysByGroup.get(component);
-      if (keys !== undefined) relatedKeys.push(...keys);
-    }
-    for (const relatedKey of relatedKeys) {
-      const row = byKey.get(relatedKey);
-      if (row === undefined) continue;
-      if (++processed % 32 === 0) await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-      const sourceId = optionalString(row, 'origin');
-      const bookId = optionalString(row, 'bookUrl');
-      const title = optionalString(row, 'name');
-      if (sourceId === undefined || bookId === undefined || title === undefined) continue;
-      const key = JSON.stringify([sourceId, bookId]);
-      if (seen.has(key)) continue;
-      const source = enabledSources.get(sourceId);
-      if (source === undefined || !readerSourceCategoryIsText(source.category)) continue;
-      const facts = row['acquisition'] as JsonObject | undefined;
-      const author = optionalString(row, 'author') ?? '';
-      const component = identities.groupFor(sourceId, bookId);
-      const group = component === undefined ? undefined : admittedGroups.get(component);
-      if (group === undefined) continue;
-      const variables = optionalString(row, 'variable');
-      let decodedVariables: SearchBookVariable[] = [];
-      try { if (variables !== undefined) decodedVariables = decodeBookSearchVariables(JSON.parse(variables)); } catch (_error) { /* Legacy invalid continuation must not poison other sources. */ }
-      refreshed.push({ sourceId, sourceName: source.name, bookSourceUrl: this.sourceBookUrl(source),
-        bookId, detailUrl: bookId, title, author, sourceRuleVersion: facts === undefined ? '' : optionalString(facts, 'sourceVersion') ?? '',
-        searchRequestId: group.searchRequestId, groupKey: group.groupKey, category: source.category,
-        coverUrl: optionalString(row, 'coverUrl'), intro: optionalString(row, 'intro'), kind: optionalString(row, 'kind'),
-        latestChapterTitle: optionalString(row, 'latestChapterTitle'), acquisition: facts, variables: decodedVariables });
-      seen.add(key);
-    }
-    if (epoch !== this.projectedBookEpoch || revision !== this.sourceRevision()) throw new Error('source registry changed during book projection');
-    return refreshed.length === books.length && refreshed.every((book: SearchBook, index: number): boolean => book === books[index])
-      ? books : refreshed;
+    return this.bookProjection.refresh(books, change, sources,
+      async (method: string, params: JsonObject): Promise<JsonObject> => {
+        const result = await this.runtimeOwner.request(method, params);
+        return result.data;
+      }, (): boolean => revision === this.sourceRevision());
+  }
+
+  /** Compatibility entry for callers without a query-owned identity index. */
+  async refreshBooks(books: SearchBook[], change?: BookAcquisitionChange): Promise<SearchBook[]> {
+    const indexed = new Map<string, SearchBook>();
+    for (const book of books) indexed.set(`${book.sourceId}\u0000${book.bookId}`, book);
+    const patch = await this.refreshBookDelta(indexed, change ?? { reset: true, identities: [] });
+    if (patch.upserted.length === 0 && patch.removedKeys.length === 0) return books;
+    for (const key of patch.removedKeys) indexed.delete(key);
+    for (const book of patch.upserted) indexed.set(`${book.sourceId}\u0000${book.bookId}`, book);
+    return Array.from(indexed.values());
   }
 
   private requestOptions(isCurrent: SearchRequestGuard | undefined, canDispatch?: SearchRequestGuard): BookRequestOptions {

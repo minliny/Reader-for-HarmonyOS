@@ -26,7 +26,8 @@ const errorMessageModule = stripTypeScriptTypes(
 // an injected owner without replacing application code.
 const nodeSource = stripTypeScriptTypes(
   gatewaySource
-    .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () => identityModule)
+    .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
+      readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\.\/source\/ReaderSourceCategory['"];$/m,
       () => sourceCategoryModule)
     .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
@@ -206,146 +207,6 @@ assert.match(generated.results[0].searchRequestId, /^search-[0-9a-z]+-\d+-\d+$/,
 assert.equal(generated.results[0].sourceRuleVersion, '',
   'legacy unversioned sources are never assigned a fabricated rule version');
 
-// Canonical detail aliases join all related source candidates to this query.
-// Same title under another author and unrelated/disabled sources stay out.
-{
-  const seed = { sourceId: 'a', sourceName: '甲', bookSourceUrl: 'a', bookId: '/same', detailUrl: '/same',
-    title: '旧书名', author: '作者', groupKey: '旧书名\u0000作者', searchRequestId: 'retained-query',
-    sourceRuleVersion: 'v-a', category: 'novel', variables: [] };
-  const facts = { schemaVersion: 1, sourceVersion: 'v-a', catalogAt: 100, catalogCount: 7,
-    aliases: [{ name: '旧书名', author: '作者' }, { name: '新书名', author: '作者' }] };
-  const rows = [
-    { origin: 'a', bookUrl: '/same', name: '新书名', author: '作者', acquisition: facts },
-    { origin: 'b', bookUrl: '/same', name: '新书名', author: '作者', variable: '{"token":"retained"}',
-      acquisition: { schemaVersion: 1, sourceVersion: 'v-b', chapterUrl: '/chapter-1', readableAt: 101 } },
-    { origin: 'c', bookUrl: '/other-author', name: '新书名', author: '另一作者' },
-    { origin: 'c', bookUrl: '/unrelated', name: '别的书', author: '作者' },
-    { origin: 'disabled', bookUrl: '/same', name: '旧书名', author: '作者' },
-  ];
-  let network = 0;
-  const shared = new SearchGateway({ request: async method => {
-    if (method === 'source.list') return { data: { sources: ['a', 'b', 'c', 'disabled'].map(sourceId =>
-      ({ sourceId, name: sourceId, enabled: sourceId !== 'disabled', category: 'novel', sourceVersion: `v-${sourceId}` })) } };
-    if (method === 'search-book.list') return { data: { books: rows } };
-    network += 1; throw new Error(`projection issued ${method}`);
-  } });
-  const projected = await shared.refreshBooks([seed]);
-  assert.deepEqual(projected.map(book => [book.sourceId, book.bookId]), [['a', '/same'], ['b', '/same']]);
-  assert.equal(projected[0].title, '新书名');
-  assert.equal(projected[0].acquisition.catalogCount, 7);
-  assert.equal(projected[1].acquisition.chapterUrl, '/chapter-1');
-  assert.deepEqual(projected[1].variables, [{ name: 'token', value: 'retained' }]);
-  assert.ok(projected.every(book => book.groupKey === seed.groupKey && book.searchRequestId === seed.searchRequestId));
-  assert.equal(network, 0, 'cross-page projection reads durable facts without another search');
-}
-
-console.log('search gateway remote-result and canonical synchronization: PASS');
-
-// Broad searches carry many source variants for the same title. Refreshing
-// those facts must let timers/input run, reuse normalization, and retain all rows.
-{
-  const books = Array.from({ length: 2048 }, (_, index) => ({
-    sourceId: 'a', sourceName: '甲', bookSourceUrl: 'a', bookId: `/book-${index}`,
-    detailUrl: `/book-${index}`, title: `同书 ${index % 128}`, author: '作者',
-    sourceRuleVersion: 'v-a', searchRequestId: 'large-query', category: 'novel', variables: [],
-  }));
-  const rows = books.map(book => ({ origin: 'a', bookUrl: book.bookId, name: book.title,
-    author: book.author, acquisition: { sourceVersion: 'v-a', catalogCount: 8 } }));
-  const gateway = new SearchGateway({ request: async method => ({ data: method === 'source.list' ?
-    { sources: [{ sourceId: 'a', name: '甲', enabled: true, sourceVersion: 'v-a' }] } : { books: rows } }) });
-  let ticks = 0, normalizations = 0;
-  const timer = setInterval(() => { ticks += 1; }, 0);
-  const normalize = String.prototype.toLocaleLowerCase;
-  String.prototype.toLocaleLowerCase = function (...args) { normalizations += 1; return normalize.apply(this, args); };
-  try {
-    const refreshed = await gateway.refreshBooks(books);
-    assert.deepEqual(refreshed.map(book => book.bookId), books.map(book => book.bookId));
-    assert.ok(refreshed.every(book => book.acquisition.catalogCount === 8));
-    assert.ok(ticks > 0, 'large projection must yield to the event loop before completion');
-    assert.ok(normalizations <= 256, 'shared titles/authors must not be normalized repeatedly across rows');
-    normalizations = 0;
-    await gateway.refreshBooks(refreshed);
-    assert.equal(normalizations, 0, 'repeated metadata refresh reuses bounded alias cache');
-  } finally {
-    clearInterval(timer);
-    String.prototype.toLocaleLowerCase = normalize;
-  }
-}
-console.log('search gateway broad projection responsiveness: PASS');
-
-{
-  let visible = true;
-  let captured;
-  const guarded = new SearchGateway({ request: async (_method, params, options) => {
-    captured = options;
-    return { data: { sourceId: params.sourceId, books: [] } };
-  } });
-  await guarded.searchBySource(source, '保留查询', () => true, 'retained-query', () => visible);
-  assert.equal(captured.canDispatch(), true);
-  visible = false;
-  assert.equal(captured.canDispatch(), false, 'route visibility reaches the global queue');
-  assert.equal(captured.shouldCancel(), false, 'hiding never invalidates the retained query');
-}
-
-// PH65: cache projections reuse the source registry, but an identity mutation invalidates it.
-{
-  let revision = 0, sourceLoads = 0, enabled = true;
-  const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => revision }),
-    request: async method => {
-      if (method === 'source.list') { sourceLoads++; return { data: { sources: [{ ...source, enabled }] } }; }
-      if (method === 'search-book.list') return { data: { books: [] } };
-      throw Error(method);
-    } };
-  const gateway = new SearchGateway(owner);
-  const seed = validOutcome.results[0];
-  await gateway.loadSources();
-  await gateway.refreshBooks([seed]);
-  await gateway.refreshBooks([seed]);
-  assert.equal(sourceLoads, 1, 'cache projection cannot repeatedly parse the whole source registry');
-  enabled = false; revision++;
-  assert.deepEqual(await gateway.refreshBooks([seed]), [], 'disabled source is not revived from registry cache');
-  assert.equal(sourceLoads, 2);
-}
-console.log('PH65 source registry reuse and mutation invalidation PASS');
-
-// PH65: decoding a large source response yields rendering turns and rejects a superseded sweep.
-{
-  let turns = 0;
-  const timer = setInterval(() => { turns++; }, 0);
-  const gateway = new SearchGateway({ request: async () => ({ data: { sourceId: source.sourceId,
-    books: Array.from({ length: 1024 }, (_, i) => ({ bookId: `/large/${i}`, title: `书${i}`, author: '作者' })) } }) });
-  try {
-    const outcome = await gateway.searchBySource(source, '书', () => true, 'large');
-    assert.equal(outcome.ok, true); assert.equal(outcome.results.length, 1024);
-    assert.ok(turns >= 16, 'a broad source response must not monopolize one JS turn');
-    let current = true; setTimeout(() => { current = false; }, 0);
-    const stale = await gateway.searchBySource(source, '书', () => current, 'cancelled');
-    assert.equal(stale.ok, false, 'cancelled decoding does not release a partial stale source result');
-  } finally { clearInterval(timer); }
-}
-{
-  let revision = 0, release;
-  const cache = new Promise(resolve => { release = resolve; });
-  const gateway = new SearchGateway({ bookAcquisitions: () => ({ sourceRegistryRevision: () => revision }), request: async method => {
-    if (method === 'source.list') return { data: { sources: [source] } };
-    await cache; return { data: { books: [] } };
-  } });
-  await gateway.loadSources();
-  const projecting = gateway.refreshBooks([validOutcome.results[0]]);
-  revision++; release();
-  await assert.rejects(projecting, /source registry changed/, 'old projection cannot re-admit a deleted or replaced source');
-}
-console.log('PH65 yielding decode, superseded sweep and late source projection invalidation PASS');
-
-// PH65: unchanged canonical reads retain both payload and array identity for UI projection caches.
-{
-  const gateway = new SearchGateway({ request: async method => method === 'source.list'
-    ? { data: { sources: [source] } } : { data: { books: [] } } });
-  const books = [validOutcome.results[0]];
-  assert.equal(await gateway.refreshBooks(books), books, 'no new cache facts means no new UI payload');
-}
-console.log('PH65 no-op canonical refresh retains projection identity PASS');
-
 // PH68: opening Search and submitting before source.list returns must not
 // decode the same registry twice. A mutation/restore starts a new generation.
 {
@@ -375,62 +236,123 @@ console.log('PH65 no-op canonical refresh retains projection identity PASS');
 }
 console.log('PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS');
 
-// PH68: metadata changes read only the dirty identities and reuse canonical
-// membership. The Core origin index bounds a broad source batch to one RPC.
-{
-  const rows = new Map(Array.from({length:2000}, (_,i) => {
-    const row={origin:i===1?'source-b':'source-a',bookUrl:`/book/${i}`,name:i<2?'鸣龙':`其他书${i}`,
-      author:'关关公子',acquisition:{sourceVersion:'v1',detailAt:1}};
-    return [JSON.stringify([row.origin,row.bookUrl]),row];
-  }));
-  const calls=[];let revision=1;
-  const g=new SearchGateway({bookAcquisitions:()=>({sourceRegistryRevision:()=>revision}),request:async(method,params)=>{
+
+const keyOf = b => `${b.sourceId ?? b.origin}\u0000${b.bookId ?? b.bookUrl}`;
+const identityOf = b => ({sourceId:b.sourceId??b.origin,bookId:b.bookId??b.bookUrl});
+function fixture(count=1) {
+  const sources=['a','b'].map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:`v-${sourceId}`,category:'novel'}));
+  const books=Array.from({length:count},(_,i)=>({...validOutcome.results[0],sourceId:'a',sourceName:'a',bookSourceUrl:'a',
+    sourceRuleVersion:'v-a',bookId:`/${i}`,detailUrl:`/${i}`,title:`书${i}`,author:'作者',groupKey:`card${i}`,admittedOrder:i}));
+  const rows=new Map(books.map(b=>[keyOf(b),{origin:b.sourceId,bookUrl:b.bookId,name:b.title,author:b.author,
+    relationKey:`relation${b.bookId}`,relationRevision:'1',acquisition:{sourceVersion:'v-a',detailAt:1}}]));
+  const calls=[];let revision=1, handler;
+  const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>revision}),request:async(method,params)=>{
     calls.push({method,params});
-    if(method==='source.list')return {data:{sources:[{...source,sourceVersion:'v1'},
-      {...source,sourceId:'source-b',sourceVersion:'v1'}]}};
-    if(method==='search-book.list')return {data:{books:structuredClone(Array.from(rows.values()).filter(r=>!params.origin||r.origin===params.origin))}};
-    if(method==='search-book.get')return {data:{book:structuredClone(rows.get(JSON.stringify([params.origin,params.bookUrl]))??null)}};
-    throw Error(method);
-  }});
-  let builds=0;const build=g.bookIdentities.build.bind(g.bookIdentities);
-  g.bookIdentities.build=async(...args)=>{builds++;return build(...args);};
-  const seed={...validOutcome.results[0],bookId:'/book/0',detailUrl:'/book/0',title:'鸣龙',author:'关关公子',sourceRuleVersion:'v1'};
-  let books=await g.refreshBooks([seed],{reset:false,identities:[{sourceId:'source-a',bookId:'/book/0'}]});
-  assert.equal(books.length,2,'related cached source joins, 1998 unrelated rows stay out');
-  const groupIndex=g.projectedKeysByGroup;
-  for(let i=2;i<=4;i++) {
-    rows.get(JSON.stringify(['source-a','/book/0'])).acquisition.detailAt=i;
-    books=await g.refreshBooks(books,{reset:false,identities:[{sourceId:'source-a',bookId:'/book/0'},
-      {sourceId:'source-a',bookId:'/book/0'}]});
-    assert.equal(books.find(b=>b.sourceId==='source-a').acquisition.detailAt,i);
-    assert.equal(g.projectedKeysByGroup,groupIndex,'metadata keeps canonical member index');
-  }
-  assert.equal(calls.filter(c=>c.method==='search-book.list').length,1,'one initial full cache read');
-  assert.equal(calls.filter(c=>c.method==='search-book.get').length,3,'duplicate dirty identities coalesce');
-  assert.equal(builds,1,'metadata changes do not rebuild the identity graph');
-  books=await g.refreshBooks(books,{reset:false,identities:Array.from({length:8},(_,i)=>({sourceId:'source-a',bookId:`/book/${i+2}`}))});
-  assert.deepEqual(calls.filter(c=>c.method==='search-book.list').map(c=>c.params),[{}, {origin:'source-a'}]);
-  assert.equal(books.length,2,'scoped read cannot remove another source');assert.equal(builds,1);
-  rows.get(JSON.stringify(['source-b','/book/1'])).name='鸣龙：校订';
-  rows.get(JSON.stringify(['source-b','/book/1'])).acquisition.aliases=[{name:'鸣龙',author:'关关公子'}];
-  books=await g.refreshBooks(books,{reset:false,identities:[{sourceId:'source-b',bookId:'/book/1'}]});
-  assert.equal(builds,2,'changed aliases rebuild membership exactly once');
-  assert.equal(books.find(b=>b.sourceId==='source-b').title,'鸣龙：校订');
-  revision++;
-  await g.refreshBooks(books,{reset:false,identities:[]});
-  assert.equal(calls.filter(c=>c.method==='source.list').length,2);
-  assert.equal(calls.filter(c=>c.method==='search-book.list'&&!c.params.origin).length,2,'registry revision rebuilds projection');
-  console.log('PH68 2000-row fixture: initial full reads=1, three metadata updates=3 exact gets, identity builds=1; broad batch=1 indexed origin read PASS');
+    if (method==='source.list')return {data:{sources}};
+    if(handler){const result=await handler(method,params);if(result)return result;}
+    assert.equal(method,'search-book.batch.get','projection must not read global/origin cache or dispatch HTTP');
+    assert.ok(params.identities.length<=128);
+    return {data:{books:params.identities.map(i=>structuredClone(rows.get(keyOf(i)))).filter(Boolean),
+      missing:params.identities.filter(i=>!rows.has(keyOf(i))),sourceVersions:sources,
+      snapshotRevision:'snapshot',complete:true}};
+  }};
+  return {sources,books,rows,calls,owner,gateway:new SearchGateway(owner),setHandler:h=>handler=h,bump:()=>revision++};
 }
-// Closing/new query during source loading cannot dispatch an ownerless cache read.
+function apply(index,patch){for(const key of patch.removedKeys)index.delete(key);for(const book of patch.upserted)index.set(keyOf(book),book);}
+// Fixed query, increasingly unrelated cache: response/projection cost remains scoped.
+for(const unrelated of [0,9000]) {
+  const f=fixture(1000);const index=new Map(f.books.map(b=>[keyOf(b),b]));
+  for(let i=0;i<unrelated;i++)f.rows.set(`unrelated${i}`,{origin:'a',bookUrl:`/unrelated${i}`,name:'历史书',author:'别的作者'});
+  let patch=await f.gateway.refreshBookDelta(index,{reset:true,identities:[]});apply(index,patch);
+  assert.equal(patch.retryIdentities.length,0);assert.equal(index.size,1000);
+  assert.equal(f.calls.filter(c=>c.method==='search-book.batch.get').length,8);
+  f.calls.length=0;
+  f.rows.get('a\u0000/500').intro='更新简介';
+  const before=new Map(index);let projected=0;
+  const original=f.gateway.bookProjection.project.bind(f.gateway.bookProjection);
+  f.gateway.bookProjection.project=(...args)=>{projected++;return original(...args);};
+  patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'a',bookId:'/500'}]});apply(index,patch);
+  assert.equal(patch.upserted.length,1);assert.equal(projected,1);assert.equal(patch.captured.size,1);
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].params.identities.length,1);
+  assert.equal(index.get('a\u0000/501'),before.get('a\u0000/501'));
+  console.log(`R5/R6 query=1000 unrelated=${unrelated}: metadata RPC=1 returned=1 projected=1 captured=1 PASS`);
+}
+// Source partitions are atomic: truncation/malformed facts preserve that source, healthy source publishes.
 {
-  let release;const gate=new Promise(r=>{release=r;});const calls=[];
-  const g=new SearchGateway({bookAcquisitions:()=>({sourceRegistryRevision:()=>1}),request:async method=>{
-    calls.push(method);if(method==='source.list'){await gate;return {data:{sources:[source]}};}
-    return {data:{books:[]}};
-  }});
-  const pending=g.refreshBooks([validOutcome.results[0]],{reset:false,identities:[]});
-  const rejected=assert.rejects(pending,/superseded/);
-  g.resetBookProjection();release();await rejected;
-  assert.deepEqual(calls,['source.list']);assert.equal(g.projectedBookRows,undefined);
+  const f=fixture(2);const b={...f.books[0],sourceId:'b',sourceName:'b',sourceRuleVersion:'v-b',bookSourceUrl:'b',bookId:'/b',detailUrl:'/b',groupKey:'b',admittedOrder:2};
+  const index=new Map([...f.books,b].map(b=>[keyOf(b),b]));
+  f.rows.set(keyOf(b),{origin:'b',bookUrl:'/b',name:'乙书',author:'作者',relationKey:'b',relationRevision:'1',acquisition:{sourceVersion:'v-b'}});
+  apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
+  f.setHandler((method,p)=>p.identities?.[0].sourceId==='a'?{data:{books:[],missing:[],sourceVersions:f.sources,complete:true,snapshotRevision:'s'}}:undefined);
+  f.rows.get(keyOf(b)).intro='健康源更新';
+  const old=index.get('a\u0000/0');const patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[identityOf(old),identityOf(b)]});apply(index,patch);
+  assert.equal(index.get(keyOf(old)),old);assert.equal(index.get(keyOf(b)).intro,'健康源更新');assert.equal(patch.retryIdentities.length,1);
+  f.setHandler(undefined);f.rows.delete(keyOf(old));
+  const deletion=await f.gateway.refreshBookDelta(index,{reset:false,identities:[identityOf(old)]});apply(index,deletion);
+  assert.ok(!index.has(keyOf(old)),'only explicit missing removes admitted fact');
+  f.sources[1].enabled=false;f.bump();apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
+  assert.ok(!index.has(keyOf(b)),'disabled source cannot revive from old query');
 }
+// New exact relation member joins; unrelated/same title under a different confirmed relation stays out.
+{
+  const f=fixture();let index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
+  f.rows.set('b\u0000/new',{origin:'b',bookUrl:'/new',name:'书0',author:'作者',relationKey:'relation/0',relationRevision:'1',
+    acquisition:{sourceVersion:'v-b'},variable:'{"token":"typed"}'});
+  f.rows.set('b\u0000/unrelated',{origin:'b',bookUrl:'/unrelated',name:'书0',author:'另一作者',relationKey:'other',relationRevision:'1',acquisition:{sourceVersion:'v-b'}});
+  const patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'b',bookId:'/new'},{sourceId:'b',bookId:'/unrelated'}]});apply(index,patch);
+  assert.equal(index.size,2);assert.equal(index.get('b\u0000/new').groupKey,'card0');assert.deepEqual(index.get('b\u0000/new').variables,[{name:'token',value:'typed'}]);
+}
+// Merge retains earliest admitted key; splitting gives the later child an independent key.
+{
+  const f=fixture(2);const index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
+  for(const row of f.rows.values()){row.relationKey='merged';row.relationRevision='2';}
+  f.setHandler((method,p)=>method==='search-book.related'?{data:{books:[...f.rows.values()].filter(r=>r.relationKey===f.rows.get(keyOf(p.identity)).relationKey),
+    sourceVersions:f.sources,complete:true,snapshotRevision:'merge'}}:undefined);
+  let patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'a',bookId:'/1'}]});apply(index,patch);
+  assert.equal(index.get('a\u0000/0').groupKey,'card0');assert.equal(index.get('a\u0000/1').groupKey,'card0');
+  f.rows.get('a\u0000/0').relationKey='split0';f.rows.get('a\u0000/1').relationKey='split1';
+  for(const row of f.rows.values())row.relationRevision='3';
+  patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'a',bookId:'/0'}]});apply(index,patch);
+  assert.equal(index.get('a\u0000/0').groupKey,'card0');assert.notEqual(index.get('a\u0000/1').groupKey,'card0');
+}
+// Incomplete relation pages retain old membership but healthy metadata may update.
+{
+  const f=fixture(2);const index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
+  f.rows.get('a\u0000/0').relationKey='changed';f.rows.get('a\u0000/0').relationRevision='2';f.rows.get('a\u0000/0').intro='safe metadata';
+  f.setHandler((method,p)=>method==='search-book.related'?{data:{books:[f.rows.get('a\u0000/0')],sourceVersions:f.sources,
+    complete:false,nextCursor:'stuck',snapshotRevision:p.cursor?'stale':'initial'}}:undefined);
+  const patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'a',bookId:'/0'}]});apply(index,patch);
+  assert.equal(index.get('a\u0000/0').groupKey,'card0');assert.equal(index.get('a\u0000/0').intro,'safe metadata');assert.equal(patch.retryIdentities.length,1);
+}
+// A queued source read belongs to the original query even before projection starts.
+{
+  let release;const gate=new Promise(r=>release=r);let requests=0;
+  const gateway=new SearchGateway({request:async()=>{requests++;await gate;return {data:{sources:[]}};}});
+  const pending=gateway.refreshBooks([validOutcome.results[0]]);gateway.resetBookProjection();release();
+  await assert.rejects(pending,/superseded/);assert.equal(requests,1);
+}
+console.log('R5/R6 partition isolation, exact missing, related admission, stable merge/split, stale cursor and ownership PASS');
+
+// More than one identity batch is one source partition: a bad tail cannot publish its head.
+{
+  const f=fixture(130);const index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
+  const old=index.get('a\u0000/0');f.rows.get('a\u0000/0').intro='uncommitted head';
+  f.setHandler((_method,p)=>p.identities?.[0].bookId==='/128'?{data:{books:[],missing:[],sourceVersions:f.sources,snapshotRevision:'snapshot',complete:true}}:undefined);
+  const patch=await f.gateway.refreshBookDelta(index,{reset:true,identities:[]});apply(index,patch);
+  assert.equal(index.get('a\u0000/0'),old);assert.equal(patch.upserted.length,0);assert.equal(patch.retryIdentities.length,130);
+}
+// Complete related pages may exceed 128 candidates and retain typed continuation.
+{
+  const f=fixture();const index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
+  const row=f.rows.get('a\u0000/0');row.relationRevision='2';
+  for(let i=0;i<130;i++)f.rows.set(`b\u0000/r${i}`,{...row,origin:'b',bookUrl:`/r${i}`,acquisition:{sourceVersion:'v-b'},variable:'{"token":"literal\\\\n"}'});
+  let pages=0;
+  f.setHandler((method,p)=>{if(method!=='search-book.related')return;pages++;
+    const all=[...f.rows.values()];const start=p.cursor?128:0;
+    return {data:{books:all.slice(start,start+128),sourceVersions:f.sources,complete:start+128>=all.length,
+      nextCursor:start+128<all.length?'page2':undefined,snapshotRevision:'same'}};});
+  apply(index,await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'a',bookId:'/0'}]}));
+  assert.equal(pages,2);assert.equal(index.size,131);assert.ok([...index.values()].every(b=>b.groupKey==='card0'));
+  assert.equal(index.get('b\u0000/r129').variables[0].value,'literal\\n');
+}
+console.log('R5/R6 130-identity atomic source partition and complete 131-member two-page relation PASS');

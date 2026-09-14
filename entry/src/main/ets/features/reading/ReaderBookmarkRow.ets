@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_LINE, TOK_READ_INK, TOK_READ_MUTED } from '../common/ReaderTokens';
 import type { ReaderBookmarkRowModel } from './ReaderBookmarkProjection';
@@ -28,7 +29,7 @@ export struct ReaderBookmarkRow {
     positionLabel: '',
     timeLabel: '',
   };
-  onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number) => void =
+  onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void =
     (_bookmarkId: string, _chapterIndex: number, _chapterOffset: number): void => {};
 
   build() {
@@ -73,7 +74,7 @@ export struct ReaderBookmarkRow {
     }.width(this.frame().card.width).height(this.frame().card.height).clip(true)
       .accessibilityText(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel} ${this.row.timeLabel}` +
         (this.row.identityStatus === 'pendingConfirmation' ? ` ${BOOKMARK_PENDING_LABEL}` : ''))
-      .onClick((): void => this.onSelectBookmark(this.row.bookmarkId, this.row.chapterIndex, this.row.chapterOffset));
+      .onClick((): void => this.onSelectBookmark(this.row.bookmarkId, this.row.chapterIndex, this.row.chapterOffset, this.row.positionScope));
   }
 
   @Builder
@@ -151,6 +152,6 @@ export struct ReaderBookmarkRow {
     .padding({ left: 10, right: 10 })
     .accessibilityText(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel}`)
     .onClick((): void =>
-      this.onSelectBookmark(this.row.bookmarkId, this.row.chapterIndex, this.row.chapterOffset));
+      this.onSelectBookmark(this.row.bookmarkId, this.row.chapterIndex, this.row.chapterOffset, this.row.positionScope));
   }
 }

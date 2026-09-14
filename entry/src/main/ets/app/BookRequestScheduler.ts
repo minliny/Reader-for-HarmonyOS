@@ -8,9 +8,13 @@ export type BookRequestExecutor = (
 export interface BookRequestOptions extends RequestOptions {
   /** Page visibility delays queued work without invalidating its query. */
   canDispatch?: () => boolean;
+  /** Process/source validity survives the page-owned cancellation boundary. */
+  canContinue?: () => boolean;
+  /** Called at the executor boundary, including a join to an already started request. */
+  onDispatch?: () => void;
 }
 
-type Consumer = { cancelled?: () => boolean; canDispatch?: () => boolean };
+type Consumer = { cancelled?: () => boolean; canDispatch?: () => boolean; onDispatch?: () => void };
 type RequestJob = {
   key: string;
   method: string;
@@ -51,7 +55,8 @@ export class BookRequestScheduler {
     const key = JSON.stringify([method, version, params]);
     let job = options.hostRequest === undefined ? this.jobs.get(key) : undefined;
     if (job !== undefined) {
-      job.consumers.push({ cancelled: options.shouldCancel, canDispatch: options.canDispatch });
+      job.consumers.push({ cancelled: options.shouldCancel, canDispatch: options.canDispatch, onDispatch: options.onDispatch });
+      if (job.started) options.onDispatch?.();
       if (priorityRank(priority) < priorityRank(job.priority)) job.priority = priority;
       this.drain();
       return job.promise;
@@ -63,7 +68,8 @@ export class BookRequestScheduler {
       rejectResult = reject;
     });
     job = { key, method, params, options, priority, queuedAt: Date.now(), started: false,
-      consumers: [{ cancelled: options.shouldCancel, canDispatch: options.canDispatch }], promise, resolve: resolveResult, reject: rejectResult };
+      consumers: [{ cancelled: options.shouldCancel, canDispatch: options.canDispatch, onDispatch: options.onDispatch }],
+      promise, resolve: resolveResult, reject: rejectResult };
     if (options.hostRequest === undefined) this.jobs.set(key, job);
     this.queue.push(job);
     this.drain();
@@ -92,7 +98,7 @@ export class BookRequestScheduler {
   }
 
   private cancelled(job: RequestJob): boolean {
-    if (this.closed) return true;
+    if (this.closed || job.options.canContinue?.() === false) return true;
     if (job.started && (job.method === 'book.detail' || job.method === 'book.toc' || job.method === 'chapter.content')) return false;
     return job.consumers.every((consumer: Consumer): boolean => consumer.cancelled?.() === true);
   }
@@ -123,10 +129,18 @@ export class BookRequestScheduler {
       const background = job.priority === 'background';
       if (background) this.backgroundActive += 1;
       job.started = true;
+      for (const consumer of job.consumers) {
+        if (consumer.cancelled?.() !== true) consumer.onDispatch?.();
+      }
       const requestOptions: RequestOptions = { timeoutMs: job.options.timeoutMs,
         pollMs: job.options.pollMs, hostRequest: job.options.hostRequest,
         shouldCancel: (): boolean => this.cancelled(job) };
-      void this.execute(job.method, job.params, requestOptions).then(job.resolve, job.reject)
+      // Convert a synchronous adapter throw to the same completion path so
+      // occupied slots are always released.
+      let execution: Promise<ReaderCoreResultEvent>;
+      try { execution = this.execute(job.method, job.params, requestOptions); }
+      catch (error) { execution = Promise.reject(error); }
+      void execution.then(job.resolve, job.reject)
         .finally((): void => {
           this.active -= 1;
           if (background) this.backgroundActive -= 1;

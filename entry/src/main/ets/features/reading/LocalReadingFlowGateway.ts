@@ -1,5 +1,7 @@
+import { appendExpectedPositionVersions, decodeRemotePositionScope, encodeRemotePositionScope, type RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
+import type { RemoteReadingIdentity } from './RemoteReadingContract';
 
 /**
  * Page-facing, materialized local-book TOC entry. The Core-owned local URL
@@ -21,6 +23,7 @@ export type LocalReadingDownloadState =
   'unknown' | 'missing' | 'queued' | 'inProgress' | 'cached' | 'completed' | 'failed' | 'cancelled';
 
 export type LocalReadingBookmark = {
+  positionScope?: RemoteReadingPositionScope;
   time: number;
   chapterIndex: number;
   chapterOffset: number;
@@ -31,6 +34,7 @@ export type LocalReadingBookmark = {
 };
 
 export type LocalReadingChapterStartBookmarkInput = {
+  positionScope?: RemoteReadingPositionScope;
   bookName: string;
   bookAuthor: string;
   chapterIndex: number;
@@ -84,6 +88,8 @@ export type LocalReadingContentMetrics = {
  * gateway inventing a second position model.
  */
 export type LocalReadingProgress = {
+  bodyVersion?: string;
+  processingVersion?: string;
   bookId: string;
   chapterIndex: number;
   chapterOffset: number;
@@ -97,6 +103,8 @@ export type LocalReadingProgressState =
   | { kind: 'restored'; progress: LocalReadingProgress };
 
 export type LocalReadingProgressUpdate = {
+  expectedBodyVersion?: string;
+  expectedProcessingVersion?: string;
   chapterIndex: number;
   chapterOffset: number;
   chapterProgress: number;
@@ -115,6 +123,8 @@ export type LocalReadingLayout = {
 
 /** One Unicode-scalar anchor emitted by the local pagination/measurement layer. */
 export type LocalReadingAnchor = {
+  bodyVersion?: string;
+  processingVersion?: string;
   chapterIndex: number;
   chapterOffset: number;
   chapterProgress: number;
@@ -297,7 +307,10 @@ export class LocalReadingFlowGateway {
       if (chapterIndex < 0) {
         continue;
       }
+      const positionScope = decodeRemotePositionScope(bookmark['positionScope']);
+      if (positionScope !== undefined && positionScope.chapterIndex !== chapterIndex) throw new Error('bookmark.list position scope chapter mismatch');
       bookmarks.push({
+        ...(positionScope === undefined ? {} : { positionScope }),
         time: this.requireSafeInteger(bookmark, 'time', 'bookmark.list bookmark'),
         chapterIndex,
         chapterOffset: this.requireNonNegativeInteger(bookmark, 'chapterPos', 'bookmark.list bookmark'),
@@ -338,14 +351,56 @@ export class LocalReadingFlowGateway {
   async createChapterStartBookmark(
     input: LocalReadingChapterStartBookmarkInput,
     isCurrent?: LocalReadingRequestGuard,
+    remoteIdentity?: RemoteReadingIdentity,
   ): Promise<LocalReadingBookmark> {
-    return this.createPositionBookmark({
-      bookName: input.bookName,
-      bookAuthor: input.bookAuthor,
-      chapterIndex: input.chapterIndex,
-      chapterOffset: 0,
-      chapterTitle: input.chapterTitle,
-    }, isCurrent);
+    const captured: LocalReadingPositionBookmarkInput = {
+      bookName: input.bookName, bookAuthor: input.bookAuthor, chapterIndex: input.chapterIndex,
+      chapterOffset: 0, chapterTitle: input.chapterTitle,
+      positionScope: input.positionScope === undefined ? undefined : decodeRemotePositionScope(encodeRemotePositionScope(input.positionScope)),
+    };
+    if (remoteIdentity !== undefined && remoteIdentity.sourceId !== LOCAL_SOURCE_ID) {
+      const identity: RemoteReadingIdentity = { sourceId: remoteIdentity.sourceId, bookId: remoteIdentity.bookId };
+      if (captured.positionScope !== undefined && (captured.positionScope.sourceId !== identity.sourceId ||
+        captured.positionScope.bookId !== identity.bookId)) throw new Error('bookmark position scope identity mismatch');
+      if (captured.positionScope === undefined) captured.positionScope =
+        await this.loadChapterStartPositionScope(identity, captured.chapterIndex, isCurrent);
+    }
+    if (isCurrent?.() === false) throw new Error('bookmark creation superseded');
+    return this.createPositionBookmark(captured, isCurrent);
+  }
+
+  /** A new chapter-start anchor is always zero in the current Core body.
+   * This proof is never attached to a persisted bookmark's historical offset.
+   * Omit every fetch input so a cache race/miss cannot launch source HTTP.
+   */
+  private async loadChapterStartPositionScope(identity: RemoteReadingIdentity, chapterIndex: number,
+    isCurrent?: LocalReadingRequestGuard): Promise<RemoteReadingPositionScope | undefined> {
+    this.assertNonBlankString(identity.sourceId, 'sourceId');
+    this.assertNonBlankString(identity.bookId, 'bookId');
+    this.assertNonNegativeInteger(chapterIndex, 'chapterIndex');
+    if (isCurrent?.() === false) throw new Error('bookmark creation superseded');
+    const status = await this.runtimeOwner.request('cache.book.status', { sourceId: identity.sourceId, bookId: identity.bookId,
+      includeGlobalStats: false, includeChapterStates: true }, this.requestOptions(isCurrent));
+    if (isCurrent?.() === false) throw new Error('bookmark creation superseded');
+    if (status.data['sourceId'] !== identity.sourceId || status.data['bookId'] !== identity.bookId ||
+      !Array.isArray(status.data['chapters'])) throw new Error('bookmark cache status identity mismatch');
+    let selected: JsonObject | undefined = undefined;
+    for (const raw of status.data['chapters']) {
+      const chapter = this.requireObject(raw, 'cache.book.status chapter');
+      if (this.requireNonNegativeInteger(chapter, 'chapterIndex', 'cache.book.status chapter') !== chapterIndex) continue;
+      if (selected !== undefined) throw new Error('duplicate bookmark cache chapter');
+      selected = chapter;
+    }
+    if (selected === undefined) return undefined;
+    const cachedBytes = this.requireNonNegativeInteger(selected, 'cachedBytes', 'cache.book.status chapter');
+    if (cachedBytes === 0 && selected['state'] !== 'cached' && selected['state'] !== 'completed') return undefined;
+    const result = await this.runtimeOwner.request('chapter.content', { sourceId: identity.sourceId,
+      bookId: identity.bookId, chapterIndex }, this.requestOptions(isCurrent));
+    if (isCurrent?.() === false) throw new Error('bookmark creation superseded');
+    if (result.data['sourceId'] !== identity.sourceId || result.data['bookId'] !== identity.bookId ||
+      result.data['via'] !== 'cache' || typeof result.data['content'] !== 'string') throw new Error('bookmark cached body identity mismatch');
+    return decodeRemotePositionScope({ sourceId: identity.sourceId, bookId: identity.bookId, chapterIndex,
+      bodyVersion: result.data['bodyVersion'], processingVersion: result.data['processingVersion'] });
   }
 
   /** Creates a bookmark at one exact Core Unicode-scalar reading anchor. */
@@ -360,14 +415,15 @@ export class LocalReadingFlowGateway {
     this.assertNonNegativeInteger(input.chapterIndex, 'chapterIndex');
     this.assertNonNegativeInteger(input.chapterOffset, 'chapterOffset');
     this.assertNonBlankString(input.chapterTitle, 'chapterTitle');
-    const result = await this.runtimeOwner.request('bookmark.create', {
-      bookName: input.bookName,
-      bookAuthor: input.bookAuthor,
-      chapterIndex: input.chapterIndex,
-      chapterPos: input.chapterOffset,
-      chapterName: input.chapterTitle,
-      bookText: input.bookText ?? '',
-    }, this.requestOptions(isCurrent));
+    const params: JsonObject = {
+      bookName: input.bookName, bookAuthor: input.bookAuthor, chapterIndex: input.chapterIndex,
+      chapterPos: input.chapterOffset, chapterName: input.chapterTitle, bookText: input.bookText ?? '',
+    };
+    if (input.positionScope !== undefined) {
+      if (input.positionScope.chapterIndex !== input.chapterIndex) throw new Error('bookmark position scope chapter mismatch');
+      params['positionScope'] = encodeRemotePositionScope(input.positionScope);
+    }
+    const result = await this.runtimeOwner.request('bookmark.create', params, this.requestOptions(isCurrent));
     const rawBookmark = this.requireObject(result.data['bookmark'], 'bookmark.create bookmark');
     const time = this.requireSafeInteger(rawBookmark, 'time', 'bookmark.create bookmark');
     const bookName = this.requireString(rawBookmark, 'bookName', 'bookmark.create bookmark');
@@ -386,7 +442,14 @@ export class LocalReadingFlowGateway {
       chapterTitle !== input.chapterTitle) {
       throw new Error('bookmark.create returned a mismatched position bookmark');
     }
-    return { time, chapterIndex, chapterOffset, chapterTitle, content, bookText };
+    const positionScope = decodeRemotePositionScope(rawBookmark['positionScope']);
+    if (input.positionScope !== undefined && (positionScope === undefined || positionScope.sourceId !== input.positionScope.sourceId ||
+      positionScope.bookId !== input.positionScope.bookId || positionScope.chapterIndex !== input.positionScope.chapterIndex ||
+      positionScope.bodyVersion !== input.positionScope.bodyVersion || positionScope.processingVersion !== input.positionScope.processingVersion)) {
+      throw new Error('bookmark.create returned a mismatched position scope');
+    }
+    return { time, chapterIndex, chapterOffset, chapterTitle, content, bookText,
+      ...(positionScope === undefined ? {} : { positionScope }) };
   }
 
   /** Deletes one already-projected bookmark by its Core-owned primary key. */
@@ -669,6 +732,8 @@ export class LocalReadingFlowGateway {
       chapterOffset: update.chapterOffset,
       chapterProgress: update.chapterProgress,
     };
+    appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
+      update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);
     if (update.locationRevision !== undefined) {
       params['locationRevision'] = update.locationRevision;
     }
@@ -698,7 +763,9 @@ export class LocalReadingFlowGateway {
     // policy. `stored: true` confirms command handling, not that this caller's
     // anchor won; never let the page treat a different retained chapter/offset
     // as its own successful first-page commit.
-    if (stored.chapterIndex !== update.chapterIndex || stored.chapterOffset !== update.chapterOffset ||
+    if ((params['expectedBodyVersion'] !== undefined && stored.bodyVersion !== params['expectedBodyVersion']) ||
+      (params['expectedProcessingVersion'] !== undefined && stored.processingVersion !== params['expectedProcessingVersion']) ||
+      stored.chapterIndex !== update.chapterIndex || stored.chapterOffset !== update.chapterOffset ||
       (update.locationRevision !== undefined && stored.locationRevision !== update.locationRevision)) {
       throw new Error('reading.progress.update retained a different current progress row');
     }
@@ -732,6 +799,9 @@ export class LocalReadingFlowGateway {
     const progress = this.requireObject(value, `${command} progress`);
     this.assertLocalSource(progress, command);
     this.assertMatchingBookId(progress, expectedBookId, command);
+    const bodyVersion = this.optionalString(progress, 'bodyVersion', command);
+    const processingVersion = this.optionalString(progress, 'processingVersion', command);
+    appendExpectedPositionVersions({}, bodyVersion, processingVersion);
     const locationRevision = this.optionalString(progress, 'locationRevision', command);
     return {
       bookId: expectedBookId,
@@ -740,6 +810,8 @@ export class LocalReadingFlowGateway {
       chapterProgress: this.requireProgress(progress, 'chapterProgress', command),
       updatedAt: this.requireNonNegativeInteger(progress, 'updatedAt', command),
       ...(locationRevision === undefined ? {} : { locationRevision }),
+      ...(bodyVersion === undefined ? {} : { bodyVersion }),
+      ...(processingVersion === undefined ? {} : { processingVersion }),
     };
   }
 

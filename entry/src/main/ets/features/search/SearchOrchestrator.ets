@@ -1,12 +1,14 @@
 import {
   SearchGateway,
   type SearchBook,
+  type SearchResultDelta,
   type SearchHistory,
   type SearchSource,
 } from './SearchGateway';
 import type {
   SearchPresentation,
 } from './SearchPage';
+import type { SearchBookPatch } from './SearchBookProjection';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -22,12 +24,76 @@ const DOMAIN = 0x5244;
  * source; outcomes are still assembled in source registration order.
  */
 const MAX_SEARCH_CONCURRENCY = 4;
-const SEARCH_PARTIAL_PUBLISH_INTERVAL_MS = 16;
+const SEARCH_PARTIAL_PUBLISH_INTERVAL_MS = 100;
+const SEARCH_PARTIAL_PUBLISH_MAX_MS = 200;
 
 /** One isolated source failure; healthy sources continue in the same search. */
 interface WorkerFailure {
   source: SearchSource;
   error: string;
+}
+
+type SearchBranchStatus = 'running' | 'done' | 'failed';
+
+/** Query ownership survives stop/retry and is independent of a rendered frame. */
+class SearchQueryRun {
+  keyword: string;
+  requestId: string;
+  scope: string[] | undefined;
+  sources: SearchSource[] = [];
+  sourceResults: Map<string, SearchBook[]> = new Map();
+  completed: Set<string> = new Set();
+  completedVersions: Map<string, string | undefined> = new Map();
+  failures: Map<string, WorkerFailure> = new Map();
+  localResults: SearchBook[] = [];
+  localStatus: SearchBranchStatus = 'running';
+  localFailed: boolean = false;
+  historyWritten: boolean = false;
+  onlineStatus: SearchBranchStatus = 'running';
+  sourceListFailed: boolean = false;
+  stopped: boolean = false;
+  order: Map<string, number> = new Map();
+  revision: number = 0;
+  flattenedRevision: number = -1;
+  flattened: SearchBook[] = [];
+  timer: number = -1;
+  pendingSince: number = 0;
+
+  constructor(keyword: string, requestId: string, scope?: string[]) {
+    this.keyword = keyword;
+    this.requestId = requestId;
+    this.scope = scope;
+  }
+
+  admit(books: SearchBook[], previous: SearchBook[] = []): SearchBook[] {
+    const admitted: SearchBook[] = [];
+    const seen = new Set<string>();
+    for (const book of books) {
+      if (book.searchRequestId !== this.requestId) continue;
+      const key = `${book.sourceId}\u0000${book.bookId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      let rank = this.order.get(key);
+      if (rank === undefined) { rank = this.order.size; this.order.set(key, rank); }
+      admitted.push({ ...book, admittedOrder: rank });
+    }
+    // A successful empty source changes completion counters only. Replacing
+    // an earlier nonempty bucket still changes membership and must invalidate.
+    if (admitted.length > 0 || previous.length > 0) this.revision += 1;
+    return admitted;
+  }
+
+  results(): SearchBook[] {
+    if (this.flattenedRevision === this.revision) return this.flattened;
+    const results = this.localResults.slice();
+    for (const source of this.sources) {
+      const books = this.sourceResults.get(source.sourceId);
+      if (books !== undefined) results.push(...books);
+    }
+    this.flattened = results;
+    this.flattenedRevision = this.revision;
+    return results;
+  }
 }
 
 /**
@@ -79,6 +145,10 @@ export class SearchOrchestrator {
   private sweepCompletedSourceCount: number = 0;
   /** Scope of the most recent search; an explicit retry uses the same subset. */
   private lastScope: string[] | undefined = undefined;
+  private resultIndex: Map<string, SearchBook> = new Map();
+  private resultRevision: number = 0;
+  private rawIdentityKeys: Set<string> = new Set();
+  private run: SearchQueryRun | undefined = undefined;
 
   constructor(
     emitPresentation: (presentation: SearchPresentation) => void,
@@ -167,6 +237,7 @@ export class SearchOrchestrator {
     if (keyword.trim().length === 0) {
       return;
     }
+    this.cancelRunTimer();
     this.searchedSources.clear();
     this.resultGeneration += 1;
     this.gateway.resetBookProjection();
@@ -179,11 +250,10 @@ export class SearchOrchestrator {
     this.sweepAlive = true;
     this.lastScope = scopeSourceIds === undefined ? undefined : scopeSourceIds.slice();
     this.sweepCompletedSourceCount = 0;
-    const work = this.work;
-    const session = this.session;
-    const searchRequestId = this.gateway.generateSearchRequestId(keyword);
-    this.present({ kind: 'loading', keyword: keyword });
-    void this.performSearch(work, session, keyword, searchRequestId, this.lastScope);
+    const run = new SearchQueryRun(keyword, this.gateway.generateSearchRequestId(keyword), this.lastScope);
+    this.run = run;
+    this.present({ kind: 'loading', keyword });
+    void this.performSearch(this.work, this.session, run, true, true);
   }
 
   /**
@@ -192,6 +262,20 @@ export class SearchOrchestrator {
    * landed. Partial results stay; stopping is never destructive.
    */
   stop(): void {
+    const run = this.run;
+    if (run !== undefined && this.sweepAlive) {
+      // The run owns already decoded outcomes even when the batching timer has
+      // not published them yet. Stop is a synchronous commit boundary.
+      this.cancelRunTimer();
+      run.stopped = true;
+      hilog.info(DOMAIN, 'Reader', 'Search sweep stopped by user: %{private}s',
+        this.truncatedKeywordForLog(run.keyword));
+      this.publishRun(run, true);
+      this.work += 1;
+      this.sweepAlive = false;
+      this.wakeDispatchers();
+      return;
+    }
     const presentation = this.presentation;
     if (presentation.kind === 'loading') {
       this.work += 1;
@@ -222,17 +306,41 @@ export class SearchOrchestrator {
         completedSourceCount: presentation.completedSourceCount,
         failedSourceCount: presentation.failedSourceCount,
         stopped: true,
+        localSearchFailed: presentation.localSearchFailed, sourceListFailed: presentation.sourceListFailed,
       });
     }
   }
 
   /** Re-run the last failed or empty search, or reload sources after a list failure. */
   retry(): void {
-    if (this.presentation.kind === 'empty' || this.presentation.kind === 'error') {
-      this.search(this.presentation.keyword, this.lastScope);
+    const run = this.run;
+    if (run !== undefined) {
+      const retryLocal = run.localStatus === 'failed' || (!this.sweepAlive && run.localStatus !== 'done');
+      const retryOnline = (!this.sweepAlive || run.onlineStatus !== 'running') && (run.onlineStatus !== 'done' || run.failures.size > 0 ||
+        run.sources.some((source: SearchSource): boolean => !run.completed.has(source.sourceId)));
+      if (!retryLocal && !retryOnline) {
+        // The empty surface labels this action as a new search, not failure recovery.
+        if (this.presentation.kind === 'empty') this.search(run.keyword, run.scope);
+        return;
+      }
+      this.cancelRunTimer();
+      if (!this.sweepAlive) this.work += 1;
+      this.wakeDispatchers();
+      run.stopped = false;
+      this.sweepAlive = true;
+      if (retryLocal) run.localStatus = 'running';
+      if (retryOnline) {
+        run.onlineStatus = 'running';
+        this.sourceLoad = this.gateway.loadSources();
+        this.sourceLoadSession = this.session;
+      }
+      this.publishRun(run);
+      void this.performSearch(this.work, this.session, run, retryLocal, retryOnline);
       return;
     }
-    if (this.presentation.kind === 'sourceLoadError') {
+    if (this.presentation.kind === 'empty' || this.presentation.kind === 'error') {
+      this.search(this.presentation.keyword, this.lastScope);
+    } else if (this.presentation.kind === 'sourceLoadError') {
       this.retrySourceLoad();
     }
   }
@@ -252,6 +360,9 @@ export class SearchOrchestrator {
 
   /** Logical exit releases the query, including workers waiting for foreground. */
   close(): void {
+    this.cancelRunTimer();
+    this.run = undefined;
+    this.resultIndex.clear(); this.rawIdentityKeys.clear(); this.rawResultsInput = undefined;
     this.resultGeneration += 1;
     this.gateway.resetBookProjection();
     this.pendingBookReset = false;
@@ -283,6 +394,28 @@ export class SearchOrchestrator {
     const resultGeneration = this.resultGeneration;
     const current = this.presentation;
     try {
+      if (typeof this.gateway.refreshBookDelta === 'function') {
+        const patch = await this.gateway.refreshBookDelta(this.resultIndex, delta);
+        if (!this.isCurrentSession(session) || resultGeneration !== this.resultGeneration || this.presentation.kind !== 'results') return;
+        const accepted: SearchBook[] = []; const removed: string[] = [];
+        for (const diagnostic of patch.diagnostics ?? []) hilog.warn(DOMAIN, 'Reader', 'Search projection retained incomplete facts: %{private}s', this.sanitizedLogText(diagnostic));
+        for (const identity of patch.retryIdentities) this.pendingBookIdentities.set(`${identity.sourceId}\u0000${identity.bookId}`, identity);
+        const accepts = (key: string): boolean => {
+          if (this.resultIndex.get(key) === patch.captured.get(key)) return true;
+          const book = this.resultIndex.get(key);
+          if (book !== undefined) this.pendingBookIdentities.set(key, { sourceId: book.sourceId, bookId: book.bookId });
+          this.refreshAgain = true; return false;
+        };
+        for (const book of patch.upserted) if (accepts(`${book.sourceId}\u0000${book.bookId}`)) accepted.push(book);
+        for (const key of patch.removedKeys) if (accepts(key)) removed.push(key);
+        if (accepted.length === 0 && removed.length === 0) return;
+        const latest = this.presentation;
+        for (const key of removed) this.resultIndex.delete(key);
+        for (const book of accepted) this.resultIndex.set(`${book.sourceId}\u0000${book.bookId}`, book);
+        const resultDelta: SearchResultDelta = { baseRevision: this.resultRevision, revision: this.resultRevision + 1,
+          reset: false, upserted: accepted, removedKeys: removed };
+        this.present({ ...latest, results: Array.from(this.resultIndex.values()), delta: resultDelta }, false);
+      } else {
       const results = await this.gateway.refreshBooks(current.results, delta);
       if (this.isCurrentSession(session) && resultGeneration === this.resultGeneration && this.presentation.kind === 'results') {
         const latest = this.presentation;
@@ -318,6 +451,8 @@ export class SearchOrchestrator {
           searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
           completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount }, false);
       }
+      }
+
     } catch (_error) {
       // Keep the displayed results and retry these exact facts only on a later
       // event/visibility change. Dropping a consumed delta loses it permanently
@@ -390,6 +525,9 @@ export class SearchOrchestrator {
 
   /** Clear recent history back to the Initial surface. */
   clearHistory(): void {
+    this.cancelRunTimer();
+    this.run = undefined;
+    this.resultIndex.clear(); this.rawIdentityKeys.clear(); this.rawResultsInput = undefined;
     this.resultGeneration += 1;
     this.gateway.resetBookProjection();
     this.work += 1;
@@ -414,231 +552,147 @@ export class SearchOrchestrator {
       });
   }
 
-  private async performSearch(work: number, session: number, keyword: string,
-    searchRequestId: string, scopeSourceIds?: string[]): Promise<void> {
-    // Search history is auxiliary. Do not wait for a persistence failure
-    // before issuing the user-requested source search.
-    void this.gateway.addHistory(keyword)
-      .catch((error: Error): void => {
-        if (this.isCurrentWork(work, session)) {
-          hilog.warn(DOMAIN, 'Reader', 'Search history add failed: %{private}s', error.message);
-        }
+  private cancelRunTimer(): void {
+    if (this.run !== undefined && this.run.timer >= 0) clearTimeout(this.run.timer);
+    if (this.run !== undefined) { this.run.timer = -1; this.run.pendingSince = 0; }
+  }
+
+  private publishRun(run: SearchQueryRun, stopped: boolean = false): void {
+    if (this.run !== run || !this.sessionOpen) return;
+    const results = run.results();
+    const searching = !stopped && (run.localStatus === 'running' || run.onlineStatus === 'running');
+    this.sweepCompletedSourceCount = run.completed.size;
+    if (results.length > 0) {
+      this.present({ kind: 'results', keyword: run.keyword, results, searching,
+        totalSourceCount: run.sources.length, completedSourceCount: run.completed.size,
+        failedSourceCount: run.failures.size, localSearchFailed: run.localFailed,
+        sourceListFailed: run.sourceListFailed, stopped: stopped || undefined });
+    } else if (!searching) {
+      const failed = run.localFailed || run.sourceListFailed ||
+        (run.sources.length > 0 && run.failures.size === run.sources.length);
+      this.present({ kind: failed && !stopped ? 'error' : 'empty', keyword: run.keyword,
+        searchedSourceCount: run.completed.size, failedSourceCount: run.failures.size,
+        localSearchFailed: run.localFailed, sourceListFailed: run.sourceListFailed,
+        stopped: stopped || undefined });
+    } else if (this.presentation.kind !== 'loading') {
+      this.present({ kind: 'loading', keyword: run.keyword });
+    }
+  }
+
+  private scheduleRunPublish(run: SearchQueryRun, work: number, session: number): void {
+    if (!this.isCurrentWork(work, session) || this.run !== run) return;
+    const settled = run.localStatus !== 'running' && run.onlineStatus !== 'running';
+    let first = this.presentation.kind !== 'results' && run.localResults.length > 0;
+    if (!first && this.presentation.kind !== 'results') {
+      for (const books of run.sourceResults.values()) if (books.length > 0) { first = true; break; }
+    }
+    if (settled || first) {
+      this.cancelRunTimer();
+      this.publishRun(run);
+      return;
+    }
+    if (run.timer >= 0) return;
+    const now = Date.now();
+    if (run.pendingSince === 0) run.pendingSince = now;
+    const delay = Math.max(0, Math.min(SEARCH_PARTIAL_PUBLISH_INTERVAL_MS,
+      SEARCH_PARTIAL_PUBLISH_MAX_MS - (now - run.pendingSince)));
+    run.timer = setTimeout((): void => {
+      run.timer = -1;
+      run.pendingSince = 0;
+      if (this.isCurrentWork(work, session) && this.run === run) this.publishRun(run);
+    }, delay);
+  }
+
+  private async performSearch(work: number, session: number, run: SearchQueryRun,
+    searchLocal: boolean, searchOnline: boolean): Promise<void> {
+    if (!run.historyWritten) {
+      run.historyWritten = true;
+      void this.gateway.addHistory(run.keyword).catch((error: Error): void => {
+        hilog.warn(DOMAIN, 'Reader', 'Search history add failed: %{private}s', error.message);
       });
-    let attemptedSourceCount = 0;
-    try {
-      let localSearchFailed = false;
-      let sourceListFailed = false;
-      const localAttempt = this.gateway.searchLocalBooks(keyword, searchRequestId)
-        .catch((): SearchBook[] => { localSearchFailed = true; return []; });
-      const sourceAttempt = this.sourcesForSession(session)
-        .catch((): SearchSource[] => { sourceListFailed = true; return []; });
-      // Start both paths before awaiting either. A missing online source never
-      // prevents searching the imported local collection.
-      const sources = await sourceAttempt;
-      const localResults = await localAttempt;
-      if (!this.isCurrentWork(work, session)) {
-        return;
+    }
+    const local = async (): Promise<void> => {
+      if (!searchLocal) return;
+      try {
+        const books = await this.gateway.searchLocalBooks(run.keyword, run.requestId);
+        if (!this.isCurrentWork(work, session)) return;
+        run.localResults = run.admit(books, run.localResults);
+        run.localStatus = 'done';
+        run.localFailed = false;
+      } catch (_error) {
+        if (!this.isCurrentWork(work, session)) return;
+        run.localStatus = 'failed';
+        run.localFailed = true;
       }
-      this.presentSources(sources);
-      const scope = scopeSourceIds === undefined ? undefined : new Set<string>(scopeSourceIds);
-      const enabled = sources.filter((source) => source.enabled && source.name.trim().length > 0 &&
-        readerSourceCategoryIsText(source.category) &&
-        (scope === undefined || scope.has(source.sourceId)));
-      attemptedSourceCount = enabled.length;
-      if (enabled.length === 0) {
-        if (localResults.length > 0) {
-          this.present({ kind: 'results', keyword, results: localResults, searching: false,
-            totalSourceCount: 0, completedSourceCount: 0, failedSourceCount: 0,
-            localSearchFailed, sourceListFailed });
-        } else if (localSearchFailed || sourceListFailed) {
-          this.present({ kind: 'error', keyword, searchedSourceCount: 0, failedSourceCount: 0 });
-        } else {
-          this.present({ kind: 'empty', keyword, searchedSourceCount: 0, failedSourceCount: 0 });
+      this.scheduleRunPublish(run, work, session);
+    };
+    const online = async (): Promise<void> => {
+      if (!searchOnline) return;
+      try {
+        const sources = await this.sourcesForSession(session);
+        if (!this.isCurrentWork(work, session)) return;
+        this.presentSources(sources);
+        const scope = run.scope === undefined ? undefined : new Set<string>(run.scope);
+        const enabled = sources.filter((source: SearchSource): boolean => source.enabled &&
+          source.name.trim().length > 0 && readerSourceCategoryIsText(source.category) &&
+          (scope === undefined || scope.has(source.sourceId)));
+        run.sources = enabled;
+        run.sourceListFailed = false;
+        // Keep successful source buckets on retry. Replaced/deleted sources
+        // cannot survive an explicit registry refresh through a stale bucket.
+        const retained = new Set<string>(enabled.map((source: SearchSource): string => source.sourceId));
+        for (const id of run.sourceResults.keys()) if (!retained.has(id)) run.sourceResults.delete(id);
+        for (const id of run.completed) if (!retained.has(id)) run.completed.delete(id);
+        for (const id of run.failures.keys()) if (!retained.has(id)) run.failures.delete(id);
+        for (const source of enabled) {
+          if (run.completed.has(source.sourceId) && run.completedVersions.get(source.sourceId) !== source.sourceVersion) {
+            run.completed.delete(source.sourceId); run.sourceResults.delete(source.sourceId);
+          }
         }
-        return;
-      }
-      // Bounded, feature-local concurrency: up to MAX_SEARCH_CONCURRENCY
-      // workers pull the next enabled source, so wall time tracks the longest
-      // sources instead of their sum. Each outcome lands in its registration
-      // slot, so streaming partial results share the final stable order.
-      // Each source is deduped exactly once when it lands. Partial publishes
-      // only concatenate those stable buckets instead of rescanning every
-      // previously collected result after every source completion.
-      const collectedBySource: Array<SearchBook[] | undefined> = new Array(enabled.length);
-      let successfulSourceCount = 0;
-      // A broken source is normal in a user-managed Legado source set. Keep
-      // its failure isolated so later healthy sources still run and any valid
-      // results remain usable. The whole-search error surface is reserved for
-      // the case where every enabled source failed.
-      const failures: WorkerFailure[] = [];
-      let nextSourceIndex = 0;
-      let partialPublishScheduled = false;
-      let finalized = false;
-      // A result may only enter this sweep's surface if it still carries this
-      // sweep's searchRequestId: a superseded request's late payload must never
-      // bleed into the live list.
-      const admitsResult = (book: SearchBook): boolean => book.searchRequestId === searchRequestId;
-      let collectedRevision = 0;
-      let flattenedRevision = -1;
-      let flattened: SearchBook[] = [];
-      const flattenCollected = (): SearchBook[] => {
-        if (flattenedRevision === collectedRevision) return flattened;
-        const collected: SearchBook[] = localResults.slice();
-        for (const bucket of collectedBySource) {
-          if (bucket !== undefined) {
-            for (const book of bucket) {
-              if (admitsResult(book)) {
-                collected.push(book);
-              }
+        run.revision += 1;
+        const pending = enabled.filter((source: SearchSource): boolean =>
+          !run.completed.has(source.sourceId) || run.failures.has(source.sourceId));
+        let next = 0;
+        const worker = async (): Promise<void> => {
+          while (next < pending.length) {
+            if (!await this.waitForDispatch(work, session)) return;
+            if (!this.isCurrent()) continue;
+            const source = pending[next++];
+            if (source === undefined) return;
+            this.searchedSources.add(source.sourceId);
+            const outcome = await this.gateway.searchBySource(source, run.keyword,
+              (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent());
+            if (!this.isCurrentWork(work, session)) return;
+            run.completed.add(source.sourceId);
+            run.completedVersions.set(source.sourceId, source.sourceVersion);
+            if (outcome.ok === false) {
+              run.failures.set(source.sourceId, { source, error: outcome.error });
+              hilog.warn(DOMAIN, 'Reader', 'Search source %{private}s failed: %{private}s',
+                this.sourceIdentityForLog(source), this.sanitizedLogText(outcome.error));
+            } else {
+              run.failures.delete(source.sourceId);
+              run.sourceResults.set(source.sourceId, run.admit(outcome.results, run.sourceResults.get(source.sourceId) ?? []));
             }
+            this.scheduleRunPublish(run, work, session);
           }
-        }
-        flattenedRevision = collectedRevision;
-        flattened = collected;
-        return flattened;
-      };
-      // Streaming presentation: every finished source republishes the
-      // accumulated, deduped results so cards, per-book source counts and the
-      // source counts update live. Until a book exists the Figma
-      // loading surface stays up; empty/error stay end-of-sweep verdicts.
-      const publishPartial = (): void => {
-        if (!this.isCurrentWork(work, session)) {
-          return;
-        }
-        const results = flattenCollected();
-        if (results.length === 0) {
-          return;
-        }
-        this.present({
-          kind: 'results',
-          keyword: keyword,
-          results: results,
-          searching: true,
-          totalSourceCount: attemptedSourceCount,
-          completedSourceCount: this.sweepCompletedSourceCount,
-          failedSourceCount: failures.length,
-          localSearchFailed, sourceListFailed,
-        });
-      };
-      const schedulePartialPublish = (): void => {
-        if (partialPublishScheduled || finalized) {
-          return;
-        }
-        partialPublishScheduled = true;
-        setTimeout((): void => {
-          partialPublishScheduled = false;
-          if (!finalized) {
-            publishPartial();
-          }
-        }, SEARCH_PARTIAL_PUBLISH_INTERVAL_MS);
-      };
-      const worker = async (): Promise<void> => {
-        while (true) {
-          if (nextSourceIndex >= enabled.length || !await this.waitForDispatch(work, session)) {
-            return;
-          }
-          if (!this.isCurrent()) continue;
-          const index = nextSourceIndex;
-          nextSourceIndex += 1;
-          if (index >= enabled.length) {
-            return;
-          }
-          const source = enabled[index];
-          this.searchedSources.add(source.sourceId);
-          const outcome = await this.gateway.searchBySource(
-            source,
-            keyword,
-            (): boolean => this.isCurrentWork(work, session),
-            searchRequestId,
-            (): boolean => this.isCurrent(),
-          );
-          if (!this.isCurrentWork(work, session)) {
-            return;
-          }
-          this.sweepCompletedSourceCount += 1;
-          if (outcome.ok === false) {
-            failures.push({ source: source, error: outcome.error });
-            schedulePartialPublish();
-            continue;
-          }
-          collectedBySource[index] = this.dedupeSearchResults(outcome.results);
-          if ((collectedBySource[index]?.length ?? 0) > 0) collectedRevision += 1;
-          successfulSourceCount += 1;
-          schedulePartialPublish();
-        }
-      };
-      publishPartial();
-      const workerCount = Math.min(MAX_SEARCH_CONCURRENCY, enabled.length);
-      const workerPromises: Array<Promise<void>> = [];
-      for (let index = 0; index < workerCount; index += 1) {
-        workerPromises.push(worker());
+        };
+        const workers: Promise<void>[] = [];
+        for (let index = 0; index < Math.min(MAX_SEARCH_CONCURRENCY, pending.length); index++) workers.push(worker());
+        await Promise.all(workers);
+        if (!this.isCurrentWork(work, session)) return;
+        run.onlineStatus = 'done';
+      } catch (_error) {
+        if (!this.isCurrentWork(work, session)) return;
+        run.sourceListFailed = true;
+        run.onlineStatus = 'failed';
       }
-      await Promise.all(workerPromises);
-      if (!this.isCurrentWork(work, session)) {
-        return;
-      }
-      // Flush one final streaming snapshot before the closed verdict. This
-      // preserves the observable partial-result contract even when every
-      // healthy source completes inside the coalescing interval.
-      if (partialPublishScheduled) {
-        publishPartial();
-      }
-      finalized = true;
-      for (const failure of failures) {
-        // P2-9 log hygiene: sourceId is the Legado bookSourceUrl (a URL that
-        // must not reach hilog verbatim) and Core error text can embed the
-        // request or final redirect URL, so both are reduced before logging.
-        hilog.warn(DOMAIN, 'Reader', 'Search source %{private}s failed: %{private}s',
-          this.sourceIdentityForLog(failure.source), this.sanitizedLogText(failure.error));
-      }
-      if (localResults.length === 0 && successfulSourceCount === 0 && failures.length > 0) {
-        this.present({
-          kind: 'error',
-          keyword: keyword,
-          searchedSourceCount: attemptedSourceCount,
-          failedSourceCount: failures.length,
-          localSearchFailed, sourceListFailed,
-        });
-        return;
-      }
-      const results: SearchBook[] = flattenCollected();
-      if (results.length === 0) {
-        this.present({
-          kind: 'empty',
-          keyword: keyword,
-          searchedSourceCount: attemptedSourceCount,
-          failedSourceCount: failures.length,
-          localSearchFailed, sourceListFailed,
-        });
-        return;
-      }
-      this.present({
-        kind: 'results',
-        keyword: keyword,
-        results: results,
-        searching: false,
-        totalSourceCount: attemptedSourceCount,
-        completedSourceCount: this.sweepCompletedSourceCount,
-        failedSourceCount: failures.length,
-        localSearchFailed, sourceListFailed,
-      });
-    } catch (error) {
-      if (!this.isCurrentWork(work, session)) {
-        return;
-      }
-      const message = errorMessageOf(error);
-      hilog.error(DOMAIN, 'Reader', 'Search failed: %{private}s', this.sanitizedLogText(message));
-      this.present({
-        kind: 'error',
-        keyword: keyword,
-        searchedSourceCount: attemptedSourceCount,
-        failedSourceCount: 0,
-      });
-    } finally {
-      // A paused queue remains alive until it resumes or is explicitly closed.
-      if (work === this.work && session === this.session) {
-        this.sweepAlive = false;
-      }
+      this.scheduleRunPublish(run, work, session);
+    };
+    await Promise.all([local(), online()]);
+    if (this.isCurrentWork(work, session) && this.run === run) {
+      this.cancelRunTimer();
+      this.publishRun(run);
+      this.sweepAlive = run.localStatus === 'running' || run.onlineStatus === 'running';
     }
   }
 
@@ -774,47 +828,57 @@ export class SearchOrchestrator {
 
   private present(presentation: SearchPresentation, retainShared: boolean = true): void {
     const previous = this.presentation;
-    let newIdentities = false;
+    if (presentation.kind === 'results' && presentation.delta !== undefined &&
+      (presentation.delta.baseRevision !== this.resultRevision || presentation.delta.revision <= this.resultRevision)) {
+      presentation.delta = undefined;
+    }
     let newBooks: SearchBook[] = [];
-    if (retainShared && presentation.kind === 'results') {
+    if (presentation.kind === 'results') {
       const rawResults = presentation.results;
-      if (previous.kind === 'results' && previous.keyword === presentation.keyword) {
-        if (this.rawResultsInput === rawResults) {
-          // A failure/count/final-state update does not change card data.
-          presentation.results = previous.results;
-        } else {
-          const results: SearchBook[] = rawResults.slice();
-          const positions = new Map<string, number>();
-          for (let index = 0; index < results.length; index += 1) {
-            positions.set(`${results[index].sourceId}\u0000${results[index].bookId}`, index);
-          }
-          const previousKeys = new Set<string>();
-          for (const book of previous.results) {
-            const key = `${book.sourceId}\u0000${book.bookId}`;
-            previousKeys.add(key);
-            const position = positions.get(key);
-            if (position === undefined) results.push(book);
-            else if (book.sourceRuleVersion === results[position].sourceRuleVersion &&
-              book.searchRequestId === results[position].searchRequestId) results[position] = book;
-          }
-          newBooks = rawResults.filter((book: SearchBook): boolean =>
-            !previousKeys.has(`${book.sourceId}\u0000${book.bookId}`));
-          newIdentities = newBooks.length > 0;
-          presentation.results = results;
+      if (retainShared && previous.kind === 'results' && previous.keyword === presentation.keyword && this.rawResultsInput === rawResults) {
+        presentation.results = previous.results;
+        presentation.delta = previous.delta;
+      } else if (presentation.delta === undefined) {
+        const next = new Map<string, SearchBook>();
+        const rawKeys = new Set<string>();
+        for (const book of rawResults) {
+          const key = `${book.sourceId}\u0000${book.bookId}`;
+          rawKeys.add(key);
+          const old = this.resultIndex.get(key);
+          const retained = retainShared && old !== undefined && old.sourceRuleVersion === book.sourceRuleVersion && old.searchRequestId === book.searchRequestId;
+          next.set(key, retained ? old as SearchBook : book);
+          if (old === undefined) newBooks.push(book);
         }
-      } else {
-        newIdentities = rawResults.length > 0;
-        newBooks = rawResults;
+        if (retainShared) {
+          // Retain only cache-discovered variants. A replaced/removed raw source
+          // bucket is authoritative and must not be resurrected by an old frame.
+          const enabled = this.run === undefined ? undefined : new Set(this.run.sources.map((source: SearchSource): string => source.sourceId));
+          for (const [key, book] of this.resultIndex) if (!next.has(key) && !this.rawIdentityKeys.has(key) &&
+            (book.sourceId === 'local' || enabled === undefined || enabled.has(book.sourceId))) next.set(key, book);
+        }
+        const upserted: SearchBook[] = []; const removedKeys: string[] = [];
+        for (const [key, book] of next) if (this.resultIndex.get(key) !== book) upserted.push(book);
+        for (const key of this.resultIndex.keys()) if (!next.has(key)) removedKeys.push(key);
+        const changed = upserted.length > 0 || removedKeys.length > 0 || previous.kind !== 'results';
+        if (changed) {
+          presentation.results = Array.from(next.values());
+          presentation.delta = { baseRevision: this.resultRevision, revision: this.resultRevision + 1,
+            reset: previous.kind !== 'results', upserted, removedKeys };
+          this.resultIndex = next;
+        } else if (previous.kind === 'results') { presentation.results = previous.results; presentation.delta = previous.delta; }
+        if (retainShared) this.rawIdentityKeys = rawKeys;
       }
-      this.rawResultsInput = rawResults;
-    } else if (presentation.kind !== 'results') {
+      this.resultRevision = presentation.delta?.revision ?? this.resultRevision;
+      if (retainShared) this.rawResultsInput = rawResults;
+    } else {
       this.rawResultsInput = undefined;
+      if (presentation.kind === 'loading' || presentation.kind === 'initial') {
+        this.resultIndex.clear(); this.rawIdentityKeys.clear();
+      }
     }
     this.presentation = presentation;
     this.emitPresentation(presentation);
-    // Book-change notifications drive enrichment. A newly visible identity
-    // also needs one read when its Core event preceded the partial publish.
-    if (retainShared && newIdentities && this.unsubscribeBooks !== undefined) {
+    if (retainShared && newBooks.length > 0 && this.unsubscribeBooks !== undefined) {
       void this.refreshSharedBooks({ reset: false, identities: newBooks.map((book: SearchBook): RemoteReadingIdentity =>
         ({ sourceId: book.sourceId, bookId: book.bookId })) });
     }

@@ -1,5 +1,4 @@
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { searchCandidateRank } from '../entry/src/main/ets/features/search/SearchCandidatePolicy.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -7,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { stripTypeScriptTypes } from 'node:module';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAcquisitionPresentation.ts'), 'utf8'));
+const { acquisitionCandidateRank } = await import(`data:text/javascript;base64,${Buffer.from(factModule).toString('base64')}`);
+const searchCandidateRank = (book, now) => acquisitionCandidateRank(book.acquisition, book.sourceRuleVersion, now);
 const gateway = readFileSync(
   resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchGateway.ts'),
   'utf8',
@@ -58,6 +60,7 @@ const sourceCategoryModule = stripTypeScriptTypes(
 
 const executable = stripTypeScriptTypes(
   gateway
+    .replace(/^import \{ acquisitionCandidateRank.*;$/m, () => factModule.replace(/^export /gm, ''))
     .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/common/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
     .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
@@ -183,6 +186,13 @@ assert.deepEqual(
   'current status must use exact composite identity so same-source alternate URLs stay selectable',
 );
 
+// Core supplies one indexed relation, not an unfiltered historical library.
+function relatedData(books, extra = {}) {
+  return { books: books.map(book => ({...book, relationKey: 'relation', relationRevision: '1'})),
+    sourceVersions: [...new Set(books.map(book => book.origin))].map(sourceId => ({sourceId, sourceVersion: 'v1', enabled: true})),
+    snapshotRevision: 'snapshot', complete: true, ...extra };
+}
+
 const cacheCalls = [];
 const cachedAt = Date.now();
 const cacheRuntime = {
@@ -194,8 +204,8 @@ const cacheRuntime = {
         { sourceId: 'disabled-source', name: '停用书源', enabled: false },
       ] } };
     }
-    if (method === 'search-book.list') {
-      return { data: { books: [
+    if (method === 'search-book.related') {
+      return { data: relatedData([
         {
           bookUrl: 'current-book', origin: 'cache-source', originName: '缓存书源',
           name: 'Current Book', author: 'Writer', time: cachedAt, originOrder: 2,
@@ -218,7 +228,7 @@ const cacheRuntime = {
           chapterWordCount: 456, respondTime: 77,
         },
         { bookUrl: 'other-book', origin: 'cache-source', name: 'Other Book', time: cachedAt },
-      ] } };
+      ].filter(book => book.origin === 'cache-source' && book.name === 'Current Book' && book.author === 'Writer')) };
     }
     if (method === 'search-book.delete') {
       assert.equal(params.bookUrl, 'expired-book');
@@ -247,32 +257,23 @@ assert.equal(cachedCandidates[0].isCurrent, true);
 assert.equal(cacheCalls.some(([method]) => method === 'change.bookSource'), false,
   'a valid local projection must not start source HTTP discovery');
 
-// Historical aliases must not multiply normalization across every cached row.
+// Unrelated history never crosses this RPC boundary; aliases are indexed by Core.
 {
-  const aliases = Array.from({ length: 16 }, (_, i) => ({ name: `Old ${i}`, author: 'Writer' }));
-  const rows = [{ origin: 'cache-source', bookUrl: 'current-book', name: 'Current Book',
-    author: 'Writer', time: cachedAt, acquisition: { aliases } },
-  ...Array.from({ length: 1000 }, (_, i) => ({ origin: 'cache-source', bookUrl: `other-${i}`,
-    name: `Unrelated ${i}`, author: 'Writer', time: cachedAt,
-    acquisition: { aliases: Array.from({ length: 16 }, (_, j) => ({ name: `Other ${j}`, author: 'Writer' })) } })),
-  { origin: 'cache-source', bookUrl: 'renamed', name: 'Old 15', author: 'Writer', time: cachedAt },
-  { origin: 'cache-source', bookUrl: 'wrong-author', name: 'Old 15', author: 'Other', time: cachedAt }];
-  const gateway = new SourceSwitchGateway({ request: async method => ({ data: method === 'source.list' ?
-    { sources: [{ sourceId: 'cache-source', name: '缓存', enabled: true }] } : { books: rows } }) });
-  let ticks = 0, normalizations = 0;
-  const timer = setInterval(() => { ticks += 1; }, 0);
-  const normalize = String.prototype.toLocaleLowerCase;
-  String.prototype.toLocaleLowerCase = function (...args) { normalizations += 1; return normalize.apply(this, args); };
-  try {
-    const result = await gateway.loadCachedCandidates({ sourceId: 'cache-source', bookId: 'current-book',
-      bookName: 'Current Book', author: 'Writer', currentChapterIndex: 0, currentChapterTitle: 'One' });
-    assert.deepEqual(result.map(row => row.bookUrl), ['current-book', 'renamed']);
-    assert.ok(ticks > 0, 'large cache scan must allow the event loop to run');
-    assert.ok(normalizations < 1100, `normalization must be bounded by distinct text, got ${normalizations}`);
-  } finally {
-    clearInterval(timer);
-    String.prototype.toLocaleLowerCase = normalize;
-  }
+  const calls = [];
+  const rows = [{origin:'cache-source',bookUrl:'current-book',name:'Current Book',author:'Writer',time:cachedAt},
+    {origin:'cache-source',bookUrl:'renamed',name:'Old 15',author:'Writer',time:cachedAt}];
+  const gateway = new SourceSwitchGateway({request:async(method,params)=> {
+    calls.push({method,params});
+    if(method==='source.list') return {data:{sources:[{sourceId:'cache-source',name:'缓存',enabled:true}]}};
+    assert.equal(method,'search-book.related');
+    assert.deepEqual(params.identity,{sourceId:'cache-source',bookId:'current-book'});
+    assert.equal(params.name,'Current Book'); assert.equal(params.author,'Writer'); assert.equal(params.limit,128);
+    return {data:relatedData(rows)};
+  }});
+  const result = await gateway.loadCachedCandidates({sourceId:'cache-source',bookId:'current-book',bookName:'Current Book',
+    author:'Writer',currentChapterIndex:0,currentChapterTitle:'One'});
+  assert.deepEqual(result.map(row=>row.bookUrl),['current-book','renamed']);
+  assert.deepEqual(calls.map(call=>call.method),['source.list','search-book.related']);
 }
 
 const refreshRows = [{ bookUrl: 'old-book', origin: 'old-source', name: 'Current Book', author: 'Writer', time: cachedAt }];
@@ -282,7 +283,7 @@ const refreshRuntime = {
   bookAcquisitions: () => ({ sourceRegistryRevision: () => 1, prepare: (seeds, refresh) => { preparation = { seeds, refresh }; } }),
   async request(method, params) {
     refreshCalls.push(method);
-    if (method === 'search-book.list') return { data: { books: refreshRows } };
+    if (method === 'search-book.related') return { data: relatedData(refreshRows) };
     if (method === 'source.list') return { data: { sources: [
       { sourceId: 'fresh-source', name: '新书源', enabled: true },
       { sourceId: 'old-source', name: '已有书源', enabled: true },
@@ -373,8 +374,8 @@ console.log('source-switch gateway contract: PASS');
   const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>revision}),request:async(method,params)=>{
     calls.push({method,params});
     if(method==='source.list')return {data:{sources:[{sourceId:'a',name:'A',enabled:true,sourceVersion:'v1'},{sourceId:'b',name:'B',enabled:revision===1,sourceVersion:'v1'}]}};
-    if(method==='search-book.list')return {data:{books:[...records.values()]}};
-    if(method==='search-book.get')return {data:{book:records.get(params.origin)??null}};
+    if(method==='search-book.related')return {data:relatedData([...records.values()].filter(book=>book.origin!=='b'||revision===1))};
+    if(method==='search-book.batch.get')return {data:{books:[],missing:params.identities,complete:true}};
     throw Error(`cached switch entry must not perform ${method}`);
   }};
   const gateway=new SourceSwitchGateway(owner);
@@ -385,12 +386,12 @@ console.log('source-switch gateway contract: PASS');
   const row={origin:'b',bookUrl:'/book',name:'鸣龙',author:'关关公子',variable:'{}',time:Date.now(),acquisition:{sourceVersion:'v1',catalogCount:1,catalogAt:Date.now()}};
   records.set('b',row);calls.length=0;
   const next=await gateway.loadCachedCandidates(query,()=>true,known,{reset:false,identities:[{sourceId:'b',bookId:'/book'},{sourceId:'b',bookId:'/book'}]});
-  assert.deepEqual(calls.map(c=>c.method),['search-book.get'],'duplicate dirty identities read once without full DB/source scan');
+  assert.deepEqual(calls.map(c=>c.method),['search-book.related','search-book.batch.get'],'dirty relation reads only its indexed scope without full DB/source scan');
   assert.equal(next.find(c=>c.sourceId==='b').acquisitionState,'catalogReady');
   revision++;calls.length=0;
   const replaced=await gateway.loadCachedCandidates(query,()=>true,known,{reset:true,identities:[]});
   assert.deepEqual(replaced.map(c=>c.sourceId),['a'],'disabled source cannot be revived by a known row');
-  assert.deepEqual(calls.map(c=>c.method),['source.list','search-book.list']);
+  assert.deepEqual(calls.map(c=>c.method),['source.list','search-book.related','search-book.batch.get']);
 }
 // Missing-candidate discovery excludes sources already dispatched by this
 // exact search session; an explicit refresh (no exclusions) checks all again.
@@ -405,10 +406,11 @@ console.log('source-switch gateway contract: PASS');
 console.log('PH70 known candidate first paint, delta projection, registry deletion and missing-only discovery PASS');
 {
   let release;const sourceGate=new Promise(r=>release=r);const calls=[];let listener;
-  const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>1,subscribe:fn=>{listener=fn;return()=>{}}}),request:async(method)=>{
+  const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>1,subscribe:fn=>{listener=fn;return()=>{}}}),request:async(method,params)=>{
     calls.push(method);
     if(method==='source.list'){await sourceGate;return{data:{sources:['a','b'].map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:'v1'}))}}}
-    if(method==='search-book.list')return{data:{books:[]}};
+    if(method==='search-book.related')return{data:relatedData([])};
+    if(method==='search-book.batch.get')return{data:{books:[],missing:params.identities,complete:true}};
     throw Error(`entry must not re-search known candidates: ${method}`);
   }};
   const gateway=new SourceSwitchGateway(owner);
@@ -428,7 +430,7 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
     'known Search group paints synchronously before registry/cache I/O completes');
   listener({reset:false,identities:[]});assert.deepEqual(calls,['source.list'],'empty event does no work');
   release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
-  assert.equal(page.sourceSwitchState.candidates.length,2);assert.deepEqual(calls,['source.list','search-book.list']);
+  assert.equal(page.sourceSwitchState.candidates.length,2);assert.deepEqual(calls,['source.list','search-book.related','search-book.batch.get']);
 }
 console.log('PH70 real Index source-switch entry paints known candidates before cache RPC PASS');
 
@@ -445,10 +447,10 @@ for (const reset of [false, true]) {
     calls.push({ method, params });
     if (method === 'source.list') return { data: { sources: ['a', 'b'].map(sourceId =>
       ({ sourceId, name: sourceId, enabled: true, sourceVersion: 'v1' })) } };
-    if (fail && method === (reset ? 'search-book.list' : 'search-book.get')) {
+    if (fail && method === 'search-book.related') {
       fail = false; throw Error('one transient projection failure');
     }
-    if (method === 'search-book.list') return { data: { books: [...rows.values()] } };
+    if (method === 'search-book.related') return { data: relatedData([...rows.values()]) };
     if (method === 'search-book.get') return { data: { book: rows.get(params.origin) } };
     throw Error(`unexpected source discovery request: ${method}`);
   } };
@@ -473,11 +475,44 @@ for (const reset of [false, true]) {
   assert.equal(calls.length, failedCalls, 'failure alone must not create an automatic retry loop');
   calls.length = 0;
   listener({ reset: false, identities: [{ sourceId: 'b', bookId: '/book' }] }); await settle();
-  if (reset) assert.equal(calls.filter(c => c.method === 'search-book.list').length, 1,
-    'failed reset must survive and force the subsequent event to rebuild its snapshot');
-  else assert.deepEqual(calls.filter(c => c.method === 'search-book.get').map(c => c.params.origin).sort(), ['a', 'b'],
-    'failed A plus a later B event must re-read both actual identities');
+  assert.equal(calls.filter(c => c.method === 'search-book.related').length, 1,
+    'a later event retries the complete affected relation, retaining failed work without an all-library scan');
   assert.equal(page.sourceSwitchState.kind, 'candidates');
   assert.equal(page.sourceSwitchState.candidates.length, 2);
 }
 console.log('PH70 actual Index/Gateway retain failed delta/reset without automatic retry loops PASS');
+
+// Complete relation pages own membership; late/truncated/mixed snapshots never publish.
+{
+  const query={sourceId:'a',bookId:'one',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
+  const a={origin:'a',bookUrl:'one',name:'鸣龙',author:'关关公子',time:Date.now(),variable:'{"token":" opaque & = ","page":"2"}',
+    acquisition:{schemaVersion:2,sourceVersion:'v1',catalogCount:1,catalogAt:Date.now(),readableAt:Date.now(),verificationCurrent:true,readableChapterUrl:'/2'}};
+  const b={...a,origin:'b',bookUrl:'two'};
+  let mode='normal',attempts=0;
+  const owner={request:async(method,params)=>{
+    if(method==='source.list')return{data:{sources:['a','b'].map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:'v1'}))}};
+    assert.equal(method,'search-book.related');
+    if(!params.cursor) {
+      attempts++;
+      if(mode==='gone')return{data:relatedData([a])};
+      return{data:relatedData([a],{complete:false,nextCursor:'p2'})};
+    }
+    if(mode==='retry'&&attempts===1)throw Object.assign(Error('stale'),{details:{reason:'CURSOR_STALE'}});
+    if(mode==='loop')return{data:relatedData([b],{complete:false,nextCursor:'p2'})};
+    if(mode==='bad')return{data:relatedData([b],{snapshotRevision:'newer'})};
+    if(mode==='version')return{data:relatedData([b],{sourceVersions:[{sourceId:'b',enabled:true,sourceVersion:'v2'}]})};
+    return{data:relatedData([b])};
+  }};
+  const gateway=new SourceSwitchGateway(owner);
+  const first=await gateway.loadCachedCandidates(query);
+  assert.deepEqual(first.map(c=>c.sourceId),['a','b']);
+  assert.equal(first[0].acquisitionState,'readable');assert.equal(first[0].searchVariables[0].value,' opaque & = ');
+  for(const failure of ['loop','bad','version']){mode=failure;await assert.rejects(gateway.loadCachedCandidates(query));}
+  mode='retry';attempts=0;assert.equal((await gateway.loadCachedCandidates(query)).length,2);assert.equal(attempts,2);
+  mode='gone';assert.equal((await gateway.loadCachedCandidates(query)).length,1);
+  // A formerly persisted identity cannot be resurrected by an old Search seed after deletion.
+  const original=owner.request;
+  owner.request=async(method,params)=>method==='search-book.batch.get'?{data:{complete:true,books:[],missing:params.identities}}:original(method,params);
+  assert.equal((await gateway.loadCachedCandidates(query,undefined,first)).length,1);
+}
+console.log('R5 SourceSwitch relation pagination, stale retry, continuation, scoped verdict and deletion preservation PASS');

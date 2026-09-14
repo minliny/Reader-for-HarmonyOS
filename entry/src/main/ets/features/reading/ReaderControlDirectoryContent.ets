@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { sampleReaderControlMotionPresentation, type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
@@ -73,7 +74,7 @@ export struct ReaderControlDirectoryContent {
   @Prop bookmarkLoadMessage: string = '';
   onTabChange: (tab: string) => void = (_tab: string): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
-  onSelectBookmark: ((id: string, index: number, offset: number) => void) | undefined = undefined;
+  onSelectBookmark: ((id: string, index: number, offset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined = undefined;
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
@@ -365,8 +366,8 @@ export struct ReaderControlDirectoryContent {
             } else if (row.bookmark !== undefined) {
               ReaderBookmarkRow({ row: row.bookmark, embeddedInControl: true,
                 motionProgress: this.progress, availableWidth: this.rowWidth(),
-                onSelectBookmark: (id: string, chapter: number, offset: number): void => {
-                  if (this.onSelectBookmark !== undefined) this.onSelectBookmark(id, chapter, offset);
+                onSelectBookmark: (id: string, chapter: number, offset: number, positionScope?: RemoteReadingPositionScope): void => {
+                  if (this.onSelectBookmark !== undefined) this.onSelectBookmark(id, chapter, offset, positionScope);
                 } });
             }
           }.width('100%').height(this.rowHeight());

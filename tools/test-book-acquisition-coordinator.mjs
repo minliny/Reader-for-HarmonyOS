@@ -35,9 +35,12 @@ function fixture() {
     }
     if(method==='book.toc') {
       const row=rows.get(id); row.acquisition.catalogAt=Date.now(); row.acquisition.catalogCount=1;
-      return {data:{sourceId:params.sourceId,bookId,toc:[{index:0,title:'第一章',url:`${bookId}/1`,variables:{chapter:'one'}}]}};
+      return {data:{sourceId:params.sourceId,bookId,sourceVersion:version,catalogAt:Date.now(),
+        catalogVersion:`catalog:${bookId}`,contextVersion:`context:${bookId}`,catalogInstalled:true,
+        continuationVariables:{token:'detail'},toc:[{index:0,title:'第一章',url:`${bookId}/1`,variables:{chapter:'one'}}]}};
     }
-    if(method==='chapter.content') return {data:{sourceId:params.sourceId,bookId,chapterTitle:'第一章',via:'rule',content:'清晨的阳光照进房间，书中的故事从这里开始。'.repeat(12)}};
+    if(method==='chapter.content') return {data:{sourceId:params.sourceId,bookId,chapterTitle:'第一章',via:'rule',
+      bodyVersion:'body-v1',processingVersion:'processing-v1',content:'清晨的阳光照进房间，书中的故事从这里开始。'.repeat(12)}};
     if(method==='search-book.put') {
       const row=rows.get(id); assert.ok(row,'verdict refers to a canonical candidate');
       assert.equal(params.acquisition.sourceVersion,version);
@@ -253,3 +256,126 @@ for (const method of ['source.import', 'source.update', 'source.delete', 'runtim
   owner.close();
 }
 console.log('PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS');
+
+// R1/R2: the original engineering failures replay the real coordinator and
+// gateway with controlled Core responses, clock and request queue.
+function cachedFixture({ catalogAt = Date.now() - 2 * 86400000, cache = true, detailGate, tocGate, searchGate } = {}) {
+  const calls = [];
+  const runtime = new BookAcquisitionCoordinator(async (method, params, options) => {
+    calls.push({ method, params, options });
+    if (method === 'book.search') { await searchGate.promise; return { data: { sourceId: params.sourceId, books: [] } }; }
+    if (method === 'source.list') return { data: { sources: [{ sourceId: 's1', enabled: true, sourceVersion: 'v1' }] } };
+    if (method === 'search-book.get') return { data: { book: { origin: 's1', bookUrl: params.bookUrl,
+      name: '缓存目录', author: '作者', variable: '{}', acquisition: { schemaVersion: 2, sourceVersion: 'v1', catalogAt } } } };
+    if (method === 'cache.book.status') return { data: { sourceId: 's1', bookId: params.bookId, tocAvailable: cache,
+      sourceVersion: 'v1', catalogAt, catalogVersion: 'cached-catalog', contextVersion: 'cached-context',
+      continuationVariables: {}, chapters: cache ? [{ chapterIndex: 0, title: '第一章', url: '/1', variables: {} }] : [] } };
+    if (method === 'book.detail') {
+      if (detailGate) await detailGate.promise;
+      return { data: { sourceId: 's1', sourceVersion: 'v1', book: { bookId: params.book.bookId, title: '刷新目录', author: '作者' }, tocUrl: '/toc', variables: {} } };
+    }
+    if (method === 'book.toc') {
+      if (tocGate) await tocGate.promise;
+      return { data: { sourceId: 's1', bookId: params.bookId, sourceVersion: 'v1', catalogAt: Date.now(),
+        catalogVersion: 'fresh-catalog', contextVersion: 'fresh-context', catalogInstalled: true, continuationVariables: {},
+        toc: [{ index: 0, title: '第一章', url: '/1', variables: {} }] } };
+    }
+    if (method === 'search-book.put') return { data: {} };
+    throw Error(`unhandled ${method}`);
+  });
+  return { runtime, calls };
+}
+
+for (const failAt of ['none', 'detail', 'toc']) {
+  const detailGate = deferred(); const tocGate = deferred();
+  const f = cachedFixture({ detailGate, tocGate });
+  const first = await f.runtime.acquireBookWithBackgroundRefresh(seed('/cached'));
+  assert.equal(first.session.book.title, '缓存目录');
+  await until(() => f.calls.some(call => call.method === 'book.detail'));
+  let settled = false;
+  const secondPromise = f.runtime.acquireBookWithBackgroundRefresh(seed('/cached')).then(value => { settled = true; return value; });
+  await until(() => settled);
+  const second = await secondPromise;
+  assert.equal(second.session, first.session, 'running refresh must not block a usable complete session');
+  if (failAt === 'detail') detailGate.reject(Error('detail unavailable'));
+  else {
+    detailGate.resolve();
+    await until(() => f.calls.some(call => call.method === 'book.toc'));
+    const duringToc = await f.runtime.acquireBook(seed('/cached'));
+    assert.equal(duringToc, first.session, 'detail completion cannot evict the complete cached session');
+    if (failAt === 'toc') tocGate.reject(Error('catalog unavailable')); else tocGate.resolve();
+  }
+  const outcomes = await Promise.allSettled([first.backgroundRefresh, second.backgroundRefresh]);
+  assert.ok(outcomes.every(result => result.status === (failAt === 'none' ? 'fulfilled' : 'rejected')));
+  const next = await f.runtime.acquireBook(seed('/cached'));
+  assert.equal(next.book.title, failAt === 'none' ? '刷新目录' : '缓存目录');
+  assert.equal(f.calls.filter(call => call.method === 'book.detail').length, 1, 'all refresh subscribers share one real request');
+  f.runtime.close();
+}
+
+{
+  const original = Date.now; let now = 2000000000000; Date.now = () => now;
+  const detailGate = deferred();
+  const f = cachedFixture({ catalogAt: now - 23 * 3600000, detailGate });
+  try {
+    const first = await f.runtime.acquireBookWithBackgroundRefresh(seed('/age'));
+    assert.equal(first.backgroundRefresh, undefined);
+    now += 23 * 3600000;
+    const aged = await f.runtime.acquireBookWithBackgroundRefresh(seed('/age'));
+    assert.equal(aged.session.catalogAt, first.session.catalogAt);
+    assert.ok(aged.backgroundRefresh, '46-hour-old TOC must refresh despite being in prepared less than a day');
+    detailGate.resolve(); await aged.backgroundRefresh;
+    assert.equal(f.calls.filter(call => call.method === 'book.detail').length, 1);
+  } finally { f.runtime.close(); Date.now = original; }
+}
+
+for (const scenario of ['stop', 'hide-resume', 'foreground-takeover']) {
+  const searchGate = deferred(); const detailGate = deferred();
+  const f = cachedFixture({ cache: false, searchGate, detailGate });
+  const occupied = Array.from({ length: 5 }, (_, i) => f.runtime.request('book.search', { sourceId: `busy-${i}`, keyword: 'q' }));
+  f.runtime.beginSearch(); f.runtime.prepare([seed('/queued')]);
+  await until(() => f.runtime.scheduler.queue.some(job => job.method === 'book.detail'));
+  f.runtime.setPreparationVisible(false);
+  let foreground;
+  if (scenario === 'foreground-takeover') {
+    foreground = f.runtime.acquireBook(seed('/queued'));
+    await tick();
+  }
+  if (scenario !== 'hide-resume') f.runtime.endSearch();
+  searchGate.resolve(); await Promise.all(occupied); await tick();
+  if (scenario === 'stop') {
+    await until(() => f.runtime.preparationActive === 0);
+    assert.equal(f.calls.filter(call => call.method === 'book.detail').length, 0, 'orphaned queued work performs no network call');
+  } else {
+    if (scenario === 'hide-resume') {
+      assert.equal(f.calls.filter(call => call.method === 'book.detail').length, 0, 'hiding pauses undispatched work');
+      f.runtime.setPreparationVisible(true);
+    }
+    await until(() => f.calls.some(call => call.method === 'book.detail'));
+    f.runtime.endSearch(); detailGate.resolve();
+    if (foreground) assert.equal((await foreground).identity.bookId, '/queued');
+    await until(() => f.runtime.preparationActive === 0);
+    assert.equal(f.calls.filter(call => call.method === 'book.detail').length, 1);
+    assert.equal(f.calls.filter(call => call.method === 'book.toc').length, 1, 'actual dispatch owns the complete finite chain');
+  }
+  f.runtime.close();
+}
+
+{
+  const f = fixture(); const session = await f.runtime.acquireBook(seed('/scope'));
+  const count = () => f.calls.filter(call => call.method === 'search-book.put').length;
+  const start = count();
+  await f.runtime.reportVerdict({ ...session, catalogVersion: undefined }, 0, '/scope/1', 'host', 'body', 'processing');
+  await f.runtime.reportVerdict({ ...session, acquisitionMode: 'offline' }, 0, '/scope/1', 'host', 'body', 'processing');
+  assert.equal(count(), start, 'legacy and offline sessions cannot fabricate scoped online facts');
+  await f.runtime.reportVerdict(session, 0, '/scope/1', 'host', 'body', 'processing');
+  const fact = f.calls.at(-1).params.acquisition;
+  assert.equal(fact.schemaVersion, 2);
+  assert.equal(fact.catalogVersion, session.catalogVersion);
+  assert.equal(fact.contextVersion, session.contextVersion);
+  assert.equal(fact.bodyVersion, 'body');
+  assert.equal(fact.processingVersion, 'processing');
+  assert.equal(fact.contentVersion, 'host');
+  f.runtime.close();
+}
+console.log('R1/R2 cache-refresh separation, original freshness, dispatch consumers and scoped facts: PASS');

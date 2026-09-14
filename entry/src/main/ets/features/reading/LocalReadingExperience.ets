@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionContext, RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
 import { buildReaderSessionLaunchGeometry, sampleReaderSessionLaunch, type ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
@@ -680,7 +681,10 @@ export class ReaderBookmarkAnchorRequest {
   chapterIndex: number;
   chapterOffset: number;
 
-  constructor(requestId: number, chapterIndex: number, chapterOffset: number) {
+  positionScope?: RemoteReadingPositionScope;
+
+  constructor(requestId: number, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) {
+    this.positionScope = positionScope;
     this.requestId = requestId;
     this.chapterIndex = chapterIndex;
     this.chapterOffset = chapterOffset;
@@ -696,6 +700,7 @@ class ReaderDeferredChapterSelection {
   controlOwnerRevision: number;
   closeControlOnCommit: boolean;
   refreshContent: boolean;
+  positionContext?: RemoteReadingPositionContext;
 
   constructor(
     chapterIndex: number,
@@ -706,6 +711,7 @@ class ReaderDeferredChapterSelection {
     controlOwnerRevision: number,
     closeControlOnCommit: boolean = true,
     refreshContent: boolean = false,
+    positionContext?: RemoteReadingPositionContext,
   ) {
     this.chapterIndex = chapterIndex;
     this.chapterOffset = chapterOffset;
@@ -715,6 +721,7 @@ class ReaderDeferredChapterSelection {
     this.controlOwnerRevision = controlOwnerRevision;
     this.closeControlOnCommit = closeControlOnCommit;
     this.refreshContent = refreshContent;
+    this.positionContext = positionContext;
   }
 }
 
@@ -759,10 +766,14 @@ class CoreReadingAnchor implements LocalReadingAnchor {
   chapterOffset: number;
   chapterProgress: number;
 
-  constructor(chapterIndex: number, chapterOffset: number, chapterProgress: number) {
+  bodyVersion?: string;
+  processingVersion?: string;
+
+  constructor(chapterIndex: number, chapterOffset: number, chapterProgress: number, bodyVersion?: string, processingVersion?: string) {
     this.chapterIndex = chapterIndex;
     this.chapterOffset = chapterOffset;
     this.chapterProgress = chapterProgress;
+    this.bodyVersion = bodyVersion; this.processingVersion = processingVersion;
   }
 }
 
@@ -1814,8 +1825,8 @@ export struct ReadingExperience {
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),
-        onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number): void =>
-          this.selectBookmarkAnchor(chapterIndex, chapterOffset),
+        onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
+          this.selectBookmarkAnchor(chapterIndex, chapterOffset, positionScope),
         bookmarkIdentity: this.bookmarkIdentity,
         onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
         onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
@@ -3018,10 +3029,7 @@ export struct ReadingExperience {
     if (anchor === undefined || !this.mounted) {
       return;
     }
-    this.clearTtsChapterEndTimer();
-    // The precise (chapter, Unicode-scalar offset) jump is the same capability
-    // the search-result jump uses; the reader owns the exact positioning.
-    this.selectChapterAnchor(anchor.chapterIndex, anchor.chapterOffset, false);
+    this.selectBookmarkAnchor(anchor.chapterIndex, anchor.chapterOffset, anchor.positionScope);
   }
 
   private onDeviceFormChanged(): void {
@@ -3127,15 +3135,36 @@ export struct ReadingExperience {
     requestedOffset?: number,
     requestedProgress?: number,
     refreshContent: boolean = false,
+    positionContext?: RemoteReadingPositionContext,
   ): Promise<void> {
     try {
       if (!isInitial && this.tocEntries.length > 0) {
         this.requireKnownChapter(chapterIndex);
       }
       const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken);
-      const chapter = await this.loadSessionChapter(chapterIndex, isCurrent, refreshContent);
+      const restored = isInitial && this.restoredProgress?.kind === 'restored' &&
+        this.restoredProgress.progress.chapterIndex === chapterIndex ? this.restoredProgress.progress : undefined;
+      const context = positionContext ?? (restored?.bodyVersion !== undefined && restored.processingVersion !== undefined ?
+        { bodyVersion: restored.bodyVersion, processingVersion: restored.processingVersion,
+          anchors: [{ id: 'restored', offset: restored.chapterOffset }] } : undefined);
+      const chapter = await this.loadSessionChapter(chapterIndex, isCurrent, refreshContent, context);
       if (!isCurrent()) {
         return;
+      }
+      const migration = chapter.positionMigration;
+      if (migration?.status === 'committed' && context !== undefined) {
+        if (migration.previousBodyVersion !== context.bodyVersion || migration.previousProcessingVersion !== context.processingVersion ||
+          migration.bodyVersion !== chapter.bodyVersion || migration.processingVersion !== chapter.processingVersion) {
+          throw new Error('READING_POSITION_MIGRATION_IDENTITY_MISMATCH');
+        }
+        for (const anchor of context.anchors) {
+          const mapped = migration.anchors.find((item): boolean => item.id === anchor.id && item.previousOffset === anchor.offset);
+          if (mapped === undefined) throw new Error('READING_POSITION_MIGRATION_ANCHOR_MISSING');
+          if (anchor.id === 'requested') requestedOffset = mapped.offset;
+          if (anchor.id === 'restored' && restored !== undefined) this.restoredProgress = {
+            kind: 'restored', progress: { ...restored, chapterOffset: mapped.offset,
+              bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion } };
+        }
       }
       const chapterMap = new ReadingSurfaceLayoutMap(chapter.content);
       if (chapterMap.scalarCount() === 0) {
@@ -3171,12 +3200,14 @@ export struct ReadingExperience {
     chapterIndex: number,
     isCurrent: () => boolean,
     forceRefresh: boolean = false,
+    positionContext?: RemoteReadingPositionContext,
   ): Promise<ReadingSessionChapter> {
     const cached = this.chapterWindow.get(chapterIndex);
-    if (cached !== undefined && !forceRefresh) {
+    if (cached !== undefined && !forceRefresh && (positionContext === undefined ||
+      (cached.bodyVersion === positionContext.bodyVersion && cached.processingVersion === positionContext.processingVersion))) {
       return cached;
     }
-    return this.activeGateway().loadChapter(this.bookId, chapterIndex, isCurrent, forceRefresh);
+    return this.activeGateway().loadChapter(this.bookId, chapterIndex, isCurrent, forceRefresh, positionContext);
   }
 
   /**
@@ -4321,7 +4352,7 @@ export struct ReadingExperience {
         const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, visiblePage.startScalar, visibleProgress),
+          new CoreReadingAnchor(chapter.chapterIndex, visiblePage.startScalar, visibleProgress, chapter.bodyVersion, chapter.processingVersion),
           this.coreLayout(),
           (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken),
         );
@@ -4513,7 +4544,7 @@ export struct ReadingExperience {
         const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress),
+          new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress, chapter.bodyVersion, chapter.processingVersion),
           this.coreLayout(),
           (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken),
         );
@@ -4609,7 +4640,7 @@ export struct ReadingExperience {
         const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, scalar, chapterProgress),
+          new CoreReadingAnchor(chapter.chapterIndex, scalar, chapterProgress, chapter.bodyVersion, chapter.processingVersion),
           this.coreLayout(),
           isCurrent,
         );
@@ -6644,7 +6675,8 @@ export struct ReadingExperience {
     const chapter = this.chapter;
     if (!this.isSessionActive(lifecycleToken) || chapter === undefined ||
       progress.chapter.sourceId !== this.sourceId || progress.chapter.bookId !== this.bookId ||
-      progress.chapter.chapterIndex !== chapter.chapterIndex) return;
+      progress.chapter.chapterIndex !== chapter.chapterIndex || progress.chapter.bodyVersion !== chapter.bodyVersion ||
+      progress.chapter.processingVersion !== chapter.processingVersion) return;
     try {
       await this.activeGateway().runProgressCommitSerial(async (): Promise<void> => {
         if (!this.isSessionActive(lifecycleToken) || this.chapter !== chapter) return;
@@ -6655,7 +6687,7 @@ export struct ReadingExperience {
         const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, offset, chapterProgress),
+          new CoreReadingAnchor(chapter.chapterIndex, offset, chapterProgress, chapter.bodyVersion, chapter.processingVersion),
           this.coreLayout(),
           isCurrent,
         );
@@ -6673,6 +6705,7 @@ export struct ReadingExperience {
       bookId: chapter.bookId,
       chapterIndex: chapter.chapterIndex,
       chapterTitle: chapter.chapterTitle,
+      bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
     };
   }
 
@@ -9241,13 +9274,29 @@ export struct ReadingExperience {
     if (result.bookId !== this.bookId || result.sourceId !== this.sourceId) {
       return;
     }
-    this.clearTtsChapterEndTimer();
-    this.selectChapterAnchor(result.chapterIndex, result.chapterOffset, false);
+    this.selectBookmarkAnchor(result.chapterIndex, result.chapterOffset, result.positionScope);
   }
 
-  private selectBookmarkAnchor(chapterIndex: number, chapterOffset: number): void {
+  private selectBookmarkAnchor(chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
+    // A persisted nonzero offset cannot borrow the currently displayed body's
+    // proof. Core supplies a scope only when its original owner is provable.
+    // Chapter start remains invariant; local positions keep their own contract.
+    let context: RemoteReadingPositionContext | undefined = undefined;
+    try {
+      if (this.sourceId !== LOCAL_READING_SOURCE_ID && chapterOffset > 0 && positionScope === undefined) {
+        throw new Error('READING_POSITION_SCOPE_UNAVAILABLE');
+      }
+      context = this.positionContextForScope(positionScope, chapterIndex, chapterOffset);
+    } catch (_) {
+      try {
+        this.getUIContext().getPromptAction().showToast({
+          message: '该位置的正文版本暂时无法确认，已保留原书签和阅读位置，请从目录打开章节',
+        });
+      } catch (_) {}
+      return;
+    }
     this.clearTtsChapterEndTimer();
-    this.selectChapterAnchor(chapterIndex, chapterOffset, false);
+    this.selectChapterAnchor(chapterIndex, chapterOffset, false, true, undefined, -2, true, false, context);
   }
 
   private selectControlChapter(chapterIndex: number): void {
@@ -9312,6 +9361,16 @@ export struct ReadingExperience {
     this.selectChapterAnchor(chapter.chapterIndex, page.startScalar, false, true, undefined, -2, false, true);
   }
 
+  private positionContextForScope(scope: RemoteReadingPositionScope | undefined,
+    chapterIndex: number, offset: number): RemoteReadingPositionContext | undefined {
+    if (scope === undefined) return undefined;
+    if (scope.sourceId !== this.sourceId || scope.bookId !== this.bookId || scope.chapterIndex !== chapterIndex) {
+      throw new Error('READING_POSITION_SCOPE_MISMATCH');
+    }
+    return { bodyVersion: scope.bodyVersion, processingVersion: scope.processingVersion,
+      anchors: [{ id: 'requested', offset }] };
+  }
+
   private selectChapterAnchor(
     chapterIndex: number,
     chapterOffset: number,
@@ -9321,10 +9380,15 @@ export struct ReadingExperience {
     controlOwnerRevision: number = -2,
     closeControlOnCommit: boolean = true,
     refreshContent: boolean = false,
+    positionContext?: RemoteReadingPositionContext,
   ): void {
     if (!this.mounted || !this.isKnownControlChapter(chapterIndex)) {
       return;
     }
+    const existing = this.chapterWindow.get(chapterIndex);
+    if (positionContext === undefined && requestedProgress === undefined && existing?.bodyVersion !== undefined &&
+      existing.processingVersion !== undefined) positionContext = { bodyVersion: existing.bodyVersion,
+        processingVersion: existing.processingVersion, anchors: [{ id: 'requested', offset: requireChapterStart ? 0 : chapterOffset }] };
     const selectionControlRevision = controlOwnerRevision === -2 ?
       (this.controlVisible() && !this.controlShellExitArmed() ? this.controlOpenRevision : -1) :
       controlOwnerRevision;
@@ -9337,7 +9401,7 @@ export struct ReadingExperience {
         requestedProgress,
         selectionControlRevision,
         closeControlOnCommit,
-        refreshContent,
+        refreshContent, positionContext,
       );
       return;
     }
@@ -9361,7 +9425,7 @@ export struct ReadingExperience {
     this.pendingControlSelectionOrigin = origin;
     this.pendingControlSelectionCandidate = undefined;
     this.pendingControlSelectionRetry = new ReaderDeferredChapterSelection(chapterIndex, chapterOffset,
-      requireChapterStart, stopTts, requestedProgress, selectionControlRevision, closeControlOnCommit, refreshContent);
+      requireChapterStart, stopTts, requestedProgress, selectionControlRevision, closeControlOnCommit, refreshContent, positionContext);
     this.controlSelectionReconciliationInFlight = false;
     this.resetForChapterSelection();
     this.restoredProgress = undefined;
@@ -9373,7 +9437,7 @@ export struct ReadingExperience {
       selectionToken,
       requireChapterStart ? 0 : (requestedProgress === undefined ? chapterOffset : undefined),
       requestedProgress,
-      refreshContent,
+      refreshContent, positionContext,
     );
   }
 
@@ -9573,7 +9637,7 @@ export struct ReadingExperience {
       primaryButton: { value: '重试', action: (): void => {
         if (retry === undefined || !readerControlSelectionOwnsReading(ticket, this.controlSelectionOwner())) return;
         this.selectChapterAnchor(retry.chapterIndex, retry.chapterOffset, retry.requireChapterStart,
-          retry.stopTts, retry.requestedProgress, retry.controlOwnerRevision, retry.closeControlOnCommit, retry.refreshContent);
+          retry.stopTts, retry.requestedProgress, retry.controlOwnerRevision, retry.closeControlOnCommit, retry.refreshContent, retry.positionContext);
       } },
       secondaryButton: { value: '关闭提示', action: (): void => {} },
     });
@@ -10512,6 +10576,9 @@ export struct ReadingExperience {
       chapterTitle: currentEntry.title,
       bookmarkTimes,
       bookText: this.currentPageBookmarkText(),
+      positionScope: this.chapter?.bodyVersion !== undefined && this.chapter.processingVersion !== undefined ?
+        { sourceId: this.sourceId, bookId: this.bookId, chapterIndex,
+          bodyVersion: this.chapter.bodyVersion, processingVersion: this.chapter.processingVersion } : undefined,
       onSettled: (success: boolean): void => {
         if (generation !== this.bookmarkMutationGeneration || !this.mounted) return;
         this.bookmarkMutationConfirmed = success;
@@ -10822,7 +10889,8 @@ export struct ReadingExperience {
         const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           prepared.context.chapter.chapterTitle,
-          new CoreReadingAnchor(prepared.context.chapter.chapterIndex, prepared.page.startScalar, chapterProgress),
+          new CoreReadingAnchor(prepared.context.chapter.chapterIndex, prepared.page.startScalar, chapterProgress,
+            prepared.context.chapter.bodyVersion, prepared.context.chapter.processingVersion),
           this.coreLayout(),
           (): boolean => this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration),
         );
@@ -11058,7 +11126,7 @@ export struct ReadingExperience {
         pendingChapterSelection.requestedProgress,
         pendingChapterSelection.controlOwnerRevision,
         pendingChapterSelection.closeControlOnCommit,
-        pendingChapterSelection.refreshContent,
+        pendingChapterSelection.refreshContent, pendingChapterSelection.positionContext,
       );
     } else if (pendingReplaceReload) {
       this.reloadCurrentPageAfterReplacePersist(lifecycleToken, this.bookId);

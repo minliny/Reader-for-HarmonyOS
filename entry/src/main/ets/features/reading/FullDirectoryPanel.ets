@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { sameReaderDirectoryData, snapshotReaderDirectoryData } from './ReaderDirectoryDataSnapshot';
@@ -125,7 +126,7 @@ export struct FullDirectoryPanel {
   bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   // Exact-offset bookmark selection. Undefined until the owner wires it; the
   // row tap then degrades to opening the chapter start (legacy behavior).
-  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number) => void) | undefined =
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
     undefined;
   // Error is owner-driven: the data contract has no bookmark error channel.
   @Prop bookmarkLoadFailed: boolean = false;
@@ -695,9 +696,9 @@ export struct FullDirectoryPanel {
     this.onTabChange(nextTab);
   }
 
-  private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number): void {
+  private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
     if (this.onSelectBookmark !== undefined) {
-      this.onSelectBookmark(bookmarkId, chapterIndex, chapterOffset);
+      this.onSelectBookmark(bookmarkId, chapterIndex, chapterOffset, positionScope);
       return;
     }
     // Legacy fallback until the owner wires exact-offset selection.
@@ -734,8 +735,8 @@ export struct FullDirectoryPanel {
           onViewportChanged: (_width: number, height: number): void => this.onListViewportChanged(height),
           onFirstLayout: (): void => this.onListFirstLayout(),
           onUserScrollIntent: (): void => this.onListUserScroll(),
-          onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number): void => {
-            this.selectBookmark(bookmarkId, chapterIndex, chapterOffset);
+          onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void => {
+            this.selectBookmark(bookmarkId, chapterIndex, chapterOffset, positionScope);
           },
         })
         // Bookmark cards are persistent actors as well; only their input is

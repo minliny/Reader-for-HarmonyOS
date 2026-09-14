@@ -35,9 +35,12 @@ assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('co
 assert.match(index, /PERF search-detail-admission/,
   'device runs must expose first-click admission latency instead of relying on subjective timing');
 
-assert.match(search, /SEARCH_PARTIAL_PUBLISH_INTERVAL_MS = 16/);
-assert.match(search, /partialPublishScheduled[\s\S]*schedulePartialPublish/);
-assert.match(search, /new Set<string>\(scopeSourceIds\)/);
+assert.match(search, /SEARCH_PARTIAL_PUBLISH_INTERVAL_MS = 100/);
+assert.match(search, /SEARCH_PARTIAL_PUBLISH_MAX_MS = 200/);
+assert.match(search, /if \(run\.timer >= 0\) return;/, 'arrivals must not extend an already scheduled batch');
+assert.match(search, /Math\.min\(SEARCH_PARTIAL_PUBLISH_INTERVAL_MS,[\s\S]*SEARCH_PARTIAL_PUBLISH_MAX_MS - \(now - run\.pendingSince\)/,
+  'the coalescing delay remains bounded independently of new source arrivals');
+assert.match(search, /new Set<string>\(run\.scope\)/);
 
 assert.match(sdk, /private async pollNativeQueue[\s\S]*await this\.pollNativeOnce\(\)[\s\S]*await delay\(waitMs\)[\s\S]*await this\.pollNativeOnce\(\)/);
 assert.match(sdk, /pendingEventsByRequest = new Map/);

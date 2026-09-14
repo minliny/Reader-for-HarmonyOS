@@ -23,12 +23,12 @@ function method(name) {
   return balanced(match.index);
 }
 const deferredClass = balanced(source.indexOf('class ReaderDeferredChapterSelection {'));
-const names = ['loadNextTtsChapter', 'clearTtsChapterEndTimer', 'reloadCurrentChapterAfterContentProjectionChange', 'selectChapterAnchor',
+const names = ['positionContextForScope', 'loadNextTtsChapter', 'clearTtsChapterEndTimer', 'reloadCurrentChapterAfterContentProjectionChange', 'selectChapterAnchor',
   'onRequestedBookmarkAnchorChanged', 'selectSearchResult', 'selectBookmarkAnchor', 'selectControlChapter',
   'stepControlChapter', 'readingTocEntries', 'seekControlProgress', 'controlSelectionOwner', 'completeControlSelectionAfterCommit',
   'resumeDeferredPageTurnWork', 'clearDeferredPageTurnWork'];
 function Host(mutate = code => code) {
-  const deps = { ...selectionPolicy, wholeBookAnchorForPercent };
+  const deps = { ...selectionPolicy, wholeBookAnchorForPercent, LOCAL_READING_SOURCE_ID: 'local' };
   const code = mutate(names.map(method).join('\n'));
   return new Function(...Object.keys(deps), stripTypeScriptTypes(deferredClass +
     '\nclass InternalSelectionProbe {' + code + '}') + ';return InternalSelectionProbe;')(
@@ -50,7 +50,7 @@ function owner(Type = Host()) {
     currentChapterIndex() { return this.chapter.chapterIndex; },
     adjacentChapterIndex: (index, delta) => index + delta,
     loadSessionChapter: async index => ({ chapterIndex: index, content: 'text', contentVersion: 'v1' }),
-    admitChapterContentVersion() {}, chapterWindow: { admitNeighbour() {}, clear() {} },
+    admitChapterContentVersion() {}, chapterWindow: { get:()=>undefined, admitNeighbour() {}, clear() {} },
     ttsChapterRef: chapter => ({ sourceId: 'source', bookId: 'book', chapterIndex: chapter.chapterIndex }),
     ttsTimerMode: 'duration', ttsTimerMinutes: 25, ttsTimerSeconds: 0,
     ttsState: { chapterKey: 'source\u0000book\u00002' },
@@ -140,14 +140,15 @@ assert.throws(() => checkProjection(Host(oldProjection)), /internal conversion\/
   commit(host, 2, 70); assert.equal(host.hideCalls, 0);
 }
 
+const scope = { sourceId: 'source', bookId: 'book', chapterIndex: 3, bodyVersion: 'body', processingVersion: 'processing' };
 // Discrete list/bookmark/search picks retain close AFTER the real commit.
 // Progress scrubbing is a continuous control and keeps the same panel open.
 const picks = [
   ['directory', host => host.selectControlChapter(3)],
-  ['bookmark', host => host.selectBookmarkAnchor(3, 50)],
-  ['search', host => host.selectSearchResult({ sourceId: 'source', bookId: 'book', chapterIndex: 3, chapterOffset: 50 })],
+  ['bookmark', host => host.selectBookmarkAnchor(3, 50, scope)],
+  ['search', host => host.selectSearchResult({ sourceId: 'source', bookId: 'book', chapterIndex: 3, chapterOffset: 50, positionScope: scope })],
   ['external bookmark request', host => {
-    host.requestedBookmarkAnchor = { chapterIndex: 3, chapterOffset: 50 }; host.onRequestedBookmarkAnchorChanged();
+    host.requestedBookmarkAnchor = { chapterIndex: 3, chapterOffset: 50, positionScope: scope }; host.onRequestedBookmarkAnchorChanged();
   }],
   ['chapter button', host => host.stepControlChapter(1)],
   ['progress fallback', host => host.seekControlProgress(50)],
@@ -197,7 +198,7 @@ assert.match(method('showControlSelectionFailure'), /retry\.controlOwnerRevision
 {
   const host = owner();
   host.pageTurnSettlementActive = true;
-  host.selectBookmarkAnchor(3, 70);
+  host.selectBookmarkAnchor(3, 70, scope);
   assert.equal(host.pageTurnPendingChapterSelection.controlOwnerRevision, 41);
   host.pageTurnSettlementActive = false; host.controlOpenRevision = 42;
   host.resumeDeferredPageTurnWork();

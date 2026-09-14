@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { ReaderSessionLaunchStage } from './ReaderSessionLaunchStage';
@@ -292,7 +293,7 @@ export struct ReaderControlPanel {
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
   // chapter-start fallback, so this stays a zero-regression opt-in.
-  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number) => void) | undefined =
+  onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
     undefined;
   // Static per-session book identity for stable bookmark ids; plain member by
   // contract (the identity never changes while the session is mounted).

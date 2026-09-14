@@ -1,3 +1,4 @@
+import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { TOK_SPACE_CONTROL_INLINE } from '../common/ReaderTokens';
 import type { ReaderBookmarkRowModel } from './ReaderBookmarkProjection';
 import { BOOKMARK_ROW_HEIGHT, ReaderBookmarkRow } from './ReaderBookmarkRow';
@@ -31,7 +32,7 @@ export struct ReaderBookmarkList {
   onFirstLayout: () => void = (): void => {};
   onViewportChanged: (width: number, height: number) => void = (_width: number, _height: number): void => {};
   onUserScrollIntent: () => void = (): void => {};
-  onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number) => void =
+  onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void =
     (_bookmarkId: string, _chapterIndex: number, _chapterOffset: number): void => {};
 
   private measuredWidth: number = -1;
