@@ -42,7 +42,18 @@ assert.match(search, /Math\.min\(SEARCH_PARTIAL_PUBLISH_INTERVAL_MS,[\s\S]*SEARC
   'the coalescing delay remains bounded independently of new source arrivals');
 assert.match(search, /new Set<string>\(run\.scope\)/);
 
-assert.match(sdk, /private async pollNativeQueue[\s\S]*await this\.pollNativeOnce\(\)[\s\S]*await delay\(waitMs\)[\s\S]*await this\.pollNativeOnce\(\)/);
+// R8's SDK runtime suite covers completion, timeout and cancellation behavior.
+// Keep this Host wiring guard focused on the non-blocking native read lane
+// and its interruptible wait; a fixed delay is no longer the intended policy.
+const nativePoll = sdk.slice(sdk.indexOf('private async pollNativeQueue('), sdk.indexOf('private takePendingForRequest('));
+assert.match(nativePoll, /await this\.pollNativeOnce\(\)[\s\S]*await this\.waitForWake\(waiter, waitMs\)[\s\S]*this\.checkWaiter\(waiter\)[\s\S]*await this\.pollNativeOnce\(\)/,
+  'empty native polls wait interruptibly and recheck cancellation before reading again');
+assert.doesNotMatch(nativePoll, /await delay\(/,
+  'a fixed sleep must not replace the waiter wakeup boundary');
+assert.match(nativePoll, /await predecessor;[\s\S]*this\.readNativeEvent\(0\)[\s\S]*finally \{\s*release\?\.\(\)/,
+  'only the non-blocking native read is serialized, and its lane always releases');
+assert.match(sdk, /private interruptWaiter[\s\S]*?waiter\.interruption = error;\s*waiter\.wake\?\.\(\)/,
+  'cancellation/close must wake the owned waiter');
 assert.match(sdk, /pendingEventsByRequest = new Map/);
 assert.doesNotMatch(sdk, /pendingEvents\.findIndex|pendingEvents\.splice/);
 
