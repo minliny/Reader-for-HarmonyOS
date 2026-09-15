@@ -31,3 +31,11 @@
 新增 `test-reader-window-chrome-order.mjs` 直接编译完整生产 Coordinator，使用实际 LRE 颜色请求方法与8主题注册表。6场景通过：全主题显隐/同日夜及跨日夜切换；旧请求失败后新主题；旧窗口成功/失败晚到；最新失败不自循环及前台重试；可见策略不变时控制栏恢复。既有窗口去重、窗口颜色、阅读设置回归通过。旧测试只对 stub 核对参数，未覆盖这些队列失败路径。
 
 修复的是已确定的丢请求/漏恢复缺陷。原反馈的具体主题及实际偏色仍 OPEN；不能以受控异常回归关闭用户现场，也不能把缺少主题名称记成新的产品待决事项。若具体主题可在代码侧进一步复现则继续先修代码；只有剩余问题无法代码定位且有设备授权，才安排最小原生取证。
+
+## 最终产物
+
+run `20260915T134855Z-1def93b5-8ee07803`，源码 Harmony `1def93b54bd9fad2a7fd877039332009cabce57b` / Core `c86b6aaec60b5c60a3a73254aac03ce6ddce4de9`，构建时两仓 clean。274 组 Harmony 本地检查、ArkTS、非增量构建、签名与独立 manifest 校验 PASS。Core/Native 沿用上一轮 c86b6aaec 已构建产物，本轮未修改或重新声称跑过 Core 全量。
+
+[签名包](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260915T134855Z-1def93b5-8ee07803/entry-default-signed.hap)，168158924 bytes，SHA-256 `85a7290c779a823ddd8679e36b29c0bc5751464d6ab31de906dfa24ca506e177`；[原始不可变 manifest](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260915T134855Z-1def93b5-8ee07803/manifest.json)、[构建日志](reader-ph98-hap-build.log)、[独立校验](reader-ph98-hap-verify.log)。本目录 manifest 为元数据副本，校验使用原始完整产物目录。
+
+包含 PH94–97 上轮代码修复；本次为 iteration / acceptanceEligible=false，未安装、未测试设备，用户反馈具体偏色仍 OPEN。
