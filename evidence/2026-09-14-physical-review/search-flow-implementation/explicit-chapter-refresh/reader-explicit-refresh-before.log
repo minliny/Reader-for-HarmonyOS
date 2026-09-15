@@ -1,0 +1,23 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.77s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 1 test
+
+thread 'remote::source_fetch_and_catalog_tests::explicit_chapter_refresh_bypasses_cache_without_deleting_body_or_anchor' (70892672) panicked at crates/reader-runtime/src/remote.rs:20451:9:
+assertion `left == right` failed
+  left: String("preserved")
+ right: "committed"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test remote::source_fetch_and_catalog_tests::explicit_chapter_refresh_bypasses_cache_without_deleting_body_or_anchor ... FAILED
+
+failures:
+
+failures:
+    remote::source_fetch_and_catalog_tests::explicit_chapter_refresh_bypasses_cache_without_deleting_body_or_anchor
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 421 filtered out; finished in 0.16s
+
+error: test failed, to rerun pass `-p reader-runtime --lib`

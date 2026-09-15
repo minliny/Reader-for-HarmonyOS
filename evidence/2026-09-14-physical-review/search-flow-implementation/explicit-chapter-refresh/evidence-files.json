@@ -1,0 +1,77 @@
+{
+  "coreCommit": "2e5a3504d",
+  "harmonyProductionCommit": "610ed24d",
+  "note": "Core full check precedes the final highlight URL delta; final delta has separate 26-position, HTTP, and Clippy evidence. Harmony final 268 checks include final production. No Native/HAP build or device operation in this turn.",
+  "files": [
+    {
+      "file": "reader-explicit-refresh-before.log",
+      "sha256": "b0b98937c43a2c8efead52a2844e38104a22ad7107559881c877e014e5384d7b",
+      "bytes": 1472
+    },
+    {
+      "file": "reader-explicit-refresh-detached-before-v2.log",
+      "sha256": "d3b7b74559047a1111d8d6072af92ac210b3b15c59e0ca9d817534b56837dc6c",
+      "bytes": 1734
+    },
+    {
+      "file": "reader-explicit-refresh-handoff.md",
+      "sha256": "9b7a271a68ae09e44b2195cbc6d446cfa4d6d4fa2d4cef143e05160b24a41365",
+      "bytes": 7849
+    },
+    {
+      "file": "reader-explicit-refresh-highlight-url-before.log",
+      "sha256": "376d65cd977a1b686bf89565140f55f2723f8d1bd26d0a7544a6014369cd29ba",
+      "bytes": 1783
+    },
+    {
+      "file": "reader-explicit-refresh-highlight-url-clippy.log",
+      "sha256": "7588e17ab94bd636ca89adfa11bba0ff554c487ef9fb3966d895e67568d38453",
+      "bytes": 912
+    },
+    {
+      "file": "reader-explicit-refresh-highlight-url-final.log",
+      "sha256": "9279366fa78123746a37984c95ce9c31ebddd2934e6f74adb908514151dcd846",
+      "bytes": 4239
+    },
+    {
+      "file": "reader-explicit-refresh-highlight-url-http.log",
+      "sha256": "17f85518f7844d50d636857238e681e165895db4b8ef4bb80ae256bd5edb0526",
+      "bytes": 861
+    },
+    {
+      "file": "reader-explicit-refresh-http-final.log",
+      "sha256": "710d44555e52cb78212f82726f2a816024969c9a109bd307baf8b0d89978b262",
+      "bytes": 807
+    },
+    {
+      "file": "reader-explicit-refresh-local-strict-final.log",
+      "sha256": "aa40746a43a70275ceded459876fcf023fbb9f67544ed753528b7a3c1fc0d4dc",
+      "bytes": 1142
+    },
+    {
+      "file": "reader-explicit-refresh-position-final-v4.log",
+      "sha256": "cc38cc45db80fb4edc56f62e602071405ae7c3bf75f9e0673ce7a470e915b154",
+      "bytes": 4102
+    },
+    {
+      "file": "reader-refresh-bookmark-heading-merge.log",
+      "sha256": "d1f342bc4658c64bc524db05a4b69f92f1271d518bf4838c3613d26478051829",
+      "bytes": 445
+    },
+    {
+      "file": "reader-refresh-bookmark-projection-handoff.md",
+      "sha256": "4dc1c47102abba1d9c888127add4bee1e9fbbccba74642622c8da3a2db719e90",
+      "bytes": 4894
+    },
+    {
+      "file": "reader-refresh-core-check.log",
+      "sha256": "5150bbc4530da290208146432f3383b3bf08b9ddce53e3a357ef4ca946ffa4ce",
+      "bytes": 461684
+    },
+    {
+      "file": "reader-refresh-harmony-final.log",
+      "sha256": "e277345cebf053e91cfe3b9ccb287e45e71f22fafe6b78b0e6e43b3f8bef27b0",
+      "bytes": 89868
+    }
+  ]
+}

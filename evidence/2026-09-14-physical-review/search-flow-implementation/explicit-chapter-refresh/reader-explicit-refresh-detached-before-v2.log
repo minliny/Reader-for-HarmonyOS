@@ -1,0 +1,21 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.34s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 1 test
+
+thread 'remote::remote_content_positions::tests::explicit_refresh_rebuilds_missing_body_only_from_valid_detached_proof' (70937275) panicked at crates/reader-runtime/src/remote/remote_content_positions.rs:1136:20:
+called `Result::unwrap()` on an `Err` value: CoreError { code: InvalidParams, message: "remote content position identity is stale; old content and positions were preserved", retryable: false, details: Object {"reason": String("old_chapter_missing"), "recoverable": Bool(true), "requiresPositionMigration": Bool(true)} }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test remote::remote_content_positions::tests::explicit_refresh_rebuilds_missing_body_only_from_valid_detached_proof ... FAILED
+
+failures:
+
+failures:
+    remote::remote_content_positions::tests::explicit_refresh_rebuilds_missing_body_only_from_valid_detached_proof
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 424 filtered out; finished in 0.18s
+
+error: test failed, to rerun pass `-p reader-runtime --lib`

@@ -1,5 +1,16 @@
 # 2026-09-14 真机人工审视反馈
 
+## PH93：刷新本章仍显示旧正文（2026-09-15）
+
+- 用户现象：点击顶部更多的“刷新本章”，正文不替换。对应已安装 run `20260915T081914Z-e5483b93-86eb9be1`，Harmony `e5483b93` / Core `cfb0208f4`，HAP SHA-256 `04ae9321ec60af7a970c6bfdf6177d77a23e4d9729769c88a0cd64ce1c239d35`；保数据安装回执 `deploy-physical-b1f20b88963d-20260915T102350Z.json`。
+- 代码已定位：Host 跳过 chapterWindow，Core 跳过 chapter cache，HTTP `usingCache=false`。但 `remote_content_positions::publish` 要求本章进度、历史、书签、划线和临时锚点全部迁移；任一失败即成功返回旧正文 `via=cache / positionMigration.status=preserved`。已有真实 chapter.content→Host completion→SQLite 回归甚至断言收到 `NEW BODY` 后仍返回 `OLD BODY`。这是确定的实现缺陷，不需要再次真机抓取定位。
+- 连带缺陷：页角书签及下拉删除仅按旧 offset 判断；当前章摘录补全丢 scope；目录快照忽略 scope/bookText 的变化。替换正文前必须一并防止错误标记、误删和伪造摘录。
+- 修复边界：显式刷新取得有效新正文后更新本章；可可靠匹配的位置逐项迁移，不能恢复的阅读位置退章首，无法迁移的书签/划线原记录与旧版本证明保留且不套用到新正文。网络、解析、身份、并发和存储失败仍保留旧数据并明确报错。普通缓存读取不主动刷新、不删除本机数据。
+- 已完成代码：Core `2e5a3504d`，Harmony `610ed24d`。显式刷新逐项迁移、有效 detached proof 的正文重建、原数据/版本保护已落盘；失配划线地址只使该旧划线保持未定位，不阻断新正文。成功/无变化/失败反馈、版本隔离的页角与下拉删除、原摘录保留、列表版本更新和卷标题准入、过期列表回调、冷开旧书签保护、正文版本参与错误恢复均已修复。
+- 本地证据：[Core 全量](search-flow-implementation/explicit-chapter-refresh/reader-refresh-core-check.log)为 3,882/3,882、210 协议、fmt/clippy、drift、C/C++ ABI 全通过；最后划线 URL 单项保护补丁另由[最终位置组 26/26](search-flow-implementation/explicit-chapter-refresh/reader-explicit-refresh-highlight-url-final.log)、[真实 HTTP 刷新 1/1](search-flow-implementation/explicit-chapter-refresh/reader-explicit-refresh-highlight-url-http.log)及[Clippy](search-flow-implementation/explicit-chapter-refresh/reader-explicit-refresh-highlight-url-clippy.log)通过，未冒称在最终单项补丁后又跑一次全工作区。[Harmony 最终 268 组](search-flow-implementation/explicit-chapter-refresh/reader-refresh-harmony-final.log)通过，包含实际 LRE/Index 方法及目录/书签 Builder 的回归。失败前探针及证据校验见[文件索引](search-flow-implementation/explicit-chapter-refresh/evidence-files.json)。
+- 明确保留的相邻缺口：书源最终重定向 URL 改变仍会被本章缓存 URL 身份校验拒绝；旧缓存未绑定原始逻辑章 URL/目录版本，不能凭当前 TOC 或删 query 猜身份后覆盖。已记根 DEVELOPMENT_BACKLOG PH93，现为真实错误和保留旧数据，不算已支持。
+- 交付边界：本轮没有构建 Native/HAP、安装或操作设备；手机仍是上文 e5483b93 包。代码/本地回归完成，新包、设备行为和用户验收尚未完成。这里证明通用生产分支，不伪称已抓取用户当次真机刷新响应。
+
 ## PH92：代理与搜索继续实施（2026-09-15）
 
 当前实施、最终源码/产物和未验证层统一见[当前状态](search-flow-implementation/CURRENT_STATUS_20260915.md)。没有新增产品待决事项；已确定缺口继续实施，不能把旧分包快照当成当前未修改。

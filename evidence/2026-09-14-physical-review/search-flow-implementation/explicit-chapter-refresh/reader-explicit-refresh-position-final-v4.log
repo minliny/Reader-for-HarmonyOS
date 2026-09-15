@@ -1,0 +1,35 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.80s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 25 tests
+test remote::remote_content_positions::tests::remote_cached_reads_validate_context_without_network_and_reject_old_scope_after_upgrade ... ok
+test remote::remote_content_positions::tests::remote_cache_clear_detached_proof_rejects_position_changes_and_processing_drift ... ok
+test remote::remote_content_positions::tests::remote_changed_title_keeps_old_projection_basis_and_commits_new_title ... ok
+test remote::remote_content_positions::tests::format2_first_download_and_ad_hoc_preview_hash_the_same_canonical_format ... ok
+test remote::remote_content_positions::tests::remote_js_string_refresh_uses_the_same_atomic_position_migration ... ok
+test remote::remote_content_positions::tests::remote_first_materialization_keeps_explicit_chapter_start_but_refuses_unknown_nonzero_offsets ... ok
+test remote::remote_content_positions::tests::explicit_refresh_partially_restores_positions_without_rebinding_unresolved_marks ... ok
+test remote::remote_content_positions::tests::remote_legacy_marks_never_gain_scope_from_rename_or_current_body_and_preserve_refresh ... ok
+test remote::remote_content_positions::tests::format2_explicit_refresh_maps_format1_array_and_only_the_requested_chapter ... ok
+test remote::remote_content_positions::tests::format2_old_cache_is_read_only_until_explicit_upgrade_and_current_cache_does_not_refetch ... ok
+test remote::remote_content_positions::tests::remote_lww_progress_response_uses_retained_chapter_proof ... ok
+test remote::remote_content_positions::tests::remote_position_readers_and_writers_share_proof_and_preserve_note_only_edits ... ok
+test remote::remote_content_positions::tests::remote_same_name_foreign_owner_prevents_bookmark_migration_without_guessing ... ok
+test remote::remote_content_positions::tests::remote_mark_proof_survives_full_backup_and_metadata_rename_but_not_fact_loss_or_coordinate_mutation ... ok
+test remote::remote_content_positions::tests::explicit_refresh_replaces_format1_array_and_resets_unresolvable_wrapper_position ... ok
+test remote::remote_content_positions::tests::remote_processing_changes_keep_positions_protected_until_previous_settings_are_restored ... ok
+test remote::remote_content_positions::tests::remote_upgrade_cas_rejects_concurrent_progress_without_rolling_it_back ... ok
+test remote::remote_content_positions::tests::remote_processing_seal_is_safe_after_failed_change_and_unaffected_or_positionless_books_stay_readable ... ok
+test remote::remote_content_positions::tests::remote_upgrade_maps_progress_history_bookmark_highlight_and_captured_host_anchors ... ok
+test remote::remote_content_positions::tests::remote_scalar_anchors_preserve_emoji_crlf_images_and_chapter_end ... ok
+test remote::remote_content_positions::tests::explicit_refresh_http_failures_and_concurrent_edits_never_replace_cached_body ... ok
+test remote::remote_content_positions::tests::remote_upgrade_preserves_old_body_on_short_repeated_or_conflicting_anchors ... ok
+test remote::remote_content_positions::tests::explicit_refresh_rebuilds_missing_body_only_from_valid_detached_proof ... ok
+test remote::remote_content_positions::tests::remote_cache_clear_retains_position_facts_and_restores_only_identical_body ... ok
+test remote::remote_content_positions::tests::remote_preserved_receipts_echo_captured_anchors_for_ambiguity_and_storage_rollback ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 400 filtered out; finished in 1.51s
+
