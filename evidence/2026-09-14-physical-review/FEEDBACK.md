@@ -26,6 +26,8 @@ Core 生产提交 `5c79799d5`、补齐测试构造器及 Clippy 后最终 `c86b6
 
 首次 HAP 的本地回归阶段完成，ArkTS 编译在 `ReadingSessionFlowGateway.loadChapter` 异步闭包丢失 `ReadingSessionSource` 联合类型收窄处失败。已使用函数前段确认的远程 session 常量，保持相同实例和串行边界；真实协调回归再次通过，原编译失败日志归档。此轮未发布失败包。
 
+**最终产物已完成**：run `20260915T132601Z-1b2e6136-a0d4b317`，Harmony `1b2e6136` / Core `c86b6aaec`，构建时两仓 clean；273 组 Harmony 检查、ArkTS、非增量构建、签名和独立 manifest 校验 PASS。签名 HAP SHA-256 `ef1d05a343bac16fcefc88ff39f5916f4331f238badd2d24c5a16ff5d07f4925`。本轮未安装/测试设备，交付级别 iteration。详见[修复交付记录](search-flow-implementation/explicit-chapter-refresh/regression-ph94-97/DELIVERY.md)。
+
 ## PH93：刷新本章仍显示旧正文（2026-09-15）
 
 - 用户现象：点击顶部更多的“刷新本章”，正文不替换。对应已安装 run `20260915T081914Z-e5483b93-86eb9be1`，Harmony `e5483b93` / Core `cfb0208f4`，HAP SHA-256 `04ae9321ec60af7a970c6bfdf6177d77a23e4d9729769c88a0cd64ce1c239d35`；保数据安装回执 `deploy-physical-b1f20b88963d-20260915T102350Z.json`。

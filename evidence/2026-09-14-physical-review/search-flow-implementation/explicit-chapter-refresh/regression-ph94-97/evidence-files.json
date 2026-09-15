@@ -1,7 +1,24 @@
 {
   "coreCommit": "c86b6aaec60b5c60a3a73254aac03ce6ddce4de9",
+  "harmonyBuildCommit": "1b2e613629e7e7e1071d0922955d63cc87dca036",
+  "runId": "20260915T132601Z-1b2e6136-a0d4b317",
   "deviceOperation": false,
   "files": [
+    {
+      "file": "DELIVERY.md",
+      "bytes": 4231,
+      "sha256": "1a29974769194f511d38a90666f5c266c72775d73a040158fd3771ee8e7b3639"
+    },
+    {
+      "file": "core-build-identity.json",
+      "bytes": 391,
+      "sha256": "d8da9f2796314d5aeda4dccda5f1ed0a2d434cba8fb8b9631c648a88aad03207"
+    },
+    {
+      "file": "final-manifest.json",
+      "bytes": 4260,
+      "sha256": "4388ff92ab4f42a140c6ea4f1799cfb5b2ed64adbffcfe181f0881ddf39233e2"
+    },
     {
       "file": "reader-core-cache-progress-audit.md",
       "bytes": 4013,
@@ -61,6 +78,16 @@
       "file": "reader-ph94-97-hap-attempt1.log",
       "bytes": 158782,
       "sha256": "b6f9bfee636a2c73a9b235286cf091b2b5d6ef563f448af2de16284702cafc51"
+    },
+    {
+      "file": "reader-ph94-97-hap-final.log",
+      "bytes": 159122,
+      "sha256": "14ca5162f574e29303c348847c04047e7a36298ec4b3ccb2fcca8fab3bbeb20e"
+    },
+    {
+      "file": "reader-ph94-97-hap-verify.log",
+      "bytes": 736,
+      "sha256": "2e35d323a65c6753956c154119b32c9c59119015a8d4ca96b0aa6c60fd467d9d"
     },
     {
       "file": "reader-ph94-97-harmony-integration.log",
