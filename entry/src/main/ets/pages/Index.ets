@@ -72,7 +72,8 @@ import {
   type RemoteReadingProgressState,
   type RemoteReadingSession,
 } from '../features/reading/RemoteReadingFlowGateway';
-import { sameRemoteSessionEvidence, preparedRemoteChapterMatches, withPreparedRemoteChapter, copyRemoteReadingSession } from '../features/reading/RemoteReadingEvidence';
+import { sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches, withPreparedRemoteChapter, copyRemoteReadingSession } from '../features/reading/RemoteReadingEvidence';
+import { captureRemotePositionContext, type RemoteReadingPositionContext } from '../features/reading/RemoteReadingPositionMigration';
 import type { ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import { ReadingOfflineGateway } from '../features/reading/ReadingOfflineGateway';
 import {
@@ -355,6 +356,8 @@ struct Index {
   private remoteCacheNoticeGeneration: number = -1;
   private remoteContentProbeGeneration: number = 0;
   private remoteSessionGeneration: number = 0;
+  private remoteReadabilityProjectionRevision: number = -1;
+  private pendingRemoteDirectoryProjection: (() => void) | undefined = undefined;
   @State private requestedChapterIndex: number | undefined = undefined;
   // 书签 tab 精确锚点: 每次点击递增 requestId, 保证 @Prop @Watch 对连续点击的
   // 同值/等值请求都能重新触发 (deep-equal 相同的两个对象也会下发新实例)。
@@ -2273,10 +2276,10 @@ struct Index {
     // neither launch a second probe nor automatically retry its terminal failure.
     if (this.candidateAdmissionGeneration === this.navigationGeneration ||
       this.candidateAdmissionFailedGeneration === this.navigationGeneration) return;
-    if (this.bookProjectionLoading) { this.bookProjectionAgain = true; return; }
     const book = this.detailBook;
     if (this.route !== 'detail' || this.readingSessionActive ||
       book === undefined || book.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) return;
+    if (this.bookProjectionLoading) { this.bookProjectionAgain = true; return; }
     this.bookProjectionAgain = false;
     this.bookProjectionLoading = true;
     const generation = this.navigationGeneration;
@@ -2286,11 +2289,35 @@ struct Index {
       this.route === 'detail' && this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
     try {
       const owner = ReaderRuntimeOwner.current();
+      const projectionRevision = owner.bookAcquisitions().readingProjectionRevision();
       const result = await owner.request('search-book.get', { origin: book.sourceId, bookUrl: book.bookId });
       const row = result.data['book'] as JsonObject | undefined;
       if (!current() || row === undefined || row === null) return;
+      if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
+        this.bookProjectionAgain = true;
+        return;
+      }
       const facts = row['acquisition'] as JsonObject | undefined;
-      if (facts === undefined || facts['stale'] === true) return;
+      if (facts === undefined) return;
+      if (facts['stale'] === true) {
+        const admitted = this.remoteReadingSession;
+        // A completed cache-first readmission may legitimately retain an old
+        // catalog for offline reading. Repeated stale notifications must not
+        // reopen that already validated body in a loop.
+        if (admitted !== undefined && preparedRemoteChapterMatches(admitted.preparedChapter, admitted,
+          undefined, projectionRevision) && (admitted.acquisitionMode === 'offline' ||
+          admitted.sourceVersion !== facts['sourceVersion'])) return;
+        const shelfSnapshot = this.shelfBooks.find((item: ShelfBook): boolean =>
+          item.sourceId === book.sourceId && item.bookId === book.bookId);
+        this.openRemoteBookDetail({ sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
+          title: book.title, author: book.author, intro: book.intro, coverUrl: book.coverUrl,
+          kind: book.kind, lastChapter: book.lastChapter }, book.sourceName, shelfSnapshot,
+          false, [], [], this.detailReturnRoute, undefined, true);
+        // The existing entry owns completion/failure and clears this marker.
+        // Suppress projection notifications while its single probe is active.
+        this.candidateAdmissionGeneration = this.navigationGeneration;
+        return;
+      }
       const title = typeof row['name'] === 'string' ? row['name'] as string : book.title;
       const author = typeof row['author'] === 'string' ? row['author'] as string : book.author;
       this.detailBook = { sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId, title, author,
@@ -2305,9 +2332,15 @@ struct Index {
         const merged = copyRemoteReadingSession(previous);
         merged.book = { title, author, intro: this.detailBook.intro,
           coverUrl: this.detailBook.coverUrl, kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter };
-        this.installRemoteReadingSession(merged);
-        if (previous.preparedChapter !== undefined && this.remoteReadingSession?.preparedChapter === undefined) {
-          void this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), this.remoteReadingSession ?? previous, current);
+        const wasReadable = this.remoteContentVerdict === 'readable';
+        // Core has just validated the canonical source/catalog/body/processing
+        // snapshot. Preserve that verdict across metadata notifications without
+        // relabelling an old materialized chapter as current.
+        const readableRevision = wasReadable && facts['schemaVersion'] === 2 &&
+          facts['verificationCurrent'] === true ? projectionRevision : undefined;
+        this.installRemoteReadingSession(merged, readableRevision, row);
+        if (wasReadable && this.remoteContentVerdict === 'verifying') {
+          await this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), this.remoteReadingSession ?? previous, current);
         }
         return;
       }
@@ -2318,15 +2351,20 @@ struct Index {
       if (!current()) return;
       const entries = await this.loadRemoteDirectoryProjection(new ReadingOfflineGateway(owner), owner, session, current);
       if (!current()) return;
+      if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
+        this.bookProjectionAgain = true;
+        return;
+      }
       const merged = copyRemoteReadingSession(session);
       merged.book = { title, author, intro: this.detailBook.intro, coverUrl: this.detailBook.coverUrl,
         kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter };
-      this.installRemoteReadingSession(merged);
+      const readableRevision = this.remoteContentVerdict === 'readable' ? projectionRevision : undefined;
+      this.installRemoteReadingSession(merged, readableRevision, row);
       this.detailToc = entries;
       this.detailLoadingMessage = '';
       if (this.remoteContentVerdict !== 'readable') {
         const installed = this.remoteReadingSession;
-        if (installed !== undefined) void this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), installed,
+        if (installed !== undefined) await this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), installed,
           (): boolean => generation === this.navigationGeneration && this.route === 'detail' && !this.readingSessionActive);
       }
     } catch (_error) { /* The current detail survives a failed background projection. */ }
@@ -2608,7 +2646,9 @@ struct Index {
     fallbackSourceNames: string[] = [],
     retainedDetailReturnRoute: DetailReturnRoute | undefined = undefined,
     validatedSession: RemoteReadingSession | undefined = undefined,
+    retainAdmissionThroughProbe: boolean = false,
   ): void {
+    this.pendingRemoteDirectoryProjection = undefined;
     const reusableRemoteSession = shelfSnapshot !== undefined &&
       this.remoteReadingSession?.identity.sourceId === seed.sourceId &&
       this.remoteReadingSession?.identity.bookId === seed.bookId ? this.remoteReadingSession : undefined;
@@ -2703,7 +2743,7 @@ struct Index {
       .then((admission): RemoteDetailAdmission =>
         new RemoteDetailAdmission(admission.session, admission.backgroundRefresh));
     void sessionAdmission
-      .then((admission: RemoteDetailAdmission): void => {
+      .then((admission: RemoteDetailAdmission): void | Promise<void> => {
         if (!isCurrent()) {
           return;
         }
@@ -2738,13 +2778,21 @@ struct Index {
         // persisted chapter (or the first readable leading chapter for a new
         // book) has passed body admission. This promise stays on the detail
         // generation; only a successful verdict is allowed to advance it.
-        const preferredResumeChapterIndex = resumeImmediately ? suppliedShelfBook?.currentChapterIndex : undefined;
-        const contentProbe = this.probeRemoteContentVerdict(
-          gateway,
-          session,
-          isCurrent,
-          preferredResumeChapterIndex,
-        );
+        let resumeProgress: RemoteReadingProgressState | undefined = undefined;
+        const contentProbe: Promise<number | undefined> = resumeImmediately ? gateway.loadProgress(session.identity, isCurrent)
+          .then((progress: RemoteReadingProgressState): Promise<number | undefined> | undefined => {
+            if (!isCurrent()) return undefined;
+            resumeProgress = progress;
+            const restored = progress.kind === 'restored' ? progress.progress : undefined;
+            const positionContext: RemoteReadingPositionContext | undefined =
+              restored?.bodyVersion !== undefined && restored.processingVersion !== undefined ?
+                { bodyVersion: restored.bodyVersion, processingVersion: restored.processingVersion,
+                  anchors: [{ id: 'restored', offset: restored.chapterOffset }] } : undefined;
+            return this.probeRemoteContentVerdict(gateway, session, isCurrent, restored?.chapterIndex, positionContext);
+          }).catch((error: Error): undefined => {
+            if (isCurrent()) this.remoteContentVerdict = verdictForFailureKind(remoteReadingFailureKindOf(error));
+            return undefined;
+          }) : this.probeRemoteContentVerdict(gateway, session, isCurrent);
         this.detailBook = {
           sourceId: session.identity.sourceId,
           sourceName: admittedSourceName.length > 0 ? admittedSourceName : session.identity.sourceId,
@@ -2791,19 +2839,30 @@ struct Index {
         if (admittedSourceName === session.identity.sourceId) {
           void this.resolveRemoteDetailSourceName(owner, session, isCurrent);
         }
-        void this.loadRemoteDirectoryProjection(offline, owner, session, isCurrent)
-          .then((entries: LocalReadingTocEntry[]): void => {
-            const stillSame = sameRemoteSessionEvidence(this.remoteReadingSession, session);
-            if (isCurrent() && stillSame) {
-              this.detailToc = entries;
-            }
-          })
-          .catch((error: Error): void => {
-            if (isCurrent()) {
-              hilog.error(DOMAIN, 'Reader',
+        const projectionSessionGeneration = this.remoteSessionGeneration;
+        const projectDirectory = (): void => {
+          const bookmarkGeneration = this.directoryBookmarkMutationGeneration;
+          const offlineGeneration = this.offlineMutationGeneration;
+          const projectionCurrent = (): boolean => (resumeImmediately ? this.readingSessionActive : isCurrent()) &&
+            projectionSessionGeneration === this.remoteSessionGeneration &&
+            sameRemoteSessionEvidence(this.remoteReadingSession, session) &&
+            this.detailBook?.title === session.book.title && this.detailBook?.author === session.book.author;
+          if (!projectionCurrent()) return;
+          void this.loadRemoteDirectoryProjection(offline, owner, session, projectionCurrent)
+            .then((entries: LocalReadingTocEntry[]): void => {
+              if (!projectionCurrent() || offlineGeneration !== this.offlineMutationGeneration) return;
+              // A later bookmark mutation owns its newer markers. Preserve
+              // those while accepting this still-current download projection.
+              const bookmarksCurrent = bookmarkGeneration === this.directoryBookmarkMutationGeneration &&
+                (this.directoryBookmarkMutationActiveKey ?? '').length === 0;
+              this.detailToc = bookmarksCurrent ? entries : this.mergeDirectoryBookmarks(entries, this.detailToc);
+            }).catch((error: Error): void => {
+              if (projectionCurrent()) hilog.error(DOMAIN, 'Reader',
                 'Remote download projection failed: %{private}s', error.message);
-            }
-          });
+            });
+        };
+        if (resumeImmediately) this.pendingRemoteDirectoryProjection = projectDirectory;
+        else projectDirectory();
         if (admission.refreshInBackground) {
           const admittedSeed = candidateSeeds[admittedIndex];
           if (admittedSeed !== undefined) {
@@ -2843,9 +2902,14 @@ struct Index {
             // Preserve Core's exact persisted offset when one exists. A book
             // without progress starts at the leading chapter that the probe
             // actually admitted, never at a known blank placeholder.
-            this.openReading(preferredResumeChapterIndex === undefined ? readableChapterIndex : undefined);
+            this.openReading(resumeProgress?.kind === 'restored' ? undefined : readableChapterIndex);
           });
         }
+        // Automatic stale-detail readmission owns its body probe as well as
+        // its catalog, so durable notifications cannot restart that recovery.
+        if (retainAdmissionThroughProbe) return contentProbe.then((chapterIndex: number | undefined): void => {
+          if (chapterIndex === undefined && isCurrent()) this.candidateAdmissionFailedGeneration = generation;
+        });
       })
       .catch((error: Error): void => {
         if (isCurrent()) {
@@ -2863,7 +2927,7 @@ struct Index {
             });
             return;
           }
-          if (allowGroupFallback) this.candidateAdmissionFailedGeneration = generation;
+          if (allowGroupFallback || retainAdmissionThroughProbe) this.candidateAdmissionFailedGeneration = generation;
           if (error instanceof RemoteReadingGatewayError) {
             hilog.error(DOMAIN, 'Reader', 'Remote detail failure: %{public}s',
               JSON.stringify(remoteReadingFailureRecord(error, generation)));
@@ -3737,6 +3801,9 @@ struct Index {
     }
     this.shelfReadingPreparation = false;
     this.route = this.preparedReaderRoute;
+    const projectDirectory = this.pendingRemoteDirectoryProjection;
+    this.pendingRemoteDirectoryProjection = undefined;
+    projectDirectory?.();
   }
 
   private returnToReadingOrigin(): void {
@@ -4779,14 +4846,19 @@ struct Index {
   }
 
   /** All semantic session replacement passes this boundary. */
-  private installRemoteReadingSession(session: RemoteReadingSession | undefined): void {
+  private installRemoteReadingSession(session: RemoteReadingSession | undefined,
+    readableProjectionRevision?: number, readableProjection?: JsonObject): void {
     const previous = this.remoteReadingSession;
     const same = sameRemoteSessionEvidence(previous, session);
     if (!same) {
       this.remoteSessionGeneration += 1;
       this.remoteContentProbeGeneration += 1;
     }
-    if (session === undefined) { this.remoteReadingSession = undefined; return; }
+    if (session === undefined) {
+      this.remoteReadingSession = undefined;
+      this.remoteReadabilityProjectionRevision = -1;
+      return;
+    }
     const revision = ReaderRuntimeOwner.current().bookAcquisitions().readingProjectionRevision();
     const prepared = session.preparedChapter ?? (same ? previous?.preparedChapter : undefined);
     const valid = preparedRemoteChapterMatches(prepared, session, undefined, revision);
@@ -4797,8 +4869,23 @@ struct Index {
     } else {
       this.remoteReadingSession = session;
     }
-    if (valid) this.remoteContentVerdict = 'readable';
-    else if (!same || previous?.preparedChapter !== undefined) this.remoteContentVerdict = 'verifying';
+    const facts = readableProjection?.['acquisition'] as JsonObject | undefined;
+    // Only a stable Core projection for this exact canonical session can
+    // preserve the gate. It supplies no reusable materialized chapter.
+    const confirmed = readableProjectionRevision === revision && facts?.['schemaVersion'] === 2 &&
+      facts['verificationCurrent'] === true && facts['stale'] !== true &&
+      readableProjection?.['origin'] === session.identity.sourceId &&
+      readableProjection?.['bookUrl'] === session.identity.bookId &&
+      session.sourceVersion !== undefined && session.catalogVersion !== undefined && session.contextVersion !== undefined &&
+      facts['sourceVersion'] === session.sourceVersion && facts['catalogVersion'] === session.catalogVersion &&
+      facts['contextVersion'] === session.contextVersion && session.requiresContextRefresh !== true;
+    if (valid || confirmed) {
+      this.remoteReadabilityProjectionRevision = revision;
+      this.remoteContentVerdict = 'readable';
+    } else if (!same || previous?.preparedChapter !== undefined ||
+      (this.remoteReadabilityProjectionRevision >= 0 && this.remoteReadabilityProjectionRevision !== revision)) {
+      this.remoteContentVerdict = 'verifying';
+    }
   }
 
   /**
@@ -4812,18 +4899,21 @@ struct Index {
     session: RemoteReadingSession,
     isCurrent: () => boolean,
     preferredChapterIndex?: number,
+    positionContext?: RemoteReadingPositionContext,
   ): Promise<number | undefined> {
+    positionContext = captureRemotePositionContext(positionContext);
     if (!isCurrent() || !sameRemoteSessionEvidence(this.remoteReadingSession, session)) {
       return undefined;
     }
     const generation = ++this.remoteContentProbeGeneration;
     const coordinator = ReaderRuntimeOwner.current().bookAcquisitions();
     const projectionRevision = coordinator.readingProjectionRevision();
-    const probeCurrent = (): boolean => isCurrent() && generation === this.remoteContentProbeGeneration &&
-      projectionRevision === coordinator.readingProjectionRevision() &&
+    const ownerCurrent = (): boolean => isCurrent() && generation === this.remoteContentProbeGeneration &&
       sameRemoteSessionEvidence(this.remoteReadingSession, session);
+    const probeCurrent = (): boolean => ownerCurrent() && projectionRevision === coordinator.readingProjectionRevision();
     const prepared = this.remoteReadingSession?.preparedChapter;
-    if (preparedRemoteChapterMatches(prepared, session, preferredChapterIndex, projectionRevision)) {
+    if (preparedRemoteChapterMatches(prepared, session, preferredChapterIndex, projectionRevision) &&
+      preparedRemoteChapterPositionMatches(prepared, positionContext)) {
       this.remoteContentVerdict = 'readable';
       return prepared?.chapter.chapterIndex;
     }
@@ -4842,11 +4932,11 @@ struct Index {
     }
     for (let attempt = start; attempt < limit; attempt += 1) {
       try {
-        const chapter = await gateway.loadChapter(session, readableEntries[attempt].index, probeCurrent);
+        const chapter = await gateway.loadChapter(session, readableEntries[attempt].index, probeCurrent, false, positionContext);
         if (!probeCurrent()) {
           return undefined;
         }
-        this.installRemoteReadingSession(withPreparedRemoteChapter(this.remoteReadingSession ?? session, chapter, projectionRevision));
+        this.installRemoteReadingSession(withPreparedRemoteChapter(this.remoteReadingSession ?? session, chapter, projectionRevision, positionContext));
         this.remoteContentVerdict = 'readable';
         return readableEntries[attempt].index;
       } catch (error) {
@@ -4854,7 +4944,7 @@ struct Index {
           return undefined;
         }
         if (error instanceof RemoteChapterCacheRefreshError) {
-          return this.refreshCachedChapterFromPrompt(error, probeCurrent);
+          return this.refreshCachedChapterFromPrompt(error, ownerCurrent);
         }
         const kind = remoteReadingFailureKindOf(error);
         // Only a new book may skip a blank leading announcement. A resume
@@ -4892,12 +4982,19 @@ struct Index {
     this.remoteContentVerdict = 'verifying';
     try {
       const owner = ReaderRuntimeOwner.current();
-      const revision = owner.bookAcquisitions().readingProjectionRevision();
-      const refreshCurrent = (): boolean => isCurrent() && revision === owner.bookAcquisitions().readingProjectionRevision();
+      const coordinator = owner.bookAcquisitions();
+      const revision = coordinator.readingProjectionRevision();
+      // This forceRefresh itself advances the projection revision at dispatch
+      // and completion. A guard pinned to its predecessor cancels its own RPC.
+      // Admit only those two changes; concurrent projection mutations still
+      // invalidate the handoff, while Core also validates its publication CAS.
+      const refreshCurrent = (): boolean => isCurrent() && coordinator.readingProjectionRevision() <= revision + 2;
       const chapter = await new RemoteReadingFlowGateway(owner).loadChapter(error.session,
         error.chapterIndex, refreshCurrent, true, error.positionContext);
-      if (!refreshCurrent()) return undefined;
-      this.installRemoteReadingSession(withPreparedRemoteChapter(error.session, chapter, revision));
+      if (!isCurrent()) return undefined;
+      const completedRevision = coordinator.readingProjectionRevision();
+      if (completedRevision !== revision + 2) throw new Error('正文配置已变化，请重新读取本章');
+      this.installRemoteReadingSession(withPreparedRemoteChapter(error.session, chapter, completedRevision));
       this.remoteContentVerdict = 'readable';
       this.detailLoadingMessage = '';
       return chapter.chapterIndex;

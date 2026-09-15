@@ -30,8 +30,8 @@ assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_S
   'source browsing remains available even when the current source catalog failed');
 assert.match(index, /readingEnabled: this\.remoteContentVerdict === 'readable'/,
   'the start-reading action is enabled only after the leading-chapter verdict admits the content');
-assert.match(index, /const contentProbe = this\.probeRemoteContentVerdict\([\s\S]*preferredResumeChapterIndex/,
-  'the verdict probe must reuse the admitted session and probe the exact persisted resume chapter');
+assert.match(remoteOpen, /gateway\.loadProgress\(session\.identity, isCurrent\)[\s\S]*this\.probeRemoteContentVerdict\(gateway, session, isCurrent, restored\?\.chapterIndex, positionContext\)/,
+  'resume must use Core current progress and its scoped anchor, not a stale bookshelf projection');
 assert.match(remoteOpen,
   /if \(resumeImmediately\) \{[\s\S]*contentProbe\.then[\s\S]*readableChapterIndex === undefined[\s\S]*this\.openReading/,
   'a shelf resume must wait for a readable chapter verdict before mounting the reader');

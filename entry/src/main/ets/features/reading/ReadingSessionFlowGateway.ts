@@ -1,4 +1,4 @@
-import { decodeRemotePositionScope, type RemoteReadingPositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
+import { captureRemotePositionContext, decodeRemotePositionScope, type RemoteReadingPositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
@@ -21,7 +21,7 @@ import type { ReadingSessionChapter, ReadingSessionImage } from './ReadingChapte
 import { materializeReadingDocument } from './ReadingDocumentProjection';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { image } from '@kit.ImageKit';
-import { preparedRemoteChapterMatches } from './RemoteReadingEvidence';
+import { preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches } from './RemoteReadingEvidence';
 
 /**
  * The source-specific acquisition state admitted into one reader instance.
@@ -173,20 +173,35 @@ export class ReadingSessionFlowGateway {
   ): Promise<ReadingSessionChapter> {
     this.assertBook(bookId);
     if (this.source.kind === 'remote') {
+      positionContext = captureRemotePositionContext(positionContext);
       const session = this.source.session;
       const prepared = session.preparedChapter;
       const coordinator = this.runtimeOwner.bookAcquisitions?.();
-      if (positionContext === undefined && !forceRefresh && !this.preparedChapterConsumed && prepared !== undefined &&
+      if (!forceRefresh && !this.preparedChapterConsumed && prepared !== undefined &&
+        preparedRemoteChapterPositionMatches(prepared, positionContext) &&
         preparedRemoteChapterMatches(prepared, session, chapterIndex, coordinator?.readingProjectionRevision() ?? 0)) {
         const version = coordinator === undefined ? session.sourceVersion : await coordinator.currentSourceVersion(this.sourceId);
         if (isCurrent?.() === false) throw new Error('reading chapter request was cancelled');
-        if (version === session.sourceVersion &&
+        if (version === session.sourceVersion && preparedRemoteChapterPositionMatches(prepared, positionContext) &&
           preparedRemoteChapterMatches(prepared, session, chapterIndex, coordinator?.readingProjectionRevision() ?? 0)) {
           this.preparedChapterConsumed = true;
           return prepared.chapter;
         }
       }
-      const chapter = await this.remote.loadChapter(this.source.session, chapterIndex, isCurrent, forceRefresh, positionContext);
+      let chapter: ReadingSessionChapter;
+      if (forceRefresh) {
+        // Refresh atomically replaces body AND positions in Core. Wait for
+        // earlier dispatched progress writes before capturing its snapshot,
+        // and keep later writes behind the whole HTTP/publication operation.
+        let refreshed: ReadingSessionChapter | undefined;
+        await this.remote.runProgressCommitSerial(async (): Promise<void> => {
+          refreshed = await this.remote.loadChapter(this.source.session, chapterIndex, isCurrent, true, positionContext);
+        });
+        if (refreshed === undefined) throw new Error('reading refresh returned no chapter');
+        chapter = refreshed;
+      } else {
+        chapter = await this.remote.loadChapter(this.source.session, chapterIndex, isCurrent, false, positionContext);
+      }
       if (prepared?.chapter.chapterIndex === chapterIndex) this.preparedChapterConsumed = true;
       return chapter;
     }

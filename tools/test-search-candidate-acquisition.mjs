@@ -10,7 +10,8 @@ const {RemoteReadingFlowGateway,RemoteChapterCacheRefreshError}=await import(pat
 const {RemoteReadingGatewayError,remoteReadingFailureRecord}=await import(path('features/reading/RemoteReadingContract.ts'));
 const {remoteReadingFailureKindOf,verdictForFailureKind}=await import(path('features/reading/RemoteContentAdmission.ts'));
 const {searchCandidateRank}=await import(path('features/search/SearchCandidatePolicy.ts'));
-const {sameRemoteSessionEvidence,preparedRemoteChapterMatches,withPreparedRemoteChapter,copyRemoteReadingSession}=await import(path('features/reading/RemoteReadingEvidence.ts'));
+const {sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,withPreparedRemoteChapter,copyRemoteReadingSession}=await import(path('features/reading/RemoteReadingEvidence.ts'));
+const {captureRemotePositionContext}=await import(path('features/reading/RemoteReadingPositionMigration.ts'));
 const {errorMessageOf}=await import(path('app/ErrorMessage.ts'));
 const {readerSourceCategoryIsText}=await import(path('features/source/ReaderSourceCategory.ts'));
 const pause=()=>new Promise(r=>setTimeout(r,0));
@@ -296,7 +297,7 @@ const admissionSource=indexSource.slice(indexSource.indexOf('class RemoteDetailA
 const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admissionSource)+';return RemoteDetailAdmission;')();
 function indexFixture(f){
  const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{
- sameRemoteSessionEvidence,preparedRemoteChapterMatches,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
+ sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,captureRemotePositionContext,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
  ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
  const page=Object.assign(new Index(),{route:'search',shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};
 }

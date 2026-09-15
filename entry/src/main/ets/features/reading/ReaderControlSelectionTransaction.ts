@@ -8,6 +8,8 @@ export interface ReaderControlSelectionTicket {
   targetChapterIndex: number;
   /** Slider scrubbing keeps the panel open; list/search selections still close. */
   closeOnCommit?: boolean;
+  /** Retained across recovery so a refresh is never presented as a TOC jump. */
+  refreshContent?: boolean;
 }
 
 export interface ReaderControlSelectionOwner {

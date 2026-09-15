@@ -1,0 +1,401 @@
+{
+  "origin": "real Core Pending -> HTTP -> SQLite -> reader.location.resolve -> reading.progress.update regression",
+  "cases": [
+    {
+      "chapterContent": {
+        "blocks": [
+          {
+            "endScalar": 8,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "NEW BODY"
+          }
+        ],
+        "bodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+        "bookId": "b",
+        "chapterTitle": "Chapter",
+        "content": "NEW BODY",
+        "contentFormatVersion": 3,
+        "contentRefreshRequired": false,
+        "http": {
+          "finalUrl": "https://example.test/1",
+          "finalUrlDigest": "98780052059c9103799e803c8bf1e4a75c7edd58bc3e67bae3cc0a2dd1ab224a",
+          "responseBytes": 47,
+          "responseDigest": "22a89efd1c603b2f2d4faf45af2fdfca571295302b77d0a4bc2ec3d8888679c2",
+          "status": 200
+        },
+        "positionMigration": {
+          "anchors": [
+            {
+              "id": "requested",
+              "offset": 0,
+              "previousOffset": 3
+            }
+          ],
+          "bodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+          "previousBodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+          "previousProcessingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+          "processingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+          "reason": "positions_partially_restored",
+          "status": "committed"
+        },
+        "processingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+        "sourceId": "s",
+        "via": "rule"
+      },
+      "hadProgress": false,
+      "locationResolved": {
+        "canonicalLocation": {
+          "bookId": "b",
+          "chapterIndex": 0,
+          "chapterOffset": 0,
+          "chapterProgress": 0.0,
+          "locationRevision": "reader-location-v1:b:0:0"
+        },
+        "reflow": {
+          "fallbackAnchor": "chapterProgress",
+          "layoutIndependent": true,
+          "primaryAnchor": "chapterOffset",
+          "strategy": "offsetAnchor"
+        },
+        "resolved": true,
+        "resolverVersion": "reader.location.resolve.v1.reflow"
+      },
+      "progressUpdateParams": {
+        "anchor": {
+          "chapterOffset": 0,
+          "chapterProgress": 0.0
+        },
+        "bookId": "b",
+        "chapterIndex": 0,
+        "chapterOffset": 0,
+        "chapterProgress": 0.0,
+        "expectedBodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+        "expectedProcessingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+        "layout": {
+          "fontScale": 1.0,
+          "viewportHeight": 844,
+          "viewportWidth": 390
+        },
+        "locationRevision": "reader-location-v1:b:0:0",
+        "sourceId": "s",
+        "updatedAt": 30
+      },
+      "progressUpdated": {
+        "bodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+        "bookId": "b",
+        "chapterIndex": 0,
+        "chapterOffset": 0,
+        "chapterProgress": 0.0,
+        "locationRevision": "reader-location-v1:b:0:0",
+        "processingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+        "sourceId": "s",
+        "stored": true,
+        "updatedAt": 30
+      },
+      "sameBody": false
+    },
+    {
+      "chapterContent": {
+        "blocks": [
+          {
+            "endScalar": 8,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "NEW BODY"
+          }
+        ],
+        "bodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+        "bookId": "b",
+        "chapterTitle": "Chapter",
+        "content": "NEW BODY",
+        "contentFormatVersion": 3,
+        "contentRefreshRequired": false,
+        "http": {
+          "finalUrl": "https://example.test/1",
+          "finalUrlDigest": "98780052059c9103799e803c8bf1e4a75c7edd58bc3e67bae3cc0a2dd1ab224a",
+          "responseBytes": 47,
+          "responseDigest": "22a89efd1c603b2f2d4faf45af2fdfca571295302b77d0a4bc2ec3d8888679c2",
+          "status": 200
+        },
+        "positionMigration": {
+          "anchors": [
+            {
+              "id": "requested",
+              "offset": 0,
+              "previousOffset": 3
+            }
+          ],
+          "bodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+          "previousBodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+          "previousProcessingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+          "processingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+          "progress": {
+            "bodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+            "bookId": "b",
+            "chapterIndex": 0,
+            "chapterOffset": 0,
+            "chapterProgress": 0.0,
+            "deviceId": "device",
+            "processingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+            "sourceId": "s",
+            "updatedAt": 10
+          },
+          "reason": "positions_partially_restored",
+          "status": "committed"
+        },
+        "processingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+        "sourceId": "s",
+        "via": "rule"
+      },
+      "hadProgress": true,
+      "locationResolved": {
+        "canonicalLocation": {
+          "bookId": "b",
+          "chapterIndex": 0,
+          "chapterOffset": 0,
+          "chapterProgress": 0.0,
+          "locationRevision": "reader-location-v1:b:0:0"
+        },
+        "reflow": {
+          "fallbackAnchor": "chapterProgress",
+          "layoutIndependent": true,
+          "primaryAnchor": "chapterOffset",
+          "strategy": "offsetAnchor"
+        },
+        "resolved": true,
+        "resolverVersion": "reader.location.resolve.v1.reflow"
+      },
+      "progressUpdateParams": {
+        "anchor": {
+          "chapterOffset": 0,
+          "chapterProgress": 0.0
+        },
+        "bookId": "b",
+        "chapterIndex": 0,
+        "chapterOffset": 0,
+        "chapterProgress": 0.0,
+        "expectedBodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+        "expectedProcessingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+        "layout": {
+          "fontScale": 1.0,
+          "viewportHeight": 844,
+          "viewportWidth": 390
+        },
+        "locationRevision": "reader-location-v1:b:0:0",
+        "sourceId": "s",
+        "updatedAt": 30
+      },
+      "progressUpdated": {
+        "bodyVersion": "91245291731430c40a2913bf8e56af46e7f65ed4ee82599e9688c7f92f9d72d9",
+        "bookId": "b",
+        "chapterIndex": 0,
+        "chapterOffset": 0,
+        "chapterProgress": 0.0,
+        "locationRevision": "reader-location-v1:b:0:0",
+        "processingVersion": "75546b9254702200638458d77b8b800beb5a224d4a670371b4cf5ab8bf7873e8",
+        "sourceId": "s",
+        "stored": true,
+        "updatedAt": 30
+      },
+      "sameBody": false
+    },
+    {
+      "chapterContent": {
+        "blocks": [
+          {
+            "endScalar": 8,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "OLD BODY"
+          }
+        ],
+        "bodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+        "bookId": "b",
+        "chapterTitle": "Chapter",
+        "content": "OLD BODY",
+        "contentFormatVersion": 3,
+        "contentRefreshRequired": false,
+        "http": {
+          "finalUrl": "https://example.test/1",
+          "finalUrlDigest": "98780052059c9103799e803c8bf1e4a75c7edd58bc3e67bae3cc0a2dd1ab224a",
+          "responseBytes": 47,
+          "responseDigest": "b3ce8d4daa8f4e72dcc9238e903cfca43d6319711e0eeec9a728b19d282e915c",
+          "status": 200
+        },
+        "positionMigration": {
+          "anchors": [
+            {
+              "id": "requested",
+              "offset": 3,
+              "previousOffset": 3
+            }
+          ],
+          "bodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+          "previousBodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+          "previousProcessingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+          "processingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+          "status": "unchanged"
+        },
+        "processingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+        "sourceId": "s",
+        "via": "rule"
+      },
+      "hadProgress": false,
+      "locationResolved": {
+        "canonicalLocation": {
+          "bookId": "b",
+          "chapterIndex": 0,
+          "chapterOffset": 3,
+          "chapterProgress": 0.375,
+          "locationRevision": "reader-location-v1:b:0:3"
+        },
+        "reflow": {
+          "fallbackAnchor": "chapterProgress",
+          "layoutIndependent": true,
+          "primaryAnchor": "chapterOffset",
+          "strategy": "offsetAnchor"
+        },
+        "resolved": true,
+        "resolverVersion": "reader.location.resolve.v1.reflow"
+      },
+      "progressUpdateParams": {
+        "anchor": {
+          "chapterOffset": 3,
+          "chapterProgress": 0.375
+        },
+        "bookId": "b",
+        "chapterIndex": 0,
+        "chapterOffset": 3,
+        "chapterProgress": 0.375,
+        "expectedBodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+        "expectedProcessingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+        "layout": {
+          "fontScale": 1.0,
+          "viewportHeight": 844,
+          "viewportWidth": 390
+        },
+        "locationRevision": "reader-location-v1:b:0:3",
+        "sourceId": "s",
+        "updatedAt": 30
+      },
+      "progressUpdated": {
+        "bodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+        "bookId": "b",
+        "chapterIndex": 0,
+        "chapterOffset": 3,
+        "chapterProgress": 0.375,
+        "locationRevision": "reader-location-v1:b:0:3",
+        "processingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+        "sourceId": "s",
+        "stored": true,
+        "updatedAt": 30
+      },
+      "sameBody": true
+    },
+    {
+      "chapterContent": {
+        "blocks": [
+          {
+            "endScalar": 8,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "OLD BODY"
+          }
+        ],
+        "bodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+        "bookId": "b",
+        "chapterTitle": "Chapter",
+        "content": "OLD BODY",
+        "contentFormatVersion": 3,
+        "contentRefreshRequired": false,
+        "http": {
+          "finalUrl": "https://example.test/1",
+          "finalUrlDigest": "98780052059c9103799e803c8bf1e4a75c7edd58bc3e67bae3cc0a2dd1ab224a",
+          "responseBytes": 47,
+          "responseDigest": "b3ce8d4daa8f4e72dcc9238e903cfca43d6319711e0eeec9a728b19d282e915c",
+          "status": 200
+        },
+        "positionMigration": {
+          "anchors": [
+            {
+              "id": "requested",
+              "offset": 3,
+              "previousOffset": 3
+            }
+          ],
+          "bodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+          "previousBodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+          "previousProcessingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+          "processingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+          "progress": {
+            "bodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+            "bookId": "b",
+            "chapterIndex": 0,
+            "chapterOffset": 3,
+            "chapterProgress": 0.375,
+            "deviceId": "device",
+            "processingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+            "sourceId": "s",
+            "updatedAt": 10
+          },
+          "status": "unchanged"
+        },
+        "processingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+        "sourceId": "s",
+        "via": "rule"
+      },
+      "hadProgress": true,
+      "locationResolved": {
+        "canonicalLocation": {
+          "bookId": "b",
+          "chapterIndex": 0,
+          "chapterOffset": 3,
+          "chapterProgress": 0.375,
+          "locationRevision": "reader-location-v1:b:0:3"
+        },
+        "reflow": {
+          "fallbackAnchor": "chapterProgress",
+          "layoutIndependent": true,
+          "primaryAnchor": "chapterOffset",
+          "strategy": "offsetAnchor"
+        },
+        "resolved": true,
+        "resolverVersion": "reader.location.resolve.v1.reflow"
+      },
+      "progressUpdateParams": {
+        "anchor": {
+          "chapterOffset": 3,
+          "chapterProgress": 0.375
+        },
+        "bookId": "b",
+        "chapterIndex": 0,
+        "chapterOffset": 3,
+        "chapterProgress": 0.375,
+        "expectedBodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+        "expectedProcessingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+        "layout": {
+          "fontScale": 1.0,
+          "viewportHeight": 844,
+          "viewportWidth": 390
+        },
+        "locationRevision": "reader-location-v1:b:0:3",
+        "sourceId": "s",
+        "updatedAt": 30
+      },
+      "progressUpdated": {
+        "bodyVersion": "50ded4c8612f08f8971083cd60b522d13440e9b92ac67bf39938252b14116764",
+        "bookId": "b",
+        "chapterIndex": 0,
+        "chapterOffset": 3,
+        "chapterProgress": 0.375,
+        "locationRevision": "reader-location-v1:b:0:3",
+        "processingVersion": "15d31dfc64021b6604d073873f4056bce45e7ab7f8143ac34f0b8e2b3becb8e7",
+        "sourceId": "s",
+        "stored": true,
+        "updatedAt": 30
+      },
+      "sameBody": true
+    }
+  ]
+}

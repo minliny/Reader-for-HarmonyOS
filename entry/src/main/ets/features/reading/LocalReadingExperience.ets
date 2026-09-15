@@ -9559,6 +9559,7 @@ export struct ReadingExperience {
       controlOpenRevision: selectionControlRevision,
       targetChapterIndex: chapterIndex,
       closeOnCommit: closeControlOnCommit,
+      refreshContent,
     };
     this.pendingControlSelectionOrigin = origin;
     this.pendingControlSelectionCandidate = undefined;
@@ -9666,6 +9667,8 @@ export struct ReadingExperience {
       sourceId: ticket.sourceId, bookId: ticket.bookId, lifecycleToken: ticket.lifecycleToken,
       selectionToken: this.chapterSelectionToken, controlOpenRevision: ticket.controlOpenRevision,
       targetChapterIndex: ticket.targetChapterIndex,
+      closeOnCommit: ticket.closeOnCommit,
+      refreshContent: ticket.refreshContent,
     };
     this.pendingControlSelection = recoveryTicket;
     this.controlSelectionReconciliationInFlight = true;
@@ -9719,6 +9722,7 @@ export struct ReadingExperience {
     if (display === undefined || stored === undefined ||
       display.layoutSignature !== this.paginationLayoutSignature() ||
       display.continuous !== (this.readerSettingsSnapshot.navigationMode === 'continuous')) {
+      if (stored !== undefined && await this.recoverRefreshedChapterDisplay(ticket, stored)) return;
       // Do not mark the stale body/old lastCommittedProgress authoritative.
       // The existing control remains available; explicit retry creates a new
       // selection and may supersede this reconciliation without exiting reader.
@@ -9759,6 +9763,30 @@ export struct ReadingExperience {
     this.releaseUnretainedReadingImages();
   }
 
+  private async recoverRefreshedChapterDisplay(ticket: ReaderControlSelectionTicket,
+    stored: ReaderControlSelectionStoredProgress): Promise<boolean> {
+    const retry = this.pendingControlSelectionRetry;
+    const previous = retry?.positionContext;
+    if (retry?.refreshContent !== true || previous === undefined ||
+      stored.bookId !== ticket.bookId || stored.chapterIndex !== ticket.targetChapterIndex ||
+      stored.bodyVersion === undefined || stored.processingVersion === undefined ||
+      (stored.bodyVersion === previous.bodyVersion && stored.processingVersion === previous.processingVersion) ||
+      !readerControlSelectionOwnsReading(ticket, this.controlSelectionOwner())) return false;
+    // The serialized read proves Core already published replacement content.
+    // Retrying forceRefresh with the predecessor's scope can only fail again.
+    // Re-read that committed body and measure its actual saved position once;
+    // the non-refresh retry prevents an automatic recovery loop if layout fails.
+    const context: RemoteReadingPositionContext = { bodyVersion: stored.bodyVersion,
+      processingVersion: stored.processingVersion,
+      anchors: [{ id: 'requested', offset: stored.chapterOffset }] };
+    this.pendingControlSelectionRetry = new ReaderDeferredChapterSelection(stored.chapterIndex,
+      stored.chapterOffset, false, retry.stopTts, undefined, retry.controlOwnerRevision,
+      retry.closeControlOnCommit, false, context);
+    await this.openChapter(stored.chapterIndex, false, ticket.lifecycleToken, ticket.selectionToken,
+      stored.chapterOffset, undefined, false, context);
+    return true;
+  }
+
   private notifyControlSelectionReadingReady(chapterIndex: number, chapterTitle: string,
     page: PhysicalReadingPage | undefined = this.visiblePage,
     selectionToken: number = this.chapterSelectionToken,
@@ -9785,8 +9813,9 @@ export struct ReadingExperience {
     const retry = this.pendingControlSelectionRetry;
     hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience control selection failed: ${this.failureCode}; ${detail}`);
     this.getUIContext().showAlertDialog({
-      title: '跳转失败',
-      message: `${this.failureCode}\n${detail}。可重试本次选择，或关闭提示后重新选择章节。`,
+      title: ticket.refreshContent === true ? '刷新本章失败' : '跳转失败',
+      message: ticket.refreshContent === true ? `${this.failureCode}\n${detail}。可重试恢复本章，原书签和记录仍保留。` :
+        `${this.failureCode}\n${detail}。可重试本次选择，或关闭提示后重新选择章节。`,
       primaryButton: { value: '重试', action: (): void => {
         if (retry === undefined || !readerControlSelectionOwnsReading(ticket, this.controlSelectionOwner())) return;
         this.selectChapterAnchor(retry.chapterIndex, retry.chapterOffset, retry.requireChapterStart,

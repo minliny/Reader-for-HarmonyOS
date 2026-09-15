@@ -1,10 +1,10 @@
-import * as readingEvidence from '../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { createHash } from 'node:crypto';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
+const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 const readingAdmission=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const readingContract=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
 const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');

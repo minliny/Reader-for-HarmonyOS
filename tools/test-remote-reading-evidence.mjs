@@ -6,8 +6,9 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context); throw error; }
 } });
-const { sameRemoteSessionEvidence, preparedRemoteChapterMatches, withPreparedRemoteChapter, copyRemoteReadingSession } =
+const { sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches, withPreparedRemoteChapter, copyRemoteReadingSession } =
   await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+const { captureRemotePositionContext } = await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
 const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve)); };
@@ -19,7 +20,7 @@ class Gateway { async loadChapter(session, index, current) { return load(session
 const Index = productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url)),
   ['installRemoteReadingSession', 'probeRemoteContentVerdict', 'refreshCachedSearchDetailInBackground', 'switchPreviewSource',
     'nextNavigationGeneration'], {
-    sameRemoteSessionEvidence, preparedRemoteChapterMatches, withPreparedRemoteChapter, copyRemoteReadingSession,
+    sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches, captureRemotePositionContext, withPreparedRemoteChapter, copyRemoteReadingSession,
     ReaderRuntimeOwner: { current: () => owner }, RemoteReadingFlowGateway: Gateway, ReadingOfflineGateway: class {},
     remoteReadingFailureKindOf: error => error.kind ?? 'SOURCE_HTTP_FAILED', verdictForFailureKind: () => 'networkFailed',
     errorMessageOf: error => error.message, DOMAIN: 0, hilog: { warn() {} },

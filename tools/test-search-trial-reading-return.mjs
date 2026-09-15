@@ -4,6 +4,7 @@ import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
 const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+const {captureRemotePositionContext}=await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
 const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 import { SearchViewState } from '../entry/src/main/ets/features/search/SearchViewState.ts';
 
@@ -66,8 +67,9 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     setPreparationVisible() {}, recentFailures: () => [], endSearch: () => calls.push('search.end'),
   }) };
   const Index = productionMotionMethods(source, methods, {
-    ...readingEvidence,RemoteChapterCacheRefreshError, searchCandidateRank, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
+    ...readingEvidence,captureRemotePositionContext,RemoteChapterCacheRefreshError, searchCandidateRank, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
     RemoteReadingFlowGateway: class {
+      async loadProgress() { return {kind:'missing'}; }
       async loadChapter(session) { return loadChapter(session); }
     },
     ReadingOfflineGateway: class {},

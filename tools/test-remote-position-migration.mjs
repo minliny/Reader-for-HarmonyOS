@@ -33,7 +33,9 @@ for(const force of [false,true]){
   copy.positionMigration.anchors[0].offset=888;copy.positionMigration.progress.chapterOffset=777;
   assert.equal(window.get(0).positionMigration.anchors[0].offset,15);assert.equal(window.get(0).positionMigration.progress.chapterOffset,15);
 }
-// A prepared body may serve an ordinary read, but position context always reaches Core validation.
+// An unscoped prepared body may serve an ordinary read, but it cannot prove
+// resume anchors. Exact context verified by a prior Core request is covered
+// separately in test-shelf-resume-handoff.mjs.
 {
   const cached={sourceId:'source',bookId:'book',chapterIndex:0,chapterTitle:'第一章',chapterUrl:'/0',content:'正文',images:[],
     bodyVersion:'old-body',processingVersion:'old-processing',contentVersion:'host',extractionVia:'rule'};

@@ -12,6 +12,7 @@ import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
 const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+const {captureRemotePositionContext}=await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
 const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 
 const source = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
@@ -54,7 +55,7 @@ function create(remote = false) {
     'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel',
     'remoteReadingFailureKindOf', 'verdictForFailureKind', 'isRemoteSourceFailureKind',
     'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord', 'searchCandidateRank',
-    'sameRemoteSessionEvidence','preparedRemoteChapterMatches','withPreparedRemoteChapter','copyRemoteReadingSession','RemoteChapterCacheRefreshError',
+    'sameRemoteSessionEvidence','preparedRemoteChapterMatches','preparedRemoteChapterPositionMatches','captureRemotePositionContext','withPreparedRemoteChapter','copyRemoteReadingSession','RemoteChapterCacheRefreshError',
     `${harnessCode}; return Harness;`,
   )(
     'local', { current: () => ({ bookAcquisitions: () => ({ readingProjectionRevision:()=>0, endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: (seed) => {
@@ -66,6 +67,7 @@ function create(remote = false) {
     class {
       openCachedCatalogSession() { return catalog.promise; }
       openSession() { return catalog.promise; }
+      async loadProgress() { return {kind:'restored',progress:{...book,chapterIndex:book.currentChapterIndex,chapterOffset:10,chapterProgress:0,updatedAt:100}}; }
       loadChapter(_session, index) { probes.push(index); return body.promise.then(() => ({sourceId:book.sourceId,bookId:book.bookId,chapterIndex:index,chapterUrl:`chapter-${index}`,contentVersion:`body-${index}`,content:'正文',images:[]})); }
     },
     class {}, class { loadShelfBook() { return Promise.resolve(book); } },
@@ -74,7 +76,7 @@ function create(remote = false) {
     { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',
     error => error.kind ?? 'NETWORK_FAILED', () => 'networkFailed',
     kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}), searchCandidateRank,
-    readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,RemoteChapterCacheRefreshError,
+    readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.preparedRemoteChapterPositionMatches,captureRemotePositionContext,readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,RemoteChapterCacheRefreshError,
   );
   const h = new Harness(), routes = [], alerts = [];
   let route = 'bookshelf';
