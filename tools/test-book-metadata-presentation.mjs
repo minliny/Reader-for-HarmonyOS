@@ -117,6 +117,71 @@ for (const leading of [[seed, lateSeed], [lateSeed, seed]]) {
 assert.equal(JSON.stringify({ sources, rows }), snapshot, 'UI projection must leave the canonical facts unchanged');
 assert.ok(calls.every(method => ['source.list', 'search-book.batch.get', 'search-book.related'].includes(method)));
 
+// An empty detail/search-cache field is missing metadata, not an instruction
+// to erase a nonblank field already admitted for this exact source and URL.
+// Exercise the public gateway and its production projection against Core-shaped
+// rows, retaining each candidate's original continuation and source binding.
+{
+  const fields = ['coverUrl', 'intro', 'kind', 'latestChapterTitle'];
+  const registry = [{ sourceId: 'metadata-source', name: 'Metadata source', enabled: true, sourceVersion: 'v1' }];
+  const original = Object.freeze({ ...seed, sourceId: 'metadata-source', bookId: 'metadata-book', detailUrl: 'metadata-book',
+    bookSourceUrl: 'https://metadata.example', searchRequestId: 'metadata-query',
+    variables: Object.freeze([{ name: 'continuation', value: 'search-owned' }]),
+    coverUrl: 'https://metadata.example/cover.png', intro: 'The admitted book synopsis.', kind: 'Fantasy',
+    latestChapterTitle: 'Chapter 123' });
+  const row = { origin: original.sourceId, bookUrl: original.bookId, name: original.title, author: original.author,
+    relationKey: 'metadata-relation', relationRevision: '1', acquisition: { sourceVersion: 'v1' },
+    variable: JSON.stringify({ continuation: 'cached-other-value' }) };
+  for (const blank of ['', ' \t\r\n\u3000', undefined, null]) {
+    const cache = [{ ...row, ...Object.fromEntries(fields.map(field => [field, blank])) }];
+    const projected = await new SearchGateway(cacheRuntime(registry, cache, cache)).refreshBooks([original]);
+    assert.equal(projected.length, 1);
+    for (const field of fields) assert.equal(projected[0][field], original[field],
+      `same-source blank ${field} must preserve admitted nonblank metadata`);
+    assert.equal(projected[0].variables, original.variables, 'metadata enrichment must not replace continuation variables');
+    assert.equal(projected[0].bookId, original.bookId);
+    assert.equal(projected[0].detailUrl, original.detailUrl);
+    assert.equal(projected[0].sourceRuleVersion, original.sourceRuleVersion);
+    assert.equal(projected[0].searchRequestId, original.searchRequestId);
+  }
+  const richer = Object.fromEntries(fields.map(field => [field, `  new ${field}  `]));
+  const enrichedRows = [{ ...row, ...richer }];
+  const enriched = await new SearchGateway(cacheRuntime(registry, enrichedRows, enrichedRows)).refreshBooks([original]);
+  for (const field of fields) assert.equal(enriched[0][field], richer[field],
+    `nonblank ${field} updates unchanged, including its original whitespace`);
+  const staleRows = [{ ...row, ...richer, acquisition: { sourceVersion: 'old-version' } }];
+  const protectedRows = await new SearchGateway(cacheRuntime(registry, staleRows, staleRows)).refreshBooks([original]);
+  for (const field of fields) assert.equal(protectedRows[0][field], original[field],
+    `stale source facts cannot replace ${field}`);
+  assert.equal(protectedRows[0].variables, original.variables);
+  assert.equal(protectedRows[0].sourceRuleVersion, original.sourceRuleVersion);
+
+  // A newly discovered URL can share a Core relation but is not the same
+  // candidate. Its empty fields must not inherit the relation seed's metadata.
+  const relationRows = [{ ...row, ...Object.fromEntries(fields.map(field => [field, original[field]])) }];
+  const owner = cacheRuntime(registry, relationRows, relationRows);
+  // Use a mutable Core fixture to announce the complete changed relation.
+  let changed = false;
+  const related = { ...row, bookUrl: 'another-book-url', relationRevision: '2',
+    ...Object.fromEntries(fields.map(field => [field, ' \t '])) };
+  const gateway = new SearchGateway({ async request(method, params) {
+    if (!changed || method === 'source.list') return owner.request(method, params);
+    const cache = [{ ...relationRows[0], relationRevision: '2' }, related];
+    return cacheRuntime(registry, cache, cache).request(method, params);
+  } });
+  const initial = await gateway.refreshBooks([original]);
+  changed = true;
+  const complete = await gateway.refreshBooks(initial, { reset: false,
+    identities: [{ sourceId: original.sourceId, bookId: original.bookId }] });
+  const separate = complete.find(book => book.bookId === related.bookUrl);
+  assert.ok(separate, 'the Core-proven relation admits the distinct URL');
+  for (const field of fields) assert.equal(separate[field], undefined,
+    `a different URL must not inherit the relation seed's ${field}`);
+  assert.equal(separate.detailUrl, related.bookUrl);
+  assert.deepEqual(separate.variables, [{ name: 'continuation', value: 'cached-other-value' }]);
+  assert.equal(original.intro, 'The admitted book synopsis.', 'projection never mutates the admitted object');
+}
+
 // Anonymized shape of the VM's 73/61 mismatch: the selected row knows the
 // current title, another source connects an old title, and 12 sources still
 // publish that old title. One-hop matching loses those 12 source identities.

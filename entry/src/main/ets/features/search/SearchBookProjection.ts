@@ -54,6 +54,10 @@ export class SearchBookProjection {
     if (relationKey.length === 0 || relationRevision.length === 0) throw new Error('blank search relation');
     return { row, relationKey, relationRevision };
   }
+  private nonBlankMetadata(value: unknown, previous: string | undefined): string | undefined {
+    if (typeof value === 'string' && value.trim().length > 0) return value;
+    return previous !== undefined && previous.trim().length > 0 ? previous : undefined;
+  }
   private project(value: ProjectionRow, source: SearchSource, previous: SearchBook | undefined,
     seed: SearchBook): SearchBook {
     const row = value.row;
@@ -76,13 +80,13 @@ export class SearchBookProjection {
       sourceRuleVersion: previous?.sourceRuleVersion ?? source.sourceVersion ?? '', category: source.category,
       title: this.string(row, 'name') || previous?.title || seed.title, author: this.string(row, 'author'),
       authorIdentity: readBookAuthorIdentity(facts?.['authorIdentity'], this.string(row, 'author'), source.sourceVersion),
-      coverUrl: row['coverUrl'] as string | undefined, intro: row['intro'] as string | undefined,
-      kind: row['kind'] as string | undefined, latestChapterTitle: row['latestChapterTitle'] as string | undefined,
+      // Missing cache metadata may retain only this exact candidate's fields,
+      // never the relation seed's fields from another source or book URL.
+      coverUrl: this.nonBlankMetadata(row['coverUrl'], previous?.coverUrl),
+      intro: this.nonBlankMetadata(row['intro'], previous?.intro),
+      kind: this.nonBlankMetadata(row['kind'], previous?.kind),
+      latestChapterTitle: this.nonBlankMetadata(row['latestChapterTitle'], previous?.latestChapterTitle),
       acquisition: facts, variables, admittedOrder: previous?.admittedOrder };
-    if (previous !== undefined) {
-      result.coverUrl = result.coverUrl ?? previous.coverUrl; result.intro = result.intro ?? previous.intro;
-      result.kind = result.kind ?? previous.kind; result.latestChapterTitle = result.latestChapterTitle ?? previous.latestChapterTitle;
-    }
     return result;
   }
   private same(left: SearchBook, right: SearchBook): boolean {
