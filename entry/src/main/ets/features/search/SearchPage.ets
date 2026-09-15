@@ -1,5 +1,5 @@
 import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
-import { FrameCallback } from '@kit.ArkUI';
+import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { SearchSpinner } from './SearchSpinner';
@@ -1301,13 +1301,21 @@ struct SearchResultCard {
     return bookIntroText(this.group.book.intro);
   }
 
+  private coverWidth(): number {
+    return this.isTablet ? 96 : 88;
+  }
+
+  private coverHeight(): number {
+    return this.coverWidth() * (this.isTablet ? 92 / 68 : 82 / 60);
+  }
+
   build() {
     Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Bottom }) {
         if (this.group.book.coverUrl !== undefined && this.group.book.coverUrl.trim().length > 0) {
           Image(this.group.book.coverUrl)
-            .width(this.isTablet ? 68 : 60)
-            .height(this.isTablet ? 92 : 82)
+            .width(this.coverWidth())
+            .height(this.coverHeight())
             .objectFit(ImageFit.Cover)
             .borderRadius(6);
         } else {
@@ -1328,8 +1336,8 @@ struct SearchResultCard {
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .padding({ left: TOK_SPACE_ROW_BLOCK, right: TOK_SPACE_ROW_BLOCK, bottom: 6 });
           }
-          .width(this.isTablet ? 68 : 60)
-          .height(this.isTablet ? 92 : 82)
+          .width(this.coverWidth())
+          .height(this.coverHeight())
           .linearGradient({
             angle: 141.7,
             colors: [[readerAppColor('TOK_PRIMARY_GRADIENT_START', this.appThemeScheme), 0.077], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0.923]],
@@ -1337,87 +1345,97 @@ struct SearchResultCard {
           .borderRadius(6);
         }
       }
-      .width(this.isTablet ? 68 : 60)
-      .height(this.isTablet ? 92 : 82)
+      .width(this.coverWidth())
+      .height(this.coverHeight())
       .borderRadius(6);
 
-      Column({ space: 5 }) {
-        Text(this.group.book.title)
-          .width('100%')
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(15)
-          .lineHeight(19.5)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-        Text(bookAuthorLabel(this.group.book.author, this.group.book.authorIdentity, this.group.book.sourceRuleVersion))
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(12)
-          .lineHeight(12)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-        if (this.group.book.latestChapterTitle !== undefined) {
-          Text(this.group.book.latestChapterTitle)
+      Column() {
+        Column({ space: 5 }) {
+          Text(this.group.book.title)
             .width('100%')
-            .opacity(0.8)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(11)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .fontFamily('ReaderNotoSerifSCBold')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(15)
+            .lineHeight(19.5)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-        }
 
-        if (this.displayIntro().length > 0) {
-          Text(this.displayIntro())
+          Text(bookAuthorLabel(this.group.book.author, this.group.book.authorIdentity, this.group.book.sourceRuleVersion))
             .width('100%')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(12)
-            .lineHeight(18)
-            .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
-            .maxLines(2)
+            .lineHeight(12)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-        }
 
-        Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
+          if ((this.group.book.latestChapterTitle?.trim().length ?? 0) > 0) {
+            Text(this.group.book.latestChapterTitle)
+              .width('100%')
+              .opacity(0.8)
+              .fontFamily('ReaderInter')
+              .fontWeight(FontWeight.Regular)
+              .fontSize(11)
+              .lineHeight(11)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
+          }
+
+          if (this.displayIntro().length > 0) {
+            Text(this.displayIntro())
+              .width('100%')
+              .fontFamily('ReaderInter')
+              .fontWeight(FontWeight.Regular)
+              .fontSize(12)
+              .lineHeight(18)
+              .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
+          }
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start);
+
+        Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+          space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
           Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
             .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
             .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis }).margin({ right: 6, bottom: 2 });
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
             .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).maxLines(1).margin({ right: 6, bottom: 2 });
+            .borderRadius(4).maxLines(1);
           if (this.group.inBookshelf) {
             Text('已在书架')
               .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).maxLines(1).margin({ right: 6, bottom: 2 });
+              .borderRadius(4).maxLines(1);
           }
         }
-        .width('100%');
+        .width('100%')
+        .margin({ top: 5 });
       }
       .layoutWeight(1)
+      // Only the gap above the tags grows for short metadata. Long metadata
+      // grows the row naturally, while the original cover ratio stays intact.
+      .constraintSize({ minHeight: this.coverHeight() })
+      .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.cardWidth)
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
-    .alignItems(VerticalAlign.Top)
+    .alignItems(VerticalAlign.Bottom)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } })
     .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
   }
