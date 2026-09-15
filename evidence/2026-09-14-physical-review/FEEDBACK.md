@@ -10,6 +10,7 @@
 - 本地证据：[Core 全量](search-flow-implementation/explicit-chapter-refresh/reader-refresh-core-check.log)为 3,882/3,882、210 协议、fmt/clippy、drift、C/C++ ABI 全通过；最后划线 URL 单项保护补丁另由[最终位置组 26/26](search-flow-implementation/explicit-chapter-refresh/reader-explicit-refresh-highlight-url-final.log)、[真实 HTTP 刷新 1/1](search-flow-implementation/explicit-chapter-refresh/reader-explicit-refresh-highlight-url-http.log)及[Clippy](search-flow-implementation/explicit-chapter-refresh/reader-explicit-refresh-highlight-url-clippy.log)通过，未冒称在最终单项补丁后又跑一次全工作区。[Harmony 最终 268 组](search-flow-implementation/explicit-chapter-refresh/reader-refresh-harmony-final.log)通过，包含实际 LRE/Index 方法及目录/书签 Builder 的回归。失败前探针及证据校验见[文件索引](search-flow-implementation/explicit-chapter-refresh/evidence-files.json)。
 - 明确保留的相邻缺口：书源最终重定向 URL 改变仍会被本章缓存 URL 身份校验拒绝；旧缓存未绑定原始逻辑章 URL/目录版本，不能凭当前 TOC 或删 query 猜身份后覆盖。已记根 DEVELOPMENT_BACKLOG PH93，现为真实错误和保留旧数据，不算已支持。
 - 交付边界：本轮没有构建 Native/HAP、安装或操作设备；手机仍是上文 e5483b93 包。代码/本地回归完成，新包、设备行为和用户验收尚未完成。这里证明通用生产分支，不伪称已抓取用户当次真机刷新响应。
+- 后续用户授权真机重装：Core `2e5a3504d` Native 已构建。首轮 HAP 在 ArkTS 编译阶段拒绝 LRE 两处对象展开（`arkts-no-spread`，原日志 `/private/tmp/reader-refresh-install-hap.log`）；Node 回归不覆盖这项平台语法规则。已改为显式复制全部书签字段并保留/撤销正确的 scope，重新构建后才可安装，失败包未发布、未操作手机应用。
 
 ## PH92：代理与搜索继续实施（2026-09-15）
 

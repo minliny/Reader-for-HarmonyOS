@@ -5916,7 +5916,8 @@ export struct ReadingExperience {
         // A parent projection may still carry the previous body's proof while
         // the canonical list reloads. Retain its original quote, never a newly
         // sliced quote or a current coordinate claimed from the old offset.
-        return { ...mark, positionScope: undefined };
+        return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
+          chapterTitle: mark.chapterTitle, content: mark.content, bookText: mark.bookText, positionScope: undefined };
       }
       if ((mark.bookText ?? '').length > 0 || mark.chapterOffset >= map.scalarCount()) return mark;
       const key = JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex,
@@ -5933,7 +5934,8 @@ export struct ReadingExperience {
       // Display-only recovery for older records. Never overwrite the user's
       // note or persist guessed original text, and never fetch another chapter.
       changed = true;
-      return { ...mark, bookText: excerpt };
+      return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
+        chapterTitle: mark.chapterTitle, content: mark.content, bookText: excerpt, positionScope: mark.positionScope };
     });
     if (!changed) return entries;
     const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title,
