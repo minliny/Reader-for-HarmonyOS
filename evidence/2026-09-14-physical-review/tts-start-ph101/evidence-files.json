@@ -1,0 +1,192 @@
+[
+  {
+    "path": "REPORT.md",
+    "sha256": "f84e3c506a1114a450c9b5b458a12bbc413fdb6df94f6c685040c0956d1878c9",
+    "bytes": 5316
+  },
+  {
+    "path": "reader-ph101-boot.log",
+    "sha256": "3eec7ff83a05f54ec3ee3856db21a220928cc5b3fb96d0c47f2dcafd9022c506",
+    "bytes": 6
+  },
+  {
+    "path": "reader-ph101-gateway-review.log",
+    "sha256": "1cdc9b9df72a9b284703997b125cca49d742a3c13676866ff0c2e8d415790f47",
+    "bytes": 438
+  },
+  {
+    "path": "reader-ph101-hap-build.log",
+    "sha256": "d8471578ae0d49ec1a5d2d40d93912617b1db541516cd122406d62627032519f",
+    "bytes": 163331
+  },
+  {
+    "path": "reader-ph101-hap-verify.log",
+    "sha256": "df3d1f795b010e7002a576b48ae28fc320741e20c19aa438bdad7be69c4526a9",
+    "bytes": 736
+  },
+  {
+    "path": "reader-ph101-launch-existing.log",
+    "sha256": "d6a7663243f0e050c39f0fca027eb31873acca76d43917192b30934179446110",
+    "bytes": 120
+  },
+  {
+    "path": "reader-ph101-playback-existing.log",
+    "sha256": "8a95a54b23b41d6647d36a6796e8d46657d03714176876b19c9931b8c5cc8c94",
+    "bytes": 467
+  },
+  {
+    "path": "reader-ph101-root-launch-recovery.log",
+    "sha256": "1c2fe68fdc2178162ca8ee24c88cef5d11aef324b0572ff2182f8cbd57288746",
+    "bytes": 308
+  },
+  {
+    "path": "reader-ph101-root-tts-test.log",
+    "sha256": "fc8de30782b062a2b2d30bcbd7159198b7b9f1f77a2f48678873e88957c66000",
+    "bytes": 438
+  },
+  {
+    "path": "reader-ph101-test-reader-tts-gateway.mjs.log",
+    "sha256": "e88c5bdd55ee5d3a0f9c40d3712e1b8f894555f82aa547cfce17adf3daee3c8c",
+    "bytes": 438
+  },
+  {
+    "path": "reader-ph101-test-reader-tts-launch-intent.mjs.log",
+    "sha256": "bce794e8abe89018080bbcd055138513f372d5709fc15cd5827be3f986156688",
+    "bytes": 125
+  },
+  {
+    "path": "reader-ph101-test-reader-tts-quick-preparation.mjs.log",
+    "sha256": "c75288f5a395bde416089f709e57479c178a9aaff3f6b23372e8dd1a149371a5",
+    "bytes": 385
+  },
+  {
+    "path": "reader-ph101-test-reader-tts-session-coordinator.mjs.log",
+    "sha256": "a146164a5dcf6d6db815968ad6f0155f67eaeee7be37b9b43e8fb5930f1bc6d5",
+    "bytes": 39
+  },
+  {
+    "path": "reader-ph101-test-reader-tts-state-machine.mjs.log",
+    "sha256": "4b8cb480aaf9ec4e20fc23f7c999f64f8325ed05584fd31a098967fcd345de83",
+    "bytes": 430
+  },
+  {
+    "path": "reader-ph101-tts-gateway-after.log",
+    "sha256": "035b8508814cae1587911638d75849f4cd0789ef004121c49191ca2c9b22b403",
+    "bytes": 438
+  },
+  {
+    "path": "reader-ph101-tts-gateway-before.log",
+    "sha256": "053e68062ea704bd1530daf8034d7a00318470eb37ca0a48dbdf99d0abb910f7",
+    "bytes": 683
+  },
+  {
+    "path": "reader-ph101-tts-layout-probe.log",
+    "sha256": "46c4242f3609873072fe6694f5e4e41a758dbf6fc4ff06f448ab443dc4538a38",
+    "bytes": 4974
+  },
+  {
+    "path": "reader-ph101-tts-layout-probe.mjs",
+    "sha256": "fac5c144f2683b85211d1d900e245d34f99864cdf2b6712ae8049399375b19bc",
+    "bytes": 2511
+  },
+  {
+    "path": "reader-ph101-vm-inspect.log",
+    "sha256": "51f88fc8c7ff627a47b1106b76830c843f9319006d88363c5fb45a55e61d948a",
+    "bytes": 1173
+  },
+  {
+    "path": "reader-ph101-vm-install.log",
+    "sha256": "a53e22893837de7908d8bfeebaeecfc57b0b431d589af47eba8a0b93659dfe5e",
+    "bytes": 206
+  },
+  {
+    "path": "reader-ph101-vm-processes.log",
+    "sha256": "2a3ec45e976eec455ddd93784d00454c6d189d7acabeb9380cbc065e6ba7f955",
+    "bytes": 13385
+  },
+  {
+    "path": "vm-deployment.json",
+    "sha256": "4966aee2e65989a08b6ca74fc0885aba2f13c7c599bf6af3dea355a7a8daa9e8",
+    "bytes": 1755
+  },
+  {
+    "path": "vm-repaired/reader-control-26958064-dfdd-41dc-a5ce-5e74f024a9bb-frame-0.png",
+    "sha256": "011848b950f28a04d3101dbdcc7e3c247e20dcac0b512287bf5faa1e342235f8",
+    "bytes": 582958
+  },
+  {
+    "path": "vm-repaired/reader-control-26958064-dfdd-41dc-a5ce-5e74f024a9bb-frame-1.png",
+    "sha256": "23dafc286f240fe9ecbbc9f645b5fb832397d376dc208c4b3a0f9fb205dc781a",
+    "bytes": 592231
+  },
+  {
+    "path": "vm-repaired/reader-control-26958064-dfdd-41dc-a5ce-5e74f024a9bb-frame-2.png",
+    "sha256": "297b98b6438c71ef4f00dbd5714e39c5f14c1688deb118017eda8751152df253",
+    "bytes": 633166
+  },
+  {
+    "path": "vm-repaired/reader-control-26958064-dfdd-41dc-a5ce-5e74f024a9bb-frame-3.png",
+    "sha256": "911bef7841f236e547d2cf13e8b12671a7f79a034ef66cb2a0149b82ce7b9cf8",
+    "bytes": 627624
+  },
+  {
+    "path": "vm-repaired/reader-control-26958064-dfdd-41dc-a5ce-5e74f024a9bb-frame-4.png",
+    "sha256": "911bef7841f236e547d2cf13e8b12671a7f79a034ef66cb2a0149b82ce7b9cf8",
+    "bytes": 627624
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-after-play.json",
+    "sha256": "407563dba95ba8042b4701df8795659f944edf69e3a584072b56d58e641fb2a4",
+    "bytes": 221877
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-before-play.png",
+    "sha256": "011848b950f28a04d3101dbdcc7e3c247e20dcac0b512287bf5faa1e342235f8",
+    "bytes": 582958
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-live-tts.json",
+    "sha256": "56d2d172e949ae4fa405bfe9fef4c2f2ebe1aa3a4a14feffafdf62c1ab7a7ff6",
+    "bytes": 175590
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-live-tts.png",
+    "sha256": "f817387903db1eceb89eb10ebc810a3687492edcc4817bbcd5ffba7ceefd3d39",
+    "bytes": 583514
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-reader.json",
+    "sha256": "48ff1b19c0ab120f0b1a2ca8f6e78c0de9e71481bb4d141fd3d4142187d75932",
+    "bytes": 114980
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-start.json",
+    "sha256": "976015cacaf2b95fe03fbb0a9a20b034fe4f9edb99ad4ff3079cc8b15afcf60d",
+    "bytes": 141215
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-stopped.json",
+    "sha256": "9798939a71b9472ae11f96a6d08beb01c7b879422da60af0063e7f1b0743ea27",
+    "bytes": 175596
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-tts-panel.json",
+    "sha256": "6ca28dbe33bad11635bfab56eeaaabe4d22ebfec7e86ec1ba14b5950febdf0cc",
+    "bytes": 175596
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-tts-ready.json",
+    "sha256": "3889a0b6127b4429c390f59aa4ab186e306bac601b89010175dba3c0a7e4a690",
+    "bytes": 113648
+  },
+  {
+    "path": "vm-repaired/reader-control-ph101-tts-ready.png",
+    "sha256": "9b59c764218cb11bce2acae329e9feb5a5be81678a4907389b8d0652f22b1f07",
+    "bytes": 590492
+  },
+  {
+    "path": "vm-repaired/reader-control-probe-1789491797862-d86e99b3-bfee-4a8f-9626-2cb335076e35.jsonl",
+    "sha256": "99a0b02d0d77456587a951bbcd67c71c2e389e38ed5a9313def1571a193c47de",
+    "bytes": 22697
+  }
+]

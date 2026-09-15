@@ -24,4 +24,18 @@
 
 本地无法证明实际 ArkUI 图层交接、系统 TTS 引擎回调与用户所述瞬间偏移。新包完成后，只在已存在并确认就绪的 Mate 80 Pro VM 上，保留数据打开已有书籍，快捷朗读点击播放、获取短时画面/布局及状态，确认是否启动、是否发生恢复，再停止朗读。发现新故障先回到代码定位。手机听感和用户验收仍独立 OPEN。
 
-构建、安装、VM 结果待追加；本地检查不等于全量验收完成。
+## 产物与 VM 结果（2026-09-16 北京时间）
+
+修复提交 `ce5026cc`；构建源码 Harmony `973aa937` / Core `bf49495317798f68b98928712eb6e106af02bed1`，两仓构建时 clean。run `20260915T170116Z-973aa937-8ca702f9`，276 组 Harmony、ArkTS 编译、隔离非增量构建、signed debug 签名验证和独立 manifest 复验 PASS。Core Native 未改动。
+
+- [不可变 manifest](../../../.reader-artifacts/hap/20260915T170116Z-973aa937-8ca702f9/manifest.json)
+- 签名 HAP SHA-256：`6f05565d0f4d1ad2f7d8e3e9ba70a5b602e67ee0c5a302acf37dcb2d2e034b9a`。
+- 既有 ArkWebResourceDiagnostic 类型名称与 SearchPage ObjectLink 编译警告保留在原日志；编译退出成功，不称无警告。
+- 当前现场重确认 Mate 80 Pro / 原实例路径，Emulator PID 21552（9/13 启动）、HDC `127.0.0.1:5555` Connected、boot.completed=true、Emulator 完成标记、SceneBoard PID1529 自02:19:23连续运行。没有冷启动/新建/重置 VM。
+- 2026-09-15 17:02:44 UTC 保数据覆盖安装并普通启动 PASS，targetRef `6460677a198b`。[部署回执](vm-deployment.json)
+
+在已有本地测试书 `ReaderPagingAudit20260911` 第18章，从快捷朗读控制点击播放（17:05:39 UTC）。采样显示控件进入既定向右下角的胶囊过渡，最终胶囊显示暂停按钮，没有退回原快捷控件。17:06:13 再唤起控制栏显示“朗读中”；源码只在实际引擎 onStart 后发布该状态，前后截图的正文朗读下划线从首行推进到后续段落。17:06:48 点击停止，随后恢复“未开始”；17:06:49 退出探针并释放锁。
+
+[播放前](vm-repaired/reader-control-ph101-before-play.png) · [播放后胶囊](vm-repaired/reader-control-26958064-dfdd-41dc-a5ce-5e74f024a9bb-frame-4.png) · [持续朗读](vm-repaired/reader-control-ph101-live-tts.png)
+
+新包的系统 TTS 启动、推进、停止 VM 路径 PASS；采样未复现“左漂再恢复”。点击前、朗读中、停止后播放器布局边界均为 `[131,1727][970,1958]`。采样为5张离散截图，实际触发约3.5/326.7/1012.9/2010.5/2400.8ms，并非连续录像或帧率测量，不能宣称完全排除采样间瞬态偏移。未录制/主观验收输出音频，不扩大为所有语音服务通过。期间只操作已有 VM，手机仍为旧包，手机动效/音频和用户验收 OPEN。

@@ -1,0 +1,184 @@
+UID             PID   PPID C STIME TTY          TIME CMD
+root              1      0 0 02:19:12 ?     00:00:28 init --second-stage 1460567
+root              2      0 0 02:19:12 ?     00:00:00 [kthreadd]
+root              3      2 0 02:19:12 ?     00:00:00 [rcu_gp]
+root              4      2 0 02:19:12 ?     00:00:00 [rcu_par_gp]
+root              6      2 0 02:19:12 ?     00:00:00 [kworker/0:0H-events_highpri]
+root              8      2 0 02:19:12 ?     00:00:00 [mm_percpu_wq]
+root              9      2 0 02:19:12 ?     00:00:00 [rcu_tasks_rude_]
+root             10      2 0 02:19:12 ?     00:00:29 [ksoftirqd/0]
+root             11      2 0 02:19:12 ?     00:01:30 [rcu_sched]
+root             12      2 0 02:19:12 ?     00:00:02 [migration/0]
+root             14      2 0 02:19:12 ?     00:00:00 [cpuhp/0]
+root             15      2 0 02:19:12 ?     00:00:00 [cpuhp/1]
+root             16      2 0 02:19:12 ?     00:00:02 [migration/1]
+root             17      2 0 02:19:12 ?     00:00:10 [ksoftirqd/1]
+root             19      2 0 02:19:12 ?     00:00:00 [kworker/1:0H-kblockd]
+root             20      2 0 02:19:12 ?     00:00:00 [cpuhp/2]
+root             21      2 0 02:19:12 ?     00:00:02 [migration/2]
+root             22      2 0 02:19:12 ?     00:00:11 [ksoftirqd/2]
+root             24      2 0 02:19:12 ?     00:00:00 [kworker/2:0H-events_highpri]
+root             25      2 0 02:19:12 ?     00:00:00 [cpuhp/3]
+root             26      2 0 02:19:12 ?     00:00:02 [migration/3]
+root             27      2 0 02:19:12 ?     00:00:11 [ksoftirqd/3]
+root             29      2 0 02:19:12 ?     00:00:00 [kworker/3:0H-kblockd]
+root             30      2 0 02:19:12 ?     00:00:00 [kdevtmpfs]
+root             31      2 0 02:19:12 ?     00:00:00 [netns]
+root             32      2 0 02:19:12 ?     00:19:33 [kauditd]
+root             33      2 0 02:19:12 ?     00:00:00 [khungtaskd]
+root             34      2 0 02:19:12 ?     00:00:00 [oom_reaper]
+root             35      2 0 02:19:12 ?     00:00:00 [writeback]
+root             36      2 0 02:19:12 ?     00:00:06 [kcompactd0]
+root             62      2 0 02:19:12 ?     00:00:00 [kblockd]
+root             63      2 0 02:19:12 ?     00:00:00 [ata_sff]
+root             64      2 0 02:19:12 ?     00:00:00 [devfreq_wq]
+root             65      2 0 02:19:12 ?     00:00:00 [watchdogd]
+root             66      2 0 02:19:12 ?     00:00:00 [rpciod]
+root             67      2 0 02:19:12 ?     00:00:08 [kworker/0:1H-kblockd]
+root             68      2 0 02:19:12 ?     00:00:00 [kworker/u9:0]
+root             69      2 0 02:19:12 ?     00:00:00 [xprtiod]
+root             70      2 0 02:19:12 ?     00:00:00 [cfg80211]
+root             71      2 0 02:19:12 ?     00:00:00 [kswapd0]
+root             72      2 0 02:19:12 ?     00:00:34 [snapshotd]
+root             73      2 0 02:19:12 ?     00:00:00 [zswapd0]
+root             74      2 0 02:19:12 ?     00:00:00 [nfsiod]
+root             78      2 0 02:19:13 ?     00:00:00 [ipv6_addrconf]
+root             80      2 0 02:19:13 ?     00:01:01 [cache_freed]
+root             85      2 0 02:19:13 ?     00:00:07 [kworker/2:1H-kblockd]
+root             86      2 0 02:19:13 ?     00:00:00 [ext4-rsv-conver]
+root             87      2 0 02:19:13 ?     00:00:00 [ext4-rsv-conver]
+root             88      2 0 02:19:13 ?     00:00:00 [ext4-rsv-conver]
+root             91      2 0 02:19:13 ?     00:00:06 [kworker/1:1H-kblockd]
+root             93      2 0 02:19:13 ?     00:00:28 [jbd2/vdd-8]
+root             94      2 0 02:19:13 ?     00:00:00 [ext4-rsv-conver]
+root             96      2 0 02:19:14 ?     00:00:07 [kworker/3:1H-kblockd]
+ueventd          97      1 0 02:19:14 ?     00:00:02 ueventd
+watchdog         98      1 0 02:19:14 ?     00:00:01 watchdog_service 10 20
+faultloggerd    105      1 0 02:19:15 ?     00:00:00 faultloggerd
+logd            106      1 0 02:19:15 ?     00:08:49 hilogd
+storage_manager 121      1 0 02:19:15 ?     00:00:03 storage_manager
+root            122      1 0 02:19:15 ?     00:00:01 storage_daemon
+samgr           126      1 0 02:19:15 ?     00:03:45 samgr
+paramwatcher    127      1 0 02:19:15 ?     00:00:01 param_watcher
+hiview          131      1 0 02:19:15 ?     00:08:27 hiview
+hdf_devmgr      134      1 0 02:19:15 ?     00:00:02 hdf_devmgr
+root            135      1 0 02:19:15 ?     00:00:41 appspawn
+root            136      1 0 02:19:15 ?     00:00:00 QemuParams boot-params
+gps             176      1 0 02:19:15 ?     00:01:12 locationhub
+accessibility   196      1 0 02:19:16 ?     00:00:08 accessibility
+audio           204      1 0 02:19:16 ?     00:00:16 audio_server
+system          205      1 0 02:19:16 ?     00:00:00 concurrent_task_service
+dlp_credential  222      1 0 02:19:16 ?     00:00:00 dlp_credential_service_sa
+healthsport     237      1 0 02:19:16 ?     00:00:16 healthsport_services
+huks_server     239      1 0 02:19:16 ?     00:00:03 huks_service
+memmgr          257      1 0 02:19:16 ?     00:00:27 memmgrservice
+input           262      1 0 02:19:16 ?     00:00:34 multimodalinput
+root            279      1 0 02:19:16 ?     00:00:02 resource_schedule_executor
+ressched        301      1 0 02:19:16 ?     00:01:31 resource_schedule_service
+access_token    325      1 0 02:19:16 ?     00:00:40 accesstoken_service
+net_manager     333      1 0 02:19:16 ?     00:00:51 netmanager
+radio           334      1 0 02:19:16 ?     00:01:35 telephony
+wallpaper       344      1 0 02:19:16 ?     00:00:00 wallpaper_service
+shell           360    971 2 00:59:56 ?     00:00:00 ps -ef
+user_data_rw    417      1 0 02:19:17 ?     00:02:37 file_monitor_service
+msdp            430      1 0 02:19:18 ?     00:00:40 msdp
+push            440      1 0 02:19:18 ?     00:00:20 push_manager_service
+time            450      1 0 02:19:18 ?     00:00:23 time_service
+ddms            471      1 0 02:19:18 ?     00:15:32 distributeddata
+fingerprint_auth_host 491 1 0 02:19:18 ?    00:00:00 fingerprint_auth_host   -i 22 -n fingerprint_auth_host
+user_auth_host  500      1 0 02:19:18 ?     00:00:00 user_auth_host          -i 21 -n user_auth_host
+face_auth_host  507      1 0 02:19:18 ?     00:00:00 face_auth_host          -i 19 -n face_auth_host
+codec_host      508      1 0 02:19:18 ?     00:00:00 codec_host              -i 16 -n codec_host
+device_manager  523      1 0 02:19:18 ?     00:00:39 device_manager
+light_host      524      1 0 02:19:18 ?     00:00:00 light_host              -i 15 -n light_host
+vibrator_host   525      1 0 02:19:18 ?     00:00:00 vibrator_host           -i 14 -n vibrator_host
+sensor_host     530      1 0 02:19:18 ?     00:09:58 sensor_host             -i 13 -n sensor_host
+input_user_host 543      1 0 02:19:18 ?     00:00:00 input_user_host         -i 10 -n input_user_host
+camera_host     549      1 0 02:19:18 ?     00:00:00 camera_host             -i 9 -n camera_host
+audio_host      550      1 0 02:19:18 ?     00:00:00 audio_host              -i 8 -n audio_host
+wifi_host       551      1 0 02:19:18 ?     00:00:11 wifi_host               -i 5 -n wifi_host
+power_host      552      1 0 02:19:18 ?     00:01:09 power_host              -i 4 -n power_host
+usb_host        597      1 0 02:19:19 ?     00:00:00 usb_host                -i 3 -n usb_host
+blue_host       598      1 0 02:19:19 ?     00:00:00 blue_host               -i 1 -n blue_host
+allocator_host  603      1 0 02:19:19 ?     00:00:03 allocator_host          -i 12 -n allocator_host
+composer_host   605      1 0 02:19:19 ?     00:05:18 composer_host           -i 11 -n composer_host
+useriam         613      1 0 02:19:19 ?     00:00:46 useriam
+uiserver        622      1 0 02:19:19 ?     00:00:08 ui_service
+dsoftbus        637      1 0 02:19:19 ?     00:01:50 softbus_server
+sensor          638      1 0 02:19:19 ?     00:03:18 sensors
+security_guard  643      1 0 02:19:19 ?     00:01:02 security_guard
+pin_auth_host   644      1 0 02:19:19 ?     00:00:00 pin_auth_host           -i 20 -n pin_auth_host
+media           667      1 0 02:19:19 ?     00:00:00 av_codec_service
+access_token    668      1 0 02:19:19 ?     00:00:00 privacy_service
+powermgr        678      1 0 02:19:19 ?     00:04:42 powermgr
+netsysnative    689      1 0 02:19:19 ?     00:01:18 netsysnative
+media           694      1 0 02:19:19 ?     00:00:17 media_service
+media_monitor   695      1 0 02:19:19 ?     00:00:01 media_monitor
+inputmethod     706      1 0 02:19:19 ?     00:00:25 inputmethod_service
+huawei_id       726      1 0 02:19:19 ?     00:00:07 huawei_id_svc
+location_host   754      1 0 02:19:19 ?     00:00:00 location_host           -i 23 -n location_host
+hianalytics     783      1 0 02:19:19 ?     00:00:00 hianalytics
+graphics        791      1 0 02:19:19 ?     00:06:09 render_service
+foundation      802      1 0 02:19:19 ?     00:04:02 foundation
+drmserver       806      1 0 02:19:19 ?     00:00:58 drm_service
+data_monitor_service 813 1 0 02:19:19 ?     00:00:00 data_monitor_service
+cccs            840      1 0 02:19:20 ?     00:00:01 client_cloud_cache_service
+cameraserver    841      1 0 02:19:20 ?     00:00:00 camera_service
+av_session      848      1 0 02:19:20 ?     00:00:26 av_session
+aps_manager     887      1 0 02:19:20 ?     00:01:55 aps_manager
+account         893      1 0 02:19:20 ?     00:00:07 accountmgr
+CollaborationFwk 904     1 0 02:19:20 ?     00:00:39 CollaborationFwk
+shell           971      1 0 02:19:20 ?     00:19:28 hdcd
+dms            1030      1 0 02:19:20 ?     00:00:37 deviceprofile
+wifi           1084      1 0 02:19:20 ?     00:02:13 wifi_manager_service
+root           1169      2 0 02:19:21 ?     00:00:00 [share_item_time]
+root           1172      2 0 02:19:21 ?     00:00:00 [dfs_ino_wb1]
+root           1174      2 0 02:19:21 ?     00:00:00 [dfs_sb_wb1]
+root           1175      2 0 02:19:21 ?     00:00:00 [dfs_srv_wb1]
+root           1179      2 0 02:19:21 ?     00:00:00 [share_item_time]
+root           1180      2 0 02:19:21 ?     00:00:00 [dfs_ino_wb2]
+root           1181      2 0 02:19:21 ?     00:00:00 [dfs_sb_wb2]
+root           1182      2 0 02:19:21 ?     00:00:00 [dfs_srv_wb2]
+root           1186      2 0 02:19:21 ?     00:00:00 [share_item_time]
+root           1187      2 0 02:19:21 ?     00:00:00 [dfs_ino_wb3]
+root           1188      2 0 02:19:21 ?     00:00:00 [dfs_sb_wb3]
+root           1192      2 0 02:19:21 ?     00:00:00 [dfs_srv_wb3]
+wifi           1273      1 0 02:19:21 ?     00:00:08 wpa_host                -i 6 -n wpa_host
+20001          1307    135 0 02:19:22 ?     00:00:32 com.huawei.emulatormultiscreen
+20005          1384    135 0 02:19:22 ?     00:00:34 com.huawei.hms.pafservice
+20002          1407    135 0 02:19:22 ?     00:00:29 com.huawei.hmsapp.samplemanagement
+asset_service  1445      1 0 02:19:23 ?     00:00:03 asset_service
+20020012       1529    135 0 02:19:23 ?     00:09:14 com.ohos.sceneboard
+nwebspawn      1546      1 0 02:19:23 ?     00:00:40 nwebspawn
+20006          1567    135 0 02:19:23 ?     00:00:21 com.huawei.hmos.location
+device_cert_manager_server 1643 1 0 02:19:24 ? 00:00:00 dcm_service
+20020040       1645    135 0 02:19:24 ?     00:00:49 com.ohos.medialibrary.medialibrarydata
+20020019       1660    135 0 02:19:24 ?     00:00:35 com.huawei.hms.adsservice
+20020018       1672    135 0 02:19:24 ?     00:00:32 com.huawei.hmsapp.intelligent
+20020048       1681    135 0 02:19:24 ?     00:00:34 com.ohos.contactsdataability
+20020012       1981    135 0 02:19:27 ?     00:00:43 com.ohos.sceneboard:EngineServiceAbility:1
+root           2237      2 0 02:19:31 ?     00:00:01 [psimon]
+appgallery_service 2311  1 0 02:19:32 ?     00:00:00 appgallery_service
+root           2344      1 0 02:19:33 ?     00:00:16 QemuParams boot-complete
+root           2346      1 0 02:19:33 ?     00:00:00 QemuParams clipboard-content
+root           2347      1 0 02:19:33 ?     00:00:00 QemuParams qemud-command
+20004          2427    135 0 02:19:33 ?     00:00:42 com.huawei.hms.pushservice
+file_system_service 2460 1 0 02:19:33 ?     00:00:00 file_system_service
+pasteboard     2488      1 0 02:19:34 ?     00:00:01 pasteboard_service
+hidumper_service 2933    1 1 02:19:36 ?     00:24:46 hidumper_service
+20020073       6794    135 1 00:36:39 ?     00:00:18 io.reader.harmonyos
+root           8947      2 0 00:38:28 ?     00:00:00 [kworker/1:0-events]
+root           9017    135 0 00:38:30 ?     00:00:00 apppool
+root          12781      2 0 16:30:00 ?     00:00:38 [kworker/0:0-events]
+root          13897      2 0 00:42:35 ?     00:00:00 [kworker/3:1-mm_percpu_wq]
+atomicservice_distribution 14540 1 0 02:30:11 ? 00:00:00 atomicservice_ecological_rule_manager
+device_activate_service 15510 1 0 23:47:32 ? 00:00:00 device_activate_service
+root          16746      2 0 18:58:24 ?     00:00:00 [kworker/2:1-events]
+root          17871      2 0 00:46:15 ?     00:00:00 [kworker/u8:2-ext4-rsv-conversion]
+deviceinfo    18912      1 0 18:55:21 ?     00:00:00 deviceinfoservice
+root          19407      2 0 00:19:22 ?     00:00:00 [kworker/2:0]
+root          21971      2 0 23:52:51 ?     00:00:00 [kworker/3:3-events]
+root          23919      2 0 00:51:48 ?     00:00:00 [kworker/u8:1-ext4-rsv-conversion]
+root          25106      2 0 23:55:34 ?     00:00:00 [kworker/0:2-events]
+root          25189      2 0 23:55:38 ?     00:00:00 [kworker/1:2-events]
+root          29430      2 0 00:56:53 ?     00:00:00 [kworker/u8:0-flush-254:48]
