@@ -8,16 +8,39 @@ export type NetworkTarget = {
   bypassSystemProxy?: boolean;
 };
 
+type NetworkEnvironmentDetails = {
+  category: string;
+  phase: string;
+  operation?: string;
+  platformCode?: number;
+  platformType?: string;
+};
+
 export class NetworkEnvironmentError extends Error {
   readonly code: string = 'NETWORK_ERROR';
   readonly retryable: boolean = true;
-  readonly details: { category: string; phase: string };
-  constructor(phase: 'dns' | 'route' | 'transport', message: string) {
+  readonly details: NetworkEnvironmentDetails;
+  constructor(phase: 'dns' | 'route' | 'transport', message: string, operation?: string) {
     super(message);
     this.name = 'NetworkEnvironmentError';
     this.details = { category: 'NETWORK_ENVIRONMENT', phase };
+    if (operation !== undefined) this.details.operation = operation;
   }
-  toJSON(): { code: string; message: string; retryable: boolean; details: { category: string; phase: string } } {
+  static fromPlatform(phase: 'dns' | 'route' | 'transport', message: string,
+    operation: string, cause: unknown): NetworkEnvironmentError {
+    const failure = new NetworkEnvironmentError(phase, message, operation);
+    // Native messages may contain a PAC URL, proxy endpoint or credentials.
+    // Retain only the numeric platform code and a fixed language-level type.
+    failure.details.platformType = cause instanceof TypeError ? 'TypeError' :
+      cause instanceof RangeError ? 'RangeError' : cause instanceof Error ? 'Error' :
+        cause === null ? 'null' : typeof cause;
+    if (cause !== null && typeof cause === 'object') {
+      const code = (cause as { code?: unknown }).code;
+      if (typeof code === 'number' && Number.isSafeInteger(code)) failure.details.platformCode = code;
+    }
+    return failure;
+  }
+  toJSON(): { code: string; message: string; retryable: boolean; details: NetworkEnvironmentDetails } {
     // Error.message is non-enumerable. The SDK forwards typed Host errors to
     // NAPI through JSON.stringify, so explicitly retain the required message.
     return { code: this.code, message: this.message, retryable: this.retryable, details: this.details };
@@ -96,20 +119,37 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
     throw new Error('url targets a private, loopback, link-local or invalid address and is not allowed');
   }
   let bypassSystemProxy = false;
+  let operation = 'getDefaultHttpProxy';
   try {
     const proxy = await connection.getDefaultHttpProxy();
-    const pacConfigured = connection.getPacUrl().length > 0 || connection.getPacFileUrl().length > 0;
+    if (proxy === null || typeof proxy !== 'object' || typeof proxy.host !== 'string' ||
+      typeof proxy.port !== 'number' || !Number.isInteger(proxy.port) || proxy.port < 0 || proxy.port > 65535 ||
+      !Array.isArray(proxy.exclusionList) || proxy.exclusionList.some((item: string): boolean => typeof item !== 'string')) {
+      throw new TypeError('Invalid system proxy result type');
+    }
+    operation = 'getPacUrl';
+    const pacUrl = connection.getPacUrl();
+    if (typeof pacUrl !== 'string') throw new TypeError('Invalid PAC URL result type');
+    let pacConfigured = pacUrl.length > 0;
+    if (!pacConfigured) {
+      operation = 'getPacFileUrl';
+      const pacFileUrl = connection.getPacFileUrl();
+      if (typeof pacFileUrl !== 'string') throw new TypeError('Invalid PAC file URL result type');
+      pacConfigured = pacFileUrl.length > 0;
+    }
+    operation = 'proxy.configuration';
     const hasProxy = proxy.host.trim().length > 0 && proxy.port > 0;
     if (pacConfigured && !hasProxy) {
-      throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试');
+      throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', operation);
     }
     bypassSystemProxy = hasProxy;
     if (hasProxy && !isSystemProxyExcluded(host, proxy.exclusionList)) {
       // Reuse the system PAC engine. For DIRECT, the transport must explicitly
       // bypass the local PAC proxy so the validated application DNS pin applies.
+      operation = 'findProxyForUrl';
       const pac = pacConfigured ? connection.findProxyForUrl(requestUrl).trim() : '';
       if (pacConfigured && pac.length === 0) {
-        throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试');
+        throw new NetworkEnvironmentError('route', '系统代理配置尚未就绪，请稍后重试', operation);
       }
       if (!pacConfigured || !/^DIRECT(?:\s*;|$)/i.test(pac)) {
         return { host, addresses: [], route: 'systemProxy' };
@@ -117,7 +157,7 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
     }
   } catch (error) {
     if (error instanceof NetworkEnvironmentError) throw error;
-    throw new NetworkEnvironmentError('route', '无法读取系统网络代理配置，请检查网络连接后重试');
+    throw NetworkEnvironmentError.fromPlatform('route', '无法读取系统网络代理配置，请检查网络连接后重试', operation, error);
   }
   if (host.includes(':') || /^[0-9.]+$/.test(host)) return { host, addresses: [host], route: 'direct', bypassSystemProxy };
   let network: SelectedNetwork;

@@ -124,3 +124,29 @@ assert.equal(wire.code,'INTERNAL','NETWORK_ERROR is a Host semantic code, not a 
 assert.equal(wire.details.hostErrorCode,'NETWORK_ERROR');
 assert.equal(wire.message,'代理路由未就绪');assert.equal(wire.retryable,true);assert.equal(wire.details.category,'NETWORK_ENVIRONMENT');assert.equal(wire.details.phase,'route');
 console.log('PASS: vendored SDK emits a legal CoreError code and preserves Host network semantics, message and retryability through NAPI JSON');
+
+
+// PH76 preload failure diagnostics retain only a fixed operation/type/code.
+for(const operation of ['getDefaultHttpProxy','getPacUrl','getPacFileUrl','findProxyForUrl']){
+ reset();if(operation==='findProxyForUrl'){proxy={host:'PRIVATE_PROXY',port:8080,exclusionList:[]};pac='DIRECT';}
+ const original=connection[operation];connection[operation]=()=>{throw Object.assign(new Error('PRIVATE_URL https://u:PRIVATE_PASSWORD@proxy.test/pac'),{code:2100002});};
+ try{await assert.rejects(prepareNetworkTarget('https://source.example'),error=>{
+  assert.equal(error.details.operation,operation);assert.equal(error.details.platformCode,2100002);assert.equal(error.details.platformType,'Error');
+  assert.equal(error.details.phase,'route');assert.equal(error.details.category,'NETWORK_ENVIRONMENT');
+  assert.ok(!JSON.stringify(error).includes('PRIVATE_'));return true;
+ });assert.equal(calls.dns,0,'failed system/PAC query never guesses DIRECT');}finally{connection[operation]=original;}
+}
+for(const invalid of [undefined,()=>42]){
+ reset();const original=connection.getPacFileUrl;connection.getPacFileUrl=invalid;
+ try{await assert.rejects(prepareNetworkTarget('https://source.example'),error=>error.details.operation==='getPacFileUrl'&&error.details.platformType==='TypeError'&&error.details.platformCode===undefined);assert.equal(calls.dns,0);}finally{connection.getPacFileUrl=original;}
+}
+console.log('PASS: native proxy getter failures/missing API/invalid return preserve fixed operation and numeric code without leaking native messages or guessing DIRECT');
+
+for(const operation of ['getDefaultHttpProxy','getPacUrl','getPacFileUrl','findProxyForUrl']){
+ for(const value of [undefined,null,42]){
+  reset();if(operation==='findProxyForUrl'){proxy={host:'system-proxy',port:8080,exclusionList:[]};pac='DIRECT';}
+  const original=connection[operation];connection[operation]=()=>value;
+  try{await assert.rejects(prepareNetworkTarget('https://source.example'),error=>error.details.operation===operation&&error.details.platformType==='TypeError');assert.equal(calls.dns,0);}finally{connection[operation]=original;}
+ }
+}
+console.log('PASS: undefined/null/wrong-type results from each native proxy API identify the exact operation');

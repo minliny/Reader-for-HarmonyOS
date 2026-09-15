@@ -19,7 +19,7 @@ function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='
  const emit=(kind,id,url)=>observer?.({kind,requestId:id,url,at:now});
  const executor={attachDiagnosticObserver(fn){observer=fn;},detachDiagnosticObserver(fn){if(observer===fn)observer=undefined;},cancel(id){jobs.get(id)?.reject({code:'CANCELLED'});jobs.delete(id);},execute(params,id){
   const prefix=params.document.baseUrl.slice(0,-4);emit('start',id);
-  if(throwEarly)throw new Error('controller unavailable');
+  if(throwEarly)throw throwEarly===true?new Error('controller unavailable'):throwEarly;
   const body=params.document.body, dataUrl='data:text/html;charset=utf-8,'+encodeURIComponent(body);
   const oldDocument=documents.at(-1);documents.push(params.document);
   // Exercise the real provider's main-document boundary, which the original
@@ -191,3 +191,18 @@ assert.match(host,/diagnosticResourceProvider:[^\n]+undefined = undefined/);
 assert.ok(!read('ArkWebResourceDiagnostic.ts').includes('onResourceLoad('),'runner never fabricates native callbacks');
 assert.ok(!read('ArkWebResourceDiagnostic.ts').includes('performance.getEntries'));
 console.log('PH76 diagnostic runner: 12 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence');
+
+
+for(const operation of ['getDefaultHttpProxy','getPacUrl','getPacFileUrl','findProxyForUrl','proxy.applyProxyOverride','proxy.removeProxyOverride']){
+ const h=harness({throwEarly:{code:'NETWORK_ERROR',message:'无法读取系统网络代理配置，请检查网络连接后重试',details:{phase:'route',operation,platformCode:2100002,platformType:'Error',cause:'PRIVATE_URL https://secret.invalid'}}});
+ await h.diagnostic.run('early');const result=h.logs[0];assert.equal(result.pass,false);
+ assert.deepEqual(result.measurements,{code:'NETWORK_ERROR',message:'无法读取系统网络代理配置，请检查网络连接后重试',reason:'execution-failed-or-fixture-callback-missing',phase:'route',operation,platformCode:2100002,platformType:'Error'});
+ assert.ok(!JSON.stringify(result).includes('PRIVATE_URL'));assert.equal(h.observer(),undefined);assert.equal(h.timers.size,0);
+}
+{
+ const privateValue='PRIVATE_URL https://user:PRIVATE_PASSWORD@secret.invalid/path';
+ const h=harness({throwEarly:{code:privateValue,message:privateValue,details:{reason:privateValue,phase:privateValue,operation:privateValue,platformCode:privateValue,platformType:privateValue}}});
+ await h.diagnostic.run('early');assert.ok(!JSON.stringify(h.logs).includes('PRIVATE_'));
+ assert.deepEqual(h.logs[0].measurements,{code:'DIAGNOSTIC_FAILURE',message:'受控网页执行失败（原始错误信息已省略）',reason:'execution-failed-or-fixture-callback-missing'});
+}
+console.log('PASS safe preload diagnostics: 6 native operation receipts and arbitrary-error URL/credential suppression');

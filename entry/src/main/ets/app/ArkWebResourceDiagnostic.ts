@@ -20,7 +20,7 @@ type DiagnosticDataDocumentShape = {
 };
 type DiagnosticRecord = { kind: string; at: number; requestId?: number; resource?: string;
   dataDocument?: DiagnosticDataDocumentShape };
-type DiagnosticFailure = { code?: string; details?: JsonObject };
+type DiagnosticFailure = { code?: string; message?: string; details?: JsonObject };
 const ORIGIN = 'https://93.184.216.34';
 const FIRST_ID = 7600001;
 const SECOND_ID = 7600002;
@@ -118,12 +118,7 @@ export class ArkWebResourceDiagnostic {
     try {
       return scenario === 'early' ? await this.runEarly() : await this.runCancel();
     } catch (error) {
-      const failure = error as DiagnosticFailure;
-      return this.finish(scenario, false, {
-        code: typeof failure?.code === 'string' ? failure.code : 'DIAGNOSTIC_FAILURE',
-        reason: typeof failure?.details?.['reason'] === 'string' ? failure.details['reason'] :
-          'execution-failed-or-fixture-callback-missing',
-      });
+      return this.finish(scenario, false, this.failureMeasurements(error));
     } finally {
       ArkWebExecutor.instance.cancel(FIRST_ID);
       ArkWebExecutor.instance.cancel(SECOND_ID);
@@ -132,6 +127,44 @@ export class ArkWebResourceDiagnostic {
       this.running = false;
       this.clearDocument();
     }
+  }
+
+  private failureMeasurements(error: unknown): JsonObject {
+    const failure = error as DiagnosticFailure;
+    const details = failure?.details;
+    const codes = ['NETWORK_ERROR', 'NETWORK_POLICY_DENIED', 'TLS_ERROR', 'CANCELLED', 'TIMEOUT',
+      'RESOURCE_LIMIT_EXCEEDED', 'SCRIPT_EXECUTION_FAILED', 'INVALID_RESOURCE_MATCHER', 'CHALLENGE_REQUIRED'];
+    const messages = ['无法读取系统网络代理配置，请检查网络连接后重试', '系统代理配置尚未就绪，请稍后重试',
+      '无法设置系统网页代理，请检查网络后重试', '系统网页代理尚未恢复，请重新打开应用后重试',
+      '系统网页代理配置尚未生效，请稍后重试', '当前没有可用的系统网络，请检查代理或网络连接后重试',
+      '无法确定当前系统网络，请检查代理或网络连接后重试', '当前网络无法解析书源域名，请检查代理或网络连接后重试',
+      '当前网络未返回书源地址，请稍后重试', '代理合成地址缺少可用的系统网络路由，请检查代理连接后重试',
+      '系统网络已切换，请稍后重试', '系统网络状态已变化，请稍后重试',
+      '系统代理连接或认证失败，请检查代理后重试', '系统代理需要认证，请检查代理后重试', '书源网页加载失败'];
+    const measurements: JsonObject = {
+      code: typeof failure?.code === 'string' && codes.includes(failure.code) ? failure.code : 'DIAGNOSTIC_FAILURE',
+      message: typeof failure?.message === 'string' && messages.includes(failure.message) ?
+        failure.message : '受控网页执行失败（原始错误信息已省略）',
+      reason: 'execution-failed-or-fixture-callback-missing',
+    };
+    const phase = details?.['phase'];
+    if (typeof phase === 'string' && ['dns', 'route', 'transport', 'runtime', 'response', 'resource', 'script', 'navigation'].includes(phase)) {
+      measurements['phase'] = phase;
+    }
+    const operation = details?.['operation'];
+    if (typeof operation === 'string' && ['getDefaultHttpProxy', 'getPacUrl', 'getPacFileUrl', 'findProxyForUrl',
+      'proxy.configuration', 'proxy.config', 'proxy.insertDirectRule', 'proxy.applyProxyOverride',
+      'proxy.removeProxyOverride', 'proxy.configureAck', 'proxy.restoreAck'].includes(operation)) {
+      measurements['operation'] = operation;
+    }
+    const platformCode = details?.['platformCode'];
+    if (typeof platformCode === 'number' && Number.isSafeInteger(platformCode)) measurements['platformCode'] = platformCode;
+    const platformType = details?.['platformType'];
+    if (typeof platformType === 'string' && ['TypeError', 'RangeError', 'Error', 'object', 'string', 'number',
+      'undefined', 'null', 'boolean', 'symbol', 'bigint', 'function'].includes(platformType)) {
+      measurements['platformType'] = platformType;
+    }
+    return measurements;
   }
 
   dispose(): void {

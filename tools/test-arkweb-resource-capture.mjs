@@ -33,7 +33,7 @@ function setup({autoAttach=true,autoDetach=true,constructorError=false,target={h
   async runJavaScript(script){scripts.push(script);if(evaluate)return evaluate(script);return JSON.stringify(new Function('return ('+script+')')());}
  }
  let proxyFailure;
- const proxyOperation=(kind,callback,config)=>{if(proxyFailure===kind)throw new Error('synthetic proxy SDK failure');proxyOperations.push({kind,callback,config});if(proxyAck)callback();};
+ const proxyOperation=(kind,callback,config)=>{if(proxyFailure===kind)throw Object.assign(new Error('PRIVATE_PROXY https://user:secret@proxy.invalid'),{code:401});proxyOperations.push({kind,callback,config});if(proxyAck)callback();};
  const webview={ProxyConfig:class {direct=false;insertDirectRule(){this.direct=true;}},ProxyController:{
   applyProxyOverride:(config,callback)=>proxyOperation('apply',callback,config),
   removeProxyOverride:callback=>proxyOperation('remove',callback),
@@ -252,8 +252,8 @@ for(const stop of ['cancel','timeout']){
 for(const kind of ['apply','remove']){
  const s=setup({target:{host:'93.184.216.34',addresses:['93.184.216.34'],route:'direct',bypassSystemProxy:true}});
  if(kind==='apply')s.setProxyFailure('apply');else s.setLoad(()=>{s.setProxyFailure('remove');s.resource(base+'/done.m3u8');});
- if(kind==='apply')await assert.rejects(s.e.execute(params(),230),e=>e.details.category==='NETWORK_ENVIRONMENT');
- else {await s.e.execute(params(),230);await assert.rejects(s.e.execute(params(),231),e=>e.details.category==='NETWORK_ENVIRONMENT');assert.equal(s.loads.length,1);}
+ if(kind==='apply')await assert.rejects(s.e.execute(params(),230),e=>{assert.equal(e.details.operation,'proxy.applyProxyOverride');assert.equal(e.details.platformCode,401);assert.equal(e.details.platformType,'Error');assert.ok(!JSON.stringify(e).includes('PRIVATE_PROXY'));return e.details.category==='NETWORK_ENVIRONMENT';});
+ else {await s.e.execute(params(),230);await assert.rejects(s.e.execute(params(),231),e=>{assert.equal(e.details.operation,'proxy.removeProxyOverride');assert.equal(e.details.platformCode,401);assert.ok(!JSON.stringify(e).includes('PRIVATE_PROXY'));return e.details.category==='NETWORK_ENVIRONMENT';});assert.equal(s.loads.length,1);}
  clean(s);assert.equal(s.e.proxyLease.listeners.size,0);
  if(kind==='apply'){s.setProxyFailure(undefined);s.setLoad(()=>s.resource(base+'/recovered.m3u8'));await s.e.execute(params(),232);clean(s);}
  console.log('PASS synchronous proxy '+kind+' failure is typed; setup can recover, unconfirmed cleanup blocks all later loads');

@@ -351,7 +351,7 @@ export class ArkWebExecutor {
         if (lease.phase === (retired ? 'retired' : 'ready')) finish();
       };
       const timer = setTimeout((): void => {
-        finish(new NetworkEnvironmentError('route', '系统网页代理配置尚未生效，请稍后重试'));
+        finish(new NetworkEnvironmentError('route', '系统网页代理配置尚未生效，请稍后重试', retired ? 'proxy.restoreAck' : 'proxy.configureAck'));
       }, Math.max(0, Math.min(PROXY_ACK_TIMEOUT_MS, job.deadlineAt - Date.now())));
       job.pendingWaitReject = finish;
       lease.listeners.add(check);
@@ -372,18 +372,22 @@ export class ArkWebExecutor {
       this.notifyProxyLease(lease);
       if (lease.releaseRequested) this.releaseProxyLease(lease);
     };
+    let operation = 'proxy.removeProxyOverride';
     try {
       if (lease.direct) {
+        operation = 'proxy.config';
         const config = new webview.ProxyConfig();
+        operation = 'proxy.insertDirectRule';
         config.insertDirectRule();
+        operation = 'proxy.applyProxyOverride';
         webview.ProxyController.applyProxyOverride(config, configured);
       } else {
         webview.ProxyController.removeProxyOverride(configured);
       }
-    } catch (_) {
+    } catch (error) {
       // These synchronous SDK errors mean the configuration was not accepted.
       lease.phase = 'ready';
-      lease.error = new NetworkEnvironmentError('route', '无法设置系统网页代理，请检查网络后重试');
+      lease.error = NetworkEnvironmentError.fromPlatform('route', '无法设置系统网页代理，请检查网络后重试', operation, error);
     }
     await this.waitForProxyLease(job, lease, false);
   }
@@ -405,10 +409,11 @@ export class ArkWebExecutor {
         lease.phase = 'retired';
         this.notifyProxyLease(lease);
       });
-    } catch (_) {
+    } catch (error) {
       // Fail closed: no later job may load with an unacknowledged old override.
       lease.phase = 'failed';
-      lease.error = new NetworkEnvironmentError('route', '系统网页代理尚未恢复，请重新打开应用后重试');
+      lease.error = NetworkEnvironmentError.fromPlatform('route', '系统网页代理尚未恢复，请重新打开应用后重试',
+        'proxy.removeProxyOverride', error);
       this.notifyProxyLease(lease);
     }
   }
