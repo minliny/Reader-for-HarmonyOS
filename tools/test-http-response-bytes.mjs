@@ -51,6 +51,17 @@ for(const result of [undefined,null,'PRIVATE_BODY',{secret:'PRIVATE_HEADER'},new
  assert.equal(d.activeRequest,null);assert.equal(requests.at(-1).destroyed,true);
 }
 console.log('PASS nonempty decoded strings and unknown body representations fail with bounded status/type diagnostics');
+for(const status of [401,403,404,429,500,503]){
+ for(const result of [undefined,null]){
+  response={responseCode:status,result,header:{}};
+  await assert.rejects(host.singleHopTransport('https://93.184.216.34/PRIVATE_URL',host.parseMethod('GET'),{},{kind:'none'},undefined,deadline()),error=>{
+   assert.match(error.message,new RegExp('source returned HTTP '+status+' without response content'));
+   assert.ok(!(error instanceof NetworkEnvironmentError));assert.ok(!error.message.includes('raw response bytes'));return true;
+  });
+ }
+}
+assert.deepEqual((await execute({status:403,result:payload.buffer})).bytes,payload,'an actual 403 representation remains available to Core');
+console.log('PASS bodyless 4xx/5xx keeps explicit HTTP source rejection; actual rejection body remains unchanged');
 
 for(const status of [301,302,303,307,308]){
  response={responseCode:status,result:undefined,header:{location:'http://127.0.0.1/PRIVATE_URL'}};
@@ -87,8 +98,19 @@ await assert.rejects(execute({header:null}),TypeError);
 assert.equal(logs.filter(values=>values.includes('response.headers')).length,1,'header conversion failure keeps a distinct fixed stage');
 const safeLogs=logs.filter(values=>values.includes('http.execute TypeError stage=%{public}s frame=%{public}s'));
 assert.ok(!JSON.stringify(safeLogs).includes('PRIVATE_'));assert.ok(!JSON.stringify(safeLogs).includes('https://'));
+for(const code of [2300002,'2300002',2300060,'-105']){
+ requestFailure=Object.assign(new Error('Internal error PRIVATE_URL'),{code});
+ await assert.rejects(execute(),error=>error===requestFailure);requestFailure=undefined;
+}
+const nativeLogs=logs.filter(values=>values.includes('http.execute native failure phase=transport stage=request.dispatch code=%{public}d'));
+assert.deepEqual(nativeLogs.map(values=>values.at(-1)),[2300002,2300060,-105],'decimal string and number codes deduplicate together');
+requestFailure={code:'PRIVATE_URL https://secret.invalid',message:'PRIVATE_PASSWORD'};
+await assert.rejects(execute(),error=>error===requestFailure);requestFailure=undefined;
+assert.equal(logs.filter(values=>values.includes('http.execute native failure phase=transport stage=request.dispatch code=%{public}d')).length,3);
+assert.ok(!JSON.stringify(nativeLogs).includes('PRIVATE_'));
 for(let n=1;n<30;n++){
  const error=new TypeError('secret');error.stack='at call (NetworkRoutePolicy.ts:'+n+':3)';host.reportTypeError(error,'request.chain');
 }
-assert.equal(Host.reportedTypeErrors.size,16,'process-wide TypeError evidence has a fixed ceiling');
+assert.equal(Host.reportedDiagnostics.size,16,'native-code and TypeError evidence share one fixed process ceiling');
 console.log('PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack');
+console.log('PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs without replacing original errors');

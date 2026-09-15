@@ -159,7 +159,7 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  * API 23's `customMethod` passes those through verbatim; nothing is
  * substituted.
  *
- * Non-UTF-8 request bytes use Core's bounded shared encoder; ArkTS carries no
+ * All request text bytes use Core's bounded shared encoder; ArkTS carries no
  * private GBK/Big5 tables. Text responses are decoded using response
  * Content-Type charset, then the Core descriptor charset, then UTF-8. Raw
  * bytes are retained as bodyBase64 only for binary responses.
@@ -173,7 +173,7 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  */
 export class HttpExecuteHost {
   private static targetTails: Map<string, Promise<void>> = new Map();
-  private static reportedTypeErrors: Set<string> = new Set();
+  private static reportedDiagnostics: Set<string> = new Set();
   static readonly instance: HttpExecuteHost = new HttpExecuteHost();
   private readonly activeByRequestId = new Map<number, DeadlineState>();
   private readonly sourceDiagnosticsByRequestId = new Map<number, SourceHttpDiagnosticRecord[]>();
@@ -529,16 +529,32 @@ export class HttpExecuteHost {
   }
 
   private reportTypeError(error: unknown, stage: string): void {
-    if (!(error instanceof TypeError) || HttpExecuteHost.reportedTypeErrors.size >= 16) return;
+    if (!(error instanceof TypeError) || HttpExecuteHost.reportedDiagnostics.size >= 16) return;
     // Only local source basenames and bounded line/column numbers may leave
     // the stack. Never log the stack itself, message, path or request data.
     const stack = typeof error.stack === 'string' ? error.stack.slice(0, 8192) : '';
     const match = /(?:^|[\s/(])(HttpExecuteHost|CookieSessionStore|NetworkRoutePolicy)\.(ts|ets):(\d{1,7})(?::(\d{1,7}))?/.exec(stack);
     const frame = match === null ? 'no-frame' : `${match[1]}.${match[2]}:${match[3]}:${match[4] ?? '0'}`;
     const key = `${stage}:${frame}`;
-    if (HttpExecuteHost.reportedTypeErrors.has(key)) return;
-    HttpExecuteHost.reportedTypeErrors.add(key);
+    if (HttpExecuteHost.reportedDiagnostics.has(key)) return;
+    HttpExecuteHost.reportedDiagnostics.add(key);
     hilog.error(LOG_DOMAIN, 'Reader', 'http.execute TypeError stage=%{public}s frame=%{public}s', stage, frame);
+  }
+
+  private platformErrorCode(error: unknown): number | undefined {
+    if (error === null || typeof error !== 'object') return undefined;
+    const value = (error as { code?: unknown }).code;
+    if (typeof value === 'number' && Number.isSafeInteger(value)) return value;
+    if (typeof value === 'string' && /^-?\d{1,15}$/.test(value)) return Number(value);
+    return undefined;
+  }
+
+  private reportPlatformError(code: number | undefined): void {
+    if (code === undefined || HttpExecuteHost.reportedDiagnostics.size >= 16) return;
+    const key = `request.dispatch:${code}`;
+    if (HttpExecuteHost.reportedDiagnostics.has(key)) return;
+    HttpExecuteHost.reportedDiagnostics.add(key);
+    hilog.error(LOG_DOMAIN, 'Reader', 'http.execute native failure phase=transport stage=request.dispatch code=%{public}d', code);
   }
 
   private async requestRedirectChain(
@@ -733,7 +749,8 @@ export class HttpExecuteHost {
       try {
         response = await request.request(requestUrl, options);
       } catch (error) {
-        const platformCode = error !== null && typeof error === 'object' ? (error as { code?: number }).code : undefined;
+        const platformCode = this.platformErrorCode(error);
+        this.reportPlatformError(platformCode);
         // libcurl-derived platform codes: unresolved proxy, proxy peer connect,
         // and proxy handshake failure. Source TLS/body/timeout failures retain
         // their source-local classification so another candidate can be tried.
@@ -771,6 +788,12 @@ export class HttpExecuteHost {
         const status = Number.isInteger(response.responseCode) && response.responseCode >= 100 &&
           response.responseCode <= 599 ? response.responseCode : 0;
         const resultType = response.result === null ? 'null' : typeof response.result;
+        if (status >= 400 && (response.result === undefined || response.result === null)) {
+          // A bodyless source rejection is already a known HTTP failure.
+          // Preserve that status; neither invent success content nor blame
+          // byte conversion for a 403/404/5xx response with no representation.
+          throw new Error(`http.execute: source returned HTTP ${status} without response content`);
+        }
         throw new Error(`http.execute: platform did not return the requested raw response bytes (status=${status}, type=${resultType})`);
       }
       if (bytes.length > MAX_RESPONSE_BYTES) {
@@ -871,16 +894,11 @@ export class HttpExecuteHost {
     return this.encodeRequestText(body.text, requestCharset);
   }
 
-  private encodeRequestText(text: string, requestCharset: string | undefined): string | ArrayBuffer {
+  private encodeRequestText(text: string, requestCharset: string | undefined): ArrayBuffer {
     const charset = requestCharset === undefined ? 'utf-8' : requestCharset;
-    const normalized = charset.toLowerCase();
-    if (normalized === 'utf-8' || normalized === 'utf8') {
-      const length = new util.TextEncoder('utf-8').encode(text).length;
-      if (length > MAX_REQUEST_BODY_BYTES) {
-        throw new Error(`http.execute: request body exceeds ${MAX_REQUEST_BODY_BYTES} byte limit`);
-      }
-      return text;
-    }
+    // Use the same Core encoder for UTF-8 and legacy charsets, including
+    // empty input. This preserves byte limits without relying on the native
+    // util.TextEncoder.encode result shape or asking HTTP to encode again.
     return encodeSharedText(text, charset, MAX_REQUEST_BODY_BYTES).buffer;
   }
 
@@ -901,7 +919,7 @@ export class HttpExecuteHost {
       encodedBytes += partBytes;
       parts.push(`${encodedName}=${encodedValue}`);
     }
-    return new util.TextEncoder('utf-8').encode(parts.join('&'));
+    return encodeSharedText(parts.join('&'), 'utf-8', MAX_REQUEST_BODY_BYTES);
   }
 
   private formPercentEncode(value: string, charset: string): string {
@@ -1295,10 +1313,9 @@ export class HttpExecuteHost {
     files: MultipartFileWire[],
   ): { contentType: string; bytes: Uint8Array } {
     const boundary = `reader-${Date.now()}-${Math.floor(Math.random() * 1000000000)}`;
-    const encoder = new util.TextEncoder('utf-8');
     const chunks: Uint8Array[] = [];
     const pushText = (text: string): void => {
-      chunks.push(encoder.encode(text));
+      chunks.push(encodeSharedText(text, 'utf-8', MAX_REQUEST_BODY_BYTES));
     };
     const pushBytes = (bytes: Uint8Array): void => {
       chunks.push(bytes);

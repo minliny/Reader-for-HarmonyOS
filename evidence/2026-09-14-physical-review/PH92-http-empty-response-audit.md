@@ -26,3 +26,17 @@
 既有 HTTP conformance 23 个固定向量通过；NetworkRoutePolicy 的代理、PAC DIRECT、DNS pin、取消 lease 与 SDK 错误透传回归通过。日志分别为 [conformance](ph92-http-empty-conformance.log)、[network](ph92-http-empty-network.log)。
 
 代码修复与本地回归已完成。下一次根任务原定真实查询若仍发生 length 错误，应读取新增 TypeError stage/frame，先按具体代码位置定位；若 raw-bytes 错误仍有，应按新增 status/type 区分已解码非空响应或其他平台结果。不能将本次空响应修复宣称为所有搜索失败已闭环，HAP/VM/用户验收仍由后续独立证据决定。
+
+## 6cf9705d 新包：UTF-8 编码链已准确定位并修复
+
+根任务的新查询日志 `/private/tmp/reader-proxy-vm-6cf-search/reader-network.log` 已给出精确位置：`request.payload / HttpExecuteHost.ts:878:65`，对应 `new util.TextEncoder('utf-8').encode(text).length`。因此该批 length 异常的实际原因是平台编码调用结果不能按预期读取长度，不能继续归因于 Core NAPI。另一错误也已补齐为 `status=403, type=undefined`。受限原日志保留在 [ph92-http-6cf-located.log](ph92-http-6cf-located.log)。
+
+当前修复统一使用已引入的 `encodeSharedText`：UTF-8 与 GBK 等原始文本请求都得到同一共享编码器的 ArrayBuffer，以原 16 MiB **字节**上限编码并直接发送，不再次依赖平台 HTTP 编码。表单百分号编码后的最终 ASCII 拼接也走共享编码；multipart 的文本块同步移除相同旧平台 API 分支，原合并总限额与二进制块逻辑不变。没有新增编码表、解析器或 Native 生产变更。
+
+已知 HTTP 4xx/5xx 若正文缺失，明确报 `source returned HTTP <status> without response content`，保留源站拒绝/错误语义；不会转为正常空正文，不归类为系统网络故障。实际含原始 ArrayBuffer 正文的 403 保持原行为交给 Core。正常 200 的 undefined/null 仍拒绝，前述合法 HEAD/204/205/304 和空字符串分支不变。
+
+原生 `request()` 异常现在保留安全 numeric code 诊断：数字或最多 15 位数字字符串可归一化，固定输出 `phase=transport stage=request.dispatch code=<number>`。与 TypeError 共用同一个进程内最多 16 项、去重后的诊断集合；不输出原生 message、URL、头或正文。proxy 错误的数字字符串也按原数字规则分类；其余错误继续抛出原异常，不把源站/TLS/SDK 问题一律归为环境问题。
+
+验证：[修前真实 payload 回归](ph92-http-shared-encode-before.log)在同一 `.encode(text).length` 崩溃；[修后 Native 回归](ph92-http-shared-encode-native-after.log)通过实际 SDK wrapper + 既有 C++ NAPI/Rust 编码模块（Node，不是 VM），覆盖空 POST、中文 UTF-8/UTF8、空/非空 GBK、空/普通/中文/GBK 表单、精确 16 MiB、超过限额及中文按字节超限、multipart。平台 TextEncoder 在测试中固定返回 undefined，证明生产链不再依赖它。[常规回归](ph92-http-shared-encode-fixture-after.log)以同一 SDK wrapper 和固定 UTF-8/GBK 编码样本自动加入全量脚本门禁；Native 变体可用 `READER_NATIVE_ENCODER` 指向现有探针模块独立运行。
+
+[响应/诊断回归](ph92-http-6cf-response-after.log)全过，新增 12 个 4xx/5xx 缺正文拒绝及实际 403 原始正文保留，验证 native 数字/数字字符串归一去重、恶意字符串不输出、原异常身份不变及与 TypeError 共用 16 项上限。既有 HTTP 23 向量、NetworkRoutePolicy、WebDAV、source product tools、portable import 定向回归均通过。本切片仍未操作 VM；新的真实搜索用于验证已修复编码链，并利用受限错误码区分其余 Internal error，不能仅以本地通过宣称全部书源可用。
