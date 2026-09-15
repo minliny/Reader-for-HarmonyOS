@@ -11,6 +11,7 @@ import type {
 } from './SearchPage';
 import type { SearchBookPatch } from './SearchBookProjection';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
+import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -668,13 +669,7 @@ export class SearchOrchestrator {
         run.revision += 1;
         const pending = enabled.filter((source: SearchSource): boolean =>
           !run.completed.has(source.sourceId) || run.failures.has(source.sourceId));
-        let next = 0;
-        const worker = async (): Promise<void> => {
-          while (next < pending.length) {
-            if (!await this.waitForDispatch(work, session)) return;
-            if (!this.isCurrent()) continue;
-            const source = pending[next++];
-            if (source === undefined) return;
+        await runBookSourceWorkers(pending, MAX_SEARCH_CONCURRENCY, async (source: SearchSource): Promise<void> => {
             this.searchedSources.add(source.sourceId);
             const outcome = await this.gateway.searchBySource(source, run.keyword,
               (): boolean => this.isCurrentWork(work, session), run.requestId, (): boolean => this.isCurrent());
@@ -686,15 +681,15 @@ export class SearchOrchestrator {
               hilog.warn(DOMAIN, 'Reader', 'Search source %{private}s failed: %{private}s',
                 this.sourceIdentityForLog(source), this.sanitizedLogText(outcome.error));
             } else {
+              if ((outcome.discardedCount ?? 0) > 0) hilog.warn(DOMAIN, 'Reader',
+                'Search source %{private}s discarded %{public}d malformed rows: %{public}s',
+                this.sourceIdentityForLog(source), outcome.discardedCount ?? 0,
+                (outcome.discardedReasons ?? []).join('; '));
               run.failures.delete(source.sourceId);
               run.sourceResults.set(source.sourceId, run.admit(outcome.results, run.sourceResults.get(source.sourceId) ?? []));
             }
             this.scheduleRunPublish(run, work, session);
-          }
-        };
-        const workers: Promise<void>[] = [];
-        for (let index = 0; index < Math.min(MAX_SEARCH_CONCURRENCY, pending.length); index++) workers.push(worker());
-        await Promise.all(workers);
+        }, async (): Promise<boolean> => await this.waitForDispatch(work, session) && this.isCurrent());
         if (!this.isCurrentWork(work, session)) return;
         run.onlineStatus = 'done';
       } catch (error) {

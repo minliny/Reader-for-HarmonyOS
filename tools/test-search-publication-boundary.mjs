@@ -72,6 +72,7 @@ globalThis.ReaderRuntimeOwner = { current: () => ({ request: async method => {
 } }) };
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {} };
 const { SearchOrchestrator, SearchQueryRun } = await evaluate([
+  'app/BookRequestScheduler.ts',
   'features/source/ReaderSourceCategory.ts', 'app/ErrorMessage.ts', 'features/search/SearchBookProjection.ts',
   'features/search/SearchGateway.ts', 'features/search/SearchOrchestrator.ets',
 ].map(name => clean(read(name))).join('\n') + '\nexport { SearchQueryRun };');

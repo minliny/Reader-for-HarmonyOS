@@ -83,7 +83,7 @@ export type SearchSource = {
 };
 
 export type SearchOutcome =
-  | { ok: true; results: SearchBook[] }
+  | { ok: true; results: SearchBook[]; discardedCount?: number; discardedReasons?: string[] }
   | { ok: false; error: string };
 
 type SearchRequestGuard = () => boolean;
@@ -198,20 +198,35 @@ export class SearchGateway {
       if (returnedSourceId !== source.sourceId) {
         return { ok: false, error: 'book.search returned a mismatched sourceId' };
       }
-      if (typeof data['sourceVersion'] === 'string') identity.sourceRuleVersion = data['sourceVersion'] as string;
+      if (data['sourceVersion'] !== undefined) {
+        if (typeof data['sourceVersion'] !== 'string' || data['sourceVersion'].length === 0 ||
+          (source.sourceVersion !== undefined && data['sourceVersion'] !== source.sourceVersion)) {
+          return { ok: false, error: 'book.search returned a mismatched sourceVersion' };
+        }
+        identity.sourceRuleVersion = data['sourceVersion'] as string;
+      }
       const rawBooks = data['books'];
       if (!Array.isArray(rawBooks)) {
         return { ok: false, error: 'book.search returned invalid books' };
       }
       const books: SearchBook[] = [];
+      let discardedCount = 0;
+      const discardedReasons: string[] = [];
       let processed = 0;
       for (const raw of rawBooks) {
         if (++processed % 32 === 0) {
           await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
           if (isCurrent?.() === false) return { ok: false, error: 'search superseded' };
         }
-        books.push(decodeBookSearchResult(raw, source, identity));
+        try { books.push(decodeBookSearchResult(raw, source, identity)); }
+        catch (error) {
+          discardedCount += 1;
+          // Decoder messages name only fields; do not retain response values.
+          if (discardedReasons.length < 4) discardedReasons.push(errorMessageOf(error));
+        }
       }
+      if (books.length === 0 && discardedCount > 0) return { ok: false, error: discardedReasons[0] };
+      if (discardedCount > 0) return { ok: true, results: books, discardedCount, discardedReasons };
       return { ok: true, results: books };
     } catch (error) {
       const message = errorMessageOf(error);

@@ -442,6 +442,8 @@ struct Index {
   private bookProjectionUnsubscribe: (() => void) | undefined = undefined;
   private bookProjectionLoading: boolean = false;
   private bookProjectionAgain: boolean = false;
+  private candidateAdmissionGeneration: number = -1;
+  private candidateAdmissionFailedGeneration: number = -1;
   private searchViewState: SearchViewState = new SearchViewState();
   private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState();
   private searchOrchestrator: SearchOrchestrator | undefined;
@@ -2265,6 +2267,10 @@ struct Index {
   }
 
   private async refreshDetailAcquisitionProjection(): Promise<void> {
+    // One selection owns its body verdict. Durable catalog notifications must
+    // neither launch a second probe nor automatically retry its terminal failure.
+    if (this.candidateAdmissionGeneration === this.navigationGeneration ||
+      this.candidateAdmissionFailedGeneration === this.navigationGeneration) return;
     if (this.bookProjectionLoading) { this.bookProjectionAgain = true; return; }
     const book = this.detailBook;
     if (this.route !== 'detail' || this.readingSessionActive ||
@@ -2655,7 +2661,8 @@ struct Index {
     // The coordinator validates the source and its durable cache together.
     // A deleted/disabled source must not hide already downloaded chapters.
     const allowGroupFallback = shelfSnapshot === undefined && !resumeImmediately && originRoute === 'search' &&
-      fallbackSeeds.length > 0 && this.pendingSourceSwitch === undefined;
+      this.pendingSourceSwitch === undefined;
+    if (allowGroupFallback) this.candidateAdmissionGeneration = generation;
     const candidates = candidateSeeds.map((candidate: RemoteReadingBookSeed): BookAcquisitionCandidate => {
       const row = this.searchDetailCandidates.find((book: SearchBook): boolean =>
         book.sourceId === candidate.sourceId && book.bookId === candidate.bookId);
@@ -2665,9 +2672,20 @@ struct Index {
       validatedSession.identity.sourceId === seed.sourceId && validatedSession.identity.bookId === seed.bookId &&
       preparedRemoteChapterMatches(validatedSession.preparedChapter, validatedSession, undefined,
         owner.bookAcquisitions().readingProjectionRevision()) ? validatedSession : undefined;
+    const showCandidateCatalog = (session: RemoteReadingSession): void => {
+      if (!isCurrent()) return;
+      const index = candidateSeeds.findIndex((candidate: RemoteReadingBookSeed): boolean =>
+        candidate.sourceId === session.identity.sourceId && candidate.bookId === session.identity.bookId);
+      this.installRemoteReadingSession(session);
+      this.detailBook = { ...session.book, ...session.identity, sourceName: candidateNames[index] ?? session.identity.sourceId };
+      this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
+        title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
+      this.detailLoadingMessage = '';
+      this.remoteContentVerdict = 'verifying';
+    };
     const sessionAdmission: Promise<RemoteDetailAdmission> = suppliedSession !== undefined ?
       Promise.resolve(new RemoteDetailAdmission(suppliedSession)) : (allowGroupFallback ? owner.bookAcquisitions()
-      .acquireCandidateGroup(candidates, { isCurrent }) : owner.bookAcquisitions()
+      .acquireCandidateGroup(candidates, { isCurrent, requireReadable: true, onCatalog: showCandidateCatalog }) : owner.bookAcquisitions()
       .acquireBookWithBackgroundRefresh(seed, { isCurrent }))
       .then((admission): RemoteDetailAdmission =>
         new RemoteDetailAdmission(admission.session, admission.backgroundRefresh));
@@ -2818,6 +2836,7 @@ struct Index {
       })
       .catch((error: Error): void => {
         if (isCurrent()) {
+          if (allowGroupFallback) this.candidateAdmissionFailedGeneration = generation;
           if (error instanceof RemoteReadingGatewayError) {
             hilog.error(DOMAIN, 'Reader', 'Remote detail failure: %{public}s',
               JSON.stringify(remoteReadingFailureRecord(error, generation)));
@@ -2833,15 +2852,20 @@ struct Index {
             this.rollbackPendingSourceSwitch(error.message);
             return;
           }
-          this.detailBook = this.readingDetailForRemoteSeed(seed, sourceName);
-          this.detailToc = [];
+          const catalogAvailable = allowGroupFallback && this.remoteReadingSession !== undefined && this.detailToc.length > 0;
+          if (!catalogAvailable) {
+            this.detailBook = this.readingDetailForRemoteSeed(seed, sourceName);
+            this.detailToc = [];
+            this.installRemoteReadingSession(undefined);
+          }
           this.detailLoadingMessage = error.message;
-          this.remoteContentVerdict = 'parseFailed';
-          this.installRemoteReadingSession(undefined);
+          this.remoteContentVerdict = verdictForFailureKind(remoteReadingFailureKindOf(error));
           this.shelfReadingPreparation = false;
           this.route = resumeImmediately ? originRoute : 'detail';
           this.showReadingFailure(resumeImmediately ? '阅读加载失败' : '详情加载失败', error.message);
         }
+      }).finally((): void => {
+        if (this.candidateAdmissionGeneration === generation) this.candidateAdmissionGeneration = -1;
       });
   }
 

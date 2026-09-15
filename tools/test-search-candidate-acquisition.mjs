@@ -23,7 +23,7 @@ function fixture(){
  const calls=[],rows=new Map(),catalogs=new Map(),modes=new Map(),gates=new Map();let version='v1',enabled=true;
  const key=(s,b)=>JSON.stringify([s,b]);
  const runtime=new BookAcquisitionCoordinator(async(method,params,options)=>{
-  calls.push({method,params});const sourceId=params.sourceId??params.origin;const bookId=params.bookId??params.book?.bookId??params.bookUrl;const id=key(sourceId,bookId);
+  calls.push({method,params,options});const sourceId=params.sourceId??params.origin;const bookId=params.bookId??params.book?.bookId??params.bookUrl;const id=key(sourceId,bookId);
   const gate=gates.get(method==='source.list'?'sources':`${method}:${id}`);if(gate)await gate.promise;
   if(method==='source.list')return {data:{sources:['s1','s2','s3','s4','s5'].map(sourceId=>({sourceId,name:sourceId,enabled,sourceVersion:version}))}};
   if(method==='source.delete'){enabled=false;return{data:{deleted:1}}}
@@ -40,7 +40,10 @@ function fixture(){
    if(toc.length){catalogs.set(id,toc);Object.assign(rows.get(id).acquisition,{catalogAt:Date.now(),catalogCount:1});}
    return {data:{sourceId,bookId,toc}};
   }
-  if(method==='chapter.content')return {data:{sourceId,bookId,chapterTitle:'第一章',via:'rule',content:'清晨的阳光照进房间，书中的故事从这里开始。'.repeat(12)}};
+  if(method==='chapter.content'){
+   const failure=modes.get(`body:${id}`);if(failure instanceof Error)throw failure;
+   return {data:{sourceId,bookId,chapterTitle:'第一章',via:'rule',content:failure==='empty'?'':'清晨的阳光照进房间，书中的故事从这里开始。'.repeat(12)}};
+  }
   if(method==='search-book.put'){const row=rows.get(id);if(row)row.acquisition={...row.acquisition,...params.acquisition};return{data:{book:row}}}
   if(method==='book.search')return{data:{sourceId,books:[{bookId:'/new'}]}};
   throw Error(`unexpected ${method}`);
@@ -61,20 +64,73 @@ await check('visible failed catalog tries another same-book candidate without bo
  assert.deepEqual(f.calls.filter(c=>c.method==='book.toc').map(c=>c.params.sourceId),['s1','s2']);assert.equal(f.calls.some(c=>c.method==='chapter.content'),false);
  }finally{f.runtime.close()}
 });
-await check('unknown network candidates capped at three; successful known catalog beyond them has priority',async()=>{
+await check('foreground preempts unrelated started preparation, propagates cancellation and resumes it without unhealthy proof',async()=>{
+ const f=fixture();try{const background=deferred(),foreground=deferred();
+ f.gates.set(`book.detail:${f.key('s1','/b0')}`,background);f.gates.set(`book.detail:${f.key('s2','/b1')}`,foreground);
+ f.runtime.prepareGroups([[candidate(0)]]);await until(()=>f.calls.some(c=>c.method==='book.detail'));
+ const backgroundCall=f.calls.find(c=>c.method==='book.detail');
+ const requested=f.runtime.acquireBook(seed(1,'s2'));
+ await until(()=>f.calls.some(c=>c.method==='book.detail'&&c.params.sourceId==='s2'));
+ assert.equal(backgroundCall.options.shouldCancel(),true,'actual Core callback receives preemption');background.resolve();
+ await until(()=>f.runtime.preparationActive===0);assert.equal(f.calls.filter(c=>c.method==='book.detail'&&c.params.sourceId==='s1').length,1,'no restart while foreground owns chain');
+ assert.equal(f.calls.some(c=>c.method==='search-book.put'&&c.params.origin==='s1'),false);
+ foreground.resolve();await requested;await until(()=>f.calls.filter(c=>c.method==='book.detail'&&c.params.sourceId==='s1').length===2&&f.runtime.preparationActive===0);
+ }finally{f.runtime.close()}
+});
+await check('foreground joins same prepared book instead of cancelling its only active request',async()=>{
+ const f=fixture();try{const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);
+ f.runtime.prepareGroups([[candidate(0)]]);await until(()=>f.calls.some(c=>c.method==='book.detail'));
+ const original=f.calls.find(c=>c.method==='book.detail');const joined=f.runtime.acquireBook(seed(0));await pause();
+ assert.equal(original.options.shouldCancel(),false);gate.resolve();await joined;await until(()=>f.runtime.preparationActive===0);
+ assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);
+ }finally{f.runtime.close()}
+});
+await check('only background rounds cap unknown candidates; foreground fourth source succeeds',async()=>{
  const f=fixture();try{for(const s of ['s1','s2','s3','s4'])f.modes.set(f.key(s,'/b0'),'empty');
- await assert.rejects(f.runtime.acquireCandidateGroup(['s1','s2','s3','s4'].map(s=>candidate(0,s))));assert.equal(f.calls.filter(c=>c.method==='book.toc').length,3);
+ await assert.rejects(f.runtime.acquireCandidateGroup(['s1','s2','s3','s4'].map(s=>candidate(0,s)), {}, 'background'));assert.equal(f.calls.filter(c=>c.method==='book.toc').length,3);
+ f.modes.delete(f.key('s4','/b0')); f.calls.length=0;
+ const fourth=await f.runtime.acquireCandidateGroup(['s1','s2','s3','s4'].map(s=>candidate(0,s)));
+ assert.equal(fourth.session.identity.sourceId,'s4');assert.equal(f.calls.filter(c=>c.method==='book.toc').length,4);
  f.calls.length=0;await f.runtime.acquireBook(seed(0,'s5'));f.calls.length=0;
  const result=await f.runtime.acquireCandidateGroup([...['s1','s2','s3','s4'].map(s=>candidate(0,s)),candidate(0,'s5',true)]);
  assert.equal(result.session.identity.sourceId,'s5');assert.equal(f.calls.length,0,'already-successful candidate is neither blocked nor re-fetched');
  }finally{f.runtime.close()}
 });
-for(const code of ['cancelled','identityMismatch','sourceVersionChanged','storageFailure','unsupportedHostCapability']){
+for(const code of ['cancelled','identityMismatch','sourceVersionChanged','storageFailure']){
  await check(`${code} stops group fallback`,async()=>{const f=fixture();try{f.modes.set(f.key('s1','/b0'),new RemoteReadingGatewayError(code,'blocked','book.detail'));
  await assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]),e=>e.code===code);
  assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
  }finally{f.runtime.close()}});
 }
+await check('source-local capability failure tries independent same-book source',async()=>{
+ const f=fixture();try{f.modes.set(f.key('s1','/b0'),new RemoteReadingGatewayError('unsupportedHostCapability','blocked','book.detail'));
+ const admitted=await f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]);assert.equal(admitted.session.identity.sourceId,'s2');
+ }finally{f.runtime.close()}
+});
+await check('proxy/DNS environment failure stops source churn without candidate health penalty',async()=>{
+ const f=fixture();try{f.modes.set(f.key('s1','/b0'),new RemoteReadingGatewayError('networkEnvironment','代理路由暂不可用','book.detail',undefined,undefined,undefined,'NETWORK_ENVIRONMENT'));
+ await assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]),e=>e.category==='NETWORK_ENVIRONMENT');
+ assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
+ assert.equal(f.calls.some(c=>c.method==='search-book.put'),false,'environment failure never publishes a bad-source fact');
+ }finally{f.runtime.close()}
+});
+await check('whole foreground deadline includes waiting; process completion cannot publish late catalog',async()=>{
+ const f=fixture();try{const gate=deferred(),catalogs=[];f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);
+ const start=Date.now();await assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')],{budgetMs:30,onCatalog:s=>catalogs.push(s)}),e=>e.code==='cancelled'&&/超时/.test(e.message));
+ assert.ok(Date.now()-start<500);assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);gate.resolve();await pause();await pause();assert.equal(catalogs.length,0);
+ }finally{f.runtime.close()}
+});
+await check('cancel waiting foreground releases consumer promptly and does not try next source',async()=>{
+ const f=fixture();try{const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);let current=true;
+ const admission=f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')],{isCurrent:()=>current});await until(()=>f.calls.some(c=>c.method==='book.detail'));current=false;
+ await assert.rejects(admission,e=>e.code==='cancelled');gate.resolve();assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
+ }finally{f.runtime.close()}
+});
+await check('same title with blank or conflicting author cannot authorize automatic source replacement',async()=>{
+ for(const author of ['', '其他作者']){const f=fixture();try{const a=candidate(0),b=candidate(0,'s2');a.seed.author=author;f.modes.set(f.key('s1','/b0'),'empty');
+ await assert.rejects(f.runtime.acquireCandidateGroup([a,b]));assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
+ }finally{f.runtime.close()}}
+});
 await check('hidden source-wait pauses and resumes same visible group once without cancellation',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set('sources',gate);const groups=[[candidate(0)]];f.runtime.prepareGroups(groups);await pause();
  f.runtime.setPreparationVisible(false);gate.resolve();for(let i=0;i<6;i++)await pause();
@@ -110,7 +166,7 @@ const indexSource=readFileSync(path('pages/Index.ets'),'utf8');
 const admissionSource=indexSource.slice(indexSource.indexOf('class RemoteDetailAdmission {'),indexSource.indexOf('class RemoteSessionAttemptOutcome {'));
 const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admissionSource)+';return RemoteDetailAdmission;')();
 function indexFixture(f){
- const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{
+ const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{
  sameRemoteSessionEvidence,preparedRemoteChapterMatches,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
  ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
  const page=Object.assign(new Index(),{route:'search',shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};
@@ -119,6 +175,28 @@ await check('real selected search group primary empty TOC admits second and prob
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0),book(0,'s2')]);
  await until(()=>page.remoteContentVerdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);assert.equal(page.detailBook.sourceId,'s2');assert.equal(page.detailBook.sourceName,'s2名称');assert.equal(page.detailReturnRoute,'search');assert.equal(page.detailInBookshelf,false);
  assert.deepEqual(f.calls.filter(c=>c.method==='chapter.content').map(c=>c.params.sourceId),['s2']);assert.equal(f.calls.some(c=>/bookshelf.put|source.switch|progress.update/.test(c.method)),false);
+ }finally{f.runtime.close()}
+});
+await check('real search body failure tries second source and reuses admitted body exactly once',async()=>{
+ const f=fixture();try{f.modes.set(`body:${f.key('s1','/b0')}`,new RemoteReadingGatewayError('invalidResponse','bad extraction','chapter.content'));
+ const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0),book(0,'s2')]);
+ await until(()=>page.remoteContentVerdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);assert.equal(page.detailBook.sourceId,'s2');
+ assert.deepEqual(f.calls.filter(c=>c.method==='chapter.content').map(c=>c.params.sourceId),['s1','s2']);
+ assert.equal(f.calls.some(c=>/bookshelf.put|source.switch|progress.update/.test(c.method)),false);
+ assert.equal(f.rows.get(f.key('s1','/b0')).acquisition.failureStage,undefined,'a chapter failure does not invalidate entire book');
+ }finally{f.runtime.close()}
+});
+await check('real search catalog is visible before delayed body completes',async()=>{
+ const f=fixture();try{const gate=deferred();f.gates.set(`chapter.content:${f.key('s1','/b0')}`,gate);const {page,errors}=indexFixture(f);
+ page.onSearchResultSelected(book(0),[book(0,'s2')]);await until(()=>f.calls.some(c=>c.method==='chapter.content'));
+ assert.equal(page.detailBook.sourceId,'s1');assert.equal(page.detailToc.length,1);assert.equal(page.remoteContentVerdict,'verifying');const calls=f.calls.length;await page.refreshDetailAcquisitionProjection();assert.equal(f.calls.length,calls,'catalog notification cannot duplicate active body probe');gate.resolve();
+ await until(()=>page.remoteContentVerdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);
+ }finally{f.runtime.close()}
+});
+await check('real body storage failure stops group and preserves visible admitted catalog',async()=>{
+ const f=fixture();try{f.modes.set(`body:${f.key('s1','/b0')}`,new RemoteReadingGatewayError('storageFailure','storage unavailable','chapter.content'));
+ const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0,'s2')]);await until(()=>errors.length>0);
+ assert.equal(page.detailBook.sourceId,'s1');assert.equal(page.detailToc.length,1);assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);await pause();const calls=f.calls.length;await page.refreshDetailAcquisitionProjection();assert.equal(f.calls.length,calls,'terminal failure does not trigger automatic notification retries');
  }finally{f.runtime.close()}
 });
 for(const mode of ['shelf','explicit'])await check(`${mode} fixed source never auto-falls back`,async()=>{

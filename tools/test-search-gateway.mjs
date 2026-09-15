@@ -103,6 +103,28 @@ assert.deepEqual(validOutcome, {
 assert.equal(validOutcome.results[0].detailUrl, validOutcome.results[0].bookId,
   'detailUrl must be the exact validated bookId, not a derived URL');
 
+const mixedRows = await new SearchGateway({ request: async () => ({ data: {
+  sourceId: source.sourceId, books: [
+    { bookId: '/good', title: '鸣龙', author: '关关公子' },
+    { bookId: '/bad', title: '' },
+    { bookId: '/bad-vars', title: '另一书', variables: { token: 42 } },
+    { bookId: '/good2', title: '正常书籍' },
+  ],
+} }) }).searchBySource(source, '鸣龙');
+assert.equal(mixedRows.ok, true);
+assert.deepEqual(mixedRows.results.map(book => book.bookId), ['/good', '/good2']);
+assert.equal(mixedRows.discardedCount, 2);
+assert.equal(mixedRows.discardedReasons.length, 2);
+for (const data of [
+  { sourceId: 'wrong', books: [{ bookId: '/good', title: '鸣龙' }] },
+  { sourceId: source.sourceId, sourceVersion: 'wrong', books: [{ bookId: '/good', title: '鸣龙' }] },
+  { sourceId: source.sourceId, sourceVersion: 42, books: [{ bookId: '/good', title: '鸣龙' }] },
+  { sourceId: source.sourceId, books: {} },
+]) {
+  const outcome = await new SearchGateway({ request: async () => ({ data }) }).searchBySource({ ...source, sourceVersion: 'v1' }, '鸣龙');
+  assert.equal(outcome.ok, false, 'envelope identity/version failure rejects all rows');
+}
+
 for (const invalidVariables of [
   null,
   [],

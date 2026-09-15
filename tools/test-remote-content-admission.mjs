@@ -98,6 +98,28 @@ for (const [code, kind] of codeExpectations) {
 assert.equal(remoteReadingFailureKindOf(new Error('some ui error')), 'RENDER_FAILED',
   'unknown errors never classify as source failures');
 
+for (const [category, expected] of [
+  ['SOURCE_RULE_FAILED', 'SOURCE_PARSE_FAILED'],
+  ['SOURCE_RESPONSE_FORMAT', 'SOURCE_PARSE_FAILED'],
+  ['SOURCE_CONTENT_EMPTY', 'SOURCE_CONTENT_EMPTY'],
+  ['SOURCE_TOC_EMPTY', 'SOURCE_TOC_EMPTY'],
+  ['NETWORK_ENVIRONMENT', 'NETWORK_ENVIRONMENT'],
+]) {
+  const error = new RemoteReadingGatewayError('commandFailed', 'safe failure', 'chapter.content',
+    undefined, undefined, undefined, category);
+  assert.equal(remoteReadingFailureKindOf(error), expected, `keep typed ${category}`);
+}
+assert.equal(isRemoteSourceFailureKind('NETWORK_ENVIRONMENT'), false,
+  'proxy/DNS failures cannot penalize a source or trigger candidate cycling');
+assert.equal(verdictForFailureKind('NETWORK_ENVIRONMENT'), 'networkFailed');
+for (const literal of [
+  '程序员在纸上写下 null 和 [数组]，解释了字符串的含义。',
+  String.raw`正文中的代码示例：\r\n 和 C:\reader\book 必须原样保留。`,
+  '{"message":"小说中引用的完整 JSON 示例，不是网络异常证据"}',
+]) {
+  assert.equal(classifyChapterBody(literal).kind, 'readable', 'typed rejection must not become text guessing');
+}
+
 // 4. Only the six source kinds may offer a source switch.
 for (const kind of [
   'SOURCE_HTTP_FAILED', 'SOURCE_PARSE_FAILED', 'SOURCE_TOC_EMPTY',

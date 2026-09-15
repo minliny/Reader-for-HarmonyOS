@@ -26,7 +26,7 @@ assert.match(scheduler, /job\.priority !== 'foreground' && this\.active >= 5/,
   'reading retains reserved capacity while source/search work is running');
 const remoteOpen = index.slice(index.indexOf('  private openRemoteBookDetail('),
   index.indexOf('  private refreshCachedSearchDetailInBackground('));
-assert.match(remoteOpen, /owner\.bookAcquisitions\(\)\s*\.acquireCandidateGroup\(candidates, \{ isCurrent \}\)/,
+assert.match(remoteOpen, /owner\.bookAcquisitions\(\)\s*\.acquireCandidateGroup\(candidates, \{ isCurrent, requireReadable: true, onCatalog: showCandidateCatalog \}\)/,
   'group fallback uses the shared coordinator with the active navigation guard');
 assert.match(remoteOpen, /owner\.bookAcquisitions\(\)\s*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'fixed-source detail admission uses the shared cache-first/background-refresh coordinator');

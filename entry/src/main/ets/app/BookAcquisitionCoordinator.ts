@@ -1,6 +1,8 @@
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import { BookRequestScheduler, type BookRequestExecutor, type BookRequestPriority, type BookRequestOptions } from './BookRequestScheduler';
 import { errorMessageOf } from './ErrorMessage';
+import { isRemoteSourceFailureKind, remoteReadingFailureKindOf, RemoteReadingSourceError } from '../features/reading/RemoteContentAdmission';
+import { preparedRemoteChapterMatches, withPreparedRemoteChapter } from '../features/reading/RemoteReadingEvidence';
 import {
   RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingOpenOptions,
   type RemoteReadingSession,
@@ -21,10 +23,18 @@ export interface BookAcquisitionCandidate {
   catalogReady: boolean;
   failed: boolean;
 }
+export interface BookCandidateOpenOptions extends RemoteReadingOpenOptions {
+  /** Only the explicitly opened new-book group validates bodies. Viewport preparation stays catalog-only. */
+  requireReadable?: boolean;
+  /** The visible catalog is available while the bounded body probe continues. */
+  onCatalog?: (session: RemoteReadingSession) => void;
+  /** Whole foreground selection budget, including queueing and all candidates. */
+  budgetMs?: number;
+}
 type Preparation = { candidates: BookAcquisitionCandidate[]; scope: number; forceRefresh: boolean };
 type BookConsumer = { active: boolean; isCurrent?: () => boolean; canDispatch?: () => boolean };
 type BookJob = { promise: Promise<RemoteReadingSession>; priority: BookRequestPriority; forceRefresh: boolean;
-  started: boolean; consumers: BookConsumer[] };
+  started: boolean; consumers: BookConsumer[]; sourceId: string; bookId: string; preempted: boolean };
 type PreparedSession = { session: RemoteReadingSession; at: number };
 
 export type BookAcquisitionAdmission = {
@@ -55,6 +65,7 @@ export class BookAcquisitionCoordinator {
   private pending: Map<string, Preparation> = new Map();
   private attempted: Set<string> = new Set();
   private preparationActive: number = 0;
+  private foregroundRequests: number = 0;
   private preparationVisible: boolean = true;
   private preparationGroups: Set<string> = new Set();
   private scope: number = 0;
@@ -115,12 +126,20 @@ export class BookAcquisitionCoordinator {
     if (changesProjection) this.projectionRevision += 1;
     if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
     const registryAtStart = this.registryRevision;
+    let foregroundRequest = false;
     try {
       const sourceId = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : '';
       const network = method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
         method === 'chapter.content' || method === 'change.bookSource';
+      const actualPriority = priority ?? (method === 'book.search' || method === 'change.bookSource' ? 'search' : 'foreground');
+      foregroundRequest = network && actualPriority === 'foreground';
+      if (foregroundRequest) {
+        this.foregroundRequests += 1;
+        const bookId = params['bookId'] ?? objectValue(params['book'])?.['bookId'];
+        this.preemptBackgroundAcquisitions(sourceId, typeof bookId === 'string' ? bookId : '');
+      }
       const result = network ? await this.scheduler.request(method, params, options,
-        this.versions.get(sourceId) ?? '', priority ?? (method === 'book.search' || method === 'change.bookSource' ? 'search' : 'foreground')) :
+        this.versions.get(sourceId) ?? '', actualPriority) :
         await this.execute(method, params, options);
       if (method === 'source.list' && registryAtStart === this.registryRevision) {
         this.observeSources(result.data, params['enabledOnly'] !== true);
@@ -145,6 +164,11 @@ export class BookAcquisitionCoordinator {
       }
       return result;
     } finally {
+      if (foregroundRequest) {
+        this.foregroundRequests -= 1;
+        this.scheduler.visibilityChanged();
+        this.drainPreparations();
+      }
       if (changesProjection) this.projectionRevision += 1;
       if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
     }
@@ -198,26 +222,49 @@ export class BookAcquisitionCoordinator {
   }
 
   /** Business fallback for an admitted same-book group, never for a fixed shelf identity. */
-  async acquireCandidateGroup(candidates: BookAcquisitionCandidate[], options: RemoteReadingOpenOptions = {},
+  async acquireCandidateGroup(candidates: BookAcquisitionCandidate[], options: BookCandidateOpenOptions = {},
     priority: BookRequestPriority = 'foreground'): Promise<BookAcquisitionAdmission> {
+    const deadline = priority === 'background' ? Number.POSITIVE_INFINITY :
+      Date.now() + Math.max(1, options.budgetMs ?? 45000);
+    const isCurrent = (): boolean => !this.closed && options.isCurrent?.() !== false && Date.now() < deadline;
+    const actualOptions: RemoteReadingOpenOptions = { ...options, isCurrent };
+    const primary = candidates[0]?.seed;
+    const normalize = (value: string): string => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+    const title = normalize(primary?.title ?? '');
+    const author = normalize(primary?.author ?? '');
     const seen = new Set<string>();
     const ordered = candidates.slice().sort((a: BookAcquisitionCandidate, b: BookAcquisitionCandidate): number =>
       (a.failed ? 2 : a.catalogReady ? 0 : 1) - (b.failed ? 2 : b.catalogReady ? 0 : 1));
     let unverifiedAttempts = 0;
     let failure: Error = new Error('没有可用的同书候选');
     for (const candidate of ordered) {
-      if (this.closed || options.isCurrent?.() === false) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+      this.assertCandidateCurrent(options, deadline);
+      // A display grouping is not proof of identity. In particular, blank
+      // authors cannot authorize automatic substitution between sources.
+      if (primary !== undefined && (candidate.seed.sourceId !== primary.sourceId || candidate.seed.bookId !== primary.bookId) &&
+        (author.length === 0 || normalize(candidate.seed.title) !== title || normalize(candidate.seed.author) !== author)) continue;
       const key = acquisitionBookKey(candidate.seed.sourceId, candidate.seed.bookId);
       if (seen.has(key)) continue;
       seen.add(key);
-      if (candidate.failed && !options.forceRefresh) continue;
-      if (!candidate.catalogReady && unverifiedAttempts >= 3) continue;
+      if (priority === 'background' && candidate.failed && !options.forceRefresh) continue;
+      if (priority === 'background' && !candidate.catalogReady && unverifiedAttempts >= 3) continue;
       if (!candidate.catalogReady) unverifiedAttempts += 1;
       try {
-        const admission = await this.acquireBookWithBackgroundRefresh(candidate.seed, options, priority);
-        if (options.isCurrent?.() === false) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+        let admission = await this.waitForCandidate(this.acquireBookWithBackgroundRefresh(candidate.seed, actualOptions, priority), options, deadline);
+        this.assertCandidateCurrent(options, deadline);
+        if (normalize(admission.session.book.title) !== title ||
+          (author.length > 0 && normalize(admission.session.book.author) !== author)) {
+          throw new RemoteReadingGatewayError('invalidResponse', '详情书名或作者与所选书籍不一致', 'book.detail');
+        }
+        options.onCatalog?.(admission.session);
+        if (options.requireReadable === true) {
+          const session = await this.waitForCandidate(this.verifyCandidateBody(admission.session, actualOptions, priority), options, deadline);
+          admission = { ...admission, session };
+        }
+        this.assertCandidateCurrent(options, deadline);
         return admission;
       } catch (error) {
+        this.assertCandidateCurrent(options, deadline);
         if (!(error instanceof RemoteReadingGatewayError) || !this.canTryAnotherCandidate(error)) throw error;
         failure = error;
       }
@@ -226,15 +273,62 @@ export class BookAcquisitionCoordinator {
   }
 
   private canTryAnotherCandidate(error: RemoteReadingGatewayError): boolean {
-    if (error.capability !== undefined || error.code === 'unsupportedHostCapability') return false;
+    if (error.category === 'NETWORK_ENVIRONMENT') return false;
+    // Contract/storage/cancellation failures are never masked by another source.
+    if (['cancelled', 'identityMismatch', 'sourceVersionChanged', 'storageFailure', 'positionContextStale'].includes(error.code)) return false;
+    if (error.capability !== undefined || error.code === 'unsupportedHostCapability') return true;
     return error.code === 'emptyToc' || error.code === 'missingTocUrl' ||
+      (error.command === 'chapter.content' && isRemoteSourceFailureKind(remoteReadingFailureKindOf(error))) ||
       ((error.command === 'book.detail' || error.command === 'book.toc') &&
         (error.code === 'commandFailed' || error.code === 'invalidResponse'));
+  }
+
+  private assertCandidateCurrent(options: BookCandidateOpenOptions, deadline: number): void {
+    if (this.closed || options.isCurrent?.() === false) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+    if (Date.now() >= deadline) throw new RemoteReadingGatewayError('cancelled', '验证可用书源超时，已保留已获取的目录，请重试或手动选择书源');
+  }
+
+  private async waitForCandidate<T>(operation: Promise<T>, options: BookCandidateOpenOptions, deadline: number): Promise<T> {
+    let timer: number = -1;
+    const cancelled = new Promise<T>((_resolve, reject): void => {
+      const check = (): void => {
+        try { this.assertCandidateCurrent(options, deadline); }
+        catch (error) { reject(error); return; }
+        timer = setTimeout(check, Math.min(100, Math.max(1, deadline - Date.now())));
+      };
+      check();
+    });
+    try { return await Promise.race([operation, cancelled]); }
+    finally { if (timer >= 0) clearTimeout(timer); }
+  }
+
+  private async verifyCandidateBody(session: RemoteReadingSession, options: RemoteReadingOpenOptions,
+    priority: BookRequestPriority): Promise<RemoteReadingSession> {
+    const revision = this.readingProjectionRevision();
+    if (preparedRemoteChapterMatches(session.preparedChapter, session, undefined, revision)) return session;
+    const isCurrent = (): boolean => options.isCurrent?.() !== false && revision === this.readingProjectionRevision();
+    const gateway = new RemoteReadingFlowGateway({ bookAcquisitions: (): BookAcquisitionCoordinator => this,
+      request: (method: string, params: JsonObject = {}, requestOptions: RequestOptions = {}): Promise<ReaderCoreResultEvent> =>
+        this.request(method, params, { ...requestOptions, canContinue: isCurrent }, priority) });
+    const entries = session.entries.filter((entry): boolean => entry.url.trim().length > 0).slice(0, 3);
+    for (let index = 0; index < entries.length; index += 1) {
+      try {
+        const chapter = await gateway.loadChapter(session, entries[index].index, isCurrent);
+        if (!isCurrent()) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+        return withPreparedRemoteChapter(session, chapter, revision);
+      } catch (error) {
+        if (!isCurrent()) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+        if (remoteReadingFailureKindOf(error) === 'SOURCE_CONTENT_EMPTY' && index + 1 < entries.length) continue;
+        throw error;
+      }
+    }
+    throw new RemoteReadingSourceError('SOURCE_CONTENT_EMPTY', '目录没有可验证的正文章节', 'chapter.content');
   }
 
   async acquireBook(seed: RemoteReadingBookSeed, options: RemoteReadingOpenOptions = {},
     priority: BookRequestPriority = 'foreground'): Promise<RemoteReadingSession> {
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
+    if (priority === 'foreground') this.preemptBackgroundAcquisitions(seed.sourceId, seed.bookId);
     await this.ensureSources();
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     const version = this.versions.get(seed.sourceId);
@@ -249,6 +343,10 @@ export class BookAcquisitionCoordinator {
     const consumer: BookConsumer = { active: true, isCurrent: options.isCurrent, canDispatch: options.canDispatch };
     const jobs = options.forceRefresh ? this.refreshes : this.jobs;
     let job = jobs.get(key) ?? (!options.forceRefresh ? this.refreshes.get(key) : undefined);
+    if (job?.preempted === true) {
+      await job.promise.catch((_error: Error): void => {});
+      return this.acquireBook(seed, options, priority);
+    }
     if (options.forceRefresh && job === undefined && this.jobs.has(key)) {
       // A cache admission cannot satisfy forceRefresh. Its complete session
       // remains owned by its existing consumers; then start/join real refresh.
@@ -265,7 +363,7 @@ export class BookAcquisitionCoordinator {
       return this.consumeJob(job, consumer);
     }
     const next: BookJob = { priority, forceRefresh: options.forceRefresh === true,
-      started: false, consumers: [consumer],
+      started: false, consumers: [consumer], sourceId: seed.sourceId, bookId: seed.bookId, preempted: false,
       promise: Promise.resolve(undefined as unknown as RemoteReadingSession) };
     // The first actual dispatch transfers the finite detail→TOC chain to the
     // process. Before that boundary, an orphan can still leave the queue.
@@ -279,7 +377,11 @@ export class BookAcquisitionCoordinator {
           }
         }
         return session;
-      }).finally((): void => { if (jobs.get(key) === next) jobs.delete(key); });
+      }).finally((): void => {
+        if (jobs.get(key) === next) jobs.delete(key);
+        this.scheduler.visibilityChanged();
+        this.drainPreparations();
+      });
     jobs.set(key, next);
     return this.consumeJob(next, consumer);
   }
@@ -292,6 +394,31 @@ export class BookAcquisitionCoordinator {
       }
       return session;
     } finally { consumer.active = false; }
+  }
+
+  private preemptBackgroundAcquisitions(sourceId: string, bookId: string): void {
+    for (const jobs of [this.jobs, this.refreshes]) {
+      for (const job of jobs.values()) {
+        if (job.preempted || job.priority !== 'background') continue;
+        if (job.sourceId === sourceId && job.bookId === bookId) {
+          job.priority = 'foreground';
+          this.scheduler.promote(sourceId, bookId);
+        } else if (job.started) {
+          // Unlike navigation detachment, a foreground preemption explicitly
+          // cancels speculative Core/JS work so the reading lane is released.
+          job.preempted = true;
+        }
+      }
+    }
+    this.scheduler.visibilityChanged();
+  }
+
+  private hasForegroundAcquisition(): boolean {
+    if (this.foregroundRequests > 0) return true;
+    for (const jobs of [this.jobs, this.refreshes]) {
+      for (const job of jobs.values()) if (!job.preempted && job.priority === 'foreground') return true;
+    }
+    return false;
   }
 
   private withCatalogFreshness(session: RemoteReadingSession): RemoteReadingSession {
@@ -413,12 +540,13 @@ export class BookAcquisitionCoordinator {
         actual.searchVariables = seed.sourceVersion === version ? seed.searchVariables : [];
       }
     }
-    const processCurrent = (): boolean => !this.closed && this.versions.get(seed.sourceId) === version;
+    const processCurrent = (): boolean => !this.closed && !job.preempted && this.versions.get(seed.sourceId) === version;
     const hasConsumer = (): boolean => job.consumers.some((consumer: BookConsumer): boolean =>
       consumer.active && consumer.isCurrent?.() !== false);
     const isCurrent = (): boolean => processCurrent() && (job.started || hasConsumer());
-    const canDispatch = (): boolean => job.started || job.consumers.some((consumer: BookConsumer): boolean =>
-      consumer.active && consumer.isCurrent?.() !== false && consumer.canDispatch?.() !== false);
+    const canDispatch = (): boolean => (job.priority !== 'background' || !this.hasForegroundAcquisition()) &&
+      (job.started || job.consumers.some((consumer: BookConsumer): boolean =>
+      consumer.active && consumer.isCurrent?.() !== false && consumer.canDispatch?.() !== false));
     const gateway = new RemoteReadingFlowGateway({
       request: (method: string, params?: JsonObject, options?: RequestOptions): Promise<ReaderCoreResultEvent> =>
         this.request(method, params, { ...options, shouldCancel: (): boolean => !isCurrent(),
@@ -436,6 +564,7 @@ export class BookAcquisitionCoordinator {
           catalogAt: cached.catalogAt ?? (typeof facts?.['catalogAt'] === 'number' ? facts['catalogAt'] as number : undefined),
           requiresContextRefresh: (!contextIsCurrent || cached.requiresContextRefresh === true) && version !== undefined });
       } catch (error) {
+        if (job.preempted) throw new RemoteReadingGatewayError('cancelled', '预热已让出前台阅读任务');
         const classified = classifyRemoteReadingCommandFailure('cache.book.status', error);
         this.recordFailure(classified, attemptId, failureContext(classified.code === 'cachedSessionUnavailable' ? 'miss' : classified.code === 'cacheDerivedCorrupt' ? 'derivedCorrupt' : 'blocked'));
         if (!isRemoteReadingCacheRecoveryEligible(classified)) throw classified;
@@ -450,6 +579,7 @@ export class BookAcquisitionCoordinator {
     try {
       session = await gateway.openSession(actual, { isCurrent });
     } catch (error) {
+      if (job.preempted) throw new RemoteReadingGatewayError('cancelled', '预热已让出前台阅读任务');
       const classified = classifyRemoteReadingCommandFailure('book.toc', error);
       const failure = cacheFailure === undefined ? classified : new RemoteReadingGatewayError(classified.code,
         classified.message, classified.command, classified.capability, classified.diagnostic, cacheFailure, classified.category);
@@ -464,6 +594,7 @@ export class BookAcquisitionCoordinator {
       }
       throw failure;
     }
+    if (job.preempted) throw new RemoteReadingGatewayError('cancelled', '预热已让出前台阅读任务');
     if (!isCurrent() || (session.sourceVersion !== undefined && session.sourceVersion !== version)) {
       this.registryReady = false;
       throw new RemoteReadingGatewayError('sourceVersionChanged', '书源规则已更新，请重试');
@@ -472,7 +603,7 @@ export class BookAcquisitionCoordinator {
   }
 
   private drainPreparations(): void {
-    while (!this.closed && this.preparationVisible && this.preparationActive < 2 && this.pending.size > 0) {
+    while (!this.closed && !this.hasForegroundAcquisition() && this.preparationVisible && this.preparationActive < 2 && this.pending.size > 0) {
       const key = this.pending.keys().next().value;
       if (key === undefined) return;
       const task = this.pending.get(key);

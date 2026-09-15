@@ -37,7 +37,7 @@ assert.match(gateway, /private requireStringMap\([\s\S]*typeof variableValue !==
 assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
 assert.match(gateway, /'change\.bookSource',[\s\S]*sourceIds:\s*\[candidateSourceId\]/);
 assert.match(gateway, /SOURCE_SWITCH_DISCOVERY_CONCURRENCY\s*=\s*8/);
-assert.match(gateway, /await Promise\.all\(pending\)/);
+assert.match(gateway, /runBookSourceWorkers\(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY/);
 assert.match(gateway, /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
 assert.match(gateway, /deduplicateSourceSwitchCandidates\(candidates\)/);
 assert.match(gateway, /requireString\(result\.data, 'transactionId', 'source\.switch\.commit'\)/);
@@ -60,10 +60,12 @@ const sourceCategoryModule = stripTypeScriptTypes(
 
 const executable = stripTypeScriptTypes(
   gateway
+    .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () =>
+      readFileSync(resolve(repo, 'entry/src/main/ets/app/BookRequestScheduler.ts'), 'utf8'))
     .replace(/^import \{ acquisitionCandidateRank.*;$/m, () => factModule.replace(/^export /gm, ''))
     .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/common/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
-    .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
+    .replace(/^import \{ errorMessageOf, isNetworkEnvironmentFailure \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
       () => errorMessageModule)
     .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
@@ -140,6 +142,39 @@ assert.deepEqual(
     'candidate-6', 'candidate-7', 'candidate-8', 'candidate-9'],
   'one failed source is skipped and registry order remains stable',
 );
+
+// A slow first source cannot hold the ninth source behind an eight-source batch.
+{
+  let releaseSlow;
+  const slow = new Promise(resolve => { releaseSlow = resolve; });
+  const started = [];
+  const gateway = new SourceSwitchGateway({ request: async (method, params) => {
+    if (method === 'source.list') return { data: { sources: Array.from({ length: 12 }, (_, i) =>
+      ({ sourceId: `s${i}`, name: `s${i}`, enabled: true })) } };
+    const id = params.sourceIds[0]; started.push(id);
+    if (id === 's0') await slow;
+    return { data: { candidates: [{ sourceId: id, bookUrl: '/book', bookName: '鸣龙' }] } };
+  } });
+  const run = gateway.discoverCandidates('original', '/book', '鸣龙');
+  for (let i = 0; i < 100 && !started.includes('s11'); i++) await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(started.includes('s11'), true, 'fast lanes continue before s0 completes');
+  releaseSlow();
+  const result = await run;
+  assert.deepEqual(result.candidates.map(item => item.sourceId), Array.from({ length: 12 }, (_, i) => `s${i}`));
+}
+{
+  const requests = [];
+  const environment = Object.assign(new Error('代理路由失败'), { event: { error: { code: 'HOST_ERROR',
+    details: { host: { diagnostics: { details: { category: 'NETWORK_ENVIRONMENT' } } } } } } });
+  const gateway = new SourceSwitchGateway({ request: async (method, params) => {
+    if (method === 'source.list') return { data: { sources: Array.from({ length: 20 }, (_, i) =>
+      ({ sourceId: `proxy${i}`, name: `proxy${i}`, enabled: true })) } };
+    requests.push(params.sourceIds[0]); throw environment;
+  } });
+  await assert.rejects(gateway.discoverCandidates('original', '/book', '鸣龙'), error => error === environment);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(requests.length, 8, 'environment error propagates and stops dispatch beyond active lanes');
+}
 
 const identityRuntime = {
   async request(method, params) {

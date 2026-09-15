@@ -33,6 +33,27 @@ function priorityRank(priority: BookRequestPriority): number {
   return priority === 'foreground' ? 0 : priority === 'search' ? 1 : 2;
 }
 
+/** Shared source-sweep cursor from SearchOrchestrator. Each completion frees
+ * its lane immediately; a slow source never blocks the next whole batch. The
+ * request scheduler below still owns actual network concurrency and priority. */
+export async function runBookSourceWorkers<T>(sources: T[], concurrency: number,
+  visit: (source: T) => Promise<void>, beforeDispatch: () => Promise<boolean>): Promise<void> {
+  let next = 0;
+  let failed = false;
+  const worker = async (): Promise<void> => {
+    while (!failed && next < sources.length) {
+      if (!await beforeDispatch() || failed) return;
+      const source = sources[next++];
+      if (source === undefined) return;
+      try { await visit(source); }
+      catch (error) { failed = true; throw error; }
+    }
+  };
+  const workers: Promise<void>[] = [];
+  for (let index = 0; index < Math.min(concurrency, sources.length); index += 1) workers.push(worker());
+  await Promise.all(workers);
+}
+
 /** In-flight sharing only. Core remains the durable response/cache owner. */
 export class BookRequestScheduler {
   private jobs: Map<string, RequestJob> = new Map();

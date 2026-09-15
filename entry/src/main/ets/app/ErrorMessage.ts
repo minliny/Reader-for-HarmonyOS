@@ -34,3 +34,24 @@ export function errorMessageOf(error: unknown): string {
   }
   return `${error}`;
 }
+
+/** Recognize only structured transport evidence, never words in a source's response. */
+export function isNetworkEnvironmentFailure(error: unknown): boolean {
+  if (error === null || typeof error !== 'object') return false;
+  const raw = error as Record<string, Object>;
+  if (raw['category'] === 'NETWORK_ENVIRONMENT') return true;
+  // These are the SDK error, Core Host diagnostics and gateway cause envelopes.
+  // Limit traversal to those fields; arbitrary response bodies are not evidence.
+  return networkEnvironmentEnvelope(raw, 0);
+}
+
+function networkEnvironmentEnvelope(value: Object, depth: number): boolean {
+  if (depth > 6 || value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const raw = value as Record<string, Object>;
+  if (raw['category'] === 'NETWORK_ENVIRONMENT') return true;
+  for (const key of ['details', 'host', 'diagnostics', 'event', 'error', 'causeValue']) {
+    const nested = raw[key];
+    if (nested !== undefined && networkEnvironmentEnvelope(nested, depth + 1)) return true;
+  }
+  return false;
+}

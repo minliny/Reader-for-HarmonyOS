@@ -1,7 +1,8 @@
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
+import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingVariable } from '../reading/RemoteReadingContract';
-import { errorMessageOf } from '../../app/ErrorMessage';
+import { errorMessageOf, isNetworkEnvironmentFailure } from '../../app/ErrorMessage';
 import { acquisitionCandidateRank, acquisitionReadableCurrent, acquisitionBookFailureCurrent } from '../common/BookAcquisitionPresentation';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
@@ -427,20 +428,14 @@ export class SourceSwitchGateway {
       return { kind: 'noSources' };
     }
     const candidates: SourceSwitchCandidate[] = [];
-    for (let start = 0; start < sources.length; start += SOURCE_SWITCH_DISCOVERY_CONCURRENCY) {
-      if (isCurrent !== undefined && !isCurrent()) {
-        return { kind: 'noSources' };
-      }
-      const end = Math.min(start + SOURCE_SWITCH_DISCOVERY_CONCURRENCY, sources.length);
-      const pending: Promise<SourceSwitchCandidate[]>[] = [];
-      for (let index = start; index < end; index += 1) {
-        pending.push(this.discoverFromSource(sourceId, bookId, keyword, sources[index], isCurrent));
-      }
-      const groups = await Promise.all(pending);
-      for (const group of groups) {
-        candidates.push(...group);
-      }
-    }
+    await runBookSourceWorkers(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY,
+      async (source: SourceSwitchRegistryEntry): Promise<void> => {
+        const group = await this.discoverFromSource(sourceId, bookId, keyword, source, isCurrent);
+        if (isCurrent?.() !== false) candidates.push(...group);
+      }, async (): Promise<boolean> => isCurrent?.() !== false);
+    if (isCurrent?.() === false) return { kind: 'noSources' };
+    candidates.sort((left: SourceSwitchCandidate, right: SourceSwitchCandidate): number =>
+      (left.sourceOrder ?? 0) - (right.sourceOrder ?? 0));
     const uniqueCandidates = deduplicateSourceSwitchCandidates(candidates);
     const currentCandidateKey = sourceSwitchCandidateKey(sourceId, bookId);
     for (const candidate of uniqueCandidates) {
@@ -465,6 +460,7 @@ export class SourceSwitchGateway {
       );
       return this.decodeDiscoveryCandidates(result.data, source);
     } catch (error) {
+      if (isNetworkEnvironmentFailure(error)) throw error;
       if (isCurrent !== undefined && !isCurrent()) {
         throw error;
       }

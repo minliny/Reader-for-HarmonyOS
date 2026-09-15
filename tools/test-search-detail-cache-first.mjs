@@ -5,7 +5,7 @@ const index = read('pages/Index.ets');
 const coordinator = read('app/BookAcquisitionCoordinator.ts');
 assert.match(index, /const allowGroupFallback = shelfSnapshot === undefined && !resumeImmediately && originRoute === 'search'/,
   'automatic candidate recovery is restricted to a search preview');
-assert.match(index, /acquireCandidateGroup\(candidates, \{ isCurrent \}\)/);
+assert.match(index, /acquireCandidateGroup\(candidates, \{ isCurrent, requireReadable: true, onCatalog: showCandidateCatalog \}\)/);
 assert.match(index, /acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'fixed shelf/manual identities retain single-book admission');
 assert.doesNotMatch(index, /private async openSearchSessionCacheFirst/, 'remove the unused helper formerly covered by a misleading source assertion');

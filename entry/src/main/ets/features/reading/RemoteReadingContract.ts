@@ -1,5 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
-import { errorMessageOf } from '../../app/ErrorMessage.ts';
+import { errorMessageOf, isNetworkEnvironmentFailure } from '../../app/ErrorMessage.ts';
 
 export type RemoteReadingCommand =
   'book.detail' | 'book.toc' | 'chapter.content' |
@@ -11,12 +11,12 @@ export type RemoteReadingErrorCode =
   'identityMismatch' | 'missingTocUrl' | 'emptyToc' |
   'chapterNotFound' | 'chapterNotDownloaded' | 'cachedSessionUnavailable' |
   'nonTextChapter' | 'commandFailed' | 'cancelled' | 'storageFailure' |
-  'sourceVersionChanged' | 'cacheDerivedCorrupt' | 'positionContextStale';
+  'sourceVersionChanged' | 'cacheDerivedCorrupt' | 'positionContextStale' | 'networkEnvironment';
 
 export type RemoteReadingFailureCategory = 'CACHE_MISSING' | 'CACHE_DERIVED_CORRUPT' |
   'STORAGE_FAILURE' | 'CANCELLED' | 'IDENTITY_MISMATCH' | 'SOURCE_VERSION_CHANGED' |
   'SOURCE_HTTP_FAILED' | 'SOURCE_RESPONSE_FORMAT' | 'SOURCE_RULE_FAILED' |
-  'SOURCE_TOC_EMPTY' | 'SOURCE_CONTENT_EMPTY' | 'POSITION_CONTEXT_STALE';
+  'SOURCE_TOC_EMPTY' | 'SOURCE_CONTENT_EMPTY' | 'POSITION_CONTEXT_STALE' | 'NETWORK_ENVIRONMENT';
 
 export type RemoteReadingHostCapabilityId =
   'httpExecute' | 'responseCharsetDecoding' | 'platformCookieJar' |
@@ -110,6 +110,7 @@ export class RemoteReadingGatewayError extends Error {
 
 function remoteReadingCategoryForCode(code: RemoteReadingErrorCode): RemoteReadingFailureCategory {
   switch (code) {
+    case 'networkEnvironment': return 'NETWORK_ENVIRONMENT';
     case 'positionContextStale': return 'POSITION_CONTEXT_STALE';
     case 'cancelled': return 'CANCELLED';
     case 'storageFailure': return 'STORAGE_FAILURE';
@@ -319,6 +320,9 @@ export function classifyRemoteReadingCommandFailure(
     requestId:raw?.event?.requestId,
     ...remoteReadingHttpSummary(details)};
   const category = details?.['category'];
+  if (isNetworkEnvironmentFailure(error)) {
+    return new RemoteReadingGatewayError('networkEnvironment', message, command, undefined, diagnostic, error);
+  }
   if (code === 'CANCELLED' || /cancelled|canceled|已取消/i.test(message)) {
     return new RemoteReadingGatewayError('cancelled', message, command, undefined, diagnostic, error);
   }
@@ -364,7 +368,7 @@ export function classifyRemoteReadingCommandFailure(
  */
 export function isRemoteReadingCacheFallbackEligible(error: unknown): boolean {
   return error instanceof RemoteReadingGatewayError &&
-    (error.code === 'commandFailed' || error.code === 'unsupportedHostCapability');
+    (error.code === 'commandFailed' || error.code === 'unsupportedHostCapability' || error.code === 'networkEnvironment');
 }
 
 function upsertRemoteReadingVariable(

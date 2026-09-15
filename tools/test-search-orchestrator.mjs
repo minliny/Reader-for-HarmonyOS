@@ -31,6 +31,7 @@ const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts'
   .replace(sourceCategoryImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '');
 const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrchestrator.ets')
+  .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () => read('entry/src/main/ets/app/BookRequestScheduler.ts'))
   .replace(/^import \{[\s\S]*?from '\.\/SearchGateway';\n/m, '')
   .replace(errorMessageImport, '')
   .replace(sourceCategorySingleImport, '')

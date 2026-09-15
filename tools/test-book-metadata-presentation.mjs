@@ -8,7 +8,7 @@ const withoutImports = source => source.replace(/^import[\s\S]*?;\n/gm, '');
 const dependencies = `${read('app/ErrorMessage.ts')}\n${read('features/source/ReaderSourceCategory.ts')}\n${withoutImports(read('features/common/CachedBookIdentity.ts'))}\n${withoutImports(read('features/common/BookAcquisitionPresentation.ts'))}`;
 const { SearchGateway } = await executable(dependencies + withoutImports(read('features/search/SearchBookProjection.ts')) + withoutImports(read('features/search/SearchGateway.ts')));
 const switchSource = read('features/source/SourceSwitchGateway.ts');
-const { SourceSwitchGateway, sourceSwitchCandidateKey, sourceSwitchSourceCount } = await executable(dependencies + withoutImports(switchSource));
+const { SourceSwitchGateway, sourceSwitchCandidateKey, sourceSwitchSourceCount } = await executable(dependencies + withoutImports(read('app/BookRequestScheduler.ts')) + withoutImports(switchSource));
 const page = read('features/search/SearchPage.ets');
 const groupSource = page.slice(page.indexOf('class SearchBookGroup'), page.indexOf('class SearchResultDataSource'));
 const window = read('features/source/SourceSwitchWindow.ets');

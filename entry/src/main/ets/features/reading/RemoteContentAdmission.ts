@@ -25,7 +25,8 @@ export type RemoteReadingFailureKind =
   | 'LAYOUT_FAILED'
   | 'RENDER_FAILED'
   | 'STORAGE_FAILED'
-  | 'POSITION_CONTEXT_STALE';
+  | 'POSITION_CONTEXT_STALE'
+  | 'NETWORK_ENVIRONMENT';
 
 const SOURCE_FAILURE_KINDS: RemoteReadingFailureKind[] = [
   'SOURCE_HTTP_FAILED',
@@ -189,6 +190,7 @@ export function remoteReadingFailureKindOf(error: unknown): RemoteReadingFailure
     return error.kind;
   }
   if (error instanceof RemoteReadingGatewayError) {
+    if (error.category === 'NETWORK_ENVIRONMENT') { return 'NETWORK_ENVIRONMENT'; }
     switch (error.code) {
       case 'positionContextStale':
         return 'POSITION_CONTEXT_STALE';
@@ -205,7 +207,12 @@ export function remoteReadingFailureKindOf(error: unknown): RemoteReadingFailure
       case 'storageFailure':
         return 'STORAGE_FAILED';
       case 'commandFailed':
-        return 'SOURCE_HTTP_FAILED';
+        switch (error.category) {
+          case 'SOURCE_RULE_FAILED': case 'SOURCE_RESPONSE_FORMAT': return 'SOURCE_PARSE_FAILED';
+          case 'SOURCE_CONTENT_EMPTY': return 'SOURCE_CONTENT_EMPTY';
+          case 'SOURCE_TOC_EMPTY': return 'SOURCE_TOC_EMPTY';
+          default: return 'SOURCE_HTTP_FAILED';
+        }
       case 'identityMismatch':
       case 'sourceVersionChanged':
       case 'cancelled':
@@ -221,6 +228,7 @@ export function remoteReadingFailureKindOf(error: unknown): RemoteReadingFailure
 /** Detail-page verdict for a classified failure. */
 export function verdictForFailureKind(kind: RemoteReadingFailureKind): RemoteContentVerdict {
   switch (kind) {
+    case 'NETWORK_ENVIRONMENT':
     case 'SOURCE_HTTP_FAILED':
       return 'networkFailed';
     case 'SOURCE_PARSE_FAILED':
