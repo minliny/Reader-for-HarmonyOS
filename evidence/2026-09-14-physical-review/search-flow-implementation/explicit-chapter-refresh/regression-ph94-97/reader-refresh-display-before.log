@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: a proven new persisted body must be rematerialized instead of retrying old scope
+
+0 !== 1
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-refresh-display-recovery.mjs:37:12 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

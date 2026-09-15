@@ -1,0 +1,121 @@
+{
+  "coreCommit": "c86b6aaec60b5c60a3a73254aac03ce6ddce4de9",
+  "deviceOperation": false,
+  "files": [
+    {
+      "file": "reader-core-cache-progress-audit.md",
+      "bytes": 4013,
+      "sha256": "f974c0ed5cdcf84b8b85f94938b82e49434e1a815d0d10d874116110d8289f57"
+    },
+    {
+      "file": "reader-detail-return-final-candidate.log",
+      "bytes": 5137,
+      "sha256": "b44523a303898dfe55e8738b81c81b1f809e6d1db8a613574a05008d2412e787"
+    },
+    {
+      "file": "reader-detail-return-final-entry.log",
+      "bytes": 521,
+      "sha256": "b29ff27fa6baab19d111e12514e79b669a25c62fba7f855567bc63dc41f17c6c"
+    },
+    {
+      "file": "reader-detail-return-final-evidence.log",
+      "bytes": 285,
+      "sha256": "562110888af5853811ef3eb94583cdc19941b56a81bb77fde641e42c031e75f9"
+    },
+    {
+      "file": "reader-detail-return-final-test.log",
+      "bytes": 365,
+      "sha256": "7cc0b8567629e2383294662d854a0a820c0a4a69361ef4c55bf71b9cb9d3529b"
+    },
+    {
+      "file": "reader-detail-return-projection-baseline.log",
+      "bytes": 599,
+      "sha256": "98a73fe6f3cfac057749071686afee987c6a542f9752b245ece9f7218389640b"
+    },
+    {
+      "file": "reader-ph94-97-coordination-final.log",
+      "bytes": 433,
+      "sha256": "c85b32ecdc444a937da0ba0ba182a0125d2c4c25e221632eda17503417fcab06"
+    },
+    {
+      "file": "reader-ph94-97-core-attempt1.log",
+      "bytes": 2524,
+      "sha256": "68803e0263730c9215ec6025d76bbe059a51202be652ad5224ef894817f24891"
+    },
+    {
+      "file": "reader-ph94-97-core-final.log",
+      "bytes": 463181,
+      "sha256": "b263f5d378b7a159da918aa6e064c4853f3a993f000a8d3d13053ec99f3c561f"
+    },
+    {
+      "file": "reader-ph94-97-core-handoff.md",
+      "bytes": 5890,
+      "sha256": "21f7fd6b379ce13e6d3b84e2e40af36aaf0c7206ee051c191400f6b188a3e299"
+    },
+    {
+      "file": "reader-ph94-97-display-final.log",
+      "bytes": 328,
+      "sha256": "dd6267aa677b571878f01f79eeb8dfc52792abddb9c436e97e0a52a5aea54fa0"
+    },
+    {
+      "file": "reader-ph94-97-harmony-integration.log",
+      "bytes": 15017,
+      "sha256": "3f5589537194d9283ed437ee37eff57c64e3e3ea5c11446a1ee1729b878bf6f3"
+    },
+    {
+      "file": "reader-ph94-97-native-final.log",
+      "bytes": 3869,
+      "sha256": "701f71da28de3af26a01870513bb0b639ec71d7df5b4e8dc92991115c495b1fc"
+    },
+    {
+      "file": "reader-refresh-coordination-before.log",
+      "bytes": 565,
+      "sha256": "31c3c43e48f4b0eb11dae7cd6945119b350611eff4ebe414d83b1094520bd75c"
+    },
+    {
+      "file": "reader-refresh-display-before.log",
+      "bytes": 460,
+      "sha256": "4c4c9ba04d24771351ab88e8008c1d8181d2532d35ec291e2c36050289d3d732"
+    },
+    {
+      "file": "reader-refresh-progress-wire.json",
+      "bytes": 14382,
+      "sha256": "e97101cdc6f4ff07bda8f17ade6629afb5831b5fd6261b69bfb91c5af53c0760"
+    },
+    {
+      "file": "reader-refresh-progress-wire.log",
+      "bytes": 11109,
+      "sha256": "9b14a062dcd15dee3af93744ffccb538e808f771fc122d0c61294a4640db2ba7"
+    },
+    {
+      "file": "reader-refresh-prompt-before.log",
+      "bytes": 626,
+      "sha256": "47f4a886da91d3474ccb108469d9e485490cebbc975e9fccdc97e7405b09a0ac"
+    },
+    {
+      "file": "reader-ui-flicker-audit.md",
+      "bytes": 8310,
+      "sha256": "e7b88a181f2cc391e8c17d4d6d229f420b00f6c37732424cfb62c3f0a6d5f5f6"
+    },
+    {
+      "file": "reader-ui-flicker-baseline-test.log",
+      "bytes": 658,
+      "sha256": "337b9a770c0ddec0936fc906d3846f7271d154f415053235101f88871a3501e6"
+    },
+    {
+      "file": "reader-ui-flicker-fixed-test.log",
+      "bytes": 324,
+      "sha256": "e5734a7999f95cc72581d168e6f7fd3c9dcc97ef953c133471c3be041b965245"
+    },
+    {
+      "file": "shelf-entry-reuse-audit.md",
+      "bytes": 5260,
+      "sha256": "16dcf54caa93d3d78f2cb3bbad95c47976350f5f4e1a935878707c6ae68172b1"
+    },
+    {
+      "file": "shelf-prepared-before.json",
+      "bytes": 1315,
+      "sha256": "45e3b40089ed5c93fc1e6308d66c6fa891a50fed91f3f333c503cc5f56ddaeff"
+    }
+  ]
+}

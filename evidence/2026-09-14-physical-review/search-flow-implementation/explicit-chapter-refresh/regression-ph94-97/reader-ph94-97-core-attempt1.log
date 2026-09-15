@@ -1,0 +1,34 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+    Checking reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Checking reader-ffi v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-ffi)
+    Checking reader-cli v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/tools/reader-cli)
+error: called `.err().expect()` on a `Result` value
+    --> crates/reader-runtime/src/remote/remote_content_positions.rs:2055:18
+     |
+2055 |                   .err()
+     |  __________________^
+2056 | |                 .expect("stale/invalid cached coordinates must be rejected");
+     | |_______________________^ help: try: `expect_err`
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.97.0/index.html#err_expect
+     = note: `-D clippy::err-expect` implied by `-D warnings`
+     = help: to override `-D warnings` add `#[allow(clippy::err_expect)]`
+
+error[E0063]: missing fields `chapter_response_url` and `logical_chapter_url` in initializer of `reader_runtime::remote::SourceFetchMeta`
+   --> crates/reader-runtime/tests/pagination.rs:337:22
+    |
+337 |         source_meta: reader_runtime::remote::SourceFetchMeta {
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing `chapter_response_url` and `logical_chapter_url`
+
+error[E0063]: missing fields `chapter_response_url` and `logical_chapter_url` in initializer of `reader_runtime::remote::SourceFetchMeta`
+   --> crates/reader-runtime/tests/pagination.rs:588:26
+    |
+588 |             source_meta: reader_runtime::remote::SourceFetchMeta {
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing `chapter_response_url` and `logical_chapter_url`
+
+error: could not compile `reader-runtime` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+For more information about this error, try `rustc --explain E0063`.
+error: could not compile `reader-runtime` (test "runtime_integration") due to 2 previous errors

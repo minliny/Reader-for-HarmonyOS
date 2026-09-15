@@ -1,0 +1,22 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: refresh must not capture a progress snapshot while its predecessor is unsettled
++ actual - expected
+
+  [
+    'old-write',
++   'chapter.content'
+  ]
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-refresh-coordination.mjs:35:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [ 'old-write', 'chapter.content' ],
+  expected: [ 'old-write' ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

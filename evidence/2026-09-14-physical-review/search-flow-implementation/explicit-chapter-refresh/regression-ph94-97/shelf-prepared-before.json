@@ -1,0 +1,44 @@
+{
+  "kind": "successful defect reproduction, not a fix pass",
+  "sourceSha256": {
+    "entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts": "d31ce0759b47051159d62432313b14a12dfe972e1d9f7228620a275169377132",
+    "entry/src/main/ets/features/reading/RemoteReadingEvidence.ts": "8c973ab3b73c616a2ace4500c97605872d480c13da5ce9dd147b9a298837a15f",
+    "entry/src/main/ets/pages/Index.ets": "4d1cf2f60fe5173ccb9ce84efa7cced0a44d5302859f14c59a9d36f257f0c591"
+  },
+  "observations": [
+    {
+      "positionContext": false,
+      "coreRequests": 0,
+      "samePreparedObject": true,
+      "calls": []
+    },
+    {
+      "positionContext": true,
+      "coreRequests": 1,
+      "samePreparedObject": false,
+      "calls": [
+        {
+          "method": "chapter.content",
+          "params": {
+            "sourceId": "s",
+            "bookId": "b",
+            "chapterTitle": "第一章",
+            "chapterIndex": 0,
+            "chapterUrl": "/0",
+            "variables": {},
+            "positionContext": {
+              "bodyVersion": "body-v1",
+              "processingVersion": "processing-v1",
+              "anchors": [
+                {
+                  "id": "restored",
+                  "offset": 10
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

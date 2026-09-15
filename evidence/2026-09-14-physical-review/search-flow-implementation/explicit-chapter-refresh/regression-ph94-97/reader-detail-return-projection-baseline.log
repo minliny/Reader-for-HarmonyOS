@@ -1,0 +1,17 @@
+(node:26851) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Core-confirmed return cannot flash verifying
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-detail-acquisition-return-stability.mjs:80:12 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
