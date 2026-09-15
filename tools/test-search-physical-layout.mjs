@@ -17,11 +17,11 @@ const card = source.slice(source.indexOf('@Component\nstruct SearchResultCard'))
 for (const scheme of ['day', 'night']) {
   for (const inBookshelf of [false, true]) {
     for (const [width, isTablet] of [[320, false], [390, false], [736, true]]) {
-      const { owner } = createReaderBuilderProbe(card, ['resultBody', 'displayIntro', 'coverWidth', 'coverHeight'], {
+      const { owner } = createReaderBuilderProbe(card, ['resultBody', 'displayIntro', 'coverWidth', 'coverHeight', 'coverErrorHandler'], {
         bookIntroText, bookAuthorLabel, ImageFit: { Cover: 'Cover' }, LengthMetrics: { vp: value => value }, ...tokens,
       });
       const book = { title: '终宋', author: '作者', sourceId: 'source', sourceName: '实际书源', coverUrl: 'https://example.test/cover', intro: '正文简介', latestChapterTitle: '  ' };
-      Object.assign(owner, { group: { book, variants: [book], sourceCount: 2, inBookshelf },
+      Object.assign(owner, { group: { book, coverUrl: book.coverUrl, variants: [book], sourceCount: 2, inBookshelf },
         isTablet, cardWidth: width, appThemeScheme: scheme });
       owner.resultBody();
       const nodes = () => [...owner.nodes.values()];

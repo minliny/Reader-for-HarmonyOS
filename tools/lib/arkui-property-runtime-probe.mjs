@@ -18,7 +18,8 @@ export function createArkUIPropertyRuntimeProbe() {
     return source.slice(start, end + 2);
   };
   const names = ['ObservedPropertyPU', 'ObservedPropertyObjectPU', 'ObservedPropertySimplePU',
-    'SynchedPropertyOneWayPU', 'SynchedPropertySimpleOneWayPU', 'SynchedPropertyObjectOneWayPU'];
+    'SynchedPropertyOneWayPU', 'SynchedPropertySimpleOneWayPU', 'SynchedPropertyObjectOneWayPU',
+    'SynchedPropertyNestedObjectPU'];
   const proxyStart = source.indexOf('class SubscribableHandler {');
   const proxyEnd = source.indexOf("ObservedObject.__OBSERVED_OBJECT_RAW_OBJECT = Symbol('_____raw_object__');", proxyStart);
   const trackedStart = source.indexOf('class TrackedObject {');
@@ -46,6 +47,7 @@ export function createArkUIPropertyRuntimeProbe() {
     id__() { return this.id_; }
     setDecoratorInfo() {}
     checkIsSupportedValue() { return true; }
+    checkIsObject(value) { return value === undefined || (value !== null && typeof value === 'object'); }
     getPropSourceObservedPropertyFakeName() { return `${this.info_}:source`; }
     debugInfo() { return this.info_; }
     recordPropertyDependentUpdate() {

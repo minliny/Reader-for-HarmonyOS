@@ -72,7 +72,9 @@ class SearchBookGroup {
   inBookshelf: boolean;
   sourceIds: string[];
   variants: SearchBook[];
+  coverUrl: string;
   private readonly sourceIdSet: Set<string>;
+  private readonly failedCoverUrls: Set<string> = new Set();
 
   constructor(book: SearchBook, sourceCount: number, inBookshelf: boolean) {
     this.book = book;
@@ -80,6 +82,7 @@ class SearchBookGroup {
     this.inBookshelf = inBookshelf;
     this.sourceIds = [book.sourceId];
     this.variants = [book];
+    this.coverUrl = book.coverUrl?.trim() ?? '';
     this.sourceIdSet = new Set<string>([book.sourceId]);
   }
 
@@ -91,6 +94,30 @@ class SearchBookGroup {
       this.sourceCount += 1;
     }
     this.inBookshelf = this.inBookshelf || inBookshelf;
+    // Admission is append-only; do not rescan every prior variant per source.
+    const url = book.coverUrl?.trim() ?? '';
+    if (this.coverUrl.length === 0 && url.length > 0 && !this.failedCoverUrls.has(url)) this.coverUrl = url;
+  }
+
+  resetCoverFailures(): void { this.failedCoverUrls.clear(); }
+
+  refreshCover(): void {
+    // A source becoming a better reading candidate must not replace this
+    // book's already displayed image. Cover choice belongs to the retained row.
+    if (this.coverUrl.length > 0 && !this.failedCoverUrls.has(this.coverUrl) &&
+      this.variants.some((book: SearchBook): boolean => book.coverUrl?.trim() === this.coverUrl)) return;
+    const candidate = this.variants.find((book: SearchBook): boolean => {
+      const url = book.coverUrl?.trim() ?? '';
+      return url.length > 0 && !this.failedCoverUrls.has(url);
+    });
+    const next = candidate?.coverUrl?.trim() ?? '';
+    if (this.coverUrl !== next) this.coverUrl = next;
+  }
+
+  rejectCover(url: string): void {
+    if (url.length === 0 || this.coverUrl !== url) return;
+    this.failedCoverUrls.add(url);
+    this.refreshCover();
   }
 }
 
@@ -136,6 +163,7 @@ class SearchResultDataSource implements IDataSource {
 
   private update(retained: SearchBookGroup, next: SearchBookGroup): boolean {
     if (retained === next) return false;
+    const newRequest = retained.book.searchRequestId !== next.book.searchRequestId;
     let changed = false;
     if (!this.sameBook(retained.book, next.book)) { retained.book = next.book; changed = true; }
     if (retained.sourceCount !== next.sourceCount) { retained.sourceCount = next.sourceCount; changed = true; }
@@ -148,19 +176,19 @@ class SearchResultDataSource implements IDataSource {
       retained.variants.some((book: SearchBook, index: number): boolean => !this.sameBook(book, next.variants[index]))) {
       retained.variants = next.variants; changed = true;
     }
+    if (newRequest) retained.resetCoverFailures();
+    retained.refreshCover();
     return changed;
   }
 
   replace(items: SearchBookGroup[], changedKeys?: Set<string>): boolean {
     if (this.input === items && changedKeys !== undefined) {
-      const operations: DataOperation[] = [];
       for (const key of changedKeys) {
         const index = this.positions.get(key);
-        if (index !== undefined && this.update(this.items[index], items[index])) {
-          operations.push({ type: DataOperationType.CHANGE, index });
-        }
+        if (index !== undefined) this.update(this.items[index], items[index]);
       }
-      if (operations.length > 0) for (const listener of this.listeners) listener.onDatasetChange(operations);
+      // @ObjectLink observes these retained objects. Native batch CHANGE
+      // invalidates the lazy child, including an already decoded cover image.
       return false;
     }
     const oldItems = this.items;
@@ -169,7 +197,6 @@ class SearchResultDataSource implements IDataSource {
     for (let index = 0; index < oldKeys.length; index++) previous.set(oldKeys[index], oldItems[index]);
     const nextKeys: string[] = [];
     const nextItems: SearchBookGroup[] = [];
-    const changes: number[] = [];
     const additions: number[] = [];
     const nextSet = new Set<string>();
     for (let index = 0; index < items.length; index++) {
@@ -178,7 +205,7 @@ class SearchResultDataSource implements IDataSource {
       const retained = previous.get(key);
       if (retained === undefined) { nextItems.push(next); additions.push(index); }
       else {
-        if (this.update(retained, next) || changedKeys?.has(key)) changes.push(this.positions.get(key) as number);
+        this.update(retained, next);
         nextItems.push(retained);
       }
     }
@@ -200,9 +227,6 @@ class SearchResultDataSource implements IDataSource {
         // positions. Legacy onDataMove is an exchange and is never used.
         operations.push({ type: DataOperationType.MOVE, index: {
           from: this.positions.get(moved[0]) as number, to: nextPositions.get(moved[0]) as number } });
-        for (const index of changes) if (index !== this.positions.get(moved[0]) && index !== nextPositions.get(moved[0])) {
-          operations.push({ type: DataOperationType.CHANGE, index });
-        }
       } else {
         // Arbitrary permutations belong to ArkUI's keyed comparison, not a
         // second Reader diff engine. The page restores its measured anchor.
@@ -226,18 +250,16 @@ class SearchResultDataSource implements IDataSource {
         if (original !== undefined) nextOriginal = original;
         else additionAnchors.set(index, nextOriginal);
       }
-      const insertedAt = new Set<number>();
       for (let position = 0; position < additions.length;) {
         const start = additions[position]; let end = position + 1;
         while (end < additions.length && additions[end] === additions[end - 1] + 1) end++;
-        const anchor = additionAnchors.get(start) as number; insertedAt.add(anchor);
+        const anchor = additionAnchors.get(start) as number;
         operations.push({ type: DataOperationType.ADD, index: anchor, count: end - position,
           key: nextKeys.slice(start, start + end - position) });
         position = end;
       }
-      // ArkUI admits only the first operation at an old index. The observed
-      // retained row already carries changed fields when an ADD owns its index.
-      for (const index of changes) if (!insertedAt.has(index)) operations.push({ type: DataOperationType.CHANGE, index });
+      // Only membership/order changes notify LazyForEach. Observed metadata
+      // updates do not invalidate retained native children.
     }
     this.items = nextItems; this.keys = nextKeys;
     this.input = items;
@@ -1288,10 +1310,8 @@ export struct SearchPage {
 struct SearchResultCard {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  // LazyForEach supplies a regular row value.  ObjectLink requires the
-  // parent to pass an @Observed-owned object and the compiler otherwise
-  // rejects this boundary; the data source emits an explicit row change when
-  // an existing observed group is enriched in place.
+  // The data source keeps the same @Observed instance for the same book key.
+  // ObjectLink delivers metadata changes without replacing the lazy child.
   @ObjectLink group: SearchBookGroup;
   @Prop isTablet: boolean = false;
   @Prop cardWidth: number = 0;
@@ -1309,15 +1329,24 @@ struct SearchResultCard {
     return this.coverWidth() * (this.isTablet ? 92 / 68 : 82 / 60);
   }
 
+  private coverErrorHandler(url: string): () => void {
+    const group = this.group;
+    const requestId = group.book.searchRequestId;
+    return (): void => {
+      if (this.group === group && group.book.searchRequestId === requestId) group.rejectCover(url);
+    };
+  }
+
   build() {
     Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Bottom }) {
-        if (this.group.book.coverUrl !== undefined && this.group.book.coverUrl.trim().length > 0) {
-          Image(this.group.book.coverUrl)
+        if (this.group.coverUrl.length > 0) {
+          Image(this.group.coverUrl)
             .width(this.coverWidth())
             .height(this.coverHeight())
             .objectFit(ImageFit.Cover)
-            .borderRadius(6);
+            .borderRadius(6)
+            .onError(this.coverErrorHandler(this.group.coverUrl));
         } else {
           // Figma CoverContainer placeholder: a primary-green gradient with the
           // book title overlaid at the bottom. No per-book gradient mapping

@@ -56,7 +56,7 @@ assert.equal(visibleBook.book.title, '详情中的新书名');
 assert.equal(visibleBook.sourceCount, 2);
 assert.equal(visibleBook.variants[1].sourceId, 'source-b', 'clicks receive the new candidate too');
 assert.equal(visibleBook.inBookshelf, true);
-assert.deepEqual(events, [['add', 3], ['change', 1]], 'one batch applies structural positions before row changes');
+assert.deepEqual(events, [['add', 3]], 'only structural additions notify; ObjectLink carries metadata');
 ds.replace([group('b'), group('d')]);
 assert.deepEqual(Array.from({ length: ds.totalCount() }, (_, i) => ds.getData(i).book.bookId), ['b', 'd']);
 assert.equal(ds.getData(0), visibleBook, 'removing earlier rows preserves the retained observed row');
@@ -189,7 +189,8 @@ changedRows = 0; addedRows = 0;
 const batch = Array.from({ length: 4001 }, (_, i) => group(`book-${i}`));
 batch[211].sourceCount = 2;
 incremental.replace(batch);
-assert.equal(changedRows, 1); assert.equal(addedRows, 1);
+assert.equal(changedRows, 0); assert.equal(addedRows, 1);
+assert.equal(incremental.getData(211).sourceCount, 2, 'retained row enriched without native replacement');
 changedRows = 0; addedRows = 0;
 incremental.replace(batch);
 assert.equal(changedRows, 0); assert.equal(addedRows, 0);
@@ -257,12 +258,12 @@ console.log('current-version catalog group representative; stale and other-versi
     assert.equal(owner.changedGroupKeys.size,1);
     assert.equal([...owner.projectedGroups].filter(([key,row])=>row!==before.get(key)).length,1);
     data.replace(updated,owner.changedGroupKeys);
-    assert.equal(touched,1);assert.deepEqual(notices,[[{type:'change',index:500}]]);assert.equal(lower,0);
+    assert.equal(touched,1);assert.deepEqual(notices,[]);assert.equal(data.getData(500).book.intro,'更新');assert.equal(lower,0);
     notices.length=0;touched=0;
     owner.groupResults(next);data.replace(groups,owner.changedGroupKeys);
     assert.equal(owner.changedGroupKeys.size,0);assert.equal(touched,0);assert.equal(notices.length,0);assert.equal(lower,0);
   } finally {String.prototype.toLocaleLowerCase=originalLower;}
-  console.log('R6 query=1000 single metadata: newGroups=1 rowUpdates=1 notifications=1 normalize=0 groupSort=0; progress all=0 PASS');
+  console.log('R6 query=1000 single metadata: newGroups=1 rowUpdates=1 structuralNotifications=0 normalize=0 groupSort=0; progress all=0 PASS');
 }
 // Native batch indices use the original array. Structural and change events
 // at the same index must not conflict (the retained ObjectLink carries fields).
@@ -273,8 +274,7 @@ console.log('current-version catalog group representative; stale and other-versi
   const retainedC=data.getData(2),retainedD=data.getData(3);
   data.replace([group('x'),group('b'),group('c','new C'),group('y'),group('d','new D')],new Set(['online:c','online:d']));
   assert.deepEqual(notices,[[{type:'delete',index:4,count:1},{type:'delete',index:0,count:1},
-    {type:'add',index:1,count:1,key:['online:x']},{type:'add',index:3,count:1,key:['online:y']},
-    {type:'change',index:2}]],'adds and change reference old b/d/c positions, not final shifted indexes');
+    {type:'add',index:1,count:1,key:['online:x']},{type:'add',index:3,count:1,key:['online:y']}]],'structural edits reference old positions; observed metadata needs no CHANGE');
   assert.equal(data.getData(2),retainedC);assert.equal(data.getData(4),retainedD);assert.equal(retainedD.book.title,'new D');
   notices.length=0;
   data.replace([group('d','most relevant'),group('x'),group('b'),group('c','new C'),group('y')],new Set(['online:d']));
