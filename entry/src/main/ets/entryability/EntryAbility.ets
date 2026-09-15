@@ -7,6 +7,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerControlVerificationColdStartPage } from '../app/ReaderControlVerificationLaunch';
+import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
+import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';
 const DOMAIN = 0x5244;
@@ -18,6 +20,7 @@ export default class EntryAbility extends UIAbility {
   private themeReady: Promise<void> = Promise.resolve();
   private recoveryReady: Promise<void> = Promise.resolve();
   private bookshelfModeReady: Promise<void> = Promise.resolve();
+  private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     // Deliberately no onNewWant route switching: a warm request must not bypass
@@ -29,6 +32,12 @@ export default class EntryAbility extends UIAbility {
       want.parameters?.readerControlMotionVerification,
       want.parameters?.readerOpenSourcePilot,
     );
+    if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerEventLoopProbe)) {
+      this.eventLoopProbe = new ReaderEventLoopProbe(readerMotionNowMs,
+        (sample: ReaderEventLoopSample): void => {
+          hilog.info(DOMAIN, 'Reader', 'READER_EVENT_LOOP %{public}s', JSON.stringify(sample));
+        });
+    }
     AppStorage.setOrCreate('readerAppForeground', true);
     WebDavCredentialStore.instance.attachContext(this.context);
     this.bookshelfModeReady = WebDavCredentialStore.instance.loadBookshelfViewMode()
@@ -85,6 +94,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageDestroy(): void {
+    this.eventLoopProbe?.stop('window-destroyed');
     this.windowStageGeneration += 1;
     ReaderWindowCoordinator.detach();
   }
@@ -108,6 +118,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onBackground(): void {
+    this.eventLoopProbe?.stop('background');
     AppStorage.setOrCreate('readerAppForeground', false);
     this.runtimeOwner?.flush().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{private}s', error.message);
@@ -115,6 +126,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    this.eventLoopProbe?.stop('destroyed');
     ReaderThemeHost.detach();
     this.windowStageGeneration += 1;
     ReaderWindowCoordinator.detach();
@@ -130,6 +142,8 @@ export default class EntryAbility extends UIAbility {
     windowStage.loadContent(this.coldStartPage, (error): void => {
       if (error.code) {
         hilog.error(DOMAIN, 'Reader', 'Failed to load main page: %{private}s', JSON.stringify(error));
+      } else {
+        this.eventLoopProbe?.start();
       }
     });
   }
