@@ -259,10 +259,6 @@ export class RemoteReadingFlowGateway {
       variables: encodeRemoteReadingVariables(continuationVariables),
     }, options.isCurrent);
     this.assertIdentity(tocResult.data, identity, 'book.toc');
-    if (tocResult.data['catalogInstalled'] === false) {
-      throw new RemoteReadingGatewayError('sourceVersionChanged',
-        '目录已被更新的请求替换，请重试', 'book.toc');
-    }
     const detailVersion = this.optionalString(detailResult.data, 'sourceVersion', 'book.detail') ?? seed.sourceVersion;
     const tocVersion = this.optionalString(tocResult.data, 'sourceVersion', 'book.toc');
     if (tocVersion !== undefined && detailVersion !== undefined && tocVersion !== detailVersion) {
@@ -283,6 +279,12 @@ export class RemoteReadingFlowGateway {
       };
       throw new RemoteReadingGatewayError(
         'emptyToc', 'book.toc returned no readable chapters', 'book.toc', undefined, diagnostic);
+    }
+    // Core also declines publication for an empty/unreadable catalog. Only
+    // a readable result that was not installed proves a superseded snapshot.
+    if (tocResult.data['catalogInstalled'] === false) {
+      throw new RemoteReadingGatewayError('sourceVersionChanged',
+        '目录已被更新的请求替换，请重试', 'book.toc');
     }
     return {
       acquisitionMode: 'online',

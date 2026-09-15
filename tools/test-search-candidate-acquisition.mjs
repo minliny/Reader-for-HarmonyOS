@@ -48,9 +48,13 @@ function fixture({cooperativeCancellation=false}={}){
    return {data:{sourceId,sourceVersion:version,book:{bookId,title:'鸣龙',author,authorIdentity},tocUrl:`${bookId}/toc`,variables:{token:'detail'}}};
   }
   if(method==='book.toc'){
-   const toc=modes.get(id)==='empty'?[]:[{index:0,title:'第一章',url:`${bookId}/1`,variables:{}}];
-   if(toc.length){catalogs.set(id,toc);Object.assign(rows.get(id).acquisition,{catalogAt:Date.now(),catalogCount:1});}
-   return {data:{sourceId,bookId,toc}};
+   const mode=modes.get(id);
+   const toc=mode==='empty'?[]:[{index:0,title:'第一章',url:mode==='volume-only'?'':`${bookId}/1`,variables:{}}];
+   // Mirror Core finish_toc_result: empty/unreadable catalogs and stale
+   // publications both return false; the flag alone does not identify why.
+   const catalogInstalled=toc.some(entry=>entry.url.trim().length>0)&&mode!=='superseded';
+   if(catalogInstalled){catalogs.set(id,toc);Object.assign(rows.get(id).acquisition,{catalogAt:Date.now(),catalogCount:1});}
+   return {data:{sourceId,bookId,sourceVersion:version,toc,catalogInstalled}};
   }
   if(method==='chapter.content'){
    const failure=modes.get(`body:${id}`);if(failure instanceof Error)throw failure;
@@ -64,6 +68,44 @@ function fixture({cooperativeCancellation=false}={}){
 }
 const outcomes=[];
 async function check(name,body){try{await body();outcomes.push({name,status:'PASS'})}catch(error){outcomes.push({name,status:'FAIL',error:error.stack})}}
+for(const sample of [
+ {name:'empty',toc:[],code:'emptyToc'},
+ {name:'volume-only',toc:[{index:0,title:'第一卷',url:'',variables:{}}],code:'emptyToc'},
+ {name:'superseded readable',toc:[{index:0,title:'第一章',url:'/b0/1',variables:{}}],code:'sourceVersionChanged'},
+ {name:'empty with source version drift',toc:[],override:{sourceVersion:'v2'},code:'sourceVersionChanged'},
+ {name:'empty with source identity drift',toc:[],override:{sourceId:'s2'},code:'identityMismatch'},
+ {name:'empty with book identity drift',toc:[],override:{bookId:'/other'},code:'identityMismatch'},
+])await check(`Core publication contract: ${sample.name} is classified without relaxing identity/version checks`,async()=>{
+ const gateway=new RemoteReadingFlowGateway({request:async(method)=>method==='book.detail'?{data:{sourceId:'s1',sourceVersion:'v1',
+  book:{bookId:'/b0',title:'鸣龙',author:'关关公子'},tocUrl:'/b0/toc',variables:{}}}:{requestId:'catalog-contract-probe',
+  data:{sourceId:'s1',bookId:'/b0',sourceVersion:'v1',toc:sample.toc,catalogInstalled:false,...sample.override}}});
+ await assert.rejects(gateway.openSession(seed(0)),error=>{
+  assert.equal(error.code,sample.code);
+  if(sample.code==='emptyToc'){
+   assert.equal(error.category,'SOURCE_TOC_EMPTY');
+   assert.equal(error.diagnostic.returnedEntryCount,sample.toc.length);
+   assert.equal(error.diagnostic.readableEntryCount,0);
+   assert.equal(error.diagnostic.requestId,'catalog-contract-probe');
+   assert.equal(error.diagnostic.sourceId,'s1');assert.equal(error.diagnostic.bookId,'/b0');
+  }
+  return true;
+ });
+});
+await check('unreadable volume-only catalog continues to a valid same-book candidate',async()=>{
+ const f=fixture();try{f.modes.set(f.key('s1','/b0'),'volume-only');
+ const admitted=await f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]);
+ assert.equal(admitted.session.identity.sourceId,'s2');
+ assert.deepEqual(f.calls.filter(call=>call.method==='book.toc').map(call=>call.params.sourceId),['s1','s2']);
+ }finally{f.runtime.close()}
+});
+await check('a genuinely superseded readable catalog stops fallback and is never admitted or marked source-failed',async()=>{
+ const f=fixture();try{f.modes.set(f.key('s1','/b0'),'superseded');
+ await assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]),error=>error.code==='sourceVersionChanged');
+ assert.equal(f.calls.some(call=>call.params.sourceId==='s2'),false);
+ assert.equal(f.calls.some(call=>call.method==='search-book.put'),false);
+ assert.equal(f.runtime.prepared.size,0);
+ }finally{f.runtime.close()}
+});
 await check('visible groups cap six, concurrency two; speculative work has no progress/body/verdict-success',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);f.gates.set(`book.detail:${f.key('s1','/b1')}`,gate);
  f.runtime.prepareGroups(Array.from({length:2000},(_,i)=>[candidate(i)]));await until(()=>f.calls.filter(c=>c.method==='book.detail').length===2);
