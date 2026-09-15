@@ -1,0 +1,55 @@
+{
+  "scope": "existing PH89 screenshots, before baseline fix, not new VM validation",
+  "pixelSelection": "inner circle radius20px around (905.5,2691.5), RGB min>170 and channel range<45",
+  "densityPxPerVp": 3.5,
+  "measurements": [
+    {
+      "frame": "../search-flow-implementation/vm-ph89-auto-capsule/frame-7.png",
+      "digitInkBoundsInclusive": [
+        900,
+        2679,
+        911,
+        2699
+      ],
+      "circlePixelCentreY": 2691.5,
+      "digitInkCentreY": 2689.0,
+      "inkUpwardOffsetPx": 2.5
+    },
+    {
+      "frame": "../search-flow-implementation/vm-ph89-auto-capsule/frame-8.png",
+      "digitInkBoundsInclusive": [
+        900,
+        2679,
+        911,
+        2700
+      ],
+      "circlePixelCentreY": 2691.5,
+      "digitInkCentreY": 2689.5,
+      "inkUpwardOffsetPx": 2.0
+    },
+    {
+      "frame": "../search-flow-implementation/vm-ph89-auto-capsule/frame-9.png",
+      "digitInkBoundsInclusive": [
+        899,
+        2679,
+        911,
+        2700
+      ],
+      "circlePixelCentreY": 2691.5,
+      "digitInkCentreY": 2689.5,
+      "inkUpwardOffsetPx": 2.0
+    },
+    {
+      "frame": "../search-flow-implementation/vm-ph89-auto-capsule/frame-10.png",
+      "digitInkBoundsInclusive": [
+        899,
+        2679,
+        912,
+        2699
+      ],
+      "circlePixelCentreY": 2691.5,
+      "digitInkCentreY": 2689.0,
+      "inkUpwardOffsetPx": 2.5
+    }
+  ]
+}

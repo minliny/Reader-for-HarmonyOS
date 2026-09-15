@@ -33,6 +33,9 @@ export struct ReaderSessionCapsuleLeading {
             .fontWeight(TYPE_READER_SESSION_COUNTDOWN.fontWeight)
             .fontSize(TYPE_READER_SESSION_COUNTDOWN.fontSizeFp)
             .lineHeight(TYPE_READER_SESSION_COUNTDOWN.lineHeightFp)
+            // PH89: Noto Sans SC digits sit above the centred line box. Match
+            // their ink centre to the circle; fp keeps the correction font-scaled.
+            .baselineOffset('-0.65fp')
             .fontColor(this.onPrimaryColor).textAlign(TextAlign.Center).maxLines(1);
         }.width(16).height(16).backgroundColor(this.primaryColor).borderRadius(999);
       } else {
