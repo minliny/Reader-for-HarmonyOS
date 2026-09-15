@@ -6,9 +6,10 @@ const { searchCandidateRank } = await import('../entry/src/main/ets/features/sea
 const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 import { SearchViewState } from '../entry/src/main/ets/features/search/SearchViewState.ts';
 
-// Only transport and Core persistence are fakes. Execute the unchanged Index
-// methods through the project's SDK parser, including both acquisition phases
-// and the actual preview-switch dispatch rather than a rewritten route model.
+// The acquisition boundary and Core persistence are fakes. Execute the actual
+// Index methods through the project's SDK parser, including both acquisition
+// phases and the preview-switch dispatch. Candidate selection/body admission
+// itself is covered with the real coordinator in test-search-candidate-acquisition.
 const source = process.env.READER_TRIAL_RETURN_INDEX_SOURCE ??
   new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
 const settle = async () => { for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve)); };
@@ -45,15 +46,28 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     if (firstFails && seed.sourceId === first.sourceId) throw new Error('book.toc returned no readable chapters');
     return sessions.get(key(seed));
   };
+  const loadChapter = async session => {
+    calls.push(`chapter.probe:${session.identity.sourceId}`);
+    return {sourceId:session.identity.sourceId,bookId:session.identity.bookId,chapterIndex:0,
+      chapterUrl:session.entries[0].url,contentVersion:'body',content:'正文',images:[]};
+  };
   const owner = { bookAcquisitions: () => ({
     readingProjectionRevision:()=>0, acquireBook: seed => acquire(seed, 'switch.acquire'),
     acquireBookWithBackgroundRefresh: async seed => ({ session: await acquire(seed, 'detail.acquire') }),
+    acquireCandidateGroup: async (candidates,options) => {
+      assert.equal(candidates.length,1,'this navigation fixture selects one new-book candidate');
+      assert.equal(options.requireReadable,true,'new-book trial waits for readable body admission');
+      const session=await acquire(candidates[0].seed,'detail.acquire');
+      if(!options.isCurrent())throw Error('cancelled acquisition');
+      options.onCatalog(session);
+      return {session:readingEvidence.withPreparedRemoteChapter(session,await loadChapter(session),0)};
+    },
     setPreparationVisible() {}, recentFailures: () => [], endSearch: () => calls.push('search.end'),
   }) };
   const Index = productionMotionMethods(source, methods, {
     ...readingEvidence, searchCandidateRank, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
     RemoteReadingFlowGateway: class {
-      async loadChapter(session) { calls.push(`chapter.probe:${session.identity.sourceId}`); return {sourceId:session.identity.sourceId,bookId:session.identity.bookId,chapterIndex:0,chapterUrl:session.entries[0].url,contentVersion:'body',content:'正文',images:[]}; }
+      async loadChapter(session) { return loadChapter(session); }
     },
     ReadingOfflineGateway: class {},
     ReaderCoreGateway: class {

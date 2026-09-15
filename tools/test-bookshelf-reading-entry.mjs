@@ -26,7 +26,7 @@ const methods = [
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'retryCurrentReadingSource(', 'runReadingFailureActionAfterExit(', 'openDetailSourceSwitch(',
-  'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',
+  'onSearchResultSelected(', 'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',
   ...(source.includes('  private cancelReaderExitDestination(') ? ['cancelReaderExitDestination('] : []),
 ].map(method).join('\n');
 const back = source.slice(source.indexOf('  onBackPress(): boolean {'), source.indexOf('\n  build() {'));
@@ -56,7 +56,11 @@ function create(remote = false) {
     'sameRemoteSessionEvidence','preparedRemoteChapterMatches','withPreparedRemoteChapter','copyRemoteReadingSession',
     `${harnessCode}; return Harness;`,
   )(
-    'local', { current: () => ({ bookAcquisitions: () => ({ readingProjectionRevision:()=>0, endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: () => catalog.promise.then(session => ({ session })), recentFailures: () => [] }) }) },
+    'local', { current: () => ({ bookAcquisitions: () => ({ readingProjectionRevision:()=>0, endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: (seed) => {
+      assert.equal(seed.sourceId,book.sourceId,'a shelf preview or resume keeps its durable source identity');
+      assert.equal(seed.bookId,book.bookId,'a shelf preview or resume keeps its durable book identity');
+      return catalog.promise.then(session => ({ session }));
+    }, acquireCandidateGroup:()=>assert.fail('a shelf book must not enter automatic candidate substitution'), recentFailures: () => [] }) }) },
     class { loadToc() { return toc.promise; } loadDirectoryProjection() { return Promise.resolve(entries); } },
     class {
       openCachedCatalogSession() { return catalog.promise; }
@@ -137,7 +141,11 @@ for (const remote of [false, true]) {
 {
   const t = create(true);
   t.h.route = 'search';
-  t.h.openRemoteBookDetail(t.book, 'Test source');
+  // Exercise the actual search dispatcher: it supplies the exact durable shelf
+  // snapshot. Calling its lower-level detail entry without that snapshot would
+  // model a new-book trial instead of this persisted-book journey.
+  t.h.onSearchResultSelected({...t.book,sourceName:'Test source',variables:[]},
+    [{...t.book,sourceId:'alternative',sourceName:'Another source',variables:[]}]);
   t.catalog.resolve(t.session); t.body.resolve('body');
   await settle();
   assert.equal(t.h.route, 'detail');

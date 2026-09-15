@@ -838,28 +838,46 @@ function isNonNegativeSafeInteger(value: unknown): value is number {
 }
 
 function normalizeHostError(error: unknown): ReaderCoreError {
-  if (isReaderCoreError(error)) {
-    return error;
-  }
-
-  if (error instanceof Error) {
-    return {
-      code: "INTERNAL",
-      message: error.message,
-      retryable: false,
-      details: { name: error.name },
-    };
-  }
-
+  const candidate = isJsonObject(error) ? error : undefined;
+  const sourceCode = typeof candidate?.code === "string" ? candidate.code : undefined;
+  // HostErrorCode belongs to diagnostics, while NAPI's error argument is a
+  // CoreError. Never forward a platform code as the enclosing protocol code.
+  // Rebuild even valid Error subclasses: Error.message is non-enumerable and
+  // would disappear when NAPI serializes the original instance to JSON.
   const normalized: ReaderCoreError = {
-    code: "INTERNAL",
-    message: typeof error === "string" ? error : "host request failed",
-    retryable: false,
+    code: sourceCode !== undefined && isCoreErrorCode(sourceCode) ? sourceCode : "INTERNAL",
+    message: typeof candidate?.message === "string"
+      ? candidate.message
+      : typeof error === "string" ? error : "host request failed",
+    retryable: typeof candidate?.retryable === "boolean" ? candidate.retryable : false,
   };
-  if (typeof error === "object" && error !== null) {
+  if (isJsonObject(candidate?.details)) {
+    normalized.details = { ...candidate.details };
+  } else if (error instanceof Error) {
+    normalized.details = { name: error.name };
+  } else if (candidate !== undefined && sourceCode === undefined) {
     normalized.details = { cause: error };
   }
+  if (sourceCode !== undefined && !isCoreErrorCode(sourceCode)) {
+    normalized.details = { ...normalized.details, hostErrorCode: sourceCode };
+  }
   return normalized;
+}
+
+function isCoreErrorCode(code: string): boolean {
+  switch (code) {
+    case "UNKNOWN_METHOD":
+    case "INVALID_PARAMS":
+    case "INVALID_PROTOCOL_VERSION":
+    case "CANCELLED":
+    case "TIMEOUT":
+    case "INVALID_MESSAGE":
+    case "INTERNAL":
+    case "TRANSACTION_PENDING":
+      return true;
+    default:
+      return false;
+  }
 }
 
 function isReaderCoreError(value: unknown): value is ReaderCoreError {

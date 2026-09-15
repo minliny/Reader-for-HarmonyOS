@@ -114,10 +114,13 @@ const hop=d=>host.singleHop('https://lease.example/book',{enumMethod:'GET'}, {},
 }
 console.log('PASS: cancelled never-settling HTTP frees DNS lease; queued cancellation preserves predecessor and same-host recovery');
 
-// The actual SDK passes recognized structured errors directly to NAPI; NAPI
-// JSON.stringify must retain Error.message as well as the custom category.
+// The actual SDK must produce the closed CoreError code set accepted by Rust's
+// HostErrorParams.error. Host-only semantic codes belong in details, while NAPI
+// JSON.stringify must retain Error.message and the environment category.
 const sdkSource=stripTypeScriptTypes(readFileSync(new URL('../entry/vendor/core-harmony/sdk/reader_core.ts',import.meta.url),'utf8')).replace(/^export /gm,'');
 const normalizeHostError=new Function(sdkSource+';return normalizeHostError;')();
 const wire=JSON.parse(JSON.stringify(normalizeHostError(new NetworkEnvironmentError('route','代理路由未就绪'))));
-assert.equal(wire.message,'代理路由未就绪');assert.equal(wire.retryable,true);assert.equal(wire.details.category,'NETWORK_ENVIRONMENT');
-console.log('PASS: real SDK Host error normalization and NAPI JSON serialization preserve structured proxy error');
+assert.equal(wire.code,'INTERNAL','NETWORK_ERROR is a Host semantic code, not a valid Rust CoreError code');
+assert.equal(wire.details.hostErrorCode,'NETWORK_ERROR');
+assert.equal(wire.message,'代理路由未就绪');assert.equal(wire.retryable,true);assert.equal(wire.details.category,'NETWORK_ENVIRONMENT');assert.equal(wire.details.phase,'route');
+console.log('PASS: vendored SDK emits a legal CoreError code and preserves Host network semantics, message and retryability through NAPI JSON');

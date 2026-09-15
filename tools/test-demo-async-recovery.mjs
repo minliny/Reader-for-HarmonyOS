@@ -1,9 +1,12 @@
 import * as readingEvidence from '../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { createHash } from 'node:crypto';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
+const readingAdmission=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
+const readingContract=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -47,15 +50,20 @@ const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admission)+';retur
 for(const stale of [false,true]) for(const fails of [false,true]) {
  const shared=deferred(),background=deferred(),calls=[],failures=[],refreshes=[];
  const coordinator={readingProjectionRevision:()=>0,setPreparationVisible(value){assert.equal(value,false);},
-   acquireBookWithBackgroundRefresh(seed,options){calls.push({seed,options});return shared.promise;},
+   acquireBookWithBackgroundRefresh(){assert.fail('a new search preview must use readable candidate-group admission');},
+   acquireCandidateGroup(candidates,options){
+     assert.equal(options.requireReadable,true,'new-book trial must verify body before admission');
+     assert.equal(typeof options.onCatalog,'function','catalog publication is independent of body completion');
+     calls.push({seed:candidates[0].seed,options});return shared.promise;
+   },
    recentFailures:()=>[]};
  const CacheClass=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
    ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
-     ...readingEvidence,
+     ...readingEvidence,...readingAdmission,...readingContract,
      ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>coordinator})},RemoteDetailAdmission,
      RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},
      ReaderCoreGateway:class{async loadShelfBook(){return undefined;}},
-     RemoteReadingGatewayError:class extends Error{},DOMAIN:0,hilog:{info(){},warn(){},error(){}},
+     DOMAIN:0,hilog:{info(){},warn(){},error(){}},
    });
  const seed={sourceId:'s',bookId:'b',title:'预览',author:'作者'};
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};

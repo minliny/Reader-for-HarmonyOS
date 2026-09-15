@@ -98,7 +98,7 @@ for(const after of [false,true]) for(let at=1;at<=9;at++) {
    cookie:{name:'b-overflow',value:'x'.repeat(4096)}}),/quota exceeded/);
 }
 globalThis.auditCookieStore=CookieSessionStore;
-let endDns;globalThis.auditDns={getDefaultHttpProxy:async()=>({host:'',port:0,exclusionList:[]}),getPacUrl:()=>'',getPacFileUrl:()=>'',getAddressesByName:()=>new Promise((_,reject)=>{endDns=reject;})};
+let endDns;globalThis.auditDns={getDefaultHttpProxy:async()=>({host:'',port:0,exclusionList:[]}),getPacUrl:()=>'',getPacFileUrl:()=>'',getAppNet:async()=>null,getDefaultNet:async()=>({netId:1}),getAddressesByName:()=>new Promise((_,reject)=>{endDns=reject;})};
 const policy=stripTypeScriptTypes(readFileSync(new URL('HttpTransportPolicy.ts',app),'utf8')).replace(/^export /gm,'');
 const routePolicy=stripTypeScriptTypes(readFileSync(new URL('NetworkRoutePolicy.ts',app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const {HttpExecuteHost}=await load('HttpExecuteHost.ts',`const http={InterceptorType:{REDIRECTION:1},RequestMethod:{GET:'GET',POST:'POST',HEAD:'HEAD',PUT:'PUT',DELETE:'DELETE',PATCH:'PATCH',OPTIONS:'OPTIONS',TRACE:'TRACE',CONNECT:'CONNECT'}};const connection=globalThis.auditDns;const CookieSessionStore=globalThis.auditCookieStore;${policy}${routePolicy}`);

@@ -9,7 +9,7 @@ const routePolicy=stripTypeScriptTypes(read('NetworkRoutePolicy.ts').replace(/^i
 const executor=stripTypeScriptTypes(read('ArkWebExecutor.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace('export class','class');
 let generation=0;let fetchCookies=async()=>[];let reconciled;
 let dns=async()=>[{address:'93.184.216.34'}];const pins=[];
-const Executor=new Function('connection','webview','CookieSessionStore',policy+routePolicy+executor+';return ArkWebExecutor;')({getDefaultHttpProxy:async()=>({host:'',port:0,exclusionList:[]}),getPacUrl:()=>'',getPacFileUrl:()=>'',getAddressesByName:host=>dns(host)}, {WebviewController:{setHostIP:(...args)=>pins.push(args)},WebCookieManager:{fetchAllCookies:()=>fetchCookies()},WebHttpCookieSameSitePolicy:{STRICT:1,LAX:2,NONE:3}}, {instance:{sessionGeneration:()=>generation,reconcileArkWebCookies:async(...args)=>{reconciled=args;}}});
+const Executor=new Function('connection','webview','CookieSessionStore',policy+routePolicy+executor+';return ArkWebExecutor;')({getDefaultHttpProxy:async()=>({host:'',port:0,exclusionList:[]}),getPacUrl:()=>'',getPacFileUrl:()=>'',getAppNet:async()=>null,getDefaultNet:async()=>({netId:1}),getAddressesByName:host=>dns(host)}, {WebviewController:{setHostIP:(...args)=>pins.push(args)},WebCookieManager:{fetchAllCookies:()=>fetchCookies()},WebHttpCookieSameSitePolicy:{STRICT:1,LAX:2,NONE:3}}, {instance:{sessionGeneration:()=>generation,reconcileArkWebCookies:async(...args)=>{reconciled=args;}}});
 const e=new Executor();
 const surface={id:1,requestId:1,controller:{stop(){}}};
 const job={requestId:1,surface,deadlineAt:Date.now()+10000,cancelled:false};

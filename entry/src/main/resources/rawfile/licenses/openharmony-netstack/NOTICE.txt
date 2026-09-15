@@ -2,5 +2,5 @@ NetworkRoutePolicy.isSystemProxyExcluded adapts OpenHarmony communication_netsta
 Upstream: https://github.com/openharmony/communication_netstack
 Commit: 76e2ca18189c86d46203cca227afe6947292ee30
 File: utils/common_utils/src/netstack_common_utils.cpp
-Copyright (c) 2021-2026 Huawei Device Co., Ltd. Licensed under Apache-2.0.
+Copyright (c) 2021-2025 Huawei Device Co., Ltd. Licensed under Apache-2.0.
 Adapter: C++ std::regex to ECMAScript RegExp; same allowlisted exclusion syntax and full-host matching. No PAC interpreter or HTTP transport is copied.
