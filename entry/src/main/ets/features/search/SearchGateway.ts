@@ -1,4 +1,4 @@
-import { bookTitleAuthorKey } from '../common/BookAuthorMetadata';
+import { bookTitleAuthorKey, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import type { JsonObject } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { BookRequestOptions } from '../../app/BookRequestScheduler';
@@ -35,6 +35,7 @@ export type SearchBook = {
   category: ReaderSourceCategory;
   title: string;
   author: string;
+  authorIdentity?: BookAuthorIdentityProof;
   coverUrl?: string;
   intro?: string;
   kind?: string;
@@ -375,6 +376,7 @@ function decodeBookSearchResult(
   // A blank remote identity or title would create a non-actionable, empty
   // Figma card. Reject malformed source data rather than fabricating a route.
   const bookId = requiredNonBlankString(book, 'bookId');
+  const authorIdentity = readBookAuthorIdentity(book['authorIdentity'], optionalString(book, 'author') ?? '', identity.sourceRuleVersion);
   const decoded: SearchBook = {
     sourceId: source.sourceId,
     sourceName: source.name,
@@ -384,11 +386,13 @@ function decodeBookSearchResult(
     searchRequestId: identity.searchRequestId,
     sourceRuleVersion: identity.sourceRuleVersion,
     category: source.category ?? 'novel',
-    groupKey: bookTitleAuthorKey(requiredNonBlankString(book, 'title'), optionalString(book, 'author') ?? ''),
+    groupKey: bookTitleAuthorKey(requiredNonBlankString(book, 'title'), optionalString(book, 'author') ?? '',
+      authorIdentity, identity.sourceRuleVersion),
     title: requiredNonBlankString(book, 'title'),
     author: optionalString(book, 'author') ?? '',
     variables: decodeBookSearchVariables(book['variables']),
   };
+  if (authorIdentity !== undefined) decoded.authorIdentity = authorIdentity;
   const coverUrl = optionalString(book, 'coverUrl');
   const intro = optionalString(book, 'intro');
   const kind = optionalString(book, 'kind');

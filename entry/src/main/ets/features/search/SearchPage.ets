@@ -117,13 +117,14 @@ class SearchResultDataSource implements IDataSource {
     const book = group.book;
     if (book.sourceId === 'local') return `local:${book.bookId}`;
     if (book.groupKey !== undefined) return `online:${book.groupKey}`;
-    const alias = bookTitleAuthorKey(book.title, book.author);
+    const alias = bookTitleAuthorKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion);
     return `online:${alias}`;
   }
 
   private sameBook(left: SearchBook, right: SearchBook): boolean {
     return left === right || (left.sourceId === right.sourceId && left.bookId === right.bookId &&
       left.groupKey === right.groupKey && left.title === right.title && left.author === right.author &&
+      (left.authorIdentity === right.authorIdentity || JSON.stringify(left.authorIdentity) === JSON.stringify(right.authorIdentity)) &&
       left.sourceName === right.sourceName && left.coverUrl === right.coverUrl && left.intro === right.intro &&
       left.kind === right.kind && left.latestChapterTitle === right.latestChapterTitle &&
       left.category === right.category && left.detailUrl === right.detailUrl &&
@@ -1351,7 +1352,7 @@ struct SearchResultCard {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Text(bookAuthorLabel(this.group.book.author))
+        Text(bookAuthorLabel(this.group.book.author, this.group.book.authorIdentity, this.group.book.sourceRuleVersion))
           .width('100%')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)

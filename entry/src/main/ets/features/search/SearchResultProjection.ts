@@ -1,4 +1,4 @@
-import { bookTitleAuthorKey } from '../common/BookAuthorMetadata';
+import { bookTitleAuthorKey, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { SearchViewState } from './SearchViewState';
@@ -38,8 +38,8 @@ export class SearchResultProjection {
   private revision: number = -1;
 
   private identity(book: SearchBook): string { return `${book.sourceId}\u0000${book.bookId}`; }
-  private titleKey(title: string, author: string): string {
-    return bookTitleAuthorKey(title, author);
+  private titleKey(title: string, author: string, proof?: BookAuthorIdentityProof, sourceVersion?: string): string {
+    return bookTitleAuthorKey(title, author, proof, sourceVersion);
   }
   private unlink(key: string, affected: Set<string>): void {
     const fact = this.facts.get(key);
@@ -77,11 +77,13 @@ export class SearchResultProjection {
         const key = this.identity(book);
         const previous = this.books.get(key);
         const previousFact = this.facts.get(key);
-        const titleKey = previous !== undefined && previous.title === book.title && previous.author === book.author
-          ? (previousFact as SearchProjectionFact).titleKey : this.titleKey(book.title, book.author);
+        const titleKey = previous !== undefined && previous.title === book.title && previous.author === book.author &&
+          previous.authorIdentity === book.authorIdentity && previous.sourceRuleVersion === book.sourceRuleVersion
+          ? (previousFact as SearchProjectionFact).titleKey : this.titleKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion);
         const groupKey = book.sourceId === 'local' ? `local:${book.bookId}` : `online:${book.groupKey ?? titleKey}`;
-        const score = previous !== undefined && previous.title === book.title && previous.author === book.author
-          ? (previousFact as SearchProjectionFact).score : searchResultRelevance(book.title, book.author, keyword);
+        const score = previous !== undefined && previous.title === book.title && previous.author === book.author &&
+          previous.authorIdentity === book.authorIdentity && previous.sourceRuleVersion === book.sourceRuleVersion
+          ? (previousFact as SearchProjectionFact).score : searchResultRelevance(book.title, book.author, keyword, book.authorIdentity, book.sourceRuleVersion);
         this.unlink(key, affected);
         this.books.set(key, book); this.facts.set(key, { groupKey, titleKey, score });
         let members = this.members.get(groupKey);

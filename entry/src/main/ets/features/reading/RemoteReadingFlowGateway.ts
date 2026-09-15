@@ -1,3 +1,4 @@
+import { readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import { appendExpectedPositionVersions, captureRemotePositionContext, decodeRemotePositionMigration, encodeRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import type {
   JsonObject,
@@ -38,6 +39,7 @@ export type RemoteReadingBookSeed = {
   detailUrl: string;
   title: string;
   author: string;
+  authorIdentity?: BookAuthorIdentityProof;
   coverUrl?: string;
   intro?: string;
   kind?: string;
@@ -49,6 +51,7 @@ export type RemoteReadingBookSeed = {
 export type RemoteReadingBookDetail = {
   title: string;
   author: string;
+  authorIdentity?: BookAuthorIdentityProof;
   coverUrl?: string;
   intro?: string;
   kind?: string;
@@ -232,6 +235,8 @@ export class RemoteReadingFlowGateway {
       );
     }
     const book = this.decodeBookDetail(rawBook);
+    book.authorIdentity = readBookAuthorIdentity(rawBook['authorIdentity'], book.author,
+      this.optionalString(detailResult.data, 'sourceVersion', 'book.detail') ?? seed.sourceVersion);
     const tocUrl = this.optionalString(detailResult.data, 'tocUrl', 'book.detail');
     if (tocUrl === undefined || tocUrl.trim().length === 0) {
       throw new RemoteReadingGatewayError(
@@ -382,6 +387,7 @@ export class RemoteReadingFlowGateway {
       book: {
         title: seed.title,
         author: seed.author,
+        authorIdentity: readBookAuthorIdentity(seed.authorIdentity, seed.author, sourceVersion),
         coverUrl: seed.coverUrl,
         intro: seed.intro,
         kind: seed.kind,

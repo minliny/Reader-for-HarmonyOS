@@ -28,7 +28,7 @@ async function simulatedCoreGate(gate,options){
  } finally {clearTimeout(timer)}
 }
 function fixture({cooperativeCancellation=false}={}){
- const calls=[],rows=new Map(),catalogs=new Map(),modes=new Map(),gates=new Map(),detailAuthors=new Map();let version='v1',enabled=true;
+ const calls=[],rows=new Map(),catalogs=new Map(),modes=new Map(),gates=new Map(),detailAuthors=new Map(),detailProofs=new Map();let version='v1',enabled=true;
  const key=(s,b)=>JSON.stringify([s,b]);
  const runtime=new BookAcquisitionCoordinator(async(method,params,options)=>{
   calls.push({method,params,options});const sourceId=params.sourceId??params.origin;const bookId=params.bookId??params.book?.bookId??params.bookUrl;const id=key(sourceId,bookId);
@@ -42,8 +42,9 @@ function fixture({cooperativeCancellation=false}={}){
   if(method==='book.detail'){
    const mode=modes.get(id);if(mode instanceof Error)throw mode;
    const author=detailAuthors.get(id)??'关关公子';
-   rows.set(id,{origin:sourceId,bookUrl:bookId,name:'鸣龙',author,variable:'{}',time:Date.now(),acquisition:{sourceVersion:version,detailAt:Date.now()}});
-   return {data:{sourceId,sourceVersion:version,book:{bookId,title:'鸣龙',author},tocUrl:`${bookId}/toc`,variables:{token:'detail'}}};
+   const authorIdentity=detailProofs.get(id);
+   rows.set(id,{origin:sourceId,bookUrl:bookId,name:'鸣龙',author,variable:'{}',time:Date.now(),acquisition:{sourceVersion:version,detailAt:Date.now(),authorIdentity}});
+   return {data:{sourceId,sourceVersion:version,book:{bookId,title:'鸣龙',author,authorIdentity},tocUrl:`${bookId}/toc`,variables:{token:'detail'}}};
   }
   if(method==='book.toc'){
    const toc=modes.get(id)==='empty'?[]:[{index:0,title:'第一章',url:`${bookId}/1`,variables:{}}];
@@ -58,7 +59,7 @@ function fixture({cooperativeCancellation=false}={}){
   if(method==='book.search')return{data:{sourceId,books:[{bookId:'/new'}]}};
   throw Error(`unexpected ${method}`);
  });
- return {runtime,owner:{bookAcquisitions:()=>runtime,request:(...a)=>runtime.request(...a)},calls,rows,catalogs,modes,gates,detailAuthors,key,setVersion:v=>version=v};
+ return {runtime,owner:{bookAcquisitions:()=>runtime,request:(...a)=>runtime.request(...a)},calls,rows,catalogs,modes,gates,detailAuthors,detailProofs,key,setVersion:v=>version=v};
 }
 const outcomes=[];
 async function check(name,body){try{await body();outcomes.push({name,status:'PASS'})}catch(error){outcomes.push({name,status:'FAIL',error:error.stack})}}
@@ -201,6 +202,42 @@ await check('author label variants use one identity across search candidate and 
    assert.equal(a.seed.author,primaryAuthor);assert.equal(b.seed.author,candidateAuthor);
    assert.deepEqual(f.calls.filter(c=>c.method==='book.detail').map(c=>c.params.sourceId),['s1','s2']);
    assert.equal(f.calls.filter(c=>c.method==='chapter.content').length,1);
+  }finally{f.runtime.close()}
+ }
+});
+const authorProof=(raw,version='v1',field='search')=>({schemaVersion:1,sourceVersion:version,field,raw,label:raw.slice(1),rule:'author-nickname-at-v1'});
+await check('source-bound author decoration admits same-book detail and body while preserving raw rules context',async()=>{
+ for(const [primaryAuthor,decoratedAuthor] of [['关关公子','@关关公子'],['@真实笔名','@@真实笔名']]){
+  const f=fixture();try{
+   const a=candidate(0),b=candidate(0,'s2');a.seed.author=primaryAuthor;b.seed.author=decoratedAuthor;b.seed.authorIdentity=authorProof(decoratedAuthor);
+   f.detailAuthors.set(f.key('s1','/b0'),primaryAuthor);f.detailAuthors.set(f.key('s2','/b0'),decoratedAuthor);
+   f.detailProofs.set(f.key('s2','/b0'),authorProof(decoratedAuthor,'v1','detail'));f.modes.set(f.key('s1','/b0'),'empty');
+   const admitted=await f.runtime.acquireCandidateGroup([a,b],{requireReadable:true});
+   assert.equal(admitted.session.identity.sourceId,'s2');assert.equal(admitted.session.book.author,decoratedAuthor);
+   assert.equal(admitted.session.book.authorIdentity.field,'detail');
+   assert.equal(f.calls.find(c=>c.method==='book.detail'&&c.params.sourceId==='s2').params.book.author,decoratedAuthor);
+   assert.equal(f.calls.find(c=>c.method==='book.detail'&&c.params.sourceId==='s2').params.book.authorIdentity,undefined,'proof never enters source JS context');
+   assert.equal(f.rows.get(f.key('s2','/b0')).author,decoratedAuthor);assert.equal(admitted.session.preparedChapter.chapter.chapterIndex,0);
+  }finally{f.runtime.close()}
+ }
+});
+await check('genuine at-author and stale decorated proof cannot authorize another author',async()=>{
+ for(const proof of [undefined,authorProof('@关关公子','old'),{...authorProof('@关关公子'),label:'其他作者'}]){
+  const f=fixture();try{const a=candidate(0),b=candidate(0,'s2');b.seed.author='@关关公子';b.seed.authorIdentity=proof;f.modes.set(f.key('s1','/b0'),'empty');
+   await assert.rejects(f.runtime.acquireCandidateGroup([a,b]));assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
+  }finally{f.runtime.close()}
+ }
+});
+await check('a recognized author template with an empty nickname remains unknown and cannot authorize fallback',async()=>{
+ const f=fixture();try{const a=candidate(0),b=candidate(0,'s2');a.seed.author='@';a.seed.authorIdentity=authorProof('@');b.seed.author='@';
+  f.detailAuthors.set(f.key('s1','/b0'),'@');f.detailProofs.set(f.key('s1','/b0'),authorProof('@','v1','detail'));f.modes.set(f.key('s1','/b0'),'empty');
+  await assert.rejects(f.runtime.acquireCandidateGroup([a,b]));assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
+ }finally{f.runtime.close()}
+});
+await check('acquired detail must revalidate decorated author against its own current proof',async()=>{
+ for(const proof of [undefined,authorProof('@关关公子','old')]){
+  const f=fixture();try{const a=candidate(0);f.detailAuthors.set(f.key('s1','/b0'),'@关关公子');f.detailProofs.set(f.key('s1','/b0'),proof);
+   await assert.rejects(f.runtime.acquireCandidateGroup([a],{requireReadable:true}));assert.equal(f.calls.some(c=>c.method==='chapter.content'),false);
   }finally{f.runtime.close()}
  }
 });

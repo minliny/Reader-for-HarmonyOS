@@ -1,4 +1,4 @@
-import { bookAuthorIdentity } from '../common/BookAuthorMetadata';
+import { bookAuthorIdentity, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
@@ -37,6 +37,7 @@ export type SourceSwitchCandidate = {
   bookUrl: string;
   bookName: string;
   author?: string;
+  authorIdentity?: BookAuthorIdentityProof;
   coverUrl?: string;
   latestChapterTitle?: string;
   currentChapterTitle?: string;
@@ -54,6 +55,8 @@ export type SourceSwitchProbeQuery = {
   bookId: string;
   bookName: string;
   author: string;
+  authorIdentity?: BookAuthorIdentityProof;
+  sourceVersion?: string;
   currentChapterIndex: number;
   currentChapterTitle: string;
 };
@@ -503,6 +506,8 @@ export class SourceSwitchGateway {
       const coverUrl = this.optionalString(candidate, 'coverUrl');
       if (author !== undefined) {
         entry.author = author;
+        entry.sourceVersion = source.sourceVersion;
+        entry.authorIdentity = readBookAuthorIdentity(candidate['authorIdentity'], author, source.sourceVersion);
       }
       if (coverUrl !== undefined) {
         entry.coverUrl = coverUrl;
@@ -954,7 +959,8 @@ export class SourceSwitchGateway {
     query: SourceSwitchProbeQuery,
   ): boolean {
     return this.normalizeBookName(candidate.bookName) === this.normalizeBookName(query.bookName) &&
-      this.matchesAuthor(candidate.author, query.author);
+      bookAuthorIdentity(candidate.author ?? '', candidate.authorIdentity, candidate.sourceVersion) ===
+        bookAuthorIdentity(query.author, query.authorIdentity, query.sourceVersion);
   }
 
   private decodeCachedCandidate(
@@ -1013,6 +1019,7 @@ export class SourceSwitchGateway {
     const cachedChapter = this.parseCachedChapter(this.optionalString(book, 'chapterWordCountText'));
     if (author !== undefined && author.length > 0) {
       candidate.author = author;
+      candidate.authorIdentity = readBookAuthorIdentity(facts?.['authorIdentity'], author, source.sourceVersion);
     }
     if (coverUrl !== undefined && coverUrl.length > 0) {
       candidate.coverUrl = coverUrl;

@@ -2417,6 +2417,7 @@ struct Index {
       detailUrl: candidate.detailUrl,
       title: candidate.title,
       author: candidate.author,
+      authorIdentity: candidate.authorIdentity,
       coverUrl: candidate.coverUrl,
       intro: candidate.intro,
       kind: candidate.kind,
@@ -4419,8 +4420,10 @@ struct Index {
   private sourceSwitchProbeQuery(): SourceSwitchProbeQuery {
     const book = this.detailBook;
     if (book === undefined) throw new Error('换源需要当前书籍');
+    const session = this.remoteReadingSession?.identity.sourceId === book.sourceId &&
+      this.remoteReadingSession?.identity.bookId === book.bookId ? this.remoteReadingSession : undefined;
     if (this.detailToc.length === 0) {
-      return { sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author,
+      return { sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author, authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,
         currentChapterIndex: 0, currentChapterTitle: '' };
     }
     let anchor = this.detailToc[this.detailToc.length - 1];
@@ -4440,6 +4443,7 @@ struct Index {
       bookId: book.bookId,
       bookName: book.title,
       author: book.author,
+      authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,
       currentChapterIndex: anchor.index,
       currentChapterTitle: anchor.title,
     };
@@ -4450,7 +4454,7 @@ struct Index {
     return this.searchDetailCandidates.map((book: SearchBook): SourceSwitchCandidate => {
       const rank = searchCandidateRank(book);
       return { sourceId: book.sourceId, sourceName: book.sourceName, sourceVersion: book.sourceRuleVersion,
-        searchVariables: book.variables,
+        searchVariables: book.variables, authorIdentity: book.authorIdentity,
         bookUrl: book.bookId, bookName: book.title, author: book.author, coverUrl: book.coverUrl,
         latestChapterTitle: book.latestChapterTitle, category: book.category,
         acquisitionState: rank === 0 ? 'readable' : rank === 1 ? 'catalogReady' : rank === 3 ? 'failed' : 'discovered',

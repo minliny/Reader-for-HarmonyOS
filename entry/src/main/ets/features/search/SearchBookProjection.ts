@@ -1,3 +1,4 @@
+import { readBookAuthorIdentity } from '../common/BookAuthorMetadata';
 import type { JsonObject } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
@@ -74,6 +75,7 @@ export class SearchBookProjection {
       bookSourceUrl: source.baseUrl ?? source.sourceId, bookId, detailUrl: bookId,
       sourceRuleVersion: previous?.sourceRuleVersion ?? source.sourceVersion ?? '', category: source.category,
       title: this.string(row, 'name') || previous?.title || seed.title, author: this.string(row, 'author'),
+      authorIdentity: readBookAuthorIdentity(facts?.['authorIdentity'], this.string(row, 'author'), source.sourceVersion),
       coverUrl: row['coverUrl'] as string | undefined, intro: row['intro'] as string | undefined,
       kind: row['kind'] as string | undefined, latestChapterTitle: row['latestChapterTitle'] as string | undefined,
       acquisition: facts, variables, admittedOrder: previous?.admittedOrder };
@@ -84,7 +86,8 @@ export class SearchBookProjection {
     return result;
   }
   private same(left: SearchBook, right: SearchBook): boolean {
-    return left.title === right.title && left.author === right.author && left.coverUrl === right.coverUrl &&
+    return left.title === right.title && left.author === right.author &&
+      JSON.stringify(left.authorIdentity) === JSON.stringify(right.authorIdentity) && left.coverUrl === right.coverUrl &&
       left.intro === right.intro && left.kind === right.kind && left.latestChapterTitle === right.latestChapterTitle &&
       left.groupKey === right.groupKey && left.sourceName === right.sourceName && left.category === right.category &&
       left.sourceRuleVersion === right.sourceRuleVersion && left.bookSourceUrl === right.bookSourceUrl &&
