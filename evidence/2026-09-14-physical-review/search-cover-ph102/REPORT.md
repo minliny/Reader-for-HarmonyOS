@@ -19,4 +19,12 @@
 
 已有4千行增删/排序/锚点回归、真实Index→SearchPage publication边界、手机/平板/日夜卡片比例与标签布局均通过。旧测试中要求元数据CHANGE的断言改为要求ObjectLink更新且不替换Native行，结构操作原坐标和排序仍验证。新增SDK测试辅助仅补充原始NestedObject属性类及对象类型边界。
 
-构建与产物待追加。没有运行VM/真机搜索；网络站点自身错误、原生解码时间与现场闪烁帧是否全部消除仍待新包设备验证。代码/本地事实不替代像素或用户验收。
+没有运行VM/真机搜索；网络站点自身错误、原生解码时间与现场闪烁帧是否全部消除仍待新包设备验证。代码/本地事实不替代像素或用户验收。
+
+## 产物
+
+修复提交 `d920db3d`，构建源码 Harmony `12710922` / Core `bf49495317798f68b98928712eb6e106af02bed1`，构建时两仓clean。run `20260915T173454Z-12710922-83b13ceb`；277组Harmony、ArkTS、隔离非增量构建、signed debug签名及独立manifest复验PASS，Native未改。
+
+[manifest](../../../.reader-artifacts/hap/20260915T173454Z-12710922-83b13ceb/manifest.json)，签名HAP SHA-256 `8458bbc7fb683997377af1b96e27200d2fbfdac6be8b176657741d524ad41bc8`。既有SearchPage普通迭代变量传ObjectLink等SDK警告仍在日志中；实际Observed/ObjectLink回归正常且编译通过，不称无警告。
+
+该包同时含PH101朗读启动与PH89倒计时基线修正。本轮未安装，手机和VM均维持上文原包；iteration并非验收候选，设备闪烁/原生帧率/用户验收OPEN。

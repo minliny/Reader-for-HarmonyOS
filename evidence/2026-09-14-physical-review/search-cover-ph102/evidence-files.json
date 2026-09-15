@@ -1,0 +1,34 @@
+[
+  {
+    "path": "REPORT.md",
+    "sha256": "4de80cc32ab4d61522758558d3a7d29188fde61022a6e6791718394e857ced99"
+  },
+  {
+    "path": "reader-ph102-cover-after.log",
+    "sha256": "c092775489c62db50321c640f54597af01a4b087464dac0bd3fdfa7b775ea39e"
+  },
+  {
+    "path": "reader-ph102-cover-before.log",
+    "sha256": "08bc6a05cbcdb20cd2f16896fef5a8ae699cfabbf17d0aa5635a1a7306ea6ba4"
+  },
+  {
+    "path": "reader-ph102-hap-build.log",
+    "sha256": "ee409cbbe730c92f35e3a1dee3f5eaf78a094fc1cf4998eff42fe645e802bb83"
+  },
+  {
+    "path": "reader-ph102-hap-verify.log",
+    "sha256": "ef90957189f4be54ee47be2f84922ea03cbdca2b7ac8ae6c48a122660b6f45a8"
+  },
+  {
+    "path": "reader-ph102-physical-layout.log",
+    "sha256": "fd8e0d0536bbfc706936b4ccb866df9eebe93785e47f3290a80843762a294662"
+  },
+  {
+    "path": "reader-ph102-publication-boundary.log",
+    "sha256": "ea69344f235c7eb2413077acf8a9b86d7ae493ba0653e86e2ffefbde0730122e"
+  },
+  {
+    "path": "reader-ph102-view-state.log",
+    "sha256": "1f7ac45617b53dd67c3cdc9876f7125855e1031d95fffbbb8a26f37b20492ad6"
+  }
+]
