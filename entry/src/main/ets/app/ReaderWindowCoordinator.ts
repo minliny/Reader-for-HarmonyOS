@@ -213,6 +213,10 @@ export class ReaderWindowCoordinator {
    * also the final device state.
    */
   static requestReaderWindowPolicy(policy: ReaderWindowPolicy): Promise<void> {
+    // Opening controls can leave both visibility and geometry unchanged.
+    // Retry a pending theme write even when the window policy is deduplicated;
+    // a successfully applied style performs no native write here.
+    if (!policy.hideStatusBar) void ReaderWindowCoordinator.flushChrome();
     if (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
       ReaderWindowCoordinator.sameWindowPolicy(
         ReaderWindowCoordinator.desiredReaderWindowPolicy, policy) &&
@@ -550,26 +554,35 @@ export class ReaderWindowCoordinator {
       while (ReaderWindowCoordinator.mainWindow !== undefined &&
         ReaderWindowCoordinator.appliedChromeRevision !== ReaderWindowCoordinator.desiredChromeRevision) {
         const win = ReaderWindowCoordinator.mainWindow;
+        const epoch = ReaderWindowCoordinator.installEpoch;
         const revision = ReaderWindowCoordinator.desiredChromeRevision;
         const request = ReaderWindowCoordinator.desiredChrome;
         // Apply the exact opaque foreground paired with the underlay. Reader
         // chrome supplies its theme ink; legacy callers use the constructor
         // tone fallback above.
         const contentColor = request.style.contentColor;
-        await win.setWindowSystemBarProperties({
-          statusBarColor: request.style.underlayColor,
-          navigationBarColor: request.style.underlayColor,
-          statusBarContentColor: contentColor,
-          navigationBarContentColor: contentColor,
-        });
-        if (win !== ReaderWindowCoordinator.mainWindow) {
+        try {
+          await win.setWindowSystemBarProperties({
+            statusBarColor: request.style.underlayColor,
+            navigationBarColor: request.style.underlayColor,
+            statusBarContentColor: contentColor,
+            navigationBarContentColor: contentColor,
+          });
+        } catch (_error) {
+          // A failed old write must not swallow a newer queued theme. A
+          // failed latest intent remains pending for an explicit retry;
+          // never spin on a rejected native operation.
+          if (revision !== ReaderWindowCoordinator.desiredChromeRevision) continue;
+          return;
+        }
+        if (win !== ReaderWindowCoordinator.mainWindow || epoch !== ReaderWindowCoordinator.installEpoch) {
+          // install() can enqueue its new window style while this old write
+          // still owns the drain. Release only if no newer intent arrived.
+          if (revision !== ReaderWindowCoordinator.desiredChromeRevision) continue;
           return;
         }
         ReaderWindowCoordinator.appliedChromeRevision = revision;
       }
-    } catch (_error) {
-      // Keep the desired revision pending. A foreground/window event retries
-      // the last semantic request without allowing an older request to win.
     } finally {
       ReaderWindowCoordinator.chromeFlushRunning = false;
     }

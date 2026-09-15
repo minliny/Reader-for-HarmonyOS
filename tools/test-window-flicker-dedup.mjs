@@ -43,7 +43,7 @@ assert.ok(body.includes('new ReaderWindowMetricsSnapshot(\n      windowRect'),
 // reapply (revision bump) and failed applies (stale applied) re-executing.
 assert.match(coordinator, /private static appliedPolicyRevision: number = -1;/);
 assert.match(coordinator,
-  /static requestReaderWindowPolicy\(policy: ReaderWindowPolicy\): Promise<void> \{\s*if \(ReaderWindowCoordinator\.desiredWindowPolicyOwner === 'reader' &&\s*ReaderWindowCoordinator\.sameWindowPolicy\(\s*ReaderWindowCoordinator\.desiredReaderWindowPolicy, policy\) &&\s*ReaderWindowCoordinator\.appliedPolicyRevision === ReaderWindowCoordinator\.windowPolicyRevision\) \{\s*return Promise\.resolve\(\);/,
+  /static requestReaderWindowPolicy\(policy: ReaderWindowPolicy\): Promise<void> \{[\s\S]*?if \(ReaderWindowCoordinator\.desiredWindowPolicyOwner === 'reader' &&\s*ReaderWindowCoordinator\.sameWindowPolicy\(\s*ReaderWindowCoordinator\.desiredReaderWindowPolicy, policy\) &&\s*ReaderWindowCoordinator\.appliedPolicyRevision === ReaderWindowCoordinator\.windowPolicyRevision\) \{\s*return Promise\.resolve\(\);/,
   'an identical reader policy with the current revision applied must short-circuit');
 assert.match(coordinator,
   /static requestAppWindowPolicy\(\): Promise<void> \{\s*if \(ReaderWindowCoordinator\.desiredWindowPolicyOwner === 'app' &&\s*ReaderWindowCoordinator\.appliedPolicyRevision === ReaderWindowCoordinator\.windowPolicyRevision\) \{\s*return Promise\.resolve\(\);/,
