@@ -2677,7 +2677,17 @@ struct Index {
       const index = candidateSeeds.findIndex((candidate: RemoteReadingBookSeed): boolean =>
         candidate.sourceId === session.identity.sourceId && candidate.bookId === session.identity.bookId);
       this.installRemoteReadingSession(session);
-      this.detailBook = { ...session.book, ...session.identity, sourceName: candidateNames[index] ?? session.identity.sourceId };
+      this.detailBook = {
+        sourceId: session.identity.sourceId,
+        sourceName: candidateNames[index] ?? session.identity.sourceId,
+        bookId: session.identity.bookId,
+        title: session.book.title,
+        author: session.book.author,
+        kind: session.book.kind,
+        coverUrl: session.book.coverUrl,
+        intro: session.book.intro,
+        lastChapter: session.book.lastChapter,
+      };
       this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
         title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
       this.detailLoadingMessage = '';
