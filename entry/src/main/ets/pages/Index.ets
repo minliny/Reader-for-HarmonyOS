@@ -2851,7 +2851,14 @@ struct Index {
           if (error instanceof RemoteChapterCacheRefreshError) {
             this.shelfReadingPreparation = false;
             void this.refreshCachedChapterFromPrompt(error, isCurrent).then((chapterIndex: number | undefined): void => {
-              if (chapterIndex !== undefined && resumeImmediately && isCurrent()) this.openReading();
+              if (chapterIndex !== undefined && resumeImmediately && isCurrent()) {
+                const resumedShelfBook = shelfSnapshot?.sourceId === error.session.identity.sourceId &&
+                  shelfSnapshot?.bookId === error.session.identity.bookId ? shelfSnapshot :
+                  this.shelfBooks.find((book: ShelfBook): boolean =>
+                    book.sourceId === error.session.identity.sourceId && book.bookId === error.session.identity.bookId);
+                // As with ordinary admission, leave the persisted offset to Core.
+                this.openReading(resumedShelfBook?.currentChapterIndex === undefined ? chapterIndex : undefined);
+              }
             });
             return;
           }

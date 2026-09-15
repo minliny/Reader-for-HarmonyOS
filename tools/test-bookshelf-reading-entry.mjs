@@ -224,6 +224,37 @@ for (const remote of [false, true]) {
 
 console.log('bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)');
 
+// Exercise the actual acquisition rejection continuation through openReading.
+// A refreshed new book starts at the admitted chapter; a resumed book leaves
+// the chapter argument explicitly undefined so Core restores its saved offset.
+for (const progressSource of ['none', 'snapshot', 'projection']) {
+  const hasProgress = progressSource !== 'none';
+  const t = create(true), { h } = t;
+  const calls = [];
+  const openReading = h.openReading;
+  h.openReading = function (...args) {
+    calls.push(args);
+    return openReading.apply(this, args);
+  };
+  h.refreshCachedChapterFromPrompt = async (error, isCurrent) => {
+    assert.ok(error instanceof RemoteChapterCacheRefreshError);
+    assert.equal(isCurrent(), true);
+    h.installRemoteReadingSession(t.session);
+    h.detailToc = t.entries;
+    h.remoteContentVerdict = 'readable';
+    return 7;
+  };
+  h.readingOriginRoute = 'bookshelf';
+  if (!hasProgress) h.shelfBooks = [];
+  h.openRemoteBookDetail(t.book, 'Test source', progressSource === 'snapshot' ? t.book : undefined, true);
+  t.catalog.reject(new RemoteChapterCacheRefreshError(t.session, 7, undefined, false));
+  await settle();
+  assert.deepEqual(calls, [[hasProgress ? undefined : 7]], 'one explicit argument preserves new-book vs saved-offset semantics');
+  assert.equal(h.readingSessionActive, true);
+  assert.equal(h.requestedChapterIndex, hasProgress ? undefined : 7);
+}
+console.log('cache refresh admission: actual Index continuation preserves new chapter and saved offset arguments PASS');
+
 {
  const t=create(true),h=t.h;h.openShelfBook(t.book);t.catalog.resolve(t.session);t.body.resolve('body');await settle();
  const session=h.remoteReadingSession,toc=h.detailToc;let exits=0;h.readingExitRequest=()=>{exits++;};
