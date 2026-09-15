@@ -1,0 +1,9 @@
+PASS: production proxy/DNS/transparent-gateway admission, selected-network exclusions, PAC, network changes and structured errors
+PASS: actual HTTP hop preserves URL/system proxy, never pins proxy DNS, direct DNS queried once
+(node:24256) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: cancelled never-settling HTTP frees DNS lease; queued cancellation preserves predecessor and same-host recovery
+PASS: vendored SDK emits a legal CoreError code and preserves Host network semantics, message and retryability through NAPI JSON
+PASS: native proxy getter failures/missing API/invalid return preserve fixed operation and numeric code without leaking native messages or guessing DIRECT
+PASS: undefined/null/wrong-type results from each native proxy API identify the exact operation
+PASS: API 23 active PAC getter replaces throwing legacy getter; numeric string native codes survive without retaining messages

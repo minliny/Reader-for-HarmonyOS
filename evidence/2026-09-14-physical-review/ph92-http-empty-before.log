@@ -1,0 +1,9 @@
+<anonymous_script>:1083
+        throw new Error('http.execute: platform did not return the requested raw response bytes');
+              ^
+
+Error: http.execute: platform did not return the requested raw response bytes
+    at HttpExecuteHost.singleHopTransport (eval at <anonymous> (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-http-response-bytes.mjs:17:12), <anonymous>:1083:15)
+    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-http-response-bytes.mjs:34:16
+
+Node.js v26.0.0

@@ -173,6 +173,7 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
  */
 export class HttpExecuteHost {
   private static targetTails: Map<string, Promise<void>> = new Map();
+  private static reportedTypeErrors: Set<string> = new Set();
   static readonly instance: HttpExecuteHost = new HttpExecuteHost();
   private readonly activeByRequestId = new Map<number, DeadlineState>();
   private readonly sourceDiagnosticsByRequestId = new Map<number, SourceHttpDiagnosticRecord[]>();
@@ -521,9 +522,23 @@ export class HttpExecuteHost {
         }
       }
     }
+    this.reportTypeError(lastError, 'request.chain');
     hilog.error(LOG_DOMAIN, 'Reader', 'http.execute failed after %{public}d attempt(s): %{private}s',
       attempts, lastError === null ? 'unknown' : lastError.message);
     throw lastError ?? new Error('http.execute request failed');
+  }
+
+  private reportTypeError(error: unknown, stage: string): void {
+    if (!(error instanceof TypeError) || HttpExecuteHost.reportedTypeErrors.size >= 16) return;
+    // Only local source basenames and bounded line/column numbers may leave
+    // the stack. Never log the stack itself, message, path or request data.
+    const stack = typeof error.stack === 'string' ? error.stack.slice(0, 8192) : '';
+    const match = /(?:^|[\s/(])(HttpExecuteHost|CookieSessionStore|NetworkRoutePolicy)\.(ts|ets):(\d{1,7})(?::(\d{1,7}))?/.exec(stack);
+    const frame = match === null ? 'no-frame' : `${match[1]}.${match[2]}:${match[3]}:${match[4] ?? '0'}`;
+    const key = `${stage}:${frame}`;
+    if (HttpExecuteHost.reportedTypeErrors.has(key)) return;
+    HttpExecuteHost.reportedTypeErrors.add(key);
+    hilog.error(LOG_DOMAIN, 'Reader', 'http.execute TypeError stage=%{public}s frame=%{public}s', stage, frame);
   }
 
   private async requestRedirectChain(
@@ -671,6 +686,7 @@ export class HttpExecuteHost {
   ): Promise<HopResponse> {
     const request = http.createHttp();
     deadline.activeRequest = request;
+    let stage = 'request.interceptors';
     try {
       const interceptors = new http.HttpInterceptorChain();
       if (!interceptors.addChain([new StopBeforeRedirectInterceptor()]) ||
@@ -679,6 +695,7 @@ export class HttpExecuteHost {
       }
       this.assertWithinDeadline(deadline);
       const effectiveHeaders = this.copyHeaders(headers);
+      stage = 'request.payload';
       const payload: string | ArrayBuffer | undefined = this.requestPayload(
         body, requestCharset, effectiveHeaders,
       );
@@ -712,6 +729,7 @@ export class HttpExecuteHost {
         options.extraData = payload;
       }
       let response: http.HttpResponse;
+      stage = 'request.dispatch';
       try {
         response = await request.request(requestUrl, options);
       } catch (error) {
@@ -725,12 +743,14 @@ export class HttpExecuteHost {
         }
         throw error;
       }
+      stage = 'response.policy';
       if (route === 'systemProxy' && response.responseCode === 407) {
         throw new NetworkEnvironmentError('transport', '系统代理需要认证，请在代理设置中完成认证后重试');
       }
       // A response that lands after the deadline is a stale success: reject
       // it so a cancelled cycle never returns a late result.
       this.assertWithinDeadline(deadline);
+      stage = 'response.bytes';
       let bytes: Uint8Array;
       if (response.result instanceof ArrayBuffer) {
         bytes = new Uint8Array(response.result);
@@ -739,18 +759,33 @@ export class HttpExecuteHost {
         // surfaces it with an empty result instead of the requested
         // ArrayBuffer. Keep the Location header flowing to the redirect chain.
         bytes = new Uint8Array(0);
+      } else if (response.result === '' ||
+        ((method.wireMethod === 'HEAD' || response.responseCode === 204 || response.responseCode === 205 ||
+          response.responseCode === 304) && (response.result === undefined || response.result === null))) {
+        // Empty strings have an exact zero-byte representation. Missing data
+        // is valid only when HTTP semantics forbid content (RFC 9110 sections
+        // 6.4.1 and 15.3.6); HEAD/304 Content-Length may describe a GET body.
+        // A normal 200 with missing bytes or nonempty decoded text still fails.
+        bytes = new Uint8Array(0);
       } else {
-        throw new Error('http.execute: platform did not return the requested raw response bytes');
+        const status = Number.isInteger(response.responseCode) && response.responseCode >= 100 &&
+          response.responseCode <= 599 ? response.responseCode : 0;
+        const resultType = response.result === null ? 'null' : typeof response.result;
+        throw new Error(`http.execute: platform did not return the requested raw response bytes (status=${status}, type=${resultType})`);
       }
       if (bytes.length > MAX_RESPONSE_BYTES) {
         throw new Error(`http.execute: response exceeds ${MAX_RESPONSE_BYTES} byte limit`);
       }
+      stage = 'response.headers';
       return {
         status: response.responseCode,
         headers: this.flattenHeaders(response.header),
         rawHeaders: response.header,
         bytes,
       };
+    } catch (error) {
+      this.reportTypeError(error, stage);
+      throw error;
     } finally {
       if (deadline.activeRequest === request) {
         deadline.activeRequest = null;
