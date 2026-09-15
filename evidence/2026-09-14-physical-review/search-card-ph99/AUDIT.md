@@ -36,3 +36,9 @@ mockup-check.json 仅证明对照在浏览器宽320/390/736无横向溢出、封
 - 不添加onAreaChange、状态回写或全量重挂载，避免搜索增量更新产生排版反馈循环。左右18/20、间距12、上下14/14.5沿用。
 
 既有SDK探针已修正为读取生产token，覆盖320/390/736宽、日夜间、在架状态、空最新章、长书源及晚到元数据、选择原book/variants。它检查实际生成的原生布局约束和事件，不声称计算了Ace原生字形/像素。无封面分支由源码核对，未伪称已经测试加载失败图片。生产源码及专项通过，完整编译/产物另行绑定。未操作VM或真机。
+
+## 本轮最终交付
+
+run `20260915T151630Z-356f150e-e58cc5c3`，Harmony `356f150eaf1cfad13342cc11cc312d07d23508aa` / Core `c86b6aaec60b5c60a3a73254aac03ce6ddce4de9`，构建时两仓clean。275组Harmony检查、ArkTS、非增量编译、signed/debug Profile验签、独立manifest复验PASS。[构建](build.log)、[复验](verify.log)、[归档manifest](manifest.json)。
+
+签名HAP SHA-256 `2d3c41c1aac1628a48d22810b6afb35a8f4df7c07368b4ccba5e0a42ca0aa69d`。唯一正式 [manifest](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260915T151630Z-356f150e-e58cc5c3/manifest.json) 绑定 `entry-default-signed.hap`；包内同时包含上一轮状态栏补修及本次排版修改。iteration/acceptanceEligible=false，未安装、未操作设备或应用数据；VM/真机像素、用户验收OPEN。旧浏览器提案未更新为当前排版，不将其作为本次实现截图。
