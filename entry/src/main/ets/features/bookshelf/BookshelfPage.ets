@@ -483,7 +483,8 @@ export struct BookshelfPage {
             .fontWeight(FontWeight.Bold)
             .fontSize(15)
             .lineHeight(18)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+            .opacity(this.viewSwitchHeaderOpacity);
 
           Row({ space: TOK_SPACE_XS }) {
             this.sectionAction('bookshelf_grid', (): void => {
@@ -505,8 +506,9 @@ export struct BookshelfPage {
         }
         .width(this.shelfContentWidth(isTablet))
         .height(38)
-        .alignItems(VerticalAlign.Center)
-        .opacity(this.viewSwitchHeaderOpacity);
+        // The title follows the projection transition. Its persistent action
+        // siblings must stay visible while their selected asset changes.
+        .alignItems(VerticalAlign.Center);
       }
 
       if (this.groupSelectorVisible) {
