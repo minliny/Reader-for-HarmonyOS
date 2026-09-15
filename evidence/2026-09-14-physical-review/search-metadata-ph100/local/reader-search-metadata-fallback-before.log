@@ -1,0 +1,22 @@
+(node:48890) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: same-source blank coverUrl must preserve admitted nonblank metadata
++ actual - expected
+
++ ''
+- 'https://metadata.example/cover.png'
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-book-metadata-presentation.mjs:139:40 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '',
+  expected: 'https://metadata.example/cover.png',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

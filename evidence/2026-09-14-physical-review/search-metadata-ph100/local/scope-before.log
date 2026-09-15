@@ -1,0 +1,33 @@
+   Compiling reader-domain v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-domain)
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-rule v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-rule)
+   Compiling reader-rss v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-rss)
+   Compiling reader-local-book v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-local-book)
+   Compiling reader-sync v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-sync)
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 14.99s
+     Running tests/runtime_integration.rs (target/debug/deps/runtime_integration-fb80445612078c8f)
+
+running 2 tests
+
+thread 'search_continuation_variables::source_headers_survive_search_and_detail_completions_without_cross_source_leak' (72316969) panicked at crates/reader-runtime/tests/search_continuation_variables.rs:91:9:
+search result lost its own source headers: {"author":"Author","bookId":"https://example.test/book/1,","title":"Book","variables":{"book.author":"Author","book.name":"Book","searchUrl":"https://example.test/search"}}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'search_continuation_variables::reading_assistant_real_search_response_preserves_headers_and_book_metadata' (72316968) panicked at crates/reader-runtime/tests/search_continuation_variables.rs:143:5:
+searchUrl java.put headers lost: https://api-bc.wtzw.com/api/v4/book/detail?&id=1793242&imei_ip=2937357107&teeny_mode=0&sign=322084afefd2c180687122a876372f08,
+test search_continuation_variables::source_headers_survive_search_and_detail_completions_without_cross_source_leak ... FAILED
+test search_continuation_variables::reading_assistant_real_search_response_preserves_headers_and_book_metadata ... FAILED
+
+failures:
+
+failures:
+    search_continuation_variables::reading_assistant_real_search_response_preserves_headers_and_book_metadata
+    search_continuation_variables::source_headers_survive_search_and_detail_completions_without_cross_source_leak
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 639 filtered out; finished in 0.17s
+
+error: test failed, to rerun pass `-p reader-runtime --test runtime_integration`

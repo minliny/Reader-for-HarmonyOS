@@ -1,0 +1,47 @@
+{
+  "baselineHead": "c86b6aaec60b5c60a3a73254aac03ce6ddce4de9",
+  "issue": "search URL java.put source scope lost on Host response continuation after request context reset",
+  "rootCause": {
+    "writer": "remote.rs build_search_request_from_source binds source scope before AnalyzeUrl; Java headers stored under source ID",
+    "reset": "runtime.rs dispatch_host_complete calls bridge.set_current_request_id; worker source ID resets",
+    "reader": "book_search_from_params_checked used resolve_source only and evaluated java.get headers in __global__; detail/TOC/content had same transition"
+  },
+  "fix": "resolve_source_for_execution resolves source and binds worker source/cookie session at every rule execution entry",
+  "validation": {
+    "baselineTests": "2 expected failures, exact malformed URL ending comma",
+    "productionCaptureReplay": "3 passed using complete recorded search JSON with target author and request header check",
+    "runtimeLib": {
+      "passed": 432,
+      "failed": 0
+    },
+    "runtimeIntegration": {
+      "passed": 639,
+      "sandboxBlocked": 3,
+      "reason": "loopback mock server bind EPERM"
+    },
+    "loopbackRetryOutsideSandbox": {
+      "passed": 3,
+      "failed": 0
+    },
+    "format": "PASS",
+    "whitespace": "PASS"
+  },
+  "boundaries": [
+    "No HAP build or VM/physical device operation by this agent.",
+    "No source rule or source signature modification.",
+    "No stored book ID migration, cache merge, or reading-position reassignment.",
+    "New search bookId now includes correct embedded request options; old malformed bookId differs and is not silently rewritten.",
+    "Historical CLI L3 PASS on HTTP401 is invalid diagnostic evidence; current Runtime code already rejects detail non-2xx.",
+    "Existing source-scoped variable semantics retained; request variables were not made global to hide the defect."
+  ],
+  "files": {
+    "crates/reader-runtime/src/remote.rs": "ddf8ed2ad6845b86a27b9a912bc180fa046e15560fa5aa22c0e3b26e45055232",
+    "crates/reader-runtime/tests/runtime_integration.rs": "84670a4d78cc15a2be005fd38104f8bc686589e1c77848dbd01ccd40603da39e",
+    "crates/reader-runtime/tests/search_continuation_variables.rs": "26322f89f7386011d17aeb5125dd81d54db8d1c1f3892a1dd686f8c1bcd8346e",
+    "scope-before.log": "2883110fd43f52942a6cb2750bec7d4061edad5c84b1946c9b9b092ebfc86853",
+    "scope-after.log": "7173d44b5bcb0a5e9ece9dddb946b0909c5b3470ae299a1be6d3a783404a3fb9",
+    "scope-final.log": "c4ac4749c07ee91e5d17c8e835c14759cd0f29322d45f301ca8cb7390491c3ab",
+    "runtime-regression.log": "d75f28ccae4e0de4154975d8204c702846cca6a98f957b4c37c8cf64dd5c30b9",
+    "webdav-loopback-retry.log": "55a1a023d11fbfe8481fbb040257867f670de774bc782ff44c9357ce84f8ed18"
+  }
+}

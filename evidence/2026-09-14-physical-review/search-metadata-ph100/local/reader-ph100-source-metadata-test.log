@@ -1,0 +1,3 @@
+PASS PH100 source metadata: actual Core offline search/detail fixture; plain intro, separate tags, existing date role and latest retained. Actual RuntimeOwner clean v6→v7, user copy/rule edits and discovery edits/deletions protected; no live/device claim.
+(node:99683) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

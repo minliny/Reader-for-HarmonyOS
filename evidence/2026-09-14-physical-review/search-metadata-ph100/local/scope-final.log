@@ -1,0 +1,10 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running tests/runtime_integration.rs (target/debug/deps/runtime_integration-fb80445612078c8f)
+
+running 3 tests
+test search_continuation_variables::source_headers_survive_search_and_detail_completions_without_cross_source_leak ... ok
+test search_continuation_variables::toc_and_content_pagination_restore_source_variables_on_every_completion ... ok
+test search_continuation_variables::reading_assistant_real_search_response_preserves_headers_and_book_metadata ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 639 filtered out; finished in 0.22s
+

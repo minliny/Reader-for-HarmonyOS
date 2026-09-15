@@ -1,0 +1,10 @@
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.25s
+     Running tests/runtime_integration.rs (target/debug/deps/runtime_integration-fb80445612078c8f)
+
+running 2 tests
+test search_continuation_variables::reading_assistant_real_search_response_preserves_headers_and_book_metadata ... ok
+test search_continuation_variables::source_headers_survive_search_and_detail_completions_without_cross_source_leak ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 639 filtered out; finished in 0.36s
+
