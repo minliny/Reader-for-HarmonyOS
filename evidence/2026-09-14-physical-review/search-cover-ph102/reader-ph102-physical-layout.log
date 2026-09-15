@@ -1,0 +1,3 @@
+PASS PH63/PH99 actual SDK card constraints across phone/tablet and themes: bottom alignment, proportional cover, native wrapping, no blank latest row, live metadata and selection retained; no native pixels asserted
+(node:26638) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

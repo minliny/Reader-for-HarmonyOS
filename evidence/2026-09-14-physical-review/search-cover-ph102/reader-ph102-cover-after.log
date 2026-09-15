@@ -1,0 +1,5 @@
+PASS same-key metadata/source-count enrichment emits no structural replacement
+PASS 60 real SDK ObjectLink enrichments: image actor/URI retained, text and selected candidate current
+PASS cover failure fallback/late callback/no repeated failed URL/missing cover/new book isolation
+(node:30125) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

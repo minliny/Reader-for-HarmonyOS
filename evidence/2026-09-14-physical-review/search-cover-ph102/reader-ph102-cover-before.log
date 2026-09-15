@@ -1,0 +1,27 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: metadata enrichment must not issue native row-replacement CHANGE
++ actual - expected
+
++ [
++   [
++     {
++       index: 0,
++       type: 'change'
++     }
++   ]
++ ]
+- []
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-search-cover-continuity.mjs:32:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [ [ { type: 'change', index: 0 } ] ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
