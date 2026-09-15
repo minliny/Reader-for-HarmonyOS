@@ -34,7 +34,7 @@ export interface BookCandidateOpenOptions extends RemoteReadingOpenOptions {
 type Preparation = { candidates: BookAcquisitionCandidate[]; scope: number; forceRefresh: boolean };
 type BookConsumer = { active: boolean; isCurrent?: () => boolean; canDispatch?: () => boolean };
 type BookJob = { promise: Promise<RemoteReadingSession>; priority: BookRequestPriority; forceRefresh: boolean;
-  started: boolean; consumers: BookConsumer[]; sourceId: string; bookId: string; preempted: boolean };
+  started: boolean; consumers: BookConsumer[]; sourceId: string; bookId: string; preempted: boolean; cancelled: boolean };
 type PreparedSession = { session: RemoteReadingSession; at: number };
 
 export type BookAcquisitionAdmission = {
@@ -189,7 +189,7 @@ export class BookAcquisitionCoordinator {
     this.preparationGroups.clear();
     this.preparationVisible = false;
     this.scheduler.visibilityChanged();
-    // Admitted detail/TOC/body work has independent ownership until completion.
+    // Shared consumers retain their work; requests with no live consumer cancel.
   }
 
   visibilityChanged(): void { this.scheduler.visibilityChanged(); }
@@ -329,7 +329,9 @@ export class BookAcquisitionCoordinator {
     priority: BookRequestPriority = 'foreground'): Promise<RemoteReadingSession> {
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     if (priority === 'foreground') this.preemptBackgroundAcquisitions(seed.sourceId, seed.bookId);
-    await this.ensureSources();
+    // Register a known-source join before yielding: another caller may leave
+    // in this same turn, but must not orphan a request this caller now needs.
+    if (!this.registryReady) await this.ensureSources();
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     const version = this.versions.get(seed.sourceId);
     const key = JSON.stringify([seed.sourceId, seed.bookId, version]);
@@ -343,14 +345,15 @@ export class BookAcquisitionCoordinator {
     const consumer: BookConsumer = { active: true, isCurrent: options.isCurrent, canDispatch: options.canDispatch };
     const jobs = options.forceRefresh ? this.refreshes : this.jobs;
     let job = jobs.get(key) ?? (!options.forceRefresh ? this.refreshes.get(key) : undefined);
-    if (job?.preempted === true) {
-      await job.promise.catch((_error: Error): void => {});
+    if (job !== undefined && this.bookJobCancelled(job)) {
+      await this.waitForCandidate(job.promise.catch((_error: Error): void => {}), options, Number.POSITIVE_INFINITY);
       return this.acquireBook(seed, options, priority);
     }
     if (options.forceRefresh && job === undefined && this.jobs.has(key)) {
       // A cache admission cannot satisfy forceRefresh. Its complete session
       // remains owned by its existing consumers; then start/join real refresh.
-      await this.jobs.get(key)?.promise.catch((_error: Error): void => {});
+      await this.waitForCandidate(this.jobs.get(key)?.promise.catch((_error: Error): void => {}) ??
+        Promise.resolve(), options, Number.POSITIVE_INFINITY);
       return this.acquireBook(seed, options, priority);
     }
     if (priority === 'foreground') {
@@ -363,13 +366,13 @@ export class BookAcquisitionCoordinator {
       return this.consumeJob(job, consumer);
     }
     const next: BookJob = { priority, forceRefresh: options.forceRefresh === true,
-      started: false, consumers: [consumer], sourceId: seed.sourceId, bookId: seed.bookId, preempted: false,
+      started: false, consumers: [consumer], sourceId: seed.sourceId, bookId: seed.bookId, preempted: false, cancelled: false,
       promise: Promise.resolve(undefined as unknown as RemoteReadingSession) };
-    // The first actual dispatch transfers the finite detail→TOC chain to the
-    // process. Before that boundary, an orphan can still leave the queue.
+    // The process shares one detail→TOC chain only while a real consumer owns it.
+    // Starting a request does not grant it a lifetime beyond every caller.
     next.promise = this.openBook(seed, version, next, options.forceRefresh === true)
       .then((session: RemoteReadingSession): RemoteReadingSession => {
-        if (this.versions.get(seed.sourceId) === version && !this.closed) {
+        if (this.versions.get(seed.sourceId) === version && !this.bookJobCancelled(next)) {
           this.prepared.set(key, { session, at: Date.now() });
           while (this.prepared.size > PREPARED_SESSION_LIMIT) {
             const oldest = this.prepared.keys().next().value;
@@ -388,18 +391,32 @@ export class BookAcquisitionCoordinator {
 
   private async consumeJob(job: BookJob, consumer: BookConsumer): Promise<RemoteReadingSession> {
     try {
-      const session = await job.promise;
+      const session = await this.waitForCandidate(job.promise,
+        { isCurrent: consumer.isCurrent }, Number.POSITIVE_INFINITY);
       if (this.closed || consumer.isCurrent?.() === false) {
         throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
       }
       return session;
-    } finally { consumer.active = false; }
+    } finally {
+      consumer.active = false;
+      this.scheduler.visibilityChanged();
+    }
+  }
+
+  private bookJobCancelled(job: BookJob): boolean {
+    if (this.closed || job.preempted || job.cancelled) return true;
+    if (!job.consumers.some((consumer: BookConsumer): boolean =>
+      consumer.active && consumer.isCurrent?.() !== false)) {
+      job.cancelled = true;
+      return true;
+    }
+    return false;
   }
 
   private preemptBackgroundAcquisitions(sourceId: string, bookId: string): void {
     for (const jobs of [this.jobs, this.refreshes]) {
       for (const job of jobs.values()) {
-        if (job.preempted || job.priority !== 'background') continue;
+        if (this.bookJobCancelled(job) || job.priority !== 'background') continue;
         if (job.sourceId === sourceId && job.bookId === bookId) {
           job.priority = 'foreground';
           this.scheduler.promote(sourceId, bookId);
@@ -416,7 +433,7 @@ export class BookAcquisitionCoordinator {
   private hasForegroundAcquisition(): boolean {
     if (this.foregroundRequests > 0) return true;
     for (const jobs of [this.jobs, this.refreshes]) {
-      for (const job of jobs.values()) if (!job.preempted && job.priority === 'foreground') return true;
+      for (const job of jobs.values()) if (!this.bookJobCancelled(job) && job.priority === 'foreground') return true;
     }
     return false;
   }
@@ -436,7 +453,7 @@ export class BookAcquisitionCoordinator {
   async acquireBookWithBackgroundRefresh(seed: RemoteReadingBookSeed,
     options: RemoteReadingOpenOptions = {}, priority: BookRequestPriority = 'foreground'):
     Promise<BookAcquisitionAdmission> {
-    await this.ensureSources();
+    if (!this.registryReady) await this.ensureSources();
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     const version = this.versions.get(seed.sourceId);
     const session = await this.acquireBook(seed, options, priority);
@@ -540,10 +557,8 @@ export class BookAcquisitionCoordinator {
         actual.searchVariables = seed.sourceVersion === version ? seed.searchVariables : [];
       }
     }
-    const processCurrent = (): boolean => !this.closed && !job.preempted && this.versions.get(seed.sourceId) === version;
-    const hasConsumer = (): boolean => job.consumers.some((consumer: BookConsumer): boolean =>
-      consumer.active && consumer.isCurrent?.() !== false);
-    const isCurrent = (): boolean => processCurrent() && (job.started || hasConsumer());
+    const processCurrent = (): boolean => !this.bookJobCancelled(job) && this.versions.get(seed.sourceId) === version;
+    const isCurrent = (): boolean => processCurrent();
     const canDispatch = (): boolean => (job.priority !== 'background' || !this.hasForegroundAcquisition()) &&
       (job.started || job.consumers.some((consumer: BookConsumer): boolean =>
       consumer.active && consumer.isCurrent?.() !== false && consumer.canDispatch?.() !== false));
@@ -559,12 +574,13 @@ export class BookAcquisitionCoordinator {
         const cached = contextIsCurrent ? await gateway.openCachedCatalogSession(actual, isCurrent, true) :
           await gateway.openCachedSession(actual, isCurrent);
         if (this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消', 'cache.book.status');
+        if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消', 'cache.book.status');
         if (!isCurrent()) throw new RemoteReadingGatewayError('sourceVersionChanged', '书源规则已更新，请重试', 'cache.book.status');
         return this.withCatalogFreshness({ ...cached, sourceVersion: version,
           catalogAt: cached.catalogAt ?? (typeof facts?.['catalogAt'] === 'number' ? facts['catalogAt'] as number : undefined),
           requiresContextRefresh: (!contextIsCurrent || cached.requiresContextRefresh === true) && version !== undefined });
       } catch (error) {
-        if (job.preempted) throw new RemoteReadingGatewayError('cancelled', '预热已让出前台阅读任务');
+        if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
         const classified = classifyRemoteReadingCommandFailure('cache.book.status', error);
         this.recordFailure(classified, attemptId, failureContext(classified.code === 'cachedSessionUnavailable' ? 'miss' : classified.code === 'cacheDerivedCorrupt' ? 'derivedCorrupt' : 'blocked'));
         if (!isRemoteReadingCacheRecoveryEligible(classified)) throw classified;
@@ -579,7 +595,7 @@ export class BookAcquisitionCoordinator {
     try {
       session = await gateway.openSession(actual, { isCurrent });
     } catch (error) {
-      if (job.preempted) throw new RemoteReadingGatewayError('cancelled', '预热已让出前台阅读任务');
+      if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
       const classified = classifyRemoteReadingCommandFailure('book.toc', error);
       const failure = cacheFailure === undefined ? classified : new RemoteReadingGatewayError(classified.code,
         classified.message, classified.command, classified.capability, classified.diagnostic, cacheFailure, classified.category);
@@ -594,7 +610,7 @@ export class BookAcquisitionCoordinator {
       }
       throw failure;
     }
-    if (job.preempted) throw new RemoteReadingGatewayError('cancelled', '预热已让出前台阅读任务');
+    if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     if (!isCurrent() || (session.sourceVersion !== undefined && session.sourceVersion !== version)) {
       this.registryReady = false;
       throw new RemoteReadingGatewayError('sourceVersionChanged', '书源规则已更新，请重试');

@@ -79,7 +79,7 @@ function fixture() {
   f.runtime.close();
 }
 
-// Only a bounded catalog window is queued; exit releases waiting work.
+// Only a bounded catalog window is queued; exit cancels unowned active work too.
 {
   const f=fixture(); const gates=[deferred(),deferred()];
   gates.forEach((gate,i)=>f.gates.set(`book.detail:${f.key('s1',`/b${i}`)}`,gate));
@@ -87,7 +87,7 @@ function fixture() {
   await until(()=>f.calls.filter(c=>c.method==='book.detail').length===2);
   f.runtime.endSearch(); gates.forEach(g=>g.resolve());
   await until(()=>f.runtime.preparationActive===0);
-  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,2);
+  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,0,'unowned preparation must not continue from detail into TOC');
   await tick();
   assert.equal(f.calls.filter(c=>c.method==='book.detail').length,2,'unadmitted preparation was released');
   f.runtime.close();
@@ -147,8 +147,8 @@ function fixture() {
   f.runtime.close();
 }
 
-// An admitted chapter finishes after the page disappears. Cached/readable
-// publication runs independently; a late UI guard must not abort its transport.
+// The last chapter consumer leaving must cancel Core work and must not publish
+// a late readability proof. Starting transport is not an extra consumer.
 {
   const f=fixture(); const session=await f.runtime.acquireBook(seed('/read'));
   const gate=deferred(); f.gates.set(`chapter.content:${f.key('s1','/read')}`,gate);
@@ -157,11 +157,9 @@ function fixture() {
   const body=gateway.loadChapter(session,0,()=>visible);
   await until(()=>f.calls.some(c=>c.method==='chapter.content'));
   visible=false;
-  assert.equal(f.calls.find(c=>c.method==='chapter.content').options.shouldCancel(),false);
-  gate.resolve(); const chapter = await body;
-  assert.ok(chapter.content.length > 100, 'admitted parsing finishes after the caller hides');
-  await until(() => f.calls.some(c => c.method === 'search-book.put'));
-  assert.equal(f.rows.get(f.key('s1', '/read')).acquisition.stage, 'readable');
+  assert.equal(f.calls.find(c=>c.method==='chapter.content').options.shouldCancel(),true);
+  const cancelled=assert.rejects(body,/cancelled|取消/);gate.resolve();await cancelled;
+  assert.equal(f.calls.some(c => c.method === 'search-book.put'),false,'cancellation cannot publish a readability or bad-source proof');
   const attemptA = f.runtime.beginAttempt();
   assert.ok(f.runtime.beginAttempt() > attemptA, 'concurrent verdict attempts have ordered initiation stamps');
   f.runtime.close();
@@ -220,6 +218,30 @@ function fixture() {
   scheduler.close();
 }
 console.log('shared book acquisition lifecycle, identities, and scheduling: PASS');
+
+// canContinue belongs to each shared consumer. A shorter deadline or lost
+// session from the first caller cannot cancel a later still-valid caller.
+for (const command of ['book.detail','book.toc','chapter.content']) {
+ const calls=[],gates=[];
+ const scheduler=new BookRequestScheduler(async(method,params,options)=>{
+  const gate=deferred();gates.push(gate);calls.push({method,params,options});await gate.promise;
+  if(options.shouldCancel())throw Error('Core operation cancelled');return{data:{sourceId:params.sourceId}};
+ });
+ let firstAlive=true,secondAlive=true;
+ const params={sourceId:'shared',bookId:'b'};
+ const first=scheduler.request(command,params,{canContinue:()=>firstAlive},'v1','foreground');
+ const second=scheduler.request(command,params,{canContinue:()=>secondAlive},'v1','background');
+ firstAlive=false;assert.equal(calls[0].options.shouldCancel(),false);
+ secondAlive=false;assert.equal(calls[0].options.shouldCancel(),true);
+ const rejected=Promise.all([assert.rejects(first,/cancelled/),assert.rejects(second,/cancelled/)]);
+ // A new same-key consumer gets a separate request and cannot undo Core cancel.
+ const third=scheduler.request(command,params,{},'v1','foreground');
+ assert.equal(calls.length,2);firstAlive=true;assert.equal(calls[0].options.shouldCancel(),true);
+ assert.equal(calls[1].options.shouldCancel(),false);gates.forEach(g=>g.resolve());
+ await rejected;assert.equal((await third).data.sourceId,'shared');await tick();assert.equal(scheduler.active,0);
+ scheduler.close();
+}
+console.log('shared detail/TOC/body cancellation: each consumer owns its lifetime; Core cancellation cannot be revived PASS');
 
 // PH65: every source-changing entry, including WebDAV storage apply, invalidates both sides.
 for (const method of ['source.import', 'source.update', 'source.delete', 'runtime.storage.apply', 'runtime.storage.restore']) {
@@ -356,7 +378,8 @@ for (const scenario of ['stop', 'hide-resume', 'foreground-takeover']) {
     if (foreground) assert.equal((await foreground).identity.bookId, '/queued');
     await until(() => f.runtime.preparationActive === 0);
     assert.equal(f.calls.filter(call => call.method === 'book.detail').length, 1);
-    assert.equal(f.calls.filter(call => call.method === 'book.toc').length, 1, 'actual dispatch owns the complete finite chain');
+    assert.equal(f.calls.filter(call => call.method === 'book.toc').length, foreground ? 1 : 0,
+      'only the retained foreground consumer keeps the chain after search exit');
   }
   f.runtime.close();
 }

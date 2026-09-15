@@ -6,7 +6,7 @@ registerHooks({resolve(s,c,n){try{return n(s,c)}catch(e){if(s.startsWith('.')&&!
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const path=p=>new URL(p,base);
 const {BookAcquisitionCoordinator}=await import(path('app/BookAcquisitionCoordinator.ts'));
-const {RemoteReadingFlowGateway}=await import(path('features/reading/RemoteReadingFlowGateway.ts'));
+const {RemoteReadingFlowGateway,RemoteChapterCacheRefreshError}=await import(path('features/reading/RemoteReadingFlowGateway.ts'));
 const {RemoteReadingGatewayError,remoteReadingFailureRecord}=await import(path('features/reading/RemoteReadingContract.ts'));
 const {remoteReadingFailureKindOf,verdictForFailureKind}=await import(path('features/reading/RemoteContentAdmission.ts'));
 const {searchCandidateRank}=await import(path('features/search/SearchCandidatePolicy.ts'));
@@ -19,12 +19,21 @@ async function until(p){for(let i=0;i<300;i++){if(p())return;await pause()}asser
 const seed=(i,s='s1')=>({sourceId:s,bookId:`/b${i}`,detailUrl:`/b${i}`,title:'鸣龙',author:'关关公子',sourceVersion:'v1'});
 const candidate=(i,s='s1',ready=false)=>({seed:seed(i,s),catalogReady:ready,failed:false});
 const book=(i,s='s1')=>({...seed(i,s),sourceRuleVersion:'v1',sourceName:`${s}名称`,category:'novel',variables:[{name:'token',value:'search-context'}]});
-function fixture(){
+async function simulatedCoreGate(gate,options){
+ let timer;
+ try {
+  await Promise.race([gate.promise,new Promise((_,reject)=>{
+   const poll=()=>{if(options.shouldCancel?.())reject(new RemoteReadingGatewayError('cancelled','Core operation cancelled'));else timer=setTimeout(poll,2)};poll();
+  })]);
+ } finally {clearTimeout(timer)}
+}
+function fixture({cooperativeCancellation=false}={}){
  const calls=[],rows=new Map(),catalogs=new Map(),modes=new Map(),gates=new Map();let version='v1',enabled=true;
  const key=(s,b)=>JSON.stringify([s,b]);
  const runtime=new BookAcquisitionCoordinator(async(method,params,options)=>{
   calls.push({method,params,options});const sourceId=params.sourceId??params.origin;const bookId=params.bookId??params.book?.bookId??params.bookUrl;const id=key(sourceId,bookId);
-  const gate=gates.get(method==='source.list'?'sources':`${method}:${id}`);if(gate)await gate.promise;
+  const gate=gates.get(method==='source.list'?'sources':`${method}:${id}`);
+  if(gate){if(cooperativeCancellation)await simulatedCoreGate(gate,options);else await gate.promise;}
   if(method==='source.list')return {data:{sources:['s1','s2','s3','s4','s5'].map(sourceId=>({sourceId,name:sourceId,enabled,sourceVersion:version}))}};
   if(method==='source.delete'){enabled=false;return{data:{deleted:1}}}
   if(method==='search-book.get')return {data:{book:rows.get(id)??null}};
@@ -126,6 +135,50 @@ await check('cancel waiting foreground releases consumer promptly and does not t
  await assert.rejects(admission,e=>e.code==='cancelled');gate.resolve();assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
  }finally{f.runtime.close()}
 });
+for(const reason of ['user','deadline'])await check(`${reason} cancels orphan foreground Core work, frees slots and allows another book`,async()=>{
+ const f=fixture({cooperativeCancellation:true});try{
+  const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);let current=true;
+  const admission=f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')],{
+   isCurrent:()=>current,budgetMs:reason==='deadline'?35:1000});
+  await until(()=>f.calls.some(c=>c.method==='book.detail'));
+  const first=f.calls.find(c=>c.method==='book.detail');if(reason==='user')current=false;
+  await assert.rejects(admission,e=>e.code==='cancelled');
+  assert.equal(first.options.shouldCancel(),true,'the actual Core request receives cancellation');
+  await until(()=>f.runtime.scheduler.active===0&&f.runtime.jobs.size===0&&f.runtime.foregroundRequests===0);
+  assert.equal(f.calls.some(c=>c.method==='book.toc'||c.method==='search-book.put'),false,'orphan cannot fetch TOC or publish source health');
+  assert.equal(f.runtime.prepared.size,0);assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false,'cancel does not retry the group');
+  const next=await f.runtime.acquireBook(seed(1,'s2'));assert.equal(next.identity.bookId,'/b1');
+  assert.equal(first.options.shouldCancel(),true,'later foreground work cannot revive the old Core operation');
+ }finally{f.runtime.close()}
+});
+for(const otherPriority of ['foreground','background'])await check(`one cancelled caller preserves a live same-book ${otherPriority} consumer`,async()=>{
+ const f=fixture({cooperativeCancellation:true});try{
+  const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);let firstCurrent=true;
+  const first=f.runtime.acquireBook(seed(0),{isCurrent:()=>firstCurrent});
+  await until(()=>f.calls.some(c=>c.method==='book.detail'));
+  const second=f.runtime.acquireBook(seed(0),{isCurrent:()=>true},otherPriority);
+  firstCurrent=false;
+  await assert.rejects(first,e=>e.code==='cancelled');
+  const request=f.calls.find(c=>c.method==='book.detail');assert.equal(request.options.shouldCancel(),false);
+  assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);
+  gate.resolve();const session=await second;assert.equal(session.identity.bookId,'/b0');
+  assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
+  assert.equal(f.calls.some(c=>c.method==='search-book.put'),false,'a cancelled sibling cannot report source failure');
+ }finally{f.runtime.close()}
+});
+await check('same-book reopen waits for cancelled Core operation and starts a new acquisition',async()=>{
+ const f=fixture({cooperativeCancellation:true});try{
+  const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);let current=true;
+  const old=f.runtime.acquireBook(seed(0),{isCurrent:()=>current});const oldRejected=assert.rejects(old,e=>e.code==='cancelled');
+  await until(()=>f.calls.some(c=>c.method==='book.detail'));
+  const request=f.calls.find(c=>c.method==='book.detail');current=false;assert.equal(request.options.shouldCancel(),true);
+  f.gates.delete(`book.detail:${f.key('s1','/b0')}`);
+  const fresh=await f.runtime.acquireBook(seed(0));await oldRejected;
+  assert.equal(fresh.identity.bookId,'/b0');assert.equal(request.options.shouldCancel(),true);
+  assert.equal(f.calls.filter(c=>c.method==='book.detail').length,2,'reopen never joins an operation already cancelled by Core');
+  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
+ }finally{f.runtime.close()}
+});
 await check('same title with blank or conflicting author cannot authorize automatic source replacement',async()=>{
  for(const author of ['', '其他作者']){const f=fixture();try{const a=candidate(0),b=candidate(0,'s2');a.seed.author=author;f.modes.set(f.key('s1','/b0'),'empty');
  await assert.rejects(f.runtime.acquireCandidateGroup([a,b]));assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
@@ -167,7 +220,7 @@ const admissionSource=indexSource.slice(indexSource.indexOf('class RemoteDetailA
 const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admissionSource)+';return RemoteDetailAdmission;')();
 function indexFixture(f){
  const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{
- sameRemoteSessionEvidence,preparedRemoteChapterMatches,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
+ sameRemoteSessionEvidence,preparedRemoteChapterMatches,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
  ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
  const page=Object.assign(new Index(),{route:'search',shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};
 }

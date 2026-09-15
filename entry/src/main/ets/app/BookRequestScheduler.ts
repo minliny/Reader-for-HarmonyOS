@@ -8,13 +8,14 @@ export type BookRequestExecutor = (
 export interface BookRequestOptions extends RequestOptions {
   /** Page visibility delays queued work without invalidating its query. */
   canDispatch?: () => boolean;
-  /** Process/source validity survives the page-owned cancellation boundary. */
+  /** Additional validity of this consumer, including source/session lifetime. */
   canContinue?: () => boolean;
   /** Called at the executor boundary, including a join to an already started request. */
   onDispatch?: () => void;
 }
 
-type Consumer = { cancelled?: () => boolean; canDispatch?: () => boolean; onDispatch?: () => void };
+type Consumer = { cancelled?: () => boolean; canContinue?: () => boolean;
+  canDispatch?: () => boolean; onDispatch?: () => void };
 type RequestJob = {
   key: string;
   method: string;
@@ -23,6 +24,7 @@ type RequestJob = {
   priority: BookRequestPriority;
   queuedAt: number;
   started: boolean;
+  cancellationRequested: boolean;
   consumers: Consumer[];
   promise: Promise<ReaderCoreResultEvent>;
   resolve: (result: ReaderCoreResultEvent) => void;
@@ -75,8 +77,12 @@ export class BookRequestScheduler {
     // Diagnostic/replay Host overrides are intentionally not shared.
     const key = JSON.stringify([method, version, params]);
     let job = options.hostRequest === undefined ? this.jobs.get(key) : undefined;
+    // Once Core has observed cancellation, a later same-key caller must start
+    // a new request instead of reviving an operation already being unwound.
+    if (job !== undefined && this.cancelled(job)) job = undefined;
     if (job !== undefined) {
-      job.consumers.push({ cancelled: options.shouldCancel, canDispatch: options.canDispatch, onDispatch: options.onDispatch });
+      job.consumers.push({ cancelled: options.shouldCancel, canContinue: options.canContinue,
+        canDispatch: options.canDispatch, onDispatch: options.onDispatch });
       if (job.started) options.onDispatch?.();
       if (priorityRank(priority) < priorityRank(job.priority)) job.priority = priority;
       this.drain();
@@ -88,8 +94,9 @@ export class BookRequestScheduler {
       resolveResult = resolve;
       rejectResult = reject;
     });
-    job = { key, method, params, options, priority, queuedAt: Date.now(), started: false,
-      consumers: [{ cancelled: options.shouldCancel, canDispatch: options.canDispatch, onDispatch: options.onDispatch }],
+    job = { key, method, params, options, priority, queuedAt: Date.now(), started: false, cancellationRequested: false,
+      consumers: [{ cancelled: options.shouldCancel, canContinue: options.canContinue,
+        canDispatch: options.canDispatch, onDispatch: options.onDispatch }],
       promise, resolve: resolveResult, reject: rejectResult };
     if (options.hostRequest === undefined) this.jobs.set(key, job);
     this.queue.push(job);
@@ -119,9 +126,13 @@ export class BookRequestScheduler {
   }
 
   private cancelled(job: RequestJob): boolean {
-    if (this.closed || job.options.canContinue?.() === false) return true;
-    if (job.started && (job.method === 'book.detail' || job.method === 'book.toc' || job.method === 'chapter.content')) return false;
-    return job.consumers.every((consumer: Consumer): boolean => consumer.cancelled?.() === true);
+    if (this.closed || job.cancellationRequested) return true;
+    if (job.consumers.every((consumer: Consumer): boolean =>
+      consumer.cancelled?.() === true || consumer.canContinue?.() === false)) {
+      job.cancellationRequested = true;
+      return true;
+    }
+    return false;
   }
 
   private drain(): void {
@@ -141,7 +152,8 @@ export class BookRequestScheduler {
         continue;
       }
       if (!job.consumers.some((consumer: Consumer): boolean =>
-        consumer.cancelled?.() !== true && consumer.canDispatch?.() !== false)) { index += 1; continue; }
+        consumer.cancelled?.() !== true && consumer.canContinue?.() !== false &&
+          consumer.canDispatch?.() !== false)) { index += 1; continue; }
       // Six total requests; reserve one slot for reading, cap preparation at two.
       if (this.active >= 6 || (job.priority !== 'foreground' && this.active >= 5) ||
         (job.priority === 'background' && this.backgroundActive >= 2)) { index += 1; continue; }
@@ -151,7 +163,7 @@ export class BookRequestScheduler {
       if (background) this.backgroundActive += 1;
       job.started = true;
       for (const consumer of job.consumers) {
-        if (consumer.cancelled?.() !== true) consumer.onDispatch?.();
+        if (consumer.cancelled?.() !== true && consumer.canContinue?.() !== false) consumer.onDispatch?.();
       }
       const requestOptions: RequestOptions = { timeoutMs: job.options.timeoutMs,
         pollMs: job.options.pollMs, hostRequest: job.options.hostRequest,
