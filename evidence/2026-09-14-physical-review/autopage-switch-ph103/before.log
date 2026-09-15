@@ -1,0 +1,9 @@
+{"scheme":"day","value":false,"child":3,"command":true,"row":"#FAFFFAF4","opacity":1,"enabled":true,"track":"#A3EEE6DB","thumb":"#BDFFFCF8","position":{"x":2,"y":2}}
+{"scheme":"day","value":true,"child":3,"command":false,"row":"#FAFFFAF4","opacity":1,"enabled":true,"track":"#FF2F6373","thumb":"#BDFFFCF8","position":{"x":22,"y":2}}
+{"scheme":"night","value":false,"child":3,"command":true,"row":"#FA2A2622","opacity":1,"enabled":true,"track":"#A32C2824","thumb":"#BD2C2824","position":{"x":2,"y":2}}
+{"scheme":"night","value":true,"child":3,"command":false,"row":"#FA2A2622","opacity":1,"enabled":true,"track":"#FFD2BD96","thumb":"#BD2C2824","position":{"x":22,"y":2}}
+{"scheme":"day","value":false,"child":3,"command":true,"row":"#FAFFFAF4","opacity":1,"enabled":true,"track":"#A3EEE6DB","thumb":"#BDFFFCF8","position":{"x":2,"y":2}}
+{"scheme":"day","value":true,"child":3,"command":false,"row":"#FAFFFAF4","opacity":1,"enabled":true,"track":"#FF2F6373","thumb":"#BDFFFCF8","position":{"x":22,"y":2}}
+{"status":"running","enabled":false,"opacity":1}
+(node:50371) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

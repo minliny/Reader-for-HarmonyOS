@@ -1,0 +1,3 @@
+PASS Appearance fields: retained SDK Day/Night/Day stepper and open/closed trigger paint, menu surface/border roles
+(node:51048) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

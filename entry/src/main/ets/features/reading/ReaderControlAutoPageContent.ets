@@ -605,7 +605,10 @@ export struct ReaderControlAutoPageContent {
         .lineHeight(13)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .maxLines(1);
-      ReaderControlSwitchTrack({ value: this.followHighlight, inactiveColor: readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appScheme) })
+      // The soft Night surface shares the thumb's RGB. Use the shared off-track
+      // palette at Night while retaining this control's authored Day surface.
+      ReaderControlSwitchTrack({ value: this.followHighlight,
+        inactiveColor: this.appScheme === 'night' ? '' : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appScheme) })
         .margin({ left: 8 }).accessibilityText(`跟随高亮，${this.followHighlight ? '已开启' : '已关闭'}`);
     }
     .width(this.sectionInnerWidth())
