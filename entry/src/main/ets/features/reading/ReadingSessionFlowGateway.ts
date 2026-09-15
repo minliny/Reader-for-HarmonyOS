@@ -195,12 +195,12 @@ export class ReadingSessionFlowGateway {
         // and keep later writes behind the whole HTTP/publication operation.
         let refreshed: ReadingSessionChapter | undefined;
         await this.remote.runProgressCommitSerial(async (): Promise<void> => {
-          refreshed = await this.remote.loadChapter(this.source.session, chapterIndex, isCurrent, true, positionContext);
+          refreshed = await this.remote.loadChapter(session, chapterIndex, isCurrent, true, positionContext);
         });
         if (refreshed === undefined) throw new Error('reading refresh returned no chapter');
         chapter = refreshed;
       } else {
-        chapter = await this.remote.loadChapter(this.source.session, chapterIndex, isCurrent, false, positionContext);
+        chapter = await this.remote.loadChapter(session, chapterIndex, isCurrent, false, positionContext);
       }
       if (prepared?.chapter.chapterIndex === chapterIndex) this.preparedChapterConsumed = true;
       return chapter;

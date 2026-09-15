@@ -24,6 +24,8 @@ Core 生产提交 `5c79799d5`、补齐测试构造器及 Clippy 后最终 `c86b6
 
 证据汇总：[文件与校验索引](search-flow-implementation/explicit-chapter-refresh/regression-ph94-97/evidence-files.json)。本次手机原刷新弹窗的具体内部错误尚未取得，以上是当前代码确定缺陷，不把任一项冒称已唯一解释该次手机失败。全量 Harmony/HAP 及设备层结果另补；本批未操作设备。
 
+首次 HAP 的本地回归阶段完成，ArkTS 编译在 `ReadingSessionFlowGateway.loadChapter` 异步闭包丢失 `ReadingSessionSource` 联合类型收窄处失败。已使用函数前段确认的远程 session 常量，保持相同实例和串行边界；真实协调回归再次通过，原编译失败日志归档。此轮未发布失败包。
+
 ## PH93：刷新本章仍显示旧正文（2026-09-15）
 
 - 用户现象：点击顶部更多的“刷新本章”，正文不替换。对应已安装 run `20260915T081914Z-e5483b93-86eb9be1`，Harmony `e5483b93` / Core `cfb0208f4`，HAP SHA-256 `04ae9321ec60af7a970c6bfdf6177d77a23e4d9729769c88a0cd64ce1c239d35`；保数据安装回执 `deploy-physical-b1f20b88963d-20260915T102350Z.json`。

@@ -58,6 +58,11 @@
       "sha256": "dd6267aa677b571878f01f79eeb8dfc52792abddb9c436e97e0a52a5aea54fa0"
     },
     {
+      "file": "reader-ph94-97-hap-attempt1.log",
+      "bytes": 158782,
+      "sha256": "b6f9bfee636a2c73a9b235286cf091b2b5d6ef563f448af2de16284702cafc51"
+    },
+    {
       "file": "reader-ph94-97-harmony-integration.log",
       "bytes": 15017,
       "sha256": "3f5589537194d9283ed437ee37eff57c64e3e3ea5c11446a1ee1729b878bf6f3"
