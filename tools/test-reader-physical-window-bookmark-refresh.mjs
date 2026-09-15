@@ -49,7 +49,7 @@ for(const extended of [false,true])for(const scale of [1,1.5]){
 }
 const source=readFileSync(lre,'utf8');
 for(const [extended,controls,active,visible]of [[true,false,true,false],[true,true,true,true],[false,false,true,true],[false,true,false,false]]){
- const {owner:b}=createReaderBuilderProbe(source,['readerStatusBarUnderlay'],{ReaderWindowCoordinator:{metrics:()=>metrics},
+ const {owner:b}=createReaderBuilderProbe(source,['readerStatusBarUnderlay','readerStatusBarMetrics'],{ReaderWindowCoordinator:{metrics:()=>metrics},
  readerAppearanceThemeStyle:()=>({paperStart:'#FFE8D8B9'})});
  Object.assign(b,{windowChromeActive:active,readerSettingsSnapshot:{extendIntoCutout:extended},controlsPresentedForWindow:()=>controls,
  appearanceSnapshot:{activeTheme:'paper'}});b.readerStatusBarUnderlay();

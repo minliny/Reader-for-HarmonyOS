@@ -9,6 +9,7 @@ import { ReaderPageChrome } from './ReaderPageChrome';
 import { measureReaderPageChromeText } from './ReaderPageChromeTextMeasurement';
 import { TYPE_READER_IMMERSIVE_TIME } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import type { ReaderWindowMetricsSnapshot } from '../common/ReaderWindowMetrics';
 import { settings, type BusinessError } from '@kit.BasicServicesKit';
 import { readerBrightnessWindowValue, readerBrightnessControlPercent, readerBrightnessSystemValue } from './ReaderBrightnessCurve';
 import { readerNativeHighlightValues, type ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
@@ -7373,15 +7374,21 @@ export struct ReadingExperience {
       .catch((_error: Error): void => {});
   }
 
+  private readerStatusBarMetrics(_revision: number): ReaderWindowMetricsSnapshot {
+    return ReaderWindowCoordinator.metrics();
+  }
+
   @Builder
   private readerStatusBarUnderlay() {
     // Native status chrome overlays this explicit reader-owned band. It stays
     // independent of the moving page and App-colored control surfaces below.
     if (this.windowChromeActive && (!this.readerSettingsSnapshot.extendIntoCutout || this.controlsPresentedForWindow())) {
-      Row().width(ReaderWindowCoordinator.metrics().statusBarRect.width)
-        .height(ReaderWindowCoordinator.metrics().statusBarHeight)
-        .position({ x: ReaderWindowCoordinator.metrics().statusBarRect.left,
-          y: ReaderWindowCoordinator.metrics().statusBarRect.top })
+      // Read the observed revision inside the Row update function: a static
+      // metrics getter alone never subscribes this paint node to later measures.
+      Row().width(this.readerStatusBarMetrics(this.readerWindowMetricsRevision).statusBarRect.width)
+        .height(this.readerStatusBarMetrics(this.readerWindowMetricsRevision).statusBarHeight)
+        .position({ x: this.readerStatusBarMetrics(this.readerWindowMetricsRevision).statusBarRect.left,
+          y: this.readerStatusBarMetrics(this.readerWindowMetricsRevision).statusBarRect.top })
         .backgroundColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart)
         .id('reader-status-bar-underlay').zIndex(10).hitTestBehavior(HitTestMode.None);
     }

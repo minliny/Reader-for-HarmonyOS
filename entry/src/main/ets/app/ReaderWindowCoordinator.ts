@@ -83,6 +83,9 @@ export class ReaderWindowCoordinator {
   private static metricsSnapshot: ReaderWindowMetricsSnapshot = createDefaultReaderWindowMetrics();
   private static statusBarMeasurement: ReaderStatusBarMeasurement = new ReaderStatusBarMeasurement();
   private static statusBarHiddenApplied: boolean = false;
+  // A visibility Promise acknowledges the request, not the visible avoid area.
+  // Retain this window geometry's measured band until the reveal is observed.
+  private static statusBarRevealPending: boolean = false;
   private static windowRectListener: ((options: window.RectChangeOptions) => void) | undefined = undefined;
   private static displayChangeListener: ((id: number) => void) | undefined = undefined;
   private static windowSizeListener: ((size: window.Size) => void) | undefined = undefined;
@@ -146,6 +149,7 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.brightnessWriter.reset();
     ReaderWindowCoordinator.statusBarMeasurement = new ReaderStatusBarMeasurement();
     ReaderWindowCoordinator.statusBarHiddenApplied = false;
+    ReaderWindowCoordinator.statusBarRevealPending = false;
     const win = ReaderWindowCoordinator.mainWindow;
     if (win !== undefined) {
       try {
@@ -338,8 +342,11 @@ export class ReaderWindowCoordinator {
     if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setWindowKeepScreenOn(policy.keepScreenOn);
     if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
+    const statusEpoch = ReaderWindowCoordinator.installEpoch;
+    ReaderWindowCoordinator.statusBarRevealPending = !policy.hideStatusBar &&
+      (ReaderWindowCoordinator.statusBarRevealPending || ReaderWindowCoordinator.statusBarHiddenApplied);
     await win.setSpecificSystemBarEnabled('status', !policy.hideStatusBar, false);
-    if (win === ReaderWindowCoordinator.mainWindow) {
+    if (ReaderWindowCoordinator.installStillCurrent(statusEpoch, win)) {
       ReaderWindowCoordinator.statusBarHiddenApplied = policy.hideStatusBar;
     }
     if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
@@ -354,8 +361,11 @@ export class ReaderWindowCoordinator {
     if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setWindowKeepScreenOn(ReaderWindowCoordinator.appKeepScreenOn);
     if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
+    const statusEpoch = ReaderWindowCoordinator.installEpoch;
+    ReaderWindowCoordinator.statusBarRevealPending = ReaderWindowCoordinator.statusBarRevealPending ||
+      ReaderWindowCoordinator.statusBarHiddenApplied;
     await win.setSpecificSystemBarEnabled('status', true, false);
-    if (win === ReaderWindowCoordinator.mainWindow) ReaderWindowCoordinator.statusBarHiddenApplied = false;
+    if (ReaderWindowCoordinator.installStillCurrent(statusEpoch, win)) ReaderWindowCoordinator.statusBarHiddenApplied = false;
     if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
     await win.setSpecificSystemBarEnabled('navigation', true, false);
     if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
@@ -397,9 +407,15 @@ export class ReaderWindowCoordinator {
     const previous = ReaderWindowCoordinator.metricsSnapshot;
     const statusMeasurementKey = `${windowRect.left}:${windowRect.top}:${windowRect.width}:` +
       `${windowRect.height}:${globalRectVp.left}:${globalRectVp.top}:${density}:${displayInfo.id}:${displayInfo.rotation}`;
+    const measuredStatusBarRect = ReaderWindowCoordinator.statusBarRectVp(density);
+    if (measuredStatusBarRect.height > 0 && !ReaderWindowCoordinator.statusBarHiddenApplied &&
+      !(ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
+      ReaderWindowCoordinator.desiredReaderWindowPolicy.hideStatusBar)) {
+      ReaderWindowCoordinator.statusBarRevealPending = false;
+    }
     const statusBarRect = ReaderWindowCoordinator.statusBarMeasurement.observeRect(statusMeasurementKey,
-      windowRect.width > windowRect.height, ReaderWindowCoordinator.statusBarRectVp(density),
-      ReaderWindowCoordinator.statusBarHiddenApplied ||
+      windowRect.width > windowRect.height, measuredStatusBarRect,
+      ReaderWindowCoordinator.statusBarHiddenApplied || ReaderWindowCoordinator.statusBarRevealPending ||
       (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
       ReaderWindowCoordinator.desiredReaderWindowPolicy.hideStatusBar));
     const statusBarHeight = statusBarRect.height;
