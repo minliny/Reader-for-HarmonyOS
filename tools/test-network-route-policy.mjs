@@ -8,7 +8,10 @@ let proxy,pac,dns,networks,bound,defaultNet,calls,onDns;
 async function resolveDns(netId){calls.dns++;calls.dnsNetworks.push(netId);if(dns instanceof Error)throw dns;const result=dns.map(address=>({address}));onDns?.();return result;}
 const netHandle=netId=>({netId,getAddressesByName:async()=>resolveDns(netId)});
 const connection={
- getDefaultHttpProxy:async()=>{calls.proxy++;return proxy;},getPacUrl:()=>pac===undefined?'':'configured',getPacFileUrl:()=>'',findProxyForUrl:()=>pac,
+ getDefaultHttpProxy:async()=>{calls.proxy++;return proxy;},
+ getPacUrl:()=>{calls.legacyPac++;throw Object.assign(new Error('No legacy PAC script'),{code:2100003})},
+ getPacFileUrl:()=>{calls.pacFile++;return pac===undefined?'':'configured'},
+ findProxyForUrl:()=>{calls.pacResolve++;return pac},
  getAddressesByName:async()=>resolveDns('system'),
  getAppNet:async()=>bound===null?null:netHandle(bound),getDefaultNet:async()=>netHandle(defaultNet),
  getAllNets:async()=>assert.fail('an unrelated available network cannot authorize this request'),
@@ -18,20 +21,27 @@ const connection={
 };
 const {prepareNetworkTarget,NetworkEnvironmentError,isSystemProxyExcluded}=new Function('connection',code('HttpTransportPolicy.ts')+code('NetworkRoutePolicy.ts')+';return {prepareNetworkTarget,NetworkEnvironmentError,isSystemProxyExcluded};')(connection);
 const {isNetworkEnvironmentFailure}=new Function(code('ErrorMessage.ts')+';return {isNetworkEnvironmentFailure};')();
-function reset(){proxy={host:'',port:0,exclusionList:[]};pac=undefined;dns=['93.184.216.34'];networks=[systemNetwork()];bound=0;defaultNet=7;onDns=undefined;calls={dns:0,proxy:0,dnsNetworks:[]};}
+function reset(){if(calls)assert.equal(calls.legacyPac,0,'legacy PAC address getter must never be called, even when it throws for no script');proxy={host:'',port:0,exclusionList:[]};pac=undefined;dns=['93.184.216.34'];networks=[systemNetwork()];bound=0;defaultNet=7;onDns=undefined;calls={dns:0,proxy:0,pacFile:0,pacResolve:0,legacyPac:0,dnsNetworks:[]};}
 function systemNetwork({id=7,route='0.0.0.0',prefix=0,excluded=false,interfaceName='eth0',routeInterface=interfaceName}={}){return {id,properties:{interfaceName,routes:[{interface:routeInterface,destination:{address:{address:route},prefixLength:prefix},gateway:{address:'10.0.2.2'},hasGateway:true,isDefaultRoute:prefix===0,isExcludedRoute:excluded}]}};}
 function vpn(options={}){return systemNetwork({interfaceName:'tun0',...options})}
 reset();assert.equal((await prepareNetworkTarget('https://source.example/book')).route,'direct');assert.equal(calls.dns,1);
+assert.equal(calls.legacyPac,0);assert.equal(calls.pacFile,1);assert.equal(calls.pacResolve,0,'no active PAC skips synchronous URL evaluation');
 assert.deepEqual(calls.dnsNetworks,['system'],'unbound app retains system/UID VPN DNS instead of explicitly selecting physical default DNS');
 for(const address of ['127.0.0.1','10.1.2.3','192.168.2.3','169.254.169.254','[::1]','198.18.0.1','2130706433']){
  reset();proxy={host:'user-proxy',port:8080,exclusionList:[]};await assert.rejects(prepareNetworkTarget('http://'+address+'/'));assert.equal(calls.proxy,0);
 }
 reset();proxy={host:'user-proxy',port:8080,exclusionList:[]};dns=Error('local DNS unavailable');assert.equal((await prepareNetworkTarget('https://source.example/')).route,'systemProxy');assert.equal(calls.dns,0);
+assert.equal(calls.pacResolve,0,'static system proxy does not evaluate a merely stored legacy PAC address');
 assert.equal((await prepareNetworkTarget('https://93.184.216.34/book')).route,'systemProxy','literal public IP still follows system proxy selection');assert.equal(calls.dns,0);
 proxy.exclusionList=['*.example'];await assert.rejects(prepareNetworkTarget('https://source.example/'),e=>e.details.phase==='dns');
 for(const [host,patterns,excluded] of [['source.example',['localhost','127.*'],false],['source.example',['*.example'],true],['source.example',['source.example'],true],['source.example',['source.*'],true],['source.example',['*'],true],['source.example',['example'],false],['sourceXexample',['source.example'],false],['source.example',['[invalid]'],false]])assert.equal(isSystemProxyExcluded(host,patterns),excluded);
 reset();proxy={host:'local-pac',port:1234,exclusionList:[]};pac='DIRECT';assert.equal((await prepareNetworkTarget('https://source.example')).route,'direct');pac='PROXY upstream:8080; DIRECT';dns=Error('proxy resolves DNS');assert.equal((await prepareNetworkTarget('https://source.example')).route,'systemProxy');pac='';await assert.rejects(prepareNetworkTarget('https://source.example'),e=>e.details.phase==='route');
 reset();pac='PROXY upstream:8080';await assert.rejects(prepareNetworkTarget('https://source.example'),e=>e.details.phase==='route','configured PAC without ready system endpoint is not a direct connection');
+reset();proxy={host:'local-pac',port:1234,exclusionList:['source.example']};pac='PROXY upstream:8080';
+assert.equal((await prepareNetworkTarget('https://source.example')).route,'direct');assert.equal(calls.pacResolve,0,'system exclusion does not need synchronous PAC evaluation');
+proxy.exclusionList=[];pac='DIRECT';assert.equal((await prepareNetworkTarget('https://source.example')).route,'direct');assert.equal(calls.pacResolve,1);
+pac='PROXY upstream:8080';assert.equal((await prepareNetworkTarget('https://source.example')).route,'systemProxy');assert.equal(calls.pacResolve,2,'next request observes changed PAC instead of a stale cached decision');
+pac=undefined;assert.equal((await prepareNetworkTarget('https://source.example')).route,'systemProxy');assert.equal(calls.pacResolve,2,'disabling PAC returns to the current static system proxy without evaluating a stale script');
 reset();dns=['198.18.1.2'];assert.equal((await prepareNetworkTarget('https://source.example')).route,'systemSynthetic','VM/router transparent proxy can use the selected gateway default route without a local VPN');
 networks=[vpn()];assert.equal((await prepareNetworkTarget('https://source.example')).route,'systemSynthetic');
 bound=null;assert.equal((await prepareNetworkTarget('https://source.example')).route,'systemSynthetic','SDK may return null when the app is unbound');bound=0;
@@ -127,7 +137,7 @@ console.log('PASS: vendored SDK emits a legal CoreError code and preserves Host 
 
 
 // PH76 preload failure diagnostics retain only a fixed operation/type/code.
-for(const operation of ['getDefaultHttpProxy','getPacUrl','getPacFileUrl','findProxyForUrl']){
+for(const operation of ['getDefaultHttpProxy','getPacFileUrl','findProxyForUrl']){
  reset();if(operation==='findProxyForUrl'){proxy={host:'PRIVATE_PROXY',port:8080,exclusionList:[]};pac='DIRECT';}
  const original=connection[operation];connection[operation]=()=>{throw Object.assign(new Error('PRIVATE_URL https://u:PRIVATE_PASSWORD@proxy.test/pac'),{code:2100002});};
  try{await assert.rejects(prepareNetworkTarget('https://source.example'),error=>{
@@ -142,7 +152,7 @@ for(const invalid of [undefined,()=>42]){
 }
 console.log('PASS: native proxy getter failures/missing API/invalid return preserve fixed operation and numeric code without leaking native messages or guessing DIRECT');
 
-for(const operation of ['getDefaultHttpProxy','getPacUrl','getPacFileUrl','findProxyForUrl']){
+for(const operation of ['getDefaultHttpProxy','getPacFileUrl','findProxyForUrl']){
  for(const value of [undefined,null,42]){
   reset();if(operation==='findProxyForUrl'){proxy={host:'system-proxy',port:8080,exclusionList:[]};pac='DIRECT';}
   const original=connection[operation];connection[operation]=()=>value;
@@ -150,3 +160,9 @@ for(const operation of ['getDefaultHttpProxy','getPacUrl','getPacFileUrl','findP
  }
 }
 console.log('PASS: undefined/null/wrong-type results from each native proxy API identify the exact operation');
+for(const [code,expected] of [['2100002',2100002],['-105',-105],['2100002 https://u:secret@proxy.test',undefined],['2100002.5',undefined],['999999999999999999',undefined]]){
+ const error=NetworkEnvironmentError.fromPlatform('route','fixed explanation','getPacFileUrl',Object.assign(new Error('PRIVATE_URL'),{code}));
+ assert.equal(error.details.platformCode,expected);assert.ok(!JSON.stringify(error).includes('PRIVATE_URL'));assert.ok(!JSON.stringify(error).includes('secret'));
+}
+assert.equal(calls.legacyPac,0);
+console.log('PASS: API 23 active PAC getter replaces throwing legacy getter; numeric string native codes survive without retaining messages');

@@ -37,6 +37,11 @@ export class NetworkEnvironmentError extends Error {
     if (cause !== null && typeof cause === 'object') {
       const code = (cause as { code?: unknown }).code;
       if (typeof code === 'number' && Number.isSafeInteger(code)) failure.details.platformCode = code;
+      // Some native bindings expose BusinessError.code as a decimal string.
+      // Accept only a bounded integer, never an arbitrary diagnostic message.
+      if (typeof code === 'string' && /^-?\d{1,15}$/.test(code)) {
+        failure.details.platformCode = Number(code);
+      }
     }
     return failure;
   }
@@ -127,16 +132,16 @@ export async function prepareNetworkTarget(requestUrl: string): Promise<NetworkT
       !Array.isArray(proxy.exclusionList) || proxy.exclusionList.some((item: string): boolean => typeof item !== 'string')) {
       throw new TypeError('Invalid system proxy result type');
     }
-    operation = 'getPacUrl';
-    const pacUrl = connection.getPacUrl();
-    if (typeof pacUrl !== 'string') throw new TypeError('Invalid PAC URL result type');
-    let pacConfigured = pacUrl.length > 0;
-    if (!pacConfigured) {
-      operation = 'getPacFileUrl';
-      const pacFileUrl = connection.getPacFileUrl();
-      if (typeof pacFileUrl !== 'string') throw new TypeError('Invalid PAC file URL result type');
-      pacConfigured = pacFileUrl.length > 0;
-    }
+    // API 20+ getPacFileUrl reports the script used to enable system PAC and
+    // returns '' when none is configured (Phone PAC support starts at API 23).
+    // Legacy getPacUrl may throw 2100003 for an absent script; its setter only
+    // stores an address and does not enable the system proxy. Do not query it.
+    // Keep this read fresh: caching it without a configuration revision could
+    // route a PAC DIRECT request through a proxy, bypassing DNS admission.
+    operation = 'getPacFileUrl';
+    const pacFileUrl = connection.getPacFileUrl();
+    if (typeof pacFileUrl !== 'string') throw new TypeError('Invalid PAC file URL result type');
+    const pacConfigured = pacFileUrl.length > 0;
     operation = 'proxy.configuration';
     const hasProxy = proxy.host.trim().length > 0 && proxy.port > 0;
     if (pacConfigured && !hasProxy) {
