@@ -1,0 +1,19 @@
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: early lifecycle/identity evidence: blank-before-start
+
+false !== true
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-arkweb-resource-diagnostic.mjs:115:9 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

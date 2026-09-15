@@ -13,12 +13,14 @@ class Response {
 }
 const util={TextEncoder,Base64Helper:class {encodeToStringSync(bytes){return Buffer.from(bytes).toString('base64');}}};
 function percentBase64(body){const value=Buffer.from(body).toString('base64');return '%'+value.charCodeAt(0).toString(16)+encodeURIComponent(value.slice(1));}
-function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='complete'}={}){
+function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='complete',earlyMode='normal'}={}){
  let now=1000,next=1,observer,diagnostic;const timers=new Map(),jobs=new Map(),logs=[],documents=[];
  const set=(fn,ms)=>{const id=next++;timers.set(id,{at:now+ms,fn});return id;};const clear=id=>timers.delete(id);
  const emit=(kind,id,url)=>observer?.({kind,requestId:id,url,at:now});
  const executor={attachDiagnosticObserver(fn){observer=fn;},detachDiagnosticObserver(fn){if(observer===fn)observer=undefined;},cancel(id){jobs.get(id)?.reject({code:'CANCELLED'});jobs.delete(id);},execute(params,id){
-  const prefix=params.document.baseUrl.slice(0,-4);emit('start',id);
+  const prefix=params.document.baseUrl.slice(0,-4);
+  if(earlyMode==='blank-before-start'){emit('pageBegin',id,'about:blank');now+=7;emit('pageEnd',id,'about:blank');now+=42;}
+  emit('start',id);
   if(throwEarly)throw throwEarly===true?new Error('controller unavailable'):throwEarly;
   const body=params.document.body, dataUrl='data:text/html;charset=utf-8,'+encodeURIComponent(body);
   const oldDocument=documents.at(-1);documents.push(params.document);
@@ -57,7 +59,19 @@ function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='
   }
   if(params.document.body.includes('early.css')){
    assert.equal(diagnostic.provide(prefix+'early.css').code,200);diagnostic.provide(prefix+'hold.js');
-   emit('resource',id,prefix+'early.css');emit('matcherStart',id,prefix+'early.css');emit('matched',id,prefix+'early.css');
+   if(earlyMode==='blank-after-start')emit('pageEnd',id,'about:blank');
+   if(earlyMode==='data-end-before-match')emit('pageEnd',id,dataUrl);
+   if(earlyMode==='base-end-before-match')emit('pageEnd',id,params.document.baseUrl);
+   if(earlyMode==='foreign-data-end')emit('pageEnd',id,'data:text/html,foreign');
+   if(earlyMode==='foreign-http-end')emit('pageEnd',id,'https://user.example/private-token');
+   const callbackId=earlyMode==='wrong-request'?7600002:id;
+   now+=61;
+   if(earlyMode==='reversed')emit('matched',callbackId,prefix+'early.css');
+   if(earlyMode!=='missing-resource')emit('resource',callbackId,prefix+'early.css');
+   if(earlyMode!=='missing-matcher')emit('matcherStart',callbackId,prefix+'early.css');
+   emit('pageBegin',id,dataUrl);now+=6;
+   if(earlyMode!=='reversed')emit('matched',callbackId,prefix+'early.css');
+   if(earlyMode==='data-end-after-match'){now+=1;emit('pageEnd',id,dataUrl);}
    return Promise.resolve({value:prefix+'early.css',resourceUrl:prefix+'early.css'});
   }
   if(params.document.body.includes('old.js')){
@@ -84,7 +98,7 @@ function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='
 }
 {
  const h=harness();assert.equal(h.diagnostic.provide('https://unrelated.example/user-token').code,403);assert.equal(h.diagnostic.provide('about:blank'),null);
- await h.diagnostic.run('early');assert.equal(h.logs[0].pass,true);assert.equal(h.logs[0].measurements.callbackToMatchMs,0);
+ await h.diagnostic.run('early');assert.equal(h.logs[0].pass,true);assert.equal(h.logs[0].measurements.callbackToMatchMs,6);
  assert.equal(h.timers.size,0);assert.equal(h.observer(),undefined);assert.equal(h.diagnostic.provide('https://93.184.216.34/not-a-fixture').code,403);
  assert.ok(!JSON.stringify(h.logs).includes('https://'),'logs contain no raw URL');
  assert.ok(h.logs[0].events.some(e=>e.kind==='documentProvided'&&e.resource==='page'));
@@ -93,6 +107,18 @@ function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='
  assert.equal(h.diagnostic.provide('data:text/html,'+h.documents[0].body).code,403,'finished run has no admitted document');
  console.log('PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup');
 }
+for(const earlyMode of ['blank-before-start','blank-after-start','data-end-after-match',
+ 'data-end-before-match','base-end-before-match','foreign-data-end','foreign-http-end',
+ 'wrong-request','missing-resource','missing-matcher','reversed']){
+ const h=harness({earlyMode});await h.diagnostic.run('early');const result=h.logs[0];
+ const expected=['blank-before-start','blank-after-start','data-end-after-match'].includes(earlyMode);
+ assert.equal(result.pass,expected,'early lifecycle/identity evidence: '+earlyMode);
+ if(expected){assert.equal(result.measurements.callbackToMatchMs,6);assert.equal(result.measurements.matchedBeforePageEnd,true);}
+ if(earlyMode.startsWith('blank-'))assert.ok(result.events.some(event=>event.kind==='pageEnd'&&event.resource==='about-blank'),'blank event remains in evidence');
+ assert.ok(!JSON.stringify(result).includes('private-token'));
+ assert.equal(h.timers.size,0);assert.equal(h.jobs.size,0);assert.equal(h.observer(),undefined);
+}
+console.log('PASS early timing uses this run and exact target document: native blank initialization excluded, premature/foreign/incomplete evidence still fails (11 scenarios)');
 {
  const h=harness({shapeProbes:true});await h.diagnostic.run('early');
  assert.equal(h.logs[0].pass,true,'all exact native document admission and rejection assertions must complete');

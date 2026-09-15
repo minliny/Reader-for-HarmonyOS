@@ -311,3 +311,22 @@ for(const status of [401,403,429]){
  console.log('PASS native detach cancels pending proxy ACK immediately and late configuration is cleaned');
 }
 console.log('PH92 proxy/challenge compatibility: 5 additional scenario groups passed');
+
+// Native Web first mounts about:blank. Both its pre-load completion and a
+// delayed completion after loadData must remain diagnostic-only in production.
+for(const capture of [false,true]){
+ const s=setup({autoAttach:false});const events=[];s.e.attachDiagnosticObserver(event=>events.push(event));
+ s.setEvaluate(async script=>script==='INITIALIZE'?'"ready"':JSON.stringify(new Function('return ('+script+')')()));
+ const pending=s.e.execute(params({javaScript:'INITIALIZE',resourceUrlMatcherJavaScript:capture?matcher:undefined}),280+(capture?1:0));
+ await ticks();const job=s.e.active;assert.equal(job.loadStarted,undefined);
+ s.pageEnd('about:blank');assert.equal(job.pageReadyAt,0);assert.equal(job.finalUrl,undefined);
+ s.e.attachController(s.surface);await s.clock.advance(100);assert.equal(job.loadStarted,true);
+ s.pageEnd('about:blank');s.resource('about:blank');await s.clock.advance(550);
+ assert.equal(job.pageReadyAt,0);assert.equal(job.finalUrl,undefined);assert.equal(s.scripts.length,0);
+ if(capture){assert.equal(job.resourceCapture.initializationScheduled,false);s.resource(base+'/early.m3u8');}
+ else{s.pageEnd(base+'/page');await s.clock.advance(500);}
+ const result=await pending;assert.equal(result.value,capture?base+'/early.m3u8':'ready');
+ assert.equal(events.filter(event=>event.kind==='pageEnd'&&event.url==='about:blank').length,2);
+ clean(s);
+}
+console.log('PASS production blank lifecycle before/after real load never sets page ready, final URL or schedules source initialization (2 scenarios)');

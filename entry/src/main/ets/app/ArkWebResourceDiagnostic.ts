@@ -19,7 +19,7 @@ type DiagnosticDataDocumentShape = {
   uriDecodedMatchesCurrentBase64: boolean;
 };
 type DiagnosticRecord = { kind: string; at: number; requestId?: number; resource?: string;
-  dataDocument?: DiagnosticDataDocumentShape };
+  dataDocument?: DiagnosticDataDocumentShape; currentDocument?: boolean };
 type DiagnosticFailure = { code?: string; message?: string; details?: JsonObject };
 const ORIGIN = 'https://93.184.216.34';
 const FIRST_ID = 7600001;
@@ -49,8 +49,11 @@ export class ArkWebResourceDiagnostic {
     const resource = controlledResource ? event.url!.slice(this.prefix.length) : undefined;
     const label = resource === undefined ? undefined :
       ['early.css', 'hold.js', 'old.js', 'new.js', 'page'].includes(resource) ? resource : 'other-controlled-resource';
+    const lifecycle = event.kind === 'pageBegin' || event.kind === 'pageEnd';
+    const currentDocument = lifecycle && event.url !== undefined ?
+      event.url === `${this.prefix}page` || this.isCurrentDataDocument(event.url) : undefined;
     this.record(event.kind, event.requestId, label ??
-      (event.url === undefined ? undefined : this.documentLabel(event.url)), event.at);
+      (event.url === undefined ? undefined : this.documentLabel(event.url)), event.at, undefined, currentDocument);
   };
 
   readonly provide = (url: string): WebResourceResponse => {
@@ -259,14 +262,29 @@ export class ArkWebResourceDiagnostic {
   private async runEarly(): Promise<string> {
     const html = `<html><head><link rel="stylesheet" href="${this.prefix}early.css"><script src="${this.prefix}hold.js"></script></head><body>PH76 early</body></html>`;
     const result = await ArkWebExecutor.instance.execute(this.params(html, this.pattern('early\\.css')), FIRST_ID);
-    const resource = this.records.find((event): boolean => event.kind === 'resource' && event.resource === 'early.css');
-    const matched = this.records.find((event): boolean => event.kind === 'matched' && event.resource === 'early.css');
-    const pageEnd = this.records.find((event): boolean => event.kind === 'pageEnd' && event.requestId === FIRST_ID);
-    const pass = result['resourceUrl'] === `${this.prefix}early.css` && resource !== undefined && matched !== undefined &&
-      (pageEnd === undefined || matched.at < pageEnd.at);
+    const started = this.records.findIndex((event): boolean => event.kind === 'start' && event.requestId === FIRST_ID);
+    const events = started < 0 ? [] : this.records.slice(started + 1).filter((event): boolean => event.requestId === FIRST_ID);
+    const resource = events.find((event): boolean => event.kind === 'resource' && event.resource === 'early.css');
+    const matcher = events.find((event): boolean => event.kind === 'matcherStart' && event.resource === 'early.css');
+    const matched = events.find((event): boolean => event.kind === 'matched' && event.resource === 'early.css');
+    // The native Web mounts about:blank before the requested loadData. Keep
+    // those callbacks in the receipt, but never treat them as the fixture's
+    // completion. Exact body/base-URL identity also excludes stale data pages.
+    const pageEnd = events.find((event): boolean => event.kind === 'pageEnd' && event.currentDocument === true);
+    const unexpectedDocument = events.some((event): boolean => (event.kind === 'pageBegin' || event.kind === 'pageEnd') &&
+      event.resource !== 'about-blank' && event.currentDocument !== true);
+    const orderedMatch = resource !== undefined && matcher !== undefined && matched !== undefined &&
+      events.indexOf(resource) < events.indexOf(matcher) && events.indexOf(matcher) < events.indexOf(matched) &&
+      resource.at <= matcher.at && matcher.at <= matched.at;
+    const beforePageEnd = orderedMatch && !unexpectedDocument &&
+      (pageEnd === undefined || (matched !== undefined && matched.at < pageEnd.at));
+    const pass = result['resourceUrl'] === `${this.prefix}early.css` && beforePageEnd;
     return this.finish('early', pass, {
       callbackToMatchMs: resource !== undefined && matched !== undefined ? matched.at - resource.at : -1,
-      matchedBeforePageEnd: pageEnd === undefined || (matched !== undefined && matched.at < pageEnd.at),
+      matchedBeforePageEnd: beforePageEnd,
+      observedTargetPageEnd: pageEnd !== undefined,
+      unexpectedDocument,
+      orderedMatch,
     });
   }
 
@@ -323,9 +341,9 @@ export class ArkWebResourceDiagnostic {
   }
 
   private record(kind: string, requestId?: number, resource?: string, at: number = Date.now(),
-    dataDocument?: DiagnosticDataDocumentShape): void {
+    dataDocument?: DiagnosticDataDocumentShape, currentDocument?: boolean): void {
     if (this.records.length >= 256) return;
-    this.records.push({ kind, at, requestId, resource, dataDocument });
+    this.records.push({ kind, at, requestId, resource, dataDocument, currentDocument });
   }
 
   private finish(scenario: string, pass: boolean, measurements: JsonObject): string {
