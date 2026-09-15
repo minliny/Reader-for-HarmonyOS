@@ -56,9 +56,9 @@ for(const [extended,controls,active,visible]of [[true,false,true,false],[true,tr
  const rows=[...b.nodes.values()].filter(n=>n.id==='reader-status-bar-underlay');assert.equal(rows.length,visible?1:0,JSON.stringify([...b.nodes.values()]));
  if(visible){assert.equal(rows[0].height,48);assert.equal(rows[0].backgroundColor,'#FFE8D8B9');assert.equal(rows[0].zIndex,10);}
 }
-const B=productionMotionMethods(lre,['currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','canStartReaderBookmarkGesture']);
+const B=productionMotionMethods(lre,['bookmarkMatchesCurrentChapter','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','canStartReaderBookmarkGesture'],{LOCAL_READING_SOURCE_ID:'local'});
 let entries=[{index:0,title:'C',bookmarks:[]}],requests=[];
-const b=Object.assign(new B(),{sourceId:'s',bookId:'b',mounted:true,visiblePage:{startScalar:10,endScalar:20},bookmarkPendingTarget:'',bookmarkMutationGeneration:0,
+const b=Object.assign(new B(),{sourceId:'local',bookId:'b',mounted:true,visiblePage:{startScalar:10,endScalar:20},bookmarkPendingTarget:'',bookmarkMutationGeneration:0,
  bookmarkPreviewChanged:false,currentChapterIndex:()=>0,controlDirectoryEntries:()=>entries,currentPageBookmarkText:()=> 'original',onTogglePageBookmark:r=>requests.push(r),canTurnPage:()=>true});
 assert.equal(b.pageBookmarkFeedbackFilled(),false);b.bookmarkPreviewChanged=true;assert.equal(b.pageBookmarkFeedbackFilled(),true);
 b.toggleCurrentPageBookmark();b.bookmarkPreviewChanged=false;assert.equal(b.pageBookmarkFeedbackFilled(),true);assert.equal(b.canStartReaderBookmarkGesture(),false);
@@ -132,7 +132,7 @@ moving.detach();assert.equal(events.size,0);assert.equal(displayEvents.size,0);c
 console.log('PASS PH57 actual Window position/display listeners, equality dedup, rotation invalidation and resource release');
 
 let unavailable=[{index:0,title:'C',bookmarks:[]}],confirmedCallback;
-const confirmed=Object.assign(new B(),{sourceId:'s',bookId:'confirmed',mounted:true,visiblePage:{startScalar:10,endScalar:20},bookmarkPendingTarget:'',bookmarkMutationGeneration:0,
+const confirmed=Object.assign(new B(),{sourceId:'local',bookId:'confirmed',mounted:true,visiblePage:{startScalar:10,endScalar:20},bookmarkPendingTarget:'',bookmarkMutationGeneration:0,
  bookmarkPreviewChanged:false,currentChapterIndex:()=>0,controlDirectoryEntries:()=>unavailable,currentPageBookmarkText:()=> 'original',onTogglePageBookmark:r=>confirmedCallback=r.onSettled,canTurnPage:()=>true});
 confirmed.toggleCurrentPageBookmark();unavailable=[{index:0,title:'C',bookmarks:undefined}];confirmed.reconcilePageBookmarkFeedback();confirmedCallback(true);
 assert.equal(confirmed.pageBookmarkFeedbackFilled(),true);assert.equal(confirmed.canStartReaderBookmarkGesture(),false,'confirmed write + failed projection retains marker but cannot repeat mutation');

@@ -50,6 +50,8 @@ export type ReaderLegacyBookmark = {
 /** Row model rendered by ReaderBookmarkRow; pure data, no UI types. */
 export type ReaderBookmarkRowModel = {
   positionScope?: RemoteReadingPositionScope;
+  /** Location proof is separate from the bookmark's book ownership. */
+  positionStatus?: 'confirmed' | 'unverified';
   bookmarkId: string;
   identityStatus: ReaderBookmarkIdentityStatus;
   chapterIndex: number;
@@ -198,6 +200,8 @@ function readerBookmarkRowFromBookmark(
   chapterScalarLengths: ReadonlyMap<number, number> | undefined,
 ): ReaderBookmarkRowModel {
   const chapterLength = chapterScalarLengths?.get(bookmark.chapterIndex);
+  const positionStatus = readerBookmarkPositionStatus(identity?.sourceId, identity?.bookId,
+    bookmark.chapterIndex, bookmark.positionScope);
   return {
     ...(bookmark.positionScope === undefined ? {} : { positionScope: bookmark.positionScope }),
     bookmarkId: identity === undefined ?
@@ -205,11 +209,13 @@ function readerBookmarkRowFromBookmark(
       readerBookmarkRecordId(
         identity.bookName, identity.bookAuthor, bookmark.chapterIndex, bookmark.chapterOffset, bookmark.time),
     identityStatus,
+    positionStatus,
     chapterIndex: bookmark.chapterIndex,
     chapterOffset: bookmark.chapterOffset,
     chapterTitle: bookmark.chapterTitle,
     excerpt: readerBookmarkExcerpt(bookmark.bookText || bookmark.content || '暂无正文摘录'),
-    positionLabel: readerBookmarkPositionLabel(bookmark.chapterOffset, chapterLength),
+    positionLabel: positionStatus === 'unverified' ? '位置待恢复' :
+      positionStatus === 'confirmed' ? readerBookmarkPositionLabel(bookmark.chapterOffset, chapterLength) : '',
     timeLabel: readerBookmarkTimeLabel(bookmark.time),
   };
 }
@@ -219,17 +225,33 @@ function readerBookmarkRowFromRecord(
   chapterScalarLengths: ReadonlyMap<number, number> | undefined,
 ): ReaderBookmarkRowModel {
   const chapterLength = chapterScalarLengths?.get(record.chapterIndex);
+  const positionStatus = readerBookmarkPositionStatus(record.sourceId, record.bookId,
+    record.chapterIndex, record.positionScope);
   return {
     ...(record.positionScope === undefined ? {} : { positionScope: record.positionScope }),
     bookmarkId: record.bookmarkId,
     identityStatus: record.identityStatus,
+    positionStatus,
     chapterIndex: record.chapterIndex,
     chapterOffset: record.chapterOffset,
     chapterTitle: record.chapterTitle,
     excerpt: readerBookmarkExcerpt(record.bookText || record.content || '暂无正文摘录'),
-    positionLabel: readerBookmarkPositionLabel(record.chapterOffset, chapterLength),
+    positionLabel: positionStatus === 'unverified' ? '位置待恢复' :
+      positionStatus === 'confirmed' ? readerBookmarkPositionLabel(record.chapterOffset, chapterLength) : '',
     timeLabel: readerBookmarkTimeLabel(record.time),
   };
+}
+
+/** Core only exposes a remote scope when it matches the current cached body;
+ * the reading host also withdraws stale current-chapter proofs during refresh.
+ * Keep historical quotes visible without presenting an unproven numeric position.
+ */
+function readerBookmarkPositionStatus(sourceId: string | undefined, bookId: string | undefined,
+  chapterIndex: number, scope: RemoteReadingPositionScope | undefined): 'confirmed' | 'unverified' | undefined {
+  if (sourceId === undefined || sourceId.length === 0) return undefined;
+  if (sourceId === 'local') return 'confirmed';
+  return scope !== undefined && scope.sourceId === sourceId && scope.bookId === bookId &&
+    scope.chapterIndex === chapterIndex ? 'confirmed' : 'unverified';
 }
 
 /**

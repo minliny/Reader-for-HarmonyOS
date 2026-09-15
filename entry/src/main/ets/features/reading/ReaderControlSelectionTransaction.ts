@@ -79,6 +79,8 @@ export interface ReaderControlSelectionStoredProgress {
   chapterProgress: number;
   updatedAt: number;
   locationRevision?: string;
+  bodyVersion?: string;
+  processingVersion?: string;
 }
 
 export interface ReaderControlSelectionDisplayAnchor {
@@ -87,6 +89,8 @@ export interface ReaderControlSelectionDisplayAnchor {
   visibleScalar: number;
   scalarCount: number;
   continuous: boolean;
+  bodyVersion?: string;
+  processingVersion?: string;
 }
 
 export interface ReaderControlSelectionReconciliation {
@@ -158,6 +162,7 @@ export async function reconcileReaderControlSelectionProgress(
 function displayCanShowStored(anchor: ReaderControlSelectionDisplayAnchor | undefined,
   progress: ReaderControlSelectionStoredProgress): boolean {
   if (anchor === undefined || anchor.chapterIndex !== progress.chapterIndex) return false;
+  if (anchor.bodyVersion !== progress.bodyVersion || anchor.processingVersion !== progress.processingVersion) return false;
   if (anchor.continuous) return progress.chapterOffset < anchor.scalarCount;
   return progress.chapterOffset === anchor.pageStartScalar;
 }
@@ -171,7 +176,7 @@ export function readerControlSelectionRecoveryAction(
   if (result.kind === 'obsolete') return 'obsolete';
   if (result.kind !== 'verified' || result.progress === undefined) return 'blocked';
   if (target !== undefined && target.chapterIndex === result.progress.chapterIndex &&
-    target.pageStartScalar === result.progress.chapterOffset) return 'target';
+    target.pageStartScalar === result.progress.chapterOffset && displayCanShowStored(target, result.progress)) return 'target';
   if (displayCanShowStored(origin, result.progress)) return 'origin';
   return 'blocked';
 }

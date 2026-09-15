@@ -213,3 +213,28 @@ if (readerBuilderSdkAvailable) {
   console.log('Actual SDK nonempty bookmark row: mounted reversible actors, live metadata/identity and clip mutations PASS');
 }
 console.log('PASS bookmark production geometry, native row-height extent binding and same-open anchor continuation; NOT native visual acceptance');
+
+// The production row consumes the independent position label and keeps the
+// saved quote/callback proof through scope-only updates of a retained card.
+{
+ const {projectReaderBookmarkRows}=await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+ const identity={libraryBookId:'lib',sourceId:'remote',bookId:'b',bookName:'书',bookAuthor:'作者'};
+ const mark={time:92,chapterIndex:0,chapterOffset:12,chapterTitle:'章节',content:'备注',bookText:'刷新前保留的原文'};
+ const entries=[{index:0,title:'章节',bookmarks:[mark]}];
+ const model=projectReaderBookmarkRows(entries,'',identity,new Map([[0,24]]))[0];
+ for(const builder of ['motionBody','legacyBody']) {
+  const {owner}=createReaderBuilderProbe(row,['frame',builder],{sampleReaderControlBookmark,BOOKMARK_ROW_HEIGHT:74,BOOKMARK_PENDING_LABEL:'待确认'});
+  const calls=[];Object.assign(owner,{row:model,motionProgress:1,availableWidth:316,onSelectBookmark:(...args)=>calls.push(args)});
+  owner[builder]();
+  assert.ok([...owner.nodes.values()].some(n=>n.type==='Text'&&n.create==='位置待恢复'));
+  assert.ok([...owner.nodes.values()].some(n=>n.type==='Text'&&n.create==='刷新前保留的原文'));
+  assert.equal([...owner.nodes.values()].filter(n=>n.type==='Text'&&n.create==='待确认').length,0,'position uncertainty does not change book ownership badge');
+  const card=[...owner.nodes.values()].find(n=>typeof n.onClick==='function');card.onClick();
+  assert.equal(calls.at(-1)[2],12);assert.equal(calls.at(-1)[3],undefined,'UI does not synthesize a new scope or chapter-start bookmark');
+  const scoped={...mark,positionScope:{sourceId:'remote',bookId:'b',chapterIndex:0,bodyVersion:'new',processingVersion:'p'}};
+  owner.row=projectReaderBookmarkRows([{...entries[0],bookmarks:[scoped]}],'',identity,new Map([[0,24]]))[0];owner.replay();
+  card.onClick();assert.deepEqual(calls.at(-1)[3],scoped.positionScope,'retained callback uses latest admitted proof');
+  assert.ok([...owner.nodes.values()].some(n=>n.type==='Text'&&n.create==='50%'));
+ }
+}
+console.log('PASS actual quick/full bookmark row Builders preserve historical excerpt, separate location/owner labels and retain latest admitted click proof');

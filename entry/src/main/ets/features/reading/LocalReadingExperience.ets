@@ -3223,6 +3223,9 @@ export struct ReadingExperience {
       if (this.hasMeasuredViewport()) {
         this.beginMeasurement(lifecycleToken);
       }
+      if (chapter.positionMigration?.status === 'committed') {
+        this.reloadBookmarksAfterContentRefresh(chapter, lifecycleToken, selectionToken);
+      }
       this.notifyPreservedContentRefresh(chapter, refreshContent, lifecycleToken, selectionToken);
     } catch (error) {
       // A stale selection (or unmounted session) must not fail the current
@@ -3258,21 +3261,47 @@ export struct ReadingExperience {
   private notifyPreservedContentRefresh(chapter: ReadingSessionChapter, refreshContent: boolean,
     lifecycleToken: number, selectionToken: number): void {
     const preserved = refreshContent && chapter.positionMigration?.status === 'preserved';
-    if ((!preserved && chapter.cacheRefreshRequired !== true) ||
+    const refreshed = refreshContent && (chapter.positionMigration?.status === 'committed' ||
+      chapter.positionMigration?.status === 'unchanged');
+    if ((!preserved && !refreshed && chapter.cacheRefreshRequired !== true) ||
       !this.isSelectionActive(lifecycleToken, selectionToken)) {
       return;
     }
-    if (!preserved && this.cacheNoticeLifecycle === lifecycleToken) return;
-    if (!preserved) this.cacheNoticeLifecycle = lifecycleToken;
+    if (!preserved && !refreshed && this.cacheNoticeLifecycle === lifecycleToken) return;
+    if (!preserved && !refreshed) this.cacheNoticeLifecycle = lifecycleToken;
+    let message = '正在使用旧版缓存，正文待验证。可在顶部更多中刷新本章；离线阅读和原位置不受影响。';
+    if (preserved) {
+      message = '刷新未完成，本次未更新正文。原正文和阅读位置已保留。';
+    } else if (refreshed) {
+      message = chapter.positionMigration?.status === 'unchanged' ? '本章已刷新，书源正文没有变化。' :
+        chapter.positionMigration?.reason === 'positions_partially_restored' ?
+          '本章正文已更新；无法恢复的阅读位置从章首继续，旧书签和划线记录仍保留。' : '本章正文已更新。';
+    }
     try {
-      this.getUIContext().getPromptAction().showToast({
-        message: preserved ? '为保留阅读位置和书签，本次未更新正文。原正文和阅读位置已保留。' :
-          '正在使用旧版缓存，正文待验证。可在顶部更多中刷新本章；离线阅读和原位置不受影响。',
-      });
+      this.getUIContext().getPromptAction().showToast({ message });
     } catch (_) {
       // Presentation failure cannot turn a preserved, readable chapter into a
       // load failure. PromptAction.showToast is synchronous and returns void.
     }
+  }
+
+  private reloadBookmarksAfterContentRefresh(chapter: ReadingSessionChapter,
+    lifecycleToken: number, selectionToken: number): void {
+    // Retire older list reads before reloading Core's versioned records.
+    // Bookmark presentation never blocks the newly admitted chapter body.
+    const generation = ++this.controlBookmarkLoadGeneration;
+    const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken) &&
+      this.chapter === chapter && generation === this.controlBookmarkLoadGeneration;
+    this.controlBookmarkLoadPending = true;
+    this.controlBookmarkLoadFailed = false;
+    void Promise.resolve().then((): Promise<void> => {
+      if (!isCurrent()) return Promise.resolve();
+      return this.onLoadControlBookmarks(chapter.sourceId, chapter.bookId, isCurrent);
+    }).catch((): void => {
+      if (isCurrent()) this.controlBookmarkLoadFailed = true;
+    }).finally((): void => {
+      if (generation === this.controlBookmarkLoadGeneration) this.controlBookmarkLoadPending = false;
+    });
   }
 
   private async loadSessionChapter(
@@ -5878,9 +5907,17 @@ export struct ReadingExperience {
     this.bookmarkExcerptChapter = chapter;
     this.bookmarkExcerptProjection = entries;
     const entry = entries.find((candidate: LocalReadingTocEntry): boolean => candidate.index === chapter.chapterIndex);
-    if (entry?.bookmarks === undefined || !entry.bookmarks.some((mark: LocalReadingBookmark): boolean =>
-      (mark.bookText ?? '').length === 0 && mark.chapterOffset < map.scalarCount())) return entries;
+    if (entry?.bookmarks === undefined) return entries;
+    let changed = false;
     const bookmarks = entry.bookmarks.map((mark: LocalReadingBookmark): LocalReadingBookmark => {
+      if (!this.bookmarkMatchesCurrentChapter(mark)) {
+        if (mark.positionScope === undefined) return mark;
+        changed = true;
+        // A parent projection may still carry the previous body's proof while
+        // the canonical list reloads. Retain its original quote, never a newly
+        // sliced quote or a current coordinate claimed from the old offset.
+        return { ...mark, positionScope: undefined };
+      }
       if ((mark.bookText ?? '').length > 0 || mark.chapterOffset >= map.scalarCount()) return mark;
       const key = JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex,
         chapter.contentVersion, mark.time, mark.chapterOffset]);
@@ -5895,14 +5932,25 @@ export struct ReadingExperience {
       }
       // Display-only recovery for older records. Never overwrite the user's
       // note or persist guessed original text, and never fetch another chapter.
-      return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
-        chapterTitle: mark.chapterTitle, content: mark.content, bookText: excerpt };
+      changed = true;
+      return { ...mark, bookText: excerpt };
     });
+    if (!changed) return entries;
     const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title,
       downloadState: entry.downloadState, navigable: entry.navigable, bookmarks };
     this.bookmarkExcerptProjection = entries.map((candidate: LocalReadingTocEntry): LocalReadingTocEntry =>
       candidate === entry ? hydrated : candidate);
     return this.bookmarkExcerptProjection;
+  }
+
+  private bookmarkMatchesCurrentChapter(mark: LocalReadingBookmark): boolean {
+    if (this.sourceId === LOCAL_READING_SOURCE_ID) return true;
+    const chapter = this.chapter;
+    const scope = mark.positionScope;
+    return chapter !== undefined && scope !== undefined &&
+      scope.sourceId === chapter.sourceId && scope.bookId === chapter.bookId &&
+      scope.chapterIndex === chapter.chapterIndex && mark.chapterIndex === chapter.chapterIndex &&
+      scope.bodyVersion === chapter.bodyVersion && scope.processingVersion === chapter.processingVersion;
   }
 
   private controlDirectorySourceEntries(): LocalReadingTocEntry[] {
@@ -9640,6 +9688,8 @@ export struct ReadingExperience {
       chapterIndex: display.context.chapter.chapterIndex, pageStartScalar: display.page.startScalar,
       visibleScalar: display.visibleScalar, scalarCount: display.context.layoutMap.scalarCount(),
       continuous: display.continuous,
+      bodyVersion: display.context.chapter.bodyVersion,
+      processingVersion: display.context.chapter.processingVersion,
     };
   }
 
@@ -10567,7 +10617,7 @@ export struct ReadingExperience {
     const page = this.visiblePage;
     if (page === undefined) return 'unknown';
     const entries = this.controlDirectoryEntries();
-    const anchor = `${this.currentChapterIndex()}:${page.startScalar}:${page.endScalar}`;
+    const anchor = `${this.currentChapterIndex()}:${this.chapter?.contentVersion}:${this.chapter?.bodyVersion}:${this.chapter?.processingVersion}:${page.startScalar}:${page.endScalar}`;
     if (entries === this.bookmarkStatusEntries && anchor === this.bookmarkStatusAnchor) return this.bookmarkStatusValue;
     this.bookmarkStatusEntries = entries;
     this.bookmarkStatusAnchor = anchor;
@@ -10576,6 +10626,7 @@ export struct ReadingExperience {
     this.bookmarkStatusValue = entry?.bookmarks === undefined ? 'unknown' : 'empty';
     if (entry?.bookmarks === undefined) return this.bookmarkStatusValue;
     for (const bookmark of entry.bookmarks) {
+      if (!this.bookmarkMatchesCurrentChapter(bookmark)) continue;
       if (page.endScalar > page.startScalar ?
         bookmark.chapterOffset >= page.startScalar && bookmark.chapterOffset < page.endScalar :
         bookmark.chapterOffset === page.startScalar) { this.bookmarkStatusValue = 'bookmarked'; break; }
@@ -10585,7 +10636,7 @@ export struct ReadingExperience {
 
   private pageBookmarkFeedbackAnchor(): string {
     const page = this.visiblePage;
-    return page === undefined ? '' : `${this.sourceId}:${this.bookId}:${this.currentChapterIndex()}:${page.startScalar}:${page.endScalar}`;
+    return page === undefined ? '' : `${this.sourceId}:${this.bookId}:${this.currentChapterIndex()}:${this.chapter?.contentVersion}:${this.chapter?.bodyVersion}:${this.chapter?.processingVersion}:${page.startScalar}:${page.endScalar}`;
   }
 
   private pageBookmarkFeedbackFilled(): boolean {
@@ -10669,6 +10720,7 @@ export struct ReadingExperience {
     if (currentEntry === undefined || currentEntry.bookmarks === undefined) return;
     const bookmarkTimes: number[] = [];
     for (const bookmark of currentEntry.bookmarks) {
+      if (!this.bookmarkMatchesCurrentChapter(bookmark)) continue;
       const insidePage = page.endScalar > page.startScalar ?
         bookmark.chapterOffset >= page.startScalar && bookmark.chapterOffset < page.endScalar :
         bookmark.chapterOffset === page.startScalar;

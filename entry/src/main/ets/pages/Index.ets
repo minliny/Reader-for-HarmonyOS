@@ -3661,6 +3661,20 @@ struct Index {
     if (!this.isKnownDetailChapter(chapterIndex)) {
       return;
     }
+    const book = this.detailBook;
+    if (book !== undefined && book.sourceId !== LOCAL_SOURCE_ID &&
+      ((chapterOffset > 0 && positionScope === undefined) || (positionScope !== undefined &&
+        (positionScope.sourceId !== book.sourceId || positionScope.bookId !== book.bookId ||
+          positionScope.chapterIndex !== chapterIndex)))) {
+      // An unresolved historical mark must not start a reader that immediately
+      // fails. Keep the directory and original record available to the user.
+      try {
+        this.getUIContext().getPromptAction().showToast({
+          message: '该书签的位置暂时无法恢复，原摘录和备注仍保留，请从目录打开章节。',
+        });
+      } catch (_) {}
+      return;
+    }
     if (!this.readingSessionActive) {
       this.openReading(chapterIndex);
       if (!this.readingSessionActive) return;
@@ -4138,6 +4152,10 @@ struct Index {
         this.detailToc = entries;
         this.clearDirectoryBookmarkProjectionFailure();
       },
+    }).catch((error: Error): void => {
+      // A later bookmark write or navigation owns its own projection/result.
+      // An obsolete read must not mark that newer list as failed.
+      if (isCurrent()) throw error;
     });
   }
 

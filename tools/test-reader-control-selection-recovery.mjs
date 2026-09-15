@@ -72,3 +72,21 @@ const superseded = await reconcileReaderControlSelectionProgress({
 assert.equal(superseded.kind, 'obsolete', 'new selection invalidates a read that was already running');
 assert.equal(readerControlSelectionRecoveryAction(superseded, origin, target), 'obsolete');
 console.log('reader control selection production reconciliation: PASS');
+
+// PH93: the same chapter/scalar can refer to a different refreshed body.
+// A failed page measurement must not resurrect the old page merely because
+// the new Core position retained the same number (including chapter start).
+for(const continuous of [false,true]){
+ const previous={chapterIndex:3,pageStartScalar:0,visibleScalar:0,scalarCount:100,continuous,
+   bodyVersion:'old',processingVersion:'old-p'};
+ const current={...previous,bodyVersion:'new',processingVersion:'new-p'};
+ const progress={bookId:'b',chapterIndex:3,chapterOffset:0,chapterProgress:0,updatedAt:1,
+   bodyVersion:'new',processingVersion:'new-p'};
+ const result={kind:'verified',progress,errorCode:''};
+ assert.equal(readerControlSelectionRecoveryAction(result,previous,undefined),'blocked');
+ assert.equal(readerControlSelectionRecoveryAction(result,previous,previous),'blocked');
+ assert.equal(readerControlSelectionRecoveryAction(result,previous,current),'target');
+ assert.equal(readerControlSelectionRecoveryAction(result,current,undefined),'origin');
+ assert.equal(readerControlSelectionRecoveryAction({...result,progress:{...progress,processingVersion:'changed'}},current,current),'blocked');
+}
+console.log('PH93 refreshed body and processing versions gate actual error recovery, even at identical chapter/scalar PASS');

@@ -21,6 +21,7 @@ export function mergeReaderControlBookmarkProjection(
   for (const entry of current) {
     const source = byChapter.get(entry.index);
     next.push({ index: entry.index, title: entry.title, downloadState: entry.downloadState,
+      ...(entry.navigable === undefined ? {} : { navigable: entry.navigable }),
       bookmarks: source === undefined ? entry.bookmarks : source.bookmarks });
   }
   return next;

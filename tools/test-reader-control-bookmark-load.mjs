@@ -211,3 +211,20 @@ const refresh = hostSource.slice(hostSource.indexOf('  private onControlDirector
 assert.match(refresh, /!this\.controlBookmarkLoadPending && !this\.controlBookmarkLoadFailed/);
 assert.match(hostSource, /generation === this\.controlBookmarkLoadGeneration[\s\S]*openRevision === this\.controlOpenRevision/);
 console.log('Reader control bookmarks: production merge/async ownership/failure retry PASS; wiring assertions are not native acceptance');
+
+// A post-refresh bookmark reload must not replace independent TOC admission.
+// In particular, Core volume headings remain non-navigable after the merge.
+{
+ const toc=[{index:0,title:'第一卷',navigable:false,downloadState:'unknown',bookmarks:[]},
+  {index:1,title:'第一章',navigable:true,downloadState:'completed',bookmarks:[]}];
+ const original=structuredClone(toc);
+ const projection=[{index:0,title:'stale title',navigable:true,downloadState:'missing',bookmarks:[]},
+  {index:1,title:'stale chapter',navigable:false,downloadState:'unknown',bookmarks:[bookmark(99)]}];
+ let admitted;
+ await loadReaderControlBookmarkProjection({isCurrent:()=>true,currentEntries:()=>toc,read:async()=>projection,commit:rows=>admitted=rows});
+ assert.equal(admitted[0].navigable,false,'bookmark reload cannot turn a volume heading into a readable chapter');
+ assert.equal(admitted[1].navigable,true,'bookmark projection cannot override current chapter admission');
+ assert.equal(admitted[1].downloadState,'completed');assert.equal(admitted[1].title,'第一章');
+ assert.equal(admitted[1].bookmarks[0].time,99);assert.deepEqual(toc,original);
+}
+console.log('PASS real post-refresh bookmark load/merge preserves volume heading and chapter navigability, current title/download facts and original TOC');

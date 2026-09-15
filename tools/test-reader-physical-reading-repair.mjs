@@ -131,11 +131,11 @@ const rows=await gateway.loadBookmarkProjection('B','A',[{index:0,title:'C',down
 assert.equal(rows[0].bookmarks[0].bookText,'original text');
 const projection=projectReaderBookmarkRows(rows,'');assert.equal(projection[0].excerpt,'original text');assert.equal(projection[0].positionLabel,'');
 assert.equal(projection[0].chapterOffset,12,'removing an internal display field never changes the Core scalar anchor');
-const Hydrator=productionMotionMethods(file('LocalReadingExperience.ets'),['controlDirectoryEntries']);
+const Hydrator=productionMotionMethods(file('LocalReadingExperience.ets'),['controlDirectoryEntries','bookmarkMatchesCurrentChapter'],{LOCAL_READING_SOURCE_ID:'local'});
 const old=[{index:0,title:'Old',bookmarks:[{time:1,chapterIndex:0,chapterOffset:1,content:'keep note',bookText:''}]},
   {index:1,title:'Other',bookmarks:[{time:2,chapterIndex:1,chapterOffset:0,content:'',bookText:''}]}];
 let activeChapter={sourceId:'src',bookId:'b',chapterIndex:0,contentVersion:'v1',content:'A\ud83d\ude42body'};
-const hydration=Object.assign(new Hydrator(),{chapter:activeChapter,chapterLayoutMap:new ReadingSurfaceLayoutMap(activeChapter.content),
+const hydration=Object.assign(new Hydrator(),{sourceId:'local',chapter:activeChapter,chapterLayoutMap:new ReadingSurfaceLayoutMap(activeChapter.content),
   controlDirectorySourceEntries:()=>old,bookmarkExcerptCache:new Map()});
 const hydrated=hydration.controlDirectoryEntries();assert.equal(hydrated[0].bookmarks[0].bookText,'\ud83d\ude42body');
 assert.equal(hydrated[0].bookmarks[0].content,'keep note');assert.equal(old[0].bookmarks[0].bookText,'');
@@ -146,10 +146,10 @@ for(let revision=0;revision<160;revision++) {
   assert.ok(hydration.bookmarkExcerptCache.size<=128);
 }
 // Original page text uses the existing UTF-16/scalar map, preserving emoji/CRLF.
-const Bookmark=productionMotionMethods(file('LocalReadingExperience.ets'),['currentPageBookmarkText','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','reconcilePageBookmarkFeedback']);
+const Bookmark=productionMotionMethods(file('LocalReadingExperience.ets'),['bookmarkMatchesCurrentChapter','currentPageBookmarkText','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','reconcilePageBookmarkFeedback'],{LOCAL_READING_SOURCE_ID:'local'});
 const chapterText='A\ud83d\ude42\r\nBC\u4e2dD',map=new ReadingSurfaceLayoutMap(chapterText);
 let requests=[];let entries=[{index:0,title:'C',bookmarks:[]}];
-const bookmark=Object.assign(new Bookmark(),{bookmarkPendingTarget:'',bookmarkMutationGeneration:0,mounted:true,chapter:{chapterIndex:0,content:chapterText},chapterLayoutMap:map,
+const bookmark=Object.assign(new Bookmark(),{sourceId:'local',bookmarkPendingTarget:'',bookmarkMutationGeneration:0,mounted:true,chapter:{chapterIndex:0,content:chapterText},chapterLayoutMap:map,
   visiblePage:{startScalar:1,endScalar:7},currentChapterIndex:()=>0,controlDirectoryEntries:()=>entries,
   onTogglePageBookmark:request=>requests.push(request)});
 assert.equal(bookmark.currentPageBookmarkText(),'\ud83d\ude42\r\nBC\u4e2d');bookmark.toggleCurrentPageBookmark();

@@ -53,7 +53,7 @@ function render(layout, state = {}, time = '12:30') {
     appearance: { activeTheme: 'paper' }, getUIContext: () => ui });
   chrome.initialRender();
   const bookmark = createReaderBuilderProbe(lreSource, bookmarkMembers, dependencies).owner;
-  Object.assign(bookmark, { sourceId: 's', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
+  Object.assign(bookmark, { sourceId: 'local', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
     currentChapterIndex: () => 0, currentPageBookmarkStatus: () => 'bookmarked', bookmarkPendingTarget: '',
     controlVisible: () => false, controlObscured: false, bookmarkPageOffsetY: 0, bookmarkPreviewChanged: false,
     readerAppScheme: 'day', bookTitle: chrome.topStartText, pageChromeClockText: time, readingLayout: () => layout, getUIContext: () => ui, ...state });
@@ -116,10 +116,10 @@ for (const state of [{ controlVisible: () => true }, { controlObscured: true }])
 // Production gesture state and real Host ACK bridge: threshold preview,
 // rebound, late write/projection, page/book changes and failed deletion.
 const H = productionMotionMethods(file('LocalReadingExperience.ets'), ['onReaderBookmarkGestureStateChanged',
-  'onReaderBookmarkGestureReleased', 'finishBookmarkRollback', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus',
-  'pageBookmarkFeedbackAnchor', 'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback'], gesture);
+  'onReaderBookmarkGestureReleased', 'finishBookmarkRollback', 'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus',
+  'pageBookmarkFeedbackAnchor', 'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback'], {...gesture,LOCAL_READING_SOURCE_ID:'local'});
 let entries = [{ index: 0, title: 'C', bookmarks: [] }], pending = [];
-const host = Object.assign(new H(), { mounted: true, sourceId: 's', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
+const host = Object.assign(new H(), { mounted: true, sourceId: 'local', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
   currentChapterIndex: () => 0, currentPageBookmarkText: () => 'body', controlDirectoryEntries: () => entries,
   bookmarkPendingTarget: '', bookmarkPreviewChanged: false, bookmarkRollbackGeneration: 0, bookmarkMutationGeneration: 0,
   reduceMotion: true, appForeground: false, flushDeferredPageChromeState() {}, onTogglePageBookmark: r => pending.push(r) });
@@ -147,10 +147,10 @@ assert.equal(render(layout, { currentPageBookmarkStatus: () => 'empty' }).icon, 
 // the production methods, marker cache and merge remain unmodified.
 const Normal = productionMotionMethods(file('LocalReadingExperience.ets'), [
   'onReaderBookmarkGestureStateChanged', 'onReaderBookmarkGestureReleased', 'finishBookmarkRollback',
-  'toggleCurrentPageBookmark', 'currentPageBookmarkStatus', 'pageBookmarkFeedbackAnchor',
+  'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus', 'pageBookmarkFeedbackAnchor',
   'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback', 'canStartReaderBookmarkGesture',
   'controlDirectorySourceEntries', 'controlDirectoryEntries', 'invalidatePageTurnRuntime',
-], { ...gesture, ...rapid, motionAnimateParam: (_key, onFinish) => ({ onFinish }) });
+], { ...gesture, ...rapid, LOCAL_READING_SOURCE_ID:'local', motionAnimateParam: (_key, onFinish) => ({ onFinish }) });
 function normalHost(bookmarked = false) {
   const requests = [], animations = [];
   const h = Object.assign(new Normal(), { mounted: true, sourceId: 'local', bookId: 'b', chapter: undefined,

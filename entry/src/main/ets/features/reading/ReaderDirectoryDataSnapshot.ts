@@ -7,7 +7,12 @@ export function snapshotReaderDirectoryData(entries: LocalReadingTocEntry[]): Lo
     bookmarks: entry.bookmarks === undefined ? undefined :
       entry.bookmarks.map((bookmark: LocalReadingBookmark): LocalReadingBookmark => ({
         time: bookmark.time, chapterIndex: bookmark.chapterIndex, chapterOffset: bookmark.chapterOffset,
-        chapterTitle: bookmark.chapterTitle, content: bookmark.content,
+        chapterTitle: bookmark.chapterTitle, content: bookmark.content, bookText: bookmark.bookText,
+        positionScope: bookmark.positionScope === undefined ? undefined : {
+          sourceId: bookmark.positionScope.sourceId, bookId: bookmark.positionScope.bookId,
+          chapterIndex: bookmark.positionScope.chapterIndex, bodyVersion: bookmark.positionScope.bodyVersion,
+          processingVersion: bookmark.positionScope.processingVersion,
+        },
       })),
   }));
 }
@@ -29,7 +34,14 @@ export function sameReaderDirectoryData(previous: LocalReadingTocEntry[], next: 
       const right = b.bookmarks[j];
       if (left.time !== right.time || left.chapterIndex !== right.chapterIndex ||
         left.chapterOffset !== right.chapterOffset || left.chapterTitle !== right.chapterTitle ||
-        left.content !== right.content) return false;
+        left.content !== right.content || left.bookText !== right.bookText) return false;
+      const leftScope = left.positionScope;
+      const rightScope = right.positionScope;
+      if (leftScope === undefined || rightScope === undefined) {
+        if (leftScope !== rightScope) return false;
+      } else if (leftScope.sourceId !== rightScope.sourceId || leftScope.bookId !== rightScope.bookId ||
+        leftScope.chapterIndex !== rightScope.chapterIndex || leftScope.bodyVersion !== rightScope.bodyVersion ||
+        leftScope.processingVersion !== rightScope.processingVersion) return false;
     }
   }
   return true;

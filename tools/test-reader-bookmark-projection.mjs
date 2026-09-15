@@ -215,3 +215,34 @@ assert.equal(readerBookmarkPositionLabel(5000, 100), '100%', 'percent must clamp
 assert.equal(readerBookmarkPositionLabel(0, 100), '0%');
 
 console.log('reader bookmark projection behavior: PASS');
+
+// Core withdraws the scope of a retained old bookmark that cannot be mapped.
+// Keep the raw quote/note and ownership while refusing a new-body percentage.
+const oldReference={time:91,chapterIndex:0,chapterOffset:12,chapterTitle:'旧章标题',content:'用户原备注',bookText:'刷新前保留的原文'};
+const oldEntries=[{index:0,title:'新章标题',bookmarks:[oldReference]}];
+const oldBefore=structuredClone(oldEntries);
+const remote={libraryBookId:'lib',sourceId:'remote',bookId:'book',bookName:'书',bookAuthor:'作者'};
+const oldRow=projectReaderBookmarkRows(oldEntries,'',remote,new Map([[0,24]]))[0];
+assert.equal(oldRow.identityStatus,'confirmed','owner identity does not become ambiguous when location proof is missing');
+assert.equal(oldRow.positionStatus,'unverified');assert.equal(oldRow.positionLabel,'位置待恢复');
+assert.equal(oldRow.excerpt,'刷新前保留的原文');assert.equal(oldRow.chapterOffset,12);assert.equal(oldRow.positionScope,undefined);
+assert.deepEqual(oldEntries,oldBefore,'rendering never rewrites the saved offset, note or quote');
+const scope={sourceId:'remote',bookId:'book',chapterIndex:0,bodyVersion:'new-body',processingVersion:'new-processing'};
+const mappedEntries=[{index:0,title:'新章标题',bookmarks:[{...oldReference,positionScope:scope}]}];
+const mappedRow=projectReaderBookmarkRows(mappedEntries,'',remote,new Map([[0,24]]))[0];
+assert.equal(mappedRow.positionStatus,'confirmed');assert.equal(mappedRow.positionLabel,'50%');
+assert.equal(mappedRow.excerpt,oldRow.excerpt);assert.deepEqual(mappedRow.positionScope,scope);
+for(const [key,value] of [['sourceId','other'],['bookId','other'],['chapterIndex',1]]){
+ const mismatch=structuredClone(mappedEntries);mismatch[0].bookmarks[0].positionScope[key]=value;
+ const row=projectReaderBookmarkRows(mismatch,'',remote,new Map([[0,24]]))[0];
+ assert.equal(row.positionStatus,'unverified');assert.equal(row.positionLabel,'位置待恢复');
+}
+const localRow=projectReaderBookmarkRows(oldEntries,'',{...remote,sourceId:'local'},new Map([[0,24]]))[0];
+assert.equal(localRow.positionStatus,'confirmed');assert.equal(localRow.positionLabel,'50%','local positions keep their existing contract');
+const unknownRow=projectReaderBookmarkRows(oldEntries,'',undefined,new Map([[0,24]]))[0];
+assert.equal(unknownRow.positionStatus,undefined);assert.equal(unknownRow.positionLabel,'','unknown ownership must not fabricate location confidence');
+const savedRecords=migrateLegacyBookmarks([{...oldReference,bookName:'书',bookAuthor:'作者'}],readerBookmarkIdentityForBook(remote));
+const savedRow=readerBookmarkRowsFromRecords(savedRecords,new Map([[0,24]]))[0];
+assert.equal(savedRow.identityStatus,'confirmed');assert.equal(savedRow.positionStatus,'unverified');
+assert.equal(savedRow.positionLabel,'位置待恢复');assert.equal(savedRow.excerpt,'刷新前保留的原文');
+console.log('PASS unmapped remote references keep original quotes/notes/ownership, expose separate unverified location, and never use new-body percentages; current scopes and local anchors remain usable');
