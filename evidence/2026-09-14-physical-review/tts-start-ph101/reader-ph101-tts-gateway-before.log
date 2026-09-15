@@ -1,0 +1,22 @@
+reader TTS strict gateway: PASS
+reader TTS precise rate round trip: PASS
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=error-stop.queue code=OPERATION_FAILED
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: page → coordinator → gateway must reach Host speak: 朗读启动失败：tts.slice chapter returned unexpected field bodyVersion
+
+0 !== 1
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-tts-gateway.mjs:162:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

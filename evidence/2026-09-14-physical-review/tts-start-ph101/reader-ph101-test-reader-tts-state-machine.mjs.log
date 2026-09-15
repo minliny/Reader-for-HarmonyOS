@@ -1,0 +1,8 @@
+[ReaderTTS] stage=probe code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=startCallbackTimeout code=OPERATION_FAILED
+reader TTS state machine transactions and isolation: PASS

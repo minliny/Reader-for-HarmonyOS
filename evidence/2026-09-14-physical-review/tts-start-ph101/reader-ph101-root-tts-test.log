@@ -1,0 +1,5 @@
+reader TTS strict gateway: PASS
+reader TTS precise rate round trip: PASS
+PH101 versioned TTS start PASS: actual page reference/coordinator/gateway; strict Core fields; audio ACK; local version progress; stale-content stop; every queue and chapter command
+(node:63423) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
