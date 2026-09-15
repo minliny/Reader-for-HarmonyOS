@@ -1,0 +1,57 @@
+[
+  {
+    "path": "REPORT.md",
+    "bytes": 5115,
+    "sha256": "450a30cf58de93d75dd8cd4853e8853b0c250e86b21b18bf8a1ad126203e490a"
+  },
+  {
+    "path": "build.log",
+    "bytes": 161192,
+    "sha256": "ad6ca7bb44c397f51182b69629a37a0883f58c02c49b7e1fb1dc93523e4f7f4c"
+  },
+  {
+    "path": "dedup-after.log",
+    "bytes": 37,
+    "sha256": "d2564142e3ccee02d9ab48d7d62f5c0bca55c2cb1f70b92aa29508dfdc12af68"
+  },
+  {
+    "path": "manifest.json",
+    "bytes": 4260,
+    "sha256": "8bb06d550b388641815b17f440be81281b5550c147878ff54d3fca7f51e83595"
+  },
+  {
+    "path": "measurement-after.log",
+    "bytes": 97,
+    "sha256": "41203bde38be555b83c6f24910f85bed6399876ce1c289e775692ed89859351b"
+  },
+  {
+    "path": "settings-after.log",
+    "bytes": 43,
+    "sha256": "2c47a631d7f658ad897ca3da46b68ce4fa6a8142646e666aac4e93d7bb709757"
+  },
+  {
+    "path": "toggle-after.log",
+    "bytes": 1446,
+    "sha256": "e544ec505fcfabdd4ca331f4368435e0a4e6ac0b7a440f55e55c54e5cf3131d8"
+  },
+  {
+    "path": "toggle-before.log",
+    "bytes": 1940,
+    "sha256": "79a8a3cb45ddc199131a34bc0b4745d118552c0d8078e040dde52d23c4e7820f"
+  },
+  {
+    "path": "underlay-after.log",
+    "bytes": 621,
+    "sha256": "13fb8e54970f5b57d54cf84f9c9f9fca8db6ae368d4286cf178bee3c4b1da844"
+  },
+  {
+    "path": "underlay-before.log",
+    "bytes": 2776,
+    "sha256": "6f568e2a4747e6380bcd3a50dff50de89deab07230d1e07a70cab2b58e78c4da"
+  },
+  {
+    "path": "verify.log",
+    "bytes": 736,
+    "sha256": "3cc9b0b8ff457f1cd9ec1b3f215e662eef65f140e5bce36b2066c29d5ef967d6"
+  }
+]

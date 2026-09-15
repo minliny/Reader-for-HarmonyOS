@@ -29,3 +29,11 @@
 ## 未验证层
 
 本地代码与专项回归完成。构建/签名结果待绑定本次最终 manifest；VM、真机像素、用户验收 OPEN。本轮不占用设备。具体用户主题和背景/前景表现仍未绑定现场证据，不因此新增用户产品决策，也不要求用户重新定义颜色。
+
+## 最终产物
+
+正式 pipeline run `20260915T145417Z-86558615-52617e09` 已通过275组Harmony检查、ArkTS类型检查、非增量编译、签名及独立manifest复验。构建时 Harmony `8655861547bbdcbf1973de9094af4a10a60d84d4` / Core `c86b6aaec60b5c60a3a73254aac03ce6ddce4de9`，两仓 clean。
+
+签名 HAP `entry-default-signed.hap`，168157840 bytes，SHA-256 `c4081d8c8b014f9360bb3c1a2fcc45b9538c8985a5a7ac15325011a42e8ec937`；signed/debug Profile、验签PASS。唯一可交付 [manifest](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260915T145417Z-86558615-52617e09/manifest.json)；[归档副本](manifest.json)、[构建日志](build.log)、[独立复验](verify.log)。
+
+产物为 iteration，acceptanceEligible=false。本轮没有安装、启动或操作VM/真机；应用数据未触碰。VM与真机像素、用户验收OPEN。此产物包含本次底色测量补修及之前PH94–98代码，不将先前未安装包当真机已用版本。
