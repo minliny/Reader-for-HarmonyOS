@@ -5,6 +5,8 @@ export interface ReaderTtsRuntime {
 }
 
 export type ReaderTtsChapterRef = {
+  // Host-owned position provenance. Core's TTS chapter protocol has no body
+  // version fields; these stay on the coordinator's original input/callbacks.
   bodyVersion?: string;
   processingVersion?: string;
   sourceId: string;
@@ -117,24 +119,28 @@ export class ReaderTtsGateway {
     content: string,
     strategy: ReaderTtsSlicingStrategy = 'paragraph-then-sentence',
   ): Promise<ReaderTtsSlicePlan> {
-    this.assertChapter(chapter, 'tts.slice chapter');
+    const wireChapter = this.encodeChapter(chapter, 'tts.slice chapter');
     if (typeof content !== 'string' || content.trim().length === 0) {
       throw new Error('tts.slice requires non-empty content');
     }
     this.assertStrategy(strategy);
-    const result = await this.runtime.request('tts.slice', { chapter, content, strategy });
+    const result = await this.runtime.request('tts.slice', { chapter: wireChapter, content, strategy });
     const plan = this.decodePlan(result.data['plan'], 'tts.slice');
     this.assertSameChapter(plan.chapter, chapter, 'tts.slice');
     return plan;
   }
 
   async play(plan: ReaderTtsSlicePlan, startSliceIndex: number): Promise<ReaderTtsQueueSnapshot> {
-    this.assertPlan(plan, 'tts.queue.play plan');
+    const wirePlan: ReaderTtsSlicePlan = {
+      ...plan,
+      chapter: this.encodeChapter(plan.chapter, 'tts.queue.play plan.chapter'),
+    };
+    this.assertPlan(wirePlan, 'tts.queue.play plan');
     this.assertNonNegativeInteger(startSliceIndex, 'tts.queue.play startSliceIndex');
     if (startSliceIndex >= plan.slices.length) {
       throw new Error('tts.queue.play startSliceIndex is outside the plan');
     }
-    return this.requestSnapshot('tts.queue.play', { plan, startSliceIndex }, plan.chapter);
+    return this.requestSnapshot('tts.queue.play', { plan: wirePlan, startSliceIndex }, plan.chapter);
   }
 
   async pause(chapter: ReaderTtsChapterRef): Promise<ReaderTtsQueueSnapshot> {
@@ -172,7 +178,9 @@ export class ReaderTtsGateway {
 
   async setRate(chapter: ReaderTtsChapterRef, rate: number): Promise<ReaderTtsQueueSnapshot> {
     this.assertNonNegativeInteger(rate, 'tts.queue.set-rate rate');
-    const result = await this.runtime.request('tts.queue.set-rate', { chapter, rate });
+    const result = await this.runtime.request('tts.queue.set-rate', {
+      chapter: this.encodeChapter(chapter, 'tts.queue.set-rate chapter'), rate,
+    });
     if (result.data['rate'] !== rate) {
       throw new Error('tts.queue.set-rate returned a mismatched rate');
     }
@@ -187,7 +195,9 @@ export class ReaderTtsGateway {
     status: 'speaking' | 'done' | 'failed',
   ): Promise<ReaderTtsQueueSnapshot> {
     this.assertNonNegativeInteger(sliceIndex, 'tts.queue.report-status sliceIndex');
-    const result = await this.runtime.request('tts.queue.report-status', { chapter, sliceIndex, status });
+    const result = await this.runtime.request('tts.queue.report-status', {
+      chapter: this.encodeChapter(chapter, 'tts.queue.report-status chapter'), sliceIndex, status,
+    });
     const snapshot = this.decodeSnapshot(result.data['snapshot'], 'tts.queue.report-status');
     this.assertSameChapter(snapshot.chapter, chapter, 'tts.queue.report-status');
     return snapshot;
@@ -206,7 +216,7 @@ export class ReaderTtsGateway {
       throw new Error('tts.queue.report-callback requires callbackId and a positive failureLimit');
     }
     const result = await this.runtime.request('tts.queue.report-callback', {
-      chapter,
+      chapter: this.encodeChapter(chapter, 'tts.queue.report-callback chapter'),
       sliceIndex,
       status,
       callbackId,
@@ -233,11 +243,11 @@ export class ReaderTtsGateway {
     nextChapter: ReaderTtsChapterRef | undefined,
     drainBehavior: 'stop-on-boundary' | 'advance-to-next' = 'advance-to-next',
   ): Promise<ReaderTtsChapterTransition> {
-    this.assertChapter(chapter, 'tts.chapter.plan chapter');
-    const params: ReaderTtsJsonObject = { chapter, drainBehavior };
+    const params: ReaderTtsJsonObject = {
+      chapter: this.encodeChapter(chapter, 'tts.chapter.plan chapter'), drainBehavior,
+    };
     if (nextChapter !== undefined) {
-      this.assertChapter(nextChapter, 'tts.chapter.plan nextChapter');
-      params['nextChapter'] = nextChapter;
+      params['nextChapter'] = this.encodeChapter(nextChapter, 'tts.chapter.plan nextChapter');
     }
     const result = await this.runtime.request('tts.chapter.plan', params);
     const transition = this.decodeTransition(result.data['transition']);
@@ -256,8 +266,11 @@ export class ReaderTtsGateway {
     params: ReaderTtsJsonObject,
     chapter: ReaderTtsChapterRef,
   ): Promise<ReaderTtsQueueSnapshot> {
-    this.assertChapter(chapter, `${method} chapter`);
-    const result = await this.runtime.request(method, params);
+    const wireChapter = this.encodeChapter(chapter, `${method} chapter`);
+    // queue.play owns a nested plan rather than a top-level chapter parameter.
+    const wireParams: ReaderTtsJsonObject = params['chapter'] === undefined ? params :
+      { ...params, chapter: wireChapter };
+    const result = await this.runtime.request(method, wireParams);
     const snapshot = this.decodeSnapshot(result.data['snapshot'], method);
     this.assertSameChapter(snapshot.chapter, chapter, method);
     return snapshot;
@@ -404,8 +417,21 @@ export class ReaderTtsGateway {
     return decoded;
   }
 
-  private assertChapter(chapter: ReaderTtsChapterRef, label: string): void {
-    this.decodeChapter(chapter, label);
+  private encodeChapter(chapter: ReaderTtsChapterRef, label: string): ReaderTtsChapterRef {
+    const local = this.requireObject(chapter, label);
+    this.assertAllowedKeys(local,
+      ['sourceId', 'bookId', 'chapterIndex', 'chapterTitle', 'chapterUrl', 'bodyVersion', 'processingVersion'], label);
+    this.optionalString(local, 'bodyVersion', label);
+    this.optionalString(local, 'processingVersion', label);
+    // Do not mutate the caller's ref: correlated completion callbacks need its
+    // versions to prevent old audio from committing a newer body's position.
+    return this.decodeChapter({
+      sourceId: chapter.sourceId,
+      bookId: chapter.bookId,
+      chapterIndex: chapter.chapterIndex,
+      chapterTitle: chapter.chapterTitle,
+      chapterUrl: chapter.chapterUrl,
+    }, label);
   }
 
   private assertSameChapter(
