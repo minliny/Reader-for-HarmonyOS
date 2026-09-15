@@ -118,8 +118,8 @@ export default class EntryAbility extends UIAbility {
   }
 
   onBackground(): void {
-    this.eventLoopProbe?.stop('background');
     AppStorage.setOrCreate('readerAppForeground', false);
+    this.eventLoopProbe?.stop('background');
     this.runtimeOwner?.flush().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{private}s', error.message);
     });
