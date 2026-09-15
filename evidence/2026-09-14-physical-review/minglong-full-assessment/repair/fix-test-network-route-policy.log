@@ -1,0 +1,6 @@
+PASS: production proxy/DNS/transparent-gateway admission, selected-network exclusions, PAC, network changes and structured errors
+PASS: actual HTTP hop preserves URL/system proxy, never pins proxy DNS, direct DNS queried once
+(node:46846) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: cancelled never-settling HTTP frees DNS lease; queued cancellation preserves predecessor and same-host recovery
+PASS: real SDK Host error normalization and NAPI JSON serialization preserve structured proxy error

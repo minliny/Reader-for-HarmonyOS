@@ -1,0 +1,762 @@
+Reader HAP build-system docs and skills contract: PASS
+app shell safe geometry: PASS
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope
+(node:7761) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual resource callbacks: first full match before page-ready, no timeline or refetch
+PASS serialized matching preserves callback order across delayed evaluations
+PASS source initialization runs once and its real resource event completes capture
+PASS an earlier admitted match wins over a later resource-budget terminal marker
+PASS terminal cleanup and late callback suppression: timeout
+PASS terminal cleanup and late callback suppression: cancel
+PASS terminal cleanup and late callback suppression: detach
+PASS terminal cleanup and late callback suppression: cookie-generation
+PASS terminal cleanup and late callback suppression: network
+PASS terminal cleanup and late callback suppression: budget
+PASS terminal cleanup and late callback suppression: invalid-matcher
+PASS source profiles retain isolated cookie hydration/capture and generation
+PASS POST HTML capture, bounded matcher admission and production callback wiring
+PASS execution failure is terminal with bounded cleanup: matcher-reject
+PASS execution failure is terminal with bounded cleanup: matcher-sync-throw
+PASS execution failure is terminal with bounded cleanup: initialization-reject
+PASS execution failure is terminal with bounded cleanup: load-throw
+PASS late asynchronous matcher completion cannot publish into the next source profile
+PASS quotes and executable-looking text in observed URLs remain JSON-encoded data
+PASS SDK native callback isolation: old resource/pageEnd/pageBegin/network/detach/attach/actions cannot contaminate a new surface; same new URL is accepted
+PASS missing native retirement ACK times out without controller reuse, Host remount or cookie crossover, then recovers after ACK
+PASS never-mounted surface cancellation/retirement/recovery: cancel-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: timeout-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: host-detach-before-mount
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=false
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=true
+PH76 Host production-path resource capture: 26 scenario groups passed; SDK closure checks are local, native lifecycle timing still requires VM evidence
+PASS system route waits for native restore ACK before loading, including public IP literals
+PASS system synthetic DNS retains the admitted address pin and Host/TLS hostname
+PASS cancel during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS timeout during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS missing cleanup ACK bounds later jobs, retains no expired waiters, and permits recovery only after real cleanup ACK
+PASS synchronous proxy apply failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS synchronous proxy remove failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS SDK main-frame failure classification: proxy
+PASS SDK main-frame failure classification: 407
+PASS SDK main-frame failure classification: TLS
+PASS SDK main-frame failure classification: 404
+PASS SDK main-frame failure classification: generic-connect
+PASS SDK main-frame failure classification: numeric-only
+PASS SDK main-frame failure classification: direct407
+PASS SDK main-frame failure classification: lookalike-url
+PASS pre-load/about:blank/subresource failures cannot poison the main document
+PH92 ArkWeb proxy lifecycle/native failure: 16 additional scenario groups passed; no device or native timing acceptance claimed
+PASS existing HTML challenge classification precedes ordinary HTTP 401 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 403 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 429 failure
+PASS an ordinary forbidden document stays a source HTTP failure after challenge detection
+PASS native detach cancels pending proxy ACK immediately and late configuration is cleaned
+PH92 proxy/challenge compatibility: 5 additional scenario groups passed
+PASS production blank lifecycle before/after real load never sets page ready, final URL or schedules source initialization (2 scenarios)
+(node:7763) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+PASS early timing uses this run and exact target document: native blank initialization excluded, premature/foreign/incomplete evidence still fails (11 scenarios)
+PASS bounded data diagnostics and exact native URI-Base64 admission: tamper/unsupported/malformed/oversized remain denied, no URL or body disclosure
+PASS diagnostic rejects incomplete new-surface evidence: missing-resource
+PASS diagnostic rejects incomplete new-surface evidence: missing-match
+PASS diagnostic rejects incomplete new-surface evidence: reversed
+PASS diagnostic rejects incomplete new-surface evidence: wrong-match
+PASS diagnostic attributes old resource token during new job: lateOld=false
+PASS diagnostic attributes old resource token during new job: lateOld=true
+PASS disposing the pilot cancels only owned jobs and clears response timers/observer
+PASS diagnostic execution errors retain a failure receipt
+PASS actual SDK Host callback: exact main document, tamper rejection, policy-first order and redacted navigation labels
+PASS new run rejects previous run main URL and data document
+PH76 diagnostic runner: 12 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence
+PASS safe preload diagnostics: 6 native operation receipts and arbitrary-error URL/credential suppression
+(node:7768) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared book acquisition lifecycle, identities, and scheduling: PASS
+shared detail/TOC/body cancellation: each consumer owns its lifetime; Core cancellation cannot be revived PASS
+PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS
+R1/R2 cache-refresh separation, original freshness, dispatch consumers and scoped facts: PASS
+author metadata: 33 shared Core/Host cases, actual search decode/group/shelf/alias/source-switch chains PASS
+source-bound @ author: SDK result decode → initial group/relevance → candidate/switch proof, genuine @ and @@/stale/malformed negatives PASS
+(node:7793) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7794) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:7796) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+PASS PH60 shelf filters: independent dimensions, real SDK live chips/toggles, shared order, legacy data and hidden batch-selection safety
+(node:7799) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf management Core ownership contract: PASS
+(node:7804) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manual update bypasses prepared sessions and executes real Gateway detail/TOC","status":"PASS"}
+{"name":"manual update also bypasses durable catalog cache after prepared eviction","status":"PASS"}
+{"name":"manual request waits for a cache-only in-flight acquisition then refreshes","status":"PASS"}
+{"name":"per-book failure/empty results preserve old records, settle flags and continue bounded batch","status":"PASS"}
+{"name":"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions","status":"PASS"}
+{"name":"multiple force waiters share one refresh after the nonforce admission settles","status":"PASS"}
+{"name":"force waiting revalidates cancel before new network work","status":"PASS"}
+{"name":"force waiting revalidates close before new network work","status":"PASS"}
+{"name":"force waiting revalidates source-delete before new network work","status":"PASS"}
+PH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS
+PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update
+(node:7829) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS TXT uses format identity without changing Core metadata
+PASS default group retains empty and explicit default identities without mutating legacy groups
+PASS real section settings callback opens the default selector without navigating to another settings surface
+PASS PH61 progress/source retain equal left/right slots and live progress after row reuse
+PASS PH83 detail preview exposes 20 chapters in the original four-row scroll viewport
+PASS day: detail metadata shares source typography, label and moving source action
+PASS night: detail metadata shares source typography, label and moving source action
+PASS PH46/47 original author typography and the entire five-line block align with the cover
+PASS missing synopsis is explained without contaminating the metadata projection
+PASS empty chapters expose status: 暂无章节信息
+PASS empty chapters expose status: 正在读取本地目录…
+PASS empty chapters expose status: 目录读取失败，请重试
+PASS source name/category/URL remain distinct and login precedes detect (no login)
+PASS source name/category/URL remain distinct and login precedes detect (login)
+PASS single-book sheet matches cover frame and both layers have straight lower corners
+PASS 44vp source SVG stays 44vp in the single-book more action
+(node:7831) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7835) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+cache refresh admission: actual Index continuation preserves new chapter and saved offset arguments PASS
+Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS
+(node:7859) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection
+bookshelf tablet navigation contract: PASS
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation
+(node:7864) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS bookshelf route return: identity+item offset, list/filter/group state, reordered books, late callback isolation
+(node:7868) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1046 tested records, 919 unique identities)
+cookie exact-host and HttpOnly script-isolation policy: PASS
+core build identity startup contract: PASS
+(node:7895) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+PASS: deterministic import.persist rejection discards staged input without recovery orphan
+PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation
+PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit
+(node:7900) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH84 actual external directory routing, Builder and exact initial bookmark lifecycle: PASS
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (121 sources swept)
+(node:7928) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony HttpTTS credential URL encoding and expansion bounds: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:7933) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7935) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+PASS: HTTPS-only requests reject cleartext redirect downgrades
+PASS: same-origin comparison normalizes host case and default HTTPS port
+PASS: credential-bearing URL redirects stay on the same effective origin
+PASS: custom credential-header redirects stay on the same effective origin
+Host staging recovery retry: PASS
+(node:7937) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production request payload and HTTP POST: empty/Chinese UTF-8, GBK, form join, exact/over byte limit and multipart with broken platform TextEncoder
+Encoder evidence: actual SDK wrapper with bounded UTF-8/GBK fixtures; native variant is independently runnable
+(node:7939) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual HTTP transport: HEAD/204/205/304 absent or empty bodies, 200 empty string and binary bytes (22 cases)
+PASS nonempty decoded strings and unknown body representations fail with bounded status/type diagnostics
+PASS bodyless 4xx/5xx keeps explicit HTTP source rejection; actual rejection body remains unchanged
+PASS actual redirect chain keeps empty hop Location and rejects private targets before dispatch; empty success survives final response conversion
+PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack
+PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs without replacing original errors
+PASS unknown native 2300999 preserves per-request transient HTTP evidence, not a global network outage or a source rule verdict
+(node:7940) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:7944) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual execute/redirect/cookie/DNS/transport URL normalization: Chinese/space, existing GBK percent escapes, query/fragment, method/body preservation and private target rejection
+(node:7964) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+PASS import refresh: Figma C arc/source unchanged, 18vp slot, 23.754vp paint, 1.5vp stroke; retained Day/Night/Day.
+(node:7966) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 notifications=1 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS
+Legado product behavior contract: PASS
+(node:7969) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+local book format picker contract: PASS
+(node:7974) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.
+local EPUB resource architecture: PASS
+local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)
+(node:8000) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+PASS: production proxy/DNS/transparent-gateway admission, selected-network exclusions, PAC, network changes and structured errors
+PASS: actual HTTP hop preserves URL/system proxy, never pins proxy DNS, direct DNS queried once
+(node:8005) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: cancelled never-settling HTTP frees DNS lease; queued cancellation preserves predecessor and same-host recovery
+PASS: vendored SDK emits a legal CoreError code and preserves Host network semantics, message and retryability through NAPI JSON
+PASS: native proxy getter failures/missing API/invalid return preserve fixed operation and numeric code without leaking native messages or guessing DIRECT
+PASS: undefined/null/wrong-type results from each native proxy API identify the exact operation
+PASS: API 23 active PAC getter replaces throwing legacy getter; numeric string native codes survive without retaining messages
+performance regression contracts: PASS
+physical phone Figma layout regressions: PASS
+portable JSON local/online import boundary: PASS
+PASS Make V9 appearance: real selection handlers, stale menus, scroll/viewport placement, Quick/Full swatches and persisted theme identity. Native pixels remain separate.
+(node:8032) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance Figma N per-actor driver: PASS
+reader appearance Figma N fixture: PASS
+reader appearance measured-screen gesture: PASS
+reader appearance Figma N sampler: PASS
+reader appearance master motion state: PASS
+reader appearance unified production tree (structural only): PASS
+(node:8045) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance shared store, page races and persistence recovery: PASS
+appearance Preferences adapter migration and persistence compatibility: PASS
+application appearance background flush and teardown isolation: PASS
+PASS appearance theme extension: 8 unchanged, 9/12/24 geometry, registry cache, quick/full scroll reversal, SDK selection
+(node:8046) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance pure/static contract: PASS
+reader Full Auto Page pure/static contract: PASS
+AutoPage actual SDK Builder bounds, single current value, Quick +/- and Full range, 84 reversible samples PASS
+(node:8073) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader auto-page pure state: PASS
+production automatic turn and stop durations use monotonic time; calendar access rejected: PASS
+(node:8076) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Auto Full timer actual SDK Builder parent/child width budget, original306 baseline, 42 retained reversible poses, wheel paint Prop and mutation PASS
+(node:8081) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader book-turn architecture contract: PASS
+event delivery: 22 checks, 0 failures
+bookturn_motion_test: 538 checks, 0 failures
+373 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+245 checks, 0 failures
+reader book-turn motion state: PASS
+T01 roll-radius PASS (390->42.9000, 200->28.0000, 1000->64.0000)
+T02 schedule bijection+boundaries PASS (worst roundtrip 1.79e-07 over 1001 samples)
+T03 INV-1 no-freeze PASS (next: least step 0.566vp, final fold 0.000vp; previous: least step 0.975vp, initial fold 0.000vp)
+T04 INV-2 no-commit-pop PASS (next tau=1: maxX 0.000vp <= 11.70, maxZ 0.000; prev commit maxX 390.000vp, maxZ 0.000; worst coverage step -1.089vp over tau 0.75..1)
+T05 INV-3 cancel-reversal PASS (worst |reverse-forward| 0.00e+00 vp over tau0 0.2/0.4/0.6/0.8)
+T06 previous semantics PASS (31 same-edge points worst schedule diff 0.00e+00; start maxX 0.000vp, commit maxX 390.000vp)
+T07 S3/S4 schedule deviation PASS (worst beta 0.00e+00 rad <= 8.73e-03, worst radius 2.60e-07 vp, worst |gripPhi-beta| 0.00e+00)
+T08 C1 seam at tau=0.5 PASS (worst |dAxis| 0.4605 vp (bounds 2/1/0.5), worst |phi-pi| 0.00e+00)
+T09 milestone phi=pi/2 + continuity PASS (crossing delta 14.868 vp vs 14.868 expected, edge.x 375.1; regular worst 0.0351 rad, S5 schedule worst 0.157 rad <= 0.2, onset worst 0.631 rad [documented scope])
+T10 developability PASS (a: A-grade cylinder worst 6.57e-05 <= 1e-3; b: strict phi<=pi/4 p95 6.104e-05 max 5.293e-04 vs 1e-3/5e-3; band p95 2.078e-02 max 2.082e-02 vs 2.5e-2 [2026-08-30 apex-law recalibration, pi*r'=0.0432])
+T11 binding-edge PASS (a: theta=0 worst x 0.00e+00, y 0.00e+00, z 0.00e+00; b: theta=54deg worst 0.000 vp at tau=0.00)
+T12 touch error (fit segment) PASS (worst screen-plane err 3.05e-05 vp <= 1.0; solver targetError incl. curl z up to 84.96 vp — scope note)
+T13 free-edge inside page (fit segment) PASS (min 0.000 >= -0.26, max 378.072 <= 390.26)
+T14 purity PASS (field-exact repeats, with and without previous)
+T15 stage boundaries PASS (FLAT@W, LIFT@x(0.09), FLIP@x(0.3), ROLL@x(0.6), SPINE@x(0.8), COLLAPSE@x(0.95))
+T16 tilt regressions PASS (cap 57.184 deg <= 60.0001, jitter 1.273 deg <= 2, sweep worst 0.00278 rad <= 0.02, zero-signbit +0/-0 honored)
+T17 verticalPrevious smoke PASS (edge.x W/200/0 all finite, tilt within cap)
+T18 strict three-branch PASS (anti-M second diff 6.866e-05 <= 1e-4; seam steps f 0.5000 z 0.5000 <= 0.501 at step 0.5)
+235 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+245 checks, 0 failures
+Production Surface recovery: unwritten rollback, uncertain write retention, promoted completion, late failure PASS (7 scenarios)
+(node:8647) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader bookmark panels static contract: PASS
+reader bookmark projection behavior: PASS
+PASS PH86 normal motion: 6 completion orders/12 lifecycles without intermediate inversion; cancelled/failed/page-invalidated/duplicate/old ACK cases
+PASS PH86: 20 real chrome/bookmark Builder geometries, clock/title/cutout separation, native visibility, gesture threshold/rebound/ACK and page/book ownership
+PASS PH86 actual SDK Stage/slot/ReadingSurface/Chrome Prop chain across drag and rebound; outer viewport clip retained
+(node:8680) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS brightness cancel UI: issued ACK, preview retention, cancelled pending, newer intent, failed write convergence
+(node:8709) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader brightness control contract: PASS
+PASS brightness: HLG low-range allocation, 991 inverse samples, two-way pending toggle, system observation races, and SDK shared track clip
+(node:8714) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader brightness production writer: PASS (held MOVE, coalescing, ownership, restore, failure, cancel, microtask tail)
+PASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner
+PASS brightness failure boundaries: stale Window/owner lookup, current rejection, synchronous properties failure and subsequent drain
+reader Chinese conversion gateway contract: PASS
+reader cold-entry recovery contract: PASS
+reader content business isolation: PASS
+PH90 actual SDK field Builder: full visual field requests unique native input focus, disabled/unmounted/failure guards; geometry unchanged PASS (not native IME acceptance)
+(node:8745) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"contract":"PH90 native List","reports":[{"count":50,"maxNativeDemand":14,"finalDataCount":100},{"count":2000,"maxNativeDemand":14,"finalDataCount":2050},{"count":10000,"maxNativeDemand":14,"finalDataCount":10050}],"sdkLazyProviderVerified":true,"boundary":"SDK bindings, policy and paint equations passed; actual Ace range admission and pixel timing require VM validation"}
+(node:8748) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8772) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"baseline":false,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"41ece7cba3f807e336504e582eed056349af2a552949979c6d6f69080e2fda86","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"componentSha256":"b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159","scenarios":[{"count":0,"payloadHandoffMs":0.0002499999999940883,"legacyDeepCopies":0,"dataPublishMs":0.29325000000000045,"buildMs":0.28170900000003485,"replayMs":0.0498749999999859,"linearFindVisits":0,"mountedRows":0,"nativeRequestedIndices":[],"providerTotalCount":0},{"count":50,"payloadHandoffMs":0.0002089999999839165,"legacyDeepCopies":0,"dataPublishMs":0.060708000000033735,"buildMs":1.0757089999999607,"replayMs":0.8034589999999753,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":50},{"count":500,"payloadHandoffMs":0.0002499999999940883,"legacyDeepCopies":0,"dataPublishMs":0.06491599999998243,"buildMs":0.42508400000002666,"replayMs":0.2576670000000263,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":500},{"count":2000,"payloadHandoffMs":0.00012499999996862243,"legacyDeepCopies":0,"dataPublishMs":0.09745799999996052,"buildMs":0.46837499999998045,"replayMs":0.1731669999999781,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":2000}],"emptyEntryAndTypingCoreCalls":0,"cumulativePagination":{"pages":40,"pageSize":50,"results":2000,"lateGenerationRejected":true},"boundary":"Actual SDK row generation follows explicit requests at the native LazyForEach boundary; the full source is unsliced. No native range-selection, same-frame paint, IME or device frame-time claim"}
+{"passed":true,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"41ece7cba3f807e336504e582eed056349af2a552949979c6d6f69080e2fda86","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"componentSha256":"b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159","rows":2000,"morphSamples":21,"payloadPropCopies":0,"appended":50,"finalDataSourceCount":0,"dataNotifications":{"initialReloads":1,"morph":0,"metadata":0,"added":50,"changed":[1999],"idleReloads":1},"boundary":"actual SDK compiler + property/proxy dispatch; no native List/IME/renderer timing"}
+(node:8775) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous production pointer, same-row anchor and trailing exit commit: PASS
+production batched image reflow preserves leading fragment fraction and concurrent scroll: PASS
+(node:8779) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous mode change save/error/obsolete ownership and late stop receipt: PASS
+production continuous restore waits for layout and rejects stale frame callbacks: PASS
+production continuous cold-entry projection branch observes its reactive revision: PASS
+continuous scalar quantization: five positions, 100 repeat round trips each: PASS
+continuous restore suppresses premature stops and unknown-geometry progress writes: PASS
+continuous padded viewport: START, positive y and negative y round trips: PASS
+native List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS
+production continuous image row identity: decoder admission replaces placeholder, unchanged siblings retained: PASS
+continuous short tap and stationary long UP share paged 500ms clock boundary: PASS
+continuous-to-paged anchor: warm/cold/partial/foreign layout, containing page only: PASS
+measured prefix whitespace gaps match complete canonical page identity: PASS
+native List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS
+reader continuous reading and canonical progress pipeline: PASS
+Control accessibility: actual Host close/Back + SDK virtual-node mounted observers PASS; NOT native screen-reader acceptance
+(node:8805) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control shared actor geometry: production bidirectional/concurrent/pure sampling PASS
+reader control appearance production geometry + independent source endpoints: PASS (810 ordered import drag cases)
+Reader control backdrop publication: stable array/rect identity across motion PASS
+(node:8811) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control backdrop DOWN ownership and one-shot raw tap: PASS
+Actual SDK nonempty bookmark row: mounted reversible actors, live metadata/identity and clip mutations PASS
+PASS bookmark production geometry, native row-height extent binding and same-open anchor continuation; NOT native visual acceptance
+(node:8837) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8839) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control bookmarks: production merge/async ownership/failure retry PASS; wiring assertions are not native acceptance
+(node:8842) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Bookmark mutation recovery: actual Index CRUD/reload and Host error/retry functions PASS; not native acceptance
+reader control independent FullContentSurface source geometry and single-background wiring: PASS
+Device probe actual runtime closures: ticket/dry-run/SHA/auth-denial/DOWN-based sampling/revocation PASS (mock transport only; no HDC/device/filesystem writes).
+reader control directory content: structural wiring passed (not runtime or visual evidence)
+Production directory model: late load, centering ownership, route/data independence PASS
+Production Directory virtual-row capture, fraction, frame coalescing and late-user-input guards PASS
+Production Directory rapid tab replacement, endpoint anchor release and user-scroll ownership PASS
+Production Directory finite-tail Quick→Full→Quick semantic anchor restoration PASS
+(node:8868) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control geometry parameter contract: PASS
+reader control bounded finger residue and distinct continuation timings: PASS
+reader control gesture production driver behavior: PASS
+PASS global presentation: shared policies, production actor-local clips, retained overflow, actual SDK font content/outline separation and reversal; device evidence separate
+(node:8874) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH48/49/55 PASS: authoritative grabber actor, actual Host/native-parent admission, 7 modules x Quick/Full reversal, 28 hidden-hold UP/CANCEL paths, .2/.7/1 captured-visibility driver crossings, tap, actual Slider End/Click; two negative mutations rejected. Native compositor/physical touch remains separate.
+(node:8878) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS
+(node:8905) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control Host: actual SDK V1 member transform reproduces dropped accessor; ordinary-method input/backdrop gates PASS
+Reader control Host input: actual production methods PASS (not device hit-testing/visual acceptance)
+(node:8910) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control keyboard: production visibility/Back/hide failure cases PASS; structural Host wiring PASS (not native IME acceptance)
+Reader control keyboard layout: actual Host methods/binding dependency and 414→700vp budget PASS (not native IME acceptance)
+(node:8934) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control Host session: production projection, command, close-commit and lifecycle cases PASS
+Reader control Host wiring: structural checks PASS (not ArkUI execution or visual acceptance)
+Reader control input routing: PASS (actual SDK Header ancestor/child callback, 7 modules, runtime + Link delivery; native touch remains VM evidence)
+(node:8937) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control integration event ownership, CANCEL, and exact mixed-path behavior: PASS
+PASS internal/user selection ownership: actual Host methods, stale reopen, TTS/projection negative mutations and committed-close semantics; NOT device acceptance
+(node:8942) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control atomic layout rebase production policy: PASS (no Stage/runtime visual claim)
+reader control list positioning: production policy tests passed
+PASS shared scroll lifecycle: 5 actual component adapters, latest-offset handoff, held endpoint reversals, delayed native reset, shared/full-only roles, new expansion top; NOT visual acceptance
+(node:8968) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+MR1 archived show/hide capture absent; optional evidence checks skipped
+PASS reader control motion geometry (production functions; no runtime/visual claim)
+PASS all control modules 320/260/200/220, initial opening 220, remaining-distance release, hold/regrab/reverse, monotone velocity continuation; device acceptance separate
+PASS TTS softened-content trial: nonzero middle fade, reversible content-only blur, Full details retain their original reveal, offscreen outlines, actual mounted SDK paint observers; NOT device visual acceptance
+(node:8972) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control narrow-width contract: PASS (10 viewport widths)
+{"result":"PASS","layer":"real upstream 5.0 attribute diff + production modifier; not native layout or VM performance","mountedNodes":13,"mountedCalls":156,"poses":120,"legacyAttributeCalls":24960,"patchedAttributeCalls":7440,"reductionPercent":70.19,"reverseResizeBusinessAndCallback":"PASS"}
+(node:8977) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /onBackground\(\): void \{\s*AppStorage\.setOrCreate\('readerAppForeground', false\)/. Input:
+
+"import { SyncGateway } from '../features/sync/SyncGateway';\n" +
+  "import { LocalConfigurationReset } from '../features/settings/LocalConfigurationReset';\n" +
+  "import { ReaderThemeHost } from '../app/ReaderThemeHost';\n" +
+  "import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';\n" +
+  "import { window } from '@kit.ArkUI';\n" +
+  "import { hilog } from '@kit.PerformanceAnalysisKit';\n" +
+  "import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';\n" +
+  "import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';\n" +
+  "import { readerControlVerificationColdStartPage } from '../app/ReaderControlVerificationLaunch';\n" +
+  "import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';\n" +
+  "import { readerMotionNowMs } from '../features/common/ReaderMotionClock';\n" +
+  "import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';\n" +
+  "import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';\n" +
+  'const DOMAIN = 0x5244;\n' +
+  '\n' +
+  'export default class EntryAbility extends UIAbility {\n' +
+  '  private windowStageGeneration: number = 0;\n' +
+  "  private coldStartPage: string = 'pages/Index';\n" +
+  '  private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;\n' +
+  '  private themeReady: Promise<void> = Promise.resolve();\n' +
+  '  private recoveryReady: Promise<void> = Promise.resolve();\n' +
+  '  private bookshelfModeReady: Promise<void> = Promise.resolve();\n' +
+  '  private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;\n' +
+  '\n' +
+  '  onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {\n' +
+  '    // Deliberately no onNewWant route switching: a warm request must not bypass\n' +
+  '    // or reset the current reading session. Diagnostics require a cold start,\n' +
+  '    // debug build, and exact primitive boolean parameters.\n' +
+  '    this.coldStartPage = readerControlVerificationColdStartPage(\n' +
+  '      DEBUG,\n' +
+  '      BUILD_MODE_NAME,\n' +
+  '      want.parameters?.readerControlMotionVerification,\n' +
+  '      want.parameters?.readerOpenSourcePilot,\n' +
+  '    );\n' +
+  '    if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerEventLoopProbe)) {\n' +
+  '      this.eventLoopProbe = new ReaderEventLoopProbe(readerMotionNowMs,\n' +
+  '        (sample: ReaderEventLoopSample): void => {\n' +
+  "          hilog.info(DOMAIN, 'Reader', 'READER_EVENT_LOOP %{public}s', JSON.stringify(sample));\n" +
+  '        });\n' +
+  '    }\n' +
+  "    AppStorage.setOrCreate('readerAppForeground', true);\n" +
+  '    WebDavCredentialStore.instance.attachContext(this.context);\n' +
+  '    this.bookshelfModeReady = WebDavCredentialStore.instance.loadBookshelfViewMode()\n' +
+  '      .then((mode): void => {\n' +
+  '        if (mode !== null) {\n' +
+  "          AppStorage.setOrCreate('readerBookshelfViewMode', mode);\n" +
+  '        }\n' +
+  '      }).catch((): void => {});\n' +
+  '    const owner = ReaderRuntimeOwner.install(this.context);\n' +
+  '    this.runtimeOwner = owner;\n' +
+  '    this.themeReady = ReaderThemeHost.install(owner,\n' +
+  "      this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')\n" +
+  '      .catch((error: Error): void => {\n' +
+  "        hilog.error(DOMAIN, 'Reader', 'Theme restoration failed: %{private}s', error.message);\n" +
+  '      });\n' +
+  '    const sync = new SyncGateway(owner);\n' +
+  '    ReaderThemeHost.setRecoveryBarrier(async (): Promise<void> => {\n' +
+  '      await Promise.all([this.themeReady, this.bookshelfModeReady, owner.start()]);\n' +
+  "      if (this.runtimeOwner !== owner) throw new Error('CONFIGURATION_OWNER_CHANGED');\n" +
+  '      await sync.recoverInterruptedRestore();\n' +
+  '      await LocalConfigurationReset.recover(owner);\n' +
+  '    });\n' +
+  '    this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, owner.start()])\n' +
+  '      .then(async (): Promise<void> => {\n' +
+  '        if (this.runtimeOwner === owner) {\n' +
+  '          await sync.recoverInterruptedRestore();\n' +
+  '          await LocalConfigurationReset.recover(owner);\n' +
+  '        }\n' +
+  '      }).catch((error: Error): void => {\n' +
+  '        // The persistent receipt/journal remains pending; opening the UI permits retry.\n' +
+  "        hilog.error(DOMAIN, 'Reader', 'Core or confirmed restore recovery failed: %{private}s', error.message);\n" +
+  '      });\n' +
+  '  }\n' +
+  '\n' +
+  '  onWindowStageCreate(windowStage: window.WindowStage): void {\n' +
+  '    const generation = ++this.windowStageGeneration;\n' +
+  '    const win = windowStage.getMainWindowSync();\n' +
+  '    void ReaderWindowCoordinator.install(win).then((installed: boolean): void => {\n' +
+  '      if (installed && generation === this.windowStageGeneration) {\n' +
+  '        void Promise.all([this.bookshelfModeReady, this.themeReady, this.recoveryReady]).then((): void => {\n' +
+  '          if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);\n' +
+  '        });\n' +
+  '      }\n' +
+  '    }).catch((error: Error): void => {\n' +
+  "      hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);\n" +
+  '      // Window setup failure must not strand the application before its first\n' +
+  '      // page. The default zero-inset snapshot keeps the UI recoverable.\n' +
+  '      if (generation === this.windowStageGeneration) {\n' +
+  '        void Promise.all([this.bookshelfModeReady, this.themeReady, this.recoveryReady]).then((): void => {\n' +
+  '          if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);\n' +
+  '        });\n' +
+  '      }\n' +
+  '    });\n' +
+  '  }\n' +
+  '\n' +
+  '  onWindowStageDestroy(): void {\n' +
+  "    this.eventLoopProbe?.stop('window-destroyed');\n" +
+  '    this.windowStageGeneration += 1;\n' +
+  '    ReaderWindowCoordinator.detach();\n' +
+  '  }\n' +
+  '\n' +
+  '  onConfigurationUpdate(newConfig: Configuration): void {\n' +
+  '    if (newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ||\n' +
+  '        newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT) {\n' +
+  "      void ReaderThemeHost.systemChanged(newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')\n" +
+  "        .catch((error: Error): void => hilog.error(DOMAIN, 'Reader', 'System theme write failed: %{private}s', error.message));\n" +
+  '    }\n' +
+  '    // scaledDensity can change without a window-size callback. Refreshing the\n' +
+  '    // shared snapshot advances its revision, so the reading pagination\n' +
+  '    // signature is recomputed before the next visible page is admitted.\n' +
+  '    ReaderWindowCoordinator.refreshConfiguration();\n' +
+  '  }\n' +
+  '\n' +
+  '  onForeground(): void {\n' +
+  "    AppStorage.setOrCreate('readerAppForeground', true);\n" +
+  '    ReaderWindowCoordinator.reapplyChrome();\n' +
+  '    ReaderWindowCoordinator.reapplyWindowPolicy();\n' +
+  '  }\n' +
+  '\n' +
+  '  onBackground(): void {\n' +
+  "    this.eventLoopProbe?.stop('background');\n" +
+  "    AppStorage.setOrCreate('readerAppForeground', false);\n" +
+  '    this.runtimeOwner?.flush().catch((error: Error): void => {\n' +
+  "      hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{private}s', error.message);\n" +
+  '    });\n' +
+  '  }\n' +
+  '\n' +
+  '  onDestroy(): void {\n' +
+  "    this.eventLoopProbe?.stop('destroyed');\n" +
+  '    ReaderThemeHost.detach();\n' +
+  '    this.windowStageGeneration += 1;\n' +
+  '    ReaderWindowCoordinator.detach();\n' +
+  "    AppStorage.setOrCreate('readerAppForeground', false);\n" +
+  '    const owner = this.runtimeOwner;\n' +
+  '    this.runtimeOwner = undefined;\n' +
+  '    owner?.release().catch((error: Error): void => {\n' +
+  "      hilog.error(DOMAIN, 'Reader', 'Core close failed: %{private}s', error.message);\n" +
+  '    });\n' +
+  '  }\n' +
+  '\n' +
+  '  private loadMainContent(windowStage: window.WindowStage): void {\n' +
+  '    windowStage.loadContent(this.coldStartPage, (error): void => {\n' +
+  '      if (error.code) {\n' +
+  "        hilog.error(DOMAIN, 'Reader', 'Failed to load main page: %{private}s', JSON.stringify(error));\n" +
+  '      } else {\n' +
+  '        this.eventLoopProbe?.start();\n' +
+  '      }\n' +
+  '    });\n' +
+  '  }\n' +
+  '}\n'
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-control-p0.mjs:272:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: "import { SyncGateway } from '../features/sync/SyncGateway';\n" +
+    "import { LocalConfigurationReset } from '../features/settings/LocalConfigurationReset';\n" +
+    "import { ReaderThemeHost } from '../app/ReaderThemeHost';\n" +
+    "import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';\n" +
+    "import { window } from '@kit.ArkUI';\n" +
+    "import { hilog } from '@kit.PerformanceAnalysisKit';\n" +
+    "import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';\n" +
+    "import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';\n" +
+    "import { readerControlVerificationColdStartPage } from '../app/ReaderControlVerificationLaunch';\n" +
+    "import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';\n" +
+    "import { readerMotionNowMs } from '../features/common/ReaderMotionClock';\n" +
+    "import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';\n" +
+    "import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';\n" +
+    'const DOMAIN = 0x5244;\n' +
+    '\n' +
+    'export default class EntryAbility extends UIAbility {\n' +
+    '  private windowStageGeneration: number = 0;\n' +
+    "  private coldStartPage: string = 'pages/Index';\n" +
+    '  private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;\n' +
+    '  private themeReady: Promise<void> = Promise.resolve();\n' +
+    '  private recoveryReady: Promise<void> = Promise.resolve();\n' +
+    '  private bookshelfModeReady: Promise<void> = Promise.resolve();\n' +
+    '  private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;\n' +
+    '\n' +
+    '  onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {\n' +
+    '    // Deliberately no onNewWant route switching: a warm request must not bypass\n' +
+    '    // or reset the current reading session. Diagnostics require a cold start,\n' +
+    '    // debug build, and exact primitive boolean parameters.\n' +
+    '    this.coldStartPage = readerControlVerificationColdStartPage(\n' +
+    '      DEBUG,\n' +
+    '      BUILD_MODE_NAME,\n' +
+    '      want.parameters?.readerControlMotionVerification,\n' +
+    '      want.parameters?.readerOpenSourcePilot,\n' +
+    '    );\n' +
+    '    if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerEventLoopProbe)) {\n' +
+    '      this.eventLoopProbe = new ReaderEventLoopProbe(readerMotionNowMs,\n' +
+    '        (sample: ReaderEventLoopSample): void => {\n' +
+    "          hilog.info(DOMAIN, 'Reader', 'READER_EVENT_LOOP %{public}s', JSON.stringify(sample));\n" +
+    '        });\n' +
+    '    }\n' +
+    "    AppStorage.setOrCreate('readerAppForeground', true);\n" +
+    '    WebDavCredentialStore.instance.attachContext(this.context);\n' +
+    '    this.bookshelfModeReady = WebDavCredentialStore.instance.loadBookshelfViewMode()\n' +
+    '      .then((mode): void => {\n' +
+    '        if (mode !== null) {\n' +
+    "          AppStorage.setOrCreate('readerBookshelfViewMode', mode);\n" +
+    '        }\n' +
+    '      }).catch((): void => {});\n' +
+    '    const owner = ReaderRuntimeOwner.install(this.context);\n' +
+    '    this.runtimeOwner = owner;\n' +
+    '    this.themeReady = ReaderThemeHost.install(owner,\n' +
+    "      this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')\n" +
+    '      .catch((error: Error): void => {\n' +
+    "        hilog.error(DOMAIN, 'Reader', 'Theme restoration failed: %{private}s', error.message);\n" +
+    '      });\n' +
+    '    const sync = new SyncGateway(owner);\n' +
+    '    ReaderThemeHost.setRecoveryBarrier(async (): Promise<void> => {\n' +
+    '      await Promise.all([this.themeReady, this.bookshelfModeReady, owner.start()]);\n' +
+    "      if (this.runtimeOwner !== owner) throw new Error('CONFIGURATION_OWNER_CHANGED');\n" +
+    '      await sync.recoverInterruptedRestore();\n' +
+    '      await LocalConfigurationReset.recover(owner);\n' +
+    '    });\n' +
+    '    this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, owner.start()])\n' +
+    '      .then(async (): Promise<void> => {\n' +
+    '        if (this.runtimeOwner === owner) {\n' +
+    '          await sync.recoverInterruptedRestore();\n' +
+    '          await LocalConfigurationReset.recover(owner);\n' +
+    '        }\n' +
+    '      }).catch((error: Error): void => {\n' +
+    '        // The persistent receipt/journal remains pending; opening the UI permits retry.\n' +
+    "        hilog.error(DOMAIN, 'Reader', 'Core or confirmed restore recovery failed: %{private}s', error.message);\n" +
+    '      });\n' +
+    '  }\n' +
+    '\n' +
+    '  onWindowStageCreate(windowStage: window.WindowStage): void {\n' +
+    '    const generation = ++this.windowStageGeneration;\n' +
+    '    const win = windowStage.getMainWindowSync();\n' +
+    '    void ReaderWindowCoordinator.install(win).then((installed: boolean): void => {\n' +
+    '      if (installed && generation === this.windowStageGeneration) {\n' +
+    '        void Promise.all([this.bookshelfModeReady, this.themeReady, this.recoveryReady]).then((): void => {\n' +
+    '          if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);\n' +
+    '        });\n' +
+    '      }\n' +
+    '    }).catch((error: Error): void => {\n' +
+    "      hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);\n" +
+    '      // Window setup failure must not strand the application before its first\n' +
+    '      // page. The default zero-inset snapshot keeps the UI recoverable.\n' +
+    '      if (generation === this.windowStageGeneration) {\n' +
+    '        void Promise.all([this.bookshelfModeReady, this.themeReady, this.recoveryReady]).then((): void => {\n' +
+    '          if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);\n' +
+    '        });\n' +
+    '      }\n' +
+    '    });\n' +
+    '  }\n' +
+    '\n' +
+    '  onWindowStageDestroy(): void {\n' +
+    "    this.eventLoopProbe?.stop('window-destroyed');\n" +
+    '    this.windowStageGeneration += 1;\n' +
+    '    ReaderWindowCoordinator.detach();\n' +
+    '  }\n' +
+    '\n' +
+    '  onConfigurationUpdate(newConfig: Configuration): void {\n' +
+    '    if (newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ||\n' +
+    '        newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT) {\n' +
+    "      void ReaderThemeHost.systemChanged(newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')\n" +
+    "        .catch((error: Error): void => hilog.error(DOMAIN, 'Reader', 'System theme write failed: %{private}s', error.message));\n" +
+    '    }\n' +
+    '    // scaledDensity can change without a window-size callback. Refreshing the\n' +
+    '    // shared snapshot advances its revision, so the reading pagination\n' +
+    '    // signature is recomputed before the next visible page is admitted.\n' +
+    '    ReaderWindowCoordinator.refreshConfiguration();\n' +
+    '  }\n' +
+    '\n' +
+    '  onForeground(): void {\n' +
+    "    AppStorage.setOrCreate('readerAppForeground', true);\n" +
+    '    ReaderWindowCoordinator.reapplyChrome();\n' +
+    '    ReaderWindowCoordinator.reapplyWindowPolicy();\n' +
+    '  }\n' +
+    '\n' +
+    '  onBackground(): void {\n' +
+    "    this.eventLoopProbe?.stop('background');\n" +
+    "    AppStorage.setOrCreate('readerAppForeground', false);\n" +
+    '    this.runtimeOwner?.flush().catch((error: Error): void => {\n' +
+    "      hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{private}s', error.message);\n" +
+    '    });\n' +
+    '  }\n' +
+    '\n' +
+    '  onDestroy(): void {\n' +
+    "    this.eventLoopProbe?.stop('destroyed');\n" +
+    '    ReaderThemeHost.detach();\n' +
+    '    this.windowStageGeneration += 1;\n' +
+    '    ReaderWindowCoordinator.detach();\n' +
+    "    AppStorage.setOrCreate('readerAppForeground', false);\n" +
+    '    const owner = this.runtimeOwner;\n' +
+    '    this.runtimeOwner = undefined;\n' +
+    '    owner?.release().catch((error: Error): void => {\n' +
+    "      hilog.error(DOMAIN, 'Reader', 'Core close failed: %{private}s', error.message);\n" +
+    '    });\n' +
+    '  }\n' +
+    '\n' +
+    '  private loadMainContent(windowStage: window.WindowStage): void {\n' +
+    '    windowStage.loadContent(this.coldStartPage, (error): void => {\n' +
+    '      if (error.code) {\n' +
+    "        hilog.error(DOMAIN, 'Reader', 'Failed to load main page: %{private}s', JSON.stringify(error));\n" +
+    '      } else {\n' +
+    '        this.eventLoopProbe?.start();\n' +
+    '      }\n' +
+    '    });\n' +
+    '  }\n' +
+    '}\n',
+  expected: /onBackground\(\): void \{\s*AppStorage\.setOrCreate\('readerAppForeground', false\)/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
+/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/scripts/check-local.sh failed (1): <no output>

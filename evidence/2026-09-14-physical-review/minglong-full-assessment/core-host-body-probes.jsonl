@@ -1,0 +1,15 @@
+{"case":"content_string","empty":false,"hostCalls":1,"output":"第一段\n第二段","source":"66-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"message_only","empty":false,"hostCalls":1,"output":"synthetic upstream unavailable","source":"66-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"empty_content_message","empty":false,"hostCalls":1,"output":"synthetic rate limit","source":"66-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"content_array","empty":false,"hostCalls":1,"output":"[\"第一段\",\"第二段\"]","source":"66-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"content_object","empty":false,"hostCalls":1,"output":"{\"unexpected\":\"object\"}","source":"66-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"invalid_json","empty":false,"hostCalls":1,"output":"解析响应JSON失败: SyntaxError: unexpected token: '<'","source":"66-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"missing_data_and_message","empty":false,"hostCalls":1,"output":"null","source":"66-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"SOURCE_CONTENT_EMPTY","reason":"chapter body is blank or too short"}}
+{"case":"actual_crlf_array","empty":false,"output":"第一段\n第二行\n第三段","source":"songhe-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"literal_code_array","empty":false,"output":"代码：\\r\\n\n第二段","source":"songhe-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"html_array","empty":false,"output":"第一段\n第二段","source":"songhe-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"string","empty":false,"output":"第一段\n第二段","source":"songhe-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}
+{"case":"number","empty":false,"output":"42","source":"songhe-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"SOURCE_CONTENT_EMPTY","reason":"chapter body is blank or too short"}}
+{"case":"null","empty":false,"output":"null","source":"songhe-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"SOURCE_CONTENT_EMPTY","reason":"chapter body is blank or too short"}}
+{"case":"empty_array","empty":true,"output":"","source":"songhe-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"SOURCE_CONTENT_EMPTY","reason":"chapter body is blank or too short"}}
+{"case":"nested","empty":false,"output":"{\"name\":\"object\"}\n[\"nested\",\"array\"]","source":"songhe-exact","stage":"content","synthetic":true,"hostVerdict":{"kind":"readable"}}

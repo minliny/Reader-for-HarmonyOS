@@ -1,0 +1,23 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src/lib.rs (target/debug/deps/reader_storage-6582e3cf32965be5)
+
+running 16 tests
+test sqlite_backend::content_search::tests::content_search_v21_migration_is_atomic_and_preserves_old_body_positions ... ok
+test sqlite_backend::tests::v5_migration_recovers_pre_release_v0_schema_that_already_has_columns ... ok
+test sqlite_backend::tests::v1_to_v2_migration_adds_entity_tables ... ok
+test sqlite_backend::tests::v15_migration_adds_scope_source_without_changing_legacy_rules ... ok
+test tests::source_switch_progress_migration_fails_without_matched_chapter ... ok
+test tests::source_switch_progress_migration_resets_matched_chapter_position ... ok
+test sqlite_backend::tests::v13_migration_adds_highlight_rules_and_unique_uuid_index ... ok
+test tests::source_switch_progress_migration_validates_storage_progress_boundary ... ok
+test sqlite_backend::tests::v12_migration_adds_book_highlights_table_and_book_url_index ... ok
+test sqlite_backend::tests::v14_migration_adds_author_without_losing_legacy_read_records ... ok
+test sqlite_backend::tests::v6_to_v7_migration_initializes_existing_replace_rule_generation ... ok
+test sqlite_backend::remote_content_positions::tests::remote_mark_fact_create_update_and_migration_roll_back_with_user_rows_on_fact_write_failure ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_v19_migration_backfills_without_rewriting_facts_and_is_repeatable ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_v21_migration_preserves_cache_and_reopens_without_rebuilding ... ok
+test sqlite_backend::tests::v8_migration_invalidates_ambiguous_remote_cache_but_keeps_local ... ok
+test sqlite_backend::tests::v9_migration_scopes_remote_books_and_keeps_only_local_legacy_evidence ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 167 filtered out; finished in 0.19s
+

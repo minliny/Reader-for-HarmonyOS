@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "artifactRun": "20260914T185653Z-d5f13a96-803a4b82",
+  "harmonyCommit": "d5f13a965adf07e6c36fd8ad7e7315cf2ae7d686",
+  "coreCommit": "0c5a3956274197578554f36b1a7fed9e1977ea78",
+  "signedHapSha256": "325cdd424b9dea2bb90ced607d87c5d3299f8248e8aa2376ac56ac76041d3004",
+  "targetKind": "VM",
+  "targetRef": "6460677a198b",
+  "identityProvenance": "Root bound this capture to the existing d5 deployment; manifest and deployment were verified in the preceding archive task. No device identity query in this task.",
+  "images": [
+    {
+      "source": "/private/tmp/reader-bookmark-time-vm/reader-control-time-new-old-list.png",
+      "sha256": "240e7ffe7853e7fc9f3d76bb9a096ee6e71716455151501d6142411f61f0a0f1",
+      "bytes": 651774,
+      "captureStartedAtUtc": "2026-09-14T19:03:24.169Z",
+      "captureCompletedAtUtc": "2026-09-14T19:03:24.332Z",
+      "captureElapsedMs": 163.1074590000062,
+      "copy": "new-old-list.png"
+    },
+    {
+      "source": "/private/tmp/reader-bookmark-time-vm/reader-control-time-cleanup-list.png",
+      "sha256": "63f92e1169a585c5e8e774ce42e761e6cadeb20a268e39ede57af94ea574f8ba",
+      "bytes": 604466,
+      "captureStartedAtUtc": "2026-09-14T19:04:22.068Z",
+      "captureCompletedAtUtc": "2026-09-14T19:04:22.228Z",
+      "captureElapsedMs": 159.8693750000093,
+      "copy": "cleanup-list.png"
+    }
+  ],
+  "layouts": [
+    {
+      "source": "/private/tmp/reader-bookmark-time-vm/reader-control-time-new-old-list.json",
+      "sha256": "1b3395a6c1bd31b23e7b87c5f95204fa2bdf9ebb5fd1d5b38efa1fa650f7bdba",
+      "bytes": 126377,
+      "captureStartedAtUtc": "2026-09-14T19:03:23.451Z",
+      "captureCompletedAtUtc": "2026-09-14T19:03:24.140Z",
+      "captureElapsedMs": 689.1771249999874,
+      "relevantNodes": [
+        {
+          "type": "Text",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[177,1871][756,1920]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999897"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "时间未知",
+          "bounds": "[784,1877][911,1914]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999897"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章017段04】晨光从…",
+          "bounds": "[233,1927][925,2011]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999897"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "第18章 连续翻页验证",
+          "bounds": "[177,2060][701,2109]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999897"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "09-15 03:03",
+          "bounds": "[729,2066][911,2104]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999897"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "后页时是否仍然连续。阅读暂停后又继续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一…",
+          "bounds": "[233,2116][925,2200]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999897"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "/private/tmp/reader-bookmark-time-vm/reader-control-time-cleanup-list.json",
+      "sha256": "b722cba1336bbfaa1331584dbe153a49025101cef4e1c260d18f3dd6d275a274",
+      "bytes": 120794,
+      "captureStartedAtUtc": "2026-09-14T19:04:21.380Z",
+      "captureCompletedAtUtc": "2026-09-14T19:04:22.034Z",
+      "captureElapsedMs": 653.3691249999974,
+      "relevantNodes": [
+        {
+          "type": "Text",
+          "text": "第17章 连续翻页验证",
+          "bounds": "[177,1871][756,1920]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999134"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "时间未知",
+          "bounds": "[784,1877][911,1914]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999134"
+            }
+          ]
+        },
+        {
+          "type": "Text",
+          "text": "续，段落边界和换行都应保持原来的顺序。这里的编号是测试文本的一部分。\n\n【章017段04】晨光从…",
+          "bounds": "[233,1927][925,2011]",
+          "visible": "true",
+          "opacity": "1.000000",
+          "nonOpaqueAncestors": [
+            {
+              "type": "Stack",
+              "bounds": "[46,388][1235,2734]",
+              "opacity": "0.999134"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scope": "Native display of one old bookmark and one new bookmark; then cleanup of the new bookmark.",
+  "result": "PASS for sampled old-date fallback/new local-time display/cleanup list membership; not global PH86 closure",
+  "timeline": [
+    {
+      "event": "create by downward gesture",
+      "startUtc": "2026-09-14T19:03:06.321Z",
+      "endUtc": "2026-09-14T19:03:07.070Z",
+      "localAsiaShanghai": "2026-09-15 03:03:06.321–03:03:07.070",
+      "meaning": "Host-side command interval; not DB insertion timestamp"
+    },
+    {
+      "event": "new+old list dump",
+      "startUtc": "2026-09-14T19:03:23.451Z",
+      "endUtc": "2026-09-14T19:03:24.140Z",
+      "observedRows": [
+        "第17章 连续翻页验证 — 时间未知",
+        "第18章 连续翻页验证 — 09-15 03:03"
+      ]
+    },
+    {
+      "event": "select new chapter18 bookmark",
+      "startUtc": "2026-09-14T19:03:46.833Z",
+      "endUtc": "2026-09-14T19:03:47.048Z"
+    },
+    {
+      "event": "remove by downward gesture",
+      "startUtc": "2026-09-14T19:04:04.889Z",
+      "endUtc": "2026-09-14T19:04:05.681Z"
+    },
+    {
+      "event": "cleanup list dump",
+      "startUtc": "2026-09-14T19:04:21.380Z",
+      "endUtc": "2026-09-14T19:04:22.034Z",
+      "observedRows": [
+        "第17章 连续翻页验证 — 时间未知"
+      ],
+      "absentRow": "第18章 连续翻页验证"
+    }
+  ],
+  "limits": [
+    "The 09-15 03:03 minute matches the command time in Asia/Shanghai; no claim of exact creation-second accuracy.",
+    "No raw DB time was read; original chapter17 primary key/time value cannot be inferred from unknown label.",
+    "No rewrite or migration of old records established by screenshot alone; code/transaction tests are separate evidence.",
+    "No restart persistence, whole gesture animation, dropped-frame, physical-device or user acceptance claim.",
+    "Only two screenshots: sampled states, not continuous video.",
+    "New test chapter18 bookmark removed; chapter17 remained in the observed list.",
+    "Evidence preparation writes /private/tmp only while repository build is running.",
+    "PH76 and other independent gaps unchanged."
+  ]
+}

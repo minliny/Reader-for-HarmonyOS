@@ -1,0 +1,4 @@
+reader-control-p0 static contract: PASS
+Debug-only event-loop probe: strict opt-in, actual delayed ticks, independent windows, bounded lifetime, background/late-load ownership PASS; this is not FPS evidence.
+(node:9853) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

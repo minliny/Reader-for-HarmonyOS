@@ -1,0 +1,1801 @@
+Reader HAP build-system docs and skills contract: PASS
+app shell safe geometry: PASS
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope
+(node:59928) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual resource callbacks: first full match before page-ready, no timeline or refetch
+PASS serialized matching preserves callback order across delayed evaluations
+PASS source initialization runs once and its real resource event completes capture
+PASS an earlier admitted match wins over a later resource-budget terminal marker
+PASS terminal cleanup and late callback suppression: timeout
+PASS terminal cleanup and late callback suppression: cancel
+PASS terminal cleanup and late callback suppression: detach
+PASS terminal cleanup and late callback suppression: cookie-generation
+PASS terminal cleanup and late callback suppression: network
+PASS terminal cleanup and late callback suppression: budget
+PASS terminal cleanup and late callback suppression: invalid-matcher
+PASS source profiles retain isolated cookie hydration/capture and generation
+PASS POST HTML capture, bounded matcher admission and production callback wiring
+PASS execution failure is terminal with bounded cleanup: matcher-reject
+PASS execution failure is terminal with bounded cleanup: matcher-sync-throw
+PASS execution failure is terminal with bounded cleanup: initialization-reject
+PASS execution failure is terminal with bounded cleanup: load-throw
+PASS late asynchronous matcher completion cannot publish into the next source profile
+PASS quotes and executable-looking text in observed URLs remain JSON-encoded data
+PASS SDK native callback isolation: old resource/pageEnd/pageBegin/network/detach/attach/actions cannot contaminate a new surface; same new URL is accepted
+PASS missing native retirement ACK times out without controller reuse, Host remount or cookie crossover, then recovers after ACK
+PASS never-mounted surface cancellation/retirement/recovery: cancel-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: timeout-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: host-detach-before-mount
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=false
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=true
+PH76 Host production-path resource capture: 26 scenario groups passed; SDK closure checks are local, native lifecycle timing still requires VM evidence
+PASS system route waits for native restore ACK before loading, including public IP literals
+PASS system synthetic DNS retains the admitted address pin and Host/TLS hostname
+PASS cancel during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS timeout during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS missing cleanup ACK bounds later jobs, retains no expired waiters, and permits recovery only after real cleanup ACK
+PASS synchronous proxy apply failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS synchronous proxy remove failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS SDK main-frame failure classification: proxy
+PASS SDK main-frame failure classification: 407
+PASS SDK main-frame failure classification: TLS
+PASS SDK main-frame failure classification: 404
+PASS SDK main-frame failure classification: generic-connect
+PASS SDK main-frame failure classification: numeric-only
+PASS SDK main-frame failure classification: direct407
+PASS SDK main-frame failure classification: lookalike-url
+PASS pre-load/about:blank/subresource failures cannot poison the main document
+PH92 ArkWeb proxy lifecycle/native failure: 16 additional scenario groups passed; no device or native timing acceptance claimed
+PASS existing HTML challenge classification precedes ordinary HTTP 401 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 403 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 429 failure
+PASS an ordinary forbidden document stays a source HTTP failure after challenge detection
+PASS native detach cancels pending proxy ACK immediately and late configuration is cleaned
+PH92 proxy/challenge compatibility: 5 additional scenario groups passed
+PASS production blank lifecycle before/after real load never sets page ready, final URL or schedules source initialization (2 scenarios)
+(node:59930) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+PASS early timing uses this run and exact target document: native blank initialization excluded, premature/foreign/incomplete evidence still fails (11 scenarios)
+PASS bounded data diagnostics and exact native URI-Base64 admission: tamper/unsupported/malformed/oversized remain denied, no URL or body disclosure
+PASS diagnostic rejects incomplete new-surface evidence: missing-resource
+PASS diagnostic rejects incomplete new-surface evidence: missing-match
+PASS diagnostic rejects incomplete new-surface evidence: reversed
+PASS diagnostic rejects incomplete new-surface evidence: wrong-match
+PASS diagnostic attributes old resource token during new job: lateOld=false
+PASS diagnostic attributes old resource token during new job: lateOld=true
+PASS disposing the pilot cancels only owned jobs and clears response timers/observer
+PASS diagnostic execution errors retain a failure receipt
+PASS actual SDK Host callback: exact main document, tamper rejection, policy-first order and redacted navigation labels
+PASS new run rejects previous run main URL and data document
+PH76 diagnostic runner: 12 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence
+PASS safe preload diagnostics: 6 native operation receipts and arbitrary-error URL/credential suppression
+(node:59943) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared book acquisition lifecycle, identities, and scheduling: PASS
+shared detail/TOC/body cancellation: each consumer owns its lifetime; Core cancellation cannot be revived PASS
+PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS
+R1/R2 cache-refresh separation, original freshness, dispatch consumers and scoped facts: PASS
+author metadata: 33 shared Core/Host cases, actual search decode/group/shelf/alias/source-switch chains PASS
+source-bound @ author: SDK result decode → initial group/relevance → candidate/switch proof, genuine @ and @@/stale/malformed negatives PASS
+(node:59968) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59970) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:59972) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+PASS PH60 shelf filters: independent dimensions, real SDK live chips/toggles, shared order, legacy data and hidden batch-selection safety
+(node:59978) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf management Core ownership contract: PASS
+(node:60003) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manual update bypasses prepared sessions and executes real Gateway detail/TOC","status":"PASS"}
+{"name":"manual update also bypasses durable catalog cache after prepared eviction","status":"PASS"}
+{"name":"manual request waits for a cache-only in-flight acquisition then refreshes","status":"PASS"}
+{"name":"per-book failure/empty results preserve old records, settle flags and continue bounded batch","status":"PASS"}
+{"name":"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions","status":"PASS"}
+{"name":"multiple force waiters share one refresh after the nonforce admission settles","status":"PASS"}
+{"name":"force waiting revalidates cancel before new network work","status":"PASS"}
+{"name":"force waiting revalidates close before new network work","status":"PASS"}
+{"name":"force waiting revalidates source-delete before new network work","status":"PASS"}
+PH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS
+PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update
+(node:60006) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS TXT uses format identity without changing Core metadata
+PASS default group retains empty and explicit default identities without mutating legacy groups
+PASS real section settings callback opens the default selector without navigating to another settings surface
+PASS PH61 progress/source retain equal left/right slots and live progress after row reuse
+PASS PH83 detail preview exposes 20 chapters in the original four-row scroll viewport
+PASS day: detail metadata shares source typography, label and moving source action
+PASS night: detail metadata shares source typography, label and moving source action
+PASS PH46/47 original author typography and the entire five-line block align with the cover
+PASS missing synopsis is explained without contaminating the metadata projection
+PASS empty chapters expose status: 暂无章节信息
+PASS empty chapters expose status: 正在读取本地目录…
+PASS empty chapters expose status: 目录读取失败，请重试
+PASS source name/category/URL remain distinct and login precedes detect (no login)
+PASS source name/category/URL remain distinct and login precedes detect (login)
+PASS single-book sheet matches cover frame and both layers have straight lower corners
+PASS 44vp source SVG stays 44vp in the single-book more action
+(node:60010) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60034) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+cache refresh admission: actual Index continuation preserves new chapter and saved offset arguments PASS
+Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS
+(node:60037) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection
+bookshelf tablet navigation contract: PASS
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation
+(node:60042) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS bookshelf route return: identity+item offset, list/filter/group state, reordered books, late callback isolation
+(node:60066) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1046 tested records, 919 unique identities)
+cookie exact-host and HttpOnly script-isolation policy: PASS
+core build identity startup contract: PASS
+(node:60075) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+PASS: deterministic import.persist rejection discards staged input without recovery orphan
+PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation
+PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit
+(node:60099) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH84 actual external directory routing, Builder and exact initial bookmark lifecycle: PASS
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (121 sources swept)
+(node:60104) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony HttpTTS credential URL encoding and expansion bounds: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:60111) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60112) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+PASS: HTTPS-only requests reject cleartext redirect downgrades
+PASS: same-origin comparison normalizes host case and default HTTPS port
+PASS: credential-bearing URL redirects stay on the same effective origin
+PASS: custom credential-header redirects stay on the same effective origin
+Host staging recovery retry: PASS
+(node:60134) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production request payload and HTTP POST: empty/Chinese UTF-8, GBK, form join, exact/over byte limit and multipart with broken platform TextEncoder
+Encoder evidence: actual SDK wrapper with bounded UTF-8/GBK fixtures; native variant is independently runnable
+(node:60140) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual HTTP transport: HEAD/204/205/304 absent or empty bodies, 200 empty string and binary bytes (22 cases)
+PASS nonempty decoded strings and unknown body representations fail with bounded status/type diagnostics
+PASS bodyless 4xx/5xx keeps explicit HTTP source rejection; actual rejection body remains unchanged
+PASS actual redirect chain keeps empty hop Location and rejects private targets before dispatch; empty success survives final response conversion
+PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack
+PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs while retaining transport origin
+PASS unknown native 2300999 preserves per-request transient HTTP evidence, not a global network outage or a source rule verdict
+(node:60143) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Host -> SDK -> CoreError input -> reading classifier and safe search summary: TLS/23/no-code retain HTTP cause, only known transient codes retry; per-operation association survives repeats, cancellation and later independent failures stay separate
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:60149) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual execute/redirect/cookie/DNS/transport URL normalization: Chinese/space, existing GBK percent escapes, query/fragment, method/body preservation and private target rejection
+(node:60151) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+PASS import refresh: Figma C arc/source unchanged, 18vp slot, 23.754vp paint, 1.5vp stroke; retained Day/Night/Day.
+(node:60156) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 notifications=1 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS
+Legado product behavior contract: PASS
+(node:60161) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+local book format picker contract: PASS
+(node:60186) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.
+local EPUB resource architecture: PASS
+local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)
+(node:60193) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+PASS: production proxy/DNS/transparent-gateway admission, selected-network exclusions, PAC, network changes and structured errors
+PASS: actual HTTP hop preserves URL/system proxy, never pins proxy DNS, direct DNS queried once
+(node:60197) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: cancelled never-settling HTTP frees DNS lease; queued cancellation preserves predecessor and same-host recovery
+PASS: vendored SDK emits a legal CoreError code and preserves Host network semantics, message and retryability through NAPI JSON
+PASS: native proxy getter failures/missing API/invalid return preserve fixed operation and numeric code without leaking native messages or guessing DIRECT
+PASS: undefined/null/wrong-type results from each native proxy API identify the exact operation
+PASS: API 23 active PAC getter replaces throwing legacy getter; numeric string native codes survive without retaining messages
+performance regression contracts: PASS
+physical phone Figma layout regressions: PASS
+portable JSON local/online import boundary: PASS
+PASS Make V9 appearance: real selection handlers, stale menus, scroll/viewport placement, Quick/Full swatches and persisted theme identity. Native pixels remain separate.
+(node:60225) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance Figma N per-actor driver: PASS
+reader appearance Figma N fixture: PASS
+reader appearance measured-screen gesture: PASS
+reader appearance Figma N sampler: PASS
+reader appearance master motion state: PASS
+reader appearance unified production tree (structural only): PASS
+(node:60257) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance shared store, page races and persistence recovery: PASS
+appearance Preferences adapter migration and persistence compatibility: PASS
+application appearance background flush and teardown isolation: PASS
+PASS appearance theme extension: 8 unchanged, 9/12/24 geometry, registry cache, quick/full scroll reversal, SDK selection
+(node:60259) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance pure/static contract: PASS
+reader Full Auto Page pure/static contract: PASS
+AutoPage actual SDK Builder bounds, single current value, Quick +/- and Full range, 84 reversible samples PASS
+(node:60265) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader auto-page pure state: PASS
+production automatic turn and stop durations use monotonic time; calendar access rejected: PASS
+(node:60288) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Auto Full timer actual SDK Builder parent/child width budget, original306 baseline, 42 retained reversible poses, wheel paint Prop and mutation PASS
+(node:60291) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader book-turn architecture contract: PASS
+event delivery: 22 checks, 0 failures
+bookturn_motion_test: 538 checks, 0 failures
+373 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+245 checks, 0 failures
+reader book-turn motion state: PASS
+T01 roll-radius PASS (390->42.9000, 200->28.0000, 1000->64.0000)
+T02 schedule bijection+boundaries PASS (worst roundtrip 1.79e-07 over 1001 samples)
+T03 INV-1 no-freeze PASS (next: least step 0.566vp, final fold 0.000vp; previous: least step 0.975vp, initial fold 0.000vp)
+T04 INV-2 no-commit-pop PASS (next tau=1: maxX 0.000vp <= 11.70, maxZ 0.000; prev commit maxX 390.000vp, maxZ 0.000; worst coverage step -1.089vp over tau 0.75..1)
+T05 INV-3 cancel-reversal PASS (worst |reverse-forward| 0.00e+00 vp over tau0 0.2/0.4/0.6/0.8)
+T06 previous semantics PASS (31 same-edge points worst schedule diff 0.00e+00; start maxX 0.000vp, commit maxX 390.000vp)
+T07 S3/S4 schedule deviation PASS (worst beta 0.00e+00 rad <= 8.73e-03, worst radius 2.60e-07 vp, worst |gripPhi-beta| 0.00e+00)
+T08 C1 seam at tau=0.5 PASS (worst |dAxis| 0.4605 vp (bounds 2/1/0.5), worst |phi-pi| 0.00e+00)
+T09 milestone phi=pi/2 + continuity PASS (crossing delta 14.868 vp vs 14.868 expected, edge.x 375.1; regular worst 0.0351 rad, S5 schedule worst 0.157 rad <= 0.2, onset worst 0.631 rad [documented scope])
+T10 developability PASS (a: A-grade cylinder worst 6.57e-05 <= 1e-3; b: strict phi<=pi/4 p95 6.104e-05 max 5.293e-04 vs 1e-3/5e-3; band p95 2.078e-02 max 2.082e-02 vs 2.5e-2 [2026-08-30 apex-law recalibration, pi*r'=0.0432])
+T11 binding-edge PASS (a: theta=0 worst x 0.00e+00, y 0.00e+00, z 0.00e+00; b: theta=54deg worst 0.000 vp at tau=0.00)
+T12 touch error (fit segment) PASS (worst screen-plane err 3.05e-05 vp <= 1.0; solver targetError incl. curl z up to 84.96 vp — scope note)
+T13 free-edge inside page (fit segment) PASS (min 0.000 >= -0.26, max 378.072 <= 390.26)
+T14 purity PASS (field-exact repeats, with and without previous)
+T15 stage boundaries PASS (FLAT@W, LIFT@x(0.09), FLIP@x(0.3), ROLL@x(0.6), SPINE@x(0.8), COLLAPSE@x(0.95))
+T16 tilt regressions PASS (cap 57.184 deg <= 60.0001, jitter 1.273 deg <= 2, sweep worst 0.00278 rad <= 0.02, zero-signbit +0/-0 honored)
+T17 verticalPrevious smoke PASS (edge.x W/200/0 all finite, tilt within cap)
+T18 strict three-branch PASS (anti-M second diff 6.866e-05 <= 1e-4; seam steps f 0.5000 z 0.5000 <= 0.501 at step 0.5)
+235 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+245 checks, 0 failures
+Production Surface recovery: unwritten rollback, uncertain write retention, promoted completion, late failure PASS (7 scenarios)
+(node:60859) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader bookmark panels static contract: PASS
+reader bookmark projection behavior: PASS
+PASS PH86 normal motion: 6 completion orders/12 lifecycles without intermediate inversion; cancelled/failed/page-invalidated/duplicate/old ACK cases
+PASS PH86: 20 real chrome/bookmark Builder geometries, clock/title/cutout separation, native visibility, gesture threshold/rebound/ACK and page/book ownership
+PASS PH86 actual SDK Stage/slot/ReadingSurface/Chrome Prop chain across drag and rebound; outer viewport clip retained
+(node:60865) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS brightness cancel UI: issued ACK, preview retention, cancelled pending, newer intent, failed write convergence
+(node:60901) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader brightness control contract: PASS
+PASS brightness: HLG low-range allocation, 991 inverse samples, two-way pending toggle, system observation races, and SDK shared track clip
+(node:60909) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader brightness production writer: PASS (held MOVE, coalescing, ownership, restore, failure, cancel, microtask tail)
+PASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner
+PASS brightness failure boundaries: stale Window/owner lookup, current rejection, synchronous properties failure and subsequent drain
+reader Chinese conversion gateway contract: PASS
+reader cold-entry recovery contract: PASS
+reader content business isolation: PASS
+PH90 actual SDK field Builder: full visual field requests unique native input focus, disabled/unmounted/failure guards; geometry unchanged PASS (not native IME acceptance)
+(node:60940) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"contract":"PH90 native List","reports":[{"count":50,"maxNativeDemand":14,"finalDataCount":100},{"count":2000,"maxNativeDemand":14,"finalDataCount":2050},{"count":10000,"maxNativeDemand":14,"finalDataCount":10050}],"sdkLazyProviderVerified":true,"boundary":"SDK bindings, policy and paint equations passed; actual Ace range admission and pixel timing require VM validation"}
+(node:60942) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60966) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"baseline":false,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"41ece7cba3f807e336504e582eed056349af2a552949979c6d6f69080e2fda86","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"componentSha256":"b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159","scenarios":[{"count":0,"payloadHandoffMs":0.0002499999999940883,"legacyDeepCopies":0,"dataPublishMs":0.24983300000002373,"buildMs":0.27179100000000744,"replayMs":0.04716699999994489,"linearFindVisits":0,"mountedRows":0,"nativeRequestedIndices":[],"providerTotalCount":0},{"count":50,"payloadHandoffMs":0.0002089999999839165,"legacyDeepCopies":0,"dataPublishMs":0.06516599999997652,"buildMs":1.118250000000046,"replayMs":0.7750419999999849,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":50},{"count":500,"payloadHandoffMs":0.0002499999999940883,"legacyDeepCopies":0,"dataPublishMs":0.059583000000031916,"buildMs":0.42154200000004494,"replayMs":0.258542000000034,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":500},{"count":2000,"payloadHandoffMs":0.00020799999998644125,"legacyDeepCopies":0,"dataPublishMs":0.09329199999996263,"buildMs":0.510915999999952,"replayMs":0.18133299999999508,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":2000}],"emptyEntryAndTypingCoreCalls":0,"cumulativePagination":{"pages":40,"pageSize":50,"results":2000,"lateGenerationRejected":true},"boundary":"Actual SDK row generation follows explicit requests at the native LazyForEach boundary; the full source is unsliced. No native range-selection, same-frame paint, IME or device frame-time claim"}
+{"passed":true,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"41ece7cba3f807e336504e582eed056349af2a552949979c6d6f69080e2fda86","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"componentSha256":"b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159","rows":2000,"morphSamples":21,"payloadPropCopies":0,"appended":50,"finalDataSourceCount":0,"dataNotifications":{"initialReloads":1,"morph":0,"metadata":0,"added":50,"changed":[1999],"idleReloads":1},"boundary":"actual SDK compiler + property/proxy dispatch; no native List/IME/renderer timing"}
+(node:60971) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous production pointer, same-row anchor and trailing exit commit: PASS
+production batched image reflow preserves leading fragment fraction and concurrent scroll: PASS
+(node:60995) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous mode change save/error/obsolete ownership and late stop receipt: PASS
+production continuous restore waits for layout and rejects stale frame callbacks: PASS
+production continuous cold-entry projection branch observes its reactive revision: PASS
+continuous scalar quantization: five positions, 100 repeat round trips each: PASS
+continuous restore suppresses premature stops and unknown-geometry progress writes: PASS
+continuous padded viewport: START, positive y and negative y round trips: PASS
+native List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS
+production continuous image row identity: decoder admission replaces placeholder, unchanged siblings retained: PASS
+continuous short tap and stationary long UP share paged 500ms clock boundary: PASS
+continuous-to-paged anchor: warm/cold/partial/foreign layout, containing page only: PASS
+measured prefix whitespace gaps match complete canonical page identity: PASS
+native List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS
+reader continuous reading and canonical progress pipeline: PASS
+Control accessibility: actual Host close/Back + SDK virtual-node mounted observers PASS; NOT native screen-reader acceptance
+(node:61001) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control shared actor geometry: production bidirectional/concurrent/pure sampling PASS
+reader control appearance production geometry + independent source endpoints: PASS (810 ordered import drag cases)
+Reader control backdrop publication: stable array/rect identity across motion PASS
+(node:61028) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control backdrop DOWN ownership and one-shot raw tap: PASS
+Actual SDK nonempty bookmark row: mounted reversible actors, live metadata/identity and clip mutations PASS
+PASS bookmark production geometry, native row-height extent binding and same-open anchor continuation; NOT native visual acceptance
+(node:61031) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61035) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control bookmarks: production merge/async ownership/failure retry PASS; wiring assertions are not native acceptance
+(node:61036) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Bookmark mutation recovery: actual Index CRUD/reload and Host error/retry functions PASS; not native acceptance
+reader control independent FullContentSurface source geometry and single-background wiring: PASS
+Device probe actual runtime closures: ticket/dry-run/SHA/auth-denial/DOWN-based sampling/revocation PASS (mock transport only; no HDC/device/filesystem writes).
+reader control directory content: structural wiring passed (not runtime or visual evidence)
+Production directory model: late load, centering ownership, route/data independence PASS
+Production Directory virtual-row capture, fraction, frame coalescing and late-user-input guards PASS
+Production Directory rapid tab replacement, endpoint anchor release and user-scroll ownership PASS
+Production Directory finite-tail Quick→Full→Quick semantic anchor restoration PASS
+(node:61063) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control geometry parameter contract: PASS
+reader control bounded finger residue and distinct continuation timings: PASS
+reader control gesture production driver behavior: PASS
+PASS global presentation: shared policies, production actor-local clips, retained overflow, actual SDK font content/outline separation and reversal; device evidence separate
+(node:61070) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH48/49/55 PASS: authoritative grabber actor, actual Host/native-parent admission, 7 modules x Quick/Full reversal, 28 hidden-hold UP/CANCEL paths, .2/.7/1 captured-visibility driver crossings, tap, actual Slider End/Click; two negative mutations rejected. Native compositor/physical touch remains separate.
+(node:61073) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS
+(node:61103) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control Host: actual SDK V1 member transform reproduces dropped accessor; ordinary-method input/backdrop gates PASS
+Reader control Host input: actual production methods PASS (not device hit-testing/visual acceptance)
+(node:61127) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control keyboard: production visibility/Back/hide failure cases PASS; structural Host wiring PASS (not native IME acceptance)
+Reader control keyboard layout: actual Host methods/binding dependency and 414→700vp budget PASS (not native IME acceptance)
+(node:61129) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control Host session: production projection, command, close-commit and lifecycle cases PASS
+Reader control Host wiring: structural checks PASS (not ArkUI execution or visual acceptance)
+Reader control input routing: PASS (actual SDK Header ancestor/child callback, 7 modules, runtime + Link delivery; native touch remains VM evidence)
+(node:61133) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control integration event ownership, CANCEL, and exact mixed-path behavior: PASS
+PASS internal/user selection ownership: actual Host methods, stale reopen, TTS/projection negative mutations and committed-close semantics; NOT device acceptance
+(node:61166) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control atomic layout rebase production policy: PASS (no Stage/runtime visual claim)
+reader control list positioning: production policy tests passed
+PASS shared scroll lifecycle: 5 actual component adapters, latest-offset handoff, held endpoint reversals, delayed native reset, shared/full-only roles, new expansion top; NOT visual acceptance
+(node:61173) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+MR1 archived show/hide capture absent; optional evidence checks skipped
+PASS reader control motion geometry (production functions; no runtime/visual claim)
+PASS all control modules 320/260/200/220, initial opening 220, remaining-distance release, hold/regrab/reverse, monotone velocity continuation; device acceptance separate
+PASS TTS softened-content trial: nonzero middle fade, reversible content-only blur, Full details retain their original reveal, offscreen outlines, actual mounted SDK paint observers; NOT device visual acceptance
+(node:61179) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control narrow-width contract: PASS (10 viewport widths)
+{"result":"PASS","layer":"real upstream 5.0 attribute diff + production modifier; not native layout or VM performance","mountedNodes":13,"mountedCalls":156,"poses":120,"legacyAttributeCalls":24960,"patchedAttributeCalls":7440,"reductionPercent":70.19,"reverseResizeBusinessAndCallback":"PASS"}
+(node:61203) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader-control-p0 static contract: PASS
+Actual SDK Auto/TTS mounted Builder observers: reversible actor geometry + live strings/numbers/booleans/child Prop payloads PASS
+Reader control playback: live-track geometry, child clipping/min-height, persistent content, actual measurement identity, SDK syntax and 5 mutations PASS
+(node:61206) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 350/1750 ownership)
+(node:61211) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61236) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Replace actual SDK mounted rule font: fixed 12, preserved row tracks, parent-only clip, same rule identity and 4 mutations PASS
+PASS reader-control-replace-content: actual async production methods, confirmation/failure/retry, session and preview dismissal guards; NOT ArkUI pixel evidence
+{"name":"actual TextInput uses explicit compact geometry and live app-theme text without repeating label","status":"PASS"}
+{"name":"actual editor has distinct back and fixed bottom save/cancel outside scrolling fields","status":"PASS"}
+{"name":"actual reading draft uses real book/source defaults and editing/global creation remain independent","status":"PASS"}
+{"name":"save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss","status":"PASS"}
+{"name":"same mounted footer reacts to mutation, uncertain writes and endpoint input guards","status":"PASS"}
+{"name":"actual standalone settings Add action has no inherited reading scope","status":"PASS"}
+PH52–54 actual SDK editor and business behavior PASS (6 groups); no device evidence.
+PASS reader-control-replace-gateway: real production requests, all rules, lossless partial CRUD, guards, receipts, preview and replace-only bundle
+archived replace motion capture absent; optional source-value checks skipped
+PASS reader-control-replace-geometry: production endpoint/midpoint sampling, widths and one-tree wiring; NOT native pixel acceptance
+(node:61242) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Replace Host actual methods: reopen/import canonical read, stale reads, write ownership, uncertainty and Promise rejection; NOT device acceptance
+PASS reader-control-replace-state: canonical all rows, partial/full guards, uncertainty, import and stale sessions
+reader control original-operation resume, MR1 timing and mixed restoration: PASS
+Production control runtime: seven modules, frame revocation, regrab, close, lifecycle PASS
+Production Panel scalar projection: seven modules x 101 frames retain route identity and current input state PASS
+(node:61247) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Search scroll: production row projection, source origin/end-padding, both-end reachability, guarded async rebase, clamp/user continuation, callback ownership and 9 mutations; NOT device acceptance
+(node:61271) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Actual SDK normalized List: parent clip, authored child origin, extent, same-instance roundtrip PASS
+Actual SDK Search/Settings mounted Builder observers: live payload/geometry/capability/switch changes PASS
+PASS Search/Settings real actor geometry + production callback methods; not native/visual acceptance
+(node:61273) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control selection production reconciliation: PASS
+reader control selection transaction: production ownership/commit policy passed
+reader control session production state behavior: PASS
+reader control shared spatial sampler and inverse production behavior: PASS
+reader control Stage composition + diagnostic timing wiring: PASS (structure only; not pixels/touch)
+reader control Stage lifecycle: production adapter methods passed (mock frame queue; not native/touch/visual acceptance)
+(node:61283) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Native diagnostic production parser: 4 valid + 18 malformed plans, CLI and non-injecting host gates PASS; authorization/runtime cleanup not executed.
+PASS Make TTS: scroll-aware crossing occlusion, reverse poses, narrow layout, explicit timer modes, five-minute range and precise speed callbacks
+(node:61352) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control diagnostic cold-start production admission + packaging wiring: PASS
+reader directory business-value snapshot and no-op prop refresh: PASS (native scroll still separate)
+(node:61377) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader directory extent: production lifecycle + wiring passed (not native virtualization/anchor acceptance)
+(node:61378) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader-directory-markers static contract: PASS
+reader directory projection behavior: PASS
+reader drag-follow gate contract: PASS
+dynamic highlight geometry/color/identity and static snapshot separation: PASS; pixels require runtime verification
+(node:61384) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Debug-only event-loop probe: strict opt-in, actual delayed ticks, independent windows, bounded lifetime, background/late-load ownership PASS; this is not FPS evidence.
+(node:61389) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader reported feedback regressions: PASS
+actual SDK first-page admission: viewport/chapter order, stale selection and adjacent context PASS
+(node:61392) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader HDC target lease serialization: PASS
+Reader Host staging/asset path boundary: PASS
+(node:61454) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader Host picker selection boundary: PASS
+(node:61455) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader HttpTTS strict gateway: PASS
+reader HttpTTS profile, secret boundary and nullable playback: PASS
+reader HttpTTS URL credential placeholder boundary: PASS
+reader OnlineTTS profile validator and credential alias binding: PASS
+paragraph indent production measurement: Unicode offsets and continued fragments PASS (controlled metrics)
+(node:61458) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader layout architecture contract: PASS
+reader module selection contract: PASS
+(node:61463) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS PH87 day: actual SDK anchored popup, three guarded actions, application colors and dismissal
+PASS PH87 night: actual SDK anchored popup, three guarded actions, application colors and dismissal
+PASS PH87 disabled download/refresh, obscured and hidden controls cannot dispatch
+PASS PH87 adaptive text/window geometry and popup lifecycle; native pixels/placement remain a platform gate
+(node:61465) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production motion repair: first-frame clock, opening navigation/input, menu ownership/exactly-once, reduced motion, capsule lifecycle/timeline, shelf reversal and font sampled retarget. Device pixels remain separate.
+(node:61489) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production canonical TOC headings, initial/previous/next/control guards and hot projection reuse: PASS
+PASS Index directory title projection and local/remote known-chapter guards preserve canonical headings
+(node:61491) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader page-bottom justification: PASS
+reader page chrome dynamic layout: PASS
+page chrome/native snapshot invalidation: PASS
+page chrome complete layout reuse and safe-area/session invalidation: PASS
+mounted slot revision delivery gates current/adjacent chrome capture: PASS
+production texture refresh cache matrix: no idle frame waits; requested direction first; expensive captures remain spread: PASS
+(node:61498) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader page-gesture pure state: PASS
+reader page input production sequence regressions: PASS
+(node:61522) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production adjacent measurement isolation, cancellation and rejected admission: PASS
+production current snapshot remains bound to physical slot after promotion: PASS
+async texture copy preserves lifetime and rejects superseded capture: PASS
+(node:61523) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production evicted previous chapter: demand refill, coalescing, stale/failed replies and explicit retry: PASS
+production promotion preparation honors requested direction and stale callback guard: PASS
+production image snapshot admission: cold decode, no blank publication, bounded retry, stale/held cancellation and one disposal: PASS
+single offscreen snapshot tree: detach immediately, dispose once after outstanding capture: PASS
+snapshot publication interruption: pointer retains exact pixels; new page/exit drops them; UP revalidates upload: PASS
+(node:61527) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production page commit reply-loss reconciliation and unknown-result retention: PASS
+production flat settle/regrab continuity and transaction boundary: PASS
+production simulation mode-switch teardown and capability recovery: PASS
+queued tap cue and physical velocity settlement use independent durations: PASS
+(node:61550) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader page-turn pipeline contract: PASS
+reader page-turn stable slot geometry and role transition: PASS
+(node:61554) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader paragraph indentation projection: PASS
+PH89/91 actual SDK Builders: circular countdown/centred leading lane and one themed search action in both forms PASS; native text raster still requires VM inspection
+(node:61559) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH reading: 4 production clocks, nonintersecting footer, native Builder layers, cancelled hold, closing capsule, Core original text PASS
+(node:61583) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS PH56–59 production SDK methods/Builders: measured regions/API fallback, reader underlay, bookmark threshold+ACK ordering, safe force refresh and two-action More; OEM pixels are not asserted
+PASS PH59 real Index write/projection acknowledgments: success and both failure boundaries
+PASS PH57 actual Window position/display listeners, equality dedup, rotation invalidation and resource release
+PASS PH59 confirmed Core write with unavailable projection retains actual filled Builder and locks repeat writes
+(node:61587) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production target-revision and stale-generation release guards: PASS
+production dropped-native-ACK, unadmitted revision and stable 2D recovery: PASS
+(node:61613) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader product scope contract: PASS
+(node:61617) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production finite unknown observation, queued query expiry, late durable and continuous single drain: PASS
+PH50/51 actual SDK: Query bounds, first result, button outline, submit; Quick/source headers and reversible progress PASS
+(node:61621) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader rapid page-turn dynamic target: PASS
+{"passed":true,"scenarios":44,"cases":["first:paged","first:continuous","recovery:origin/paged","recovery:origin/continuous","recovery:target/paged","recovery:target/continuous","promotion:next","promotion:previous","write-reject","anchor-mismatch","obsolete-write","observer-throw:first/commit","observer-throw:first/chapter","observer-throw:first/ready","observer-throw:first/warmup","observer-throw:recover/commit","observer-throw:recover/chapter","observer-throw:recover/ready","observer-throw:recover/warmup","observer-throw:promote/commit","observer-throw:promote/chapter","observer-throw:promote/ready","observer-throw:promote/warmup","reentrant:first/commit/exit","reentrant:first/commit/selection","reentrant:first/commit/remeasure","reentrant:first/chapter/exit","reentrant:first/chapter/selection","reentrant:first/chapter/remeasure","reentrant:recover/commit/exit","reentrant:recover/commit/selection","reentrant:recover/commit/remeasure","reentrant:recover/chapter/exit","reentrant:recover/chapter/selection","reentrant:recover/chapter/remeasure","reentrant:promote/commit/exit","reentrant:promote/commit/selection","reentrant:promote/commit/remeasure","reentrant:promote/chapter/exit","reentrant:promote/chapter/selection","reentrant:promote/chapter/remeasure","negative:first-order","negative:recovery-order","negative:promotion-slot-order"],"boundary":"Unmodified ordinary production methods/classes and selection policy with controlled Core/timer boundaries; explicit owner-publication order, not native delivery/paint or VM transient causation."}
+(node:61646) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS rendering work: empty 24-fragment page 1 clear/0 id scans; active marks 1 frame; duplicate/lifecycle/resize guards; Unicode 700 scan steps; 120 settings poses 0 paths; directory no-op correction 0
+(node:61675) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"actual TextInput uses explicit compact geometry and live app-theme text without repeating label","status":"PASS"}
+{"name":"actual editor has distinct back and fixed bottom save/cancel outside scrolling fields","status":"PASS"}
+{"name":"actual reading draft uses real book/source defaults and editing/global creation remain independent","status":"PASS"}
+{"name":"save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss","status":"PASS"}
+{"name":"same mounted footer reacts to mutation, uncertain writes and endpoint input guards","status":"PASS"}
+{"name":"actual standalone settings Add action has no inherited reading scope","status":"PASS"}
+PH52–54 actual SDK editor and business behavior PASS (6 groups); no device evidence.
+(node:61679) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader Quick Replace pure/static contract: PASS
+ReaderRuntimeOwner Ability lease lifecycle: PASS
+reader screen-awake lease: PASS
+reader search highlight: PASS
+reader copy: native selection maps to original UTF-16 text, synchronous INAPP write and failure recovery PASS
+(node:61707) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader session capsule projection: PASS
+Reader session recovery: PASS (actual control pose rebase, source-ready generations, pure SDK source Builders, More actions)
+(node:61710) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader session launch: PASS (48 archived Figma actors, 54000 property comparisons; ownership/ACK/release/Reduce Motion)
+reader session source identity: PASS
+Settings real SDK Builder hierarchy: separate rounded paint and cached dynamic mask; 42 reversible width/theme poses + partial scroll + mutation PASS
+(node:61724) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader settings pure/static contract: PASS
+bundled category coverage: {
+  novel: 875,
+  comic: 107,
+  music: 22,
+  download: 25,
+  other: 3,
+  external: 14
+}
+reader source category isolation: PASS
+(node:61749) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader source-failure P0 route contract: PASS
+PASS status height: hidden rotate, exact-window/split isolation, visible zero, replacement reset
+reader physical-key and screen-off Host contract: PASS
+reader text-selection lifecycle contract: PASS
+PASS production theme host: same-scheme restart, system linkage, app chrome, restore barrier failure/retry ordering and stale owner isolation
+(node:61756) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS PH67: four approved light bases and four unchanged Make night bases drive preview, ReadingSurface and system chrome; historical PH43 source, ink and effects retained.
+(node:61759) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS theme truth table, migrations, sync fallback, atomic publication, old failure isolation and current failure durable rollback
+PASS removed local theme falls back to matching configured day/night default
+PASS audition/formal mutual exclusion, no Core progress, synthesis-vs-audio completion, stale callbacks, candidate failure restoration, cancel and resume
+PASS missing native acceptance cannot block audition cancellation; invalid pitch fails before host mutation
+PASS TTS config interaction: real Builder callbacks, choices, empty states, input gates, slider commits, draft races, stale overlays and audio strategy adapter methods; VM/native audio remain separate.
+(node:61785) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader TTS strict gateway: PASS
+reader TTS precise rate round trip: PASS
+PASS TTS launch intent at all 7 asynchronous preparation boundaries, readyPaused, resume, and two-click acknowledgement race
+reader TTS voice and persisted Host preferences: PASS
+reader TTS system and HttpTTS product surface: PASS
+PH44 TTS Quick preparation PASS: deferred ready/single-flight/zero audio+queue/independent metadata/obsolete+newer intent guards/active session/SDK first frame/retry; omission negative control rejected
+(node:61794) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader TTS fake-host coordinator: PASS
+PASS TTS short window: 0–844vp budgets, whole-form scroll fallback, unchanged 44vp Save/Cancel SDK actions
+(node:61829) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[ReaderTTS] stage=probe code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=startCallbackTimeout code=OPERATION_FAILED
+reader TTS state machine transactions and isolation: PASS
+reader TTS pure state: PASS
+Make V17 24-bar CSS track parity, alternate/delay/transitions, shared frame clock and frozen source: PASS
+(node:61837) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader typography architecture contract: PASS
+reader window chrome P0 contract: PASS
+(node:61861) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reading chapter window: PASS
+reading document projection: PASS
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+reading offline gateway deterministic runtime: PASS
+offline canonical volume projection, range guard, readable totals and lease rejection: PASS
+reading offline image cache architecture: PASS
+reading pagination index: PASS
+reading pagination integration contract: PASS
+reading Phone/TabletExpanded shared architecture contract: PASS
+reading record accumulation contract: PASS
+reading session local/remote routing contract: PASS
+reading whole-book processed-scalar progress: PASS
+(node:61898) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+remote content admission contract: PASS
+ML cache provenance, offline reading, non-source rejection and explicit protected refresh PASS
+ML image-only chapter and short captions preserve access-notice admission PASS
+PH75 Host: captured anchor context, forced/cache validation, typed receipt rejection, prepared bypass prevention, window ownership, scoped progress/bookmarks PASS
+PH75 directory chapter-start proof: exact cache read, source/index binding, cancellation/CAS failure preservation, no fetch inputs, unscoped stored offsets untouched PASS
+PH75 recoverable position conflicts are localized and never treated as source/network failures PASS
+PH75 actual reader restore, explicit anchor, preservation, late selection, window proof and TTS write ownership PASS
+PH75 unproven persistent offset never borrows current body proof PASS
+PH85 actual LRE preserved-refresh notice: 14 admission, intent, status, generation and presentation-failure scenarios PASS
+ML cache: offline readable old body, one-session notice, explicit protected refresh and decline without write PASS
+ML actual Index cache recovery: explicit refresh, decline, stale route, preserved positions and failure feedback PASS
+(node:61905) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61910) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+R1/R9 actual session ownership, stale verdict/directory rejection and validated chapter handoff: PASS
+remote reading flow gateway contract: PASS
+reading image resolve failed: OPERATION_FAILED
+remote reading flow deterministic runtime: PASS
+PASS PH58 actual remote/reading-session adapters: optional force flag, offline refresh, identity and failure propagation
+responsive surface width regression matrix: PASS
+RSS and Discover responsive layout regressions: PASS
+rss page architecture contract: PASS
+rss subscription management page contract: PASS
+rule entity management Core ownership contract: PASS
+(node:61941) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "evidenceLayer": "SDK-extracted production methods and actual Coordinator/Gateway; synthetic RPC boundary, no device",
+  "outcomes": [
+    {
+      "name": "visible groups cap six, concurrency two; speculative work has no progress/body/verdict-success",
+      "status": "PASS"
+    },
+    {
+      "name": "visible failed catalog tries another same-book candidate without body work",
+      "status": "PASS"
+    },
+    {
+      "name": "foreground preempts unrelated started preparation, propagates cancellation and resumes it without unhealthy proof",
+      "status": "PASS"
+    },
+    {
+      "name": "foreground joins same prepared book instead of cancelling its only active request",
+      "status": "PASS"
+    },
+    {
+      "name": "only background rounds cap unknown candidates; foreground fourth source succeeds",
+      "status": "PASS"
+    },
+    {
+      "name": "cancelled stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "identityMismatch stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "sourceVersionChanged stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "storageFailure stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "source-local capability failure tries independent same-book source",
+      "status": "PASS"
+    },
+    {
+      "name": "proxy/DNS environment failure stops source churn without candidate health penalty",
+      "status": "PASS"
+    },
+    {
+      "name": "whole foreground deadline includes waiting; process completion cannot publish late catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "cancel waiting foreground releases consumer promptly and does not try next source",
+      "status": "PASS"
+    },
+    {
+      "name": "user cancels orphan foreground Core work, frees slots and allows another book",
+      "status": "PASS"
+    },
+    {
+      "name": "deadline cancels orphan foreground Core work, frees slots and allows another book",
+      "status": "PASS"
+    },
+    {
+      "name": "one cancelled caller preserves a live same-book foreground consumer",
+      "status": "PASS"
+    },
+    {
+      "name": "one cancelled caller preserves a live same-book background consumer",
+      "status": "PASS"
+    },
+    {
+      "name": "same-book reopen waits for cancelled Core operation and starts a new acquisition",
+      "status": "PASS"
+    },
+    {
+      "name": "same title with blank or conflicting author cannot authorize automatic source replacement",
+      "status": "PASS"
+    },
+    {
+      "name": "author label variants use one identity across search candidate and acquired detail without rewriting raw metadata",
+      "status": "PASS"
+    },
+    {
+      "name": "source-bound author decoration admits same-book detail and body while preserving raw rules context",
+      "status": "PASS"
+    },
+    {
+      "name": "genuine at-author and stale decorated proof cannot authorize another author",
+      "status": "PASS"
+    },
+    {
+      "name": "a recognized author template with an empty nickname remains unknown and cannot authorize fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "acquired detail must revalidate decorated author against its own current proof",
+      "status": "PASS"
+    },
+    {
+      "name": "bounded author metadata policy cannot authorize a different or missing author",
+      "status": "PASS"
+    },
+    {
+      "name": "a matching normalized search author still requires the acquired detail author to match",
+      "status": "PASS"
+    },
+    {
+      "name": "hidden source-wait pauses and resumes same visible group once without cancellation",
+      "status": "PASS"
+    },
+    {
+      "name": "query replacement drops old waiting groups; old admitted work cannot enqueue old fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "fresh prepared reused; stale catalog refresh failure handled and original promise rejects",
+      "status": "PASS"
+    },
+    {
+      "name": "change notification batches actual identities and source mutation resets",
+      "status": "PASS"
+    },
+    {
+      "name": "real selected search group primary empty TOC admits second and probes only selected body; no shelf write",
+      "status": "PASS"
+    },
+    {
+      "name": "real search body failure tries second source and reuses admitted body exactly once",
+      "status": "PASS"
+    },
+    {
+      "name": "real search catalog is visible before delayed body completes",
+      "status": "PASS"
+    },
+    {
+      "name": "real body storage failure stops group and preserves visible admitted catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "visible range callback bounds group count, skips unchanged rows and clears stopped view",
+      "status": "PASS"
+    }
+  ]
+}
+search detail shared cache admission wiring: PASS
+PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS
+(node:61972) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+R5/R6 query=1000 unrelated=0: metadata RPC=1 returned=1 projected=1 captured=1 PASS
+R5/R6 query=1000 unrelated=9000: metadata RPC=1 returned=1 projected=1 captured=1 PASS
+R5/R6 partition isolation, exact missing, related admission, stable merge/split, stale cursor and ownership PASS
+R5/R6 130-identity atomic source partition and complete 131-member two-page relation PASS
+PASS actual SearchGateway retains safe HTTP request/operation/code/timing summary and unchanged error copy; independent rule errors do not inherit stale evidence
+{"name":"initial history Scroll uses the top of the content viewport","status":"PASS"}
+{"name":"all history appears before layout without per-item measurement or expansion","status":"PASS"}
+{"name":"async history and narrow/tablet widths preserve every entry and existing scroll","status":"PASS"}
+{"name":"fresh-entry focus is consumed once and reset/return cannot recreate it","status":"PASS"}
+{"name":"native focus waits for layout and a removed or returning page never steals it","status":"PASS"}
+PH80/81 full scrollable history, zero text measurement and one-shot native focus lifecycle PASS; keyboard pixels remain a platform gate.
+(node:61974) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH81/82/90 SDK input clip and hidden Web focus isolation PASS; native caret pixels checked separately
+(node:61997) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:61999) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search orchestrator bounded concurrency and retained lifecycle: PASS
+PH65 in-flight canonical merge becomes visible before sweep completion PASS
+PH65 stale metadata/work guards, 39 counter updates and canonical grouping retention PASS
+PH68 incremental deltas: failure retention without retry loop, hidden IO pause/resume, and busy union PASS
+PH68 stopped query retains completed metadata without restarting source search PASS
+R3 independent branches, stop pending-delta flush, retained failure recovery and query/history identity PASS
+R3 failed local branch retries while online remains active; repeated retry does not duplicate work PASS
+R6 actual empty source → publication → page/list: 1000 retained rows, zero flatten/index lookup/group rebuild/notice; populated-bucket deletion still invalidates PASS
+R3 branch causes survive stop/retry, safe classified UI, successful recovery and old-run rejection PASS
+PASS actual search failure state and log retain safe request/operation/code summary while healthy sources and visible copy remain unchanged
+PASS PH63 real SDK result tags share typography, padding and wrapping; live metadata and selection retained
+(node:62092) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS PH77/79 actual SDK Index→SearchPage scalar reset→Watch→grouping→tracked status Text: 1000 refs, 0 new/change groups, 0 copied DTO Props
+PASS legacy SDK deep-copy counterexample: 3005 objects/18018 slots, 1000 new groups
+PASS actual shelf callback, fresh query and compiled remount retain current payload; native frames are not measured
+PASS actual SDK import guard rejects old TS→ETS edge and accepts pure-TS presentation types
+(node:62096) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search publication identity contract: PASS
+{"name":"PH24 native loading indicator preserves 13/36 sizes and responds without remounting","status":"PASS"}
+{"name":"PH37 four Toggle states retain geometry, track role, click and thumb position","status":"PASS"}
+{"name":"PH7 real theme actions signal accepted defaults and reject wrong day/night type explicitly","status":"PASS"}
+{"name":"PH67 SDK previews use four approved light bases and retain four original night bases","status":"PASS"}
+{"name":"PH36 real Index Back returns General to Settings before Bookshelf and preserves overlay priority","status":"PASS"}
+{"name":"PH34 actual General and Rules Scrolls align short contents at the top","status":"PASS"}
+{"name":"PH35 real cache action has intrinsic height, bounded width and retained pending/result label","status":"PASS"}
+search/settings physical feedback production/SDK regression PASS (7 groups); native pixels/device acceptance remain separate.
+(node:62124) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62148) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "source": "file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+  "evidenceLayer": "production methods parsed by Harmony SDK; no device or Core I/O",
+  "outcomes": [
+    {
+      "name": "first source parses: search -> preview -> reading -> detail -> exact search state",
+      "status": "PASS"
+    },
+    {
+      "name": "failed first source -> replacement source -> trial -> detail -> original search",
+      "status": "PASS"
+    },
+    {
+      "name": "repeated preview replacements keep the original search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "late failed first admission cannot replace a new preview or its return target",
+      "status": "PASS"
+    },
+    {
+      "name": "leaving preview during replacement rejects late success without changing the new route",
+      "status": "PASS"
+    },
+    {
+      "name": "late replacement failure cannot reopen an old detail or replace a newer search",
+      "status": "PASS"
+    },
+    {
+      "name": "a failed replacement preserves the current detail and the search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf direct resume retains its own return semantics",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf explicit info retains its own return semantics",
+      "status": "PASS"
+    }
+  ]
+}
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 notifications=1 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS
+(node:62151) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+select semantic contract: PASS
+settings cache cleanup contract: PASS checks=9
+settings responsive select overlay contract: PASS
+(node:62161) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"missing/invalid name is unknown, not evidence of source removal","status":"PASS"}
+{"name":"unready in-memory registries preserve caller supplied persisted identity label","status":"PASS"}
+{"name":"temporary unknown Core name cannot erase cached exact-source name or progress","status":"PASS"}
+{"name":"successful but unmatched/filtered source list does not prove deletion","status":"PASS"}
+{"name":"late old hydration cannot overwrite newer successful name","status":"PASS"}
+{"name":"Core deletion admitted while name lookup is pending is never resurrected","status":"PASS"}
+{"name":"runtime/route-generation changes reject old results without borrowing another identity","status":"PASS"}
+{"name":"source-name-only change invalidates the actual mounted row key while identity stays exact","status":"PASS"}
+PH45 source name projection and actual Host hydration regressions PASS (8 groups); no device identity is inferred.
+(node:62183) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+source check streaming progress contract: PASS
+Source product tools static boundary: PASS
+source supply chain: PASS
+(node:62189) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+source-switch gateway contract: PASS
+PH70 known candidate first paint, delta projection, registry deletion and missing-only discovery PASS
+PH70 real Index source-switch entry paints known candidates before cache RPC PASS
+PH70 actual Index/Gateway retain failed delta/reset without automatic retry loops PASS
+R5 SourceSwitch relation pagination, stale retry, continuation, scoped verdict and deletion preservation PASS
+source-switch post-commit transaction contract: PASS
+surface horizontal geometry: PASS (10 viewport widths)
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+(node:62215) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+surface transition P0: PASS
+svg provenance: 352 assets verified
+PASS WebDAV Host production recovery: durable choices, allow-list, compensated flush, journal ownership, crash boundary, old backup, lost apply/commit response and idempotent completion
+(node:62245) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+WebDAV product boundary/static contract: PASS
+(node:62248) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Appearance fields: retained SDK Day/Night/Day stepper and open/closed trigger paint, menu surface/border roles
+(node:62250) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS dynamic theme icons: 6 computed $r sites, 101 actual state/paint cases, retained SDK Builders and all resource geometry/alpha.
+(node:62254) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS 76 local-color bindings / 46 roles: authored Day and alpha, reactive App scope, distinct production status states and action foregrounds.
+(node:62281) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Night primary text: 41 production AST foregrounds, 21 retained Builder states; Day/solid fill/alpha/layout retained.
+(node:62284) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+durable catalog admission, source isolation and protected failures: PASS
+PASS actual SDK normalization/classifier/Coordinator: unknown HTTP remains transient, fallback/retry continues, no failed writer or prior-evidence loss; known rule and HTTP status errors stay distinct
+PASS actual readable-candidate verification: transient body failure preserves catalog and does not create a failed body verdict
+(node:62310) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS legacy/confirmed/HTTP acquisition: raw facts unchanged, only causal parser failures downgrade; unknown attempts get one visible preparation retry and generic previous-failure copy
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+(node:62311) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+window flicker dedup contracts: PASS
+Harmony contract tests passed: 268
+> hvigor [32mTYPE CHECK SUCCESSFUL in 167 ms [39m
+> hvigor [32mFinished :entry:clean... after 1 ms [39m
+> hvigor [33mWARN: Missing module info for local modules '@reader/core-harmony'. Check project-level build-profile.json5. [39m
+> hvigor [32mFinished :entry:default@PreBuild... after 54 ms [39m
+> hvigor [32mFinished :entry:default@CreateModuleInfo... after 1 ms [39m
+> hvigor [32mFinished :entry:default@GenerateMetadata... after 2 ms [39m
+> hvigor [32mFinished :entry:default@ConfigureCmake... after 9 ms [39m
+> hvigor [32mFinished :entry:default@MergeProfile... after 2 ms [39m
+> hvigor [32mFinished :entry:default@CreateBuildProfile... after 1 ms [39m
+> hvigor [32mFinished :entry:default@PreCheckSyscap... after 1 ms [39m
+> hvigor [32mFinished :entry:default@GeneratePkgContextInfo... after 4 ms [39m
+> hvigor [32mFinished :entry:default@GeneratePkgSdkInfo... after 1 ms [39m
+> hvigor [32mFinished :entry:default@ProcessIntegratedHsp... after 1 ms [39m
+> hvigor [32mFinished :entry:default@MakePackInfo... after 1 ms [39m
+> hvigor [32mFinished :entry:default@SyscapTransform... after 1 ms [39m
+> hvigor [32mFinished :entry:default@ProcessProfile... after 56 ms [39m
+> hvigor [32mFinished :entry:default@ProcessRouterMap... after 1 ms [39m
+> hvigor [32mFinished :entry:default@ProcessShareConfig... after 1 ms [39m
+> hvigor [32mFinished :entry:default@ProcessStartupConfig... after 1 ms [39m
+> hvigor [32mFinished :entry:default@ProcessResource... after 3 ms [39m
+> hvigor [32mFinished :entry:default@GenerateLoaderJson... after 3 ms [39m
+> hvigor [32mFinished :entry:default@CompileResource... after 356 ms [39m
+> hvigor [32mFinished :entry:default@BuildJS... after 1 ms [39m
+> hvigor [32mFinished :entry:default@BuildNativeWithCmake... after 516 ms [39m
+> hvigor [32mFinished :entry:default@BuildNativeWithNinja... after 792 ms [39m
+> hvigor [32mFinished :entry:default@ProcessLibs... after 10 ms [39m
+> hvigor [32mFinished :entry:default@DoNativeStrip... after 34 ms [39m
+> hvigor [32mFinished :entry:default@CacheNativeLibs... after 2 ms [39m
+> hvigor [33mWARN: [33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/vendor/core-harmony/Index.ts:1:28
+ Currently module for 'libreader_core_napi.so' is not verified. If you're importing napi, its verification will be enabled in later SDK version. Please make sure the corresponding .d.ts file is provided and the napis are correctly declared.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/NetworkRoutePolicy.ts:93:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/NetworkRoutePolicy.ts:95:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/NetworkRoutePolicy.ts:103:28
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/CookieSessionStore.ts:1004:42
+ 'encode' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:718:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:1068:21
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:1069:22
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HttpExecuteHost.ts:1101:22
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:587:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:595:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:597:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:622:38
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:623:35
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:773:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:174:18
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:174:64
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:347:59
+ 'encode' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:410:49
+ 'encode' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:425:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:433:31
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:439:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:441:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:456:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:466:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:604:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:609:29
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:616:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:618:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:620:31
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:627:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:636:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:640:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:650:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:652:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:654:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:655:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:671:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:676:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:678:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:682:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:694:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:697:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:702:29
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:706:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:721:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:733:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:737:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:750:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:754:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:767:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:770:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:796:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:799:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:865:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:868:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:872:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:880:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:982:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:1144:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderHostRegistry.ts:1147:23
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:139:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:143:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:154:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:312:12
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:334:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:335:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:336:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:344:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:345:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonySystemTtsHost.ts:346:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:117:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:121:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:131:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:154:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:479:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:480:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:481:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:489:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:490:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyHttpTtsHost.ts:491:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:37:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:60:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:61:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:62:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:63:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:64:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:70:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:86:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:87:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:88:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:89:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:90:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:91:5
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/HarmonyTtsMediaSession.ts:93:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:427:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:433:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:460:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:461:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts:462:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/LocalEpubResourceHost.ts:38:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/LocalEpubResourceHost.ts:41:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:24:12
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:91:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:94:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:99:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:196:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:271:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:272:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:273:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:374:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:380:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:387:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:388:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:393:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:396:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:399:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:400:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:403:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:406:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:410:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts:417:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:56:18
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:57:9
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:58:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:197:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:199:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:201:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/BundledBookSourceSupply.ts:204:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderAppearancePreferences.ts:21:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderAppearancePreferences.ts:32:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderAppearancePreferences.ts:33:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderAppearancePreferences.ts:38:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:117:46
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:118:47
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:119:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:123:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:333:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:335:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:337:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:342:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:344:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:349:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:351:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:353:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:356:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:358:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:376:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts:381:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:130:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:131:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:132:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:147:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:148:29
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:149:32
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:157:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:158:18
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:159:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:218:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/WebDavCredentialStore.ts:325:42
+ 'encode' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/sync/SyncGateway.ts:626:49
+ 'encode' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:100:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:101:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:102:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:103:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:108:31
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:109:34
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:110:28
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:111:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsGateway.ts:128:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsGateway.ts:58:30
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsGateway.ts:63:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsGateway.ts:77:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsGateway.ts:104:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts:29:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts:51:30
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts:56:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesGateway.ts:68:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/LocalConfigurationReset.ts:68:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/LocalConfigurationReset.ts:69:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/LocalConfigurationReset.ts:74:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/LocalConfigurationReset.ts:76:29
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/LocalConfigurationReset.ts:96:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/LocalConfigurationReset.ts:98:27
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets:77:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:565:6
+ 'onScroll' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderClipboardHost.ts:9:3
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSurface.ets:226:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/BookTurnPresentationSession.ets:2:28
+ Currently module for 'libreader_bookturn_napi.so' is not verified. If you're importing napi, its verification will be enabled in later SDK version. Please make sure the corresponding .d.ts file is provided and the napis are correctly declared.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets:41:57
+ 'onDataChanged' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets:456:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:64:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:76:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:81:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:84:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:86:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:101:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:102:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:104:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:108:33
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:113:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:116:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:121:26
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:162:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:168:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:175:15
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderCustomFontHost.ts:176:13
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingRecordGateway.ts:69:30
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingRecordGateway.ts:74:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingRecordGateway.ts:75:11
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingRecordGateway.ts:83:24
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:821:10
+ 'onScroll' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1279:7
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:61:26
+ Cannot find name 'WebResourceResponse'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:62:14
+ Cannot find name 'setResponseCode'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:63:14
+ Cannot find name 'setReasonMessage'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:64:14
+ Cannot find name 'setResponseMimeType'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:65:14
+ Cannot find name 'setResponseData'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:77:16
+ Cannot find name 'setResponseCode'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:78:16
+ Cannot find name 'setReasonMessage'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:79:16
+ Cannot find name 'setResponseMimeType'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:80:16
+ Cannot find name 'setResponseData'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:93:14
+ Cannot find name 'setResponseCode'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:94:14
+ Cannot find name 'setReasonMessage'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:95:14
+ Cannot find name 'setResponseMimeType'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:96:14
+ Cannot find name 'setResponseData'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:102:16
+ Cannot find name 'setResponseIsReady'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:106:18
+ Cannot find name 'setResponseIsReady'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:184:104
+ 'encode' has been deprecated.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:338:22
+ Cannot find name 'setResponseIsReady'.
+[39m[39m
+[33mWARN: [33m[33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/pages/ReaderRendererPilot.ets:38:53
+ 'replaceUrl' has been deprecated.
+[39m[39m
+[33mWARN: [33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:34:32
+ Cannot find name 'WebResourceResponse'.[39m[39m
+[33mWARN: [33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:34:71
+ Cannot find name 'WebResourceResponse'.[39m[39m
+[33mWARN: [33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:59:37
+ Cannot find name 'WebResourceResponse'.[39m[39m
+[33mWARN: [33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebResourceDiagnostic.ts:336:37
+ Cannot find name 'WebResourceResponse'.[39m[39m
+[33mWARN: [33mArkTS:WARN File: /private/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-hap-build-cMtNvg/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:804:34
+ The 'regular' property 'group' cannot be assigned to the '@ObjectLink' property 'group'.[39m[39m
+[39m
+> hvigor [32mFinished :entry:default@CompileArkTS... after 11 s 46 ms [39m
+> hvigor [32mFinished :entry:default@GeneratePkgModuleJson... after 1 ms [39m
+> hvigor [32mFinished :entry:default@ProcessCompiledResources... after 1 ms [39m
+> hvigor [32mFinished :entry:default@PackageHap... after 440 ms [39m
+> hvigor [32mFinished :entry:default@PackingCheck... after 5 ms [39m
+> hvigor [32mFinished :entry:default@SignHap... after 1 s 359 ms [39m
+> hvigor [32mFinished :entry:default@CollectDebugSymbol... after 1 ms [39m
+> hvigor [32mFinished :entry:assembleHap... after 1 ms [39m
+> hvigor [32mBUILD SUCCESSFUL in 14 s 929 ms [39m
+/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/.staging-20260915T081914Z-e5483b93-86eb9be1-59864/entry-default-signed.hap: bundled source collection PASS (1046 tested records, 919 unique identities)
+/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/.staging-20260915T081914Z-e5483b93-86eb9be1-59864/entry-default-unsigned.hap: bundled source collection PASS (1046 tested records, 919 unique identities)
+{"status":"PASS","runId":"20260915T081914Z-e5483b93-86eb9be1","buildClass":"iteration","manifest":"/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260915T081914Z-e5483b93-86eb9be1/manifest.json","artifacts":[{"kind":"signed","path":"entry-default-signed.hap","sha256":"04ae9321ec60af7a970c6bfdf6177d77a23e4d9729769c88a0cd64ce1c239d35","signature":{"status":"signed","verified":true,"profileType":"debug","appIdSha256":"b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf","appIdentifierSha256":"8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b","certificateSha256":"9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"}},{"kind":"unsigned","path":"entry-default-unsigned.hap","sha256":"52d116166614d720a2a5cf89d0f988a23db845b7a7af0cecf34d19440b07c3a3","signature":{"status":"unsigned","verified":false,"profileType":"none"}}]}

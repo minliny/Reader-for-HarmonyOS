@@ -1,0 +1,5 @@
+PASS actual SDK normalization/classifier/Coordinator: unknown HTTP remains transient, fallback/retry continues, no failed writer or prior-evidence loss; known rule and HTTP status errors stay distinct
+PASS actual readable-candidate verification: transient body failure preserves catalog and does not create a failed body verdict
+(node:54044) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS legacy/confirmed/HTTP acquisition: raw facts unchanged, only causal parser failures downgrade; unknown attempts get one visible preparation retry and generic previous-failure copy

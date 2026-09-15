@@ -1,5 +1,17 @@
 # PH76：WebView sourceRegex 真实资源地址捕获
 
+## 2026-09-15 surface隔离代码补完（未交付）
+
+现已改为每job独立WebviewController/surface，SDK回调绑定创建时surface，下一job等待旧surface退场ACK；支持未挂载取消/超时和构造异常后恢复。cancel诊断要求新任务真实new.js resource→matched同URL有序事件及正确结果，避免只看late=0误报。26组资源、12组诊断、3组网络策略与SDK焦点检查通过，[原始资源回归日志](minglong-full-assessment/ph76-surface-resource-capture.log)及同目录另外3份日志已归档。
+
+这是本地生产方法和SDK回调闭包验证，完整ArkTS/HAP及修复后VM未执行；384实际cancel FAIL仍有效。该缺陷不能解释不使用WebView的66/松鹤源错误，见[全链路报告](minglong-full-assessment/REPORT.md)。
+
+## 2026-09-15 原生跨任务回调已确认，隔离修复中
+
+Root 的 `3843792a` / `20260914T190706Z-3843792a-773d63a4` VM 受控 early 已通过：回调至匹配 4 ms，早于 pageEnd。随后 cancel 明确失败：runToken `1789413089067-2`，old.js intercept/cancel/end 均在 1789413089116，新任务 7600002 在 9118 开始，旧 old.js 原生 resource 在 9121 被标成新任务，9123 被新 matcher 接受。原始日志 `PH76-admitted-vm-hilog.log` 保留；这是生产跨任务归属错误，不是旧 matcher Promise 已启动后的迟到场景。
+
+代码原因：唯一 controller 的 native 回调没有携带不可变 surface 身份，而是读取当前 active。旧跨主机请求还可能误设新任务 networkDenied 并 stop 新 controller，旧 pageBegin 可改变新交互页地址。修复采用每任务独立原生 Web/controller 和全回调归属，不使用 URL 黑名单或固定等待。同一 URL 在新 surface 中仍须有效。发现后先记录，代码与本地回归完成后才能安排后续有效 VM 验证；此子任务未操作设备、Core 或 Git。
+
 状态：生产薄适配与本地回归已完成；ArkTS/HAP 集成、VM 回调行为、真机和用户验收分别未在本记录中完成。不得将此项推导为《鸣龙》未知第二书源的现场原因或修复验收。
 
 ## 事实修正与来源
@@ -167,3 +179,17 @@ Root 在 aa387 包的隔离 pilot 执行 early，得到 `TIMEOUT`。现有 `/pri
 | `test-arkweb-network-policy.mjs` | 原 3 组 PASS；[日志](ph76-percent-base64-network-regression.log) |
 
 源码、测试与本节证据均冻结。新包仍需根任务的一次有效 early 原生回调观察，再按既定 cancel 场景验证资源归属；本地回归不替代这两个平台结论。本切片没有 Git、构建或设备操作。
+
+
+## 主文档准入后：early 已通过，cancel 原生迟到归属失败
+
+[两个真实结果原日志](ph76-vm-early-pass-cancel-failure.log)必须分别记账：early runToken `1789413057837-1` 返回正确 early.css，`callbackToMatchMs=4`、`matchedBeforePageEnd=true`，该受控 VM 样本 **PASS**。这不是全部网络性能指标或所有原生调度时序通过。
+
+cancel runToken `1789413089067-2` **FAIL**：old.js 在旧任务 7600001 被拦截后取消；新任务 7600002 于 1789413089118 开始，旧 old.js 的原生 resource 回调却在 1789413089121 被记到 7600002，随后 matcherStart、matched 也归于新任务，returnedResource=unexpected、observedLateOldCallbacks=1。此处不是旧 matcher promise 延迟完成，而是旧页面的 native 回调在新 active 已开始之后才进入共享 Host。已有“旧异步 matcher 完成不得写入新任务”测试不能替代此时序。安装包由根任务的部署回执单独绑定，本节按所列真实 runToken 保留结果，不回写早期失败或把 cancel 记为通过。
+
+源码当前 Web 组件/控制器跨任务复用，onResourceLoad/onPageEnd 等回调仅携带 URL，Executor 在回调时读取 active，因此不能凭 URL 或最新 active 证明页面归属。修复 owner 正处理每任务原生 surface/controller 与不可变回调身份；此切片独立验证旧 native 回调、同 URL 合法新回调、旧 pageEnd/detach 与新队列生命周期，禁止用资源 URL 黑名单或任意延迟代替身份隔离。
+
+
+## 后续原生闭环：6cf9705d
+
+原故障已修复，6cf固定early/cancel两项真实ArkWeb样本均PASS，分别3ms/1ms，旧old.js丢弃、新new.js正确返回。[实际事件](search-flow-implementation/vm-6cf9705d/ONLINE_RUN.md)。af406的blank判定问题是探针问题，d4b已修，不将旧FAIL倒写为PASS。后续真实搜索/当前状态见[统一页](search-flow-implementation/CURRENT_STATUS_20260915.md)。

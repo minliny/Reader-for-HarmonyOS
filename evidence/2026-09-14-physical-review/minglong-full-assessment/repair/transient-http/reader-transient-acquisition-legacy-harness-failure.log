@@ -1,0 +1,22 @@
+PASS actual SDK normalization/classifier/Coordinator: unknown HTTP remains transient, fallback/retry continues, no failed writer or prior-evidence loss; known rule and HTTP status errors stay distinct
+PASS actual readable-candidate verification: transient body failure preserves catalog and does not create a failed body verdict
+(node:73955) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+:11
+
+}; return RowProbe;
+   ^^^^^^^^^^^^^^^^
+
+SyntaxError [ERR_INVALID_TYPESCRIPT_SYNTAX]: Return statement is not allowed here
+    at parseTypeScript (node:internal/modules/typescript:63:36)
+    at processTypeScriptCode (node:internal/modules/typescript:135:42)
+    at stripTypeScriptTypes (node:internal/modules/typescript:113:10)
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-transient-transport-acquisition.mjs:114:29 {
+  code: 'ERR_INVALID_TYPESCRIPT_SYNTAX'
+}
+
+Node.js v26.0.0

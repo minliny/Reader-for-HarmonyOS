@@ -1,0 +1,155 @@
+(node:74539) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "evidenceLayer": "SDK-extracted production methods and actual Coordinator/Gateway; synthetic RPC boundary, no device",
+  "outcomes": [
+    {
+      "name": "visible groups cap six, concurrency two; speculative work has no progress/body/verdict-success",
+      "status": "PASS"
+    },
+    {
+      "name": "visible failed catalog tries another same-book candidate without body work",
+      "status": "PASS"
+    },
+    {
+      "name": "foreground preempts unrelated started preparation, propagates cancellation and resumes it without unhealthy proof",
+      "status": "PASS"
+    },
+    {
+      "name": "foreground joins same prepared book instead of cancelling its only active request",
+      "status": "PASS"
+    },
+    {
+      "name": "only background rounds cap unknown candidates; foreground fourth source succeeds",
+      "status": "PASS"
+    },
+    {
+      "name": "cancelled stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "identityMismatch stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "sourceVersionChanged stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "storageFailure stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "source-local capability failure tries independent same-book source",
+      "status": "PASS"
+    },
+    {
+      "name": "proxy/DNS environment failure stops source churn without candidate health penalty",
+      "status": "PASS"
+    },
+    {
+      "name": "whole foreground deadline includes waiting; process completion cannot publish late catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "cancel waiting foreground releases consumer promptly and does not try next source",
+      "status": "PASS"
+    },
+    {
+      "name": "user cancels orphan foreground Core work, frees slots and allows another book",
+      "status": "PASS"
+    },
+    {
+      "name": "deadline cancels orphan foreground Core work, frees slots and allows another book",
+      "status": "PASS"
+    },
+    {
+      "name": "one cancelled caller preserves a live same-book foreground consumer",
+      "status": "PASS"
+    },
+    {
+      "name": "one cancelled caller preserves a live same-book background consumer",
+      "status": "PASS"
+    },
+    {
+      "name": "same-book reopen waits for cancelled Core operation and starts a new acquisition",
+      "status": "PASS"
+    },
+    {
+      "name": "same title with blank or conflicting author cannot authorize automatic source replacement",
+      "status": "PASS"
+    },
+    {
+      "name": "author label variants use one identity across search candidate and acquired detail without rewriting raw metadata",
+      "status": "PASS"
+    },
+    {
+      "name": "source-bound author decoration admits same-book detail and body while preserving raw rules context",
+      "status": "PASS"
+    },
+    {
+      "name": "genuine at-author and stale decorated proof cannot authorize another author",
+      "status": "PASS"
+    },
+    {
+      "name": "a recognized author template with an empty nickname remains unknown and cannot authorize fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "acquired detail must revalidate decorated author against its own current proof",
+      "status": "PASS"
+    },
+    {
+      "name": "bounded author metadata policy cannot authorize a different or missing author",
+      "status": "PASS"
+    },
+    {
+      "name": "a matching normalized search author still requires the acquired detail author to match",
+      "status": "PASS"
+    },
+    {
+      "name": "hidden source-wait pauses and resumes same visible group once without cancellation",
+      "status": "PASS"
+    },
+    {
+      "name": "query replacement drops old waiting groups; old admitted work cannot enqueue old fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "fresh prepared reused; stale catalog refresh failure handled and original promise rejects",
+      "status": "PASS"
+    },
+    {
+      "name": "change notification batches actual identities and source mutation resets",
+      "status": "PASS"
+    },
+    {
+      "name": "real selected search group primary empty TOC admits second and probes only selected body; no shelf write",
+      "status": "PASS"
+    },
+    {
+      "name": "real search body failure tries second source and reuses admitted body exactly once",
+      "status": "PASS"
+    },
+    {
+      "name": "real search catalog is visible before delayed body completes",
+      "status": "PASS"
+    },
+    {
+      "name": "real body storage failure stops group and preserves visible admitted catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "visible range callback bounds group count, skips unchanged rows and clears stopped view",
+      "status": "PASS"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260914T190706Z-3843792a-773d63a4",
+  "harmony": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+    "commit": "3843792ab06ee1025d06d44d9666fbab2bd6f63f",
+    "dirty": false,
+    "status": []
+  },
+  "core": {
+    "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+    "commit": "0c5a3956274197578554f36b1a7fed9e1977ea78",
+    "dirty": false,
+    "status": []
+  },
+  "signedSha256": "badce494ce3429906ff25c066d97a5e7babb58f8ad260a70f90350923b211f07",
+  "signedBytes": 167841833,
+  "completedAt": "2026-09-14T19:09:12.959Z",
+  "targetRef": "6460677a198b",
+  "files": [
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T190706Z-3843792a-773d63a4/manifest.json",
+      "copy": "manifest.json",
+      "bytes": 4260,
+      "sha256": "6f3f0d0762c4b7c7cd9ca689bae87245187ba3f22a99836bd09f35263f6a2f68"
+    },
+    {
+      "source": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260914T190706Z-3843792a-773d63a4/deploy-vm-6460677a198b-20260914T190912Z.json",
+      "copy": "deployment.json",
+      "bytes": 1755,
+      "sha256": "7aa2e5df0d063893a7f171f7de5a79956d7eb19a48e03ab1d641c1c16bc07faa"
+    },
+    {
+      "source": "/private/tmp/ph7791-delivery-build.log",
+      "copy": "build.log",
+      "bytes": 144885,
+      "sha256": "946050e56a2c64ad366f4579a0ec08dfb7ad781954bc1911feeb7400c6aeb396"
+    },
+    {
+      "source": "/private/tmp/ph7791-delivery-inspect.log",
+      "copy": "inspect.log",
+      "bytes": 1173,
+      "sha256": "2478b7ad082cc7d1a4c7bae9dbb5a0ad4f18399848c34d58d5fabfd6d9e3580a"
+    },
+    {
+      "source": "/private/tmp/ph7791-delivery-install.log",
+      "copy": "install.log",
+      "bytes": 206,
+      "sha256": "cc323b64a66322a9e00fcea0130fb4de1ec71cc209525a569345790707d543d1"
+    },
+    {
+      "source": "/private/tmp/ph76-admitted-vm-hilog.log",
+      "copy": "ph76-native-results.log",
+      "bytes": 3730,
+      "sha256": "69247620604218417115fb7c93fc98fe8d82a875b497f6a53f6940f72dfc6c4f"
+    }
+  ],
+  "ph76": "early 4ms before pageEnd PASS; cancel late old.js matched as7600002 FAIL; production isolation fix in progress",
+  "dateEvidence": "d5f13a96 prior package has verified old-unknown/new-local-minute date and cleanup; no new date repetition claimed for3843792a",
+  "limits": [
+    "Native controlled in-memory run, not all source/network/WebView histories.",
+    "PH76 still OPEN; no all-pass or repaired-native-isolation claim.",
+    "Iteration VM install and package gates do not close physical-device or user acceptance."
+  ]
+}

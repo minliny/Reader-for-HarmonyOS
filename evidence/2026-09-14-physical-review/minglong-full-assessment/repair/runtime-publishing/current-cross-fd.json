@@ -1,0 +1,258 @@
+[
+  {
+    "time": 11.341179542,
+    "fds": [
+      {
+        "pid": "36489",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "37",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x57db0be5b8165f59"
+      },
+      {
+        "pid": "36491",
+        "ppid": "35656",
+        "cmd": "host_replay-78c5ce36704ec279",
+        "fd": "1",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x57db0be5b8165f59"
+      },
+      {
+        "pid": "36497",
+        "ppid": "36489",
+        "cmd": "reader-cli",
+        "fd": "37",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x57db0be5b8165f59"
+      }
+    ]
+  },
+  {
+    "time": 14.599297542,
+    "fds": [
+      {
+        "pid": "36749",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "32",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      },
+      {
+        "pid": "36750",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "1",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      },
+      {
+        "pid": "36759",
+        "ppid": "36749",
+        "cmd": "reader-cli",
+        "fd": "32",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      }
+    ]
+  },
+  {
+    "time": 14.657167459,
+    "fds": [
+      {
+        "pid": "36749",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "32",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      },
+      {
+        "pid": "36750",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "1",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      },
+      {
+        "pid": "36759",
+        "ppid": "36749",
+        "cmd": "reader-cli",
+        "fd": "32",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      }
+    ]
+  },
+  {
+    "time": 14.710441709,
+    "fds": [
+      {
+        "pid": "36749",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "32",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      },
+      {
+        "pid": "36750",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "1",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      },
+      {
+        "pid": "36759",
+        "ppid": "36749",
+        "cmd": "reader-cli",
+        "fd": "32",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      }
+    ]
+  },
+  {
+    "time": 14.772102625,
+    "fds": [
+      {
+        "pid": "36749",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "32",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      },
+      {
+        "pid": "36750",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "1",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      },
+      {
+        "pid": "36759",
+        "ppid": "36749",
+        "cmd": "reader-cli",
+        "fd": "32",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x59af6670d485b94"
+      }
+    ]
+  },
+  {
+    "time": 25.75713025,
+    "fds": [
+      {
+        "pid": "37619",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "53",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0xdaff84cbdfbaca3d"
+      },
+      {
+        "pid": "37623",
+        "ppid": "35656",
+        "cmd": "host_replay-78c5ce36704ec279",
+        "fd": "2",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0xdaff84cbdfbaca3d"
+      },
+      {
+        "pid": "37632",
+        "ppid": "37619",
+        "cmd": "reader-cli",
+        "fd": "53",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0xdaff84cbdfbaca3d"
+      }
+    ]
+  },
+  {
+    "time": 25.811486084,
+    "fds": [
+      {
+        "pid": "37619",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "53",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0xdaff84cbdfbaca3d"
+      },
+      {
+        "pid": "37623",
+        "ppid": "35656",
+        "cmd": "host_replay-78c5ce36704ec279",
+        "fd": "2",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0xdaff84cbdfbaca3d"
+      },
+      {
+        "pid": "37632",
+        "ppid": "37619",
+        "cmd": "reader-cli",
+        "fd": "53",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0xdaff84cbdfbaca3d"
+      }
+    ]
+  },
+  {
+    "time": 31.423580291999997,
+    "fds": [
+      {
+        "pid": "38060",
+        "ppid": "35656",
+        "cmd": "fixture_vertical-885f782df52fc757",
+        "fd": "5",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x54ac571a3254ca5a"
+      },
+      {
+        "pid": "38064",
+        "ppid": "35656",
+        "cmd": "host_replay-78c5ce36704ec279",
+        "fd": "1",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x54ac571a3254ca5a"
+      },
+      {
+        "pid": "38072",
+        "ppid": "38060",
+        "cmd": "reader-cli",
+        "fd": "5",
+        "a": " ",
+        "t": "PIPE",
+        "n": "->0x54ac571a3254ca5a"
+      }
+    ]
+  }
+]

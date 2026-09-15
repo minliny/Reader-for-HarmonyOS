@@ -1,0 +1,16 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.15s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 7 tests
+test runtime::tests::transient_ordinary_http_failure_preserves_per_source_evidence ... ok
+test remote::source_fetch_and_catalog_tests::transient_http_status_is_checked_before_search_detail_or_body_rules ... ok
+test runtime::tests::transient_66_http_failure_keeps_required_endpoint_admission_typed ... ok
+test runtime::tests::nontransient_http_reject_keeps_original_66_required_endpoint_typed ... ok
+test runtime::tests::transient_http_status_evidence_does_not_override_success_or_independent_throw ... ok
+test runtime::tests::transient_js_http_evidence_only_explains_its_failed_required_result ... ok
+test runtime::tests::nontransient_http_reject_cause_survives_only_its_required_js_result ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 415 filtered out; finished in 0.47s
+

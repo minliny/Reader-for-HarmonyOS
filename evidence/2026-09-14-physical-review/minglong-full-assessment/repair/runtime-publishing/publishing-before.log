@@ -1,0 +1,24 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.63s
+     Running tests/runtime_integration.rs (target/check/debug/deps/runtime_integration-fb80445612078c8f)
+
+running 1 test
+test cache_commands::runtime_host_error_retries_the_same_chapter_then_can_succeed ... FAILED
+
+failures:
+
+---- cache_commands::runtime_host_error_retries_the_same_chapter_then_can_succeed stdout ----
+
+thread 'cache_commands::runtime_host_error_retries_the_same_chapter_then_can_succeed' (69788343) panicked at crates/reader-runtime/tests/cache_commands.rs:1357:18:
+host.error must trigger the bounded retry, got Error { protocol_version: 1, request_id: 8402, error: CoreError { code: InvalidParams, message: "unknown host operationId: 1", retryable: false, details: Object {"operationId": Number(1)} } }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    cache_commands::runtime_host_error_retries_the_same_chapter_then_can_succeed
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 637 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p reader-runtime --test runtime_integration`

@@ -1,0 +1,159 @@
+{
+  "evidence": "macOS production C++ NAPI and linked Core; debug Rust profile, not Harmony device timing; no HTTP decoding included",
+  "identity": {
+    "buildId": "07541c3e7b3ffc954d225ef8f81557d356837f99c1f7dd061848b25c7a928218",
+    "cargoLockSha256": "2876d68af627ae95593e6d95197d1299ab4186583c09b8f0a358558f04d0cdd6",
+    "gitCommit": "c28f0f7927f107a37ff5963637240cb0885bcc9e",
+    "gitDirty": false,
+    "protocolSha256": "52b45af80756f0210d58a3af429eb0ff23f2ba14b9b31bf08bdf427b62552eda",
+    "rustProfile": "debug",
+    "schemaVersion": 1
+  },
+  "node": "v26.0.0",
+  "samples": [
+    {
+      "bodyUtf8Bytes": 16384,
+      "wireBytes": 17601,
+      "sample": 0,
+      "completeSyncMs": 0.4689170000000047,
+      "sdkParseMs": 0.06824999999997772,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 16384,
+      "wireBytes": 17601,
+      "sample": 1,
+      "completeSyncMs": 0.14462499999999068,
+      "sdkParseMs": 0.012791999999990367,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 16384,
+      "wireBytes": 17601,
+      "sample": 2,
+      "completeSyncMs": 0.14333400000001006,
+      "sdkParseMs": 0.02229099999999562,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 131072,
+      "wireBytes": 139457,
+      "sample": 0,
+      "completeSyncMs": 1.0194590000000119,
+      "sdkParseMs": 0.06329200000001833,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 131072,
+      "wireBytes": 139457,
+      "sample": 1,
+      "completeSyncMs": 0.9919170000000008,
+      "sdkParseMs": 0.0615839999999821,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 131072,
+      "wireBytes": 139457,
+      "sample": 2,
+      "completeSyncMs": 0.9883330000000115,
+      "sdkParseMs": 0.059750000000008185,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 1048576,
+      "wireBytes": 1114305,
+      "sample": 0,
+      "completeSyncMs": 7.873625000000004,
+      "sdkParseMs": 0.4695000000000107,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 1048576,
+      "wireBytes": 1114305,
+      "sample": 1,
+      "completeSyncMs": 7.540375000000012,
+      "sdkParseMs": 0.5314169999999763,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 1048576,
+      "wireBytes": 1114305,
+      "sample": 2,
+      "completeSyncMs": 7.66700000000003,
+      "sdkParseMs": 0.49037500000002865,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 8388608,
+      "wireBytes": 8913089,
+      "sample": 0,
+      "completeSyncMs": 64.89662500000003,
+      "sdkParseMs": 4.313542000000098,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 8388608,
+      "wireBytes": 8913089,
+      "sample": 1,
+      "completeSyncMs": 62.46154200000001,
+      "sdkParseMs": 3.767832999999996,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 8388608,
+      "wireBytes": 8913089,
+      "sample": 2,
+      "completeSyncMs": 63.848082999999974,
+      "sdkParseMs": 3.8582910000000084,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 33554432,
+      "wireBytes": 35651777,
+      "sample": 0,
+      "completeSyncMs": 283.60566600000004,
+      "sdkParseMs": 24.24345799999992,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 33554432,
+      "wireBytes": 35651777,
+      "sample": 1,
+      "completeSyncMs": 276.7085000000002,
+      "sdkParseMs": 16.02408299999979,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 33554432,
+      "wireBytes": 35651777,
+      "sample": 2,
+      "completeSyncMs": 260.001209,
+      "sdkParseMs": 15.362708000000111,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 67108800,
+      "wireBytes": 71303293,
+      "sample": 0,
+      "completeSyncMs": 532.2911670000003,
+      "sdkParseMs": 32.422209000000294,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 67108800,
+      "wireBytes": 71303293,
+      "sample": 1,
+      "completeSyncMs": 510.25666699999965,
+      "sdkParseMs": 29.02300000000014,
+      "timerRanDuringCompletion": false
+    },
+    {
+      "bodyUtf8Bytes": 67108800,
+      "wireBytes": 71303293,
+      "sample": 2,
+      "completeSyncMs": 520.3523329999998,
+      "sdkParseMs": 33.15191699999923,
+      "timerRanDuringCompletion": false
+    }
+  ]
+}

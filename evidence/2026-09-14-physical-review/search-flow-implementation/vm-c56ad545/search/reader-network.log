@@ -1,0 +1,33 @@
+09-15 14:48:18.330  2810  2810 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300999
+09-15 14:48:18.330  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:48:18.341  2810  2810 W A05244/Reader: Search source 101kanshu.net failed: Internal error
+09-15 14:48:19.989  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: source returned HTTP 400 without response content
+09-15 14:48:20.001  2810  2810 W A05244/Reader: Search source bcshuku.com failed: http.execute: source returned HTTP 400 without response content
+09-15 14:48:20.039  2810  2810 W A05244/Reader: Search source 444.1006sd.com failed: search protocol returned blank title
+09-15 14:48:20.871  2810  2810 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300023
+09-15 14:48:21.173  2810  2810 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300003
+09-15 14:48:21.173  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): Invalid URL format or missing URL
+09-15 14:48:36.552  2810  2810 W A05244/Reader: Search source m.zjsw.org failed: search protocol returned blank title
+09-15 14:48:36.953  2810  2810 W A05244/Reader: Search source qd9.net failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 14:48:37.291  2810  2810 W A05244/Reader: Search source ruarourou.top failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 14:48:38.639  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:48:38.650  2810  2810 W A05244/Reader: Search source novel.seseclub.com failed: Internal error
+09-15 14:48:40.661  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:48:40.673  2810  2810 W A05244/Reader: Search source sesebooks.com failed: Internal error
+09-15 14:48:41.270  2810  2810 W A05244/Reader: Search source www.52dzxy.com discarded 23 malformed rows: search protocol returned blank title; search protocol returned blank title; search protocol returned blank title; search protocol returned blank title
+09-15 14:48:58.586  2810  2810 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300052
+09-15 14:48:58.586  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): The server returned nothing (no header or data)
+09-15 14:48:58.597  2810  2810 W A05244/Reader: Search source w2.heiyan.com failed: The server returned nothing (no header or data)
+09-15 14:48:58.732  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:48:59.390  2810  2810 W A05244/Reader: Search source www.hqrgjtcw.com failed: Internal error
+09-15 14:49:02.491  2810  2810 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300060
+09-15 14:49:02.491  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): Invalid SSL peer certificate or SSH remote key
+09-15 14:49:02.491  2810  2810 W A05244/Reader: Search source www.liyuxiangku.com failed: Invalid SSL peer certificate or SSH remote key
+09-15 14:49:03.437  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: source returned HTTP 403 without response content
+09-15 14:49:03.448  2810  2810 W A05244/Reader: Search source www.min-yuan.com failed: http.execute: source returned HTTP 403 without response content
+09-15 14:49:09.247  2810  2810 W A05244/Reader: Search source www.tatays.com failed: 书源网页请求了不允许的网络地址
+09-15 14:49:11.251  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:49:11.263  2810  2810 W A05244/Reader: Search source www.xtyxsw.org failed: Internal error
+09-15 14:49:15.234  2810  2810 W A05244/Reader: Search source www.zggdwx.com failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 14:49:18.225  2810  2810 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:49:18.238  2810  2810 W A05244/Reader: Search source www.souhh.com failed: Internal error

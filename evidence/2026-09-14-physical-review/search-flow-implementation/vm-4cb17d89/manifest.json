@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "name": "reader-harmonyos-hap-run",
+  "runId": "20260915T050708Z-4cb17d89-b685b051",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "startedAt": "2026-09-15T05:06:51.657Z",
+  "finishedAt": "2026-09-15T05:07:08.121Z",
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "commit": "4cb17d895f0696fccc023b63714d9cf84c466f71",
+      "dirty": true,
+      "status": [
+        "M evidence/2026-09-14-physical-review/FEEDBACK.md",
+        " M evidence/2026-09-14-physical-review/PH76-webview-resource-url-capture.md",
+        " M evidence/2026-09-14-physical-review/search-flow-implementation/IMPLEMENTATION.md",
+        " M evidence/2026-09-14-physical-review/search-flow-implementation/VM_VALIDATION.md",
+        " M evidence/2026-09-14-physical-review/search-flow-implementation/vm-d5f13a96/receipt.json",
+        "?? evidence/2026-09-14-physical-review/PH76-admitted-vm-hilog.log",
+        "?? evidence/2026-09-14-physical-review/PH77_91_RECHECK_20260915.md",
+        "?? evidence/2026-09-14-physical-review/PH92-PROXY_COMPATIBILITY.md",
+        "?? evidence/2026-09-14-physical-review/PH92-platform-audit.md",
+        "?? evidence/2026-09-14-physical-review/PH92-proxy-admission-probe.json",
+        "?? evidence/2026-09-14-physical-review/PH92-proxy-admission-probe.mjs",
+        "?? evidence/2026-09-14-physical-review/PH92-scope-audit.md",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/",
+        "?? evidence/2026-09-14-physical-review/ph76-native-callback-before.log",
+        "?? evidence/2026-09-14-physical-review/ph76-vm-early-pass-cancel-failure.log",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-3843792a/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-d5f13a96/bookmark-time/"
+      ]
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "commit": "9e0c008b3000afc0ecdc604d2b754c327ef3da9a",
+      "dirty": false,
+      "status": []
+    },
+    "buildInputs": {
+      "fingerprint": "b685b05193c05c63c2832ba1e076612a53ba068c0c74a94b409237c9b0120a6c",
+      "fileCount": 735,
+      "snapshot": "source-snapshot.json"
+    },
+    "effectiveBuildProfile": {
+      "mode": "local",
+      "bytes": 1510,
+      "sha256": "0857c8a0897ca62681003b7507acc2048c14d5421df1ae8039143bee74301f7d",
+      "secretMaterialArchived": false
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 19657672,
+      "sha256": "5bf4b4715583bd3b445d1aeba8a12a1afa69c39ac276664382cc9a79f5b83089"
+    }
+  },
+  "gates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "972669781166ba85d802efce7210e0c5be81d0bc350e03e2a8423fad86a4aa82",
+      "fileCount": 325,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "4df3dcc01332d05019d75f7f17572663ed67aa29a9ca6f44a65f06fec7257d9c",
+      "fileCount": 15,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "toolchain": {
+    "hvigorw": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw",
+    "hvigorVersion": "6.24.4",
+    "buildCommand": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHap --mode module -p product=default -p module=entry@default -p buildMode=debug --no-daemon --no-incremental"
+  },
+  "artifacts": [
+    {
+      "kind": "signed",
+      "path": "entry-default-signed.hap",
+      "bytes": 167973364,
+      "sha256": "03d1252c7fbb74b01e74626d2dee93464e572099516c9fd0da7cbb5190800400",
+      "signature": {
+        "status": "signed",
+        "verified": true,
+        "profileType": "debug",
+        "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+        "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+        "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 15022912,
+        "sha256": "5bca2f90ce34c49b11e0034c35bd7e09e9075677527afcfd9db592fc46a31f25"
+      }
+    },
+    {
+      "kind": "unsigned",
+      "path": "entry-default-unsigned.hap",
+      "bytes": 167714625,
+      "sha256": "4525ad35c1497784a27b37cc7958cacd840182606c97651d9e90d34e0247cec9",
+      "signature": {
+        "status": "unsigned",
+        "verified": false,
+        "profileType": "none"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 15022912,
+        "sha256": "5bca2f90ce34c49b11e0034c35bd7e09e9075677527afcfd9db592fc46a31f25"
+      }
+    }
+  ],
+  "acceptanceProvenance": null,
+  "evidenceBoundary": {
+    "packageBuild": "PASS",
+    "vmInstall": "OPEN",
+    "physicalInstall": "OPEN",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  }
+}

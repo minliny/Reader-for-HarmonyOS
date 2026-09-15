@@ -1,0 +1,56 @@
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+   Compiling reader-ffi v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-ffi)
+    Finished `release` profile [optimized] target(s) in 1m 39s
+built target/aarch64-unknown-linux-ohos/release/libreader_core.a
+evidence target/aarch64-unknown-linux-ohos/release/ohos-build-evidence.txt
+name=reader-core-native-ohos
+target=aarch64-unknown-linux-ohos
+artifact=target/aarch64-unknown-linux-ohos/release/libreader_core.a
+artifact_sha256=5c258b8871975f34a277e26dbb83e752afe739fdf81c3728b447a5178e2d9b8d
+artifact_bytes=37296032
+rustc=rustc 1.97.1 (8bab26f4f 2026-07-14)
+cargo=cargo 1.97.1 (c980f4866 2026-06-30)
+ohos_sdk_home=/Applications/DevEco-Studio.app/Contents/sdk/default
+CC_aarch64_unknown_linux_ohos=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/aarch64-unknown-linux-ohos-clang
+CXX_aarch64_unknown_linux_ohos=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/aarch64-unknown-linux-ohos-clang++
+AR_aarch64_unknown_linux_ohos=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-ar
+RANLIB_aarch64_unknown_linux_ohos=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-ranlib
+CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_LINKER=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/aarch64-unknown-linux-ohos-clang
+libclang_path=/Library/Developer/CommandLineTools/usr/lib
+-- Configuring done (0.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a
+[1/1] Linking CXX shared library libreader_core_napi.so
+built target/harmony-napi/arm64-v8a/libreader_core_napi.so
+evidence target/harmony-napi/arm64-v8a/harmony-napi-build-evidence.txt
+name=reader-core-native-harmony-napi
+target=aarch64-unknown-linux-ohos
+ohos_arch=arm64-v8a
+artifact=target/harmony-napi/arm64-v8a/libreader_core_napi.so
+artifact_sha256=697a3f5d6afe88507584f9040d813887953e7e8d98222d850f6f93699a572cc6
+artifact_bytes=19658216
+reader_core_static=target/aarch64-unknown-linux-ohos/release/libreader_core.a
+reader_core_static_sha256=5c258b8871975f34a277e26dbb83e752afe739fdf81c3728b447a5178e2d9b8d
+reader_core_static_bytes=37296032
+cmake=cmake version 3.28.2
+ninja=1.12.0
+toolchain=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/build/cmake/ohos.toolchain.cmake
+ohos_sdk_home=/Applications/DevEco-Studio.app/Contents/sdk/default
+arkts_entry=bindings/harmony/Index.ets
+ohpm_package=bindings/harmony/oh-package.json5
+package_dir=target/harmony-napi/arm64-v8a/package
+package_manifest=target/harmony-napi/arm64-v8a/harmony-package-manifest.sha256
+package_manifest_sha256=db1cbffa9ef613dcf08d7912c0bb51c0cbf7965fb27651ece98e6abf9e523b99
+core_build_identity=target/harmony-napi/arm64-v8a/core-build-identity.json
+core_build_identity_sha256=e141f333f8b418c35492516995dbb7622d261a63ccd22525822daf9875ceed80
+exports=abiVersion,readEpubEntry,encodeText,createRuntime,releaseRuntime,sendCommand,cancelRequest,readEvent,pendingEventCount,completeHostRequest,failHostRequest,pingSmoke,hostSmoke,lifecycleSmoke
+sdk_smoke=pass
+sdk_smoke_tests=bindings/harmony/sdk
+sdk_smoke_output=target/harmony-napi/arm64-v8a/harmony-sdk-smoke.txt
+sdk_smoke_output_sha256=ce46d21cef42642172f9d7cf835b58f2af4eca342ddc075c029a907cb4e030d6
+sdk_smoke_raw_output=target/harmony-napi/arm64-v8a/harmony-sdk-smoke.raw.txt
+symbols=target/harmony-napi/arm64-v8a/libreader_core_napi.symbols.txt
+symbols_sha256=59ea478d52b7b926924b44c7e163f5289d05250ae818209d1649d3a4c0b4c46c
+napi_symbols=target/harmony-napi/arm64-v8a/libreader_core_napi.napi-symbols.txt
+napi_symbols_sha256=189125f385c4864de9c216032c7f96c64a51a8bdc7a3e074177a6ab27d2c72aa

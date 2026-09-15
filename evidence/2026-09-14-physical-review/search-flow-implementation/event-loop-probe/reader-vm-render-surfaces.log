@@ -1,0 +1,45 @@
+
+-------------------------------[ability]-------------------------------
+
+
+----------------------------------RenderService----------------------------------
+
+
+-- RenderServiceHWCThread
+
+-- LayerInfo
+
+ surface [ScreenNode] NodeId[3397319131136] LayerId[0]:
+ zOrder = 0, visibleNum = 1, transformType = 12 <uninitialized>, compositionType = 1 <device composition>, blendType = 3 <SRC_OVER blending>, layerAlpha = [enGlobalAlpha(1), enPixelAlpha(0), alpha0(0), alpha1(0), gAlpha(255)].
+ layerRect = [0, 0, 1280, 2832], cropRect = [0, 0, 1280, 2832],visibleRegions[0] = [0, 0, 1280, 2832], dirtyRegions[0] = [0, 0, 1280, 2832], layerColor = [R:0, G:0, B:0, A:0],
+BufferQueue:
+      default-size = [0x0], FIFO = 4, name = ScreenNode, uniqueId = 3397319131137, usedBufferListLen = 4, freeBufferListLen = 2, dirtyBufferListLen = 0, totalBuffersMemSize = 56640.00(KiB), hdrWhitePointBrightness = 0.000000, sdrWhitePointBrightness = 0.000000, lockLastFlushedBuffer seq = 4294967295
+      bufferQueueCache:
+        sequence = 51838977, bufferId = 222646706578128897, state = 0, listenerClientPid = 0, timestamp = 0, damagesRect = [0] = [0, 0, 1280, 2832], config = [1280x2832, 8, 12, 1800, 3000, 4, 0],0,  [staticMetadata:  ],[dynamicMetadata:  ],[metadataType: 0], scalingMode = 1, HDR = 0,  bufferWith = 1280, bufferHeight = 2832, bufferMemSize = 14160.00(KiB).
+        sequence = 51838978, bufferId = 222646706578128898, state = 0, listenerClientPid = 0, timestamp = 0, damagesRect = [0] = [0, 0, 1280, 2832], config = [1280x2832, 8, 12, 1800, 3000, 4, 0],0,  [staticMetadata:  ],[dynamicMetadata:  ],[metadataType: 0], scalingMode = 1, HDR = 0,  bufferWith = 1280, bufferHeight = 2832, bufferMemSize = 14160.00(KiB).
+        sequence = 51838979, bufferId = 222646706578128899, state = 3, listenerClientPid = 0, timestamp = 0, damagesRect = [0] = [0, 0, 1280, 2832], config = [1280x2832, 8, 12, 1800, 3000, 4, 0],0,  [staticMetadata:  ],[dynamicMetadata:  ],[metadataType: 0], scalingMode = 1, HDR = 0,  bufferWith = 1280, bufferHeight = 2832, bufferMemSize = 14160.00(KiB).
+        sequence = 51838980, bufferId = 222646706578128900, state = 1, listenerClientPid = 0, timestamp = 0, damagesRect = [0] = [0, 0, 1280, 2832], config = [1280x2832, 8, 12, 1800, 3000, 4, 0],0,  [staticMetadata:  ],[dynamicMetadata:  ],[metadataType: 0], scalingMode = 1, HDR = 0,  bufferWith = 1280, bufferHeight = 2832, bufferMemSize = 14160.00(KiB).
+ displayNit = 0.000000, brightnessRatio = 1.000000,  ancoFlags = 0, 
+FrameBufferSurface
+
+BufferQueue:
+      default-size = [0x0], FIFO = 3, name = FrameBuffer, uniqueId = 3397319131136, usedBufferListLen = 0, freeBufferListLen = 0, dirtyBufferListLen = 0, totalBuffersMemSize = 0.00(KiB), hdrWhitePointBrightness = 0.000000, sdrWhitePointBrightness = 0.000000, lockLastFlushedBuffer seq = 4294967295
+      bufferQueueCache:
+
+-- VSyncGenerator --
+period:15863833
+phase:203024
+referenceTime:333615337
+vsyncMode:0
+periodCheckCounter_:0
+-- VSyncSampler --
+period:15863833
+phase:203024
+referenceTime:333615337
+modeUpdated:1
+hardwareVSyncStatus:0
+numSamples:6
+samples:[333615337,349830629,365752587,381389879,397021920,413054170,]
+presentFenceTime:[-1,-1,-1,-1,-1,-1,-1,-1,]
+presentFenceTimeOffset:0
+vsyncEnabledScreenId:0

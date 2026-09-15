@@ -69,8 +69,13 @@
   ],
   "preflight": "sys.boot_completed unknown parameter error1002 was an operator parameter mistake; proper bootevent.boot.completed returned true; SceneBoard PID1529. No VM boot-failure claim.",
   "limits": [
-    "Date display and PH76 native callback still OPEN at archive time.",
+    "Date display was OPEN at installation archive time; later d5 sample passed (bookmarkTimeEvidence). PH76 remains separate.",
     "6863 bookmark/brightness and aa387 capsule/other observations remain tied to their original packages.",
     "Iteration package, not physical-device or user acceptance."
-  ]
+  ],
+  "bookmarkTimeEvidence": {
+    "receipt": "bookmark-time/receipt.json",
+    "result": "PASS for sampled old unknown label/new local-minute date and cleanup; not all PH86",
+    "package": "d5f13a96"
+  }
 }

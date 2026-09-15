@@ -1,0 +1,27 @@
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.52s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_storage-6582e3cf32965be5)
+
+running 19 tests
+test sqlite_backend::scoped_search::tests::scoped_search_author_label_fixture_matches_derived_aliases ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_alias_history_is_bounded_and_raw_facts_survive ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_proof_has_one_identity_and_source_change_revokes_it ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_normalization_matches_recorded_javascript_unicode_fixtures ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_policy_parses_sources_once_per_source_change ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_history_requires_its_own_valid_proof_or_current_raw_match ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_empty_author_identity_fallback_and_disabled_bridge_are_exact ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_alias_closure_expands_splits_and_ignores_metadata_updates ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_labels_join_related_and_batch_without_rewriting_facts ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_normalization_upgrade_rebuilds_only_derived_rows ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_v21_migration_preserves_cache_and_reopens_without_rebuilding ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_legacy_author_proof_requires_current_rule_and_confirmed_field ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_normalizer_version_rebuild_preserves_facts_and_invalidates_snapshot ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_snapshot_restore_and_direct_sql_delete_keep_derived_rows_consistent ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_source_delete_restore_reports_missing_and_invalidates_old_cursors ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_v19_migration_backfills_without_rewriting_facts_and_is_repeatable ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_page_source_snapshot_is_bounded_to_the_page_and_requested_identity ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_indexed_scope_does_not_scan_unrelated_library_growth ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_pages_cover_beyond_128_and_invalidate_on_source_changes ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 164 filtered out; finished in 0.51s
+

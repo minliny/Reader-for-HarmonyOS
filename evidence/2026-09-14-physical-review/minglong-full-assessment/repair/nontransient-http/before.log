@@ -1,0 +1,35 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.51s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 2 tests
+test runtime::tests::nontransient_http_reject_keeps_original_66_required_endpoint_typed ... FAILED
+test runtime::tests::nontransient_http_reject_cause_survives_only_its_required_js_result ... FAILED
+
+failures:
+
+---- runtime::tests::nontransient_http_reject_keeps_original_66_required_endpoint_typed stdout ----
+
+thread 'runtime::tests::nontransient_http_reject_keeps_original_66_required_endpoint_typed' (70343041) panicked at crates/reader-runtime/src/runtime.rs:11999:13:
+assertion `left == right` failed: Some(2300060): CoreError { code: Internal, message: "rule engine error: required rule result failed: chapter endpoint returned a non-text JSON value", retryable: true, details: Object {"category": String("SOURCE_RULE_FAILED"), "requiredResultFailure": Bool(true), "stage": String("chapter.content")} }
+  left: String("SOURCE_RULE_FAILED")
+ right: "SOURCE_HTTP_FAILED"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- runtime::tests::nontransient_http_reject_cause_survives_only_its_required_js_result stdout ----
+
+thread 'runtime::tests::nontransient_http_reject_cause_survives_only_its_required_js_result' (70343040) panicked at crates/reader-runtime/src/runtime.rs:11961:25:
+assertion `left == right` failed: Some(2300060)/required: CoreError { code: Internal, message: "rule engine error: required rule result failed: chapter endpoint returned a non-text JSON value", retryable: true, details: Object {"category": String("SOURCE_RULE_FAILED"), "requiredResultFailure": Bool(true), "stage": String("chapter.content")} }
+  left: String("SOURCE_RULE_FAILED")
+ right: "SOURCE_HTTP_FAILED"
+
+
+failures:
+    runtime::tests::nontransient_http_reject_cause_survives_only_its_required_js_result
+    runtime::tests::nontransient_http_reject_keeps_original_66_required_endpoint_typed
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 420 filtered out; finished in 0.17s
+
+error: test failed, to rerun pass `-p reader-runtime --lib`

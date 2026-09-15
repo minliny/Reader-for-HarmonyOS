@@ -1,0 +1,27 @@
+PASS actual resource callbacks: first full match before page-ready, no timeline or refetch
+PASS serialized matching preserves callback order across delayed evaluations
+PASS source initialization runs once and its real resource event completes capture
+PASS an earlier admitted match wins over a later resource-budget terminal marker
+PASS terminal cleanup and late callback suppression: timeout
+PASS terminal cleanup and late callback suppression: cancel
+PASS terminal cleanup and late callback suppression: detach
+PASS terminal cleanup and late callback suppression: cookie-generation
+PASS terminal cleanup and late callback suppression: network
+PASS terminal cleanup and late callback suppression: budget
+PASS terminal cleanup and late callback suppression: invalid-matcher
+PASS source profiles retain isolated cookie hydration/capture and generation
+PASS POST HTML capture, bounded matcher admission and production callback wiring
+PASS execution failure is terminal with bounded cleanup: matcher-reject
+PASS execution failure is terminal with bounded cleanup: matcher-sync-throw
+PASS execution failure is terminal with bounded cleanup: initialization-reject
+PASS execution failure is terminal with bounded cleanup: load-throw
+PASS late asynchronous matcher completion cannot publish into the next source profile
+PASS quotes and executable-looking text in observed URLs remain JSON-encoded data
+PASS SDK native callback isolation: old resource/pageEnd/pageBegin/network/detach/attach/actions cannot contaminate a new surface; same new URL is accepted
+PASS missing native retirement ACK times out without controller reuse, Host remount or cookie crossover, then recovers after ACK
+PASS never-mounted surface cancellation/retirement/recovery: cancel-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: timeout-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: host-detach-before-mount
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=false
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=true
+PH76 Host production-path resource capture: 26 scenario groups passed; SDK closure checks are local, native lifecycle timing still requires VM evidence

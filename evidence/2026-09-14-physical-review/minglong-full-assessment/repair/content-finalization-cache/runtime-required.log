@@ -1,0 +1,16 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 11.41s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 2 tests
+test remote::required_chapter_admission_tests::environment_failure_stops_source_check_and_change_source_without_verdicts ... ok
+test remote::required_chapter_admission_tests::required_chapter_type_error_is_structured_and_cannot_replace_cached_body ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 409 filtered out; finished in 0.18s
+

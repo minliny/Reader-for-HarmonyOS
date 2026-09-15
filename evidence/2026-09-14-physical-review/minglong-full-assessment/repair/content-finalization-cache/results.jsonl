@@ -1,0 +1,7 @@
+{"case":"main_caught_object","result":{"error":"rule engine error: JavaScript rule failed: chapter endpoint returned a non-text JSON value"}}
+{"case":"replacement_caught_object","result":{"output":"{\"message\":\"synthetic failure\"}"}}
+{"case":"replacement_throws","result":{"output":""}}
+{"case":"replacement_null","result":{"output":"null"}}
+{"case":"replacement_nested","result":{"output":"[{\"message\":\"synthetic failure\"}]"}}
+{"case":"v1_string_rule_object","result":{"output":"{\"message\":\"synthetic failure\"}"}}
+{"case":"v1_chain_object","result":{"error":"invalid rule spec: unknown variant `js`, expected one of `regexExtract`, `regexReplace`, `jsonPath`, `cssText`, `cssAttr`, `xPath`"}}

@@ -1,0 +1,28 @@
+{"charset":"utf-8","inputLength":0,"byteLength":0}
+{"charset":"utf-8","inputLength":1,"byteLength":1}
+{"charset":"utf-8","inputLength":2,"byteLength":6}
+{"charset":"gbk","inputLength":0,"byteLength":0}
+{"charset":"gbk","inputLength":1,"byteLength":1}
+{"charset":"gbk","inputLength":2,"byteLength":4}
+{"charset":"gb2312","inputLength":0,"byteLength":0}
+{"charset":"gb2312","inputLength":1,"byteLength":1}
+{"charset":"gb2312","inputLength":2,"byteLength":4}
+{"charset":"big5","inputLength":0,"byteLength":0}
+{"charset":"big5","inputLength":1,"byteLength":1}
+[stdin]:5
+  const bytes = native.encodeText(input,charset,16777216);
+                       ^
+
+Error: rc_text_encode failed: request text contains characters not representable as big5
+    at [stdin]:5:24
+    at runScriptInThisContext (node:internal/vm:219:10)
+    at node:internal/process/execution:483:12
+    at [stdin]-wrapper:6:24
+    at runScriptInContext (node:internal/process/execution:481:60)
+    at evalFunction (node:internal/process/execution:315:30)
+    at evalTypeScript (node:internal/process/execution:327:3)
+    at node:internal/main/eval_stdin:51:5
+    at ReadStream.<anonymous> (node:internal/process/execution:237:5)
+    at ReadStream.emit (node:events:509:20)
+
+Node.js v26.0.0

@@ -1,0 +1,11 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.56s
+────────────
+ Nextest run ID 5c2f37e1-7c66-4497-86eb-b1915bf56481 with nextest profile: default
+    Starting 1 test across 1 binary (637 tests skipped)
+        PASS [   0.169s] (1/1) reader-runtime::runtime_integration pagination::merged_chapter_replacement_runs_once_and_keeps_first_analyzer_context
+────────────
+     Summary [   0.173s] 1 test run: 1 passed, 637 skipped

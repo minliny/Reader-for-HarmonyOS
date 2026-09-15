@@ -1,0 +1,22 @@
+   Compiling reader-domain v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-domain)
+   Compiling reader-contract v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-contract)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-rule v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-rule)
+   Compiling reader-rss v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-rss)
+   Compiling reader-local-book v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-local-book)
+   Compiling reader-sync v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-sync)
+   Compiling reader-js v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-js)
+   Compiling reader-storage v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-storage)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 12.94s
+     Running unittests src/lib.rs (target/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 5 tests
+test runtime::tests::transient_ordinary_http_failure_preserves_per_source_evidence ... ok
+test remote::source_fetch_and_catalog_tests::transient_http_status_is_checked_before_search_detail_or_body_rules ... ok
+test runtime::tests::transient_66_http_failure_keeps_required_endpoint_admission_typed ... ok
+test runtime::tests::transient_http_status_evidence_does_not_override_success_or_independent_throw ... ok
+test runtime::tests::transient_js_http_evidence_only_explains_its_failed_required_result ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 414 filtered out; finished in 0.32s
+

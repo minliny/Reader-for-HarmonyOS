@@ -1,12 +1,35 @@
+## 2026-09-15 当前实施入口
+
+当前完整修复及证据层以[当前状态](CURRENT_STATUS_20260915.md)为准。6cf PH76双样本通过；c56真实查询、详情、首章、换源复用与返回已经验证，详见[c56动线](vm-c56ad545/ONLINE_RUN.md)。后续作者规则与临时HTTP错误补修、门禁和最终产物分别记账。以下按原版本保留历史，不把已定规则重新归为未定。
+
 # 搜索至试读实施记录
 
-## 最新已验证安装：d5f13a96
+## 2026-09-15《鸣龙》修复前追加定位快照
+
+该时点正文准入、候选回退、错误原因保留、换源批次等问题已有生产方法和完整原规则受控回放证据；没有用户本次真实逐源响应，不能提供真实失败比例。13项为审计分解，不是新的产品待决。该时点PH76 surface隔离只有本地回归，后续构建与af406原生结果见本文顶部，不再称当前未构建。384旧cancel FAIL继续保留；最后有回执真机1d1f47e5与各VM包含不同修复，不合并验收。
+
+## 3843792a历史安装：PH76取消隔离失败
+
+**`20260914T190706Z-3843792a-773d63a4`** 已在 **2026-09-14 19:09:12.959 UTC** 保数据安装到 VM `6460677a198b` 并启动。Harmony `3843792ab06ee1025d06d44d9666fbab2bd6f63f`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名、身份准入、install/launch PASS。签名HAP **167841833 bytes**，SHA-256 `badce494ce3429906ff25c066d97a5e7babb58f8ad260a70f90350923b211f07`。证据：[manifest](vm-3843792a/manifest.json)、[部署回执](vm-3843792a/deployment.json)、[构建](vm-3843792a/build.log)、[身份检查](vm-3843792a/inspect.log)、[安装](vm-3843792a/install.log)、[校验索引](vm-3843792a/receipt.json)。
+
+**384包时点PH76整体OPEN，取消后跨作业误归属由真实VM回调确认；当时生产隔离尚在修复。** 后续源码已实施，最新验证见顶部。两项是384同包不同受控运行，不能只取early成功而报全部通过：
+
+| 实际运行 | 真实结果及证据范围 |
+|---|---|
+| early，03:10:57当地时间 | **PASS**：`callbackToMatchMs=4`、`matchedBeforePageEnd=true`。当前内存文档已准入，`early.css`真实回调在页面结束前被匹配；不是性能timeline模拟结果。 |
+| cancel，03:11:29当地时间 | **FAIL**：旧作业7600001在`old.js`拦截后取消，新作业7600002开始；随后迟到`old.js`被记入7600002并实际`matched`，`returnedResource=unexpected`、`observedLateOldCallbacks=1`。这证明本次取消/新导航的资源归属隔离失败，不能继续当成仅fixture未准入。 |
+
+[完整原生日志](vm-3843792a/ph76-native-results.log)、[两条结构化结果](vm-3843792a/ph76-native-results.json)保留所有事件与时间。两场景均为`in-memory-only`、真实ArkWeb回调受控样本；不证明真实书源联网、全部平台回调顺序或修复后的隔离已通过。专项根因与修复由PH76负责人另记，本节没有新增产品决策、生产修改或设备操作。
+
+书签日期继续沿用**d5f13a96已经VM确认**的新旧显示和清理事实，不假称在384再次测过；6863/aa387其他验证也保留原包身份。Core未变化，沿用3837/3837正式门禁与既有Native；当前仍为iteration / `acceptanceEligible=false`，在线闭环、最终真机和用户验收不因包已安装而关闭。
+
+## d5f13a96 阶段验证（历史包，日期实证保留）
 
 **`20260914T185653Z-d5f13a96-803a4b82`** 已在 **2026-09-14 18:58:57.400 UTC** 保数据安装到 VM `6460677a198b` 并启动，install/launch PASS。Harmony `d5f13a965adf07e6c36fd8ad7e7315cf2ae7d686`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名与安装身份准入通过。签名HAP **167841969 bytes**，SHA-256 `325cdd424b9dea2bb90ced607d87c5d3299f8248e8aa2376ac56ac76041d3004`。
 
 [Manifest](vm-d5f13a96/manifest.json)、[部署回执](vm-d5f13a96/deployment.json)、[构建](vm-d5f13a96/build.log)、[身份检查](vm-d5f13a96/inspect.log)、[安装](vm-d5f13a96/install.log)及[副本校验索引](vm-d5f13a96/receipt.json)已归档。新Core正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift0和C/C++smoke通过；首次因localhost端口权限失败的运行仍保留在下方Core门禁证据，不能冒称该次也通过。
 
-**本包新书签日期尚未VM验证，PH76实际回调结果仍OPEN。** 6863的书签保存/删除与PH88几何、aa387的胶囊及其他交互均保留原包身份，不因安装d5就算重复验证。此包仍为iteration / `acceptanceEligible=false`；在线动线、真机与用户验收不因此通过。
+**本包书签日期已补VM确认**：旧第17章显示“时间未知”，新增第18章显示“09-15 03:03”，与实际创建的上海当地分钟一致；随后清理第18章，列表仅保留第17章。[日期证据](vm-d5f13a96/bookmark-time/receipt.json)。仅该日期/清理样本通过，**PH76实际回调结果仍OPEN**。 6863的书签保存/删除与PH88几何、aa387的胶囊及其他交互均保留原包身份，不因安装d5就算重复验证。此包仍为iteration / `acceptanceEligible=false`；在线动线、真机与用户验收不因此通过。
 
 启动预检曾误用`sys.boot_completed`，返回参数错误1002；随后使用规范`bootevent.boot.completed`确认`true`，SceneBoard仍为PID1529。三份原始回执在上述索引中；这是操作参数错误，不登记为VM启动故障或HDC断联。
 
@@ -31,7 +54,7 @@
 
 ## aa387f08 阶段快照（历史包，不代表6863重复验证）
 
-本轮执行 READER_REPAIR_SPEC §16 及 PH77–91 反馈修复。当前绑定产物为 `20260914T171802Z-aa387f08-71c7172c`：Harmony `aa387f08`、Core `28369db94`，构建时两仓 clean；Core 官方 **3832 项 PASS（1 leaky）/0 skipped**，本次 HAP 入口 Harmony **260 项 PASS**，Native、HAP 编译/签名/校验及 VM 保数据安装与启动通过。**PH90 收起回首条的终态符合用户原约定，初判“位置丢失”已撤回；精确中途 paint 未验。在线搜索 109 源约 3 秒全部失败正在定位，不能记为速度 PASS；当前不是全部交付或用户验收通过。**
+本阶段执行 READER_REPAIR_SPEC §16 及 PH77–91 反馈修复，绑定产物为 `20260914T171802Z-aa387f08-71c7172c`：Harmony `aa387f08`、Core `28369db94`，构建时两仓 clean；Core 官方 **3832 项 PASS（1 leaky）/0 skipped**，该次 HAP 入口 Harmony **260 项 PASS**，Native、HAP 编译/签名/校验及 VM 保数据安装与启动通过。**PH90 收起回首条的终态符合用户原约定，初判“位置丢失”已撤回；精确中途 paint 未验。在线109源失败后来已分类为106次DNS后地址准入拒绝和3次缺searchUrl，详见末节，不是搜索速度PASS；该包不代表全部交付或用户验收通过。**
 
 ## aa387 阶段证据状态
 
@@ -44,7 +67,7 @@
 | VM 安装与启动 | PASS，保留数据 | 2026-09-14 17:20:51 UTC，[同 run 部署回执](ph77-91-vm-deployment.json)，签名包 SHA `720e4709979005f8dc785c768bcb76208a8ea6ebcc250a05dfa88a818861cc98` |
 | VM 本地功能 | 已列操作与 PH90 收起终态符合约定；精确中途 paint 未验 | PH80 现场历史、PH81 重入键盘、PH82 光标、PH83 20 章预览、PH84 外部目录/返回、PH87 稳定菜单、PH91 图标及 PH90 输入/加载/滚动已有事实；范围与初判撤回说明见 [VM_VALIDATION.md](VM_VALIDATION.md) |
 | PH86 追加书签审计 | 独立中间反转已修、本地回归通过；旧 VM 稳定缺图标原因 OPEN | 6 种 ACK/投影/正常回弹顺序、12 次添加删除全程无反转；不把该瞬态修复归因为旧 54 秒缺图标。[专项记录](ph86-bookmark-native-audit.json)、[回归](ph86-bookmark-top-info-fixed.log)；新修复尚无设备验收 |
-| 在线闭环与 PH76 | 未通过，原因定位中 | 本次在线搜索 109 源约 3 秒全部失败，不是速度 PASS；停止重试/详情/换源/试读/返回、松鹤响应及资源捕获仍未通过 |
+| 在线闭环与 PH76 | 该包未通过；后续已定位地址准入/缺URL | 在线109源失败不是速度PASS；该包停止重试/详情/换源/试读/返回、松鹤响应及资源捕获未通过。后续代码与最新验证见顶部 |
 | 本包真机行为/用户验收 | OPEN | 本记录无同 run 真机部署回执；旧包安装、VM 安装及桌面测试均不替代最终真机行为或用户验收 |
 
 当前记录截至 2026-09-14 17:46:30 UTC 的本地书 VM 操作。构建 manifest 的安装 OPEN 是生成时快照；后续安装以部署回执为准，不修改不可变 manifest。PH90 经执行参考第 196–214 行和真实方法探针复核，Quick 回首条是既定终态，已撤回“锚点丢失”初判；未改生产，也不新增保锚需求。中途 paint 和动态帧仍未验。随后在线搜索全失败已由根任务另行定位，不将其耗时记为性能通过。

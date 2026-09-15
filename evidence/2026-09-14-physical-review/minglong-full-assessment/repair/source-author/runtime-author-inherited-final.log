@@ -1,0 +1,22 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.40s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 12 tests
+test remote::acquisition::tests::disabled_source_preserves_offline_body_but_blocks_force_refresh_before_http ... ok
+test remote::acquisition::tests::projected_failures_are_scoped_and_later_catalog_success_obsoletes_early_failures ... ok
+test remote::acquisition::tests::catalog_freshness_and_context_are_from_one_snapshot_and_semantic_refresh_is_stable ... ok
+test remote::acquisition::tests::changed_processing_or_wrong_cached_chapter_invalidates_scoped_success ... ok
+test remote::acquisition::tests::empty_materialized_projection_cannot_publish_readable_even_with_matching_hashes ... ok
+test remote::acquisition::tests::scoped_readable_uses_core_body_evidence_and_rejects_every_stale_scope ... ok
+test remote::acquisition::tests::failure_confirmation_requires_an_explicit_current_content_cause_and_preserves_raw_facts ... ok
+test remote::acquisition::tests::failure_category_admission_keeps_related_order_independent_of_failures ... ok
+test remote::acquisition::tests::shallow_search_preserves_enriched_detail_in_both_storage_representations ... ok
+test remote::acquisition::tests::old_and_unknown_acquisition_json_survive_backup_without_becoming_scoped_readability ... ok
+test remote::acquisition::tests::changed_search_template_cannot_relabel_an_old_author_inherited_by_detail ... ok
+test remote::acquisition::tests::source_bound_author_full_rule_search_detail_and_relation_keep_raw_context ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 408 filtered out; finished in 0.32s
+

@@ -1,0 +1,7 @@
+{"case":"replacement_caught_object","result":{"output":"{\"message\":\"synthetic failure\"}"},"host":{"kind":"readable"}}
+{"case":"replacement_throws","result":{"output":""},"host":{"kind":"SOURCE_CONTENT_EMPTY","reason":"chapter body is blank or too short"}}
+{"case":"replacement_null","result":{"output":"null"},"host":{"kind":"SOURCE_CONTENT_EMPTY","reason":"chapter body is blank or too short"}}
+{"case":"replacement_nested","result":{"output":"[{\"message\":\"synthetic failure\"}]"},"host":{"kind":"readable"}}
+{"case":"v1_string_rule_object","result":{"output":"{\"message\":\"synthetic failure\"}"},"host":{"kind":"readable"}}
+{"case":"long_auth","length":432,"host":{"kind":"readable"}}
+{"case":"api_message","length":12,"host":{"kind":"readable"}}

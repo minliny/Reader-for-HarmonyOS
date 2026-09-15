@@ -1,0 +1,148 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.14s
+────────────
+ Nextest run ID 4c7bb525-277b-4535-843c-9ba6db2c5b23 with nextest profile: default
+    Starting 11 tests across 2 binaries
+────────────
+ Stress test iteration 1/10 (00:00:00 elapsed so far, 10 iterations remaining)
+        PASS [   2.825s] [ 1/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   2.844s] [ 1/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.069s] [ 1/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   2.904s] [ 1/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   2.933s] [ 1/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   3.024s] [ 1/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   3.038s] [ 1/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   3.082s] [ 1/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   3.146s] [ 1/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   3.820s] [ 1/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   6.775s] [ 1/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   6.776s] iteration 1/10: 11 tests run: 11 passed, 0 skipped
+────────────
+ Stress test iteration 2/10 (00:00:06 elapsed so far, 9 iterations remaining)
+        PASS [   0.045s] [ 2/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.075s] [ 2/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.076s] [ 2/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   0.129s] [ 2/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.129s] [ 2/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.283s] [ 2/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.287s] [ 2/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   0.340s] [ 2/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.342s] [ 2/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   1.070s] [ 2/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   3.954s] [ 2/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   3.954s] iteration 2/10: 11 tests run: 11 passed, 0 skipped
+────────────
+ Stress test iteration 3/10 (00:00:10 elapsed so far, 8 iterations remaining)
+        PASS [   0.040s] [ 3/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.079s] [ 3/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.082s] [ 3/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   0.128s] [ 3/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.299s] [ 3/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.299s] [ 3/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.317s] [ 3/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   0.355s] [ 3/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.365s] [ 3/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   1.174s] [ 3/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   3.257s] [ 3/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   3.257s] iteration 3/10: 11 tests run: 11 passed, 0 skipped
+────────────
+ Stress test iteration 4/10 (00:00:13 elapsed so far, 7 iterations remaining)
+        PASS [   0.068s] [ 4/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.121s] [ 4/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.124s] [ 4/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.065s] [ 4/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        LEAK [   0.234s] [ 4/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.236s] [ 4/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.245s] [ 4/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.249s] [ 4/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   0.285s] [ 4/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   0.840s] [ 4/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   2.813s] [ 4/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   2.813s] iteration 4/10: 11 tests run: 11 passed (1 leaky), 0 skipped
+────────────
+ Stress test iteration 5/10 (00:00:16 elapsed so far, 6 iterations remaining)
+        PASS [   0.035s] [ 5/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.069s] [ 5/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.065s] [ 5/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   0.126s] [ 5/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.129s] [ 5/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.229s] [ 5/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.231s] [ 5/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.249s] [ 5/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   0.278s] [ 5/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   0.851s] [ 5/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   2.791s] [ 5/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   2.791s] iteration 5/10: 11 tests run: 11 passed, 0 skipped
+────────────
+ Stress test iteration 6/10 (00:00:19 elapsed so far, 5 iterations remaining)
+        PASS [   0.031s] [ 6/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.067s] [ 6/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.065s] [ 6/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   0.118s] [ 6/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.129s] [ 6/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.235s] [ 6/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.237s] [ 6/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.241s] [ 6/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   0.264s] [ 6/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   0.854s] [ 6/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   2.815s] [ 6/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   2.815s] iteration 6/10: 11 tests run: 11 passed, 0 skipped
+────────────
+ Stress test iteration 7/10 (00:00:22 elapsed so far, 4 iterations remaining)
+        PASS [   0.030s] [ 7/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.068s] [ 7/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.066s] [ 7/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   0.117s] [ 7/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.123s] [ 7/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.220s] [ 7/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.223s] [ 7/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   0.241s] [ 7/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.263s] [ 7/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   0.821s] [ 7/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   2.751s] [ 7/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   2.752s] iteration 7/10: 11 tests run: 11 passed, 0 skipped
+────────────
+ Stress test iteration 8/10 (00:00:25 elapsed so far, 3 iterations remaining)
+        PASS [   0.030s] [ 8/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.069s] [ 8/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.070s] [ 8/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   0.124s] [ 8/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.207s] [ 8/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.227s] [ 8/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   0.236s] [ 8/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.267s] [ 8/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        LEAK [   0.323s] [ 8/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.827s] [ 8/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   2.739s] [ 8/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   2.739s] iteration 8/10: 11 tests run: 11 passed (1 leaky), 0 skipped
+────────────
+ Stress test iteration 9/10 (00:00:27 elapsed so far, 2 iterations remaining)
+        PASS [   0.031s] [ 9/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.065s] [ 9/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.059s] [ 9/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   0.119s] [ 9/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.120s] [ 9/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.247s] [ 9/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        PASS [   0.249s] [ 9/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.302s] [ 9/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.302s] [ 9/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   0.896s] [ 9/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   2.944s] [ 9/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   2.944s] iteration 9/10: 11 tests run: 11 passed, 0 skipped
+────────────
+ Stress test iteration 10/10 (00:00:30 elapsed so far, 1 iteration remaining)
+        PASS [   0.026s] [10/10] reader-cli::fixture_vertical fixture_vertical_runs_full_pipeline
+        PASS [   0.068s] [10/10] reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   0.126s] [10/10] reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   0.127s] [10/10] reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   0.235s] [10/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_css_dsl_pipeline
+        PASS [   0.239s] [10/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline
+        LEAK [   0.265s] [10/10] reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.270s] [10/10] reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        PASS [   0.292s] [10/10] reader-cli::fixture_vertical booksource_fixture_outputs_stable_json
+        PASS [   0.851s] [10/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_yodu_multirule_real_source_pipeline
+        PASS [   2.822s] [10/10] reader-cli::fixture_vertical fixture_vertical_runs_legado_sudugu_real_source_pipeline
+ Stress test [   2.822s] iteration 10/10: 11 tests run: 11 passed (1 leaky), 0 skipped
+────────────
+     Summary [  33.664s] 10/10 stress run iterations: 10 passed

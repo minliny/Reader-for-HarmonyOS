@@ -1,0 +1,22 @@
+   Compiling reader-domain v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-domain)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.58s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_domain-de29c5e72d18f336)
+
+running 1 test
+test author_identity::tests::author_rule_decoration_requires_the_exact_field_template ... FAILED
+
+failures:
+
+---- author_identity::tests::author_rule_decoration_requires_the_exact_field_template stdout ----
+
+thread 'author_identity::tests::author_rule_decoration_requires_the_exact_field_template' (70045916) panicked at crates/reader-domain/src/author_identity.rs:43:14:
+called `Result::unwrap()` on an `Err` value: Error("missing field `rules`", line: 0, column: 0)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    author_identity::tests::author_rule_decoration_requires_the_exact_field_template
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p reader-domain --lib`

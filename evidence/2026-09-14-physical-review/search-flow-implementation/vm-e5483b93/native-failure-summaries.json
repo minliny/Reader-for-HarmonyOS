@@ -1,0 +1,72 @@
+[
+  {
+    "category": "SOURCE_HTTP_FAILED",
+    "phase": "transport",
+    "stage": "request.dispatch",
+    "requestId": 12,
+    "operationId": 4,
+    "platformCode": 2300999,
+    "elapsedMs": 1713,
+    "transient": true
+  },
+  {
+    "category": "SOURCE_HTTP_FAILED",
+    "phase": "transport",
+    "stage": "request.dispatch",
+    "requestId": 100,
+    "operationId": 32,
+    "platformCode": 2300999,
+    "elapsedMs": 10222,
+    "transient": true
+  },
+  {
+    "category": "SOURCE_HTTP_FAILED",
+    "phase": "transport",
+    "stage": "request.dispatch",
+    "requestId": 141,
+    "operationId": 55,
+    "platformCode": 2300999,
+    "elapsedMs": 2588,
+    "transient": true
+  },
+  {
+    "category": "SOURCE_HTTP_FAILED",
+    "phase": "transport",
+    "stage": "request.dispatch",
+    "requestId": 159,
+    "operationId": 61,
+    "platformCode": 2300999,
+    "elapsedMs": 2426,
+    "transient": true
+  },
+  {
+    "category": "SOURCE_HTTP_FAILED",
+    "phase": "transport",
+    "stage": "request.dispatch",
+    "requestId": 250,
+    "operationId": 85,
+    "platformCode": 2300060,
+    "elapsedMs": 595,
+    "transient": false
+  },
+  {
+    "category": "SOURCE_HTTP_FAILED",
+    "phase": "transport",
+    "stage": "request.dispatch",
+    "requestId": 281,
+    "operationId": 103,
+    "platformCode": 2300999,
+    "elapsedMs": 633,
+    "transient": true
+  },
+  {
+    "category": "SOURCE_HTTP_FAILED",
+    "phase": "transport",
+    "stage": "request.dispatch",
+    "requestId": 267,
+    "operationId": 93,
+    "platformCode": 2300999,
+    "elapsedMs": 7801,
+    "transient": true
+  }
+]

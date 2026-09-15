@@ -1,0 +1,8 @@
+PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS
+(node:54029) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+R5/R6 query=1000 unrelated=0: metadata RPC=1 returned=1 projected=1 captured=1 PASS
+R5/R6 query=1000 unrelated=9000: metadata RPC=1 returned=1 projected=1 captured=1 PASS
+R5/R6 partition isolation, exact missing, related admission, stable merge/split, stale cursor and ownership PASS
+R5/R6 130-identity atomic source partition and complete 131-member two-page relation PASS
+PASS actual SearchGateway retains safe HTTP request/operation/code/timing summary and unchanged error copy; independent rule errors do not inherit stale evidence

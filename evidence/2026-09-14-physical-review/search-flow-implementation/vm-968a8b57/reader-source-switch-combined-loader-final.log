@@ -1,0 +1,7 @@
+(node:14078) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+source-switch gateway contract: PASS
+PH70 known candidate first paint, delta projection, registry deletion and missing-only discovery PASS
+PH70 real Index source-switch entry paints known candidates before cache RPC PASS
+PH70 actual Index/Gateway retain failed delta/reset without automatic retry loops PASS
+R5 SourceSwitch relation pagination, stale retry, continuation, scoped verdict and deletion preservation PASS

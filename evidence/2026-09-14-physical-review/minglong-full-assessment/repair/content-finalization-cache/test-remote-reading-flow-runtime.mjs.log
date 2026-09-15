@@ -1,0 +1,3 @@
+reading image resolve failed: OPERATION_FAILED
+remote reading flow deterministic runtime: PASS
+PASS PH58 actual remote/reading-session adapters: optional force flag, offline refresh, identity and failure propagation

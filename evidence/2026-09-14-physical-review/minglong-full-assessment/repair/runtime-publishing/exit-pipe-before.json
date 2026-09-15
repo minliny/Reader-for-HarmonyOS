@@ -1,0 +1,402 @@
+[
+  {
+    "iteration": 0,
+    "pid": 31206,
+    "exitCode": 0,
+    "elapsedMs": 233.636,
+    "exitToLastEofMs": -0.016,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.23s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 1,
+    "pid": 31207,
+    "exitCode": 0,
+    "elapsedMs": 233.816,
+    "exitToLastEofMs": -0.053,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.23s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 2,
+    "pid": 31209,
+    "exitCode": 0,
+    "elapsedMs": 234.089,
+    "exitToLastEofMs": -1.239,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.23s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 3,
+    "pid": 31208,
+    "exitCode": 0,
+    "elapsedMs": 232.621,
+    "exitToLastEofMs": -0.168,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.23s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 4,
+    "pid": 31216,
+    "exitCode": 0,
+    "elapsedMs": 165.696,
+    "exitToLastEofMs": -0.017,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 5,
+    "pid": 31215,
+    "exitCode": 0,
+    "elapsedMs": 166.396,
+    "exitToLastEofMs": 0.058,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 6,
+    "pid": 31217,
+    "exitCode": 0,
+    "elapsedMs": 165.389,
+    "exitToLastEofMs": -0.012,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 7,
+    "pid": 31218,
+    "exitCode": 0,
+    "elapsedMs": 166.301,
+    "exitToLastEofMs": -0.567,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 8,
+    "pid": 31224,
+    "exitCode": 0,
+    "elapsedMs": 168.962,
+    "exitToLastEofMs": -0.017,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 9,
+    "pid": 31225,
+    "exitCode": 0,
+    "elapsedMs": 170.619,
+    "exitToLastEofMs": -0.012,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 10,
+    "pid": 31226,
+    "exitCode": 0,
+    "elapsedMs": 167.138,
+    "exitToLastEofMs": -0.01,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 11,
+    "pid": 31227,
+    "exitCode": 0,
+    "elapsedMs": 167.586,
+    "exitToLastEofMs": 0.024,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 12,
+    "pid": 31234,
+    "exitCode": 0,
+    "elapsedMs": 169.212,
+    "exitToLastEofMs": -0.052,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 13,
+    "pid": 31235,
+    "exitCode": 0,
+    "elapsedMs": 168.447,
+    "exitToLastEofMs": -0.169,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 14,
+    "pid": 31236,
+    "exitCode": 0,
+    "elapsedMs": 167.565,
+    "exitToLastEofMs": -0.165,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 15,
+    "pid": 31238,
+    "exitCode": 0,
+    "elapsedMs": 168.307,
+    "exitToLastEofMs": 0.058,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 16,
+    "pid": 31245,
+    "exitCode": 0,
+    "elapsedMs": 172.782,
+    "exitToLastEofMs": -0.046,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 17,
+    "pid": 31243,
+    "exitCode": 0,
+    "elapsedMs": 173.088,
+    "exitToLastEofMs": -0.015,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 18,
+    "pid": 31244,
+    "exitCode": 0,
+    "elapsedMs": 176.686,
+    "exitToLastEofMs": -0.01,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 19,
+    "pid": 31246,
+    "exitCode": 0,
+    "elapsedMs": 169.995,
+    "exitToLastEofMs": -0.017,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 20,
+    "pid": 31272,
+    "exitCode": 0,
+    "elapsedMs": 171.55,
+    "exitToLastEofMs": -0.052,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 21,
+    "pid": 31273,
+    "exitCode": 0,
+    "elapsedMs": 170.259,
+    "exitToLastEofMs": -0.019,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 22,
+    "pid": 31274,
+    "exitCode": 0,
+    "elapsedMs": 171.704,
+    "exitToLastEofMs": -1.457,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 23,
+    "pid": 31277,
+    "exitCode": 0,
+    "elapsedMs": 168.705,
+    "exitToLastEofMs": 0.012,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 24,
+    "pid": 31281,
+    "exitCode": 0,
+    "elapsedMs": 180.652,
+    "exitToLastEofMs": -0.008,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.18s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 25,
+    "pid": 31282,
+    "exitCode": 0,
+    "elapsedMs": 178.637,
+    "exitToLastEofMs": -0.008,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.18s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 26,
+    "pid": 31283,
+    "exitCode": 0,
+    "elapsedMs": 164.72,
+    "exitToLastEofMs": -0.011,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 27,
+    "pid": 31284,
+    "exitCode": 0,
+    "elapsedMs": 174.933,
+    "exitToLastEofMs": -0.012,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 28,
+    "pid": 31290,
+    "exitCode": 0,
+    "elapsedMs": 157.747,
+    "exitToLastEofMs": -0.037,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.15s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 29,
+    "pid": 31292,
+    "exitCode": 0,
+    "elapsedMs": 170.034,
+    "exitToLastEofMs": 0.046,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 30,
+    "pid": 31293,
+    "exitCode": 0,
+    "elapsedMs": 167.848,
+    "exitToLastEofMs": -0.009,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 31,
+    "pid": 31295,
+    "exitCode": 0,
+    "elapsedMs": 167.668,
+    "exitToLastEofMs": -0.084,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 32,
+    "pid": 31299,
+    "exitCode": 0,
+    "elapsedMs": 164.364,
+    "exitToLastEofMs": -0.009,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 33,
+    "pid": 31301,
+    "exitCode": 0,
+    "elapsedMs": 170.671,
+    "exitToLastEofMs": -0.014,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 34,
+    "pid": 31302,
+    "exitCode": 0,
+    "elapsedMs": 169.897,
+    "exitToLastEofMs": -0.012,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 35,
+    "pid": 31303,
+    "exitCode": 0,
+    "elapsedMs": 170.654,
+    "exitToLastEofMs": 0.122,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.17s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 36,
+    "pid": 31309,
+    "exitCode": 0,
+    "elapsedMs": 168.174,
+    "exitToLastEofMs": -0.01,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 37,
+    "pid": 31311,
+    "exitCode": 0,
+    "elapsedMs": 166.786,
+    "exitToLastEofMs": -0.05,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 38,
+    "pid": 31312,
+    "exitCode": 0,
+    "elapsedMs": 166.734,
+    "exitToLastEofMs": -0.037,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  },
+  {
+    "iteration": 39,
+    "pid": 31313,
+    "exitCode": 0,
+    "elapsedMs": 165.93,
+    "exitToLastEofMs": -0.006,
+    "holderCapture": false,
+    "stdout": "\nrunning 1 test\ntest fixture_vertical_runs_legado_zhuishu_json_real_source_pipeline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.16s\n\n",
+    "stderr": ""
+  }
+]

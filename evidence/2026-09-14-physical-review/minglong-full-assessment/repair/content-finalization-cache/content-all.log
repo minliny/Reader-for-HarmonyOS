@@ -1,0 +1,527 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.16s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_content-dd92e2a3824a4829)
+
+running 201 tests
+test chinese::tests::chinese_converter_type_from_legado_config_parses_int_values ... ok
+test normalization::tests::collapses_three_plus_newlines_to_two ... ok
+test content_processor::tests::default_has_no_rules_and_no_conversion ... ok
+test content_processor::tests::matching_invalid_source_regex_fails_candidate ... ok
+test normalization::tests::display_intro_uses_standard_entities_without_rewriting_literal_or_language_text ... ok
+test content_processor::tests::source_import_rules_are_ordered_and_source_target_only ... ok
+test content_processor::tests::replacement_pattern_validation_rejects_blank_and_invalid_regex ... ok
+test normalization::tests::encodes_gbk_request_text_without_host_tables ... ok
+test normalization::tests::extracted_content_keeps_language_joiners_and_removes_thin_spacing ... ok
+test normalization::tests::extracted_content_decodes_common_html4_punctuation_entities ... ok
+test normalization::tests::extracted_html_fragments_strip_tags_and_decode_entities ... ok
+test normalization::tests::normalize_content_handles_empty_string ... ok
+test normalization::tests::extracted_html_keeps_img_data_attributes_like_legado ... ok
+test normalization::tests::normalize_content_trims_edges_and_collapses_blanks ... ok
+test normalization::tests::normalizes_crlf_and_cr_to_lf ... ok
+test normalization::tests::request_encoding_rejects_unknown_and_unmappable_text ... ok
+test normalization::tests::strip_bom_removes_leading_bom ... ok
+test reading_document::tests::image_only_chapters_remain_renderable ... ok
+test reading_document::tests::text_only_projection_is_exact ... ok
+test reading_document::tests::images_get_one_scalar_and_block_boundaries ... ok
+test source_adapters::tests::adapter_is_bound_to_the_complete_existing_source_rule ... ok
+test tests::base_url_strips_fragment_from_book_source_url ... ok
+test tests::chapter_content_extracts_text ... ok
+test chinese::tests::fixt2sdict_exclude_words_preserved_by_zhhz_t2s ... ok
+test content_processor::tests::with_chinese_converter_applies_t2s ... ok
+test chinese::tests::convert_t2s_preserves_exclude_words_in_mixed_content ... ok
+test tests::chapter_content_formats_raw_html_fragment_like_legado ... ok
+test tests::chapter_document_extracts_then_normalizes_for_cache ... ok
+test tests::content_document_upsert_replaces_same_source_book ... ok
+test tests::content_document_library_upserts_lists_and_reads_chapters ... ok
+test tests::content_library_snapshot_export_is_stable_and_json_round_trips ... ok
+test tests::content_library_snapshot_rejects_schema_duplicates_invalid_documents_and_unknown_fields ... ok
+test tests::content_library_snapshot_replace_is_atomic_on_validation_failure ... ok
+test tests::content_library_snapshot_replace_round_trips_and_empty_clears ... ok
+test chinese::tests::zhhz_opencc_covers_common_t2s_pairs_without_fixt2sdict ... ok
+test chinese::tests::convert_chinese_matches_legado_chinese_utils_full_dictionary_paths ... ok
+test tests::chapter_content_accepts_raw_legado_css_rule_string ... ok
+test tests::book_source_content_extracts_class_html_with_regex_suffix ... ok
+test tests::content_js_kugou_ajax_rule_yields_audio_url ... ok
+test tests::content_rule_js_can_call_book_source_js_lib_helpers ... ok
+test tests::book_source_content_runs_css_attr_then_js_tail_for_image_html ... ok
+test tests::content_js_assignment_completion_value_yields_audio_url ... ok
+test tests::content_js_if_else_fallback_completion_extracts_gaolashuwu_html ... ok
+test tests::detail_flat_key_value_fallback ... ok
+test tests::detail_merges_metadata_from_json_object ... ok
+test tests::detail_field_put_rule_value_feeds_later_toc_url_get ... ok
+test tests::detail_accepts_raw_legado_css_rule_string ... ok
+test tests::detail_init_colon_regex_injects_backrefs_into_field_rules ... ok
+test tests::detail_toc_url_literal_template_strips_put_before_url_dsl_options ... ok
+test tests::detail_init_put_rule_value_feeds_toc_url_get ... ok
+test tests::detail_toc_url_js_result_preserves_url_dsl_options ... ok
+test tests::evaluate_url_js_accepts_cpxpsp_multiline_search_script ... ok
+test tests::evaluate_url_js_cookie_object_exposes_remove_get_set_methods ... ok
+test tests::current_review_reply_page_requires_body_and_parses_top_level_replies ... ok
+test tests::evaluate_url_js_exposes_base_j_and_cache_memory_helpers ... ok
+test tests::detail_toc_url_js_java_put_feeds_toc_chapter_url_get ... ok
+test tests::detail_put_variable_feeds_toc_chapter_url_js_template_get ... ok
+test tests::evaluate_url_js_java_android_id_returns_stub_via_registered_callback ... ok
+test tests::evaluate_url_js_injects_extended_legado_variables ... ok
+test tests::detail_toc_url_js_supports_base_j_and_cache_memory_helpers ... ok
+test tests::evaluate_url_js_source_data_fields_read_from_context_source ... ok
+test tests::evaluate_url_js_injects_source_from_context ... ok
+test tests::evaluate_url_js_source_get_key_on_empty_default_returns_empty ... ok
+test tests::expand_template_evaluates_at_css_subrule_templates ... ok
+test tests::expand_template_expands_jsonpath_against_item_scope ... ok
+test tests::expand_template_evaluates_double_at_current_scope_templates ... ok
+test tests::expand_template_expands_single_brace_jsonpath_url_templates ... ok
+test tests::expand_template_jsonpath_no_match_returns_empty_string ... ok
+test tests::evaluate_url_js_let_redeclaration_does_not_trigger_syntax_error ... ok
+test tests::expand_template_supports_mixed_jsonpath_and_variable_lookups ... ok
+test tests::evaluate_url_js_source_data_fields_default_to_empty_when_no_context_source ... ok
+test tests::evaluate_url_js_source_object_exposes_get_key_and_variable_methods ... ok
+test tests::evaluate_url_js_source_partial_data_fields_use_defaults_for_missing ... ok
+test tests::extract_manga_pages_falls_back_to_generic_img_selector_when_no_rule ... ok
+test tests::expand_template_preserves_unknown_variable_as_literal ... ok
+test tests::extract_manga_pages_passes_through_json_array_content ... ok
+test tests::evaluate_url_js_undefined_and_null_returns_empty_string ... ok
+test tests::extract_manga_pages_falls_back_to_amp_img_inside_comic_container ... ok
+test tests::extract_manga_pages_extracts_img_src_from_html_via_legado_rule ... ok
+test tests::extract_manga_pages_via_v1_rule_spec ... ok
+test tests::fn_149823_extract_regex_list_items_invalid_pattern_returns_rule_error ... ok
+test tests::fn_149823_extract_regex_list_items_returns_none_for_non_colon_rules ... ok
+test tests::fn_149823_is_pure_regex_backreference_rule_classification ... ok
+test tests::fn_149823_substitute_regex_backreferences_noop_without_capture_groups ... ok
+test tests::fn_149823_substitute_regex_backreferences_preserves_unstored_groups ... ok
+test tests::fn_149823_substitute_regex_backreferences_replaces_dollar_n ... ok
+test tests::fn_149823_extract_regex_list_items_returns_matches_and_capture_groups ... ok
+test tests::expand_template_stringifies_integral_js_numbers_without_decimal_suffix ... ok
+test tests::extract_manga_pages_parses_img_html_returned_by_content_js ... ok
+test tests::js_bridge_empty_element_collection_size_and_get_remain_functional ... ok
+test tests::extract_manga_pages_parses_img_html_with_header_json_returned_by_content_js ... ok
+test tests::extract_manga_pages_runs_json_content_js_get_string_list ... ok
+test tests::normalize_chapter_rejects_missing_keys_and_empty_content ... ok
+test tests::normalize_chapter_removes_leading_duplicate_chapter_title ... ok
+test tests::normalize_chapter_trims_bom_line_endings_and_blank_runs ... ok
+test tests::parse_manga_pages_from_json_array_of_objects ... ok
+test tests::normalized_chapter_json_denies_unknown_fields ... ok
+test tests::js_rule_host_call_with_registered_callback_succeeds ... ok
+test tests::parse_manga_pages_from_json_array_of_strings ... ok
+test tests::parse_manga_pages_from_json_array_preserves_referrer_and_headers ... ok
+test tests::parse_manga_pages_from_newline_separated_urls ... ok
+test tests::parse_manga_pages_from_single_url_returns_one_page ... ok
+test tests::parse_manga_pages_from_url_with_json_headers_suffix ... ok
+test tests::parse_manga_pages_returns_empty_for_empty_content ... ok
+test tests::parse_manga_pages_returns_none_for_html ... ok
+test tests::js_rule_host_call_without_callback_is_unsupported ... ok
+test tests::reading_image_sources_resolve_per_page_and_preserve_dsl_headers ... ok
+test tests::extract_manga_pages_runs_jsonpath_then_content_js_tail ... ok
+test tests::remap_reading_progress_handles_empty_new_toc ... ok
+test tests::remap_reading_progress_preserves_offset_when_chapter_survives ... ok
+test tests::remap_reading_progress_resets_offset_when_chapter_removed ... ok
+test tests::resolve_url_preserves_url_dsl_options ... ok
+test tests::rule_step_spec_rejects_raw_legado_dsl_strings ... ok
+test tests::rule_step_spec_round_trips_json_path ... ok
+test tests::run_chain_empty_input_jsonpath_returns_empty_not_eof_error ... ok
+test tests::run_chain_html_input_jsonpath_returns_empty_not_json_parse_error ... ok
+test tests::js_bridge_empty_element_collection_string_concat_does_not_yield_object_object ... ok
+test tests::real_book_source_js_rule_fixture_routes_through_host_callbacks ... ok
+test tests::js_rule_success_path ... ok
+test tests::ph85_songhe_original_rule_projects_json_paragraphs_without_serialization_artifacts ... ok
+test tests::ph85_final_replacement_getstring_uses_first_response_and_restores_result ... ok
+test tests::run_chain_java_get_elements_supports_paginated_toc_js ... ok
+test tests::run_chain_java_get_string_supports_css_attr_extraction ... ok
+test tests::run_chain_java_get_elements_supports_negative_bang_index ... ok
+test tests::current_review_summary_applies_index_count_and_key_fallbacks ... ok
+test tests::run_chain_js_empty_string_chained_with_jsonpath_does_not_error ... ok
+test tests::run_chain_java_get_string_supports_bang_index_pipeline ... ok
+test tests::run_chain_js_java_get_string_reads_current_json_result ... ok
+test tests::run_chain_js_result_chained_with_jsonpath_rechecks_segment_mode ... ok
+test tests::run_chain_js_infinity_does_not_cause_non_json_value_error ... ok
+test tests::run_chain_js_undefined_does_not_cause_json_parse_error ... ok
+test tests::run_chain_js_undefined_chained_with_jsonpath_does_not_error ... ok
+test tests::run_chain_whitespace_input_jsonpath_returns_empty_not_eof_error ... ok
+test tests::search_accepts_raw_legado_css_rule_string ... ok
+test tests::search_book_source_expands_single_brace_book_url_template ... ok
+test tests::run_chain_js_nan_does_not_cause_non_json_value_error ... ok
+test tests::run_chain_js_object_stringifies_to_valid_json ... ok
+test tests::ph85_text_fields_and_js_getstring_join_arrays_without_changing_request_templates ... ok
+test tests::current_review_detail_parses_protocol_media_badges_replies_and_next_page ... ok
+test tests::search_book_source_scopes_per_item_with_json_booklist ... ok
+test tests::search_book_source_skips_fallback_when_book_url_pattern_is_set ... ok
+test tests::run_chain_jsonpath_multivalue_then_js_parse_result_map_works ... ok
+test tests::run_chain_jsoup_elements_methods_support_esj_toc_rule ... ok
+test tests::search_book_source_fallback_uses_current_url_not_raw_template ... ok
+test tests::search_book_source_uses_url_template_fallback_branch_for_json_item ... ok
+test tests::search_extracts_books_from_json ... ok
+test tests::search_book_source_strips_put_directive_from_name_rule ... ok
+test tests::search_book_source_extracts_manhuaren_book_list_shorthand_items ... ok
+test tests::run_chain_java_get_element_array_from_supports_itemlist_script_toc ... ok
+test tests::search_json_booklist_iterates_array_returned_by_bare_jsonpath ... ok
+test tests::search_with_empty_response_and_jsonpath_rule_returns_empty_not_core_error ... ok
+test tests::search_json_booklist_expands_common_envelope_object_array ... ok
+test tests::search_with_empty_rules_returns_empty ... ok
+test tests::search_with_html_response_and_jsonpath_rule_returns_empty_not_core_error ... ok
+test tests::search_field_put_variable_feeds_detail_toc_url_get ... ok
+test tests::search_book_source_skips_fallback_when_detail_parse_yields_no_name ... ok
+test tests::toc_accepts_raw_legado_css_rule_string ... ok
+test tests::toc_bare_keyword_chapter_name_on_jsonpath_item ... ok
+test tests::search_book_source_skips_fallback_when_booklist_returns_results ... ok
+test tests::search_book_url_js_uses_legado_map_to_string_for_per_item_result ... ok
+test tests::search_field_put_variable_reads_bare_json_field_name ... ok
+test tests::template_literal_rule_runs_time_format_then_regex_suffix ... ok
+test tests::template_literal_rule_runs_java_get_string_then_regex_suffix ... ok
+test tests::toc_chapter_list_js_fallback_runs_after_empty_selector_result ... ok
+test tests::toc_chapter_list_js_receives_request_context ... ok
+test tests::search_book_source_falls_back_to_detail_page_when_booklist_empty_and_no_pattern ... ok
+test tests::toc_chapter_list_leading_plus_js_preserves_order ... ok
+test tests::toc_chapter_list_leading_dash_reverses_order ... ok
+test tests::toc_chapter_list_js_tail_selects_decoded_html_items ... ok
+test tests::toc_diff_handles_duplicate_urls_by_occurrence ... ok
+test tests::toc_diff_maps_url_changes_by_title_fallback ... ok
+test tests::toc_chapter_list_supports_chained_bang_index ... ok
+test tests::toc_extracts_from_json_array ... ok
+test tests::toc_dash_chapter_url_uses_current_page_url ... ok
+test tests::toc_item_put_variables_are_attached_to_chapter_entries ... ok
+test tests::toc_css_selector_prefix_at_js_receives_element_html ... ok
+test tests::book_source_semantic_pipeline_runs_canonical_fixture ... ok
+test tests::toc_cache_set_content_jsonpath_get_elements_supports_cached_nuxt ... ok
+test tests::toc_keeps_chapters_when_chapter_url_rule_defined_but_evaluates_empty ... ok
+test tests::toc_extracts_onclick_chapter_url_with_webview_options ... ok
+test tests::run_chain_jsoup_esj_single_chapter_without_volume_marker ... ok
+test tests::toc_list_bare_json_path_with_put_extracts_chapters ... ok
+test tests::toc_ixdzs_js_post_array_items_parse_as_chapters ... ok
+test tests::toc_list_put_rule_value_feeds_item_chapter_url_get ... ok
+test tests::toc_jsoup_for_in_json_string_items_supports_xgcartoon_rule ... ok
+test tests::toc_keeps_volume_heading_with_empty_url_when_chapter_url_rule_defined ... ok
+test tests::toc_miui_js_array_items_parse_as_chapters ... ok
+test tests::toc_url_class_shorthand_extracts_href ... ok
+test tests::toc_chapter_list_selector_js_tail_keeps_element_array_and_book_variable ... ok
+test tests::toc_whole_jsonpath_list_expands_json_items ... ok
+test tests::toc_chapter_list_js_stringify_element_array_keeps_outer_html ... ok
+test tests::toc_js_java_get_reads_host_backed_java_put_across_evals ... ok
+test tests::toc_lestory_js_jsonpath_array_items_parse_as_chapters ... ok
+test tests::toc_resolves_absolute_path_against_fragment_stripped_origin ... ok
+test tests::toc_url_template_expands_to_url_not_selector ... ok
+test tests::toc_douban_json_js_list_supports_json_item_multirule_and_js_url_templates ... ok
+test tests::toc_xpath_collection_js_tail_redetects_css_selector ... ok
+test tests::toc_list_js_java_put_feeds_item_chapter_url_get ... ok
+test tests::toc_xpath_chapter_list_preserves_element_scope_for_fields ... ok
+test tests::toc_nuxt_js_jsonpath_items_parse_as_chapters ... ok
+test tests::source_with_raw_book_source_uses_semantic_rules_when_v1_rules_are_empty ... ok
+
+test result: ok. 201 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running tests/analyze_url.rs (target/check/debug/deps/analyze_url-f1e47e88269a2239)
+
+running 109 tests
+test build_request_dsl_headers_override_source_headers_case_insensitively ... ok
+test build_request_merges_source_headers_and_dsl_headers ... ok
+test build_request_ascii_host_passthrough_unchanged ... ok
+test build_request_normalizes_empty_charset_to_utf8 ... ok
+test build_request_no_type_post_still_uses_raw_body ... ok
+test build_request_normalizes_relative_dot_segments ... ok
+test build_request_auto_content_type_for_post_body ... ok
+test build_request_plain_get_url ... ok
+test build_request_full_width_dirty_char_host_falls_back_without_panic ... ok
+test build_request_encodes_chinese_host_with_chinese_path_unchanged_path ... ok
+test build_request_encodes_chinese_domain_host_to_punycode ... ok
+test build_request_post_with_body_and_charset ... ok
+test build_request_rejects_js_url_in_non_js_build ... ok
+test build_request_preserves_port_when_encoding_chinese_host ... ok
+test build_request_rejects_non_http_scheme ... ok
+test build_request_rejects_non_static_js_template_in_non_js_build ... ok
+test build_request_post_body_uses_raw_keyword_not_percent_encoded ... ok
+test build_request_resolves_relative_path_stripping_base_fragment ... ok
+test build_request_post_with_json_object_body_serializes_to_string ... ok
+test build_request_resolves_relative_url_against_base ... ok
+test build_request_resolves_relative_url_stripping_base_fragment ... ok
+test build_request_strips_double_scheme_http_http ... ok
+test build_request_strips_double_scheme_https_https ... ok
+test build_request_strips_double_scheme_preserves_real_host ... ok
+test build_request_strips_fragment_from_explicit_absolute_url ... ok
+test build_request_treats_header_names_case_insensitively ... ok
+test build_request_type1_still_uses_raw_body ... ok
+test build_request_type2_constructs_multipart_body_with_fields_and_files ... ok
+test build_request_type2_expands_keyword_in_form_fields ... ok
+test build_request_type2_rejects_non_object_body ... ok
+test build_request_type2_with_multiple_fields_and_files ... ok
+test build_request_url_path_still_uses_percent_encoded_keyword ... ok
+test build_request_with_js_evaluates_at_js_expression ... ok
+test build_request_with_js_evaluates_dsl_js_option ... ok
+test build_request_with_js_evaluates_js_tag_expression ... ok
+test build_request_with_js_fragment_stripping_preserves_fragment_free_baseurl_verbatim ... ok
+test build_request_with_js_exposes_raw_source_header_to_source_object ... ok
+test build_request_with_js_fragment_stripping_compatible_with_idn_punycode ... ok
+test build_request_with_js_extracts_multiline_script_tag_body ... ok
+test build_request_with_js_handles_dsl_json_with_at_js_tail ... ok
+test build_request_with_js_initializes_result_to_url_part ... ok
+test build_request_with_js_resolves_relative_js_result_against_fragment_stripped_base ... ok
+test build_request_with_js_result_defaults_to_empty_when_no_url_part ... ok
+test build_request_with_js_re_evaluates_non_static_templates_in_js_result ... ok
+test build_request_with_js_result_variable_holds_url_without_newline ... ok
+test build_request_with_js_returns_js_result_as_dsl_with_post_options ... ok
+test build_request_with_js_strips_fragment_from_baseurl_in_js_context ... ok
+test build_request_with_js_strips_group_mark_fragment_from_src374_baseurl ... ok
+test build_request_with_js_substitutes_page_arithmetic_and_date_templates ... ok
+test build_request_with_js_surfaces_evaluator_error ... ok
+test build_request_with_js_substitutes_cookie_prefix_before_post_dsl_parse ... ok
+test classify_static_variable_placeholders_are_not_js ... ok
+test expand_legado_page_pattern_allows_empty_first_segment ... ok
+test expand_legado_page_pattern_uses_current_page_segment ... ok
+test build_request_with_js_without_js_falls_through_to_non_js_path ... ok
+test expand_page_list_does_not_mangle_js_regex_and_arrow ... ok
+test expand_page_list_range_takes_first_value ... ok
+test expand_page_list_takes_first_value_for_single_request ... ok
+test expand_page_pattern_preserves_js_tags ... ok
+test expand_static_templates_replaces_key_and_page ... ok
+test expand_static_templates_replaces_keyword_alias ... ok
+test parse_empty_string_yields_empty_url ... ok
+test parse_malformed_json_returns_error ... ok
+test parse_plain_url_yields_no_options ... ok
+test parse_url_dsl_inserts_missing_comma_between_pairs ... ok
+test parse_url_dsl_tolerates_equals_between_quoted_strings_in_value ... ok
+test parse_url_dsl_tolerates_unescaped_quotes_inside_template ... ok
+test parse_url_with_at_js_expression_classifies ... ok
+test parse_url_with_at_js_inside_body_string_is_not_stripped ... ok
+test parse_url_with_bare_unquoted_body_value_normalizes ... ok
+test parse_url_with_false_and_null_literals_preserves_booleans ... ok
+test parse_url_with_headers_as_string_with_single_quotes_normalizes ... ok
+test parse_url_with_js_template_in_value_not_treated_as_separator ... ok
+test parse_url_with_json_object_body_serializes_to_string ... ok
+test parse_url_with_json_options_and_at_js_suffix_strips_js_tail ... ok
+test parse_url_with_json_options_and_js_tag_suffix_strips_js_tail ... ok
+test parse_url_with_json_options_post_body ... ok
+test parse_url_with_legacy_method_prefix_keeps_url ... ok
+test parse_url_with_newline_before_at_js_suffix_strips_newline_from_url_part ... ok
+test parse_url_with_newline_before_js_tag_suffix_strips_newline_from_url_part ... ok
+test parse_url_with_semicolon_separated_pairs_normalizes ... ok
+test parse_url_with_single_quoted_json_normalizes ... ok
+test parse_url_with_string_body_still_works ... ok
+test parse_url_with_trailing_js_after_json_is_truncated ... ok
+test parse_url_with_unquoted_headers_key_normalizes ... ok
+test parse_url_with_unquoted_json_keys_normalizes ... ok
+test parse_url_with_webview_true_literal_preserves_boolean ... ok
+test url_dsl_options_parses_type_field ... ok
+test parse_webview_execution_options_for_host_planning ... ok
+test url_dsl_parses_body_with_control_char_after_escape ... ok
+test url_dsl_parses_body_with_js_regex_escape_backslash_d ... ok
+test url_dsl_parses_body_with_js_regex_escape_backslash_w_and_s ... ok
+test url_dsl_parses_numeric_string_type_as_u32 ... ok
+test url_dsl_parses_body_with_literal_control_chars_in_string ... ok
+test url_dsl_rejects_invalid_type_array ... ok
+test url_dsl_tolerates_string_type_value_qtqd ... ok
+test url_dsl_valid_json_escapes_pass_through_unchanged ... ok
+test url_js_get_function_returns_null_when_variable_empty ... ok
+test url_js_map_function_returns_empty_string_for_missing_key ... ok
+test url_js_cache_get_returns_stored_value_not_empty ... ok
+test url_js_get_with_default_returns_default_when_missing ... ok
+test url_js_inline_jslib_code_is_still_prepended ... ok
+test build_request_with_js_merges_js_mutated_headers_into_request ... ok
+test url_js_cache_get_returns_null_for_missing_key ... ok
+test url_js_get_function_reads_source_variable ... ok
+test url_js_newline_in_java_url_does_not_cause_unexpected_end_of_string ... ok
+test url_js_json_object_jslib_does_not_cause_parse_error ... ok
+test url_js_put_function_writes_and_returns_value ... ok
+test url_js_source_get_variable_returns_empty_string_when_unset ... ok
+
+test result: ok. 109 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/b12_charset_boundary.rs (target/check/debug/deps/b12_charset_boundary-b2e04a189f03baa1)
+
+running 9 tests
+test rejects_invalid_charset_falls_back_to_utf8_lossy ... ok
+test handles_utf8_bom_prefix ... ok
+test handles_gbk_no_charset_declaration ... ok
+test handles_big5_traditional_chinese ... ok
+test missing_charset_normalizes_to_utf8 ... ok
+test source_headers_do_not_override_dsl_charset ... ok
+test charset_with_post_body_combination ... ok
+test dsl_charset_gbk_propagates_to_host_http_request ... ok
+test other_charset_values_pass_through ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/b12_cookie_boundary.rs (target/check/debug/deps/b12_cookie_boundary-7b4b6bb268ed83a9)
+
+running 9 tests
+test classifies_login_required_as_cookie_auth_error ... ok
+test parses_set_cookie_with_expires_and_path ... ok
+test cookie_jar_propagates_across_redirects ... ok
+test multiple_cookies_in_single_header_pass_through ... ok
+test source_cookie_passes_through_to_host_request ... ok
+test cookie_header_case_insensitive_pass_through ... ok
+test key_placeholder_in_cookie_is_expanded ... ok
+test dsl_cookie_overrides_source_cookie ... ok
+test dsl_cookie_passes_through_to_host_request ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/chapter_object_injection.rs (target/check/debug/deps/chapter_object_injection-d522859d57c314cf)
+
+running 4 tests
+test content_js_chapter_isvip_is_callable_and_defaults_false ... ok
+test content_js_chapter_fields_accessible ... ok
+test content_js_chapter_get_variable_works ... ok
+test content_js_chapter_isvip_true_when_set ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/chapter_typed_admission.rs (target/check/debug/deps/chapter_typed_admission-126479112a9f5dad)
+
+running 6 tests
+test songhe_rejects_non_text_types_but_preserves_literal_text ... ok
+test mandatory_search_list_js_failure_is_not_a_successful_empty_search ... ok
+test configured_chapter_url_failure_is_distinct_from_an_empty_volume_url ... ok
+test complete_66_rule_never_publishes_message_log_or_object_as_a_body ... ok
+test legacy_string_chapter_and_raw_fallback_share_typed_admission ... ok
+test required_body_js_keeps_intermediate_structure_and_rejects_terminal_non_text ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running tests/content_processor.rs (target/check/debug/deps/content_processor-478d5ab9fbb34e4e)
+
+running 21 tests
+test empty_pattern_is_skipped_not_error ... ok
+test disabled_rule_skipped ... ok
+test re_segment_preserves_already_segmented_text ... ok
+test exclude_scope_excludes_rule ... ok
+test re_segment_splits_long_single_paragraph_by_sentence_end ... ok
+test scope_content_false_skipped_for_content ... ok
+test scope_match_includes_book_name_applies ... ok
+test scope_empty_matches_all ... ok
+test rules_apply_in_order_ascending ... ok
+test invalid_regex_is_skipped_not_panic ... ok
+test legado_json_import_respects_scope_filtering ... ok
+test process_title_only_applies_scope_title_rules ... ok
+test scope_no_match_skips_rule ... ok
+test string_replace_applies_when_is_regex_false ... ok
+test content_lines_are_trimmed_before_replace_like_legado ... ok
+test up_remove_same_title_disabled_keeps_leading_title ... ok
+test regex_replace_applies_to_content ... ok
+test legado_json_import_then_apply_rules_to_content ... ok
+test up_remove_same_title_strips_chapter_title_only_when_no_book_name_prefix ... ok
+test up_remove_same_title_strips_leading_book_name_and_chapter_title ... ok
+test process_chapter_runs_full_pipeline_in_legado_order ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/cover_decode_js.rs (target/check/debug/deps/cover_decode_js-ca10dea861e2d33f)
+
+running 6 tests
+test decode_cover_bytes_none_returns_original_bytes ... ok
+test decode_cover_bytes_blank_returns_original_bytes ... ok
+test decode_cover_bytes_source_object_available ... ok
+test decode_cover_bytes_xor_decrypt ... ok
+test decode_cover_bytes_execution_failure_returns_error ... ok
+test decode_cover_bytes_with_book_object ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/error_classification.rs (target/check/debug/deps/error_classification-d256bb02bdc8f189)
+
+running 5 tests
+test classifies_charset_error ... ok
+test classifies_network_error ... ok
+test classifies_cookie_auth_error ... ok
+test classifies_parse_error ... ok
+test classifies_rule_syntax_error ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/explore_kinds.rs (target/check/debug/deps/explore_kinds-166e9de635f52860)
+
+running 10 tests
+test empty_explore_url_yields_no_kinds ... ok
+test js_wrapped_form_returns_empty_from_standalone_parser ... ok
+test plain_text_form_handles_mixed_separators ... ok
+test plain_text_form_parses_amp_amp_separator ... ok
+test plain_text_form_entry_without_url_yields_none_url ... ok
+test plain_text_form_parses_double_colon_separator ... ok
+test plain_text_form_skips_entries_without_title ... ok
+test json_array_accepts_name_field_as_title_alias ... ok
+test json_array_form_parses_title_and_url ... ok
+test json_array_recurses_into_children ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/golden_content.rs (target/check/debug/deps/golden_content-d128a1b1466fbc15)
+
+running 1 test
+test golden_content_returns_structured_chapter_content ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/golden_detail.rs (target/check/debug/deps/golden_detail-039c727daedb511a)
+
+running 2 tests
+test detail_toc_url_regex_suffix_extracts_chapter_id_from_html ... ok
+test golden_detail_returns_structured_book_detail ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.12s
+
+     Running tests/golden_error_classification.rs (target/check/debug/deps/golden_error_classification-a6564fe65040d694)
+
+running 4 tests
+test classifies_real_network_timeout ... ok
+test classifies_real_cookie_auth_403 ... ok
+test classifies_real_rule_syntax_error ... ok
+test classifies_real_parse_no_toc_entries ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/golden_search.rs (target/check/debug/deps/golden_search-e31bd305518fc942)
+
+running 1 test
+test golden_search_returns_structured_search_result ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/golden_toc.rs (target/check/debug/deps/golden_toc-8531a28d579ce3b7)
+
+running 1 test
+test golden_toc_returns_structured_chapter_list ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/host_replay_suite.rs (target/check/debug/deps/host_replay_suite-91f6a4a6f1bcb7b6)
+
+running 2 tests
+test host_replay_suite_covers_supported_field_matrix ... ok
+test host_replay_suite_all_cases_build_expected_requests ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/remote_content_finalization.rs (target/check/debug/deps/remote_content_finalization-b0d6f6a940c36ec4)
+
+running 7 tests
+test replacement_templates_share_the_first_response_and_merged_result_context ... ok
+test replacement_can_read_first_response_and_book_chapter_context ... ok
+test standalone_chapter_helper_passes_extracted_continuation_to_final_replacement ... ok
+test json_and_html_layers_preserve_text_and_decode_only_their_own_syntax ... ok
+test source_replacement_is_an_independent_complete_rule ... ok
+test image_descriptor_round_trip_preserves_url_options_and_scalar_anchors ... ok
+test replacement_endpoint_is_required_text_with_structured_intermediates ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/toc_rule_single_execution.rs (target/check/debug/deps/toc_rule_single_execution-67099668cca3afb0)
+
+running 1 test
+test bundled_66_toc_missing_data_is_not_retried_as_an_identical_rule ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/yodu_multirule_fixture.rs (target/check/debug/deps/yodu_multirule_fixture-50992926a5efef3c)
+
+running 4 tests
+test yodu_chapter_content_returns_non_empty_body ... ok
+test yodu_detail_returns_non_empty_title_with_multirule_name ... ok
+test yodu_search_returns_non_empty_books_with_multirule_booklist ... ok
+test yodu_toc_returns_non_empty_chapters_with_bare_text_href_extraction ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+
+   Doc-tests reader_content
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,17 @@
+[
+  "rustc",
+  "--edition=2021",
+  "/private/tmp/minglong-source-content-audit/probe.rs",
+  "-L",
+  "dependency=/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps",
+  "-o",
+  "/private/tmp/minglong-source-content-audit/probe",
+  "--extern",
+  "reader_content=/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/libreader_content.rlib",
+  "--extern",
+  "reader_domain=/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps/libreader_domain-7fe331e4df4cc001.rlib",
+  "--extern",
+  "reader_js=/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps/libreader_js-173ee6baee03d67f.rlib",
+  "--extern",
+  "serde_json=/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps/libserde_json-0003dd6fd619a93b.rlib"
+]

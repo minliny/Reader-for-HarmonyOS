@@ -1,0 +1,4 @@
+author metadata: 33 shared Core/Host cases, actual search decode/group/shelf/alias/source-switch chains PASS
+source-bound @ author: SDK result decode → initial group/relevance → candidate/switch proof, genuine @ and @@/stale/malformed negatives PASS
+(node:71130) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

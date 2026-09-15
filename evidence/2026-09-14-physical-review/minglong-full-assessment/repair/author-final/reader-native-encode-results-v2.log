@@ -1,0 +1,13 @@
+{"charset":"utf-8","inputLength":0,"byteLength":0}
+{"charset":"utf-8","inputLength":1,"byteLength":1}
+{"charset":"utf-8","inputLength":2,"byteLength":6}
+{"charset":"gbk","inputLength":0,"byteLength":0}
+{"charset":"gbk","inputLength":1,"byteLength":1}
+{"charset":"gbk","inputLength":2,"byteLength":4}
+{"charset":"gb2312","inputLength":0,"byteLength":0}
+{"charset":"gb2312","inputLength":1,"byteLength":1}
+{"charset":"gb2312","inputLength":2,"byteLength":4}
+{"charset":"big5","inputLength":0,"byteLength":0}
+{"charset":"big5","inputLength":1,"byteLength":1}
+{"charset":"big5","inputLength":2,"byteLength":4}
+PASS actual C++ NAPI and Rust encoder: empty/text inputs and error propagation; Node runtime, not Harmony VM

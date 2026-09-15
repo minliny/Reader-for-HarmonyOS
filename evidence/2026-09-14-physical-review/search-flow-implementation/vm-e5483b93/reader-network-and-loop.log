@@ -1,0 +1,159 @@
+09-15 16:22:20.009 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":1013,"uptimeMs":223900612,"samples":14,"maxDelayMs":210,"delayedOver50Ms":2,"reason":"window"}
+09-15 16:22:21.010 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":2015,"uptimeMs":223901614,"samples":18,"maxDelayMs":86,"delayedOver50Ms":1,"reason":"window"}
+09-15 16:22:22.148 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":3153,"uptimeMs":223902752,"samples":14,"maxDelayMs":414,"delayedOver50Ms":1,"reason":"window"}
+09-15 16:22:23.169 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":4174,"uptimeMs":223903773,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:24.193 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":5198,"uptimeMs":223904797,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:25.217 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":6221,"uptimeMs":223905820,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:26.250 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":7255,"uptimeMs":223906854,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:27.291 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":8295,"uptimeMs":223907894,"samples":20,"maxDelayMs":25,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:27.848 12856 12856 W A05244/Reader: Search source 444.1006sd.com failed: search protocol returned blank title transport=none
+09-15 16:22:28.239 12856 12856 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300999
+09-15 16:22:28.240 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:22:28.240 12856 12856 W A05244/Reader: http.execute failure requestId=12 stage=request.dispatch code=2300999 elapsedMs=1713 transient=true
+09-15 16:22:28.252 12856 12856 W A05244/Reader: Search source 101kanshu.net failed: Internal error transport={"category":"SOURCE_HTTP_FAILED","phase":"transport","stage":"request.dispatch","requestId":12,"operationId":4,"platformCode":2300999,"elapsedMs":1713,"transient":true}
+09-15 16:22:28.317 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":9322,"uptimeMs":223908921,"samples":19,"maxDelayMs":47,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:28.861 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: source returned HTTP 400 without response content
+09-15 16:22:28.861 12856 12856 W A05244/Reader: Search source bcshuku.com failed: http.execute: source returned HTTP 400 without response content transport=none
+09-15 16:22:29.345 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":10349,"uptimeMs":223909948,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:29.893 12856 12856 W A05244/Reader: Search source h5.reader.qq.com failed: book.search HTTP status 404 transport=none
+09-15 16:22:30.392 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":11397,"uptimeMs":223910996,"samples":17,"maxDelayMs":139,"delayedOver50Ms":1,"reason":"window"}
+09-15 16:22:31.370 12856 12856 W A05244/Reader: Search source lnovel.tw failed: book.search HTTP status 404 transport=none
+09-15 16:22:31.418 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":12423,"uptimeMs":223912022,"samples":19,"maxDelayMs":61,"delayedOver50Ms":1,"reason":"window"}
+09-15 16:22:32.430 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":13435,"uptimeMs":223913034,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:33.434 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":14439,"uptimeMs":223914038,"samples":19,"maxDelayMs":44,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:34.473 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":15478,"uptimeMs":223915077,"samples":20,"maxDelayMs":28,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:35.489 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":16494,"uptimeMs":223916093,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:36.504 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":17509,"uptimeMs":223917108,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:37.512 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":18517,"uptimeMs":223918116,"samples":20,"maxDelayMs":1,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:38.527 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":19531,"uptimeMs":223919130,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:39.538 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":20543,"uptimeMs":223920142,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:40.553 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":21558,"uptimeMs":223921157,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:40.919 12856 12856 W A05244/Reader: Search source m.zjsw.org failed: book.search HTTP status 404 transport=none
+09-15 16:22:41.571 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":22576,"uptimeMs":223922175,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:41.890 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:22:41.890 12856 12856 W A05244/Reader: http.execute failure requestId=100 stage=request.dispatch code=2300999 elapsedMs=10222 transient=true
+09-15 16:22:41.899 12856 12856 W A05244/Reader: Search source m.douyinxs.com failed: Internal error transport={"category":"SOURCE_HTTP_FAILED","phase":"transport","stage":"request.dispatch","requestId":100,"operationId":32,"platformCode":2300999,"elapsedMs":10222,"transient":true}
+09-15 16:22:42.591 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":23596,"uptimeMs":223923195,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:42.910 12856 12856 W A05244/Reader: Search source qd9.net failed: cannot auto-build searchRequest: source.searchUrl is empty transport=none
+09-15 16:22:43.633 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":24638,"uptimeMs":223924237,"samples":20,"maxDelayMs":22,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:44.629 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:22:44.629 12856 12856 W A05244/Reader: http.execute failure requestId=141 stage=request.dispatch code=2300999 elapsedMs=2588 transient=true
+09-15 16:22:44.630 12856 12856 W A05244/Reader: Search source novel.seseclub.com failed: Internal error transport={"category":"SOURCE_HTTP_FAILED","phase":"transport","stage":"request.dispatch","requestId":141,"operationId":55,"platformCode":2300999,"elapsedMs":2588,"transient":true}
+09-15 16:22:44.640 12856 12856 W A05244/Reader: Search source ruarourou.top failed: cannot auto-build searchRequest: source.searchUrl is empty transport=none
+09-15 16:22:44.649 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":25653,"uptimeMs":223925252,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:45.659 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":26664,"uptimeMs":223926263,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:46.672 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":27677,"uptimeMs":223927276,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:47.077 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:22:47.077 12856 12856 W A05244/Reader: http.execute failure requestId=159 stage=request.dispatch code=2300999 elapsedMs=2426 transient=true
+09-15 16:22:47.087 12856 12856 W A05244/Reader: Search source sesebooks.com failed: Internal error transport={"category":"SOURCE_HTTP_FAILED","phase":"transport","stage":"request.dispatch","requestId":159,"operationId":61,"platformCode":2300999,"elapsedMs":2426,"transient":true}
+09-15 16:22:47.341 12856 12856 W A05244/Reader: Search source ubook.reader.qq.com failed: book.search HTTP status 404 transport=none
+09-15 16:22:47.689 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":28694,"uptimeMs":223928293,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:48.081 12856 12856 W A05244/Reader: Search source www.52dzxy.com discarded 23 malformed rows: search protocol returned blank title; search protocol returned blank title; search protocol returned blank title; search protocol returned blank title
+09-15 16:22:48.712 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":29717,"uptimeMs":223929316,"samples":19,"maxDelayMs":66,"delayedOver50Ms":1,"reason":"window"}
+09-15 16:22:49.747 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":30752,"uptimeMs":223930351,"samples":20,"maxDelayMs":17,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:50.755 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":31760,"uptimeMs":223931359,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:51.758 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":32763,"uptimeMs":223932362,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:52.774 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":33778,"uptimeMs":223933377,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:53.794 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":34799,"uptimeMs":223934398,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:54.809 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":35814,"uptimeMs":223935413,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:55.818 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":36823,"uptimeMs":223936422,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:56.836 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":37841,"uptimeMs":223937440,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:57.846 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":38851,"uptimeMs":223938450,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:58.858 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":39862,"uptimeMs":223939461,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:22:59.872 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":40877,"uptimeMs":223940476,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:00.898 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":41903,"uptimeMs":223941502,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:01.909 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":42913,"uptimeMs":223942512,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:02.919 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":43923,"uptimeMs":223943522,"samples":20,"maxDelayMs":1,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:03.938 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":44942,"uptimeMs":223944541,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:04.957 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":45961,"uptimeMs":223945560,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:05.970 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":46974,"uptimeMs":223946573,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:06.985 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":47990,"uptimeMs":223947589,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:08.006 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":49011,"uptimeMs":223948610,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:09.022 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":50027,"uptimeMs":223949626,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:10.043 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":51048,"uptimeMs":223950647,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:11.071 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":52075,"uptimeMs":223951674,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:12.091 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":53096,"uptimeMs":223952695,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:12.910 12856 12856 W A05244/Reader: Search source readnovelfull.com failed: Reader-Core request timed out: 154 transport=none
+09-15 16:23:13.106 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":54111,"uptimeMs":223953710,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:13.113 12856 12856 W A05244/Reader: Search source readnovelfull.com failed: Reader-Core request timed out: 156 transport=none
+09-15 16:23:14.122 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":55127,"uptimeMs":223954726,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:15.160 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":56165,"uptimeMs":223955764,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:16.170 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":57175,"uptimeMs":223956774,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:17.190 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":58195,"uptimeMs":223957794,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:18.218 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":59223,"uptimeMs":223958822,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:19.257 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":60262,"uptimeMs":223959861,"samples":20,"maxDelayMs":12,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:20.279 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":61284,"uptimeMs":223960883,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:21.305 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":62310,"uptimeMs":223961909,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:22.339 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":63343,"uptimeMs":223962942,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:23.360 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":64364,"uptimeMs":223963963,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:24.379 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":65384,"uptimeMs":223964983,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:25.415 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":66420,"uptimeMs":223966019,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:26.437 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":67442,"uptimeMs":223967041,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:27.470 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":68474,"uptimeMs":223968073,"samples":20,"maxDelayMs":11,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:28.498 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":69503,"uptimeMs":223969102,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:29.519 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":70524,"uptimeMs":223970123,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:30.540 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":71545,"uptimeMs":223971144,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:31.569 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":72574,"uptimeMs":223972173,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:32.598 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":73603,"uptimeMs":223973202,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:33.633 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":74638,"uptimeMs":223974237,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:34.649 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":75654,"uptimeMs":223975253,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:35.668 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":76673,"uptimeMs":223976272,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:36.702 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":77707,"uptimeMs":223977306,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:37.738 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":78743,"uptimeMs":223978342,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:38.770 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":79775,"uptimeMs":223979374,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:39.802 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":80807,"uptimeMs":223980406,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:40.829 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":81834,"uptimeMs":223981433,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:41.851 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":82856,"uptimeMs":223982455,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:42.881 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":83886,"uptimeMs":223983485,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:43.930 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":84934,"uptimeMs":223984533,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:44.963 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":85968,"uptimeMs":223985567,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:46.000 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":87005,"uptimeMs":223986604,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:47.028 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":88032,"uptimeMs":223987631,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:48.078 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":89082,"uptimeMs":223988681,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:49.112 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":90117,"uptimeMs":223989716,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:50.148 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":91153,"uptimeMs":223990752,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:51.178 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":92183,"uptimeMs":223991782,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:52.199 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":93203,"uptimeMs":223992802,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:53.245 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":94250,"uptimeMs":223993849,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:54.265 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":95270,"uptimeMs":223994869,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:55.313 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":96318,"uptimeMs":223995917,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:56.343 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":97348,"uptimeMs":223996947,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:57.380 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":98385,"uptimeMs":223997984,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:58.408 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":99413,"uptimeMs":223999012,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:23:59.439 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":100443,"uptimeMs":224000042,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:00.469 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":101473,"uptimeMs":224001072,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:01.503 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":102508,"uptimeMs":224002107,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:02.549 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":103554,"uptimeMs":224003153,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:03.577 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":104582,"uptimeMs":224004181,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:04.623 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":105627,"uptimeMs":224005226,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:05.630 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":106634,"uptimeMs":224006233,"samples":19,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:06.630 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":107634,"uptimeMs":224007233,"samples":19,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:07.666 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":108671,"uptimeMs":224008270,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:08.693 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":109698,"uptimeMs":224009297,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:09.749 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":110753,"uptimeMs":224010352,"samples":20,"maxDelayMs":16,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:10.782 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":111787,"uptimeMs":224011386,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:11.817 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":112822,"uptimeMs":224012421,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:12.867 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":113871,"uptimeMs":224013470,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:13.913 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":114918,"uptimeMs":224014517,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:14.914 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":115919,"uptimeMs":224015518,"samples":19,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:15.953 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":116958,"uptimeMs":224016557,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:16.954 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":117959,"uptimeMs":224017558,"samples":19,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:17.981 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":118986,"uptimeMs":224018585,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:24:19.012 12856 12856 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":120017,"uptimeMs":224019616,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"duration-limit"}
+09-15 16:25:27.481 12856 12856 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300060
+09-15 16:25:27.481 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): Invalid SSL peer certificate or SSH remote key
+09-15 16:25:27.481 12856 12856 W A05244/Reader: http.execute failure requestId=250 stage=request.dispatch code=2300060 elapsedMs=595 transient=false
+09-15 16:25:27.494 12856 12856 W A05244/Reader: Search source www.liyuxiangku.com failed: Invalid SSL peer certificate or SSH remote key transport={"category":"SOURCE_HTTP_FAILED","phase":"transport","stage":"request.dispatch","requestId":250,"operationId":85,"platformCode":2300060,"elapsedMs":595,"transient":false}
+09-15 16:25:28.102 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: source returned HTTP 403 without response content
+09-15 16:25:28.113 12856 12856 W A05244/Reader: Search source www.min-yuan.com failed: http.execute: source returned HTTP 403 without response content transport=none
+09-15 16:25:32.269 12856 12856 W A05244/Reader: Search source www.xn--7dv141d.com failed: book.search HTTP status 403 transport=none
+09-15 16:25:32.700 12856 12856 W A05244/Reader: Search source www.tatays.com failed: 书源网页请求了不允许的网络地址 transport=none
+09-15 16:25:33.684 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:25:33.684 12856 12856 W A05244/Reader: http.execute failure requestId=281 stage=request.dispatch code=2300999 elapsedMs=633 transient=true
+09-15 16:25:33.778 12856 12856 W A05244/Reader: Search source www.xtyxsw.org failed: Internal error transport={"category":"SOURCE_HTTP_FAILED","phase":"transport","stage":"request.dispatch","requestId":281,"operationId":103,"platformCode":2300999,"elapsedMs":633,"transient":true}
+09-15 16:25:34.852 12856 12856 W A05244/Reader: Search source www.zggdwx.com failed: cannot auto-build searchRequest: source.searchUrl is empty transport=none
+09-15 16:25:35.365 12856 12856 W A05244/Reader: Search source www.yysk.net failed: book.search HTTP status 521 transport=none
+09-15 16:25:37.111 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:25:37.111 12856 12856 W A05244/Reader: http.execute failure requestId=267 stage=request.dispatch code=2300999 elapsedMs=7801 transient=true
+09-15 16:25:37.122 12856 12856 W A05244/Reader: Search source www.souhh.com failed: Internal error transport={"category":"SOURCE_HTTP_FAILED","phase":"transport","stage":"request.dispatch","requestId":267,"operationId":93,"platformCode":2300999,"elapsedMs":7801,"transient":true}
+09-15 16:25:37.608 12856 12856 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: source returned HTTP 404 without response content

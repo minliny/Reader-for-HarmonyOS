@@ -1,0 +1,191 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-content)
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+   Compiling reader-cli v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/tools/reader-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.31s
+────────────
+ Nextest run ID 74dbbb07-d6ca-4970-8508-cb4a4b49cff8 with nextest profile: default
+    Starting 1 test across 1 binary (4 tests skipped)
+────────────
+ Stress test iteration 1/20 (00:00:00 elapsed so far, 20 iterations remaining)
+        PASS [   1.683s] [ 1/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   1.685s] iteration 1/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 2/20 (00:00:01 elapsed so far, 19 iterations remaining)
+        PASS [   0.064s] [ 2/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.064s] iteration 2/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 3/20 (00:00:01 elapsed so far, 18 iterations remaining)
+        PASS [   0.066s] [ 3/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.066s] iteration 3/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 4/20 (00:00:01 elapsed so far, 17 iterations remaining)
+        PASS [   0.066s] [ 4/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.066s] iteration 4/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 5/20 (00:00:01 elapsed so far, 16 iterations remaining)
+        PASS [   0.067s] [ 5/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.067s] iteration 5/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 6/20 (00:00:01 elapsed so far, 15 iterations remaining)
+        PASS [   0.060s] [ 6/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.060s] iteration 6/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 7/20 (00:00:02 elapsed so far, 14 iterations remaining)
+        PASS [   0.067s] [ 7/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.067s] iteration 7/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 8/20 (00:00:02 elapsed so far, 13 iterations remaining)
+        PASS [   0.065s] [ 8/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.065s] iteration 8/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 9/20 (00:00:02 elapsed so far, 12 iterations remaining)
+        PASS [   0.065s] [ 9/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.065s] iteration 9/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 10/20 (00:00:02 elapsed so far, 11 iterations remaining)
+        PASS [   0.067s] [10/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.067s] iteration 10/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 11/20 (00:00:02 elapsed so far, 10 iterations remaining)
+        PASS [   0.068s] [11/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.068s] iteration 11/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 12/20 (00:00:02 elapsed so far, 9 iterations remaining)
+        PASS [   0.067s] [12/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.068s] iteration 12/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 13/20 (00:00:02 elapsed so far, 8 iterations remaining)
+        PASS [   0.064s] [13/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.065s] iteration 13/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 14/20 (00:00:02 elapsed so far, 7 iterations remaining)
+        PASS [   0.059s] [14/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.059s] iteration 14/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 15/20 (00:00:02 elapsed so far, 6 iterations remaining)
+        PASS [   0.063s] [15/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.063s] iteration 15/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 16/20 (00:00:02 elapsed so far, 5 iterations remaining)
+        PASS [   0.064s] [16/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.064s] iteration 16/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 17/20 (00:00:02 elapsed so far, 4 iterations remaining)
+        PASS [   0.060s] [17/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.060s] iteration 17/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 18/20 (00:00:02 elapsed so far, 3 iterations remaining)
+        PASS [   0.064s] [18/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.064s] iteration 18/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 19/20 (00:00:02 elapsed so far, 2 iterations remaining)
+        PASS [   0.062s] [19/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.062s] iteration 19/20: 1 test run: 1 passed, 4 skipped
+────────────
+ Stress test iteration 20/20 (00:00:02 elapsed so far, 1 iteration remaining)
+        PASS [   0.061s] [20/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+ Stress test [   0.061s] iteration 20/20: 1 test run: 1 passed, 4 skipped
+────────────
+     Summary [   2.907s] 20/20 stress run iterations: 20 passed
+        PASS [   1.683s] [ 1/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.064s] [ 2/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.066s] [ 3/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.066s] [ 4/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.067s] [ 5/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.060s] [ 6/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.067s] [ 7/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.065s] [ 8/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.065s] [ 9/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.067s] [10/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.068s] [11/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.067s] [12/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.064s] [13/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.059s] [14/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.063s] [15/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.064s] [16/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.060s] [17/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.064s] [18/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.062s] [19/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   0.061s] [20/20] (1/1) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        SKIP [         ] [ 1/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 1/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 1/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 1/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [ 2/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 2/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 2/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 2/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [ 3/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 3/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 3/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 3/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [ 4/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 4/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 4/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 4/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [ 5/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 5/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 5/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 5/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [ 6/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 6/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 6/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 6/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [ 7/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 7/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 7/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 7/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [ 8/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 8/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 8/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 8/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [ 9/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [ 9/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [ 9/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [ 9/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [10/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [10/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [10/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [10/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [11/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [11/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [11/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [11/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [12/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [12/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [12/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [12/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [13/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [13/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [13/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [13/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [14/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [14/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [14/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [14/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [15/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [15/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [15/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [15/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [16/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [16/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [16/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [16/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [17/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [17/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [17/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [17/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [18/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [18/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [18/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [18/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [19/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [19/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [19/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [19/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        SKIP [         ] [20/20] (───) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        SKIP [         ] [20/20] (───) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        SKIP [         ] [20/20] (───) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+        SKIP [         ] [20/20] (───) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e

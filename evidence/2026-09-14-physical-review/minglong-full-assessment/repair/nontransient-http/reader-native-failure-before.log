@@ -1,0 +1,23 @@
+PASS actual HTTP transport: HEAD/204/205/304 absent or empty bodies, 200 empty string and binary bytes (22 cases)
+PASS nonempty decoded strings and unknown body representations fail with bounded status/type diagnostics
+PASS bodyless 4xx/5xx keeps explicit HTTP source rejection; actual rejection body remains unchanged
+PASS actual redirect chain keeps empty hop Location and rejects private targets before dispatch; empty success survives final response conversion
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The validation function is expected to return "true". Received false
+
+Caught error:
+
+TypeError: PRIVATE_DISPATCH
+    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-http-response-bytes.mjs:95:1 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [at private (https://user:PRIVATE_PASSWORD@secret.invalid/private.ts:1:2)],
+  expected: [Function (anonymous)],
+  operator: 'rejects',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

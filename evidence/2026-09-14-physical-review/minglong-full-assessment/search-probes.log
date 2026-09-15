@@ -1,0 +1,5 @@
+(node:25783) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"probe":"actual SourceSwitchGateway.discoverCandidates","beforeSlowRelease":["s0","s1","s2","s3","s4","s5","s6","s7"],"ninthSourceDispatched":false,"conclusion":"Eight-source batch barrier holds next source despite seven completed source operations"}
+{"probe":"actual classifyReaderSource","namedBaiduPicture":"other","unlabelledImageSource":"novel"}
+{"probe":"actual SearchGateway.searchBySource","inputValidBooks":1,"inputMalformedBooks":1,"outcome":{"ok":false,"error":"search protocol returned blank title"},"conclusion":"One malformed record rejects entire source response; no valid sibling returned"}

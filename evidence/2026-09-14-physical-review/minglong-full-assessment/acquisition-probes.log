@@ -1,0 +1,91 @@
+(node:19123) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "evidenceLayer": "SDK-extracted production methods and actual Coordinator/Gateway; synthetic RPC boundary, no device",
+  "outcomes": [
+    {
+      "name": "visible groups cap six, concurrency two; speculative work has no progress/body/verdict-success",
+      "status": "PASS"
+    },
+    {
+      "name": "visible failed catalog tries another same-book candidate without body work",
+      "status": "PASS"
+    },
+    {
+      "name": "unknown network candidates capped at three; successful known catalog beyond them has priority",
+      "status": "PASS"
+    },
+    {
+      "name": "cancelled stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "identityMismatch stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "sourceVersionChanged stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "storageFailure stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "unsupportedHostCapability stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "hidden source-wait pauses and resumes same visible group once without cancellation",
+      "status": "PASS"
+    },
+    {
+      "name": "query replacement drops old waiting groups; old admitted work cannot enqueue old fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "fresh prepared reused; stale catalog refresh failure handled and original promise rejects",
+      "status": "PASS"
+    },
+    {
+      "name": "change notification batches actual identities and source mutation resets",
+      "status": "PASS"
+    },
+    {
+      "name": "real selected search group primary empty TOC admits second and probes only selected body; no shelf write",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "visible range callback bounds group count, skips unchanged rows and clears stopped view",
+      "status": "PASS"
+    },
+    {
+      "name": "AUDIT: fourth healthy candidate is never attempted after three empty TOCs",
+      "status": "PASS"
+    },
+    {
+      "name": "AUDIT: production Index keeps failed body primary and does not try healthy same-book second source",
+      "status": "PASS"
+    },
+    {
+      "name": "AUDIT: generic API error sentence and long text challenge are admitted readable",
+      "status": "PASS"
+    },
+    {
+      "name": "AUDIT exclusion: structured source parse error does preserve parse classification",
+      "status": "PASS"
+    },
+    {
+      "name": "AUDIT: failed chapter leaves catalog candidate rank and is not a whole-book failure",
+      "status": "PASS"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+PASS actual resource callbacks: first full match before page-ready, no timeline or refetch
+PASS serialized matching preserves callback order across delayed evaluations
+PASS source initialization runs once and its real resource event completes capture
+PASS an earlier admitted match wins over a later resource-budget terminal marker
+PASS terminal cleanup and late callback suppression: timeout
+PASS terminal cleanup and late callback suppression: cancel
+PASS terminal cleanup and late callback suppression: detach
+PASS terminal cleanup and late callback suppression: cookie-generation
+PASS terminal cleanup and late callback suppression: network
+PASS terminal cleanup and late callback suppression: budget
+PASS terminal cleanup and late callback suppression: invalid-matcher
+PASS source profiles retain isolated cookie hydration/capture and generation
+PASS POST HTML capture, bounded matcher admission and production callback wiring
+PASS execution failure is terminal with bounded cleanup: matcher-reject
+PASS execution failure is terminal with bounded cleanup: matcher-sync-throw
+PASS execution failure is terminal with bounded cleanup: initialization-reject
+PASS execution failure is terminal with bounded cleanup: load-throw
+PASS late asynchronous matcher completion cannot publish into the next source profile
+PASS quotes and executable-looking text in observed URLs remain JSON-encoded data
+PASS SDK native callback isolation: old resource/pageEnd/pageBegin/network/detach/attach/actions cannot contaminate a new surface; same new URL is accepted
+PASS missing native retirement ACK times out without controller reuse, Host remount or cookie crossover, then recovers after ACK
+PASS never-mounted surface cancellation/retirement/recovery: cancel-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: timeout-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: host-detach-before-mount
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=false
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=true
+PH76 Host production-path resource capture: 26 scenario groups passed; SDK closure checks are local, native lifecycle timing still requires VM evidence
+PASS system route waits for native restore ACK before loading, including public IP literals
+PASS system synthetic DNS retains the admitted address pin and Host/TLS hostname
+PASS cancel during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS timeout during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS missing cleanup ACK bounds later jobs, retains no expired waiters, and permits recovery only after real cleanup ACK
+PASS synchronous proxy apply failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS synchronous proxy remove failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS SDK main-frame failure classification: proxy
+PASS SDK main-frame failure classification: 407
+PASS SDK main-frame failure classification: TLS
+PASS SDK main-frame failure classification: 404
+PASS SDK main-frame failure classification: generic-connect
+PASS SDK main-frame failure classification: numeric-only
+PASS SDK main-frame failure classification: direct407
+PASS SDK main-frame failure classification: lookalike-url
+PASS pre-load/about:blank/subresource failures cannot poison the main document
+PH92 ArkWeb proxy lifecycle/native failure: 16 additional scenario groups passed; no device or native timing acceptance claimed
+PASS existing HTML challenge classification precedes ordinary HTTP 401 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 403 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 429 failure
+PASS an ordinary forbidden document stays a source HTTP failure after challenge detection
+PASS native detach cancels pending proxy ACK immediately and late configuration is cleaned
+PH92 proxy/challenge compatibility: 5 additional scenario groups passed
+(node:6990) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,0 +1,7 @@
+{"stage": "input-雨", "afterSeconds": 2.421, "texts": ["第1章 深山老陵", "丹州北，紫徽山。", "雷光划破天幕，黄豆大的雨粒砸在老旧", "帐篷上，噼啪作响。", "谢尽欢躺在地铺上，脑子昏昏沉沉，嗓", "子也如同吞了刀片，沙哑呼唤：", "“爹……爹~~……老登？！”", "“人呢？去衙门上值了不成……”", "谢尽欢又叫了家里的仆役丫鬟，依旧无", "人回应，口干舌燥之下，只能咬牙撑起", "鸣龙", "第1章 深山老陵 · 松鹤阅读", "换源", "雨雨", "输入关键词搜索正文内容", "内容搜索", "收起", "A", "目录", "朗读", "界面", "设置", "关闭控制栏并返回阅读", "04, :, 12", "04", ":", "12", "100", "来自剪贴板", "雨"], "inputs": [{"id": "reader-content-search-input-1", "focused": "true", "hint": "搜索正文内容", "text": "雨雨", "bounds": "[168,659][985,708]"}], "keyboard": true}
+Traceback (most recent call last):
+  File "/private/tmp/reader-content-interaction-resume.py", line 43, in <module>
+    target=one(nodes,'text','搜索正文');start=time.monotonic();send({'op':'click',**point(target)});until('command');time.sleep(1)
+  File "/private/tmp/reader-content-interaction-resume.py", line 29, in one
+    if len(hits)!=1:raise RuntimeError('control not uniquely observed '+str((key,value,len(hits))))
+RuntimeError: control not uniquely observed ('text', '搜索正文', 0)

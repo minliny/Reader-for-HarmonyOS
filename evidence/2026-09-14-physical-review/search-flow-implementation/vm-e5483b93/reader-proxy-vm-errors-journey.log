@@ -1,0 +1,15 @@
+{"step": "force-stop.log", "seconds": 0.285}
+{"step": "launch-probe.log", "seconds": 0.157}
+{"step": "navigate.log", "seconds": 2.663}
+{"step": "query.log", "seconds": 33.643}
+{"step": "detail.log", "seconds": 6.206}
+{"step": "content-controls.log", "seconds": 2.163}
+{"step": "content-interaction.log", "seconds": 24.801}
+Traceback (most recent call last):
+  File "/private/tmp/reader-run-errors-final-search.py", line 18, in <module>
+    run(['python3','/private/tmp/reader-observed-return.py','/private/tmp/reader-proxy-vm-errors-return'],'return.log')
+  File "/private/tmp/reader-run-errors-final-search.py", line 8, in run
+    with (root/name).open('w') as out: subprocess.run(cmd,stdout=out,stderr=subprocess.STDOUT,check=True)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 528, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python3', '/private/tmp/reader-observed-return.py', '/private/tmp/reader-proxy-vm-errors-return']' returned non-zero exit status 1.

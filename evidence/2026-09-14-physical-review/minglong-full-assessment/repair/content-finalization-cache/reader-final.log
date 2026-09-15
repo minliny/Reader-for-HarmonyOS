@@ -1,0 +1,7 @@
+PH75 actual reader restore, explicit anchor, preservation, late selection, window proof and TTS write ownership PASS
+PH75 unproven persistent offset never borrows current body proof PASS
+PH85 actual LRE preserved-refresh notice: 14 admission, intent, status, generation and presentation-failure scenarios PASS
+ML cache: offline readable old body, one-session notice, explicit protected refresh and decline without write PASS
+ML actual Index cache recovery: explicit refresh, decline, stale route, preserved positions and failure feedback PASS
+(node:21127) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

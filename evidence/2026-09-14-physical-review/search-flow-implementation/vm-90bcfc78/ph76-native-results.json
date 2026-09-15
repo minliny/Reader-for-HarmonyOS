@@ -1,0 +1,29 @@
+[
+  {
+    "scenario": "early",
+    "pass": false,
+    "runToken": "1789450729782-1",
+    "measurements": {
+      "code": "NETWORK_ERROR",
+      "message": "无法读取系统网络代理配置，请检查网络连接后重试",
+      "reason": "execution-failed-or-fixture-callback-missing",
+      "phase": "route",
+      "operation": "getPacUrl",
+      "platformType": "Error"
+    },
+    "events": [
+      {
+        "kind": "start",
+        "at": 1789450729896,
+        "requestId": 7600001
+      },
+      {
+        "kind": "end",
+        "at": 1789450729904,
+        "requestId": 7600001
+      }
+    ],
+    "network": "in-memory-only",
+    "scope": "one controlled run; not proof of all native callback schedules"
+  }
+]

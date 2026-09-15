@@ -1,0 +1,12 @@
+(node:54040) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search orchestrator bounded concurrency and retained lifecycle: PASS
+PH65 in-flight canonical merge becomes visible before sweep completion PASS
+PH65 stale metadata/work guards, 39 counter updates and canonical grouping retention PASS
+PH68 incremental deltas: failure retention without retry loop, hidden IO pause/resume, and busy union PASS
+PH68 stopped query retains completed metadata without restarting source search PASS
+R3 independent branches, stop pending-delta flush, retained failure recovery and query/history identity PASS
+R3 failed local branch retries while online remains active; repeated retry does not duplicate work PASS
+R6 actual empty source → publication → page/list: 1000 retained rows, zero flatten/index lookup/group rebuild/notice; populated-bucket deletion still invalidates PASS
+R3 branch causes survive stop/retry, safe classified UI, successful recovery and old-run rejection PASS
+PASS actual search failure state and log retain safe request/operation/code summary while healthy sources and visible copy remain unchanged

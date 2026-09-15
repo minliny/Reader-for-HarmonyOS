@@ -1,0 +1,1041 @@
+Reader HAP build-system docs and skills contract: PASS
+app shell safe geometry: PASS
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope
+(node:10510) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual resource callbacks: first full match before page-ready, no timeline or refetch
+PASS serialized matching preserves callback order across delayed evaluations
+PASS source initialization runs once and its real resource event completes capture
+PASS an earlier admitted match wins over a later resource-budget terminal marker
+PASS terminal cleanup and late callback suppression: timeout
+PASS terminal cleanup and late callback suppression: cancel
+PASS terminal cleanup and late callback suppression: detach
+PASS terminal cleanup and late callback suppression: cookie-generation
+PASS terminal cleanup and late callback suppression: network
+PASS terminal cleanup and late callback suppression: budget
+PASS terminal cleanup and late callback suppression: invalid-matcher
+PASS source profiles retain isolated cookie hydration/capture and generation
+PASS POST HTML capture, bounded matcher admission and production callback wiring
+PASS execution failure is terminal with bounded cleanup: matcher-reject
+PASS execution failure is terminal with bounded cleanup: matcher-sync-throw
+PASS execution failure is terminal with bounded cleanup: initialization-reject
+PASS execution failure is terminal with bounded cleanup: load-throw
+PASS late asynchronous matcher completion cannot publish into the next source profile
+PASS quotes and executable-looking text in observed URLs remain JSON-encoded data
+PASS SDK native callback isolation: old resource/pageEnd/pageBegin/network/detach/attach/actions cannot contaminate a new surface; same new URL is accepted
+PASS missing native retirement ACK times out without controller reuse, Host remount or cookie crossover, then recovers after ACK
+PASS never-mounted surface cancellation/retirement/recovery: cancel-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: timeout-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: host-detach-before-mount
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=false
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=true
+PH76 Host production-path resource capture: 26 scenario groups passed; SDK closure checks are local, native lifecycle timing still requires VM evidence
+PASS system route waits for native restore ACK before loading, including public IP literals
+PASS system synthetic DNS retains the admitted address pin and Host/TLS hostname
+PASS cancel during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS timeout during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS missing cleanup ACK bounds later jobs, retains no expired waiters, and permits recovery only after real cleanup ACK
+PASS synchronous proxy apply failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS synchronous proxy remove failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS SDK main-frame failure classification: proxy
+PASS SDK main-frame failure classification: 407
+PASS SDK main-frame failure classification: TLS
+PASS SDK main-frame failure classification: 404
+PASS SDK main-frame failure classification: generic-connect
+PASS SDK main-frame failure classification: numeric-only
+PASS SDK main-frame failure classification: direct407
+PASS SDK main-frame failure classification: lookalike-url
+PASS pre-load/about:blank/subresource failures cannot poison the main document
+PH92 ArkWeb proxy lifecycle/native failure: 16 additional scenario groups passed; no device or native timing acceptance claimed
+PASS existing HTML challenge classification precedes ordinary HTTP 401 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 403 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 429 failure
+PASS an ordinary forbidden document stays a source HTTP failure after challenge detection
+PASS native detach cancels pending proxy ACK immediately and late configuration is cleaned
+PH92 proxy/challenge compatibility: 5 additional scenario groups passed
+PASS production blank lifecycle before/after real load never sets page ready, final URL or schedules source initialization (2 scenarios)
+(node:10512) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+PASS early timing uses this run and exact target document: native blank initialization excluded, premature/foreign/incomplete evidence still fails (11 scenarios)
+PASS bounded data diagnostics and exact native URI-Base64 admission: tamper/unsupported/malformed/oversized remain denied, no URL or body disclosure
+PASS diagnostic rejects incomplete new-surface evidence: missing-resource
+PASS diagnostic rejects incomplete new-surface evidence: missing-match
+PASS diagnostic rejects incomplete new-surface evidence: reversed
+PASS diagnostic rejects incomplete new-surface evidence: wrong-match
+PASS diagnostic attributes old resource token during new job: lateOld=false
+PASS diagnostic attributes old resource token during new job: lateOld=true
+PASS disposing the pilot cancels only owned jobs and clears response timers/observer
+PASS diagnostic execution errors retain a failure receipt
+PASS actual SDK Host callback: exact main document, tamper rejection, policy-first order and redacted navigation labels
+PASS new run rejects previous run main URL and data document
+PH76 diagnostic runner: 12 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence
+PASS safe preload diagnostics: 6 native operation receipts and arbitrary-error URL/credential suppression
+(node:10516) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared book acquisition lifecycle, identities, and scheduling: PASS
+shared detail/TOC/body cancellation: each consumer owns its lifetime; Core cancellation cannot be revived PASS
+PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS
+R1/R2 cache-refresh separation, original freshness, dispatch consumers and scoped facts: PASS
+author metadata: 33 shared Core/Host cases, actual search decode/group/shelf/alias/source-switch chains PASS
+source-bound @ author: SDK result decode → initial group/relevance → candidate/switch proof, genuine @ and @@/stale/malformed negatives PASS
+(node:10541) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10542) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:10544) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+PASS PH60 shelf filters: independent dimensions, real SDK live chips/toggles, shared order, legacy data and hidden batch-selection safety
+(node:10547) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf management Core ownership contract: PASS
+(node:10556) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manual update bypasses prepared sessions and executes real Gateway detail/TOC","status":"PASS"}
+{"name":"manual update also bypasses durable catalog cache after prepared eviction","status":"PASS"}
+{"name":"manual request waits for a cache-only in-flight acquisition then refreshes","status":"PASS"}
+{"name":"per-book failure/empty results preserve old records, settle flags and continue bounded batch","status":"PASS"}
+{"name":"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions","status":"PASS"}
+{"name":"multiple force waiters share one refresh after the nonforce admission settles","status":"PASS"}
+{"name":"force waiting revalidates cancel before new network work","status":"PASS"}
+{"name":"force waiting revalidates close before new network work","status":"PASS"}
+{"name":"force waiting revalidates source-delete before new network work","status":"PASS"}
+PH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS
+PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update
+(node:10581) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS TXT uses format identity without changing Core metadata
+PASS default group retains empty and explicit default identities without mutating legacy groups
+PASS real section settings callback opens the default selector without navigating to another settings surface
+PASS PH61 progress/source retain equal left/right slots and live progress after row reuse
+PASS PH83 detail preview exposes 20 chapters in the original four-row scroll viewport
+PASS day: detail metadata shares source typography, label and moving source action
+PASS night: detail metadata shares source typography, label and moving source action
+PASS PH46/47 original author typography and the entire five-line block align with the cover
+PASS missing synopsis is explained without contaminating the metadata projection
+PASS empty chapters expose status: 暂无章节信息
+PASS empty chapters expose status: 正在读取本地目录…
+PASS empty chapters expose status: 目录读取失败，请重试
+PASS source name/category/URL remain distinct and login precedes detect (no login)
+PASS source name/category/URL remain distinct and login precedes detect (login)
+PASS single-book sheet matches cover frame and both layers have straight lower corners
+PASS 44vp source SVG stays 44vp in the single-book more action
+(node:10584) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10587) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+cache refresh admission: actual Index continuation preserves new chapter and saved offset arguments PASS
+Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS
+(node:10611) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection
+bookshelf tablet navigation contract: PASS
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation
+(node:10616) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS bookshelf route return: identity+item offset, list/filter/group state, reordered books, late callback isolation
+(node:10619) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1046 tested records, 919 unique identities)
+cookie exact-host and HttpOnly script-isolation policy: PASS
+core build identity startup contract: PASS
+(node:10647) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+PASS: deterministic import.persist rejection discards staged input without recovery orphan
+PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation
+PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit
+(node:10651) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH84 actual external directory routing, Builder and exact initial bookmark lifecycle: PASS
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (121 sources swept)
+(node:10678) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony HttpTTS credential URL encoding and expansion bounds: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:10683) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10684) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+PASS: HTTPS-only requests reject cleartext redirect downgrades
+PASS: same-origin comparison normalizes host case and default HTTPS port
+PASS: credential-bearing URL redirects stay on the same effective origin
+PASS: custom credential-header redirects stay on the same effective origin
+Host staging recovery retry: PASS
+(node:10687) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production request payload and HTTP POST: empty/Chinese UTF-8, GBK, form join, exact/over byte limit and multipart with broken platform TextEncoder
+Encoder evidence: actual SDK wrapper with bounded UTF-8/GBK fixtures; native variant is independently runnable
+(node:10689) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual HTTP transport: HEAD/204/205/304 absent or empty bodies, 200 empty string and binary bytes (22 cases)
+PASS nonempty decoded strings and unknown body representations fail with bounded status/type diagnostics
+PASS bodyless 4xx/5xx keeps explicit HTTP source rejection; actual rejection body remains unchanged
+PASS actual redirect chain keeps empty hop Location and rejects private targets before dispatch; empty success survives final response conversion
+PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack
+PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs without replacing original errors
+PASS unknown native 2300999 preserves per-request transient HTTP evidence, not a global network outage or a source rule verdict
+(node:10690) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:10691) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual execute/redirect/cookie/DNS/transport URL normalization: Chinese/space, existing GBK percent escapes, query/fragment, method/body preservation and private target rejection
+(node:10713) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+PASS import refresh: Figma C arc/source unchanged, 18vp slot, 23.754vp paint, 1.5vp stroke; retained Day/Night/Day.
+(node:10716) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 notifications=1 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS
+Legado product behavior contract: PASS
+(node:10719) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+local book format picker contract: PASS
+(node:10724) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.
+local EPUB resource architecture: PASS
+local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)
+(node:10749) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+PASS: production proxy/DNS/transparent-gateway admission, selected-network exclusions, PAC, network changes and structured errors
+PASS: actual HTTP hop preserves URL/system proxy, never pins proxy DNS, direct DNS queried once
+(node:10753) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: cancelled never-settling HTTP frees DNS lease; queued cancellation preserves predecessor and same-host recovery
+PASS: vendored SDK emits a legal CoreError code and preserves Host network semantics, message and retryability through NAPI JSON
+PASS: native proxy getter failures/missing API/invalid return preserve fixed operation and numeric code without leaking native messages or guessing DIRECT
+PASS: undefined/null/wrong-type results from each native proxy API identify the exact operation
+PASS: API 23 active PAC getter replaces throwing legacy getter; numeric string native codes survive without retaining messages
+performance regression contracts: PASS
+physical phone Figma layout regressions: PASS
+portable JSON local/online import boundary: PASS
+PASS Make V9 appearance: real selection handlers, stale menus, scroll/viewport placement, Quick/Full swatches and persisted theme identity. Native pixels remain separate.
+(node:10783) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance Figma N per-actor driver: PASS
+reader appearance Figma N fixture: PASS
+reader appearance measured-screen gesture: PASS
+reader appearance Figma N sampler: PASS
+reader appearance master motion state: PASS
+reader appearance unified production tree (structural only): PASS
+(node:10796) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance shared store, page races and persistence recovery: PASS
+appearance Preferences adapter migration and persistence compatibility: PASS
+application appearance background flush and teardown isolation: PASS
+PASS appearance theme extension: 8 unchanged, 9/12/24 geometry, registry cache, quick/full scroll reversal, SDK selection
+(node:10797) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance pure/static contract: PASS
+reader Full Auto Page pure/static contract: PASS
+AutoPage actual SDK Builder bounds, single current value, Quick +/- and Full range, 84 reversible samples PASS
+(node:10823) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader auto-page pure state: PASS
+production automatic turn and stop durations use monotonic time; calendar access rejected: PASS
+(node:10827) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Auto Full timer actual SDK Builder parent/child width budget, original306 baseline, 42 retained reversible poses, wheel paint Prop and mutation PASS
+(node:10829) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader book-turn architecture contract: PASS
+event delivery: 22 checks, 0 failures
+bookturn_motion_test: 538 checks, 0 failures
+373 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+245 checks, 0 failures
+reader book-turn motion state: PASS
+T01 roll-radius PASS (390->42.9000, 200->28.0000, 1000->64.0000)
+T02 schedule bijection+boundaries PASS (worst roundtrip 1.79e-07 over 1001 samples)
+T03 INV-1 no-freeze PASS (next: least step 0.566vp, final fold 0.000vp; previous: least step 0.975vp, initial fold 0.000vp)
+T04 INV-2 no-commit-pop PASS (next tau=1: maxX 0.000vp <= 11.70, maxZ 0.000; prev commit maxX 390.000vp, maxZ 0.000; worst coverage step -1.089vp over tau 0.75..1)
+T05 INV-3 cancel-reversal PASS (worst |reverse-forward| 0.00e+00 vp over tau0 0.2/0.4/0.6/0.8)
+T06 previous semantics PASS (31 same-edge points worst schedule diff 0.00e+00; start maxX 0.000vp, commit maxX 390.000vp)
+T07 S3/S4 schedule deviation PASS (worst beta 0.00e+00 rad <= 8.73e-03, worst radius 2.60e-07 vp, worst |gripPhi-beta| 0.00e+00)
+T08 C1 seam at tau=0.5 PASS (worst |dAxis| 0.4605 vp (bounds 2/1/0.5), worst |phi-pi| 0.00e+00)
+T09 milestone phi=pi/2 + continuity PASS (crossing delta 14.868 vp vs 14.868 expected, edge.x 375.1; regular worst 0.0351 rad, S5 schedule worst 0.157 rad <= 0.2, onset worst 0.631 rad [documented scope])
+T10 developability PASS (a: A-grade cylinder worst 6.57e-05 <= 1e-3; b: strict phi<=pi/4 p95 6.104e-05 max 5.293e-04 vs 1e-3/5e-3; band p95 2.078e-02 max 2.082e-02 vs 2.5e-2 [2026-08-30 apex-law recalibration, pi*r'=0.0432])
+T11 binding-edge PASS (a: theta=0 worst x 0.00e+00, y 0.00e+00, z 0.00e+00; b: theta=54deg worst 0.000 vp at tau=0.00)
+T12 touch error (fit segment) PASS (worst screen-plane err 3.05e-05 vp <= 1.0; solver targetError incl. curl z up to 84.96 vp — scope note)
+T13 free-edge inside page (fit segment) PASS (min 0.000 >= -0.26, max 378.072 <= 390.26)
+T14 purity PASS (field-exact repeats, with and without previous)
+T15 stage boundaries PASS (FLAT@W, LIFT@x(0.09), FLIP@x(0.3), ROLL@x(0.6), SPINE@x(0.8), COLLAPSE@x(0.95))
+T16 tilt regressions PASS (cap 57.184 deg <= 60.0001, jitter 1.273 deg <= 2, sweep worst 0.00278 rad <= 0.02, zero-signbit +0/-0 honored)
+T17 verticalPrevious smoke PASS (edge.x W/200/0 all finite, tilt within cap)
+T18 strict three-branch PASS (anti-M second diff 6.866e-05 <= 1e-4; seam steps f 0.5000 z 0.5000 <= 0.501 at step 0.5)
+235 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+245 checks, 0 failures
+Production Surface recovery: unwritten rollback, uncertain write retention, promoted completion, late failure PASS (7 scenarios)
+(node:11358) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader bookmark panels static contract: PASS
+reader bookmark projection behavior: PASS
+PASS PH86 normal motion: 6 completion orders/12 lifecycles without intermediate inversion; cancelled/failed/page-invalidated/duplicate/old ACK cases
+PASS PH86: 20 real chrome/bookmark Builder geometries, clock/title/cutout separation, native visibility, gesture threshold/rebound/ACK and page/book ownership
+PASS PH86 actual SDK Stage/slot/ReadingSurface/Chrome Prop chain across drag and rebound; outer viewport clip retained
+(node:11364) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS brightness cancel UI: issued ACK, preview retention, cancelled pending, newer intent, failed write convergence
+(node:11393) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader brightness control contract: PASS
+PASS brightness: HLG low-range allocation, 991 inverse samples, two-way pending toggle, system observation races, and SDK shared track clip
+(node:11423) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader brightness production writer: PASS (held MOVE, coalescing, ownership, restore, failure, cancel, microtask tail)
+PASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner
+PASS brightness failure boundaries: stale Window/owner lookup, current rejection, synchronous properties failure and subsequent drain
+reader Chinese conversion gateway contract: PASS
+reader cold-entry recovery contract: PASS
+reader content business isolation: PASS
+PH90 actual SDK field Builder: full visual field requests unique native input focus, disabled/unmounted/failure guards; geometry unchanged PASS (not native IME acceptance)
+(node:11454) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"contract":"PH90 native List","reports":[{"count":50,"maxNativeDemand":14,"finalDataCount":100},{"count":2000,"maxNativeDemand":14,"finalDataCount":2050},{"count":10000,"maxNativeDemand":14,"finalDataCount":10050}],"sdkLazyProviderVerified":true,"boundary":"SDK bindings, policy and paint equations passed; actual Ace range admission and pixel timing require VM validation"}
+(node:11457) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11461) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"baseline":false,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"41ece7cba3f807e336504e582eed056349af2a552949979c6d6f69080e2fda86","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"componentSha256":"b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159","scenarios":[{"count":0,"payloadHandoffMs":0.0002499999999940883,"legacyDeepCopies":0,"dataPublishMs":0.2701250000000073,"buildMs":0.2881669999999872,"replayMs":0.04970800000000963,"linearFindVisits":0,"mountedRows":0,"nativeRequestedIndices":[],"providerTotalCount":0},{"count":50,"payloadHandoffMs":0.00012499999996862243,"legacyDeepCopies":0,"dataPublishMs":0.060000000000002274,"buildMs":1.0855829999999855,"replayMs":0.8759579999999687,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":50},{"count":500,"payloadHandoffMs":0.0002499999999940883,"legacyDeepCopies":0,"dataPublishMs":0.06883400000003803,"buildMs":0.4834579999999846,"replayMs":0.35062499999997954,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":500},{"count":2000,"payloadHandoffMs":0.00012499999996862243,"legacyDeepCopies":0,"dataPublishMs":0.09550000000001546,"buildMs":0.49637500000000045,"replayMs":0.17479100000002745,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":2000}],"emptyEntryAndTypingCoreCalls":0,"cumulativePagination":{"pages":40,"pageSize":50,"results":2000,"lateGenerationRejected":true},"boundary":"Actual SDK row generation follows explicit requests at the native LazyForEach boundary; the full source is unsliced. No native range-selection, same-frame paint, IME or device frame-time claim"}
+{"passed":true,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"41ece7cba3f807e336504e582eed056349af2a552949979c6d6f69080e2fda86","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"componentSha256":"b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159","rows":2000,"morphSamples":21,"payloadPropCopies":0,"appended":50,"finalDataSourceCount":0,"dataNotifications":{"initialReloads":1,"morph":0,"metadata":0,"added":50,"changed":[1999],"idleReloads":1},"boundary":"actual SDK compiler + property/proxy dispatch; no native List/IME/renderer timing"}
+(node:11486) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous production pointer, same-row anchor and trailing exit commit: PASS
+production batched image reflow preserves leading fragment fraction and concurrent scroll: PASS
+(node:11490) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous mode change save/error/obsolete ownership and late stop receipt: PASS
+production continuous restore waits for layout and rejects stale frame callbacks: PASS
+production continuous cold-entry projection branch observes its reactive revision: PASS
+continuous scalar quantization: five positions, 100 repeat round trips each: PASS
+continuous restore suppresses premature stops and unknown-geometry progress writes: PASS
+continuous padded viewport: START, positive y and negative y round trips: PASS
+native List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS
+production continuous image row identity: decoder admission replaces placeholder, unchanged siblings retained: PASS
+continuous short tap and stationary long UP share paged 500ms clock boundary: PASS
+continuous-to-paged anchor: warm/cold/partial/foreign layout, containing page only: PASS
+measured prefix whitespace gaps match complete canonical page identity: PASS
+native List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS
+reader continuous reading and canonical progress pipeline: PASS
+Control accessibility: actual Host close/Back + SDK virtual-node mounted observers PASS; NOT native screen-reader acceptance
+(node:11516) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control shared actor geometry: production bidirectional/concurrent/pure sampling PASS
+reader control appearance production geometry + independent source endpoints: PASS (810 ordered import drag cases)
+Reader control backdrop publication: stable array/rect identity across motion PASS
+(node:11521) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control backdrop DOWN ownership and one-shot raw tap: PASS
+Actual SDK nonempty bookmark row: mounted reversible actors, live metadata/identity and clip mutations PASS
+PASS bookmark production geometry, native row-height extent binding and same-open anchor continuation; NOT native visual acceptance
+(node:11526) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11549) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control bookmarks: production merge/async ownership/failure retry PASS; wiring assertions are not native acceptance
+(node:11551) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Bookmark mutation recovery: actual Index CRUD/reload and Host error/retry functions PASS; not native acceptance
+reader control independent FullContentSurface source geometry and single-background wiring: PASS
+Device probe actual runtime closures: ticket/dry-run/SHA/auth-denial/DOWN-based sampling/revocation PASS (mock transport only; no HDC/device/filesystem writes).
+reader control directory content: structural wiring passed (not runtime or visual evidence)
+Production directory model: late load, centering ownership, route/data independence PASS
+Production Directory virtual-row capture, fraction, frame coalescing and late-user-input guards PASS
+Production Directory rapid tab replacement, endpoint anchor release and user-scroll ownership PASS
+Production Directory finite-tail Quick→Full→Quick semantic anchor restoration PASS
+(node:11558) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control geometry parameter contract: PASS
+reader control bounded finger residue and distinct continuation timings: PASS
+reader control gesture production driver behavior: PASS
+PASS global presentation: shared policies, production actor-local clips, retained overflow, actual SDK font content/outline separation and reversal; device evidence separate
+(node:11586) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH48/49/55 PASS: authoritative grabber actor, actual Host/native-parent admission, 7 modules x Quick/Full reversal, 28 hidden-hold UP/CANCEL paths, .2/.7/1 captured-visibility driver crossings, tap, actual Slider End/Click; two negative mutations rejected. Native compositor/physical touch remains separate.
+(node:11590) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS
+(node:11619) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control Host: actual SDK V1 member transform reproduces dropped accessor; ordinary-method input/backdrop gates PASS
+Reader control Host input: actual production methods PASS (not device hit-testing/visual acceptance)
+(node:11623) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control keyboard: production visibility/Back/hide failure cases PASS; structural Host wiring PASS (not native IME acceptance)
+Reader control keyboard layout: actual Host methods/binding dependency and 414→700vp budget PASS (not native IME acceptance)
+(node:11625) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control Host session: production projection, command, close-commit and lifecycle cases PASS
+Reader control Host wiring: structural checks PASS (not ArkUI execution or visual acceptance)
+Reader control input routing: PASS (actual SDK Header ancestor/child callback, 7 modules, runtime + Link delivery; native touch remains VM evidence)
+(node:11649) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control integration event ownership, CANCEL, and exact mixed-path behavior: PASS
+PASS internal/user selection ownership: actual Host methods, stale reopen, TTS/projection negative mutations and committed-close semantics; NOT device acceptance
+(node:11653) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control atomic layout rebase production policy: PASS (no Stage/runtime visual claim)
+reader control list positioning: production policy tests passed
+PASS shared scroll lifecycle: 5 actual component adapters, latest-offset handoff, held endpoint reversals, delayed native reset, shared/full-only roles, new expansion top; NOT visual acceptance
+(node:11659) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+MR1 archived show/hide capture absent; optional evidence checks skipped
+PASS reader control motion geometry (production functions; no runtime/visual claim)
+PASS all control modules 320/260/200/220, initial opening 220, remaining-distance release, hold/regrab/reverse, monotone velocity continuation; device acceptance separate
+PASS TTS softened-content trial: nonzero middle fade, reversible content-only blur, Full details retain their original reveal, offscreen outlines, actual mounted SDK paint observers; NOT device visual acceptance
+(node:11685) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control narrow-width contract: PASS (10 viewport widths)
+{"result":"PASS","layer":"real upstream 5.0 attribute diff + production modifier; not native layout or VM performance","mountedNodes":13,"mountedCalls":156,"poses":120,"legacyAttributeCalls":24960,"patchedAttributeCalls":7440,"reductionPercent":70.19,"reverseResizeBusinessAndCallback":"PASS"}
+(node:11689) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader-control-p0 static contract: PASS
+Actual SDK Auto/TTS mounted Builder observers: reversible actor geometry + live strings/numbers/booleans/child Prop payloads PASS
+Reader control playback: live-track geometry, child clipping/min-height, persistent content, actual measurement identity, SDK syntax and 5 mutations PASS
+(node:11693) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 350/1750 ownership)
+(node:11717) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:11720) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Replace actual SDK mounted rule font: fixed 12, preserved row tracks, parent-only clip, same rule identity and 4 mutations PASS
+PASS reader-control-replace-content: actual async production methods, confirmation/failure/retry, session and preview dismissal guards; NOT ArkUI pixel evidence
+{"name":"actual TextInput uses explicit compact geometry and live app-theme text without repeating label","status":"PASS"}
+{"name":"actual editor has distinct back and fixed bottom save/cancel outside scrolling fields","status":"PASS"}
+{"name":"actual reading draft uses real book/source defaults and editing/global creation remain independent","status":"PASS"}
+{"name":"save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss","status":"PASS"}
+{"name":"same mounted footer reacts to mutation, uncertain writes and endpoint input guards","status":"PASS"}
+{"name":"actual standalone settings Add action has no inherited reading scope","status":"PASS"}
+PH52–54 actual SDK editor and business behavior PASS (6 groups); no device evidence.
+PASS reader-control-replace-gateway: real production requests, all rules, lossless partial CRUD, guards, receipts, preview and replace-only bundle
+archived replace motion capture absent; optional source-value checks skipped
+PASS reader-control-replace-geometry: production endpoint/midpoint sampling, widths and one-tree wiring; NOT native pixel acceptance
+(node:11728) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Replace Host actual methods: reopen/import canonical read, stale reads, write ownership, uncertainty and Promise rejection; NOT device acceptance
+PASS reader-control-replace-state: canonical all rows, partial/full guards, uncertainty, import and stale sessions
+reader control original-operation resume, MR1 timing and mixed restoration: PASS
+Production control runtime: seven modules, frame revocation, regrab, close, lifecycle PASS
+Production Panel scalar projection: seven modules x 101 frames retain route identity and current input state PASS
+(node:11752) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Search scroll: production row projection, source origin/end-padding, both-end reachability, guarded async rebase, clamp/user continuation, callback ownership and 9 mutations; NOT device acceptance
+(node:11754) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Actual SDK normalized List: parent clip, authored child origin, extent, same-instance roundtrip PASS
+Actual SDK Search/Settings mounted Builder observers: live payload/geometry/capability/switch changes PASS
+PASS Search/Settings real actor geometry + production callback methods; not native/visual acceptance
+(node:11757) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control selection production reconciliation: PASS
+reader control selection transaction: production ownership/commit policy passed
+reader control session production state behavior: PASS
+reader control shared spatial sampler and inverse production behavior: PASS
+reader control Stage composition + diagnostic timing wiring: PASS (structure only; not pixels/touch)
+reader control Stage lifecycle: production adapter methods passed (mock frame queue; not native/touch/visual acceptance)
+(node:11790) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Native diagnostic production parser: 4 valid + 18 malformed plans, CLI and non-injecting host gates PASS; authorization/runtime cleanup not executed.
+PASS Make TTS: scroll-aware crossing occlusion, reverse poses, narrow layout, explicit timer modes, five-minute range and precise speed callbacks
+(node:11832) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control diagnostic cold-start production admission + packaging wiring: PASS
+reader directory business-value snapshot and no-op prop refresh: PASS (native scroll still separate)
+(node:11852) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader directory extent: production lifecycle + wiring passed (not native virtualization/anchor acceptance)
+(node:11853) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader-directory-markers static contract: PASS
+reader directory projection behavior: PASS
+reader drag-follow gate contract: PASS
+dynamic highlight geometry/color/identity and static snapshot separation: PASS; pixels require runtime verification
+(node:11859) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Debug-only event-loop probe: strict opt-in, actual delayed ticks, independent windows, bounded lifetime, background/late-load ownership PASS; this is not FPS evidence.
+(node:11863) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader reported feedback regressions: PASS
+actual SDK first-page admission: viewport/chapter order, stale selection and adjacent context PASS
+(node:11885) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader HDC target lease serialization: PASS
+Reader Host staging/asset path boundary: PASS
+(node:11927) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader Host picker selection boundary: PASS
+(node:11930) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader HttpTTS strict gateway: PASS
+reader HttpTTS profile, secret boundary and nullable playback: PASS
+reader HttpTTS URL credential placeholder boundary: PASS
+reader OnlineTTS profile validator and credential alias binding: PASS
+paragraph indent production measurement: Unicode offsets and continued fragments PASS (controlled metrics)
+(node:11933) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader layout architecture contract: PASS
+reader module selection contract: PASS
+(node:11935) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS PH87 day: actual SDK anchored popup, three guarded actions, application colors and dismissal
+PASS PH87 night: actual SDK anchored popup, three guarded actions, application colors and dismissal
+PASS PH87 disabled download/refresh, obscured and hidden controls cannot dispatch
+PASS PH87 adaptive text/window geometry and popup lifecycle; native pixels/placement remain a platform gate
+(node:11958) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production motion repair: first-frame clock, opening navigation/input, menu ownership/exactly-once, reduced motion, capsule lifecycle/timeline, shelf reversal and font sampled retarget. Device pixels remain separate.
+(node:11961) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production canonical TOC headings, initial/previous/next/control guards and hot projection reuse: PASS
+PASS Index directory title projection and local/remote known-chapter guards preserve canonical headings
+(node:11965) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader page-bottom justification: PASS
+reader page chrome dynamic layout: PASS
+page chrome/native snapshot invalidation: PASS
+page chrome complete layout reuse and safe-area/session invalidation: PASS
+mounted slot revision delivery gates current/adjacent chrome capture: PASS
+production texture refresh cache matrix: no idle frame waits; requested direction first; expensive captures remain spread: PASS
+(node:11992) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader page-gesture pure state: PASS
+reader page input production sequence regressions: PASS
+(node:11997) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production adjacent measurement isolation, cancellation and rejected admission: PASS
+production current snapshot remains bound to physical slot after promotion: PASS
+async texture copy preserves lifetime and rejects superseded capture: PASS
+(node:11998) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production evicted previous chapter: demand refill, coalescing, stale/failed replies and explicit retry: PASS
+production promotion preparation honors requested direction and stale callback guard: PASS
+production image snapshot admission: cold decode, no blank publication, bounded retry, stale/held cancellation and one disposal: PASS
+single offscreen snapshot tree: detach immediately, dispose once after outstanding capture: PASS
+snapshot publication interruption: pointer retains exact pixels; new page/exit drops them; UP revalidates upload: PASS
+(node:12025) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production page commit reply-loss reconciliation and unknown-result retention: PASS
+production flat settle/regrab continuity and transaction boundary: PASS
+production simulation mode-switch teardown and capability recovery: PASS
+queued tap cue and physical velocity settlement use independent durations: PASS
+(node:12028) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader page-turn pipeline contract: PASS
+reader page-turn stable slot geometry and role transition: PASS
+(node:12033) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader paragraph indentation projection: PASS
+PH89/91 actual SDK Builders: circular countdown/centred leading lane and one themed search action in both forms PASS; native text raster still requires VM inspection
+(node:12056) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH reading: 4 production clocks, nonintersecting footer, native Builder layers, cancelled hold, closing capsule, Core original text PASS
+(node:12059) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS PH56–59 production SDK methods/Builders: measured regions/API fallback, reader underlay, bookmark threshold+ACK ordering, safe force refresh and two-action More; OEM pixels are not asserted
+PASS PH59 real Index write/projection acknowledgments: success and both failure boundaries
+PASS PH57 actual Window position/display listeners, equality dedup, rotation invalidation and resource release
+PASS PH59 confirmed Core write with unavailable projection retains actual filled Builder and locks repeat writes
+(node:12064) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production target-revision and stale-generation release guards: PASS
+production dropped-native-ACK, unadmitted revision and stable 2D recovery: PASS
+(node:12091) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader product scope contract: PASS
+(node:12103) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production finite unknown observation, queued query expiry, late durable and continuous single drain: PASS
+PH50/51 actual SDK: Query bounds, first result, button outline, submit; Quick/source headers and reversible progress PASS
+(node:12126) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader rapid page-turn dynamic target: PASS
+{"passed":true,"scenarios":44,"cases":["first:paged","first:continuous","recovery:origin/paged","recovery:origin/continuous","recovery:target/paged","recovery:target/continuous","promotion:next","promotion:previous","write-reject","anchor-mismatch","obsolete-write","observer-throw:first/commit","observer-throw:first/chapter","observer-throw:first/ready","observer-throw:first/warmup","observer-throw:recover/commit","observer-throw:recover/chapter","observer-throw:recover/ready","observer-throw:recover/warmup","observer-throw:promote/commit","observer-throw:promote/chapter","observer-throw:promote/ready","observer-throw:promote/warmup","reentrant:first/commit/exit","reentrant:first/commit/selection","reentrant:first/commit/remeasure","reentrant:first/chapter/exit","reentrant:first/chapter/selection","reentrant:first/chapter/remeasure","reentrant:recover/commit/exit","reentrant:recover/commit/selection","reentrant:recover/commit/remeasure","reentrant:recover/chapter/exit","reentrant:recover/chapter/selection","reentrant:recover/chapter/remeasure","reentrant:promote/commit/exit","reentrant:promote/commit/selection","reentrant:promote/commit/remeasure","reentrant:promote/chapter/exit","reentrant:promote/chapter/selection","reentrant:promote/chapter/remeasure","negative:first-order","negative:recovery-order","negative:promotion-slot-order"],"boundary":"Unmodified ordinary production methods/classes and selection policy with controlled Core/timer boundaries; explicit owner-publication order, not native delivery/paint or VM transient causation."}
+(node:12131) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS rendering work: empty 24-fragment page 1 clear/0 id scans; active marks 1 frame; duplicate/lifecycle/resize guards; Unicode 700 scan steps; 120 settings poses 0 paths; directory no-op correction 0
+(node:12161) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"actual TextInput uses explicit compact geometry and live app-theme text without repeating label","status":"PASS"}
+{"name":"actual editor has distinct back and fixed bottom save/cancel outside scrolling fields","status":"PASS"}
+{"name":"actual reading draft uses real book/source defaults and editing/global creation remain independent","status":"PASS"}
+{"name":"save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss","status":"PASS"}
+{"name":"same mounted footer reacts to mutation, uncertain writes and endpoint input guards","status":"PASS"}
+{"name":"actual standalone settings Add action has no inherited reading scope","status":"PASS"}
+PH52–54 actual SDK editor and business behavior PASS (6 groups); no device evidence.
+(node:12164) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader Quick Replace pure/static contract: PASS
+ReaderRuntimeOwner Ability lease lifecycle: PASS
+reader screen-awake lease: PASS
+reader search highlight: PASS
+reader copy: native selection maps to original UTF-16 text, synchronous INAPP write and failure recovery PASS
+(node:12193) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader session capsule projection: PASS
+Reader session recovery: PASS (actual control pose rebase, source-ready generations, pure SDK source Builders, More actions)
+(node:12195) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader session launch: PASS (48 archived Figma actors, 54000 property comparisons; ownership/ACK/release/Reduce Motion)
+reader session source identity: PASS
+Settings real SDK Builder hierarchy: separate rounded paint and cached dynamic mask; 42 reversible width/theme poses + partial scroll + mutation PASS
+(node:12223) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader settings pure/static contract: PASS
+bundled category coverage: {
+  novel: 875,
+  comic: 107,
+  music: 22,
+  download: 25,
+  other: 3,
+  external: 14
+}
+reader source category isolation: PASS
+(node:12228) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader source-failure P0 route contract: PASS
+PASS status height: hidden rotate, exact-window/split isolation, visible zero, replacement reset
+reader physical-key and screen-off Host contract: PASS
+reader text-selection lifecycle contract: PASS
+PASS production theme host: same-scheme restart, system linkage, app chrome, restore barrier failure/retry ordering and stale owner isolation
+(node:12236) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS PH67: four approved light bases and four unchanged Make night bases drive preview, ReadingSurface and system chrome; historical PH43 source, ink and effects retained.
+(node:12237) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS theme truth table, migrations, sync fallback, atomic publication, old failure isolation and current failure durable rollback
+PASS removed local theme falls back to matching configured day/night default
+PASS audition/formal mutual exclusion, no Core progress, synthesis-vs-audio completion, stale callbacks, candidate failure restoration, cancel and resume
+PASS missing native acceptance cannot block audition cancellation; invalid pitch fails before host mutation
+PASS TTS config interaction: real Builder callbacks, choices, empty states, input gates, slider commits, draft races, stale overlays and audio strategy adapter methods; VM/native audio remain separate.
+(node:12263) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader TTS strict gateway: PASS
+reader TTS precise rate round trip: PASS
+PASS TTS launch intent at all 7 asynchronous preparation boundaries, readyPaused, resume, and two-click acknowledgement race
+reader TTS voice and persisted Host preferences: PASS
+reader TTS system and HttpTTS product surface: PASS
+PH44 TTS Quick preparation PASS: deferred ready/single-flight/zero audio+queue/independent metadata/obsolete+newer intent guards/active session/SDK first frame/retry; omission negative control rejected
+(node:12274) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader TTS fake-host coordinator: PASS
+PASS TTS short window: 0–844vp budgets, whole-form scroll fallback, unchanged 44vp Save/Cancel SDK actions
+(node:12301) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[ReaderTTS] stage=probe code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=start.failed code=OPERATION_FAILED
+[ReaderTTS] stage=startCallbackTimeout code=OPERATION_FAILED
+reader TTS state machine transactions and isolation: PASS
+reader TTS pure state: PASS
+Make V17 24-bar CSS track parity, alternate/delay/transitions, shared frame clock and frozen source: PASS
+(node:12330) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader typography architecture contract: PASS
+reader window chrome P0 contract: PASS
+(node:12334) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reading chapter window: PASS
+reading document projection: PASS
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+reading offline gateway deterministic runtime: PASS
+offline canonical volume projection, range guard, readable totals and lease rejection: PASS
+reading offline image cache architecture: PASS
+reading pagination index: PASS
+reading pagination integration contract: PASS
+reading Phone/TabletExpanded shared architecture contract: PASS
+reading record accumulation contract: PASS
+reading session local/remote routing contract: PASS
+reading whole-book processed-scalar progress: PASS
+(node:12373) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+remote content admission contract: PASS
+ML cache provenance, offline reading, non-source rejection and explicit protected refresh PASS
+ML image-only chapter and short captions preserve access-notice admission PASS
+PH75 Host: captured anchor context, forced/cache validation, typed receipt rejection, prepared bypass prevention, window ownership, scoped progress/bookmarks PASS
+PH75 directory chapter-start proof: exact cache read, source/index binding, cancellation/CAS failure preservation, no fetch inputs, unscoped stored offsets untouched PASS
+PH75 recoverable position conflicts are localized and never treated as source/network failures PASS
+PH75 actual reader restore, explicit anchor, preservation, late selection, window proof and TTS write ownership PASS
+PH75 unproven persistent offset never borrows current body proof PASS
+PH85 actual LRE preserved-refresh notice: 14 admission, intent, status, generation and presentation-failure scenarios PASS
+ML cache: offline readable old body, one-session notice, explicit protected refresh and decline without write PASS
+ML actual Index cache recovery: explicit refresh, decline, stale route, preserved positions and failure feedback PASS
+(node:12380) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12404) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+R1/R9 actual session ownership, stale verdict/directory rejection and validated chapter handoff: PASS
+remote reading flow gateway contract: PASS
+reading image resolve failed: OPERATION_FAILED
+remote reading flow deterministic runtime: PASS
+PASS PH58 actual remote/reading-session adapters: optional force flag, offline refresh, identity and failure propagation
+responsive surface width regression matrix: PASS
+RSS and Discover responsive layout regressions: PASS
+rss page architecture contract: PASS
+rss subscription management page contract: PASS
+rule entity management Core ownership contract: PASS
+(node:12420) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "evidenceLayer": "SDK-extracted production methods and actual Coordinator/Gateway; synthetic RPC boundary, no device",
+  "outcomes": [
+    {
+      "name": "visible groups cap six, concurrency two; speculative work has no progress/body/verdict-success",
+      "status": "PASS"
+    },
+    {
+      "name": "visible failed catalog tries another same-book candidate without body work",
+      "status": "PASS"
+    },
+    {
+      "name": "foreground preempts unrelated started preparation, propagates cancellation and resumes it without unhealthy proof",
+      "status": "PASS"
+    },
+    {
+      "name": "foreground joins same prepared book instead of cancelling its only active request",
+      "status": "PASS"
+    },
+    {
+      "name": "only background rounds cap unknown candidates; foreground fourth source succeeds",
+      "status": "PASS"
+    },
+    {
+      "name": "cancelled stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "identityMismatch stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "sourceVersionChanged stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "storageFailure stops group fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "source-local capability failure tries independent same-book source",
+      "status": "PASS"
+    },
+    {
+      "name": "proxy/DNS environment failure stops source churn without candidate health penalty",
+      "status": "PASS"
+    },
+    {
+      "name": "whole foreground deadline includes waiting; process completion cannot publish late catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "cancel waiting foreground releases consumer promptly and does not try next source",
+      "status": "PASS"
+    },
+    {
+      "name": "user cancels orphan foreground Core work, frees slots and allows another book",
+      "status": "PASS"
+    },
+    {
+      "name": "deadline cancels orphan foreground Core work, frees slots and allows another book",
+      "status": "PASS"
+    },
+    {
+      "name": "one cancelled caller preserves a live same-book foreground consumer",
+      "status": "PASS"
+    },
+    {
+      "name": "one cancelled caller preserves a live same-book background consumer",
+      "status": "PASS"
+    },
+    {
+      "name": "same-book reopen waits for cancelled Core operation and starts a new acquisition",
+      "status": "PASS"
+    },
+    {
+      "name": "same title with blank or conflicting author cannot authorize automatic source replacement",
+      "status": "PASS"
+    },
+    {
+      "name": "author label variants use one identity across search candidate and acquired detail without rewriting raw metadata",
+      "status": "PASS"
+    },
+    {
+      "name": "source-bound author decoration admits same-book detail and body while preserving raw rules context",
+      "status": "PASS"
+    },
+    {
+      "name": "genuine at-author and stale decorated proof cannot authorize another author",
+      "status": "PASS"
+    },
+    {
+      "name": "a recognized author template with an empty nickname remains unknown and cannot authorize fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "acquired detail must revalidate decorated author against its own current proof",
+      "status": "PASS"
+    },
+    {
+      "name": "bounded author metadata policy cannot authorize a different or missing author",
+      "status": "PASS"
+    },
+    {
+      "name": "a matching normalized search author still requires the acquired detail author to match",
+      "status": "PASS"
+    },
+    {
+      "name": "hidden source-wait pauses and resumes same visible group once without cancellation",
+      "status": "PASS"
+    },
+    {
+      "name": "query replacement drops old waiting groups; old admitted work cannot enqueue old fallback",
+      "status": "PASS"
+    },
+    {
+      "name": "fresh prepared reused; stale catalog refresh failure handled and original promise rejects",
+      "status": "PASS"
+    },
+    {
+      "name": "change notification batches actual identities and source mutation resets",
+      "status": "PASS"
+    },
+    {
+      "name": "real selected search group primary empty TOC admits second and probes only selected body; no shelf write",
+      "status": "PASS"
+    },
+    {
+      "name": "real search body failure tries second source and reuses admitted body exactly once",
+      "status": "PASS"
+    },
+    {
+      "name": "real search catalog is visible before delayed body completes",
+      "status": "PASS"
+    },
+    {
+      "name": "real body storage failure stops group and preserves visible admitted catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit fixed source never auto-falls back",
+      "status": "PASS"
+    },
+    {
+      "name": "visible range callback bounds group count, skips unchanged rows and clears stopped view",
+      "status": "PASS"
+    }
+  ]
+}
+search detail shared cache admission wiring: PASS
+PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS
+(node:12447) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+R5/R6 query=1000 unrelated=0: metadata RPC=1 returned=1 projected=1 captured=1 PASS
+R5/R6 query=1000 unrelated=9000: metadata RPC=1 returned=1 projected=1 captured=1 PASS
+R5/R6 partition isolation, exact missing, related admission, stable merge/split, stale cursor and ownership PASS
+R5/R6 130-identity atomic source partition and complete 131-member two-page relation PASS
+{"name":"initial history Scroll uses the top of the content viewport","status":"PASS"}
+{"name":"all history appears before layout without per-item measurement or expansion","status":"PASS"}
+{"name":"async history and narrow/tablet widths preserve every entry and existing scroll","status":"PASS"}
+{"name":"fresh-entry focus is consumed once and reset/return cannot recreate it","status":"PASS"}
+{"name":"native focus waits for layout and a removed or returning page never steals it","status":"PASS"}
+PH80/81 full scrollable history, zero text measurement and one-shot native focus lifecycle PASS; keyboard pixels remain a platform gate.
+(node:12469) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH81/82/90 SDK input clip and hidden Web focus isolation PASS; native caret pixels checked separately
+(node:12472) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12475) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search orchestrator bounded concurrency and retained lifecycle: PASS
+PH65 in-flight canonical merge becomes visible before sweep completion PASS
+PH65 stale metadata/work guards, 39 counter updates and canonical grouping retention PASS
+PH68 incremental deltas: failure retention without retry loop, hidden IO pause/resume, and busy union PASS
+PH68 stopped query retains completed metadata without restarting source search PASS
+R3 independent branches, stop pending-delta flush, retained failure recovery and query/history identity PASS
+R3 failed local branch retries while online remains active; repeated retry does not duplicate work PASS
+R6 actual empty source → publication → page/list: 1000 retained rows, zero flatten/index lookup/group rebuild/notice; populated-bucket deletion still invalidates PASS
+R3 branch causes survive stop/retry, safe classified UI, successful recovery and old-run rejection PASS
+PASS PH63 real SDK result tags share typography, padding and wrapping; live metadata and selection retained
+(node:12570) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS PH77/79 actual SDK Index→SearchPage scalar reset→Watch→grouping→tracked status Text: 1000 refs, 0 new/change groups, 0 copied DTO Props
+PASS legacy SDK deep-copy counterexample: 3005 objects/18018 slots, 1000 new groups
+PASS actual shelf callback, fresh query and compiled remount retain current payload; native frames are not measured
+PASS actual SDK import guard rejects old TS→ETS edge and accepts pure-TS presentation types
+(node:12602) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search publication identity contract: PASS
+{"name":"PH24 native loading indicator preserves 13/36 sizes and responds without remounting","status":"PASS"}
+{"name":"PH37 four Toggle states retain geometry, track role, click and thumb position","status":"PASS"}
+{"name":"PH7 real theme actions signal accepted defaults and reject wrong day/night type explicitly","status":"PASS"}
+{"name":"PH67 SDK previews use four approved light bases and retain four original night bases","status":"PASS"}
+{"name":"PH36 real Index Back returns General to Settings before Bookshelf and preserves overlay priority","status":"PASS"}
+{"name":"PH34 actual General and Rules Scrolls align short contents at the top","status":"PASS"}
+{"name":"PH35 real cache action has intrinsic height, bounded width and retained pending/result label","status":"PASS"}
+search/settings physical feedback production/SDK regression PASS (7 groups); native pixels/device acceptance remain separate.
+(node:12613) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12637) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "source": "file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+  "evidenceLayer": "production methods parsed by Harmony SDK; no device or Core I/O",
+  "outcomes": [
+    {
+      "name": "first source parses: search -> preview -> reading -> detail -> exact search state",
+      "status": "PASS"
+    },
+    {
+      "name": "failed first source -> replacement source -> trial -> detail -> original search",
+      "status": "PASS"
+    },
+    {
+      "name": "repeated preview replacements keep the original search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "late failed first admission cannot replace a new preview or its return target",
+      "status": "PASS"
+    },
+    {
+      "name": "leaving preview during replacement rejects late success without changing the new route",
+      "status": "PASS"
+    },
+    {
+      "name": "late replacement failure cannot reopen an old detail or replace a newer search",
+      "status": "PASS"
+    },
+    {
+      "name": "a failed replacement preserves the current detail and the search parent",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf direct resume retains its own return semantics",
+      "status": "PASS"
+    },
+    {
+      "name": "shelf explicit info retains its own return semantics",
+      "status": "PASS"
+    }
+  ]
+}
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 notifications=1 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS
+(node:12641) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+select semantic contract: PASS
+settings cache cleanup contract: PASS checks=9
+settings responsive select overlay contract: PASS
+(node:12669) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"missing/invalid name is unknown, not evidence of source removal","status":"PASS"}
+{"name":"unready in-memory registries preserve caller supplied persisted identity label","status":"PASS"}
+{"name":"temporary unknown Core name cannot erase cached exact-source name or progress","status":"PASS"}
+{"name":"successful but unmatched/filtered source list does not prove deletion","status":"PASS"}
+{"name":"late old hydration cannot overwrite newer successful name","status":"PASS"}
+{"name":"Core deletion admitted while name lookup is pending is never resurrected","status":"PASS"}
+{"name":"runtime/route-generation changes reject old results without borrowing another identity","status":"PASS"}
+{"name":"source-name-only change invalidates the actual mounted row key while identity stays exact","status":"PASS"}
+PH45 source name projection and actual Host hydration regressions PASS (8 groups); no device identity is inferred.
+(node:12673) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+source check streaming progress contract: PASS
+Source product tools static boundary: PASS
+source supply chain: PASS
+node:internal/modules/esm/resolve:839
+      const error = new ERR_UNSUPPORTED_RESOLVE_REQUEST(specifier, base);
+                    ^
+
+TypeError [ERR_UNSUPPORTED_RESOLVE_REQUEST]: Failed to resolve module specifier "../common/BookAcquisitionPresentation" from "data:text/javascript;base64,ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgIAogIAoKLyoqIE9ubHkgQ29yZSdzIHZlcnNpb24tYm91bmQgZXZpZGVuY2UgbWF5IHJlbW92ZSBhIHNvdXJjZSB0ZW1wbGF0ZSBkZWNvcmF0aW9uLiAqLwpleHBvcnQgZnVuY3Rpb24gcmVhZEJvb2tBdXRob3JJZGVudGl0eSh2YWx1ZSAgICAgICAgICwgcmF3ICAgICAgICAsIHNvdXJjZVZlcnNpb24gICAgICAgICApICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB7CiAgaWYgKHZhbHVlID09PSBudWxsIHx8IHR5cGVvZiB2YWx1ZSAhPT0gJ29iamVjdCcgfHwgQXJyYXkuaXNBcnJheSh2YWx1ZSkgfHwgIXNvdXJjZVZlcnNpb24pIHJldHVybiB1bmRlZmluZWQ7CiAgY29uc3QgcHJvb2YgPSB2YWx1ZSAgICAgICAgICAgICAgICAgICAgICAgICAgIDsKICBpZiAocHJvb2Yuc2NoZW1hVmVyc2lvbiAhPT0gMSB8fCBwcm9vZi5zb3VyY2VWZXJzaW9uICE9PSBzb3VyY2VWZXJzaW9uIHx8CiAgICAocHJvb2YuZmllbGQgIT09ICdzZWFyY2gnICYmIHByb29mLmZpZWxkICE9PSAnZGV0YWlsJykgfHwgcHJvb2YucnVsZSAhPT0gJ2F1dGhvci1uaWNrbmFtZS1hdC12MScgfHwKICAgIHByb29mLnJhdyAhPT0gcmF3IHx8ICFyYXcuc3RhcnRzV2l0aCgnQCcpIHx8IHR5cGVvZiBwcm9vZi5sYWJlbCAhPT0gJ3N0cmluZycgfHwKICAgIHByb29mLmxhYmVsICE9PSByYXcuc2xpY2UoMSkpIHJldHVybiB1bmRlZmluZWQ7CiAgcmV0dXJuIHByb29mOwp9CgovKiogUmVhZGVyJ3MgYXV0aG9yLWZpZWxkIGxhYmVscywgbm90IGEgcGVyc29uLW5hbWUgcGFyc2VyIG9yIGZ1enp5IG1hdGNoZXIuCiAqIEtlZXAgc3RvcmVkIG1ldGFkYXRhIGFuZCBydWxlIGNvbnRleHQgdW5jaGFuZ2VkOyB1c2UgdGhpcyBkZXJpdmVkIGxhYmVsIGZvcgogKiBwcmVzZW50YXRpb24gYW5kIGV4YWN0IHNhbWUtYm9vayBjb21wYXJpc29uIG9ubHkuIENvcmUncyBTUUxpdGUgYWxpYXMgaW5kZXgKICogZm9sbG93cyB0aGUgc2FtZSBmaXh0dXJlLWJhY2tlZCBwb2xpY3kuCiAqLwpleHBvcnQgZnVuY3Rpb24gYm9va0F1dGhvckxhYmVsKHZhbHVlICAgICAgICAsIHByb29mICAgICAgICAgICAgICAgICAgICAgICAgICAsIHNvdXJjZVZlcnNpb24gICAgICAgICApICAgICAgICAgewogIGNvbnN0IGFkbWl0dGVkID0gcmVhZEJvb2tBdXRob3JJZGVudGl0eShwcm9vZiwgdmFsdWUsIHNvdXJjZVZlcnNpb24pOwogIGxldCBsYWJlbCA9IChhZG1pdHRlZD8ubGFiZWwgPz8gdmFsdWUpLnRyaW0oKS5yZXBsYWNlKC9e5L2cXHMq6ICFXHMqWzrvvJpdXHMqLywgJycpOwogIGNvbnN0IGxhc3RMaW5lID0gTWF0aC5tYXgobGFiZWwubGFzdEluZGV4T2YoJ1xyJyksIGxhYmVsLmxhc3RJbmRleE9mKCdcbicpLAogICAgbGFiZWwubGFzdEluZGV4T2YoJ1x1MjAyOCcpLCBsYWJlbC5sYXN0SW5kZXhPZignXHUyMDI5JykpOwogIGlmIChsYXN0TGluZSA+PSAwICYmIGxhYmVsLnNsaWNlKGxhc3RMaW5lICsgMSkudHJpbSgpID09PSAn6L+b5YWl5L2c6ICF5Li76aG1IOKGkicgJiYKICAgIGxhYmVsLnNsaWNlKDAsIGxhc3RMaW5lKS50cmltKCkubGVuZ3RoID4gMCkgewogICAgbGFiZWwgPSBsYWJlbC5zbGljZSgwLCBsYXN0TGluZSkudHJpbSgpOwogIH0KICByZXR1cm4gbGFiZWw7Cn0KCmV4cG9ydCBmdW5jdGlvbiBib29rSWRlbnRpdHlUZXh0KHZhbHVlICAgICAgICApICAgICAgICAgewogIHJldHVybiB2YWx1ZS50cmltKCkucmVwbGFjZSgvXHMrL2csICcgJykudG9Mb3dlckNhc2UoKTsKfQoKZXhwb3J0IGZ1bmN0aW9uIGJvb2tBdXRob3JJZGVudGl0eSh2YWx1ZSAgICAgICAgLCBwcm9vZiAgICAgICAgICAgICAgICAgICAgICAgICAgLCBzb3VyY2VWZXJzaW9uICAgICAgICAgKSAgICAgICAgIHsKICByZXR1cm4gYm9va0lkZW50aXR5VGV4dChib29rQXV0aG9yTGFiZWwodmFsdWUsIHByb29mLCBzb3VyY2VWZXJzaW9uKSk7Cn0KCmV4cG9ydCBmdW5jdGlvbiBib29rVGl0bGVBdXRob3JLZXkodGl0bGUgICAgICAgICwgYXV0aG9yICAgICAgICAsIHByb29mICAgICAgICAgICAgICAgICAgICAgICAgICAsIHNvdXJjZVZlcnNpb24gICAgICAgICApICAgICAgICAgewogIHJldHVybiBgJHtib29rSWRlbnRpdHlUZXh0KHRpdGxlKX1cdTAwMDAke2Jvb2tBdXRob3JJZGVudGl0eShhdXRob3IsIHByb29mLCBzb3VyY2VWZXJzaW9uKX1gOwp9CgoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgIAogCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAKCmZ1bmN0aW9uIHByaW9yaXR5UmFuayhwcmlvcml0eSAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICB7CiAgcmV0dXJuIHByaW9yaXR5ID09PSAnZm9yZWdyb3VuZCcgPyAwIDogcHJpb3JpdHkgPT09ICdzZWFyY2gnID8gMSA6IDI7Cn0KCi8qKiBTaGFyZWQgc291cmNlLXN3ZWVwIGN1cnNvciBmcm9tIFNlYXJjaE9yY2hlc3RyYXRvci4gRWFjaCBjb21wbGV0aW9uIGZyZWVzCiAqIGl0cyBsYW5lIGltbWVkaWF0ZWx5OyBhIHNsb3cgc291cmNlIG5ldmVyIGJsb2NrcyB0aGUgbmV4dCB3aG9sZSBiYXRjaC4gVGhlCiAqIHJlcXVlc3Qgc2NoZWR1bGVyIGJlbG93IHN0aWxsIG93bnMgYWN0dWFsIG5ldHdvcmsgY29uY3VycmVuY3kgYW5kIHByaW9yaXR5LiAqLwpleHBvcnQgYXN5bmMgZnVuY3Rpb24gcnVuQm9va1NvdXJjZVdvcmtlcnMgICAoc291cmNlcyAgICAgLCBjb25jdXJyZW5jeSAgICAgICAgLAogIHZpc2l0ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLCBiZWZvcmVEaXNwYXRjaCAgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgewogIGxldCBuZXh0ID0gMDsKICBsZXQgZmFpbGVkID0gZmFsc2U7CiAgY29uc3Qgd29ya2VyID0gYXN5bmMgKCkgICAgICAgICAgICAgICAgPT4gewogICAgd2hpbGUgKCFmYWlsZWQgJiYgbmV4dCA8IHNvdXJjZXMubGVuZ3RoKSB7CiAgICAgIGlmICghYXdhaXQgYmVmb3JlRGlzcGF0Y2goKSB8fCBmYWlsZWQpIHJldHVybjsKICAgICAgY29uc3Qgc291cmNlID0gc291cmNlc1tuZXh0KytdOwogICAgICBpZiAoc291cmNlID09PSB1bmRlZmluZWQpIHJldHVybjsKICAgICAgdHJ5IHsgYXdhaXQgdmlzaXQoc291cmNlKTsgfQogICAgICBjYXRjaCAoZXJyb3IpIHsgZmFpbGVkID0gdHJ1ZTsgdGhyb3cgZXJyb3I7IH0KICAgIH0KICB9OwogIGNvbnN0IHdvcmtlcnMgICAgICAgICAgICAgICAgICA9IFtdOwogIGZvciAobGV0IGluZGV4ID0gMDsgaW5kZXggPCBNYXRoLm1pbihjb25jdXJyZW5jeSwgc291cmNlcy5sZW5ndGgpOyBpbmRleCArPSAxKSB3b3JrZXJzLnB1c2god29ya2VyKCkpOwogIGF3YWl0IFByb21pc2UuYWxsKHdvcmtlcnMpOwp9CgovKiogSW4tZmxpZ2h0IHNoYXJpbmcgb25seS4gQ29yZSByZW1haW5zIHRoZSBkdXJhYmxlIHJlc3BvbnNlL2NhY2hlIG93bmVyLiAqLwpleHBvcnQgY2xhc3MgQm9va1JlcXVlc3RTY2hlZHVsZXIgewogICAgICAgICAgam9icyAgICAgICAgICAgICAgICAgICAgICAgICAgPSBuZXcgTWFwKCk7CiAgICAgICAgICBxdWV1ZSAgICAgICAgICAgICAgID0gW107CiAgICAgICAgICBhY3RpdmUgICAgICAgICA9IDA7CiAgICAgICAgICBiYWNrZ3JvdW5kQWN0aXZlICAgICAgICAgPSAwOwogICAgICAgICAgY2xvc2VkICAgICAgICAgID0gZmFsc2U7CgogICAgICAgICAgZXhlY3V0ZSAgICAgICAgICAgICAgICAgICAgIDsKCiAgY29uc3RydWN0b3IoZXhlY3V0ZSAgICAgICAgICAgICAgICAgICAgICkgewogICAgdGhpcy5leGVjdXRlID0gZXhlY3V0ZTsKICB9CgogIHJlcXVlc3QobWV0aG9kICAgICAgICAsIHBhcmFtcyAgICAgICAgICAgICwgb3B0aW9ucyAgICAgICAgICAgICAgICAgICAgLAogICAgdmVyc2lvbiAgICAgICAgLCBwcmlvcml0eSAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB7CiAgICBpZiAodGhpcy5jbG9zZWQpIHJldHVybiBQcm9taXNlLnJlamVjdChuZXcgRXJyb3IoJ+S5puexjeS7u+WKoeW3suWFs+mXrScpKTsKICAgIC8vIFByZXNlcnZlIHJ1bGUgdmFyaWFibGVzIGFuZCBhbGwgc2VtYW50aWMgcGFyYW1ldGVycyBpbiB0aGUgc2hhcmluZyBrZXkuCiAgICAvLyBEaWFnbm9zdGljL3JlcGxheSBIb3N0IG92ZXJyaWRlcyBhcmUgaW50ZW50aW9uYWxseSBub3Qgc2hhcmVkLgogICAgY29uc3Qga2V5ID0gSlNPTi5zdHJpbmdpZnkoW21ldGhvZCwgdmVyc2lvbiwgcGFyYW1zXSk7CiAgICBsZXQgam9iID0gb3B0aW9ucy5ob3N0UmVxdWVzdCA9PT0gdW5kZWZpbmVkID8gdGhpcy5qb2JzLmdldChrZXkpIDogdW5kZWZpbmVkOwogICAgLy8gT25jZSBDb3JlIGhhcyBvYnNlcnZlZCBjYW5jZWxsYXRpb24sIGEgbGF0ZXIgc2FtZS1rZXkgY2FsbGVyIG11c3Qgc3RhcnQKICAgIC8vIGEgbmV3IHJlcXVlc3QgaW5zdGVhZCBvZiByZXZpdmluZyBhbiBvcGVyYXRpb24gYWxyZWFkeSBiZWluZyB1bndvdW5kLgogICAgaWYgKGpvYiAhPT0gdW5kZWZpbmVkICYmIHRoaXMuY2FuY2VsbGVkKGpvYikpIGpvYiA9IHVuZGVmaW5lZDsKICAgIGlmIChqb2IgIT09IHVuZGVmaW5lZCkgewogICAgICBqb2IuY29uc3VtZXJzLnB1c2goeyBjYW5jZWxsZWQ6IG9wdGlvbnMuc2hvdWxkQ2FuY2VsLCBjYW5Db250aW51ZTogb3B0aW9ucy5jYW5Db250aW51ZSwKICAgICAgICBjYW5EaXNwYXRjaDogb3B0aW9ucy5jYW5EaXNwYXRjaCwgb25EaXNwYXRjaDogb3B0aW9ucy5vbkRpc3BhdGNoIH0pOwogICAgICBpZiAoam9iLnN0YXJ0ZWQpIG9wdGlvbnMub25EaXNwYXRjaD8uKCk7CiAgICAgIGlmIChwcmlvcml0eVJhbmsocHJpb3JpdHkpIDwgcHJpb3JpdHlSYW5rKGpvYi5wcmlvcml0eSkpIGpvYi5wcmlvcml0eSA9IHByaW9yaXR5OwogICAgICB0aGlzLmRyYWluKCk7CiAgICAgIHJldHVybiBqb2IucHJvbWlzZTsKICAgIH0KICAgIGxldCByZXNvbHZlUmVzdWx0ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPSAoKSAgICAgICA9PiB7fTsKICAgIGxldCByZWplY3RSZXN1bHQgICAgICAgICAgICAgICAgICAgICAgICAgPSAoKSAgICAgICA9PiB7fTsKICAgIGNvbnN0IHByb21pc2UgPSBuZXcgUHJvbWlzZSAgICAgICAgICAgICAgICAgICAgICAgKChyZXNvbHZlLCByZWplY3QpICAgICAgID0+IHsKICAgICAgcmVzb2x2ZVJlc3VsdCA9IHJlc29sdmU7CiAgICAgIHJlamVjdFJlc3VsdCA9IHJlamVjdDsKICAgIH0pOwogICAgam9iID0geyBrZXksIG1ldGhvZCwgcGFyYW1zLCBvcHRpb25zLCBwcmlvcml0eSwgcXVldWVkQXQ6IERhdGUubm93KCksIHN0YXJ0ZWQ6IGZhbHNlLCBjYW5jZWxsYXRpb25SZXF1ZXN0ZWQ6IGZhbHNlLAogICAgICBjb25zdW1lcnM6IFt7IGNhbmNlbGxlZDogb3B0aW9ucy5zaG91bGRDYW5jZWwsIGNhbkNvbnRpbnVlOiBvcHRpb25zLmNhbkNvbnRpbnVlLAogICAgICAgIGNhbkRpc3BhdGNoOiBvcHRpb25zLmNhbkRpc3BhdGNoLCBvbkRpc3BhdGNoOiBvcHRpb25zLm9uRGlzcGF0Y2ggfV0sCiAgICAgIHByb21pc2UsIHJlc29sdmU6IHJlc29sdmVSZXN1bHQsIHJlamVjdDogcmVqZWN0UmVzdWx0IH07CiAgICBpZiAob3B0aW9ucy5ob3N0UmVxdWVzdCA9PT0gdW5kZWZpbmVkKSB0aGlzLmpvYnMuc2V0KGtleSwgam9iKTsKICAgIHRoaXMucXVldWUucHVzaChqb2IpOwogICAgdGhpcy5kcmFpbigpOwogICAgcmV0dXJuIHByb21pc2U7CiAgfQoKICBwcm9tb3RlKHNvdXJjZUlkICAgICAgICAsIGJvb2tJZCAgICAgICAgKSAgICAgICB7CiAgICBmb3IgKGNvbnN0IGpvYiBvZiB0aGlzLnF1ZXVlKSB7CiAgICAgIGNvbnN0IGJvb2sgPSBqb2IucGFyYW1zWydib29rJ10gICAgICAgICAgICAgICAgICAgICAgICAgIDsKICAgICAgaWYgKGpvYi5wYXJhbXNbJ3NvdXJjZUlkJ10gPT09IHNvdXJjZUlkICYmIChqb2IucGFyYW1zWydib29rSWQnXSA9PT0gYm9va0lkIHx8IGJvb2s/LlsnYm9va0lkJ10gPT09IGJvb2tJZCkpIHsKICAgICAgICBqb2IucHJpb3JpdHkgPSAnZm9yZWdyb3VuZCc7CiAgICAgIH0KICAgIH0KICAgIHRoaXMuZHJhaW4oKTsKICB9CgogIHZpc2liaWxpdHlDaGFuZ2VkKCkgICAgICAgeyB0aGlzLmRyYWluKCk7IH0KCiAgY2xvc2UoKSAgICAgICB7CiAgICB0aGlzLmNsb3NlZCA9IHRydWU7CiAgICBmb3IgKGNvbnN0IGpvYiBvZiB0aGlzLnF1ZXVlKSB7CiAgICAgIGpvYi5yZWplY3QobmV3IEVycm9yKCfkuabnsY3ku7vliqHlt7LlhbPpl60nKSk7CiAgICAgIGlmICh0aGlzLmpvYnMuZ2V0KGpvYi5rZXkpID09PSBqb2IpIHRoaXMuam9icy5kZWxldGUoam9iLmtleSk7CiAgICB9CiAgICB0aGlzLnF1ZXVlID0gW107CiAgfQoKICAgICAgICAgIGNhbmNlbGxlZChqb2IgICAgICAgICAgICApICAgICAgICAgIHsKICAgIGlmICh0aGlzLmNsb3NlZCB8fCBqb2IuY2FuY2VsbGF0aW9uUmVxdWVzdGVkKSByZXR1cm4gdHJ1ZTsKICAgIGlmIChqb2IuY29uc3VtZXJzLmV2ZXJ5KChjb25zdW1lciAgICAgICAgICApICAgICAgICAgID0+CiAgICAgIGNvbnN1bWVyLmNhbmNlbGxlZD8uKCkgPT09IHRydWUgfHwgY29uc3VtZXIuY2FuQ29udGludWU/LigpID09PSBmYWxzZSkpIHsKICAgICAgam9iLmNhbmNlbGxhdGlvblJlcXVlc3RlZCA9IHRydWU7CiAgICAgIHJldHVybiB0cnVlOwogICAgfQogICAgcmV0dXJuIGZhbHNlOwogIH0KCiAgICAgICAgICBkcmFpbigpICAgICAgIHsKICAgIGNvbnN0IG5vdyA9IERhdGUubm93KCk7CiAgICAvLyBBZ2luZyBhbGxvd3MgY2F0YWxvZyBwcmVwYXJhdGlvbiB0byBtYWtlIHByb2dyZXNzIGR1cmluZyBsb25nIHNlYXJjaGVzLgogICAgdGhpcy5xdWV1ZS5zb3J0KChhICAgICAgICAgICAgLCBiICAgICAgICAgICAgKSAgICAgICAgID0+IHsKICAgICAgY29uc3QgYVJhbmsgPSBhLnByaW9yaXR5ID09PSAnYmFja2dyb3VuZCcgJiYgbm93IC0gYS5xdWV1ZWRBdCA+PSA1MDAwID8gMSA6IHByaW9yaXR5UmFuayhhLnByaW9yaXR5KTsKICAgICAgY29uc3QgYlJhbmsgPSBiLnByaW9yaXR5ID09PSAnYmFja2dyb3VuZCcgJiYgbm93IC0gYi5xdWV1ZWRBdCA+PSA1MDAwID8gMSA6IHByaW9yaXR5UmFuayhiLnByaW9yaXR5KTsKICAgICAgcmV0dXJuIGFSYW5rIC0gYlJhbmsgfHwgYS5xdWV1ZWRBdCAtIGIucXVldWVkQXQ7CiAgICB9KTsKICAgIGZvciAobGV0IGluZGV4ID0gMDsgaW5kZXggPCB0aGlzLnF1ZXVlLmxlbmd0aDspIHsKICAgICAgY29uc3Qgam9iID0gdGhpcy5xdWV1ZVtpbmRleF07CiAgICAgIGlmICh0aGlzLmNhbmNlbGxlZChqb2IpKSB7CiAgICAgICAgdGhpcy5xdWV1ZS5zcGxpY2UoaW5kZXgsIDEpOwogICAgICAgIGlmICh0aGlzLmpvYnMuZ2V0KGpvYi5rZXkpID09PSBqb2IpIHRoaXMuam9icy5kZWxldGUoam9iLmtleSk7CiAgICAgICAgam9iLnJlamVjdChuZXcgRXJyb3IoJ+S5puexjeivt+axguW3suWPlua2iCcpKTsKICAgICAgICBjb250aW51ZTsKICAgICAgfQogICAgICBpZiAoIWpvYi5jb25zdW1lcnMuc29tZSgoY29uc3VtZXIgICAgICAgICAgKSAgICAgICAgICA9PgogICAgICAgIGNvbnN1bWVyLmNhbmNlbGxlZD8uKCkgIT09IHRydWUgJiYgY29uc3VtZXIuY2FuQ29udGludWU/LigpICE9PSBmYWxzZSAmJgogICAgICAgICAgY29uc3VtZXIuY2FuRGlzcGF0Y2g/LigpICE9PSBmYWxzZSkpIHsgaW5kZXggKz0gMTsgY29udGludWU7IH0KICAgICAgLy8gU2l4IHRvdGFsIHJlcXVlc3RzOyByZXNlcnZlIG9uZSBzbG90IGZvciByZWFkaW5nLCBjYXAgcHJlcGFyYXRpb24gYXQgdHdvLgogICAgICBpZiAodGhpcy5hY3RpdmUgPj0gNiB8fCAoam9iLnByaW9yaXR5ICE9PSAnZm9yZWdyb3VuZCcgJiYgdGhpcy5hY3RpdmUgPj0gNSkgfHwKICAgICAgICAoam9iLnByaW9yaXR5ID09PSAnYmFja2dyb3VuZCcgJiYgdGhpcy5iYWNrZ3JvdW5kQWN0aXZlID49IDIpKSB7IGluZGV4ICs9IDE7IGNvbnRpbnVlOyB9CiAgICAgIHRoaXMucXVldWUuc3BsaWNlKGluZGV4LCAxKTsKICAgICAgdGhpcy5hY3RpdmUgKz0gMTsKICAgICAgY29uc3QgYmFja2dyb3VuZCA9IGpvYi5wcmlvcml0eSA9PT0gJ2JhY2tncm91bmQnOwogICAgICBpZiAoYmFja2dyb3VuZCkgdGhpcy5iYWNrZ3JvdW5kQWN0aXZlICs9IDE7CiAgICAgIGpvYi5zdGFydGVkID0gdHJ1ZTsKICAgICAgZm9yIChjb25zdCBjb25zdW1lciBvZiBqb2IuY29uc3VtZXJzKSB7CiAgICAgICAgaWYgKGNvbnN1bWVyLmNhbmNlbGxlZD8uKCkgIT09IHRydWUgJiYgY29uc3VtZXIuY2FuQ29udGludWU/LigpICE9PSBmYWxzZSkgY29uc3VtZXIub25EaXNwYXRjaD8uKCk7CiAgICAgIH0KICAgICAgY29uc3QgcmVxdWVzdE9wdGlvbnMgICAgICAgICAgICAgICAgID0geyB0aW1lb3V0TXM6IGpvYi5vcHRpb25zLnRpbWVvdXRNcywKICAgICAgICBwb2xsTXM6IGpvYi5vcHRpb25zLnBvbGxNcywgaG9zdFJlcXVlc3Q6IGpvYi5vcHRpb25zLmhvc3RSZXF1ZXN0LAogICAgICAgIHNob3VsZENhbmNlbDogKCkgICAgICAgICAgPT4gdGhpcy5jYW5jZWxsZWQoam9iKSB9OwogICAgICAvLyBDb252ZXJ0IGEgc3luY2hyb25vdXMgYWRhcHRlciB0aHJvdyB0byB0aGUgc2FtZSBjb21wbGV0aW9uIHBhdGggc28KICAgICAgLy8gb2NjdXBpZWQgc2xvdHMgYXJlIGFsd2F5cyByZWxlYXNlZC4KICAgICAgbGV0IGV4ZWN1dGlvbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgOwogICAgICB0cnkgeyBleGVjdXRpb24gPSB0aGlzLmV4ZWN1dGUoam9iLm1ldGhvZCwgam9iLnBhcmFtcywgcmVxdWVzdE9wdGlvbnMpOyB9CiAgICAgIGNhdGNoIChlcnJvcikgeyBleGVjdXRpb24gPSBQcm9taXNlLnJlamVjdChlcnJvcik7IH0KICAgICAgdm9pZCBleGVjdXRpb24udGhlbihqb2IucmVzb2x2ZSwgam9iLnJlamVjdCkKICAgICAgICAuZmluYWxseSgoKSAgICAgICA9PiB7CiAgICAgICAgICB0aGlzLmFjdGl2ZSAtPSAxOwogICAgICAgICAgaWYgKGJhY2tncm91bmQpIHRoaXMuYmFja2dyb3VuZEFjdGl2ZSAtPSAxOwogICAgICAgICAgaWYgKHRoaXMuam9icy5nZXQoam9iLmtleSkgPT09IGpvYikgdGhpcy5qb2JzLmRlbGV0ZShqb2Iua2V5KTsKICAgICAgICAgIHRoaXMuZHJhaW4oKTsKICAgICAgICB9KTsKICAgIH0KICB9Cn0KCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAovKioKICogRXh0cmFjdHMgYSBodW1hbi1yZWFkYWJsZSBtZXNzYWdlIGZyb20gYW4gdW5rbm93biB0aHJvd24gdmFsdWUuCiAqCiAqIENhdGNoIHNpdGVzIGhpc3RvcmljYWxseSB1c2VkIGBlcnJvciBpbnN0YW5jZW9mIEVycm9yID8gZXJyb3IubWVzc2FnZSA6IFxgJHtlcnJvcn1cYGAuCiAqIFdoZW4gYSBob3N0IChOQVBJIFJQQyBlbnZlbG9wZSwgQXJrVFMgcnVudGltZSwgSFRUUCBzdGFjaykgdGhyb3dzIGEgcGxhaW4KICogb2JqZWN0LCB0ZW1wbGF0ZSBpbnRlcnBvbGF0aW9uIGNvbGxhcHNlcyBpdCB0byAiW29iamVjdCBPYmplY3RdIiBhbmQgZXZlcnkKICogZG93bnN0cmVhbSBkaWFnbm9zdGljIOKAlCBoaWxvZyBsaW5lcywgb3JjaGVzdHJhdG9yIGZhaWx1cmUgcmVjb3JkcywgVUkgZXJyb3IKICogdGV4dCDigJQgbG9zZXMgdGhlIGFjdHVhbCBjYXVzZS4gVGhpcyBoZWxwZXIga2VlcHMgdGhlIHJlYWwgY29udGVudDogdGhlCiAqIG9iamVjdCdzIG93biBgbWVzc2FnZWAgZmllbGQgd2hlbiBwcmVzZW50LCBlbHNlIGl0cyBKU09OIGZvcm0gKHRydW5jYXRlZCksCiAqIGVsc2UgdGhlIGludGVycG9sYXRlZCBzdHJpbmcuCiAqLwpmdW5jdGlvbiBlcnJvck1lc3NhZ2VPZihlcnJvciAgICAgICAgICkgICAgICAgICB7CiAgaWYgKGVycm9yIGluc3RhbmNlb2YgRXJyb3IpIHsKICAgIHJldHVybiBlcnJvci5tZXNzYWdlOwogIH0KICBpZiAodHlwZW9mIGVycm9yID09PSAnc3RyaW5nJykgewogICAgcmV0dXJuIGVycm9yOwogIH0KICBpZiAodHlwZW9mIGVycm9yID09PSAnb2JqZWN0JyAmJiBlcnJvciAhPT0gbnVsbCkgewogICAgY29uc3QgZW52ZWxvcGUgPSBlcnJvciAgICAgICAgICAgICAgICAgICAgICAgICAgOwogICAgY29uc3QgbWVzc2FnZSA9IGVudmVsb3BlWydtZXNzYWdlJ107CiAgICBpZiAodHlwZW9mIG1lc3NhZ2UgPT09ICdzdHJpbmcnICYmIG1lc3NhZ2UubGVuZ3RoID4gMCkgewogICAgICByZXR1cm4gbWVzc2FnZTsKICAgIH0KICAgIHRyeSB7CiAgICAgIGNvbnN0IGpzb24gPSBKU09OLnN0cmluZ2lmeShlcnJvcik7CiAgICAgIGlmICh0eXBlb2YganNvbiA9PT0gJ3N0cmluZycgJiYganNvbi5sZW5ndGggPiAwICYmIGpzb24gIT09ICd7fScgJiYganNvbiAhPT0gJ1tdJykgewogICAgICAgIHJldHVybiBqc29uLmxlbmd0aCA+IDUwMCA/IGAke2pzb24uc3Vic3RyaW5nKDAsIDQ5Nyl9Li4uYCA6IGpzb247CiAgICAgIH0KICAgIH0gY2F0Y2ggKHNlcmlhbGl6YXRpb25GYWlsdXJlKSB7CiAgICAgIC8vIEN5Y2xpYyBvciBvdGhlcndpc2Ugbm9uLXNlcmlhbGl6YWJsZSBvYmplY3Q6IGZhbGwgdGhyb3VnaCB0byBTdHJpbmcoKS4KICAgICAgdm9pZCBzZXJpYWxpemF0aW9uRmFpbHVyZTsKICAgIH0KICB9CiAgcmV0dXJuIGAke2Vycm9yfWA7Cn0KCi8qKiBSZWNvZ25pemUgb25seSBzdHJ1Y3R1cmVkIHRyYW5zcG9ydCBldmlkZW5jZSwgbmV2ZXIgd29yZHMgaW4gYSBzb3VyY2UncyByZXNwb25zZS4gKi8KZXhwb3J0IGZ1bmN0aW9uIGlzTmV0d29ya0Vudmlyb25tZW50RmFpbHVyZShlcnJvciAgICAgICAgICkgICAgICAgICAgewogIGlmIChlcnJvciA9PT0gbnVsbCB8fCB0eXBlb2YgZXJyb3IgIT09ICdvYmplY3QnKSByZXR1cm4gZmFsc2U7CiAgY29uc3QgcmF3ID0gZXJyb3IgICAgICAgICAgICAgICAgICAgICAgICAgIDsKICBpZiAocmF3WydjYXRlZ29yeSddID09PSAnTkVUV09SS19FTlZJUk9OTUVOVCcpIHJldHVybiB0cnVlOwogIC8vIFRoZXNlIGFyZSB0aGUgU0RLIGVycm9yLCBDb3JlIEhvc3QgZGlhZ25vc3RpY3MgYW5kIGdhdGV3YXkgY2F1c2UgZW52ZWxvcGVzLgogIC8vIExpbWl0IHRyYXZlcnNhbCB0byB0aG9zZSBmaWVsZHM7IGFyYml0cmFyeSByZXNwb25zZSBib2RpZXMgYXJlIG5vdCBldmlkZW5jZS4KICByZXR1cm4gbmV0d29ya0Vudmlyb25tZW50RW52ZWxvcGUocmF3LCAwKTsKfQoKZnVuY3Rpb24gbmV0d29ya0Vudmlyb25tZW50RW52ZWxvcGUodmFsdWUgICAgICAgICwgZGVwdGggICAgICAgICkgICAgICAgICAgewogIGlmIChkZXB0aCA+IDYgfHwgdmFsdWUgPT09IG51bGwgfHwgdHlwZW9mIHZhbHVlICE9PSAnb2JqZWN0JyB8fCBBcnJheS5pc0FycmF5KHZhbHVlKSkgcmV0dXJuIGZhbHNlOwogIGNvbnN0IHJhdyA9IHZhbHVlICAgICAgICAgICAgICAgICAgICAgICAgICA7CiAgaWYgKHJhd1snY2F0ZWdvcnknXSA9PT0gJ05FVFdPUktfRU5WSVJPTk1FTlQnKSByZXR1cm4gdHJ1ZTsKICBmb3IgKGNvbnN0IGtleSBvZiBbJ2RldGFpbHMnLCAnaG9zdCcsICdkaWFnbm9zdGljcycsICdldmVudCcsICdlcnJvcicsICdjYXVzZVZhbHVlJ10pIHsKICAgIGNvbnN0IG5lc3RlZCA9IHJhd1trZXldOwogICAgaWYgKG5lc3RlZCAhPT0gdW5kZWZpbmVkICYmIG5ldHdvcmtFbnZpcm9ubWVudEVudmVsb3BlKG5lc3RlZCwgZGVwdGggKyAxKSkgcmV0dXJuIHRydWU7CiAgfQogIHJldHVybiBmYWxzZTsKfQoKaW1wb3J0IHsgYWNxdWlzaXRpb25DYW5kaWRhdGVSYW5rLCBhY3F1aXNpdGlvblJlYWRhYmxlQ3VycmVudCwgYWNxdWlzaXRpb25Cb29rRmFpbHVyZUN1cnJlbnQsCiAgYWNxdWlzaXRpb25BdHRlbXB0RmFpbHVyZUN1cnJlbnQgfSBmcm9tICcuLi9jb21tb24vQm9va0FjcXVpc2l0aW9uUHJlc2VudGF0aW9uJzsKCgovKioKICogQSBzb3VyY2UgY2F0ZWdvcnkgaXMgcGFydCBvZiB0aGUgc291cmNlIGlkZW50aXR5IHVzZWQgYnkgdGhlIFJlYWRlciBVSS4KICogTm9uLXRleHQgZGVjbGFyYXRpb25zIGFyZSBhdXRob3JpdGF0aXZlLiBNYW55IGV4cG9ydHMgaW5jb3JyZWN0bHkgdXNlIHRoZQogKiBkZWZhdWx0IHR5cGUgMCBmb3IgbWVkaWEgc291cmNlcywgc28gc3Ryb25nIG1lZGlhIG1ldGFkYXRhIG11c3QgYWxzbyBiZQogKiBjaGVja2VkIGJlZm9yZSBhZG1pdHRpbmcgYSBzb3VyY2UgdG8gdGhlIHRleHQgcmVhZGVyLiBPdGhlciBjYXRlZ29yaWVzCiAqIHJlbWFpbiB2aXNpYmxlIGFuZCBtYW5hZ2VhYmxlLCBidXQgYXJlIG5ldmVyIHNlbnQgdGhyb3VnaCB0aGUgbm92ZWwgc2VhcmNoLAogKiBkZXRhaWwsIFRPQywgb3IgcmVhZGluZyBwaXBlbGluZS4KICovCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgIAogIAoKZnVuY3Rpb24gbm9ybWFsaXplZFR5cGUodmFsdWUgICAgICAgICApICAgICAgICAgewogIGlmICh0eXBlb2YgdmFsdWUgPT09ICdudW1iZXInKSByZXR1cm4gU3RyaW5nKHZhbHVlKTsKICBpZiAodHlwZW9mIHZhbHVlID09PSAnc3RyaW5nJykgcmV0dXJuIHZhbHVlLnRyaW0oKS50b0xvd2VyQ2FzZSgpOwogIHJldHVybiAnJzsKfQoKZnVuY3Rpb24gY29udGFpbnNBbnkodmFsdWUgICAgICAgICwgbmVlZGxlcyAgICAgICAgICApICAgICAgICAgIHsKICByZXR1cm4gbmVlZGxlcy5zb21lKChuZWVkbGUgICAgICAgICkgICAgICAgICAgPT4gdmFsdWUuaW5kZXhPZihuZWVkbGUpID49IDApOwp9CgovKiogQ2xhc3NpZnkgb25lIHNvdXJjZSB3aXRob3V0IG11dGF0aW5nIG9yIHJld3JpdGluZyBpdHMgcmF3IExlZ2FkbyBwYXlsb2FkLiAqLwpmdW5jdGlvbiBjbGFzc2lmeVJlYWRlclNvdXJjZShpbnB1dCAgICAgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgICAgICAgIHsKICBjb25zdCB0eXBlID0gbm9ybWFsaXplZFR5cGUoaW5wdXQuYm9va1NvdXJjZVR5cGUpOwogIGlmICh0eXBlID09PSAnMScgfHwgdHlwZSA9PT0gJ2F1ZGlvJyB8fCB0eXBlID09PSAnbXVzaWMnIHx8IHR5cGUgPT09ICfmnInlo7AnKSByZXR1cm4gJ211c2ljJzsKICBpZiAodHlwZSA9PT0gJzInIHx8IHR5cGUgPT09ICdpbWFnZScgfHwgdHlwZSA9PT0gJ21hbmdhJyB8fCB0eXBlID09PSAnY29taWMnIHx8IHR5cGUgPT09ICfmvKvnlLsnKSByZXR1cm4gJ2NvbWljJzsKICBpZiAodHlwZSA9PT0gJzMnIHx8IHR5cGUgPT09ICdmaWxlJyB8fCB0eXBlID09PSAnZG93bmxvYWQnIHx8IHR5cGUgPT09ICfkuIvovb0nKSByZXR1cm4gJ2Rvd25sb2FkJzsKICBpZiAodHlwZSA9PT0gJzQnIHx8IHR5cGUgPT09ICd2aWRlbycgfHwgdHlwZSA9PT0gJ2dhbWUnIHx8IHR5cGUgPT09ICdleHRlcm5hbCcpIHJldHVybiAnZXh0ZXJuYWwnOwogIGlmICh0eXBlLmxlbmd0aCA+IDAgJiYgIVsnMCcsICd0ZXh0JywgJ25vdmVsJywgJ+Wwj+ivtCddLmluY2x1ZGVzKHR5cGUpKSByZXR1cm4gJ290aGVyJzsKCiAgY29uc3QgbmFtZSA9IGAke2lucHV0Lmdyb3VwID8/ICcnfSAke2lucHV0Lm5hbWUgPz8gJyd9YC50b0xvd2VyQ2FzZSgpOwogIC8vIEV4cGxpY2l0IHBpY3R1cmUgbWV0YWRhdGEsIG5vdCBhbiBpbWFnZS9DRE4gVVJMLCByZWplY3RzIG1pc2xhYmVsZWQgdHlwZSAwIHNvdXJjZXMuCiAgaWYgKGNvbnRhaW5zQW55KG5hbWUsIFsn5Zu+54mHJywgJ+WbvuW6kycsICflm77pm4YnLCAn5aOB57q4J10pKSByZXR1cm4gJ290aGVyJzsKICBjb25zdCB1cmwgPSBgJHtpbnB1dC5zb3VyY2VJZCA/PyAnJ30gJHtpbnB1dC5iYXNlVXJsID8/ICcnfWAudG9Mb3dlckNhc2UoKTsKICBjb25zdCBoYXlzdGFjayA9IGAke25hbWV9ICR7dXJsfWA7CiAgY29uc3QgY29taWMgPSBjb250YWluc0FueShoYXlzdGFjaywgWyfmvKvnlLsnLCAn5ryr5a6iJywgJ2NvbWljJywgJ21hbmdhJywgJ21hbmh1YScsICdjYXJ0b29uJywgJ2FjLnFxLmNvbScsICdta3poYW4nLCAnYmFvemltaCcsICdwaXhpdicsICflm77nq5knLCAn5YaZ55yfJ10pOwogIGNvbnN0IG11c2ljID0gY29udGFpbnNBbnkoaGF5c3RhY2ssIFsn6Z+z5LmQJywgJ+acieWjsCcsICflkKzkuaYnLCAnYXVkaW8nLCAnbXVzaWMnLCAneGltYWxheWEnLCAnbWlzc2V2YW4nLCAnbHJ0cycsICc1c2luZyddKTsKICBjb25zdCBkb3dubG9hZCA9IGNvbnRhaW5zQW55KGhheXN0YWNrLCBbJ+S4i+i9vScsICfkuabnm5gnLCAnZG93bmxvYWQnXSkgfHwgLyg/Ol58Wy86Ll0pZmlsZXM/Wy4vOl0vLnRlc3QodXJsKTsKICBjb25zdCBleHRlcm5hbCA9IGNvbnRhaW5zQW55KGhheXN0YWNrLCBbJ+inhumikScsICd2aWRlbycsICd2b2QnLCAnZ2FtZScsICfmuLjmiI8nLCAncGxheWVyLicsICfliqjmvKsnLCAnZ3VndTMnLCAneWlrbS5uZXQnXSk7CiAgLy8gQW1iaWd1b3VzIG1peGVkLW1lZGlhIHNvdXJjZXMgbXVzdCBuZXZlciBzaWxlbnRseSBlbnRlciBub3ZlbCByZXN1bHRzLgogIGNvbnN0IG1lZGlhQ291bnQgPSBOdW1iZXIoY29taWMpICsgTnVtYmVyKG11c2ljKSArIE51bWJlcihkb3dubG9hZCkgKyBOdW1iZXIoZXh0ZXJuYWwpOwogIGlmIChtZWRpYUNvdW50ID4gMSB8fCAobWVkaWFDb3VudCA+IDAgJiYgL+Wwj+ivtFxzKltcL+OAgSsmXVxzKig/Oua8q+eUu3zpn7PkuZB85pyJ5aOwfOinhumikSl8KD865ryr55S7fOmfs+S5kHzmnInlo7B86KeG6aKRKVxzKltcL+OAgSsmXVxzKuWwj+ivtC8udGVzdChuYW1lKSkpIHJldHVybiAnb3RoZXInOwogIGlmIChjb21pYykgcmV0dXJuICdjb21pYyc7CiAgaWYgKG11c2ljKSByZXR1cm4gJ211c2ljJzsKICBpZiAoZG93bmxvYWQpIHJldHVybiAnZG93bmxvYWQnOwogIGlmIChleHRlcm5hbCkgcmV0dXJuICdleHRlcm5hbCc7CiAgcmV0dXJuICdub3ZlbCc7Cn0KCmZ1bmN0aW9uIHJlYWRlclNvdXJjZUNhdGVnb3J5TGFiZWwoY2F0ZWdvcnkgICAgICAgICAgICAgICAgICAgICAgKSAgICAgICAgIHsKICBzd2l0Y2ggKGNhdGVnb3J5KSB7CiAgICBjYXNlICdub3ZlbCc6IHJldHVybiAn5bCP6K+0JzsKICAgIGNhc2UgJ2NvbWljJzogcmV0dXJuICfmvKvnlLsnOwogICAgY2FzZSAnbXVzaWMnOiByZXR1cm4gJ+mfs+S5kC/mnInlo7AnOwogICAgY2FzZSAnZG93bmxvYWQnOiByZXR1cm4gJ+S4i+i9vS/mlofku7YnOwogICAgY2FzZSAnZXh0ZXJuYWwnOiByZXR1cm4gJ+inhumikS/lpJbpg6jlqpLkvZMnOwogICAgZGVmYXVsdDogcmV0dXJuICflhbbku5Yv5re35ZCIJzsKICB9Cn0KCmZ1bmN0aW9uIHJlYWRlclNvdXJjZUNhdGVnb3J5SXNUZXh0KGNhdGVnb3J5ICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgewogIHJldHVybiBjYXRlZ29yeSA9PT0gJ25vdmVsJzsKfQoKCi8vIExlZ2FkbyBjYXBzIENoYW5nZUJvb2tTb3VyY2VEaWFsb2cgYXQgbmluZSB3b3JrZXJzLiBLZWVwIG9uZSBsYW5lIGluIHJlc2VydmUKLy8gZm9yIHRoZSBmb3JlZ3JvdW5kIHJlYWRpbmcgc2Vzc2lvbiB3aGlsZSBhdm9pZGluZyBvbmUgdW5ib3VuZGVkIHJlcXVlc3QgcGVyCi8vIGltcG9ydGVkIHNvdXJjZS4KY29uc3QgU09VUkNFX1NXSVRDSF9ESVNDT1ZFUllfQ09OQ1VSUkVOQ1kgPSA4Owpjb25zdCBTT1VSQ0VfU1dJVENIX0NBQ0hFX1RUTF9NUyA9IDI0ICogNjAgKiA2MCAqIDEwMDA7CgovKioKICogUGFnZS1mYWNpbmcgc291cmNlLXN3aXRjaCBjYW5kaWRhdGUuIERpc2NvdmVyeSBzdXBwbGllcyB0aGUgc3RhYmxlIGJvb2sKICogaWRlbnRpdHk7IHRoZSBkZXRhaWwvVE9DL2NvbnRlbnQgcHJvYmUgc3VwcGxpZXMgdGhlIGNoYXB0ZXIgYW5kIHJlc3BvbnNlCiAqIHRpbWUgZmllbGRzIHBlcnNpc3RlZCB0aHJvdWdoIENvcmUgYHNlYXJjaC1ib29rLipgIHN0b3JhZ2UuCiAqLwogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgIAogIAoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAKCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgIAogIAoKLyoqIFN0YWJsZSBpZGVudGl0eSBzaGFyZWQgYnkgZGlzY292ZXJ5LCByZW5kZXJpbmcsIGFuZCBjbGljayBhZG1pc3Npb24uICovCmV4cG9ydCBmdW5jdGlvbiBzb3VyY2VTd2l0Y2hDYW5kaWRhdGVLZXkoc291cmNlSWQgICAgICAgICwgYm9va1VybCAgICAgICAgKSAgICAgICAgIHsKICByZXR1cm4gYCR7c291cmNlSWQubGVuZ3RofToke3NvdXJjZUlkfToke2Jvb2tVcmwubGVuZ3RofToke2Jvb2tVcmx9YDsKfQoKLyoqIE1hdGNoIHRoZSBzZWFyY2ggY2FyZCdzIGRpc3RpbmN0LXNvdXJjZSB1bml0OyBhbHRlcm5hdGUgVVJMcyBzdGF5IHNlbGVjdGFibGUuICovCmV4cG9ydCBmdW5jdGlvbiBzb3VyY2VTd2l0Y2hTb3VyY2VDb3VudChjYW5kaWRhdGVzICAgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICB7CiAgY29uc3Qgc291cmNlcyA9IG5ldyBTZXQgICAgICAgICgpOwogIGZvciAoY29uc3QgY2FuZGlkYXRlIG9mIGNhbmRpZGF0ZXMpIHNvdXJjZXMuYWRkKGNhbmRpZGF0ZS5zb3VyY2VJZCk7CiAgcmV0dXJuIHNvdXJjZXMuc2l6ZTsKfQoKZnVuY3Rpb24gZGVkdXBsaWNhdGVTb3VyY2VTd2l0Y2hDYW5kaWRhdGVzKAogIGNhbmRpZGF0ZXMgICAgICAgICAgICAgICAgICAgICAgICAgLAopICAgICAgICAgICAgICAgICAgICAgICAgICB7CiAgY29uc3QgcmVzdWx0ICAgICAgICAgICAgICAgICAgICAgICAgICA9IFtdOwogIGNvbnN0IHNlZW4gPSBuZXcgU2V0ICAgICAgICAoKTsKICBmb3IgKGNvbnN0IGNhbmRpZGF0ZSBvZiBjYW5kaWRhdGVzKSB7CiAgICBjb25zdCBrZXkgPSBzb3VyY2VTd2l0Y2hDYW5kaWRhdGVLZXkoY2FuZGlkYXRlLnNvdXJjZUlkLCBjYW5kaWRhdGUuYm9va1VybCk7CiAgICBpZiAoc2Vlbi5oYXMoa2V5KSkgewogICAgICBjb250aW51ZTsKICAgIH0KICAgIHNlZW4uYWRkKGtleSk7CiAgICByZXN1bHQucHVzaChjYW5kaWRhdGUpOwogIH0KICByZXR1cm4gcmVzdWx0Owp9CgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgIAogIAoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAKICAKCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgIAogIAoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAKICAKCi8qKiBDb3JlLW93bmVkIGR1cmFibGUgdHJhbnNhY3Rpb24gaWRlbnRpdHkuIEhhcm1vbnkgbmV2ZXIgcmVjZWl2ZXMgdGhlIGpvdXJuYWwuICovCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAKICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgCiAgCgovKioKICogRmVhdHVyZS1sb2NhbCBnYXRld2F5IGZvciB0aGUgc291cmNlLXN3aXRjaCBmbG93LiBPd25zIHRoZQogKiBgY2hhbmdlLmJvb2tTb3VyY2VgIC8gYGJvb2suZGV0YWlsYCAvIGBib29rLnRvY2AgLyBgc291cmNlLnN3aXRjaC5jb21taXRgIC8KICogYHNvdXJjZS5zd2l0Y2gucm9sbGJhY2tgIGJvdW5kYXJ5IGFuZCB2YWxpZGF0ZXMgZXZlcnkgSlNPTiBlbnZlbG9wZSBiZWZvcmUKICogdGhlIHBhbmVsIHNlZXMgaXQuCiAqCiAqIGBjaGFuZ2UuYm9va1NvdXJjZWAsIGBib29rLmRldGFpbGAsIGFuZCBgYm9vay50b2NgIGFyZSByZW1vdGUgY29tbWFuZHMgdGhhdAogKiBkZWxlZ2F0ZSB0aGUgSFRUUCByb3VuZC10cmlwIHRvIHRoZSBIb3N0IHZpYSBgaHR0cC5leGVjdXRlYC4gSG9zdCB0cmFuc3BvcnQKICogbGltaXRzIHN1cmZhY2UgYXMgYSBwbGFpbiBFcnJvciwgd2hpY2ggSW5kZXggcHJlc2VudHMgdGhyb3VnaCB0aGUgYWRtaXR0ZWQKICogZGlzY292ZXJ5L2ZhaWx1cmUgc3RhdGUuIFRoZSB3aXJlIGNvbnRyYWN0IGlzIGF1dGhvcml0YXRpdmUgcmVnYXJkbGVzcy4KICovCmV4cG9ydCBjbGFzcyBTb3VyY2VTd2l0Y2hHYXRld2F5IHsKICAgICAgICAgICAgICAgICAgIHJ1bnRpbWVPd25lciAgICAgICAgICAgICAgICAgICAgOwogICAgICAgICAgICAgICAgICAgbm9ybWFsaXplZE1hdGNoVGV4dCA9IG5ldyBNYXAgICAgICAgICAgICAgICAgKCk7CiAgICAgICAgICBjYWNoZWRTb3VyY2VzICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDsKICAgICAgICAgIGNhY2hlZFNvdXJjZVJldmlzaW9uICAgICAgICAgICAgICAgICAgICA7CiAgICAgICAgICBjb25maXJtZWRTY29wZSAgICAgICAgID0gJyc7CiAgICAgICAgICBjb25maXJtZWRDYW5kaWRhdGVzID0gbmV3IFNldCAgICAgICAgKCk7CgogIGNvbnN0cnVjdG9yKHJ1bnRpbWVPd25lciAgICAgICAgICAgICAgICAgICAgID0gUmVhZGVyUnVudGltZU93bmVyLmN1cnJlbnQoKSkgewogICAgdGhpcy5ydW50aW1lT3duZXIgPSBydW50aW1lT3duZXI7CiAgfQoKICAvKioKICAgKiBMZWdhZG8tY29tcGF0aWJsZSBmaXJzdCBwYWludDogcmVhZCBkdXJhYmxlIFNlYXJjaEJvb2sgcm93cywgaGlkZSBkaXNhYmxlZAogICAqIHNvdXJjZXMsIGFuZCByZXRhaW4gZXhwaXJlZCBzdWNjZXNzZXMgd2l0aCBhbiBleHBsaWNpdCBzdGFsZSBzdGF0ZS4gTm8KICAgKiBzb3VyY2UgSFRUUCBpcyBhdHRlbXB0ZWQgZnJvbSB0aGlzIHBhdGguCiAgICovCiAgYXN5bmMgbG9hZENhY2hlZENhbmRpZGF0ZXMoCiAgICBxdWVyeSAgICAgICAgICAgICAgICAgICAgICAgICwKICAgIGlzQ3VycmVudCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgID0gdW5kZWZpbmVkLAogICAga25vd24gICAgICAgICAgICAgICAgICAgICAgICAgID0gW10sCiAgICBfY2hhbmdlICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPSB1bmRlZmluZWQsCiAgKSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgewogICAgdGhpcy52YWxpZGF0ZVByb2JlUXVlcnkocXVlcnkpOwogICAgY29uc3QgZW5hYmxlZFNvdXJjZXMgPSBhd2FpdCB0aGlzLmxvYWRFbmFibGVkU291cmNlcyhpc0N1cnJlbnQpOwogICAgY29uc3Qgc2NvcGUgPSBzb3VyY2VTd2l0Y2hDYW5kaWRhdGVLZXkocXVlcnkuc291cmNlSWQsIHF1ZXJ5LmJvb2tJZCk7CiAgICBjb25zdCBjb25maXJtZWQgPSBuZXcgU2V0KHRoaXMuY29uZmlybWVkU2NvcGUgPT09IHNjb3BlID8gdGhpcy5jb25maXJtZWRDYW5kaWRhdGVzIDogW10pOwogICAgY29uc3QgcmV2aXNpb24gPSB0aGlzLnJ1bnRpbWVPd25lci5ib29rQWNxdWlzaXRpb25zPy4oKS5zb3VyY2VSZWdpc3RyeVJldmlzaW9uKCk7CiAgICAvLyBDb3JlIG93bnMgdGhlIGluZGV4ZWQgYWxpYXMgY2xvc3VyZS4gU3RhZ2UgYSBjb21wbGV0ZSwgdmVyc2lvbi1jb25zaXN0ZW50CiAgICAvLyByZWxhdGlvbiBiZWZvcmUgcmVwbGFjaW5nIHRoZSBwYW5lOyBhIHBhcnRpYWwgcGFnZSBuZXZlciBtZWFucyBkZWxldGlvbi4KICAgIGNvbnN0IHJlY29yZHMgPSBhd2FpdCB0aGlzLmxvYWRSZWxhdGVkQm9va3MocXVlcnksIGVuYWJsZWRTb3VyY2VzLCBpc0N1cnJlbnQpOwogICAgaWYgKGlzQ3VycmVudD8uKCkgPT09IGZhbHNlKSByZXR1cm4gW107CiAgICBjb25zdCBjYW5kaWRhdGVzICAgICAgICAgICAgICAgICAgICAgICAgICA9IFtdOwogICAgZm9yIChjb25zdCBib29rIG9mIHJlY29yZHMpIHsKICAgICAgY29uc3Qgc291cmNlSWQgPSB0aGlzLnJlcXVpcmVTdHJpbmcoYm9vaywgJ29yaWdpbicsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICAgIGNvbnN0IHNvdXJjZSA9IGVuYWJsZWRTb3VyY2VzLmdldChzb3VyY2VJZCk7CiAgICAgIGNvbmZpcm1lZC5hZGQoc291cmNlU3dpdGNoQ2FuZGlkYXRlS2V5KHNvdXJjZUlkLCB0aGlzLnJlcXVpcmVTdHJpbmcoYm9vaywgJ2Jvb2tVcmwnLCAnc2VhcmNoLWJvb2sucmVsYXRlZCcpKSk7CiAgICAgIGlmIChzb3VyY2UgIT09IHVuZGVmaW5lZCkgY2FuZGlkYXRlcy5wdXNoKHRoaXMuZGVjb2RlQ2FjaGVkQ2FuZGlkYXRlKAogICAgICAgIGJvb2ssIHF1ZXJ5LCB0aGlzLm9wdGlvbmFsTnVtYmVyKGJvb2ssICd0aW1lJykgPz8gMCwgc291cmNlKSk7CiAgICB9CiAgICBjb25zdCBrZXlzID0gbmV3IFNldChjYW5kaWRhdGVzLm1hcCgoY2FuZGlkYXRlICAgICAgICAgICAgICAgICAgICAgICApICAgICAgICAgPT4KICAgICAgc291cmNlU3dpdGNoQ2FuZGlkYXRlS2V5KGNhbmRpZGF0ZS5zb3VyY2VJZCwgY2FuZGlkYXRlLmJvb2tVcmwpKSk7CiAgICAvLyBBIGxpdmUgU2VhcmNoIHNlZWQgbWF5IGxlYWQgaXRzIGR1cmFibGUgcHVibGljYXRpb24uIEV4cGxpY2l0bHkgbWlzc2luZwogICAgLy8gcm93cyBtYXkgc3Vydml2ZSB0aGF0IHJhY2U7IHBlcnNpc3RlZCByb3dzIG91dHNpZGUgdGhpcyByZWxhdGlvbiBtYXkgbm90LgogICAgY29uc3QgdW5wZXJzaXN0ZWQgPSBuZXcgU2V0ICAgICAgICAoKTsKICAgIGNvbnN0IGV4dHJhcyA9IGtub3duLmZpbHRlcigoY2FuZGlkYXRlICAgICAgICAgICAgICAgICAgICAgICApICAgICAgICAgID0+CiAgICAgIGVuYWJsZWRTb3VyY2VzLmhhcyhxdWVyeS5zb3VyY2VJZCkgJiYgZW5hYmxlZFNvdXJjZXMuaGFzKGNhbmRpZGF0ZS5zb3VyY2VJZCkgJiYKICAgICAgIWtleXMuaGFzKHNvdXJjZVN3aXRjaENhbmRpZGF0ZUtleShjYW5kaWRhdGUuc291cmNlSWQsIGNhbmRpZGF0ZS5ib29rVXJsKSkpOwogICAgZm9yIChsZXQgc3RhcnQgPSAwOyBzdGFydCA8IGV4dHJhcy5sZW5ndGg7IHN0YXJ0ICs9IDEyOCkgewogICAgICBjb25zdCBiYXRjaCA9IGV4dHJhcy5zbGljZShzdGFydCwgc3RhcnQgKyAxMjgpOwogICAgICBjb25zdCBleHBlY3RlZCA9IG5ldyBTZXQoYmF0Y2gubWFwKChjYW5kaWRhdGUgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICA9PgogICAgICAgIHNvdXJjZVN3aXRjaENhbmRpZGF0ZUtleShjYW5kaWRhdGUuc291cmNlSWQsIGNhbmRpZGF0ZS5ib29rVXJsKSkpOwogICAgICBjb25zdCByZXN1bHQgPSBhd2FpdCB0aGlzLnJ1bnRpbWVPd25lci5yZXF1ZXN0KCdzZWFyY2gtYm9vay5iYXRjaC5nZXQnLCB7IGlkZW50aXRpZXM6IGJhdGNoLm1hcCgKICAgICAgICAoY2FuZGlkYXRlICAgICAgICAgICAgICAgICAgICAgICApICAgICAgICAgICAgID0+ICh7IHNvdXJjZUlkOiBjYW5kaWRhdGUuc291cmNlSWQsIGJvb2tJZDogY2FuZGlkYXRlLmJvb2tVcmwgfSkpIH0sCiAgICAgICAgdGhpcy5yZXF1ZXN0T3B0aW9ucyhpc0N1cnJlbnQpKTsKICAgICAgaWYgKGlzQ3VycmVudD8uKCkgPT09IGZhbHNlKSByZXR1cm4gW107CiAgICAgIGlmIChyZXN1bHQuZGF0YVsnY29tcGxldGUnXSAhPT0gdHJ1ZSB8fCAhQXJyYXkuaXNBcnJheShyZXN1bHQuZGF0YVsnYm9va3MnXSkgfHwgIUFycmF5LmlzQXJyYXkocmVzdWx0LmRhdGFbJ21pc3NpbmcnXSkpIHsKICAgICAgICB0aHJvdyBuZXcgRXJyb3IoJ+WAmemAiei6q+S7veW/q+eFp+S4jeWujOaVtCcpOwogICAgICB9CiAgICAgIGNvbnN0IHJldHVybmVkID0gbmV3IFNldCAgICAgICAgKCk7CiAgICAgIGZvciAoY29uc3QgcmF3IG9mIHJlc3VsdC5kYXRhWydib29rcyddKSB7CiAgICAgICAgaWYgKHJhdyA9PT0gbnVsbCB8fCB0eXBlb2YgcmF3ICE9PSAnb2JqZWN0JyB8fCBBcnJheS5pc0FycmF5KHJhdykpIHRocm93IG5ldyBFcnJvcign5YCZ6YCJ6Lqr5Lu95peg5pWIJyk7CiAgICAgICAgY29uc3Qgcm93ID0gcmF3ICAgICAgICAgICAgICA7CiAgICAgICAgY29uc3Qga2V5ID0gc291cmNlU3dpdGNoQ2FuZGlkYXRlS2V5KHRoaXMucmVxdWlyZVN0cmluZyhyb3csICdvcmlnaW4nLCAnc2VhcmNoLWJvb2suYmF0Y2guZ2V0JyksCiAgICAgICAgICB0aGlzLnJlcXVpcmVTdHJpbmcocm93LCAnYm9va1VybCcsICdzZWFyY2gtYm9vay5iYXRjaC5nZXQnKSk7CiAgICAgICAgaWYgKCFleHBlY3RlZC5oYXMoa2V5KSB8fCByZXR1cm5lZC5oYXMoa2V5KSkgdGhyb3cgbmV3IEVycm9yKCflgJnpgInouqvku73kuI3ljLnphY0nKTsKICAgICAgICByZXR1cm5lZC5hZGQoa2V5KTsgY29uZmlybWVkLmFkZChrZXkpOwogICAgICB9CiAgICAgIGZvciAoY29uc3QgcmF3IG9mIHJlc3VsdC5kYXRhWydtaXNzaW5nJ10pIHsKICAgICAgICBpZiAocmF3ID09PSBudWxsIHx8IHR5cGVvZiByYXcgIT09ICdvYmplY3QnIHx8IEFycmF5LmlzQXJyYXkocmF3KSkgdGhyb3cgbmV3IEVycm9yKCflgJnpgInouqvku73ml6DmlYgnKTsKICAgICAgICBjb25zdCByb3cgPSByYXcgICAgICAgICAgICAgIDsKICAgICAgICBjb25zdCBrZXkgPSBzb3VyY2VTd2l0Y2hDYW5kaWRhdGVLZXkodGhpcy5yZXF1aXJlU3RyaW5nKHJvdywgJ3NvdXJjZUlkJywgJ3NlYXJjaC1ib29rLmJhdGNoLmdldCcpLAogICAgICAgICAgdGhpcy5yZXF1aXJlU3RyaW5nKHJvdywgJ2Jvb2tJZCcsICdzZWFyY2gtYm9vay5iYXRjaC5nZXQnKSk7CiAgICAgICAgaWYgKCFleHBlY3RlZC5oYXMoa2V5KSB8fCByZXR1cm5lZC5oYXMoa2V5KSkgdGhyb3cgbmV3IEVycm9yKCflgJnpgInouqvku73kuI3ljLnphY0nKTsKICAgICAgICByZXR1cm5lZC5hZGQoa2V5KTsgaWYgKCFjb25maXJtZWQuaGFzKGtleSkpIHVucGVyc2lzdGVkLmFkZChrZXkpOwogICAgICB9CiAgICAgIGlmIChyZXR1cm5lZC5zaXplICE9PSBleHBlY3RlZC5zaXplKSB0aHJvdyBuZXcgRXJyb3IoJ+WAmemAiei6q+S7veW/q+eFp+e8uuWksScpOwogICAgfQogICAgZm9yIChjb25zdCBjYW5kaWRhdGUgb2Yga25vd24pIHsKICAgICAgY29uc3Qgc291cmNlID0gZW5hYmxlZFNvdXJjZXMuZ2V0KGNhbmRpZGF0ZS5zb3VyY2VJZCk7CiAgICAgIGNvbnN0IGtleSA9IHNvdXJjZVN3aXRjaENhbmRpZGF0ZUtleShjYW5kaWRhdGUuc291cmNlSWQsIGNhbmRpZGF0ZS5ib29rVXJsKTsKICAgICAgaWYgKHNvdXJjZSA9PT0gdW5kZWZpbmVkIHx8IGtleXMuaGFzKGtleSkgfHwgIXVucGVyc2lzdGVkLmhhcyhrZXkpKSBjb250aW51ZTsKICAgICAgY2FuZGlkYXRlcy5wdXNoKHsgLi4uY2FuZGlkYXRlLCBzb3VyY2VOYW1lOiBzb3VyY2Uuc291cmNlTmFtZSwgc291cmNlT3JkZXI6IHNvdXJjZS5zb3VyY2VPcmRlciwKICAgICAgICBhY3F1aXNpdGlvblN0YXRlOiBjYW5kaWRhdGUuc291cmNlVmVyc2lvbiA9PT0gc291cmNlLnNvdXJjZVZlcnNpb24gPyBjYW5kaWRhdGUuYWNxdWlzaXRpb25TdGF0ZSA6ICdzdGFsZScsCiAgICAgICAgaXNDdXJyZW50OiBjYW5kaWRhdGUuc291cmNlSWQgPT09IHF1ZXJ5LnNvdXJjZUlkICYmIGNhbmRpZGF0ZS5ib29rVXJsID09PSBxdWVyeS5ib29rSWQgfSk7CiAgICAgIGtleXMuYWRkKGtleSk7CiAgICB9CiAgICBpZiAoaXNDdXJyZW50Py4oKSA9PT0gZmFsc2UpIHJldHVybiBbXTsKICAgIGlmIChyZXZpc2lvbiAhPT0gdGhpcy5ydW50aW1lT3duZXIuYm9va0FjcXVpc2l0aW9ucz8uKCkuc291cmNlUmVnaXN0cnlSZXZpc2lvbigpKSB0aHJvdyBuZXcgRXJyb3IoJ+S5pua6kOmFjee9ruW3suWPmOabtO+8jOivt+mHjeivlScpOwogICAgdGhpcy5jb25maXJtZWRTY29wZSA9IHNjb3BlOyB0aGlzLmNvbmZpcm1lZENhbmRpZGF0ZXMgPSBjb25maXJtZWQ7CiAgICByZXR1cm4gdGhpcy5zb3J0Q2FuZGlkYXRlcyhjYW5kaWRhdGVzKTsKICB9CgogICAgICAgICAgYXN5bmMgbG9hZFJlbGF0ZWRCb29rcygKICAgIHF1ZXJ5ICAgICAgICAgICAgICAgICAgICAgICAgLAogICAgc291cmNlcyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAsCiAgICBpc0N1cnJlbnQgICAgICAgICAgICAgICAgICAgICAgICAgICAgICwKICApICAgICAgICAgICAgICAgICAgICAgICAgewogICAgZm9yIChsZXQgYXR0ZW1wdCA9IDA7IGF0dGVtcHQgPCAyOyBhdHRlbXB0ICs9IDEpIHsKICAgICAgY29uc3QgcmVjb3JkcyAgICAgICAgICAgICAgID0gW107CiAgICAgIGNvbnN0IGlkZW50aXRpZXMgPSBuZXcgU2V0ICAgICAgICAoKTsKICAgICAgY29uc3QgY3Vyc29ycyA9IG5ldyBTZXQgICAgICAgICgpOwogICAgICBjb25zdCB2ZXJzaW9ucyA9IG5ldyBNYXAgICAgICAgICAgICAgICAgKCk7CiAgICAgIGxldCBzbmFwc2hvdCAgICAgICAgICAgICAgICAgICAgID0gdW5kZWZpbmVkOwogICAgICBsZXQgcmVsYXRpb24gICAgICAgICAgICAgICAgICAgICA9IHVuZGVmaW5lZDsKICAgICAgbGV0IHJlbGF0aW9uUmV2aXNpb24gICAgICAgICAgICAgICAgICAgICA9IHVuZGVmaW5lZDsKICAgICAgbGV0IGN1cnNvciAgICAgICAgICAgICAgICAgICAgID0gdW5kZWZpbmVkOwogICAgICB0cnkgewogICAgICAgIGRvIHsKICAgICAgICAgIGlmIChpc0N1cnJlbnQ/LigpID09PSBmYWxzZSkgcmV0dXJuIFtdOwogICAgICAgICAgY29uc3QgcGFyYW1zICAgICAgICAgICAgID0geyBpZGVudGl0eTogeyBzb3VyY2VJZDogcXVlcnkuc291cmNlSWQsIGJvb2tJZDogcXVlcnkuYm9va0lkIH0sCiAgICAgICAgICAgIG5hbWU6IHF1ZXJ5LmJvb2tOYW1lLCBhdXRob3I6IHF1ZXJ5LmF1dGhvciwgbGltaXQ6IDEyOCB9OwogICAgICAgICAgaWYgKGN1cnNvciAhPT0gdW5kZWZpbmVkKSBwYXJhbXNbJ2N1cnNvciddID0gY3Vyc29yOwogICAgICAgICAgY29uc3QgcmVzcG9uc2UgPSBhd2FpdCB0aGlzLnJ1bnRpbWVPd25lci5yZXF1ZXN0KCdzZWFyY2gtYm9vay5yZWxhdGVkJywgcGFyYW1zLCB0aGlzLnJlcXVlc3RPcHRpb25zKGlzQ3VycmVudCkpOwogICAgICAgICAgaWYgKGlzQ3VycmVudD8uKCkgPT09IGZhbHNlKSByZXR1cm4gW107CiAgICAgICAgICBjb25zdCBkYXRhID0gcmVzcG9uc2UuZGF0YTsKICAgICAgICAgIGlmICghQXJyYXkuaXNBcnJheShkYXRhWydib29rcyddKSB8fCBkYXRhWydib29rcyddLmxlbmd0aCA+IDEyOCB8fAogICAgICAgICAgICAhQXJyYXkuaXNBcnJheShkYXRhWydzb3VyY2VWZXJzaW9ucyddKSB8fCB0eXBlb2YgZGF0YVsnY29tcGxldGUnXSAhPT0gJ2Jvb2xlYW4nKSB7CiAgICAgICAgICAgIHRocm93IG5ldyBFcnJvcign5ZCM5Lmm5YCZ6YCJ5b+r54Wn5LiN5a6M5pW0Jyk7CiAgICAgICAgICB9CiAgICAgICAgICBjb25zdCBvYnNlcnZlZCA9IHRoaXMucmVxdWlyZVN0cmluZyhkYXRhLCAnc25hcHNob3RSZXZpc2lvbicsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICAgICAgICBpZiAoc25hcHNob3QgIT09IHVuZGVmaW5lZCAmJiBzbmFwc2hvdCAhPT0gb2JzZXJ2ZWQpIHRocm93IG5ldyBFcnJvcign5ZCM5Lmm5YCZ6YCJ5b+r54Wn5bey5Y+Y5pu077yM6K+36YeN6K+VJyk7CiAgICAgICAgICBzbmFwc2hvdCA9IG9ic2VydmVkOwogICAgICAgICAgZm9yIChjb25zdCB2YWx1ZSBvZiBkYXRhWydzb3VyY2VWZXJzaW9ucyddKSB7CiAgICAgICAgICAgIGlmICh2YWx1ZSA9PT0gbnVsbCB8fCB0eXBlb2YgdmFsdWUgIT09ICdvYmplY3QnIHx8IEFycmF5LmlzQXJyYXkodmFsdWUpKSB0aHJvdyBuZXcgRXJyb3IoJ+WAmemAieS5pua6kOeJiOacrOaXoOaViCcpOwogICAgICAgICAgICBjb25zdCBzdGFtcCA9IHZhbHVlICAgICAgICAgICAgICA7CiAgICAgICAgICAgIGNvbnN0IHNvdXJjZUlkID0gdGhpcy5yZXF1aXJlU3RyaW5nKHN0YW1wLCAnc291cmNlSWQnLCAnc2VhcmNoLWJvb2sucmVsYXRlZCcpOwogICAgICAgICAgICBjb25zdCB2ZXJzaW9uID0gdGhpcy5yZXF1aXJlU3RyaW5nKHN0YW1wLCAnc291cmNlVmVyc2lvbicsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICAgICAgICAgIGNvbnN0IG9sZCA9IHZlcnNpb25zLmdldChzb3VyY2VJZCk7CiAgICAgICAgICAgIGlmIChvbGQgIT09IHVuZGVmaW5lZCAmJiBvbGQgIT09IHZlcnNpb24pIHRocm93IG5ldyBFcnJvcign5YCZ6YCJ5Lmm5rqQ54mI5pys5bey5Y+Y5pu0Jyk7CiAgICAgICAgICAgIGNvbnN0IHNvdXJjZSA9IHNvdXJjZXMuZ2V0KHNvdXJjZUlkKTsKICAgICAgICAgICAgaWYgKHNvdXJjZSAhPT0gdW5kZWZpbmVkICYmIChzdGFtcFsnZW5hYmxlZCddICE9PSB0cnVlIHx8CiAgICAgICAgICAgICAgKHNvdXJjZS5zb3VyY2VWZXJzaW9uICE9PSB1bmRlZmluZWQgJiYgc291cmNlLnNvdXJjZVZlcnNpb24gIT09IHZlcnNpb24pKSkgdGhyb3cgbmV3IEVycm9yKCfkuabmupDphY3nva7lt7Llj5jmm7TvvIzor7fph43or5UnKTsKICAgICAgICAgICAgdmVyc2lvbnMuc2V0KHNvdXJjZUlkLCB2ZXJzaW9uKTsKICAgICAgICAgIH0KICAgICAgICAgIGZvciAoY29uc3QgcmF3IG9mIGRhdGFbJ2Jvb2tzJ10pIHsKICAgICAgICAgICAgaWYgKHJhdyA9PT0gbnVsbCB8fCB0eXBlb2YgcmF3ICE9PSAnb2JqZWN0JyB8fCBBcnJheS5pc0FycmF5KHJhdykpIHRocm93IG5ldyBFcnJvcign5ZCM5Lmm5YCZ6YCJ5pWw5o2u5peg5pWIJyk7CiAgICAgICAgICAgIGNvbnN0IGJvb2sgPSByYXcgICAgICAgICAgICAgIDsKICAgICAgICAgICAgY29uc3Qgc291cmNlSWQgPSB0aGlzLnJlcXVpcmVTdHJpbmcoYm9vaywgJ29yaWdpbicsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICAgICAgICAgIGNvbnN0IGJvb2tJZCA9IHRoaXMucmVxdWlyZVN0cmluZyhib29rLCAnYm9va1VybCcsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICAgICAgICAgIGNvbnN0IGtleSA9IHNvdXJjZVN3aXRjaENhbmRpZGF0ZUtleShzb3VyY2VJZCwgYm9va0lkKTsKICAgICAgICAgICAgY29uc3QgYm9va1JlbGF0aW9uID0gdGhpcy5yZXF1aXJlU3RyaW5nKGJvb2ssICdyZWxhdGlvbktleScsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICAgICAgICAgIGNvbnN0IGJvb2tSZXZpc2lvbiA9IHRoaXMucmVxdWlyZVN0cmluZyhib29rLCAncmVsYXRpb25SZXZpc2lvbicsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICAgICAgICAgIGlmICghdmVyc2lvbnMuaGFzKHNvdXJjZUlkKSB8fCBpZGVudGl0aWVzLmhhcyhrZXkpIHx8CiAgICAgICAgICAgICAgKHJlbGF0aW9uICE9PSB1bmRlZmluZWQgJiYgKHJlbGF0aW9uICE9PSBib29rUmVsYXRpb24gfHwgcmVsYXRpb25SZXZpc2lvbiAhPT0gYm9va1JldmlzaW9uKSkpIHsKICAgICAgICAgICAgICB0aHJvdyBuZXcgRXJyb3IoJ+WQjOS5puWAmemAiei6q+S7veaIluWFs+ezu+eJiOacrOS4jeS4gOiHtCcpOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGlkZW50aXRpZXMuYWRkKGtleSk7IHJlbGF0aW9uID0gYm9va1JlbGF0aW9uOyByZWxhdGlvblJldmlzaW9uID0gYm9va1JldmlzaW9uOwogICAgICAgICAgICByZWNvcmRzLnB1c2goYm9vayk7CiAgICAgICAgICB9CiAgICAgICAgICBjdXJzb3IgPSBkYXRhWydjb21wbGV0ZSddID09PSB0cnVlID8gdW5kZWZpbmVkIDogdGhpcy5yZXF1aXJlU3RyaW5nKGRhdGEsICduZXh0Q3Vyc29yJywgJ3NlYXJjaC1ib29rLnJlbGF0ZWQnKTsKICAgICAgICAgIGlmIChjdXJzb3IgIT09IHVuZGVmaW5lZCkgewogICAgICAgICAgICBpZiAoY3Vyc29ycy5oYXMoY3Vyc29yKSB8fCBkYXRhWydib29rcyddLmxlbmd0aCA9PT0gMCkgdGhyb3cgbmV3IEVycm9yKCflkIzkuablgJnpgInliIbpobXmnKrmjqjov5snKTsKICAgICAgICAgICAgY3Vyc29ycy5hZGQoY3Vyc29yKTsKICAgICAgICAgICAgYXdhaXQgbmV3IFByb21pc2UgICAgICAoKHJlc29sdmUpICAgICAgID0+IHsgc2V0VGltZW91dChyZXNvbHZlLCAwKTsgfSk7CiAgICAgICAgICB9CiAgICAgICAgfSB3aGlsZSAoY3Vyc29yICE9PSB1bmRlZmluZWQpOwogICAgICAgIHJldHVybiByZWNvcmRzOwogICAgICB9IGNhdGNoIChlcnJvcikgewogICAgICAgIGNvbnN0IGZhaWx1cmUgPSBlcnJvciAgICAgICAgICAgICAgICAgICAgICAgICAgIDsKICAgICAgICBjb25zdCBkZXRhaWxzID0gZmFpbHVyZVsnZGV0YWlscyddICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgOwogICAgICAgIGlmIChhdHRlbXB0ID09PSAwICYmIGRldGFpbHM/LlsncmVhc29uJ10gPT09ICdDVVJTT1JfU1RBTEUnICYmIGlzQ3VycmVudD8uKCkgIT09IGZhbHNlKSBjb250aW51ZTsKICAgICAgICB0aHJvdyBlcnJvcjsKICAgICAgfQogICAgfQogICAgdGhyb3cgbmV3IEVycm9yKCflkIzkuablgJnpgInlv6vnhaflt7Lov4fmnJ/vvIzor7fph43or5UnKTsKICB9CgogIC8qKgogICAqIEV4cGxpY2l0IHJlZnJlc2ggZGlzY292ZXJzIG1pc3NpbmcgY2FuZGlkYXRlcyB3aXRob3V0IGRlbGV0aW5nIHN1Y2Nlc3Nlcy4KICAgKiBTaGFyZWQgYmFja2dyb3VuZCBwcmVwYXJhdGlvbiBwcm9ncmVzc2l2ZWx5IHB1Ymxpc2hlcyBUT0MvYm9keSB2ZXJkaWN0cy4KICAgKi8KICBhc3luYyByZWZyZXNoQ2FuZGlkYXRlcygKICAgIHF1ZXJ5ICAgICAgICAgICAgICAgICAgICAgICAgLAogICAgaXNDdXJyZW50ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPSB1bmRlZmluZWQsCiAgICBleGNsdWRlZFNvdXJjZUlkcyAgICAgICAgICAgPSBbXSwKICApICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHsKICAgIHRoaXMudmFsaWRhdGVQcm9iZVF1ZXJ5KHF1ZXJ5KTsKICAgIGF3YWl0IHRoaXMuZGlzY292ZXJDYW5kaWRhdGVzKHF1ZXJ5LnNvdXJjZUlkLCBxdWVyeS5ib29rSWQsIHF1ZXJ5LmJvb2tOYW1lLCBpc0N1cnJlbnQsIGV4Y2x1ZGVkU291cmNlSWRzKTsKICAgIGNvbnN0IGNhbmRpZGF0ZXMgPSBhd2FpdCB0aGlzLmxvYWRDYWNoZWRDYW5kaWRhdGVzKHF1ZXJ5LCBpc0N1cnJlbnQpOwogICAgcmV0dXJuIGNhbmRpZGF0ZXMubGVuZ3RoID09PSAwID8geyBraW5kOiAnbm9Tb3VyY2VzJyB9IDogeyBraW5kOiAnc291cmNlcycsIGNhbmRpZGF0ZXMgfTsKICB9CgogIC8qKgogICAqIERpc2NvdmVyeTogZW5hYmxlZCBzb3VyY2UgcmVnaXN0cnkg4oaSIGBjaGFuZ2UuYm9va1NvdXJjZWAgY2FuZGlkYXRlcyBmb3IKICAgKiB0aGUgZ2l2ZW4gYm9vay4gTmV2ZXIgaW52b2tlcyBgY2hhbmdlLmJvb2tTb3VyY2VgIHdpdGggYW4gZW1wdHkKICAgKiBgc291cmNlSWRzYCAoQ29yZSByZWplY3RzIGl0KTsgdGhhdCByZXNvbHZlcyB0byBge2tpbmQ6J25vU291cmNlcyd9YC4KICAgKi8KICBhc3luYyBkaXNjb3ZlckNhbmRpZGF0ZXMoCiAgICBzb3VyY2VJZCAgICAgICAgLAogICAgYm9va0lkICAgICAgICAsCiAgICBrZXl3b3JkICAgICAgICAsCiAgICBpc0N1cnJlbnQgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA9IHVuZGVmaW5lZCwKICAgIGV4Y2x1ZGVkU291cmNlSWRzICAgICAgICAgICA9IFtdLAogICkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgewogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyhzb3VyY2VJZCwgJ3NvdXJjZUlkJyk7CiAgICB0aGlzLmFzc2VydE5vbkJsYW5rU3RyaW5nKGJvb2tJZCwgJ2Jvb2tJZCcpOwogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyhrZXl3b3JkLCAna2V5d29yZCcpOwogICAgY29uc3QgbGlzdCA9IGF3YWl0IHRoaXMucnVudGltZU93bmVyLnJlcXVlc3QoCiAgICAgICdzb3VyY2UubGlzdCcsCiAgICAgIHsgZW5hYmxlZE9ubHk6IHRydWUgfSwKICAgICAgdGhpcy5yZXF1ZXN0T3B0aW9ucyhpc0N1cnJlbnQpLAogICAgKTsKICAgIGNvbnN0IHJhd1NvdXJjZXMgPSBsaXN0LmRhdGFbJ3NvdXJjZXMnXTsKICAgIGlmICghQXJyYXkuaXNBcnJheShyYXdTb3VyY2VzKSkgewogICAgICB0aHJvdyBuZXcgRXJyb3IoJ3NvdXJjZS5saXN0IHJldHVybmVkIGludmFsaWQgZGF0YScpOwogICAgfQogICAgY29uc3Qgc291cmNlcyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgID0gW107CiAgICBjb25zdCBleGNsdWRlZCA9IG5ldyBTZXQoZXhjbHVkZWRTb3VyY2VJZHMpOwogICAgZm9yIChsZXQgc291cmNlT3JkZXIgPSAwOyBzb3VyY2VPcmRlciA8IHJhd1NvdXJjZXMubGVuZ3RoOyBzb3VyY2VPcmRlciArPSAxKSB7CiAgICAgIGNvbnN0IHJhdyA9IHJhd1NvdXJjZXNbc291cmNlT3JkZXJdOwogICAgICBpZiAodHlwZW9mIHJhdyAhPT0gJ29iamVjdCcgfHwgcmF3ID09PSBudWxsIHx8IEFycmF5LmlzQXJyYXkocmF3KSkgewogICAgICAgIGNvbnRpbnVlOwogICAgICB9CiAgICAgIGNvbnN0IHNvdXJjZSA9IHJhdyAgICAgICAgICAgICAgOwogICAgICBpZiAoc291cmNlWydlbmFibGVkJ10gIT09IHRydWUpIHsKICAgICAgICBjb250aW51ZTsKICAgICAgfQogICAgICBjb25zdCBzb3VyY2VJZCA9IHRoaXMub3B0aW9uYWxTdHJpbmcoc291cmNlLCAnc291cmNlSWQnKTsKICAgICAgaWYgKHNvdXJjZUlkICE9PSB1bmRlZmluZWQgJiYgZXhjbHVkZWQuaGFzKHNvdXJjZUlkKSkgY29udGludWU7CiAgICAgIGlmIChzb3VyY2VJZCAhPT0gdW5kZWZpbmVkICYmIHNvdXJjZUlkLmxlbmd0aCA+IDApIHsKICAgICAgICBjb25zdCBzb3VyY2VOYW1lID0gdGhpcy5vcHRpb25hbFN0cmluZyhzb3VyY2UsICduYW1lJyk7CiAgICAgICAgY29uc3QgcmF3Qm9va1NvdXJjZSA9IHNvdXJjZVsnYm9va1NvdXJjZSddOwogICAgICAgIGxldCBib29rU291cmNlVHlwZSAgICAgICAgICA9IHVuZGVmaW5lZDsKICAgICAgICBsZXQgZ3JvdXAgICAgICAgICAgICAgICAgICAgICA9IHVuZGVmaW5lZDsKICAgICAgICBpZiAocmF3Qm9va1NvdXJjZSAhPT0gbnVsbCAmJiB0eXBlb2YgcmF3Qm9va1NvdXJjZSA9PT0gJ29iamVjdCcgJiYgIUFycmF5LmlzQXJyYXkocmF3Qm9va1NvdXJjZSkpIHsKICAgICAgICAgIGNvbnN0IGJvb2tTb3VyY2UgPSByYXdCb29rU291cmNlICAgICAgICAgICAgICA7CiAgICAgICAgICBib29rU291cmNlVHlwZSA9IGJvb2tTb3VyY2VbJ2Jvb2tTb3VyY2VUeXBlJ107CiAgICAgICAgICBncm91cCA9IHRoaXMub3B0aW9uYWxTdHJpbmcoYm9va1NvdXJjZSwgJ2Jvb2tTb3VyY2VHcm91cCcpOwogICAgICAgIH0KICAgICAgICBjb25zdCBjYXRlZ29yeSA9IGNsYXNzaWZ5UmVhZGVyU291cmNlKHsgYm9va1NvdXJjZVR5cGUsIG5hbWU6IHNvdXJjZU5hbWUsIGdyb3VwLCBzb3VyY2VJZCwKICAgICAgICAgIGJhc2VVcmw6IHRoaXMub3B0aW9uYWxTdHJpbmcoc291cmNlLCAnYmFzZVVybCcpIH0pOwogICAgICAgIGlmICghcmVhZGVyU291cmNlQ2F0ZWdvcnlJc1RleHQoY2F0ZWdvcnkpKSBjb250aW51ZTsKICAgICAgICBzb3VyY2VzLnB1c2goewogICAgICAgICAgc291cmNlSWQsCiAgICAgICAgICBzb3VyY2VOYW1lOiBzb3VyY2VOYW1lID09PSB1bmRlZmluZWQgfHwgc291cmNlTmFtZS50cmltKCkubGVuZ3RoID09PSAwID8gc291cmNlSWQgOiBzb3VyY2VOYW1lLAogICAgICAgICAgc291cmNlT3JkZXIsCiAgICAgICAgICBzb3VyY2VWZXJzaW9uOiB0aGlzLm9wdGlvbmFsU3RyaW5nKHNvdXJjZSwgJ3NvdXJjZVZlcnNpb24nKSwKICAgICAgICAgIGNhdGVnb3J5LAogICAgICAgIH0pOwogICAgICB9CiAgICB9CiAgICBpZiAoc291cmNlcy5sZW5ndGggPT09IDApIHsKICAgICAgcmV0dXJuIHsga2luZDogJ25vU291cmNlcycgfTsKICAgIH0KICAgIGNvbnN0IGNhbmRpZGF0ZXMgICAgICAgICAgICAgICAgICAgICAgICAgID0gW107CiAgICBhd2FpdCBydW5Cb29rU291cmNlV29ya2Vycyhzb3VyY2VzLCBTT1VSQ0VfU1dJVENIX0RJU0NPVkVSWV9DT05DVVJSRU5DWSwKICAgICAgYXN5bmMgKHNvdXJjZSAgICAgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgPT4gewogICAgICAgIGNvbnN0IGdyb3VwID0gYXdhaXQgdGhpcy5kaXNjb3ZlckZyb21Tb3VyY2Uoc291cmNlSWQsIGJvb2tJZCwga2V5d29yZCwgc291cmNlLCBpc0N1cnJlbnQpOwogICAgICAgIGlmIChpc0N1cnJlbnQ/LigpICE9PSBmYWxzZSkgY2FuZGlkYXRlcy5wdXNoKC4uLmdyb3VwKTsKICAgICAgfSwgYXN5bmMgKCkgICAgICAgICAgICAgICAgICAgPT4gaXNDdXJyZW50Py4oKSAhPT0gZmFsc2UpOwogICAgaWYgKGlzQ3VycmVudD8uKCkgPT09IGZhbHNlKSByZXR1cm4geyBraW5kOiAnbm9Tb3VyY2VzJyB9OwogICAgY2FuZGlkYXRlcy5zb3J0KChsZWZ0ICAgICAgICAgICAgICAgICAgICAgICAsIHJpZ2h0ICAgICAgICAgICAgICAgICAgICAgICApICAgICAgICAgPT4KICAgICAgKGxlZnQuc291cmNlT3JkZXIgPz8gMCkgLSAocmlnaHQuc291cmNlT3JkZXIgPz8gMCkpOwogICAgY29uc3QgdW5pcXVlQ2FuZGlkYXRlcyA9IGRlZHVwbGljYXRlU291cmNlU3dpdGNoQ2FuZGlkYXRlcyhjYW5kaWRhdGVzKTsKICAgIGNvbnN0IGN1cnJlbnRDYW5kaWRhdGVLZXkgPSBzb3VyY2VTd2l0Y2hDYW5kaWRhdGVLZXkoc291cmNlSWQsIGJvb2tJZCk7CiAgICBmb3IgKGNvbnN0IGNhbmRpZGF0ZSBvZiB1bmlxdWVDYW5kaWRhdGVzKSB7CiAgICAgIGNhbmRpZGF0ZS5pc0N1cnJlbnQgPSBzb3VyY2VTd2l0Y2hDYW5kaWRhdGVLZXkoY2FuZGlkYXRlLnNvdXJjZUlkLCBjYW5kaWRhdGUuYm9va1VybCkgPT09IGN1cnJlbnRDYW5kaWRhdGVLZXk7CiAgICB9CiAgICByZXR1cm4geyBraW5kOiAnc291cmNlcycsIGNhbmRpZGF0ZXM6IHVuaXF1ZUNhbmRpZGF0ZXMgfTsKICB9CgogICAgICAgICAgYXN5bmMgZGlzY292ZXJGcm9tU291cmNlKAogICAgc291cmNlSWQgICAgICAgICwKICAgIGJvb2tJZCAgICAgICAgLAogICAga2V5d29yZCAgICAgICAgLAogICAgc291cmNlICAgICAgICAgICAgICAgICAgICAgICAgICAgLAogICAgaXNDdXJyZW50ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAsCiAgKSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgewogICAgdHJ5IHsKICAgICAgY29uc3QgY2FuZGlkYXRlU291cmNlSWQgPSBzb3VyY2Uuc291cmNlSWQ7CiAgICAgIGNvbnN0IHJlc3VsdCA9IGF3YWl0IHRoaXMucnVudGltZU93bmVyLnJlcXVlc3QoCiAgICAgICAgJ2NoYW5nZS5ib29rU291cmNlJywKICAgICAgICB7IHNvdXJjZUlkLCBib29rSWQsIGtleXdvcmQsIHNvdXJjZUlkczogW2NhbmRpZGF0ZVNvdXJjZUlkXSB9LAogICAgICAgIHRoaXMucmVxdWVzdE9wdGlvbnMoaXNDdXJyZW50KSwKICAgICAgKTsKICAgICAgcmV0dXJuIHRoaXMuZGVjb2RlRGlzY292ZXJ5Q2FuZGlkYXRlcyhyZXN1bHQuZGF0YSwgc291cmNlKTsKICAgIH0gY2F0Y2ggKGVycm9yKSB7CiAgICAgIGlmIChpc05ldHdvcmtFbnZpcm9ubWVudEZhaWx1cmUoZXJyb3IpKSB0aHJvdyBlcnJvcjsKICAgICAgaWYgKGlzQ3VycmVudCAhPT0gdW5kZWZpbmVkICYmICFpc0N1cnJlbnQoKSkgewogICAgICAgIHRocm93IGVycm9yOwogICAgICB9CiAgICAgIC8vIEEgc291cmNlLXN3aXRjaCBzZWFyY2ggaXMgYSBiYXRjaC4gT25lIGRlYWQsIGNoYWxsZW5nZWQsIG9yIG1hbGZvcm1lZAogICAgICAvLyBzb3VyY2UgbXVzdCBub3QgZXJhc2UgY2FuZGlkYXRlcyBmcm9tIHRoZSByZW1haW5pbmcgZW5hYmxlZCBzb3VyY2VzLgogICAgICByZXR1cm4gW107CiAgICB9CiAgfQoKICAgICAgICAgIGRlY29kZURpc2NvdmVyeUNhbmRpZGF0ZXMoCiAgICBkYXRhICAgICAgICAgICAgLAogICAgc291cmNlICAgICAgICAgICAgICAgICAgICAgICAgICAgLAogICkgICAgICAgICAgICAgICAgICAgICAgICAgIHsKICAgIGNvbnN0IHJhd0NhbmRpZGF0ZXMgPSBkYXRhWydjYW5kaWRhdGVzJ107CiAgICBpZiAoIUFycmF5LmlzQXJyYXkocmF3Q2FuZGlkYXRlcykpIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKCdjaGFuZ2UuYm9va1NvdXJjZSByZXR1cm5lZCBpbnZhbGlkIGRhdGEnKTsKICAgIH0KICAgIGNvbnN0IGNhbmRpZGF0ZXMgICAgICAgICAgICAgICAgICAgICAgICAgID0gW107CiAgICBmb3IgKGNvbnN0IHJhdyBvZiByYXdDYW5kaWRhdGVzKSB7CiAgICAgIGlmICh0eXBlb2YgcmF3ICE9PSAnb2JqZWN0JyB8fCByYXcgPT09IG51bGwgfHwgQXJyYXkuaXNBcnJheShyYXcpKSB7CiAgICAgICAgY29udGludWU7CiAgICAgIH0KICAgICAgY29uc3QgY2FuZGlkYXRlID0gcmF3ICAgICAgICAgICAgICA7CiAgICAgIGNvbnN0IHNvdXJjZUlkID0gdGhpcy5vcHRpb25hbFN0cmluZyhjYW5kaWRhdGUsICdzb3VyY2VJZCcpOwogICAgICBjb25zdCBib29rVXJsID0gdGhpcy5vcHRpb25hbFN0cmluZyhjYW5kaWRhdGUsICdib29rVXJsJyk7CiAgICAgIGNvbnN0IGJvb2tOYW1lID0gdGhpcy5vcHRpb25hbFN0cmluZyhjYW5kaWRhdGUsICdib29rTmFtZScpOwogICAgICBpZiAoc291cmNlSWQgPT09IHVuZGVmaW5lZCB8fCBib29rVXJsID09PSB1bmRlZmluZWQgfHwgYm9va05hbWUgPT09IHVuZGVmaW5lZCkgewogICAgICAgIGNvbnRpbnVlOwogICAgICB9CiAgICAgIGNvbnN0IGVudHJ5ICAgICAgICAgICAgICAgICAgICAgICAgPSB7CiAgICAgICAgc291cmNlSWQsCiAgICAgICAgc291cmNlTmFtZTogc291cmNlLnNvdXJjZU5hbWUsCiAgICAgICAgY2F0ZWdvcnk6IHNvdXJjZS5jYXRlZ29yeSwKICAgICAgICBzb3VyY2VPcmRlcjogc291cmNlLnNvdXJjZU9yZGVyLAogICAgICAgIGJvb2tVcmwsCiAgICAgICAgYm9va05hbWUsCiAgICAgIH07CiAgICAgIGNvbnN0IGF1dGhvciA9IHRoaXMub3B0aW9uYWxTdHJpbmcoY2FuZGlkYXRlLCAnYXV0aG9yJyk7CiAgICAgIGNvbnN0IGNvdmVyVXJsID0gdGhpcy5vcHRpb25hbFN0cmluZyhjYW5kaWRhdGUsICdjb3ZlclVybCcpOwogICAgICBpZiAoYXV0aG9yICE9PSB1bmRlZmluZWQpIHsKICAgICAgICBlbnRyeS5hdXRob3IgPSBhdXRob3I7CiAgICAgICAgZW50cnkuc291cmNlVmVyc2lvbiA9IHNvdXJjZS5zb3VyY2VWZXJzaW9uOwogICAgICAgIGVudHJ5LmF1dGhvcklkZW50aXR5ID0gcmVhZEJvb2tBdXRob3JJZGVudGl0eShjYW5kaWRhdGVbJ2F1dGhvcklkZW50aXR5J10sIGF1dGhvciwgc291cmNlLnNvdXJjZVZlcnNpb24pOwogICAgICB9CiAgICAgIGlmIChjb3ZlclVybCAhPT0gdW5kZWZpbmVkKSB7CiAgICAgICAgZW50cnkuY292ZXJVcmwgPSBjb3ZlclVybDsKICAgICAgfQogICAgICBjb25zdCBsYXRlbmN5TXMgPSB0aGlzLm9wdGlvbmFsTnVtYmVyKGNhbmRpZGF0ZSwgJ2xhdGVuY3lNcycpOwogICAgICBpZiAobGF0ZW5jeU1zICE9PSB1bmRlZmluZWQpIHsKICAgICAgICBlbnRyeS5sYXRlbmN5TXMgPSBsYXRlbmN5TXM7CiAgICAgIH0KICAgICAgaWYgKGNhbmRpZGF0ZVsnb2ZmbGluZSddID09PSB0cnVlKSB7CiAgICAgICAgZW50cnkub2ZmbGluZSA9IHRydWU7CiAgICAgIH0KICAgICAgaWYgKGNhbmRpZGF0ZVsndGltZW91dCddID09PSB0cnVlKSB7CiAgICAgICAgZW50cnkudGltZW91dCA9IHRydWU7CiAgICAgIH0KICAgICAgY2FuZGlkYXRlcy5wdXNoKGVudHJ5KTsKICAgIH0KICAgIHJldHVybiBjYW5kaWRhdGVzOwogIH0KCiAgLyoqCiAgICogUmVzb2x2ZXMgdGhlIHRhcmdldCBkZXRhaWwgYmVmb3JlIGZldGNoaW5nIGl0cyBjaGFwdGVyIHRhYmxlLiBgYm9vay50b2NgCiAgICogY2Fubm90IGluZmVyIGEgVE9DIHJlcXVlc3QgZnJvbSBge3NvdXJjZUlkLCBib29rSWR9YCBhbG9uZTogdGhlIENvcmUgd2lyZQogICAqIGNvbnRyYWN0IHJlcXVpcmVzIHRoZSBgdG9jVXJsYCBhbmQgcnVsZSB2YXJpYWJsZXMgcHJvZHVjZWQgYnkKICAgKiBgYm9vay5kZXRhaWxgLiBCb3RoIHJlbW90ZSBjb21tYW5kcyBuZWVkIHRoZSBgaHR0cC5leGVjdXRlYCBob3N0LgogICAqLwogIGFzeW5jIGZldGNoVGFyZ2V0VG9jKAogICAgc291cmNlSWQgICAgICAgICwKICAgIGJvb2tJZCAgICAgICAgLAogICAgaXNDdXJyZW50ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPSB1bmRlZmluZWQsCiAgKSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHsKICAgIHRoaXMuYXNzZXJ0Tm9uQmxhbmtTdHJpbmcoc291cmNlSWQsICdzb3VyY2VJZCcpOwogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyhib29rSWQsICdib29rSWQnKTsKCiAgICBjb25zdCBjb29yZGluYXRvciA9IHRoaXMucnVudGltZU93bmVyLmJvb2tBY3F1aXNpdGlvbnM/LigpOwogICAgaWYgKGNvb3JkaW5hdG9yICE9PSB1bmRlZmluZWQpIHsKICAgICAgY29uc3Qgc3RvcmVkID0gYXdhaXQgdGhpcy5ydW50aW1lT3duZXIucmVxdWVzdCgnc2VhcmNoLWJvb2suZ2V0JywgeyBvcmlnaW46IHNvdXJjZUlkLCBib29rVXJsOiBib29rSWQgfSk7CiAgICAgIGNvbnN0IGJvb2sgPSB0aGlzLnJlcXVpcmVPYmplY3Qoc3RvcmVkLmRhdGFbJ2Jvb2snXSwgJ3NlYXJjaC1ib29rLmdldCcpOwogICAgICBjb25zdCBzZXNzaW9uID0gYXdhaXQgY29vcmRpbmF0b3IuYWNxdWlyZUJvb2soeyBzb3VyY2VJZCwgYm9va0lkLCBkZXRhaWxVcmw6IGJvb2tJZCwKICAgICAgICB0aXRsZTogdGhpcy5yZXF1aXJlU3RyaW5nKGJvb2ssICduYW1lJywgJ3NlYXJjaC1ib29rLmdldCcpLCBhdXRob3I6IHRoaXMub3B0aW9uYWxTdHJpbmcoYm9vaywgJ2F1dGhvcicpID8/ICcnIH0sIHsgaXNDdXJyZW50IH0pOwogICAgICBjb25zdCB2YXJpYWJsZXMgICAgICAgICAgICAgPSB7fTsKICAgICAgZm9yIChjb25zdCB2YXJpYWJsZSBvZiBzZXNzaW9uLmNvbnRpbnVhdGlvblZhcmlhYmxlcykgdmFyaWFibGVzW3ZhcmlhYmxlLm5hbWVdID0gdmFyaWFibGUudmFsdWU7CiAgICAgIHJldHVybiB7IHNvdXJjZUlkLCBib29rSWQsIGJvb2tOYW1lOiBzZXNzaW9uLmJvb2sudGl0bGUsIGF1dGhvcjogc2Vzc2lvbi5ib29rLmF1dGhvciwKICAgICAgICBjb3ZlclVybDogc2Vzc2lvbi5ib29rLmNvdmVyVXJsLCBsYXRlc3RDaGFwdGVyVGl0bGU6IHNlc3Npb24uYm9vay5sYXN0Q2hhcHRlciwKICAgICAgICB0b2NVcmw6IHNlc3Npb24udG9jVXJsLCB2YXJpYWJsZXMsCiAgICAgICAgZW50cmllczogc2Vzc2lvbi5lbnRyaWVzLm1hcCgoZW50cnkpICAgICAgICAgICAgICAgICAgICAgICAgICAgICA9PiB7CiAgICAgICAgICBjb25zdCBlbnRyeVZhcmlhYmxlcyAgICAgICAgICAgICA9IHt9OwogICAgICAgICAgZm9yIChjb25zdCB2YXJpYWJsZSBvZiBlbnRyeS52YXJpYWJsZXMpIGVudHJ5VmFyaWFibGVzW3ZhcmlhYmxlLm5hbWVdID0gdmFyaWFibGUudmFsdWU7CiAgICAgICAgICByZXR1cm4geyBpbmRleDogZW50cnkuaW5kZXgsIHRpdGxlOiBlbnRyeS50aXRsZSwgdXJsOiBlbnRyeS51cmwsIHZhcmlhYmxlczogZW50cnlWYXJpYWJsZXMgfTsKICAgICAgICB9KSB9OwogICAgfQoKICAgIGNvbnN0IGRldGFpbCA9IGF3YWl0IHRoaXMucnVudGltZU93bmVyLnJlcXVlc3QoCiAgICAgICdib29rLmRldGFpbCcsCiAgICAgIHsKICAgICAgICBzb3VyY2VJZCwKICAgICAgICBib29rOiB7IGJvb2tJZCB9LAogICAgICAgIGJvb2tVcmw6IGJvb2tJZCwKICAgICAgfSwKICAgICAgdGhpcy5yZXF1ZXN0T3B0aW9ucyhpc0N1cnJlbnQpLAogICAgKTsKICAgIGNvbnN0IGRldGFpbEJvb2sgPSB0aGlzLnJlcXVpcmVPYmplY3QoZGV0YWlsLmRhdGFbJ2Jvb2snXSwgJ2Jvb2suZGV0YWlsIGJvb2snKTsKICAgIGNvbnN0IGRldGFpbFNvdXJjZUlkID0gdGhpcy5yZXF1aXJlU3RyaW5nKGRldGFpbC5kYXRhLCAnc291cmNlSWQnLCAnYm9vay5kZXRhaWwnKTsKICAgIGNvbnN0IGRldGFpbEJvb2tJZCA9IHRoaXMucmVxdWlyZVN0cmluZyhkZXRhaWxCb29rLCAnYm9va0lkJywgJ2Jvb2suZGV0YWlsIGJvb2snKTsKICAgIGlmIChkZXRhaWxTb3VyY2VJZCAhPT0gc291cmNlSWQgfHwgZGV0YWlsQm9va0lkICE9PSBib29rSWQpIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKCdib29rLmRldGFpbCByZXR1cm5lZCBhIG1pc21hdGNoZWQgY29tcG9zaXRlIGtleScpOwogICAgfQogICAgLy8gQW4gYWJzZW50L2JsYW5rIFRPQyBVUkwgaXMgbm90IHJlY292ZXJhYmxlIGJ5IGBib29rLnRvY2A7IGZhaWwgYmVmb3JlIGEKICAgIC8vIGtub3dpbmdseSBpbnZhbGlkIENvcmUgcmVxdWVzdCBpbnN0ZWFkIG9mIHNpbGVudGx5IHN1YnN0aXR1dGluZyBib29rSWQuCiAgICBjb25zdCB0b2NVcmwgPSB0aGlzLnJlcXVpcmVTdHJpbmcoZGV0YWlsLmRhdGEsICd0b2NVcmwnLCAnYm9vay5kZXRhaWwnKTsKICAgIGNvbnN0IGJvb2tOYW1lID0gdGhpcy5yZXF1aXJlU3RyaW5nKGRldGFpbEJvb2ssICd0aXRsZScsICdib29rLmRldGFpbCBib29rJyk7CiAgICBjb25zdCBhdXRob3IgPSB0aGlzLm9wdGlvbmFsU3RyaW5nKGRldGFpbEJvb2ssICdhdXRob3InKSA/PyAnJzsKICAgIGNvbnN0IGNvdmVyVXJsID0gdGhpcy5vcHRpb25hbFN0cmluZyhkZXRhaWxCb29rLCAnY292ZXJVcmwnKTsKICAgIGNvbnN0IGxhdGVzdENoYXB0ZXJUaXRsZSA9IHRoaXMub3B0aW9uYWxTdHJpbmcoZGV0YWlsQm9vaywgJ2xhc3RDaGFwdGVyJyk7CiAgICAvLyBgYm9vay50b2NgIHZhcmlhYmxlcyBhcmUgb3B0aW9uYWwgaW4gdGhlIENvcmUgY29udHJhY3QgKHNlcmRlIGRlZmF1bHQKICAgIC8vIGVtcHR5IG1hcCk7IGBib29rLmRldGFpbGAgb25seSBlbWl0cyB0aGVtIHdoZW4gdGhlIHNvdXJjZSdzIHJ1bGVzIHByb2R1Y2UKICAgIC8vIGFueS4gUmVxdWlyaW5nIGFuIG9iamVjdCBoZXJlIHdvdWxkIGZhaWwtY2xvc2VkIGFnYWluc3QgcmVhbCBzb3VyY2VzCiAgICAvLyB3aG9zZSBkZXRhaWwgcnVsZXMgY2Fycnkgbm8gdmFyaWFibGVzLgogICAgY29uc3QgcmF3VmFyaWFibGVzID0gZGV0YWlsLmRhdGFbJ3ZhcmlhYmxlcyddOwogICAgY29uc3QgdmFyaWFibGVzICAgICAgICAgICAgID0KICAgICAgcmF3VmFyaWFibGVzID09PSB1bmRlZmluZWQgfHwgcmF3VmFyaWFibGVzID09PSBudWxsCiAgICAgICAgPyB7fQogICAgICAgIDogdGhpcy5yZXF1aXJlU3RyaW5nTWFwKHJhd1ZhcmlhYmxlcywgJ3ZhcmlhYmxlcycsICdib29rLmRldGFpbCcpOwoKICAgIGNvbnN0IHJlc3VsdCA9IGF3YWl0IHRoaXMucnVudGltZU93bmVyLnJlcXVlc3QoCiAgICAgICdib29rLnRvYycsCiAgICAgIHsgc291cmNlSWQsIGJvb2tJZCwgdG9jVXJsLCB2YXJpYWJsZXMgfSwKICAgICAgdGhpcy5yZXF1ZXN0T3B0aW9ucyhpc0N1cnJlbnQpLAogICAgKTsKICAgIGNvbnN0IHJhd1NvdXJjZUlkID0gcmVzdWx0LmRhdGFbJ3NvdXJjZUlkJ107CiAgICBjb25zdCByYXdCb29rSWQgPSByZXN1bHQuZGF0YVsnYm9va0lkJ107CiAgICBpZiAocmF3U291cmNlSWQgIT09IHNvdXJjZUlkIHx8IHJhd0Jvb2tJZCAhPT0gYm9va0lkKSB7CiAgICAgIHRocm93IG5ldyBFcnJvcignYm9vay50b2MgcmV0dXJuZWQgYSBtaXNtYXRjaGVkIGNvbXBvc2l0ZSBrZXknKTsKICAgIH0KICAgIGNvbnN0IHJhd1RvYyA9IHJlc3VsdC5kYXRhWyd0b2MnXTsKICAgIGlmICghQXJyYXkuaXNBcnJheShyYXdUb2MpKSB7CiAgICAgIHRocm93IG5ldyBFcnJvcignYm9vay50b2MgcmV0dXJuZWQgaW52YWxpZCBkYXRhJyk7CiAgICB9CiAgICBjb25zdCBlbnRyaWVzICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgID0gW107CiAgICBmb3IgKGNvbnN0IHJhdyBvZiByYXdUb2MpIHsKICAgICAgaWYgKHR5cGVvZiByYXcgIT09ICdvYmplY3QnIHx8IHJhdyA9PT0gbnVsbCB8fCBBcnJheS5pc0FycmF5KHJhdykpIHsKICAgICAgICB0aHJvdyBuZXcgRXJyb3IoJ2Jvb2sudG9jIHJldHVybmVkIGEgbm9uLW9iamVjdCBlbnRyeScpOwogICAgICB9CiAgICAgIGNvbnN0IGVudHJ5ID0gcmF3ICAgICAgICAgICAgICA7CiAgICAgIGNvbnN0IGluZGV4ID0gdGhpcy5yZXF1aXJlTm9uTmVnYXRpdmVJbnRlZ2VyKGVudHJ5LCAnaW5kZXgnLCAnYm9vay50b2MnKTsKICAgICAgY29uc3QgdGl0bGUgPSB0aGlzLnJlcXVpcmVTdHJpbmcoZW50cnksICd0aXRsZScsICdib29rLnRvYycpOwogICAgICBjb25zdCB1cmwgPSB0aGlzLnJlcXVpcmVTdHJpbmcoZW50cnksICd1cmwnLCAnYm9vay50b2MnKTsKICAgICAgY29uc3QgcmF3RW50cnlWYXJpYWJsZXMgPSBlbnRyeVsndmFyaWFibGVzJ107CiAgICAgIGNvbnN0IGVudHJ5VmFyaWFibGVzID0gcmF3RW50cnlWYXJpYWJsZXMgPT09IHVuZGVmaW5lZCB8fCByYXdFbnRyeVZhcmlhYmxlcyA9PT0gbnVsbAogICAgICAgID8ge30KICAgICAgICA6IHRoaXMucmVxdWlyZVN0cmluZ01hcChyYXdFbnRyeVZhcmlhYmxlcywgJ3ZhcmlhYmxlcycsICdib29rLnRvYycpOwogICAgICBlbnRyaWVzLnB1c2goeyBpbmRleCwgdGl0bGUsIHVybCwgdmFyaWFibGVzOiBlbnRyeVZhcmlhYmxlcyB9KTsKICAgIH0KICAgIGNvbnN0IHRhcmdldCAgICAgICAgICAgICAgICAgICAgICAgID0gewogICAgICBzb3VyY2VJZCwKICAgICAgYm9va0lkLAogICAgICBib29rTmFtZSwKICAgICAgYXV0aG9yLAogICAgICB0b2NVcmwsCiAgICAgIHZhcmlhYmxlcywKICAgICAgZW50cmllcywKICAgIH07CiAgICBpZiAoY292ZXJVcmwgIT09IHVuZGVmaW5lZCkgewogICAgICB0YXJnZXQuY292ZXJVcmwgPSBjb3ZlclVybDsKICAgIH0KICAgIGlmIChsYXRlc3RDaGFwdGVyVGl0bGUgIT09IHVuZGVmaW5lZCkgewogICAgICB0YXJnZXQubGF0ZXN0Q2hhcHRlclRpdGxlID0gbGF0ZXN0Q2hhcHRlclRpdGxlOwogICAgfQogICAgcmV0dXJuIHRhcmdldDsKICB9CgogICAgICAgICAgbWF0Y2hQcm9iZUNoYXB0ZXIoCiAgICBlbnRyaWVzICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLAogICAgcXVlcnkgICAgICAgICAgICAgICAgICAgICAgICAsCiAgKSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgewogICAgZm9yIChjb25zdCBlbnRyeSBvZiBlbnRyaWVzKSB7CiAgICAgIGlmIChlbnRyeS50aXRsZSA9PT0gcXVlcnkuY3VycmVudENoYXB0ZXJUaXRsZSkgewogICAgICAgIHJldHVybiBlbnRyeTsKICAgICAgfQogICAgfQogICAgY29uc3Qgbm9ybWFsaXplZFRpdGxlID0gdGhpcy5ub3JtYWxpemVDaGFwdGVyVGl0bGUocXVlcnkuY3VycmVudENoYXB0ZXJUaXRsZSk7CiAgICBmb3IgKGNvbnN0IGVudHJ5IG9mIGVudHJpZXMpIHsKICAgICAgaWYgKHRoaXMubm9ybWFsaXplQ2hhcHRlclRpdGxlKGVudHJ5LnRpdGxlKSA9PT0gbm9ybWFsaXplZFRpdGxlKSB7CiAgICAgICAgcmV0dXJuIGVudHJ5OwogICAgICB9CiAgICB9CiAgICBmb3IgKGNvbnN0IGVudHJ5IG9mIGVudHJpZXMpIHsKICAgICAgaWYgKGVudHJ5LmluZGV4ID09PSBxdWVyeS5jdXJyZW50Q2hhcHRlckluZGV4KSB7CiAgICAgICAgcmV0dXJuIGVudHJ5OwogICAgICB9CiAgICB9CiAgICByZXR1cm4gZW50cmllc1swXTsKICB9CgogIC8qKgogICAqIEF0b21pY2FsbHkgcmUtcG9pbnRzIGFuIGV4aXN0aW5nIHNoZWxmIGJvb2sgdG8gdGhlIHRhcmdldCBzb3VyY2UuIFRoaXMgaXMKICAgKiBhIHN0b3JhZ2Utb25seSBjb21tYW5kOyBpdHMgc3RydWN0dXJlZCByb2xsYmFjayBqb3VybmFsIHJlbWFpbnMgaW5zaWRlCiAgICogQ29yZSBhbmQgSGFybW9ueSByZWNlaXZlcyBvbmx5IGFuIG9wYXF1ZSB0cmFuc2FjdGlvbiBpZC4KICAgKi8KICBhc3luYyBjb21taXRTd2l0Y2goCiAgICBwYXJhbXMgICAgICAgICAgICAgICAgICAgICAgICAgICwKICAgIGlzQ3VycmVudCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgID0gdW5kZWZpbmVkLAogICkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgewogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyhwYXJhbXMuZnJvbS5zb3VyY2VJZCwgJ2Zyb20uc291cmNlSWQnKTsKICAgIHRoaXMuYXNzZXJ0Tm9uQmxhbmtTdHJpbmcocGFyYW1zLmZyb20uYm9va0lkLCAnZnJvbS5ib29rSWQnKTsKICAgIHRoaXMuYXNzZXJ0Tm9uQmxhbmtTdHJpbmcocGFyYW1zLnRhcmdldC5zb3VyY2VJZCwgJ3RhcmdldC5zb3VyY2VJZCcpOwogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyhwYXJhbXMudGFyZ2V0LmJvb2tJZCwgJ3RhcmdldC5ib29rSWQnKTsKICAgIHRoaXMuYXNzZXJ0Tm9uQmxhbmtTdHJpbmcocGFyYW1zLnRhcmdldC50aXRsZSwgJ3RhcmdldC50aXRsZScpOwogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyhwYXJhbXMuY3VycmVudENoYXB0ZXJUaXRsZSwgJ2N1cnJlbnRDaGFwdGVyVGl0bGUnKTsKICAgIGlmIChwYXJhbXMubmV3VG9jLmxlbmd0aCA9PT0gMCkgewogICAgICB0aHJvdyBuZXcgRXJyb3IoJ3NvdXJjZS5zd2l0Y2guY29tbWl0IHJlcXVpcmVzIGEgbm9uLWVtcHR5IG5ld1RvYycpOwogICAgfQogICAgaWYgKCFOdW1iZXIuaXNJbnRlZ2VyKHBhcmFtcy5jdXJyZW50Q2hhcHRlckluZGV4KSB8fCBwYXJhbXMuY3VycmVudENoYXB0ZXJJbmRleCA8IDApIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKCdzb3VyY2Uuc3dpdGNoLmNvbW1pdCByZXF1aXJlcyBhIG5vbi1uZWdhdGl2ZSBjdXJyZW50Q2hhcHRlckluZGV4Jyk7CiAgICB9CiAgICBsZXQgdHJhbnNhY3Rpb25JZCAgICAgICAgICAgICAgICAgICAgID0gdW5kZWZpbmVkOwogICAgdHJ5IHsKICAgICAgY29uc3QgcmVzdWx0ID0gYXdhaXQgdGhpcy5ydW50aW1lT3duZXIucmVxdWVzdCgKICAgICAgICAnc291cmNlLnN3aXRjaC5jb21taXQnLAogICAgICAgIHBhcmFtcyAgICAgICAgICAgICAgICAgICAgICAgICAsCiAgICAgICAgdGhpcy5yZXF1ZXN0T3B0aW9ucyhpc0N1cnJlbnQpLAogICAgICApOwogICAgICBjb25zdCByYXdCb29rID0gcmVzdWx0LmRhdGFbJ2Jvb2snXTsKICAgICAgdHJhbnNhY3Rpb25JZCA9IHRoaXMucmVxdWlyZVN0cmluZyhyZXN1bHQuZGF0YSwgJ3RyYW5zYWN0aW9uSWQnLCAnc291cmNlLnN3aXRjaC5jb21taXQnKTsKICAgICAgaWYgKHJlc3VsdC5kYXRhWydwaGFzZSddICE9PSAncGVuZGluZycpIHsKICAgICAgICB0aHJvdyBuZXcgRXJyb3IoJ3NvdXJjZS5zd2l0Y2guY29tbWl0IHJldHVybmVkIGFuIGludmFsaWQgcGhhc2UnKTsKICAgICAgfQogICAgICBpZiAodHlwZW9mIHJhd0Jvb2sgIT09ICdvYmplY3QnIHx8IHJhd0Jvb2sgPT09IG51bGwgfHwgQXJyYXkuaXNBcnJheShyYXdCb29rKSkgewogICAgICAgIHRocm93IG5ldyBFcnJvcignc291cmNlLnN3aXRjaC5jb21taXQgcmV0dXJuZWQgYW4gaW52YWxpZCBib29rJyk7CiAgICAgIH0KICAgICAgY29uc3QgbWF0Y2hlZENoYXB0ZXIgPSB0aGlzLmRlY29kZU1hdGNoZWRDaGFwdGVyKHJlc3VsdC5kYXRhWydtYXRjaGVkQ2hhcHRlciddKTsKICAgICAgcmV0dXJuIHsKICAgICAgICBzdGF0dXM6ICdzdWNjZXNzJywKICAgICAgICBib29rOiB0aGlzLmRlY29kZVNoZWxmQm9vayhyYXdCb29rKSwKICAgICAgICBtYXRjaGVkQ2hhcHRlciwKICAgICAgICB0cmFuc2FjdGlvbklkLAogICAgICB9OwogICAgfSBjYXRjaCAoZXJyb3IpIHsKICAgICAgY29uc3QgbWVzc2FnZSA9IGVycm9yTWVzc2FnZU9mKGVycm9yKTsKICAgICAgcmV0dXJuIHRyYW5zYWN0aW9uSWQgPT09IHVuZGVmaW5lZAogICAgICAgID8geyBzdGF0dXM6ICdmYWlsZWQnLCBlcnJvcjogbWVzc2FnZSB9CiAgICAgICAgOiB7IHN0YXR1czogJ2ZhaWxlZCcsIGVycm9yOiBtZXNzYWdlLCB0cmFuc2FjdGlvbklkIH07CiAgICB9CiAgfQoKICAvKioKICAgKiBDb21wZW5zYXRlcyBhIHByZXZpb3VzIGNvbW1pdCB2aWEgaXRzIG9wYXF1ZSBkdXJhYmxlIHRyYW5zYWN0aW9uIGlkLgogICAqIEZpbmFsaXplZCBvciBzdGFsZSB0cmFuc2FjdGlvbnMgYXJlIHJlamVjdGVkIHdpdGhvdXQgb3ZlcndyaXRpbmcgcHJvZ3Jlc3MuCiAgICovCiAgYXN5bmMgcm9sbGJhY2tTd2l0Y2goCiAgICB0cmFuc2FjdGlvbklkICAgICAgICAgICAgICAgICAgICAgICAgICAgLAogICAgaXNDdXJyZW50ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPSB1bmRlZmluZWQsCiAgKSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgewogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyh0cmFuc2FjdGlvbklkLCAndHJhbnNhY3Rpb25JZCcpOwogICAgY29uc3QgcmVzdWx0ID0gYXdhaXQgdGhpcy5ydW50aW1lT3duZXIucmVxdWVzdCgKICAgICAgJ3NvdXJjZS5zd2l0Y2gucm9sbGJhY2snLAogICAgICB7IHRyYW5zYWN0aW9uSWQgfSwKICAgICAgdGhpcy5yZXF1ZXN0T3B0aW9ucyhpc0N1cnJlbnQpLAogICAgKTsKICAgIGlmIChyZXN1bHQuZGF0YVsndHJhbnNhY3Rpb25JZCddICE9PSB0cmFuc2FjdGlvbklkIHx8IHJlc3VsdC5kYXRhWydwaGFzZSddICE9PSAncm9sbGVkQmFjaycgfHwKICAgICAgdHlwZW9mIHJlc3VsdC5kYXRhWydjaGFuZ2VkJ10gIT09ICdib29sZWFuJykgewogICAgICB0aHJvdyBuZXcgRXJyb3IoJ3NvdXJjZS5zd2l0Y2gucm9sbGJhY2sgcmV0dXJuZWQgYW4gaW52YWxpZCB0cmFuc2FjdGlvbiByZXN1bHQnKTsKICAgIH0KICAgIGNvbnN0IHJhd0Jvb2sgPSByZXN1bHQuZGF0YVsncmVzdG9yZWRCb29rJ107CiAgICBpZiAodHlwZW9mIHJhd0Jvb2sgIT09ICdvYmplY3QnIHx8IHJhd0Jvb2sgPT09IG51bGwgfHwgQXJyYXkuaXNBcnJheShyYXdCb29rKSkgewogICAgICB0aHJvdyBuZXcgRXJyb3IoJ3NvdXJjZS5zd2l0Y2gucm9sbGJhY2sgcmV0dXJuZWQgYW4gaW52YWxpZCByZXN0b3JlZCBib29rJyk7CiAgICB9CiAgICByZXR1cm4gewogICAgICB0cmFuc2FjdGlvbklkLAogICAgICBjaGFuZ2VkOiByZXN1bHQuZGF0YVsnY2hhbmdlZCddICAgICAgICAgICAsCiAgICAgIHJlc3RvcmVkQm9vazogdGhpcy5kZWNvZGVTaGVsZkJvb2socmF3Qm9vayksCiAgICB9OwogIH0KCiAgLyoqCiAgICogUmVhZHMgQ29yZSdzIG9wYXF1ZSBwZW5kaW5nLXRyYW5zYWN0aW9uIHByb2plY3Rpb24gZm9yIGxpZmVjeWNsZQogICAqIHJlY29uY2lsaWF0aW9uLiBIYXJtb255IHJlY2VpdmVzIG9ubHkgdGhlIGV4YWN0IGZyb20vdGFyZ2V0IGlkZW50aXRpZXMKICAgKiBhbmQgdHJhbnNhY3Rpb24gaWQ7IHRoZSBkdXJhYmxlIGpvdXJuYWwgcmVtYWlucyBvd25lZCBieSBDb3JlLgogICAqLwogIGFzeW5jIGxpc3RQZW5kaW5nU3dpdGNoZXMoCiAgICBpc0N1cnJlbnQgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA9IHVuZGVmaW5lZCwKICApICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgewogICAgY29uc3QgcmVzdWx0ID0gYXdhaXQgdGhpcy5ydW50aW1lT3duZXIucmVxdWVzdCgKICAgICAgJ3NvdXJjZS5zd2l0Y2gucGVuZGluZy5saXN0JywKICAgICAge30sCiAgICAgIHRoaXMucmVxdWVzdE9wdGlvbnMoaXNDdXJyZW50KSwKICAgICk7CiAgICBjb25zdCByYXdQZW5kaW5nID0gcmVzdWx0LmRhdGFbJ3BlbmRpbmcnXTsKICAgIGlmICghQXJyYXkuaXNBcnJheShyYXdQZW5kaW5nKSkgewogICAgICB0aHJvdyBuZXcgRXJyb3IoJ3NvdXJjZS5zd2l0Y2gucGVuZGluZy5saXN0IHJldHVybmVkIGludmFsaWQgcGVuZGluZycpOwogICAgfQogICAgY29uc3QgcGVuZGluZyAgICAgICAgICAgICAgICAgICAgICAgID0gW107CiAgICBjb25zdCB0cmFuc2FjdGlvbklkcyA9IG5ldyBTZXQgICAgICAgICgpOwogICAgZm9yIChjb25zdCB2YWx1ZSBvZiByYXdQZW5kaW5nKSB7CiAgICAgIGNvbnN0IHJvdyA9IHRoaXMucmVxdWlyZU9iamVjdCh2YWx1ZSwgJ3NvdXJjZS5zd2l0Y2gucGVuZGluZy5saXN0IHJvdycpOwogICAgICBjb25zdCB0cmFuc2FjdGlvbklkID0gdGhpcy5yZXF1aXJlU3RyaW5nKHJvdywgJ3RyYW5zYWN0aW9uSWQnLCAnc291cmNlLnN3aXRjaC5wZW5kaW5nLmxpc3QnKTsKICAgICAgaWYgKHJvd1sncGhhc2UnXSAhPT0gJ3BlbmRpbmcnIHx8IHRyYW5zYWN0aW9uSWRzLmhhcyh0cmFuc2FjdGlvbklkKSkgewogICAgICAgIHRocm93IG5ldyBFcnJvcignc291cmNlLnN3aXRjaC5wZW5kaW5nLmxpc3QgcmV0dXJuZWQgYW4gaW52YWxpZCB0cmFuc2FjdGlvbiByb3cnKTsKICAgICAgfQogICAgICBjb25zdCBmcm9tID0gdGhpcy5yZXF1aXJlT2JqZWN0KHJvd1snZnJvbSddLCAnc291cmNlLnN3aXRjaC5wZW5kaW5nLmxpc3QgZnJvbScpOwogICAgICBjb25zdCB0YXJnZXQgPSB0aGlzLnJlcXVpcmVPYmplY3Qocm93Wyd0YXJnZXQnXSwgJ3NvdXJjZS5zd2l0Y2gucGVuZGluZy5saXN0IHRhcmdldCcpOwogICAgICB0cmFuc2FjdGlvbklkcy5hZGQodHJhbnNhY3Rpb25JZCk7CiAgICAgIHBlbmRpbmcucHVzaCh7CiAgICAgICAgdHJhbnNhY3Rpb25JZCwKICAgICAgICBmcm9tU291cmNlSWQ6IHRoaXMucmVxdWlyZVN0cmluZyhmcm9tLCAnc291cmNlSWQnLCAnc291cmNlLnN3aXRjaC5wZW5kaW5nLmxpc3QgZnJvbScpLAogICAgICAgIGZyb21Cb29rSWQ6IHRoaXMucmVxdWlyZVN0cmluZyhmcm9tLCAnYm9va0lkJywgJ3NvdXJjZS5zd2l0Y2gucGVuZGluZy5saXN0IGZyb20nKSwKICAgICAgICB0YXJnZXRTb3VyY2VJZDogdGhpcy5yZXF1aXJlU3RyaW5nKHRhcmdldCwgJ3NvdXJjZUlkJywgJ3NvdXJjZS5zd2l0Y2gucGVuZGluZy5saXN0IHRhcmdldCcpLAogICAgICAgIHRhcmdldEJvb2tJZDogdGhpcy5yZXF1aXJlU3RyaW5nKHRhcmdldCwgJ2Jvb2tJZCcsICdzb3VyY2Uuc3dpdGNoLnBlbmRpbmcubGlzdCB0YXJnZXQnKSwKICAgICAgfSk7CiAgICB9CiAgICByZXR1cm4gcGVuZGluZzsKICB9CgogICAgICAgICAgZGVjb2RlTWF0Y2hlZENoYXB0ZXIodmFsdWUgICAgICAgICApICAgICAgICAgICAgICAgICAgICAgICAgICB7CiAgICBjb25zdCBjaGFwdGVyID0gdGhpcy5yZXF1aXJlT2JqZWN0KHZhbHVlLCAnc291cmNlLnN3aXRjaCBtYXRjaGVkQ2hhcHRlcicpOwogICAgcmV0dXJuIHsKICAgICAgY2hhcHRlcklkOiB0aGlzLnJlcXVpcmVTdHJpbmcoY2hhcHRlciwgJ2NoYXB0ZXJJZCcsICdzb3VyY2Uuc3dpdGNoIG1hdGNoZWRDaGFwdGVyJyksCiAgICAgIGNoYXB0ZXJUaXRsZTogdGhpcy5yZXF1aXJlU3RyaW5nKGNoYXB0ZXIsICdjaGFwdGVyVGl0bGUnLCAnc291cmNlLnN3aXRjaCBtYXRjaGVkQ2hhcHRlcicpLAogICAgICBjaGFwdGVyVXJsOiB0aGlzLnJlcXVpcmVTdHJpbmcoY2hhcHRlciwgJ2NoYXB0ZXJVcmwnLCAnc291cmNlLnN3aXRjaCBtYXRjaGVkQ2hhcHRlcicpLAogICAgICBvcmRlcjogdGhpcy5yZXF1aXJlTm9uTmVnYXRpdmVJbnRlZ2VyKGNoYXB0ZXIsICdvcmRlcicsICdzb3VyY2Uuc3dpdGNoIG1hdGNoZWRDaGFwdGVyJyksCiAgICB9OwogIH0KCiAgICAgICAgICByZXF1ZXN0T3B0aW9ucyhpc0N1cnJlbnQgICAgICAgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgIHsKICAgIGlmIChpc0N1cnJlbnQgPT09IHVuZGVmaW5lZCkgewogICAgICByZXR1cm4ge307CiAgICB9CiAgICByZXR1cm4gewogICAgICBzaG91bGRDYW5jZWw6ICgpICAgICAgICAgID0+ICFpc0N1cnJlbnQoKSwKICAgIH07CiAgfQoKICAgICAgICAgIGRlY29kZVNoZWxmQm9vayh2YWx1ZSAgICAgICAgICkgICAgICAgICAgICB7CiAgICBpZiAodHlwZW9mIHZhbHVlICE9PSAnb2JqZWN0JyB8fCB2YWx1ZSA9PT0gbnVsbCB8fCBBcnJheS5pc0FycmF5KHZhbHVlKSkgewogICAgICB0aHJvdyBuZXcgRXJyb3IoJ3NvdXJjZS5zd2l0Y2ggcmV0dXJuZWQgYSBub24tb2JqZWN0IGJvb2snKTsKICAgIH0KICAgIGNvbnN0IGJvb2sgPSB2YWx1ZSAgICAgICAgICAgICAgOwogICAgY29uc3QgZGVjb2RlZCAgICAgICAgICAgID0gewogICAgICBzb3VyY2VJZDogdGhpcy5yZXF1aXJlZFN0cmluZyhib29rLCAnc291cmNlSWQnKSwKICAgICAgYm9va0lkOiB0aGlzLnJlcXVpcmVkU3RyaW5nKGJvb2ssICdib29rSWQnKSwKICAgICAgdGl0bGU6IHRoaXMucmVxdWlyZWRTdHJpbmcoYm9vaywgJ3RpdGxlJyksCiAgICAgIGF1dGhvcjogdGhpcy5yZXF1aXJlZFN0cmluZyhib29rLCAnYXV0aG9yJyksCiAgICAgIGFkZGVkQXQ6IHRoaXMucmVxdWlyZWROdW1iZXIoYm9vaywgJ2FkZGVkQXQnKSwKICAgIH07CiAgICBjb25zdCBjb3ZlclVybCA9IHRoaXMub3B0aW9uYWxTdHJpbmcoYm9vaywgJ2NvdmVyVXJsJyk7CiAgICBjb25zdCBpbnRybyA9IHRoaXMub3B0aW9uYWxTdHJpbmcoYm9vaywgJ2ludHJvJyk7CiAgICBjb25zdCBsYXN0Q2hhcHRlciA9IHRoaXMub3B0aW9uYWxTdHJpbmcoYm9vaywgJ2xhc3RDaGFwdGVyJyk7CiAgICBjb25zdCBsYXN0UmVhZEF0ID0gdGhpcy5vcHRpb25hbE51bWJlcihib29rLCAnbGFzdFJlYWRBdCcpOwogICAgaWYgKGNvdmVyVXJsICE9PSB1bmRlZmluZWQpIHsKICAgICAgZGVjb2RlZC5jb3ZlclVybCA9IGNvdmVyVXJsOwogICAgfQogICAgaWYgKGludHJvICE9PSB1bmRlZmluZWQpIHsKICAgICAgZGVjb2RlZC5pbnRybyA9IGludHJvOwogICAgfQogICAgaWYgKGxhc3RDaGFwdGVyICE9PSB1bmRlZmluZWQpIHsKICAgICAgZGVjb2RlZC5sYXN0Q2hhcHRlciA9IGxhc3RDaGFwdGVyOwogICAgfQogICAgaWYgKGxhc3RSZWFkQXQgIT09IHVuZGVmaW5lZCkgewogICAgICBkZWNvZGVkLmxhc3RSZWFkQXQgPSBsYXN0UmVhZEF0OwogICAgfQogICAgcmV0dXJuIGRlY29kZWQ7CiAgfQoKICAgICAgICAgIHJlcXVpcmVkU3RyaW5nKHZhbHVlICAgICAgICAgICAgLCBrZXkgICAgICAgICkgICAgICAgICB7CiAgICBjb25zdCBjYW5kaWRhdGUgPSB2YWx1ZVtrZXldOwogICAgaWYgKHR5cGVvZiBjYW5kaWRhdGUgIT09ICdzdHJpbmcnIHx8IGNhbmRpZGF0ZS5sZW5ndGggPT09IDApIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKGBzb3VyY2Uuc3dpdGNoIHByb3RvY29sIHJldHVybmVkIGludmFsaWQgJHtrZXl9YCk7CiAgICB9CiAgICByZXR1cm4gY2FuZGlkYXRlOwogIH0KCiAgICAgICAgICBvcHRpb25hbFN0cmluZyh2YWx1ZSAgICAgICAgICAgICwga2V5ICAgICAgICApICAgICAgICAgICAgICAgICAgICAgewogICAgY29uc3QgY2FuZGlkYXRlID0gdmFsdWVba2V5XTsKICAgIGlmIChjYW5kaWRhdGUgPT09IHVuZGVmaW5lZCB8fCBjYW5kaWRhdGUgPT09IG51bGwpIHsKICAgICAgcmV0dXJuIHVuZGVmaW5lZDsKICAgIH0KICAgIGlmICh0eXBlb2YgY2FuZGlkYXRlICE9PSAnc3RyaW5nJykgewogICAgICB0aHJvdyBuZXcgRXJyb3IoYHNvdXJjZS5zd2l0Y2ggcHJvdG9jb2wgcmV0dXJuZWQgaW52YWxpZCAke2tleX1gKTsKICAgIH0KICAgIHJldHVybiBjYW5kaWRhdGU7CiAgfQoKICAgICAgICAgIHJlcXVpcmVkTnVtYmVyKHZhbHVlICAgICAgICAgICAgLCBrZXkgICAgICAgICkgICAgICAgICB7CiAgICBjb25zdCBjYW5kaWRhdGUgPSB2YWx1ZVtrZXldOwogICAgaWYgKHR5cGVvZiBjYW5kaWRhdGUgIT09ICdudW1iZXInIHx8ICFOdW1iZXIuaXNJbnRlZ2VyKGNhbmRpZGF0ZSkpIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKGBzb3VyY2Uuc3dpdGNoIHByb3RvY29sIHJldHVybmVkIGludmFsaWQgJHtrZXl9YCk7CiAgICB9CiAgICByZXR1cm4gY2FuZGlkYXRlOwogIH0KCiAgICAgICAgICBvcHRpb25hbE51bWJlcih2YWx1ZSAgICAgICAgICAgICwga2V5ICAgICAgICApICAgICAgICAgICAgICAgICAgICAgewogICAgY29uc3QgY2FuZGlkYXRlID0gdmFsdWVba2V5XTsKICAgIGlmIChjYW5kaWRhdGUgPT09IHVuZGVmaW5lZCB8fCBjYW5kaWRhdGUgPT09IG51bGwpIHsKICAgICAgcmV0dXJuIHVuZGVmaW5lZDsKICAgIH0KICAgIGlmICh0eXBlb2YgY2FuZGlkYXRlICE9PSAnbnVtYmVyJykgewogICAgICB0aHJvdyBuZXcgRXJyb3IoYHNvdXJjZS5zd2l0Y2ggcHJvdG9jb2wgcmV0dXJuZWQgaW52YWxpZCAke2tleX1gKTsKICAgIH0KICAgIHJldHVybiBjYW5kaWRhdGU7CiAgfQoKICAgICAgICAgIHJlcXVpcmVOb25OZWdhdGl2ZUludGVnZXIodmFsdWUgICAgICAgICAgICAsIGtleSAgICAgICAgLCBjb21tYW5kICAgICAgICApICAgICAgICAgewogICAgY29uc3QgY2FuZGlkYXRlID0gdmFsdWVba2V5XTsKICAgIGlmICh0eXBlb2YgY2FuZGlkYXRlICE9PSAnbnVtYmVyJyB8fCAhTnVtYmVyLmlzSW50ZWdlcihjYW5kaWRhdGUpIHx8IGNhbmRpZGF0ZSA8IDApIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKGAke2NvbW1hbmR9IHJldHVybmVkIGFuIGludmFsaWQgJHtrZXl9YCk7CiAgICB9CiAgICByZXR1cm4gY2FuZGlkYXRlOwogIH0KCiAgICAgICAgICByZXF1aXJlU3RyaW5nKHZhbHVlICAgICAgICAgICAgLCBrZXkgICAgICAgICwgY29tbWFuZCAgICAgICAgKSAgICAgICAgIHsKICAgIGNvbnN0IGNhbmRpZGF0ZSA9IHZhbHVlW2tleV07CiAgICBpZiAodHlwZW9mIGNhbmRpZGF0ZSAhPT0gJ3N0cmluZycgfHwgY2FuZGlkYXRlLnRyaW0oKS5sZW5ndGggPT09IDApIHsKICAgICAgdGhyb3cgbmV3IEVycm9yKGAke2NvbW1hbmR9IHJldHVybmVkIGFuIGludmFsaWQgJHtrZXl9YCk7CiAgICB9CiAgICByZXR1cm4gY2FuZGlkYXRlOwogIH0KCiAgICAgICAgICByZXF1aXJlT2JqZWN0KHZhbHVlICAgICAgICAgLCBjb250ZXh0ICAgICAgICApICAgICAgICAgICAgIHsKICAgIGlmICh0eXBlb2YgdmFsdWUgIT09ICdvYmplY3QnIHx8IHZhbHVlID09PSBudWxsIHx8IEFycmF5LmlzQXJyYXkodmFsdWUpKSB7CiAgICAgIHRocm93IG5ldyBFcnJvcihgJHtjb250ZXh0fSByZXR1cm5lZCBhIG5vbi1vYmplY3QgdmFsdWVgKTsKICAgIH0KICAgIHJldHVybiB2YWx1ZSAgICAgICAgICAgICAgOwogIH0KCiAgICAgICAgICByZXF1aXJlU3RyaW5nTWFwKHZhbHVlICAgICAgICAgLCBrZXkgICAgICAgICwgY29tbWFuZCAgICAgICAgKSAgICAgICAgICAgICB7CiAgICBjb25zdCByYXcgPSB0aGlzLnJlcXVpcmVPYmplY3QodmFsdWUsIGAke2NvbW1hbmR9ICR7a2V5fWApOwogICAgY29uc3QgZGVjb2RlZCAgICAgICAgICAgICA9IHt9OwogICAgZm9yIChjb25zdCB2YXJpYWJsZU5hbWUgb2YgT2JqZWN0LmtleXMocmF3KSkgewogICAgICBjb25zdCB2YXJpYWJsZVZhbHVlID0gcmF3W3ZhcmlhYmxlTmFtZV07CiAgICAgIGlmICh0eXBlb2YgdmFyaWFibGVWYWx1ZSAhPT0gJ3N0cmluZycpIHsKICAgICAgICB0aHJvdyBuZXcgRXJyb3IoYCR7Y29tbWFuZH0gcmV0dXJuZWQgaW52YWxpZCAke2tleX1gKTsKICAgICAgfQogICAgICBkZWNvZGVkW3ZhcmlhYmxlTmFtZV0gPSB2YXJpYWJsZVZhbHVlOwogICAgfQogICAgcmV0dXJuIGRlY29kZWQ7CiAgfQoKICAgICAgICAgIGFzeW5jIGxvYWRFbmFibGVkU291cmNlcygKICAgIGlzQ3VycmVudCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLAogICkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHsKICAgIGNvbnN0IHJldmlzaW9uID0gdGhpcy5ydW50aW1lT3duZXIuYm9va0FjcXVpc2l0aW9ucz8uKCkuc291cmNlUmVnaXN0cnlSZXZpc2lvbigpOwogICAgaWYgKHJldmlzaW9uICE9PSB1bmRlZmluZWQgJiYgdGhpcy5jYWNoZWRTb3VyY2VSZXZpc2lvbiA9PT0gcmV2aXNpb24gJiYgdGhpcy5jYWNoZWRTb3VyY2VzICE9PSB1bmRlZmluZWQpIHJldHVybiB0aGlzLmNhY2hlZFNvdXJjZXM7CiAgICBjb25zdCByZXN1bHQgPSBhd2FpdCB0aGlzLnJ1bnRpbWVPd25lci5yZXF1ZXN0KAogICAgICAnc291cmNlLmxpc3QnLAogICAgICB7IGVuYWJsZWRPbmx5OiB0cnVlIH0sCiAgICAgIHRoaXMucmVxdWVzdE9wdGlvbnMoaXNDdXJyZW50KSwKICAgICk7CiAgICBjb25zdCByYXdTb3VyY2VzID0gcmVzdWx0LmRhdGFbJ3NvdXJjZXMnXTsKICAgIGlmICghQXJyYXkuaXNBcnJheShyYXdTb3VyY2VzKSkgewogICAgICB0aHJvdyBuZXcgRXJyb3IoJ3NvdXJjZS5saXN0IHJldHVybmVkIGludmFsaWQgZGF0YScpOwogICAgfQogICAgY29uc3Qgc291cmNlcyA9IG5ldyBNYXAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICgpOwogICAgZm9yIChsZXQgc291cmNlT3JkZXIgPSAwOyBzb3VyY2VPcmRlciA8IHJhd1NvdXJjZXMubGVuZ3RoOyBzb3VyY2VPcmRlciArPSAxKSB7CiAgICAgIGNvbnN0IHJhdyA9IHJhd1NvdXJjZXNbc291cmNlT3JkZXJdOwogICAgICBpZiAodHlwZW9mIHJhdyAhPT0gJ29iamVjdCcgfHwgcmF3ID09PSBudWxsIHx8IEFycmF5LmlzQXJyYXkocmF3KSkgewogICAgICAgIGNvbnRpbnVlOwogICAgICB9CiAgICAgIGNvbnN0IHNvdXJjZSA9IHJhdyAgICAgICAgICAgICAgOwogICAgICBjb25zdCBzb3VyY2VJZCA9IHRoaXMub3B0aW9uYWxTdHJpbmcoc291cmNlLCAnc291cmNlSWQnKTsKICAgICAgaWYgKHNvdXJjZVsnZW5hYmxlZCddID09PSB0cnVlICYmIHNvdXJjZUlkICE9PSB1bmRlZmluZWQgJiYgc291cmNlSWQudHJpbSgpLmxlbmd0aCA+IDApIHsKICAgICAgICBjb25zdCBzb3VyY2VOYW1lID0gdGhpcy5vcHRpb25hbFN0cmluZyhzb3VyY2UsICduYW1lJyk7CiAgICAgICAgY29uc3QgcmF3Qm9va1NvdXJjZSA9IHNvdXJjZVsnYm9va1NvdXJjZSddOwogICAgICAgIGxldCBib29rU291cmNlVHlwZSAgICAgICAgICA9IHVuZGVmaW5lZDsKICAgICAgICBsZXQgZ3JvdXAgICAgICAgICAgICAgICAgICAgICA9IHVuZGVmaW5lZDsKICAgICAgICBpZiAocmF3Qm9va1NvdXJjZSAhPT0gbnVsbCAmJiB0eXBlb2YgcmF3Qm9va1NvdXJjZSA9PT0gJ29iamVjdCcgJiYgIUFycmF5LmlzQXJyYXkocmF3Qm9va1NvdXJjZSkpIHsKICAgICAgICAgIGNvbnN0IGJvb2tTb3VyY2UgPSByYXdCb29rU291cmNlICAgICAgICAgICAgICA7CiAgICAgICAgICBib29rU291cmNlVHlwZSA9IGJvb2tTb3VyY2VbJ2Jvb2tTb3VyY2VUeXBlJ107CiAgICAgICAgICBncm91cCA9IHRoaXMub3B0aW9uYWxTdHJpbmcoYm9va1NvdXJjZSwgJ2Jvb2tTb3VyY2VHcm91cCcpOwogICAgICAgIH0KICAgICAgICBjb25zdCBjYXRlZ29yeSA9IGNsYXNzaWZ5UmVhZGVyU291cmNlKHsgYm9va1NvdXJjZVR5cGUsIG5hbWU6IHNvdXJjZU5hbWUsIGdyb3VwLCBzb3VyY2VJZCwKICAgICAgICAgIGJhc2VVcmw6IHRoaXMub3B0aW9uYWxTdHJpbmcoc291cmNlLCAnYmFzZVVybCcpIH0pOwogICAgICAgIGlmICghcmVhZGVyU291cmNlQ2F0ZWdvcnlJc1RleHQoY2F0ZWdvcnkpKSBjb250aW51ZTsKICAgICAgICBzb3VyY2VzLnNldChzb3VyY2VJZCwgewogICAgICAgICAgc291cmNlSWQsCiAgICAgICAgICBzb3VyY2VOYW1lOiBzb3VyY2VOYW1lID09PSB1bmRlZmluZWQgfHwgc291cmNlTmFtZS50cmltKCkubGVuZ3RoID09PSAwID8gc291cmNlSWQgOiBzb3VyY2VOYW1lLAogICAgICAgICAgc291cmNlT3JkZXIsCiAgICAgICAgICBzb3VyY2VWZXJzaW9uOiB0aGlzLm9wdGlvbmFsU3RyaW5nKHNvdXJjZSwgJ3NvdXJjZVZlcnNpb24nKSwKICAgICAgICAgIGNhdGVnb3J5LAogICAgICAgIH0pOwogICAgICB9CiAgICB9CiAgICBpZiAocmV2aXNpb24gIT09IHRoaXMucnVudGltZU93bmVyLmJvb2tBY3F1aXNpdGlvbnM/LigpLnNvdXJjZVJlZ2lzdHJ5UmV2aXNpb24oKSkgdGhyb3cgbmV3IEVycm9yKCfkuabmupDphY3nva7lt7Llj5jmm7TvvIzor7fph43or5UnKTsKICAgIHRoaXMuY2FjaGVkU291cmNlUmV2aXNpb24gPSByZXZpc2lvbjsKICAgIHRoaXMuY2FjaGVkU291cmNlcyA9IHNvdXJjZXM7CiAgICByZXR1cm4gc291cmNlczsKICB9CgogICAgICAgICAgbWF0Y2hlc0NhbmRpZGF0ZUJvb2soCiAgICBjYW5kaWRhdGUgICAgICAgICAgICAgICAgICAgICAgICwKICAgIHF1ZXJ5ICAgICAgICAgICAgICAgICAgICAgICAgLAogICkgICAgICAgICAgewogICAgcmV0dXJuIHRoaXMubm9ybWFsaXplQm9va05hbWUoY2FuZGlkYXRlLmJvb2tOYW1lKSA9PT0gdGhpcy5ub3JtYWxpemVCb29rTmFtZShxdWVyeS5ib29rTmFtZSkgJiYKICAgICAgYm9va0F1dGhvcklkZW50aXR5KGNhbmRpZGF0ZS5hdXRob3IgPz8gJycsIGNhbmRpZGF0ZS5hdXRob3JJZGVudGl0eSwgY2FuZGlkYXRlLnNvdXJjZVZlcnNpb24pID09PQogICAgICAgIGJvb2tBdXRob3JJZGVudGl0eShxdWVyeS5hdXRob3IsIHF1ZXJ5LmF1dGhvcklkZW50aXR5LCBxdWVyeS5zb3VyY2VWZXJzaW9uKTsKICB9CgogICAgICAgICAgZGVjb2RlQ2FjaGVkQ2FuZGlkYXRlKAogICAgYm9vayAgICAgICAgICAgICwKICAgIHF1ZXJ5ICAgICAgICAgICAgICAgICAgICAgICAgLAogICAgY2hlY2tlZEF0ICAgICAgICAsCiAgICBzb3VyY2UgICAgICAgICAgICAgICAgICAgICAgICAgICAsCiAgKSAgICAgICAgICAgICAgICAgICAgICAgIHsKICAgIGNvbnN0IHNvdXJjZUlkID0gdGhpcy5yZXF1aXJlU3RyaW5nKGJvb2ssICdvcmlnaW4nLCAnc2VhcmNoLWJvb2sucmVsYXRlZCcpOwogICAgY29uc3QgYm9va1VybCA9IHRoaXMucmVxdWlyZVN0cmluZyhib29rLCAnYm9va1VybCcsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICBjb25zdCBib29rTmFtZSA9IHRoaXMucmVxdWlyZVN0cmluZyhib29rLCAnbmFtZScsICdzZWFyY2gtYm9vay5yZWxhdGVkJyk7CiAgICBjb25zdCBjYW5kaWRhdGUgICAgICAgICAgICAgICAgICAgICAgICA9IHsKICAgICAgc291cmNlSWQsCiAgICAgIHNvdXJjZU5hbWU6IHNvdXJjZS5zb3VyY2VOYW1lLAogICAgICBjYXRlZ29yeTogc291cmNlLmNhdGVnb3J5LAogICAgICBzb3VyY2VPcmRlcjogc291cmNlLnNvdXJjZU9yZGVyLAogICAgICBib29rVXJsLAogICAgICBib29rTmFtZSwKICAgICAgY2hlY2tlZEF0LAogICAgICBpc0N1cnJlbnQ6IHNvdXJjZVN3aXRjaENhbmRpZGF0ZUtleShzb3VyY2VJZCwgYm9va1VybCkgPT09CiAgICAgICAgc291cmNlU3dpdGNoQ2FuZGlkYXRlS2V5KHF1ZXJ5LnNvdXJjZUlkLCBxdWVyeS5ib29rSWQpLAogICAgfTsKICAgIGNvbnN0IGZhY3RzID0gYm9va1snYWNxdWlzaXRpb24nXSAgICAgICAgICAgICAgICAgICAgICAgICAgOwogICAgY29uc3QgdmVyc2lvbiA9IGZhY3RzID09PSB1bmRlZmluZWQgPyB1bmRlZmluZWQgOiB0aGlzLm9wdGlvbmFsU3RyaW5nKGZhY3RzLCAnc291cmNlVmVyc2lvbicpOwogICAgY2FuZGlkYXRlLnNvdXJjZVZlcnNpb24gPSB2ZXJzaW9uOwogICAgY29uc3QgY2F0YWxvZ0F0ID0gZmFjdHMgPT09IHVuZGVmaW5lZCA/IGNoZWNrZWRBdCA6IHRoaXMub3B0aW9uYWxOdW1iZXIoZmFjdHMsICdjYXRhbG9nQXQnKSA/PyBjaGVja2VkQXQ7CiAgICBjb25zdCBzdGFsZSA9IGNhdGFsb2dBdCA8PSAwIHx8IERhdGUubm93KCkgPCBjYXRhbG9nQXQgfHwgRGF0ZS5ub3coKSAtIGNhdGFsb2dBdCA+PSBTT1VSQ0VfU1dJVENIX0NBQ0hFX1RUTF9NUyB8fAogICAgICBmYWN0cz8uWydzdGFsZSddID09PSB0cnVlIHx8IChzb3VyY2Uuc291cmNlVmVyc2lvbiAhPT0gdW5kZWZpbmVkICYmIHZlcnNpb24gIT09IHNvdXJjZS5zb3VyY2VWZXJzaW9uKTsKICAgIGNvbnN0IGZhaWx1cmUgPSBmYWN0cz8uWydmYWlsdXJlJ10gICAgICAgICAgICAgICAgICAgICAgICAgIDsKICAgIGNvbnN0IHJhbmsgPSBhY3F1aXNpdGlvbkNhbmRpZGF0ZVJhbmsoZmFjdHMsIHNvdXJjZS5zb3VyY2VWZXJzaW9uID8/ICcnKTsKICAgIGNvbnN0IHVuY29uZmlybWVkRmFpbHVyZSA9IGFjcXVpc2l0aW9uQXR0ZW1wdEZhaWx1cmVDdXJyZW50KGZhY3RzLCBzb3VyY2Uuc291cmNlVmVyc2lvbiA/PyAnJykgJiYgcmFuayAhPT0gMzsKICAgIGNhbmRpZGF0ZS5hY3F1aXNpdGlvblN0YXRlID0gc3RhbGUgPyAnc3RhbGUnIDogcmFuayA9PT0gMyA/ICdmYWlsZWQnIDogdW5jb25maXJtZWRGYWlsdXJlID8gJ2F0dGVtcHRGYWlsZWQnIDogcmFuayA9PT0gMCA/ICdyZWFkYWJsZScgOgogICAgICByYW5rID09PSAxID8gJ2NhdGFsb2dSZWFkeScgOiAnZGlzY292ZXJlZCc7CiAgICBjYW5kaWRhdGUudmVyaWZpZWRDaGFwdGVyVXJsID0gYWNxdWlzaXRpb25SZWFkYWJsZUN1cnJlbnQoZmFjdHMsIHNvdXJjZS5zb3VyY2VWZXJzaW9uID8/ICcnKSAmJiBmYWN0cyAhPT0gdW5kZWZpbmVkID8KICAgICAgdGhpcy5vcHRpb25hbFN0cmluZyhmYWN0cywgJ3JlYWRhYmxlQ2hhcHRlclVybCcpIDogdW5kZWZpbmVkOwogICAgY2FuZGlkYXRlLmFjcXVpc2l0aW9uTWVzc2FnZSA9IGFjcXVpc2l0aW9uQm9va0ZhaWx1cmVDdXJyZW50KGZhY3RzLCBzb3VyY2Uuc291cmNlVmVyc2lvbiA/PyAnJykgJiYgZmFpbHVyZSAhPT0gdW5kZWZpbmVkID8KICAgICAgdGhpcy5vcHRpb25hbFN0cmluZyhmYWlsdXJlLCAnbWVzc2FnZScpIDogdW5jb25maXJtZWRGYWlsdXJlID8gJ+S4iuasoeivu+WPluWksei0pScgOiB1bmRlZmluZWQ7CiAgICBjb25zdCB2YXJpYWJsZSA9IHRoaXMub3B0aW9uYWxTdHJpbmcoYm9vaywgJ3ZhcmlhYmxlJyk7CiAgICBpZiAodmFyaWFibGUgIT09IHVuZGVmaW5lZCkgewogICAgICB0cnkgewogICAgICAgIGNvbnN0IHBhcnNlZCA9IEpTT04ucGFyc2UodmFyaWFibGUpICAgICAgICAgICAgICA7CiAgICAgICAgaWYgKHBhcnNlZCAhPT0gbnVsbCAmJiB0eXBlb2YgcGFyc2VkID09PSAnb2JqZWN0JyAmJiAhQXJyYXkuaXNBcnJheShwYXJzZWQpKSB7CiAgICAgICAgICBjb25zdCB2YXJpYWJsZXMgICAgICAgICAgICAgICAgICAgICAgICAgID0gW107CiAgICAgICAgICBmb3IgKGNvbnN0IG5hbWUgb2YgT2JqZWN0LmtleXMocGFyc2VkKSkgewogICAgICAgICAgICBpZiAodHlwZW9mIHBhcnNlZFtuYW1lXSAhPT0gJ3N0cmluZycpIHRocm93IG5ldyBFcnJvcign5YCZ6YCJ57ut5Lyg5Y+Y6YeP5peg5pWIJyk7CiAgICAgICAgICAgIHZhcmlhYmxlcy5wdXNoKHsgbmFtZSwgdmFsdWU6IHBhcnNlZFtuYW1lXSAgICAgICAgICAgfSk7CiAgICAgICAgICB9CiAgICAgICAgICBjYW5kaWRhdGUuc2VhcmNoVmFyaWFibGVzID0gdmFyaWFibGVzOwogICAgICAgIH0KICAgICAgfSBjYXRjaCAoX2Vycm9yKSB7IC8qIExlZ2FjeSBpbnZhbGlkIHZhcmlhYmxlIEpTT04gY2Fubm90IGF1dGhvcml6ZSBhIHJlcXVlc3QgY29udGV4dC4gKi8gfQogICAgfQogICAgY29uc3QgYXV0aG9yID0gdGhpcy5vcHRpb25hbFN0cmluZyhib29rLCAnYXV0aG9yJyk7CiAgICBjb25zdCBjb3ZlclVybCA9IHRoaXMub3B0aW9uYWxTdHJpbmcoYm9vaywgJ2NvdmVyVXJsJyk7CiAgICBjb25zdCBsYXRlc3RDaGFwdGVyVGl0bGUgPSB0aGlzLm9wdGlvbmFsU3RyaW5nKGJvb2ssICdsYXRlc3RDaGFwdGVyVGl0bGUnKTsKICAgIGNvbnN0IGxhdGVuY3lNcyA9IHRoaXMub3B0aW9uYWxOdW1iZXIoYm9vaywgJ3Jlc3BvbmRUaW1lJyk7CiAgICBjb25zdCBjaGFwdGVyV29yZENvdW50ID0gdGhpcy5vcHRpb25hbE51bWJlcihib29rLCAnY2hhcHRlcldvcmRDb3VudCcpOwogICAgY29uc3QgY2FjaGVkQ2hhcHRlciA9IHRoaXMucGFyc2VDYWNoZWRDaGFwdGVyKHRoaXMub3B0aW9uYWxTdHJpbmcoYm9vaywgJ2NoYXB0ZXJXb3JkQ291bnRUZXh0JykpOwogICAgaWYgKGF1dGhvciAhPT0gdW5kZWZpbmVkICYmIGF1dGhvci5sZW5ndGggPiAwKSB7CiAgICAgIGNhbmRpZGF0ZS5hdXRob3IgPSBhdXRob3I7CiAgICAgIGNhbmRpZGF0ZS5hdXRob3JJZGVudGl0eSA9IHJlYWRCb29rQXV0aG9ySWRlbnRpdHkoZmFjdHM/LlsnYXV0aG9ySWRlbnRpdHknXSwgYXV0aG9yLCBzb3VyY2Uuc291cmNlVmVyc2lvbik7CiAgICB9CiAgICBpZiAoY292ZXJVcmwgIT09IHVuZGVmaW5lZCAmJiBjb3ZlclVybC5sZW5ndGggPiAwKSB7CiAgICAgIGNhbmRpZGF0ZS5jb3ZlclVybCA9IGNvdmVyVXJsOwogICAgfQogICAgaWYgKGxhdGVzdENoYXB0ZXJUaXRsZSAhPT0gdW5kZWZpbmVkICYmIGxhdGVzdENoYXB0ZXJUaXRsZS5sZW5ndGggPiAwKSB7CiAgICAgIGNhbmRpZGF0ZS5sYXRlc3RDaGFwdGVyVGl0bGUgPSBsYXRlc3RDaGFwdGVyVGl0bGU7CiAgICB9CiAgICBpZiAobGF0ZW5jeU1zICE9PSB1bmRlZmluZWQgJiYgbGF0ZW5jeU1zID49IDApIHsKICAgICAgY2FuZGlkYXRlLmxhdGVuY3lNcyA9IGxhdGVuY3lNczsKICAgIH0KICAgIGlmIChjaGFwdGVyV29yZENvdW50ICE9PSB1bmRlZmluZWQgJiYgY2hhcHRlcldvcmRDb3VudCA+PSAwKSB7CiAgICAgIGNhbmRpZGF0ZS5jaGFwdGVyV29yZENvdW50ID0gY2hhcHRlcldvcmRDb3VudDsKICAgIH0KICAgIGlmIChjYWNoZWRDaGFwdGVyICE9PSB1bmRlZmluZWQpIHsKICAgICAgY2FuZGlkYXRlLmN1cnJlbnRDaGFwdGVyVGl0bGUgPSBjYWNoZWRDaGFwdGVyLnRpdGxlOwogICAgICBpZiAoY2FjaGVkQ2hhcHRlci5pbmRleCAhPT0gdW5kZWZpbmVkKSB7CiAgICAgICAgY2FuZGlkYXRlLmN1cnJlbnRDaGFwdGVySW5kZXggPSBjYWNoZWRDaGFwdGVyLmluZGV4OwogICAgICB9CiAgICB9CiAgICByZXR1cm4gY2FuZGlkYXRlOwogIH0KCiAgICAgICAgICBwYXJzZUNhY2hlZENoYXB0ZXIodmFsdWUgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgewogICAgaWYgKHZhbHVlID09PSB1bmRlZmluZWQgfHwgdmFsdWUudHJpbSgpLmxlbmd0aCA9PT0gMCkgewogICAgICByZXR1cm4gdW5kZWZpbmVkOwogICAgfQogICAgY29uc3QgZmlyc3RMaW5lID0gdmFsdWUuc3BsaXQoJ1xuJylbMF0udHJpbSgpOwogICAgY29uc3QgbWF0Y2ggPSAvXlxbKFxkKyldXHMqKC4qKSQvLmV4ZWMoZmlyc3RMaW5lKTsKICAgIGlmIChtYXRjaCA9PT0gbnVsbCkgewogICAgICByZXR1cm4geyB0aXRsZTogZmlyc3RMaW5lIH07CiAgICB9CiAgICBjb25zdCBvbmVCYXNlZEluZGV4ID0gTnVtYmVyKG1hdGNoWzFdKTsKICAgIGNvbnN0IHRpdGxlID0gbWF0Y2hbMl0udHJpbSgpOwogICAgaWYgKCFOdW1iZXIuaXNJbnRlZ2VyKG9uZUJhc2VkSW5kZXgpIHx8IG9uZUJhc2VkSW5kZXggPD0gMCB8fCB0aXRsZS5sZW5ndGggPT09IDApIHsKICAgICAgcmV0dXJuIHsgdGl0bGU6IGZpcnN0TGluZSB9OwogICAgfQogICAgcmV0dXJuIHsgdGl0bGUsIGluZGV4OiBvbmVCYXNlZEluZGV4IC0gMSB9OwogIH0KCiAgICAgICAgICBzb3J0Q2FuZGlkYXRlcyhjYW5kaWRhdGVzICAgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgICAgICAgICAgIHsKICAgIHJldHVybiBjYW5kaWRhdGVzLnNsaWNlKCkuc29ydCgobGVmdCAgICAgICAgICAgICAgICAgICAgICAgLCByaWdodCAgICAgICAgICAgICAgICAgICAgICAgKSAgICAgICAgID0+IHsKICAgICAgY29uc3Qgb3JkZXIgPSAobGVmdC5zb3VyY2VPcmRlciA/PyAwKSAtIChyaWdodC5zb3VyY2VPcmRlciA/PyAwKTsKICAgICAgaWYgKG9yZGVyICE9PSAwKSB7CiAgICAgICAgcmV0dXJuIG9yZGVyOwogICAgICB9CiAgICAgIGNvbnN0IGxlZnRLZXkgPSBzb3VyY2VTd2l0Y2hDYW5kaWRhdGVLZXkobGVmdC5zb3VyY2VJZCwgbGVmdC5ib29rVXJsKTsKICAgICAgY29uc3QgcmlnaHRLZXkgPSBzb3VyY2VTd2l0Y2hDYW5kaWRhdGVLZXkocmlnaHQuc291cmNlSWQsIHJpZ2h0LmJvb2tVcmwpOwogICAgICByZXR1cm4gbGVmdEtleSA8IHJpZ2h0S2V5ID8gLTEgOiBsZWZ0S2V5ID4gcmlnaHRLZXkgPyAxIDogMDsKICAgIH0pOwogIH0KCiAgICAgICAgICBub3JtYWxpemVCb29rTmFtZSh2YWx1ZSAgICAgICAgKSAgICAgICAgIHsKICAgIGNvbnN0IGNhY2hlZCA9IHRoaXMubm9ybWFsaXplZE1hdGNoVGV4dC5nZXQodmFsdWUpOwogICAgaWYgKGNhY2hlZCAhPT0gdW5kZWZpbmVkKSByZXR1cm4gY2FjaGVkOwogICAgY29uc3Qgbm9ybWFsaXplZCA9IHZhbHVlLnRyaW0oKS5yZXBsYWNlKC9ccysvZywgJyAnKS50b0xvY2FsZUxvd2VyQ2FzZSgpOwogICAgaWYgKHZhbHVlLmxlbmd0aCA8PSAyMDQ4KSB7CiAgICAgIGlmICh0aGlzLm5vcm1hbGl6ZWRNYXRjaFRleHQuc2l6ZSA+PSAyMDQ4KSB7CiAgICAgICAgZm9yIChjb25zdCBvbGRlc3Qgb2YgdGhpcy5ub3JtYWxpemVkTWF0Y2hUZXh0LmtleXMoKSkgeyB0aGlzLm5vcm1hbGl6ZWRNYXRjaFRleHQuZGVsZXRlKG9sZGVzdCk7IGJyZWFrOyB9CiAgICAgIH0KICAgICAgdGhpcy5ub3JtYWxpemVkTWF0Y2hUZXh0LnNldCh2YWx1ZSwgbm9ybWFsaXplZCk7CiAgICB9CiAgICByZXR1cm4gbm9ybWFsaXplZDsKICB9CgogICAgICAgICAgbWF0Y2hlc0F1dGhvcihjYW5kaWRhdGVBdXRob3IgICAgICAgICAgICAgICAgICAgICwgcXVlcnlBdXRob3IgICAgICAgICkgICAgICAgICAgewogICAgY29uc3QgZXhwZWN0ZWQgPSB0aGlzLm5vcm1hbGl6ZUF1dGhvcihxdWVyeUF1dGhvcik7CiAgICByZXR1cm4gdGhpcy5ub3JtYWxpemVBdXRob3IoY2FuZGlkYXRlQXV0aG9yID8/ICcnKSA9PT0gZXhwZWN0ZWQ7CiAgfQoKICAgICAgICAgIG5vcm1hbGl6ZUF1dGhvcih2YWx1ZSAgICAgICAgKSAgICAgICAgIHsKICAgIHJldHVybiBib29rQXV0aG9ySWRlbnRpdHkodmFsdWUpOwogIH0KCiAgICAgICAgICBub3JtYWxpemVDaGFwdGVyVGl0bGUodmFsdWUgICAgICAgICkgICAgICAgICB7CiAgICByZXR1cm4gdmFsdWUudHJpbSgpLnJlcGxhY2UoL1xzKy9nLCAnICcpLnRvTG9jYWxlTG93ZXJDYXNlKCk7CiAgfQoKICAgICAgICAgIG1lcmdlVmFyaWFibGVzKGJhc2UgICAgICAgICAgICAsIG92ZXJyaWRlICAgICAgICAgICAgKSAgICAgICAgICAgICB7CiAgICBjb25zdCBtZXJnZWQgICAgICAgICAgICAgPSB7fTsKICAgIGZvciAoY29uc3Qga2V5IG9mIE9iamVjdC5rZXlzKGJhc2UpKSB7CiAgICAgIG1lcmdlZFtrZXldID0gYmFzZVtrZXldOwogICAgfQogICAgZm9yIChjb25zdCBrZXkgb2YgT2JqZWN0LmtleXMob3ZlcnJpZGUpKSB7CiAgICAgIG1lcmdlZFtrZXldID0gb3ZlcnJpZGVba2V5XTsKICAgIH0KICAgIHJldHVybiBtZXJnZWQ7CiAgfQoKICAgICAgICAgIHZhbGlkYXRlUHJvYmVRdWVyeShxdWVyeSAgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgewogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyhxdWVyeS5zb3VyY2VJZCwgJ3NvdXJjZUlkJyk7CiAgICB0aGlzLmFzc2VydE5vbkJsYW5rU3RyaW5nKHF1ZXJ5LmJvb2tJZCwgJ2Jvb2tJZCcpOwogICAgdGhpcy5hc3NlcnROb25CbGFua1N0cmluZyhxdWVyeS5ib29rTmFtZSwgJ2Jvb2tOYW1lJyk7CgogICAgaWYgKCFOdW1iZXIuaXNJbnRlZ2VyKHF1ZXJ5LmN1cnJlbnRDaGFwdGVySW5kZXgpIHx8IHF1ZXJ5LmN1cnJlbnRDaGFwdGVySW5kZXggPCAwKSB7CiAgICAgIHRocm93IG5ldyBFcnJvcignY3VycmVudENoYXB0ZXJJbmRleCBtdXN0IGJlIGEgbm9uLW5lZ2F0aXZlIGludGVnZXInKTsKICAgIH0KICB9CgogICAgICAgICAgYXNzZXJ0Tm9uQmxhbmtTdHJpbmcodmFsdWUgICAgICAgICwgZmllbGQgICAgICAgICkgICAgICAgewogICAgaWYgKHR5cGVvZiB2YWx1ZSAhPT0gJ3N0cmluZycgfHwgdmFsdWUudHJpbSgpLmxlbmd0aCA9PT0gMCkgewogICAgICB0aHJvdyBuZXcgRXJyb3IoYCR7ZmllbGR9IG11c3QgYmUgYSBub24tYmxhbmsgc3RyaW5nYCk7CiAgICB9CiAgfQp9CgovKioKICogUHVyZSBtYXBwaW5nIGZyb20gYSBkaXNjb3ZlcmVkIGNhbmRpZGF0ZSArIGl0cyBmZXRjaGVkIFRPQyBpbnRvIHRoZQogKiBgc291cmNlLnN3aXRjaC5jb21taXRgIHBhcmFtcy4gS2VlcHMgSW5kZXggdGhpbiBhbmQgdGhlIG1hcHBpbmcgdGVzdGFibGUuCiAqLwpleHBvcnQgZnVuY3Rpb24gYnVpbGRTb3VyY2VTd2l0Y2hDb21taXRQYXJhbXMoCiAgZnJvbSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLAogIGNhbmRpZGF0ZSAgICAgICAgICAgICAgICAgICAgICAgLAogIHRvYyAgICAgICAgICAgICAgICAgICAgICAgLAogIGN1cnJlbnRDaGFwdGVyVGl0bGUgICAgICAgICwKICBjdXJyZW50Q2hhcHRlckluZGV4ICAgICAgICAsCiAgdXBkYXRlZEF0ICAgICAgICAsCikgICAgICAgICAgICAgICAgICAgICAgICAgICB7CiAgY29uc3QgdGFyZ2V0ICAgICAgICAgICAgICAgICAgICAgPSB7CiAgICBzb3VyY2VJZDogY2FuZGlkYXRlLnNvdXJjZUlkLAogICAgYm9va0lkOiBjYW5kaWRhdGUuYm9va1VybCwKICAgIHRpdGxlOiBjYW5kaWRhdGUuYm9va05hbWUsCiAgfTsKICBpZiAoY2FuZGlkYXRlLmF1dGhvciAhPT0gdW5kZWZpbmVkKSB7CiAgICB0YXJnZXQuYXV0aG9yID0gY2FuZGlkYXRlLmF1dGhvcjsKICB9CiAgaWYgKGNhbmRpZGF0ZS5jb3ZlclVybCAhPT0gdW5kZWZpbmVkKSB7CiAgICB0YXJnZXQuY292ZXJVcmwgPSBjYW5kaWRhdGUuY292ZXJVcmw7CiAgfQogIGNvbnN0IG5ld1RvYyAgICAgICAgICAgICAgICAgICAgICAgICAgICA9IFtdOwogIGZvciAoY29uc3QgZW50cnkgb2YgdG9jLmVudHJpZXMpIHsKICAgIG5ld1RvYy5wdXNoKHsKICAgICAgY2hhcHRlcklkOiBlbnRyeS51cmwsCiAgICAgIGNoYXB0ZXJUaXRsZTogZW50cnkudGl0bGUsCiAgICAgIGNoYXB0ZXJVcmw6IGVudHJ5LnVybCwKICAgICAgb3JkZXI6IGVudHJ5LmluZGV4LAogICAgfSk7CiAgfQogIHJldHVybiB7CiAgICBmcm9tLAogICAgdGFyZ2V0LAogICAgbmV3VG9jLAogICAgY3VycmVudENoYXB0ZXJUaXRsZSwKICAgIGN1cnJlbnRDaGFwdGVySW5kZXgsCiAgICB1cGRhdGVkQXQsCiAgfTsKfQo=": Invalid relative URL or base scheme is not hierarchical.
+    at moduleResolve (node:internal/modules/esm/resolve:839:21)
+    at defaultResolve (node:internal/modules/esm/resolve:988:11)
+    ... 6 lines matching cause stack trace ...
+    at ModuleJob.link (node:internal/modules/esm/module_job:252:17)
+    at new ModuleJob (node:internal/modules/esm/module_job:231:26) {
+  code: 'ERR_UNSUPPORTED_RESOLVE_REQUEST',
+  cause: TypeError: Invalid URL
+      at new URL (node:internal/url:819:25)
+      at moduleResolve (node:internal/modules/esm/resolve:837:18)
+      at defaultResolve (node:internal/modules/esm/resolve:988:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:700:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:717:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:749:52)
+      at #resolve (node:internal/modules/esm/loader:682:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:602:35)
+      at ModuleJob.syncLink (node:internal/modules/esm/module_job:162:33)
+      at ModuleJob.link (node:internal/modules/esm/module_job:252:17) {
+    code: 'ERR_INVALID_URL',
+    input: '../common/BookAcquisitionPresentation',
+    base: 'data:text/javascript;base64,ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgIAogIAoKLyoqIE9ubHkgQ29yZSdzIHZlcnNpb24tYm91bmQgZXZpZGVuY2UgbWF5IHJlbW92ZSBhIHNvdXJjZSB0ZW1wbGF0ZSBkZWNvcmF0aW9uLiAqLwpleHBvcnQgZnVuY3Rpb24gcmVhZEJvb2tBdXRob3JJZGVudGl0eSh2YWx1ZSAgICAgICAgICwgcmF3ICAgICAgICAsIHNvdXJjZVZlcnNpb24gICAgICAgICApICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB7CiAgaWYgKHZhbHVlID09PSBudWxsIHx8IHR5cGVvZiB2YWx1ZSAhPT0gJ29iamVjdCcgfHwgQXJyYXkuaXNBcnJheSh2YWx1ZSkgfHwgIXNvdXJjZVZlcnNpb24pIHJldHVybiB1bmRlZmluZWQ7CiAgY29uc3QgcHJvb2YgPSB2YWx1ZSAgICAgICAgICAgICAgICAgICAgICAgICAgIDsKICBpZiAocHJvb2Yuc2NoZW1hVmVyc2lvbiAhPT0gMSB8fCBwcm9vZi5zb3VyY2VWZXJzaW9uICE9PSBzb3VyY2VWZXJzaW9uIHx8CiAgICAocHJvb2YuZmllbGQgIT09ICdzZWFyY2gnICYmIHByb29mLmZpZWxkICE9PSAnZGV0YWlsJykgfHwgcHJvb2YucnVsZSAhPT0gJ2F1dGhvci1uaWNrbmFtZS1hdC12MScgfHwKICAgIHByb29mLnJhdyAhPT0gcmF3IHx8ICFyYXcuc3RhcnRzV2l0aCgnQCcpIHx8IHR5cGVvZiBwcm9vZi5sYWJlbCAhPT0gJ3N0cmluZycgfHwKICAgIHByb29mLmxhYmVsICE9PSByYXcuc2xpY2UoMSkpIHJldHVybiB1bmRlZmluZWQ7CiAgcmV0dXJuIHByb29mOwp9CgovKiogUmVhZGVyJ3MgYXV0aG9yLWZpZWxkIGxhYmVscywgbm90IGEgcGVyc29uLW5hbWUgcGFyc2VyIG9yIGZ1enp5IG1hdGNoZXIuCiAqIEtlZXAgc3RvcmVkIG1ldGFkYXRhIGFuZCBydWxlIGNvbnRleHQgdW5jaGFuZ2VkOyB1c2UgdGhpcyBkZXJpdmVkIGxhYmVsIGZvcgogKiBwcmVzZW50YXRpb24gYW5kIGV4YWN0IHNhbWUtYm9vayBjb21wYXJpc29uIG9ubHkuIENvcmUncyBTUUxpdGUgYWxpYXMgaW5kZXgKICogZm9sbG93cyB0aGUgc2FtZSBmaXh0dXJlLWJhY2tlZCBwb2xpY3kuCiAqLwpleHBvcnQgZnVuY3Rpb24gYm9va0F1dGhvckxhYmVsKHZhbHVlICAgICAgICAsIHByb29mICAgICAgICAgICAgICAgICAgICAgICAgICAsIHNvdXJjZVZlcnNpb24gICAgICAgICApICAgICAgICAgewogIGNvbnN0IGFkbWl0dGVkID0gcmVhZEJvb2tBdXRob3JJZGVudGl0eShwcm9vZiwgdmFsdWUsIHNvdXJjZVZlcnNpb24pOwogIGxldCBsYWJlbCA9IChhZG1pdHRlZD8ubGFiZWwgPz8gdmFsdWUpLnRyaW0oKS5yZXBsYWNlKC9e5L2cXHMq6ICFXHMqWzrvvJpdXHMqLywgJycpOwogIGNvbnN0IGxhc3RMaW5lID0gTWF0aC5tYXgobGFiZWwubGFzdEluZGV4T2YoJ1xyJyksIGxhYmVsLmxhc3RJbmRleE9mKCdcbicpLAogICAgbGFiZWwubGFzdEluZGV4T2YoJ1x1MjAyOCcpLCBsYWJlbC5sYXN0SW5kZXhPZignXHUyMDI5JykpOwogIGlmIChsYXN0TGluZSA+PSAwICYmIGxhYmVsLnNsaWNlKGxhc3RMaW5lICsgMSkudHJpbSgpID09PSAn6L+b5YWl5L2c6ICF5Li76aG1IOKGkicgJiYKICAgIGxhYmVsLnNsaWNlKDAsIGxhc3RMaW5lKS50cmltKCkubGVuZ3RoID4gMCkgewogICAgbGFiZWwgPSBsYWJlbC5zbGljZSgwLCBsYXN0TGluZSkudHJpbSgpOwogIH0KICByZXR1cm4gbGFiZWw7Cn0KCmV4cG9ydCBmdW5jdGlvbiBib29rSWRlbnRpdHlUZXh0KHZhbHVlICAgICAgICApICAgICAgICAgewogIHJldHVybiB2YWx1ZS50cmltKCkucmVwbGFjZSgvXHMrL2csICcgJykudG9Mb3dlckNhc2UoKTsKfQoKZXhwb3J0IGZ1bmN0aW9uIGJvb2tBdXRob3JJZGVudGl0eSh2YWx1ZSAgICAgICAgLCBwcm9vZiAgICAgICAgICAgICAgICAgICAgICAgICAgLCBzb3VyY2VWZXJzaW9uICAgICAgICAgKSAgICAgICAgIHsKICByZXR1cm4gYm9va0lkZW50aXR5VGV4dChib29rQXV0aG9yTGFiZWwodmFsdWUsIHByb29mLCBzb3VyY2VWZXJzaW9uKSk7Cn0KCmV4cG9ydCBmdW5jdGlvbiBib29rVGl0bGVBdXRob3JLZXkodGl0bGUgICAgICAgICwgYXV0aG9yICAgICAgICAsIHByb29mICAgICAgICAgICAgICAgICAgICAgICAgICAsIHNvdXJjZVZlcnNpb24gICAgICAgICApICAgICAgICAgewogIHJldHVybiBgJHtib29rSWRlbnRpdHlUZXh0KHRpdGxlKX1cdTAwMDAke2Jvb2tBdXRob3JJZGVudGl0eShhdXRob3IsIHByb29mLCBzb3VyY2VWZXJzaW9uKX1gOwp9CgoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAoKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgIAogCgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAKCmZ1bmN0aW9uIHByaW9yaXR5UmFuayhwcmlvcml0eSAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICB7CiAgcmV0dXJuIHByaW9yaXR5ID09PSAnZm9yZWdyb3VuZCcgPyAwIDogcHJpb3JpdHkgPT09ICdzZWFyY2gnID8gMSA6IDI7Cn0KCi8qKiBTaGFyZWQgc291cmNlLXN3ZWVwIGN1cnNvciBmcm9tIFNlYXJjaE9yY2hlc3RyYXRvci4gRWFjaCBjb21wbGV0aW9uIGZyZWVzCiAqIGl0cyBsYW5lIGltbWVkaWF0ZWx5OyBhIHNsb3cgc291cmNlIG5ldmVyIGJsb2NrcyB0aGUgbmV4dCB3aG9sZSBiYXRjaC4gVGhlCiAqIHJlcXVlc3Qgc2NoZWR1bGVyIGJlbG93IHN0aWxsIG93bnMgYWN0dWFsIG5ldHdvcmsgY29uY3VycmVuY3kgYW5kIHByaW9yaXR5LiAqLwpleHBvcnQgYXN5bmMgZnVuY3Rpb24gcnVuQm9va1NvdXJjZVdvcmtlcnMgICAoc291cmNlcyAgICAgLCBjb25jdXJyZW5jeSAgICAgICAgLAogIHZpc2l0ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLCBiZWZvcmVEaXNwYXRjaCAgICAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgewogIGxldCBuZXh0ID0gMDsKICBsZXQgZmFpbGVkID0gZmFsc2U7CiAgY29uc3Qgd29ya2VyID0gYXN5bmMgKCkgICAgICAgICAgICAgICAgPT4gewogICAgd2hpbGUgKCFmYWlsZWQgJiYgbmV4dCA8IHNvdXJjZXMubGVuZ3RoKSB7CiAgICAgIGlmICghYXdhaXQgYmVmb3JlRGlzcGF0Y2goKSB8fCBmYWlsZWQpIHJldHVybjsKICAgICAgY29uc3Qgc291cmNlID0gc291cmNlc1tuZXh0KytdOwogICAgICBpZiAoc291cmNlID09PSB1bmRlZmluZWQpIHJldHVybjsKICAgICAgdHJ5IHsgYXdhaXQgdmlzaXQoc291cmNlKTsgfQogICAgICBjYXRjaCAoZXJyb3IpIHsgZmFpbGVkID0gdHJ1ZTsgdGhyb3cgZXJyb3I7IH0KICAgIH0KICB9OwogIGNvbnN0IHdvcmtlcnMgICAgICAgICAgICAgICAgICA9IFtdOwogIGZvciAobGV0IGluZGV4ID0gMDsgaW5kZXggPCBNYXRoLm1pbihjb25jdXJyZW5jeSwgc291cmNlcy5sZW5ndGgpOyBpbmRleCArPSAxKSB3b3JrZXJzLnB1c2god29ya2VyKCkpOwogIGF3YWl0IFByb21pc2UuYWxsKHdvcmtlcnMpOwp9CgovKiogSW4tZmxpZ2h0IHNoYXJpbmcgb25seS4gQ29yZSByZW1haW5zIHRoZSBkdXJhYmxlIHJlc3BvbnNlL2NhY2hlIG93bmVyLiAqLwpleHBvcnQgY2xhc3MgQm9va1JlcXVlc3RTY2hlZHVsZXIgewogICAgICAgICAgam9icyAgICAgICAgICAgICAgICAgICAgICAgICAgPSBuZXcgTWFwKCk7CiAgICAgICAgICBxdWV1ZSAgICAgICAgICAgICAgID0gW107CiAgICAgICAgICBhY3RpdmUgICAgICAgICA9IDA7CiAgICAgICAgICBiYWNrZ3JvdW5kQWN0aXZlICAgICAgICAgPSAwOwogICAgICAgICAgY2xvc2VkICAgICAgICAgID0gZmFsc2U7CgogICAgICAgICAgZXhlY3V0ZSAgICAgICAgICAgICAgICAgICAgIDsKCiAgY29uc3RydWN0b3IoZXhlY3V0ZSAgICAgICAgICAgICAgICAgICAgICkgewogICAgdGhpcy5leGVjdXRlID0gZXhlY3V0ZTsKICB9CgogIHJlcXVlc3QobWV0aG9kICAgICAgICAsIHBhcmFtcyAgICAgICAgICAgICwgb3B0aW9ucyAgICAgICAgICAgICAgICAgICAgLAogICAgdmVyc2lvbiAgICAgICAgLCBwcmlvcml0eSAgICAgICAgICAgICAgICAgICAgICkgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB7CiAgICBpZiAodGhpcy5jbG9zZWQpIHJldHVybiBQcm9taXNlLnJlamVjdChuZXcgRXJyb3IoJ+S5puexjeS7u+WKoeW3suWFs+mXrScpKTsKICAgIC8vIFByZXNlcnZlIHJ1bGUgdmFyaWFibGVzIGFuZCBhbGwgc2VtYW50aWMgcGFyYW1ldGVycyBpbiB0aGUgc2hhcmluZyBrZXkuCiAgICAvLyBEaWFnbm9zdGljL3JlcGxheSBIb3N0IG92ZXJyaWRlcyBhcmUgaW50ZW50aW9uYWxseSBub3Qgc2hhcmVkLgogICAgY29uc3Qga2V5ID0gSlNPTi5zdHJpbmdpZnkoW21ldGhvZCwgdmVyc2lvbiwgcGFyYW1zXSk7CiAgICBsZXQgam9iID0gb3B0aW9ucy5ob3N0UmVxdWVzdCA9PT0gdW5kZWZpbmVkID8gdGhpcy5qb2JzLmdldChrZXkpIDogdW5kZWZpbmVkOwogICAgLy8gT25jZSBDb3JlIGhhcyBvYnNlcnZlZCBjYW5jZWxsYXRpb24sIGEgbGF0ZXIgc2FtZS1rZXkgY2FsbGVyIG11c3Qgc3RhcnQKICAgIC8vIGEgbmV3IHJlcXVlc3QgaW5zdGVhZCBvZiByZXZpdmluZyBhbiBvcGVyYXRpb24gYWxyZWFkeSBiZWluZyB1bndvdW5kLgogICAgaWYgKGpvYiAhPT0gdW5kZWZpbmVkICYmIHRoaXMuY2FuY2VsbGVkKGpvYikpIGpvYiA9IHVuZGVmaW5lZDsKICAgIGlmIChqb2IgIT09IHVuZGVmaW5lZCkgewogICAgICBqb2IuY29uc3VtZXJzLnB1c2goeyBjYW5jZWxsZWQ6IG9wdGlvbnMuc2hvdWxkQ2FuY2VsLCBjYW5Db250aW51ZTogb3B0aW9ucy5jYW5Db250aW51ZSwKICAgICAgICBjYW5EaXNwYXRjaDogb3B0aW9ucy5jYW5EaXNwYXRjaCwgb25EaXNwYXRjaDogb3B0aW9ucy5vbkRpc3BhdGNoIH0pOwogICAgICBpZiAoam9iLnN0YXJ0ZWQpIG9wdGlvbnMub25EaXNwYXRjaD8uKCk7CiAgICAgIGlmIChwcmlvcml0eVJhbmsocHJpb3JpdHkpIDwgcHJpb3JpdHlSYW5rKGpvYi5wcmlvcml0eSkpIGpvYi5wcmlvcml0eSA9IHByaW9yaXR5OwogICAgICB0aGlzLmRyYWluKCk7CiAgICAgIHJldHVybiBqb2IucHJvbWlzZTsKICAgIH0KICAgIGxldCByZXNvbHZlUmVzdWx0ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPSAoKSAgICAgICA9PiB7fTsKICAgIGxldCByZWplY3RSZXN1bHQgICAgICAgICAgICAgICAgICAgICAgICAgPSAoKSAgICAgICA9PiB7fTsKICAgIGNvbnN0IHByb21pc2UgPSBuZXcgUHJvbWlzZSAgICAgICAgICAgICAgICAgICAgICAgKChyZXNvbHZlLCByZWplY3QpICAgICAgID0+IHsKICAgICAgcmVzb2x2ZVJlc3VsdCA9IHJlc29sdmU7CiAgICAgIHJlamVjdFJlc3VsdCA9IHJlamVjdDsKICAgIH0pOwogICAgam9iID0geyBrZXksIG1ldGhvZCwgcGFyYW1zLCBvcHRpb25zLCBwcmlvcml0eSwgcXVldWVkQXQ6IERhdGUubm93KCksIHN0YXJ0ZWQ6IGZhbHNlLCBjYW5jZWxsYXRpb25SZXF1ZXN0ZWQ6IGZhbHNlLAogICAgICBjb25zdW1lcnM6IFt7IGNhbmNlbGxlZDogb3B0aW9ucy5zaG91bGRDYW5jZWwsIGNhbkNvbnRpbnVlOiBvcHRpb25zLmNhbkNvbnRpbnVlLAogICAgICAgIGNhbkRpc3BhdGNoOiBvcHRpb25zLmNhbkRpc3BhdGNoLCBvbkRpc3BhdGNoOiBvcHRpb25zLm9uRGlzcGF0Y2ggfV0sCiAgICAgIHByb21pc2UsIHJlc29sdmU6IHJlc29sdmVSZXN1bHQsIHJlamVjdDogcmVqZWN0UmVzdWx0IH07CiAgICBpZiAob3B0aW9ucy5ob3N0UmVxdWVzdCA9PT0gdW5kZWZpbmVkKSB0aGlzLmpvYnMuc2V0KGtleSwgam9iKTsKICAgIHRoaXMucXVldWUucHVzaChqb2IpOwogICAgdGhpcy5kcmFpbigpOwogICAgcmV0dXJuIHByb21pc2U7CiAgfQoKICBwcm9tb3RlKHNvdXJjZUlkICAgICAgICAsIGJvb2tJZCAgICAgICAgKSAgICAgICB7CiAgICBmb3IgKGNvbnN0IGpvYiBvZiB0aGlzLnF1ZXVlKSB7CiAgICAgIGNvbnN0IGJvb2sgPSBqb2IucGFyYW1zWydib29rJ10gICAgICAgICAgICAgICAgICAgICAgICAgIDsKICAgICAgaWYgKGpvYi5wYXJhbXNbJ3NvdXJjZUlkJ10gPT09IHNvdXJjZUlkICYmIChqb2IucGFyYW1zWydib29rSWQnXSA9PT0gYm9va0lkIHx8IGJvb2s/LlsnYm9va0lkJ10gPT09IGJvb2tJZCkpIHsKICAgICAgICBqb2IucHJpb3JpdHkgPSAnZm9yZWdyb3VuZCc7CiAgICAgIH0KICAgIH0KICAgIHRoaXMuZHJhaW4oKTsKICB9CgogIHZpc2liaWxpdHlDaGFuZ2VkKCkgICAgICAgeyB0aGlzLmRyYWluKCk7IH0KCiAgY2xvc2UoKSAgICAgICB7CiAgICB0aGlzLmNsb3NlZCA9IHRy'... 77756 more characters
+  }
+}
+
+Node.js v26.0.0
+/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/scripts/check-local.sh failed (1): <no output>

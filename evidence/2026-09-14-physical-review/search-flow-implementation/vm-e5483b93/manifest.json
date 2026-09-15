@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 2,
+  "name": "reader-harmonyos-hap-run",
+  "runId": "20260915T081914Z-e5483b93-86eb9be1",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "startedAt": "2026-09-15T08:18:58.612Z",
+  "finishedAt": "2026-09-15T08:19:14.353Z",
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "commit": "e5483b93522daa1468b1349327221c15e8698b7a",
+      "dirty": true,
+      "status": [
+        "M evidence/2026-09-14-physical-review/FEEDBACK.md",
+        " M evidence/2026-09-14-physical-review/PH76-webview-resource-url-capture.md",
+        " M evidence/2026-09-14-physical-review/search-flow-implementation/IMPLEMENTATION.md",
+        " M evidence/2026-09-14-physical-review/search-flow-implementation/VM_VALIDATION.md",
+        " M evidence/2026-09-14-physical-review/search-flow-implementation/vm-d5f13a96/receipt.json",
+        "?? evidence/2026-09-14-physical-review/PH76-admitted-vm-hilog.log",
+        "?? evidence/2026-09-14-physical-review/PH77_91_RECHECK_20260915.md",
+        "?? evidence/2026-09-14-physical-review/PH92-PROXY_COMPATIBILITY.md",
+        "?? evidence/2026-09-14-physical-review/PH92-platform-audit.md",
+        "?? evidence/2026-09-14-physical-review/PH92-proxy-admission-probe.json",
+        "?? evidence/2026-09-14-physical-review/PH92-proxy-admission-probe.mjs",
+        "?? evidence/2026-09-14-physical-review/PH92-scope-audit.md",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/REPORT.md",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/SEARCH_AUDIT.md",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/SOURCE_CONTENT_AUDIT.md",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/acquisition-probes.log",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/classify-core-output.mjs",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/core-host-body-probes.jsonl",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/core-probe/",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/ph76-surface-native-focus.log",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/ph76-surface-network-policy.log",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/ph76-surface-resource-capture.log",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/ph76-surface-resource-diagnostic.log",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/prepare-acquisition-probes.py",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/receipt.json",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/repair/",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/search-probes.log",
+        "?? evidence/2026-09-14-physical-review/minglong-full-assessment/search-probes.mjs",
+        "?? evidence/2026-09-14-physical-review/ph76-native-callback-before.log",
+        "?? evidence/2026-09-14-physical-review/ph76-vm-early-pass-cancel-failure.log",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/CURRENT_STATUS_20260915.md",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/event-loop-probe/reader-vm-fps-baseline.log",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/event-loop-probe/reader-vm-hidumper-help.log",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/event-loop-probe/reader-vm-render-help.log",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/event-loop-probe/reader-vm-render-surfaces.log",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/event-loop-probe/reader-window-observation.log",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/performance-current-c56/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-3843792a/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-4cb17d89/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-6cf9705d/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-90bcfc78/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-968a8b57/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-af406d49/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-c56ad545/",
+        "?? evidence/2026-09-14-physical-review/search-flow-implementation/vm-d5f13a96/bookmark-time/"
+      ]
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "commit": "cfb0208f462d05588a37492cdc124c429546c65f",
+      "dirty": false,
+      "status": []
+    },
+    "buildInputs": {
+      "fingerprint": "86eb9be14c2397eca1c0b23c7af17213bea7818ca735cbcc39c25c82b1c45ea5",
+      "fileCount": 737,
+      "snapshot": "source-snapshot.json"
+    },
+    "effectiveBuildProfile": {
+      "mode": "local",
+      "bytes": 1510,
+      "sha256": "0857c8a0897ca62681003b7507acc2048c14d5421df1ae8039143bee74301f7d",
+      "secretMaterialArchived": false
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 19714808,
+      "sha256": "425bcd200e1c9b34adedd0904f2a2a027e5253acf6060f24640d83de3c35b2d7"
+    }
+  },
+  "gates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "3842e99c469cb0436a31d8c172b0480500217cf5c9b81eedd99dedfbb779e828",
+      "fileCount": 331,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "4df3dcc01332d05019d75f7f17572663ed67aa29a9ca6f44a65f06fec7257d9c",
+      "fileCount": 15,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "toolchain": {
+    "hvigorw": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw",
+    "hvigorVersion": "6.24.4",
+    "buildCommand": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHap --mode module -p product=default -p module=entry@default -p buildMode=debug --no-daemon --no-incremental"
+  },
+  "artifacts": [
+    {
+      "kind": "signed",
+      "path": "entry-default-signed.hap",
+      "bytes": 168093142,
+      "sha256": "04ae9321ec60af7a970c6bfdf6177d77a23e4d9729769c88a0cd64ce1c239d35",
+      "signature": {
+        "status": "signed",
+        "verified": true,
+        "profileType": "debug",
+        "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+        "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+        "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 15073312,
+        "sha256": "f8367ac81b900f3d15e9c4dbce08cd44fa1ad049be0e77ff729d2252ddb301f6"
+      }
+    },
+    {
+      "kind": "unsigned",
+      "path": "entry-default-unsigned.hap",
+      "bytes": 167833632,
+      "sha256": "52d116166614d720a2a5cf89d0f988a23db845b7a7af0cecf34d19440b07c3a3",
+      "signature": {
+        "status": "unsigned",
+        "verified": false,
+        "profileType": "none"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 15073312,
+        "sha256": "f8367ac81b900f3d15e9c4dbce08cd44fa1ad049be0e77ff729d2252ddb301f6"
+      }
+    }
+  ],
+  "acceptanceProvenance": null,
+  "evidenceBoundary": {
+    "packageBuild": "PASS",
+    "vmInstall": "OPEN",
+    "physicalInstall": "OPEN",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  }
+}

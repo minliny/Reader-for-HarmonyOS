@@ -1,0 +1,86 @@
+09-15 14:35:19.815 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:19.821 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:19.822 16680 16680 W A05244/Reader: Search source 444.1006sd.com failed: Internal error
+09-15 14:35:19.825 16680 16680 W A05244/Reader: Search source 69shuba.tw failed: Internal error
+09-15 14:35:20.216 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:20.227 16680 16680 W A05244/Reader: Search source 101kanshu.net failed: Internal error
+09-15 14:35:20.747 16680 16680 E A05244/Reader: http.execute TypeError stage=request.payload frame=HttpExecuteHost.ts:878:65
+09-15 14:35:20.747 16680 16680 E A05244/Reader: http.execute TypeError stage=request.chain frame=HttpExecuteHost.ts:878:65
+09-15 14:35:20.747 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:35:20.760 16680 16680 W A05244/Reader: Search source bcshuku.com failed: Cannot read property length of undefined
+09-15 14:35:20.886 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:20.887 16680 16680 W A05244/Reader: Search source bbxxxx.com failed: Internal error
+09-15 14:35:21.304 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:21.304 16680 16680 W A05244/Reader: Search source cn.zhys.tw failed: Internal error
+09-15 14:35:21.558 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:21.570 16680 16680 W A05244/Reader: Search source crxs.me failed: Internal error
+09-15 14:35:21.597 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:35:21.867 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:21.870 16680 16680 W A05244/Reader: Search source ik8.net failed: Internal error
+09-15 14:35:22.017 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Invalid URL format or missing URL
+09-15 14:35:22.091 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:22.102 16680 16680 W A05244/Reader: Search source lnovel.org failed: Internal error
+09-15 14:35:22.207 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:22.217 16680 16680 W A05244/Reader: Search source lnovel.tw failed: Internal error
+09-15 14:35:23.440 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:23.451 16680 16680 W A05244/Reader: Search source m.douyinxs.com failed: Internal error
+09-15 14:35:23.864 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:23.864 16680 16680 W A05244/Reader: Search source m.lulushu18.com failed: Internal error
+09-15 14:35:29.200 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:29.209 16680 16680 W A05244/Reader: Search source novel.cooks.tw failed: Internal error
+09-15 14:35:30.093 16680 16680 W A05244/Reader: Search source m.zjsw.org failed: search protocol returned blank title
+09-15 14:35:30.231 16680 16680 W A05244/Reader: Search source qd9.net failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 14:35:30.467 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:30.484 16680 16680 W A05244/Reader: Search source readnovelfull.com failed: Internal error
+09-15 14:35:30.508 16680 16680 W A05244/Reader: Search source ruarourou.top failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 14:35:30.714 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:30.724 16680 16680 W A05244/Reader: Search source readnovelfull.com failed: Internal error
+09-15 14:35:31.217 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:31.227 16680 16680 W A05244/Reader: Search source www.52dzxy.com failed: Internal error
+09-15 14:35:31.366 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:31.366 16680 16680 W A05244/Reader: Search source www.52shuku123.cc failed: Internal error
+09-15 14:35:32.457 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:32.468 16680 16680 W A05244/Reader: Search source www.biquge345.com failed: Internal error
+09-15 14:35:32.515 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:32.518 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:32.518 16680 16680 W A05244/Reader: Search source novel.seseclub.com failed: Internal error
+09-15 14:35:32.527 16680 16680 W A05244/Reader: Search source sesebooks.com failed: Internal error
+09-15 14:35:32.720 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:32.720 16680 16680 W A05244/Reader: Search source www.chamabooks.net failed: Internal error
+09-15 14:35:32.757 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:32.767 16680 16680 W A05244/Reader: Search source www.bzbz1024.com failed: Internal error
+09-15 14:35:32.985 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:32.996 16680 16680 W A05244/Reader: Search source www.dbxsn.com failed: Internal error
+09-15 14:35:33.260 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:33.261 16680 16680 W A05244/Reader: Search source www.dcrbk.com failed: Internal error
+09-15 14:35:33.347 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:33.357 16680 16680 W A05244/Reader: Search source www.deqixs.co failed: Internal error
+09-15 14:35:33.464 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:33.474 16680 16680 W A05244/Reader: Search source www.douyinxs.com failed: Internal error
+09-15 14:35:33.492 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:35:33.502 16680 16680 W A05244/Reader: Search source www.ibus233.com failed: Cannot read property length of undefined
+09-15 14:35:33.542 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:33.552 16680 16680 W A05244/Reader: Search source www.feifanks.com failed: Internal error
+09-15 14:35:34.975 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: platform did not return the requested raw response bytes (status=403, type=undefined)
+09-15 14:35:34.975 16680 16680 W A05244/Reader: Search source www.min-yuan.com failed: http.execute: platform did not return the requested raw response bytes (status=403, type=undefined)
+09-15 14:35:35.377 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Invalid SSL peer certificate or SSH remote key
+09-15 14:35:35.388 16680 16680 W A05244/Reader: Search source www.liyuxiangku.com failed: Invalid SSL peer certificate or SSH remote key
+09-15 14:35:36.211 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:36.223 16680 16680 W A05244/Reader: Search source www.qiluwx.com failed: Internal error
+09-15 14:35:37.882 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:37.893 16680 16680 W A05244/Reader: Search source www.tatays.com failed: Internal error
+09-15 14:35:38.101 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:38.113 16680 16680 W A05244/Reader: Search source www.wanwx.com failed: Internal error
+09-15 14:35:38.476 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:38.490 16680 16680 W A05244/Reader: Search source www.xn--7dv141d.com failed: Internal error
+09-15 14:35:38.698 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:38.709 16680 16680 W A05244/Reader: Search source www.ybswa.com failed: Internal error
+09-15 14:35:39.120 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:39.130 16680 16680 W A05244/Reader: Search source www.yiyechunxiao.com failed: Internal error
+09-15 14:35:40.517 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:40.517 16680 16680 W A05244/Reader: Search source www.yysk.net failed: Internal error
+09-15 14:35:40.528 16680 16680 W A05244/Reader: Search source www.zggdwx.com failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 14:35:40.800 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:40.809 16680 16680 W A05244/Reader: Search source www.xtyxsw.org failed: Internal error
+09-15 14:35:45.762 16680 16680 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:35:45.762 16680 16680 W A05244/Reader: Search source www.souhh.com failed: Internal error

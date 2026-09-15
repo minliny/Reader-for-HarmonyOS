@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 2,
+  "name": "reader-harmonyos-hap-run",
+  "runId": "20260914T190706Z-3843792a-773d63a4",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "startedAt": "2026-09-14T19:06:50.114Z",
+  "finishedAt": "2026-09-14T19:07:06.217Z",
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "commit": "3843792ab06ee1025d06d44d9666fbab2bd6f63f",
+      "dirty": false,
+      "status": []
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "commit": "0c5a3956274197578554f36b1a7fed9e1977ea78",
+      "dirty": false,
+      "status": []
+    },
+    "buildInputs": {
+      "fingerprint": "773d63a47fad2d0aea7fcbdbea19ec01691cacacb3e6b096e5a07db22a2c1c56",
+      "fileCount": 732,
+      "snapshot": "source-snapshot.json"
+    },
+    "effectiveBuildProfile": {
+      "mode": "local",
+      "bytes": 1510,
+      "sha256": "0857c8a0897ca62681003b7507acc2048c14d5421df1ae8039143bee74301f7d",
+      "secretMaterialArchived": false
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 19633240,
+      "sha256": "b49783b623dd35ff39c77de821055119b09597befe4ce1714655983222394a46"
+    }
+  },
+  "gates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "4dfcb00b0000079a61fb64a852ff30e29071504456ce4f95424725282c893c92",
+      "fileCount": 324,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "4df3dcc01332d05019d75f7f17572663ed67aa29a9ca6f44a65f06fec7257d9c",
+      "fileCount": 15,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "toolchain": {
+    "hvigorw": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw",
+    "hvigorVersion": "6.24.4",
+    "buildCommand": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHap --mode module -p product=default -p module=entry@default -p buildMode=debug --no-daemon --no-incremental"
+  },
+  "artifacts": [
+    {
+      "kind": "signed",
+      "path": "entry-default-signed.hap",
+      "bytes": 167841833,
+      "sha256": "badce494ce3429906ff25c066d97a5e7babb58f8ad260a70f90350923b211f07",
+      "signature": {
+        "status": "signed",
+        "verified": true,
+        "profileType": "debug",
+        "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+        "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+        "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 15002800,
+        "sha256": "f225dff8414b49e9d8d75cf18c0dc1145f803de8ed62822f60670adebb9e482d"
+      }
+    },
+    {
+      "kind": "unsigned",
+      "path": "entry-default-unsigned.hap",
+      "bytes": 167593239,
+      "sha256": "a4c745a3ae94e70ef52342a84ee894a0b94acb0b8d5aac2b8a73f76cd9573d2f",
+      "signature": {
+        "status": "unsigned",
+        "verified": false,
+        "profileType": "none"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 15002800,
+        "sha256": "f225dff8414b49e9d8d75cf18c0dc1145f803de8ed62822f60670adebb9e482d"
+      }
+    }
+  ],
+  "acceptanceProvenance": null,
+  "evidenceBoundary": {
+    "packageBuild": "PASS",
+    "vmInstall": "OPEN",
+    "physicalInstall": "OPEN",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  }
+}

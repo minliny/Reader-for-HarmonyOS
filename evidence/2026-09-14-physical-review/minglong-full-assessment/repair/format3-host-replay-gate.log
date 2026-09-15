@@ -1,0 +1,13 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+────────────
+ Nextest run ID 8daec494-b840-49c6-9d5f-396c839cc72b with nextest profile: default
+    Starting 5 tests across 1 binary
+        PASS [   2.149s] (1/5) reader-cli::host_replay host_replay_suite_runs_remote_reading_e2e
+        PASS [   2.151s] (2/5) reader-cli::host_replay host_replay_roundtrips_request_session_contract_fields
+        PASS [   2.206s] (3/5) reader-cli::host_replay host_record_suite_outputs_replayable_comparison_fixture
+        PASS [   2.215s] (4/5) reader-cli::host_replay host_record_outputs_replayable_single_step_fixture
+        PASS [   2.309s] (5/5) reader-cli::host_replay host_replay_suite_runs_legado_desensitized_corpus
+────────────
+     Summary [   2.310s] 5 tests run: 5 passed, 0 skipped

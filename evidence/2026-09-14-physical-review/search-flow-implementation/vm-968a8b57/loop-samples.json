@@ -1,0 +1,1064 @@
+[
+  {
+    "logTime": "09-15 15:58:07.168",
+    "elapsedMs": 1045,
+    "uptimeMs": 222447772,
+    "samples": 15,
+    "maxDelayMs": 265,
+    "delayedOver50Ms": 1,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:08.172",
+    "elapsedMs": 2048,
+    "uptimeMs": 222448775,
+    "samples": 18,
+    "maxDelayMs": 83,
+    "delayedOver50Ms": 1,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:09.327",
+    "elapsedMs": 3203,
+    "uptimeMs": 222449930,
+    "samples": 16,
+    "maxDelayMs": 337,
+    "delayedOver50Ms": 1,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:10.342",
+    "elapsedMs": 4218,
+    "uptimeMs": 222450945,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:11.367",
+    "elapsedMs": 5243,
+    "uptimeMs": 222451970,
+    "samples": 20,
+    "maxDelayMs": 5,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:12.385",
+    "elapsedMs": 6262,
+    "uptimeMs": 222452989,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:13.408",
+    "elapsedMs": 7284,
+    "uptimeMs": 222454011,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:14.411",
+    "elapsedMs": 8288,
+    "uptimeMs": 222455015,
+    "samples": 18,
+    "maxDelayMs": 49,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:15.424",
+    "elapsedMs": 9301,
+    "uptimeMs": 222456028,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:16.431",
+    "elapsedMs": 10307,
+    "uptimeMs": 222457034,
+    "samples": 20,
+    "maxDelayMs": 1,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:17.455",
+    "elapsedMs": 11332,
+    "uptimeMs": 222458059,
+    "samples": 20,
+    "maxDelayMs": 20,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:18.474",
+    "elapsedMs": 12351,
+    "uptimeMs": 222459078,
+    "samples": 20,
+    "maxDelayMs": 8,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:19.488",
+    "elapsedMs": 13365,
+    "uptimeMs": 222460092,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:20.506",
+    "elapsedMs": 14383,
+    "uptimeMs": 222461110,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:21.518",
+    "elapsedMs": 15395,
+    "uptimeMs": 222462122,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:22.534",
+    "elapsedMs": 16411,
+    "uptimeMs": 222463138,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:23.551",
+    "elapsedMs": 17428,
+    "uptimeMs": 222464155,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:24.574",
+    "elapsedMs": 18450,
+    "uptimeMs": 222465177,
+    "samples": 20,
+    "maxDelayMs": 9,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:25.586",
+    "elapsedMs": 19462,
+    "uptimeMs": 222466189,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:26.605",
+    "elapsedMs": 20482,
+    "uptimeMs": 222467209,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:27.622",
+    "elapsedMs": 21499,
+    "uptimeMs": 222468226,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:28.642",
+    "elapsedMs": 22518,
+    "uptimeMs": 222469245,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:29.667",
+    "elapsedMs": 23543,
+    "uptimeMs": 222470270,
+    "samples": 20,
+    "maxDelayMs": 17,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:30.677",
+    "elapsedMs": 24554,
+    "uptimeMs": 222471281,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:31.694",
+    "elapsedMs": 25571,
+    "uptimeMs": 222472298,
+    "samples": 20,
+    "maxDelayMs": 14,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:32.707",
+    "elapsedMs": 26584,
+    "uptimeMs": 222473311,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:33.716",
+    "elapsedMs": 27593,
+    "uptimeMs": 222474320,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:34.727",
+    "elapsedMs": 28603,
+    "uptimeMs": 222475330,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:35.736",
+    "elapsedMs": 29613,
+    "uptimeMs": 222476340,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:36.748",
+    "elapsedMs": 30625,
+    "uptimeMs": 222477352,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:37.760",
+    "elapsedMs": 31636,
+    "uptimeMs": 222478363,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:38.791",
+    "elapsedMs": 32668,
+    "uptimeMs": 222479395,
+    "samples": 20,
+    "maxDelayMs": 16,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:39.810",
+    "elapsedMs": 33687,
+    "uptimeMs": 222480414,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:40.820",
+    "elapsedMs": 34697,
+    "uptimeMs": 222481424,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:41.832",
+    "elapsedMs": 35709,
+    "uptimeMs": 222482436,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:42.841",
+    "elapsedMs": 36718,
+    "uptimeMs": 222483445,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:43.854",
+    "elapsedMs": 37731,
+    "uptimeMs": 222484458,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:44.860",
+    "elapsedMs": 38737,
+    "uptimeMs": 222485464,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:45.898",
+    "elapsedMs": 39775,
+    "uptimeMs": 222486502,
+    "samples": 20,
+    "maxDelayMs": 30,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:46.919",
+    "elapsedMs": 40796,
+    "uptimeMs": 222487523,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:47.977",
+    "elapsedMs": 41853,
+    "uptimeMs": 222488580,
+    "samples": 20,
+    "maxDelayMs": 35,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:48.991",
+    "elapsedMs": 42868,
+    "uptimeMs": 222489595,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:50.015",
+    "elapsedMs": 43892,
+    "uptimeMs": 222490619,
+    "samples": 20,
+    "maxDelayMs": 9,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:51.050",
+    "elapsedMs": 44926,
+    "uptimeMs": 222491653,
+    "samples": 20,
+    "maxDelayMs": 8,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:52.075",
+    "elapsedMs": 45952,
+    "uptimeMs": 222492679,
+    "samples": 20,
+    "maxDelayMs": 5,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:53.099",
+    "elapsedMs": 46976,
+    "uptimeMs": 222493703,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:54.120",
+    "elapsedMs": 47996,
+    "uptimeMs": 222494723,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:55.159",
+    "elapsedMs": 49035,
+    "uptimeMs": 222495762,
+    "samples": 20,
+    "maxDelayMs": 9,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:56.189",
+    "elapsedMs": 50066,
+    "uptimeMs": 222496793,
+    "samples": 20,
+    "maxDelayMs": 9,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:57.210",
+    "elapsedMs": 51087,
+    "uptimeMs": 222497814,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:58.243",
+    "elapsedMs": 52120,
+    "uptimeMs": 222498847,
+    "samples": 20,
+    "maxDelayMs": 8,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:58:59.269",
+    "elapsedMs": 53145,
+    "uptimeMs": 222499872,
+    "samples": 20,
+    "maxDelayMs": 6,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:00.291",
+    "elapsedMs": 54168,
+    "uptimeMs": 222500895,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:01.308",
+    "elapsedMs": 55184,
+    "uptimeMs": 222501911,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:02.328",
+    "elapsedMs": 56205,
+    "uptimeMs": 222502932,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:03.356",
+    "elapsedMs": 57233,
+    "uptimeMs": 222503960,
+    "samples": 20,
+    "maxDelayMs": 5,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:04.404",
+    "elapsedMs": 58280,
+    "uptimeMs": 222505007,
+    "samples": 20,
+    "maxDelayMs": 9,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:05.443",
+    "elapsedMs": 59320,
+    "uptimeMs": 222506047,
+    "samples": 20,
+    "maxDelayMs": 9,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:06.482",
+    "elapsedMs": 60359,
+    "uptimeMs": 222507086,
+    "samples": 20,
+    "maxDelayMs": 9,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:07.508",
+    "elapsedMs": 61385,
+    "uptimeMs": 222508112,
+    "samples": 20,
+    "maxDelayMs": 6,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:08.528",
+    "elapsedMs": 62404,
+    "uptimeMs": 222509131,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:09.554",
+    "elapsedMs": 63430,
+    "uptimeMs": 222510157,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:10.580",
+    "elapsedMs": 64457,
+    "uptimeMs": 222511184,
+    "samples": 20,
+    "maxDelayMs": 9,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:11.598",
+    "elapsedMs": 65475,
+    "uptimeMs": 222512202,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:12.623",
+    "elapsedMs": 66500,
+    "uptimeMs": 222513227,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:13.669",
+    "elapsedMs": 67546,
+    "uptimeMs": 222514273,
+    "samples": 20,
+    "maxDelayMs": 10,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:14.693",
+    "elapsedMs": 68570,
+    "uptimeMs": 222515297,
+    "samples": 20,
+    "maxDelayMs": 7,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:15.713",
+    "elapsedMs": 69589,
+    "uptimeMs": 222516316,
+    "samples": 16,
+    "maxDelayMs": 206,
+    "delayedOver50Ms": 1,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:16.722",
+    "elapsedMs": 70599,
+    "uptimeMs": 222517326,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:17.747",
+    "elapsedMs": 71624,
+    "uptimeMs": 222518351,
+    "samples": 19,
+    "maxDelayMs": 22,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:18.756",
+    "elapsedMs": 72633,
+    "uptimeMs": 222519360,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:19.775",
+    "elapsedMs": 73651,
+    "uptimeMs": 222520378,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:20.781",
+    "elapsedMs": 74658,
+    "uptimeMs": 222521385,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:21.798",
+    "elapsedMs": 75675,
+    "uptimeMs": 222522402,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:22.815",
+    "elapsedMs": 76692,
+    "uptimeMs": 222523419,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:23.845",
+    "elapsedMs": 77721,
+    "uptimeMs": 222524448,
+    "samples": 20,
+    "maxDelayMs": 13,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:24.857",
+    "elapsedMs": 78734,
+    "uptimeMs": 222525461,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:25.871",
+    "elapsedMs": 79748,
+    "uptimeMs": 222526475,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:26.888",
+    "elapsedMs": 80765,
+    "uptimeMs": 222527492,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:27.896",
+    "elapsedMs": 81773,
+    "uptimeMs": 222528500,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:28.904",
+    "elapsedMs": 82781,
+    "uptimeMs": 222529508,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:29.914",
+    "elapsedMs": 83790,
+    "uptimeMs": 222530517,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:30.938",
+    "elapsedMs": 84814,
+    "uptimeMs": 222531541,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:31.951",
+    "elapsedMs": 85828,
+    "uptimeMs": 222532555,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:32.969",
+    "elapsedMs": 86846,
+    "uptimeMs": 222533573,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:33.989",
+    "elapsedMs": 87866,
+    "uptimeMs": 222534593,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:35.006",
+    "elapsedMs": 88883,
+    "uptimeMs": 222535610,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:36.021",
+    "elapsedMs": 89898,
+    "uptimeMs": 222536625,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:37.036",
+    "elapsedMs": 90912,
+    "uptimeMs": 222537639,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:38.050",
+    "elapsedMs": 91927,
+    "uptimeMs": 222538654,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:39.067",
+    "elapsedMs": 92943,
+    "uptimeMs": 222539670,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:40.078",
+    "elapsedMs": 93955,
+    "uptimeMs": 222540682,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:41.091",
+    "elapsedMs": 94967,
+    "uptimeMs": 222541694,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:42.106",
+    "elapsedMs": 95983,
+    "uptimeMs": 222542710,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:43.124",
+    "elapsedMs": 97001,
+    "uptimeMs": 222543728,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:44.139",
+    "elapsedMs": 98016,
+    "uptimeMs": 222544743,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:45.159",
+    "elapsedMs": 99036,
+    "uptimeMs": 222545763,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:46.174",
+    "elapsedMs": 100050,
+    "uptimeMs": 222546777,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:47.180",
+    "elapsedMs": 101057,
+    "uptimeMs": 222547784,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:48.191",
+    "elapsedMs": 102068,
+    "uptimeMs": 222548795,
+    "samples": 20,
+    "maxDelayMs": 1,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:49.206",
+    "elapsedMs": 103083,
+    "uptimeMs": 222549810,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:50.217",
+    "elapsedMs": 104094,
+    "uptimeMs": 222550821,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:51.233",
+    "elapsedMs": 105110,
+    "uptimeMs": 222551837,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:52.247",
+    "elapsedMs": 106124,
+    "uptimeMs": 222552851,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:53.270",
+    "elapsedMs": 107147,
+    "uptimeMs": 222553874,
+    "samples": 20,
+    "maxDelayMs": 5,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:54.287",
+    "elapsedMs": 108163,
+    "uptimeMs": 222554890,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:55.305",
+    "elapsedMs": 109182,
+    "uptimeMs": 222555909,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:56.314",
+    "elapsedMs": 110191,
+    "uptimeMs": 222556918,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:57.327",
+    "elapsedMs": 111204,
+    "uptimeMs": 222557931,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:58.340",
+    "elapsedMs": 112217,
+    "uptimeMs": 222558944,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 15:59:59.347",
+    "elapsedMs": 113224,
+    "uptimeMs": 222559951,
+    "samples": 20,
+    "maxDelayMs": 3,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 16:00:00.358",
+    "elapsedMs": 114235,
+    "uptimeMs": 222560962,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 16:00:01.367",
+    "elapsedMs": 115244,
+    "uptimeMs": 222561971,
+    "samples": 20,
+    "maxDelayMs": 1,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 16:00:02.379",
+    "elapsedMs": 116256,
+    "uptimeMs": 222562983,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 16:00:03.387",
+    "elapsedMs": 117263,
+    "uptimeMs": 222563990,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 16:00:04.403",
+    "elapsedMs": 118280,
+    "uptimeMs": 222565007,
+    "samples": 20,
+    "maxDelayMs": 4,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 16:00:05.416",
+    "elapsedMs": 119292,
+    "uptimeMs": 222566019,
+    "samples": 20,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "window"
+  },
+  {
+    "logTime": "09-15 16:00:06.126",
+    "elapsedMs": 120002,
+    "uptimeMs": 222566729,
+    "samples": 14,
+    "maxDelayMs": 2,
+    "delayedOver50Ms": 0,
+    "reason": "duration-limit"
+  }
+]

@@ -1,0 +1,71 @@
+{
+  "evidenceLayer": "actual production singleHop and DNS admission; platform resolver and transport boundaries controlled; no network or device",
+  "proves": "fake-range DNS answers reject before transport; does not identify the user proxy or prove phone DNS results",
+  "outcomes": [
+    {
+      "name": "public-ipv4",
+      "syntheticDnsAnswers": [
+        "8.8.8.8"
+      ],
+      "allowed": true,
+      "transportCalls": 1,
+      "pinCalls": 1,
+      "unpinCalls": 1
+    },
+    {
+      "name": "public-ipv6",
+      "syntheticDnsAnswers": [
+        "2001:4860:4860::8888"
+      ],
+      "allowed": true,
+      "transportCalls": 1,
+      "pinCalls": 1,
+      "unpinCalls": 1
+    },
+    {
+      "name": "fake-ip-range-low",
+      "syntheticDnsAnswers": [
+        "198.18.0.189"
+      ],
+      "allowed": false,
+      "transportCalls": 0,
+      "pinCalls": 0,
+      "unpinCalls": 0,
+      "error": "http.execute: url resolves to a private, loopback, or link-local address and is not allowed"
+    },
+    {
+      "name": "fake-ip-range-high",
+      "syntheticDnsAnswers": [
+        "198.19.255.254"
+      ],
+      "allowed": false,
+      "transportCalls": 0,
+      "pinCalls": 0,
+      "unpinCalls": 0,
+      "error": "http.execute: url resolves to a private, loopback, or link-local address and is not allowed"
+    },
+    {
+      "name": "mixed-public-and-fake",
+      "syntheticDnsAnswers": [
+        "8.8.8.8",
+        "198.18.0.189"
+      ],
+      "allowed": false,
+      "transportCalls": 0,
+      "pinCalls": 0,
+      "unpinCalls": 0,
+      "error": "http.execute: url resolves to a private, loopback, or link-local address and is not allowed"
+    },
+    {
+      "name": "private-lan",
+      "syntheticDnsAnswers": [
+        "192.168.1.1"
+      ],
+      "allowed": false,
+      "transportCalls": 0,
+      "pinCalls": 0,
+      "unpinCalls": 0,
+      "error": "http.execute: url resolves to a private, loopback, or link-local address and is not allowed"
+    }
+  ]
+}

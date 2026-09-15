@@ -1,0 +1,20 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: a long repeated access notice cannot pass by length
++ actual - expected
+
++ 'readable'
+- 'SOURCE_AUTH_REQUIRED'
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-remote-content-admission.mjs:56:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'readable',
+  expected: 'SOURCE_AUTH_REQUIRED',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

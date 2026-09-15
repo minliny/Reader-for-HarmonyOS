@@ -1,0 +1,224 @@
+{
+  "runId": "20260914T190706Z-3843792a-773d63a4",
+  "results": [
+    {
+      "scenario": "early",
+      "pass": true,
+      "runToken": "1789413057837-1",
+      "measurements": {
+        "callbackToMatchMs": 4,
+        "matchedBeforePageEnd": true
+      },
+      "events": [
+        {
+          "kind": "start",
+          "at": 1789413057838,
+          "requestId": 7600001
+        },
+        {
+          "kind": "dataDocumentShape",
+          "at": 1789413057845,
+          "resource": "data-document",
+          "dataDocument": {
+            "metadata": "text/html;charset=utf-8;base64",
+            "metadataTruncated": false,
+            "metadataSanitized": false,
+            "hasComma": true,
+            "bodyLength": 312,
+            "hasCurrentDocument": true,
+            "withinLengthBound": true,
+            "matchesCurrentBody": false,
+            "matchesCurrentBase64": false,
+            "uriDecodeAttempted": true,
+            "uriDecodeSucceeded": true,
+            "uriDecodedMatchesCurrentBody": false,
+            "uriDecodedMatchesCurrentBase64": true
+          }
+        },
+        {
+          "kind": "documentAllowed",
+          "at": 1789413057845,
+          "resource": "data-document"
+        },
+        {
+          "kind": "intercept",
+          "at": 1789413057852,
+          "resource": "early.css"
+        },
+        {
+          "kind": "intercept",
+          "at": 1789413057853,
+          "resource": "hold.js"
+        },
+        {
+          "kind": "pageBegin",
+          "at": 1789413057854,
+          "requestId": 7600001,
+          "resource": "data-document"
+        },
+        {
+          "kind": "resource",
+          "at": 1789413057854,
+          "requestId": 7600001,
+          "resource": "early.css"
+        },
+        {
+          "kind": "resource",
+          "at": 1789413057854,
+          "requestId": 7600001,
+          "resource": "hold.js"
+        },
+        {
+          "kind": "matcherStart",
+          "at": 1789413057856,
+          "requestId": 7600001,
+          "resource": "early.css"
+        },
+        {
+          "kind": "matched",
+          "at": 1789413057858,
+          "requestId": 7600001,
+          "resource": "early.css"
+        },
+        {
+          "kind": "end",
+          "at": 1789413057858,
+          "requestId": 7600001
+        }
+      ],
+      "network": "in-memory-only",
+      "scope": "one controlled run; not proof of all native callback schedules"
+    },
+    {
+      "scenario": "cancel",
+      "pass": false,
+      "runToken": "1789413089067-2",
+      "measurements": {
+        "returnedResource": "unexpected",
+        "observedLateOldCallbacks": 1,
+        "callbackToMatchMs": -1
+      },
+      "events": [
+        {
+          "kind": "start",
+          "at": 1789413089072,
+          "requestId": 7600001
+        },
+        {
+          "kind": "dataDocumentShape",
+          "at": 1789413089097,
+          "resource": "data-document",
+          "dataDocument": {
+            "metadata": "text/html;charset=utf-8;base64",
+            "metadataTruncated": false,
+            "metadataSanitized": false,
+            "hasComma": true,
+            "bodyLength": 174,
+            "hasCurrentDocument": true,
+            "withinLengthBound": true,
+            "matchesCurrentBody": false,
+            "matchesCurrentBase64": false,
+            "uriDecodeAttempted": true,
+            "uriDecodeSucceeded": true,
+            "uriDecodedMatchesCurrentBody": false,
+            "uriDecodedMatchesCurrentBase64": true
+          }
+        },
+        {
+          "kind": "documentAllowed",
+          "at": 1789413089097,
+          "resource": "data-document"
+        },
+        {
+          "kind": "pageBegin",
+          "at": 1789413089115,
+          "requestId": 7600001,
+          "resource": "data-document"
+        },
+        {
+          "kind": "intercept",
+          "at": 1789413089116,
+          "resource": "old.js"
+        },
+        {
+          "kind": "cancel",
+          "at": 1789413089116,
+          "requestId": 7600001
+        },
+        {
+          "kind": "end",
+          "at": 1789413089116,
+          "requestId": 7600001
+        },
+        {
+          "kind": "start",
+          "at": 1789413089118,
+          "requestId": 7600002
+        },
+        {
+          "kind": "dataDocumentShape",
+          "at": 1789413089120,
+          "resource": "data-document",
+          "dataDocument": {
+            "metadata": "text/html;charset=utf-8;base64",
+            "metadataTruncated": false,
+            "metadataSanitized": false,
+            "hasComma": true,
+            "bodyLength": 174,
+            "hasCurrentDocument": true,
+            "withinLengthBound": true,
+            "matchesCurrentBody": false,
+            "matchesCurrentBase64": false,
+            "uriDecodeAttempted": true,
+            "uriDecodeSucceeded": true,
+            "uriDecodedMatchesCurrentBody": false,
+            "uriDecodedMatchesCurrentBase64": true
+          }
+        },
+        {
+          "kind": "documentAllowed",
+          "at": 1789413089120,
+          "resource": "data-document"
+        },
+        {
+          "kind": "resource",
+          "at": 1789413089121,
+          "requestId": 7600002,
+          "resource": "old.js"
+        },
+        {
+          "kind": "matcherStart",
+          "at": 1789413089121,
+          "requestId": 7600002,
+          "resource": "old.js"
+        },
+        {
+          "kind": "pageEnd",
+          "at": 1789413089121,
+          "requestId": 7600002,
+          "resource": "data-document"
+        },
+        {
+          "kind": "interceptDenied",
+          "at": 1789413089123,
+          "resource": "other-http-document"
+        },
+        {
+          "kind": "matched",
+          "at": 1789413089123,
+          "requestId": 7600002,
+          "resource": "old.js"
+        },
+        {
+          "kind": "end",
+          "at": 1789413089123,
+          "requestId": 7600002
+        }
+      ],
+      "network": "in-memory-only",
+      "scope": "one controlled run; not proof of all native callback schedules"
+    }
+  ],
+  "meaning": "Actual controlled VM onResourceLoad callbacks, no public-network fetch; early success and cancel/new-job isolation failure must remain separate",
+  "status": "OPEN: confirmed old resource assigned to new job; production isolation fix in progress by other owners"
+}

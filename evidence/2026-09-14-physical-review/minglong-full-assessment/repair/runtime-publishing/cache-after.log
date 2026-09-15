@@ -1,0 +1,24 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   Compiling reader-runtime v0.1.0 (/Users/minliny/Documents/Reader/Reader-Core-Native/crates/reader-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.80s
+     Running tests/runtime_integration.rs (target/check/debug/deps/runtime_integration-fb80445612078c8f)
+
+running 14 tests
+test cache_commands::invalid_initial_checkpoint_completion_rolls_prefetch_back_to_its_before_image ... ok
+test cache_commands::clear_book_is_source_scoped_and_cache_mutation_classification_is_exact ... ok
+test cache_commands::initial_checkpoint_host_error_rolls_prefetch_back_before_any_http ... ok
+test cache_commands::malformed_host_results_retry_exact_task_then_leave_terminal_failure ... ok
+test cache_commands::cancellation_and_capability_rejection_leave_no_prefetch_mutation ... ok
+test cache_commands::status_reports_per_chapter_queue_states_and_global_cache_stats ... ok
+test cache_commands::cache_and_all_clear_preserve_imported_local_reading_and_rollback ... ok
+test cache_commands::runtime_host_error_retries_the_same_chapter_then_can_succeed ... ok
+test cache_commands::storage_full_report_keeps_body_failed_and_retries_without_http ... ok
+test cache_commands::final_persistence_host_error_rolls_back_completed_body_and_queue ... ok
+test cache_commands::invalid_final_persistence_completion_rolls_back_completed_body_and_queue ... ok
+test cache_commands::persistent_runtime_checkpoints_queue_before_first_http_and_flushes_final_body ... ok
+test cache_commands::publishing_host_completion_finishes_once_and_cancellation_still_wins_before_claim ... ok
+test cache_commands::prefetch_executes_cached_toc_range_serially_and_materializes_every_body ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 625 filtered out; finished in 0.43s
+

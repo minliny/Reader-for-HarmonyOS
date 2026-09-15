@@ -1,0 +1,17 @@
+PASS: production proxy/DNS/transparent-gateway admission, selected-network exclusions, PAC, network changes and structured errors
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: one origin TLS failure cannot poison or stop the whole proxy candidate group
+    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-network-route-policy.mjs:93:1 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: ReferenceError: errorMessageOf is not defined
+      at HttpExecuteHost.singleHopTransport (eval at <anonymous> (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-network-route-policy.mjs:76:12), <anonymous>:1147:9),
+  expected: [Function (anonymous)],
+  operator: 'rejects',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

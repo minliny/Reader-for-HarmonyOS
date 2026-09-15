@@ -1,0 +1,10 @@
+PASS actual HTTP transport: HEAD/204/205/304 absent or empty bodies, 200 empty string and binary bytes (22 cases)
+PASS nonempty decoded strings and unknown body representations fail with bounded status/type diagnostics
+PASS bodyless 4xx/5xx keeps explicit HTTP source rejection; actual rejection body remains unchanged
+PASS actual redirect chain keeps empty hop Location and rejects private targets before dispatch; empty success survives final response conversion
+PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack
+PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs while retaining transport origin
+PASS unknown native 2300999 preserves per-request transient HTTP evidence, not a global network outage or a source rule verdict
+(node:51830) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Host -> SDK -> CoreError input -> reading classifier and safe search summary: TLS/23/no-code retain HTTP cause, only known transient codes retry; per-operation association survives repeats, cancellation and later independent failures stay separate

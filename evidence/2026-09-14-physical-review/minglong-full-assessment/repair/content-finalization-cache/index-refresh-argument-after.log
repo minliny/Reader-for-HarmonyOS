@@ -1,0 +1,5 @@
+(node:39774) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+cache refresh admission: actual Index continuation preserves new chapter and saved offset arguments PASS
+Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS

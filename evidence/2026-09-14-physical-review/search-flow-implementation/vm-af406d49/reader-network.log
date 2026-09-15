@@ -1,0 +1,97 @@
+09-15 14:00:58.078  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:00:58.092  2875  2875 W A05244/Reader: Search source 101kanshu.net failed: Internal error
+09-15 14:00:58.994  2875  2875 W A05244/Reader: Search source 444.1006sd.com failed: search protocol returned blank title
+09-15 14:01:00.120  2875  2875 W A05244/Reader: Search projection retained incomplete facts: related source/relation snapshot changed
+09-15 14:01:00.783  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:01.584  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:01.595  2875  2875 W A05244/Reader: Search source bcshuku.com failed: Cannot read property length of undefined
+09-15 14:01:02.212  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Invalid URL format or missing URL
+09-15 14:01:03.554  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:16.987  2875  2875 W A05244/Reader: Search source m.zjsw.org failed: search protocol returned blank title
+09-15 14:01:18.104  2875  2875 W A05244/Reader: Search source qd9.net failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 14:01:18.785  2875  2875 W A05244/Reader: Search source ruarourou.top failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 14:01:19.117  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:01:19.132  2875  2875 W A05244/Reader: Search source novel.seseclub.com failed: Internal error
+09-15 14:01:19.161  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.171  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.203  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.225  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.230  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.261  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.274  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.297  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.317  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.322  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.343  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.375  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.414  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.422  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.474  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.520  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.528  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.586  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.728  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:19.729  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.232  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.314  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.332  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.376  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.421  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.457  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.463  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.503  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.558  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.571  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.608  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.647  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.648  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.698  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.743  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.751  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.802  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.899  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:20.905  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.044  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.051  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.156  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.395  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.469  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.472  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.562  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.639  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.646  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.715  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.806  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:21.982  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:01:21.985  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:22.027  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:22.101  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:22.166  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:22.174  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:22.263  2875  2875 W A05244/Reader: Search source sesebooks.com failed: Internal error
+09-15 14:01:22.412  2875  2875 W A05244/Reader: Search source www.52dzxy.com discarded 23 malformed rows: search protocol returned blank title; search protocol returned blank title; search protocol returned blank title; search protocol returned blank title
+09-15 14:01:23.068  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:23.180  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:23.199  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:23.294  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:23.297  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:23.368  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:23.413  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:23.415  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:23.467  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:27.937  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Cannot read property length of undefined
+09-15 14:01:27.939  2875  2875 W A05244/Reader: Search source www.ibus233.com failed: Cannot read property length of undefined
+09-15 14:01:30.428  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Invalid SSL peer certificate or SSH remote key
+09-15 14:01:30.441  2875  2875 W A05244/Reader: Search source www.liyuxiangku.com failed: Invalid SSL peer certificate or SSH remote key
+09-15 14:01:30.852  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:01:30.863  2875  2875 W A05244/Reader: Search source www.pofans.com failed: Internal error
+09-15 14:01:31.014  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: platform did not return the requested raw response bytes
+09-15 14:01:31.025  2875  2875 W A05244/Reader: Search source www.min-yuan.com failed: http.execute: platform did not return the requested raw response bytes
+09-15 14:01:37.360  2875  2875 W A05244/Reader: Search source www.tatays.com failed: 书源网页请求了不允许的网络地址
+09-15 14:01:44.997  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:01:45.010  2875  2875 W A05244/Reader: Search source www.souhh.com failed: Internal error
+09-15 14:03:52.229  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:03:52.229  2875  2875 W A05244/Reader: Search source www.yiyechunxiao.com failed: Internal error
+09-15 14:03:53.576  2875  2875 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 14:03:53.589  2875  2875 W A05244/Reader: Search source www.xtyxsw.org failed: Internal error
+09-15 14:03:53.688  2875  2875 W A05244/Reader: Search source www.zggdwx.com failed: cannot auto-build searchRequest: source.searchUrl is empty

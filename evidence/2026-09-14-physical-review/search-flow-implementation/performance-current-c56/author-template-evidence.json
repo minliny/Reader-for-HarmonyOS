@@ -1,0 +1,26 @@
+[
+  {
+    "file": "/Users/minliny/Documents/Reader/Reader-Core-Native/tests/fixtures/corpus/sources/src-337-bdeaa8132c97.json",
+    "sha256": "84c1efb1b43b242f235515adf5cefd32a5dd236ab24998530fdbaecf6e70491c",
+    "name": "爱推书君（优）",
+    "sourceId": "https://pre-api.tuishujun.com/",
+    "searchAuthorRule": "@{{$.author_nickname}}",
+    "detailAuthorRule": "@{{$.author_nickname}}"
+  },
+  {
+    "file": "/Users/minliny/Documents/Reader/Reader-Core-Native/tests/fixtures/corpus/sources/src-338-c9e9adfbdfab.json",
+    "sha256": "7844a5764867d840a7fd226bd24ee944c5a97a4337a42c0d7597b1f9fb1b0363",
+    "name": "爱推书君（优）",
+    "sourceId": "https://pre-api.tuishujun.com",
+    "searchAuthorRule": "@{{$.author_nickname}}",
+    "detailAuthorRule": "@{{$.author_nickname}}"
+  },
+  {
+    "file": "/Users/minliny/Documents/Reader/Reader-Core-Native/tests/fixtures/corpus/sources/src-1065-0a6f4d44c21e.json",
+    "sha256": "652461b97682079e5bafd2acf9fc39fd9ec4ef9d6b836595c7222cde2a94e339",
+    "name": "爱推书君",
+    "sourceId": "https://pre-api.tuishujun.com/",
+    "searchAuthorRule": "@{{$.author_nickname}}",
+    "detailAuthorRule": "@{{$.author_nickname}}"
+  }
+]

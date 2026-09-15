@@ -1,0 +1,13 @@
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:33.871 xcodebuild[17889:15152317]  DVTFilePathFSEvents: Failed to start fs event stream.
+warning: rquickjs-sys@0.8.1: 2026-09-04 11:44:34.074 xcodebuild[17889:15152310] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.15s
+     Running unittests src/lib.rs (target/check/debug/deps/reader_runtime-f73decdacc6c78ac)
+
+running 4 tests
+test remote::remote_content_positions::tests::format2_first_download_and_ad_hoc_preview_hash_the_same_canonical_format ... ok
+test remote::remote_content_positions::tests::format2_explicit_refresh_maps_format1_array_and_only_the_requested_chapter ... ok
+test remote::remote_content_positions::tests::format2_old_cache_is_read_only_until_explicit_upgrade_and_current_cache_does_not_refetch ... ok
+test remote::remote_content_positions::tests::format2_explicit_refresh_preserves_format1_array_when_wrapper_anchor_cannot_map ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 407 filtered out; finished in 0.20s
+

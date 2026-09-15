@@ -1,0 +1,206 @@
+09-15 15:58:07.168 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":1045,"uptimeMs":222447772,"samples":15,"maxDelayMs":265,"delayedOver50Ms":1,"reason":"window"}
+09-15 15:58:08.172 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":2048,"uptimeMs":222448775,"samples":18,"maxDelayMs":83,"delayedOver50Ms":1,"reason":"window"}
+09-15 15:58:09.327 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":3203,"uptimeMs":222449930,"samples":16,"maxDelayMs":337,"delayedOver50Ms":1,"reason":"window"}
+09-15 15:58:10.342 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":4218,"uptimeMs":222450945,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:11.367 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":5243,"uptimeMs":222451970,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:12.385 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":6262,"uptimeMs":222452989,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:13.408 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":7284,"uptimeMs":222454011,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:14.411 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":8288,"uptimeMs":222455015,"samples":18,"maxDelayMs":49,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:14.416 17201 17201 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300999
+09-15 15:58:14.440 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:14.451 17201 17201 W A05244/Reader: Search source 101kanshu.net failed: Internal error
+09-15 15:58:15.424 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":9301,"uptimeMs":222456028,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:16.431 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":10307,"uptimeMs":222457034,"samples":20,"maxDelayMs":1,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:17.454 17201 17201 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300023
+09-15 15:58:17.455 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":11332,"uptimeMs":222458059,"samples":20,"maxDelayMs":20,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:18.474 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":12351,"uptimeMs":222459078,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:19.488 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":13365,"uptimeMs":222460092,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:20.506 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":14383,"uptimeMs":222461110,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:21.518 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":15395,"uptimeMs":222462122,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:22.534 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":16411,"uptimeMs":222463138,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:23.551 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":17428,"uptimeMs":222464155,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:23.929 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:23.929 17201 17201 W A05244/Reader: Search source 69shuba.tw failed: Internal error
+09-15 15:58:23.971 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:23.971 17201 17201 W A05244/Reader: Search source 444.1006sd.com failed: Internal error
+09-15 15:58:24.574 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":18450,"uptimeMs":222465177,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:24.853 17201 17201 W A05244/Reader: Search source h5.reader.qq.com failed: book.search HTTP status 404
+09-15 15:58:25.586 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":19462,"uptimeMs":222466189,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:26.334 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:26.334 17201 17201 W A05244/Reader: Search source bcshuku.com failed: Internal error
+09-15 15:58:26.605 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":20482,"uptimeMs":222467209,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:27.622 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":21499,"uptimeMs":222468226,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:28.023 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:28.023 17201 17201 W A05244/Reader: Search source cn.zhys.tw failed: Internal error
+09-15 15:58:28.642 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":22518,"uptimeMs":222469245,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:29.667 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":23543,"uptimeMs":222470270,"samples":20,"maxDelayMs":17,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:30.677 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":24554,"uptimeMs":222471281,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:31.694 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":25571,"uptimeMs":222472298,"samples":20,"maxDelayMs":14,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:32.707 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":26584,"uptimeMs":222473311,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:33.716 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":27593,"uptimeMs":222474320,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:34.169 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:34.180 17201 17201 W A05244/Reader: Search source crxs.me failed: Internal error
+09-15 15:58:34.727 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":28603,"uptimeMs":222475330,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:35.226 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:35.236 17201 17201 W A05244/Reader: Search source ik8.net failed: Internal error
+09-15 15:58:35.736 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":29613,"uptimeMs":222476340,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:36.748 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":30625,"uptimeMs":222477352,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:37.760 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":31636,"uptimeMs":222478363,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:38.713 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:38.723 17201 17201 W A05244/Reader: Search source lnovel.org failed: Internal error
+09-15 15:58:38.791 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":32668,"uptimeMs":222479395,"samples":20,"maxDelayMs":16,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:39.150 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:39.163 17201 17201 W A05244/Reader: Search source lnovel.tw failed: Internal error
+09-15 15:58:39.810 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":33687,"uptimeMs":222480414,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:40.820 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":34697,"uptimeMs":222481424,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:41.832 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":35709,"uptimeMs":222482436,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:42.841 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":36718,"uptimeMs":222483445,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:43.854 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":37731,"uptimeMs":222484458,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:44.860 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":38737,"uptimeMs":222485464,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:45.898 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":39775,"uptimeMs":222486502,"samples":20,"maxDelayMs":30,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:46.617 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:46.618 17201 17201 W A05244/Reader: Search source m.douyinxs.com failed: Internal error
+09-15 15:58:46.919 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":40796,"uptimeMs":222487523,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:47.977 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":41853,"uptimeMs":222488580,"samples":20,"maxDelayMs":35,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:48.991 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":42868,"uptimeMs":222489595,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:48.999 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:49.000 17201 17201 W A05244/Reader: Search source m.yswnovel.com failed: Internal error
+09-15 15:58:49.298 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:58:49.308 17201 17201 W A05244/Reader: Search source m.lulushu18.com failed: Internal error
+09-15 15:58:50.015 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":43892,"uptimeMs":222490619,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:51.050 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":44926,"uptimeMs":222491653,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:52.075 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":45952,"uptimeMs":222492679,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:53.099 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":46976,"uptimeMs":222493703,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:54.120 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":47996,"uptimeMs":222494723,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:55.159 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":49035,"uptimeMs":222495762,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:56.189 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":50066,"uptimeMs":222496793,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:57.210 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":51087,"uptimeMs":222497814,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:58.243 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":52120,"uptimeMs":222498847,"samples":20,"maxDelayMs":8,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:58:59.269 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":53145,"uptimeMs":222499872,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:00.291 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":54168,"uptimeMs":222500895,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:01.308 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":55184,"uptimeMs":222501911,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:02.328 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":56205,"uptimeMs":222502932,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:03.356 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":57233,"uptimeMs":222503960,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:04.404 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":58280,"uptimeMs":222505007,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:05.443 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":59320,"uptimeMs":222506047,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:06.482 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":60359,"uptimeMs":222507086,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:07.508 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":61385,"uptimeMs":222508112,"samples":20,"maxDelayMs":6,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:08.528 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":62404,"uptimeMs":222509131,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:09.554 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":63430,"uptimeMs":222510157,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:10.580 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":64457,"uptimeMs":222511184,"samples":20,"maxDelayMs":9,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:11.598 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":65475,"uptimeMs":222512202,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:12.623 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":66500,"uptimeMs":222513227,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:13.669 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":67546,"uptimeMs":222514273,"samples":20,"maxDelayMs":10,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:14.693 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":68570,"uptimeMs":222515297,"samples":20,"maxDelayMs":7,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:15.713 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":69589,"uptimeMs":222516316,"samples":16,"maxDelayMs":206,"delayedOver50Ms":1,"reason":"window"}
+09-15 15:59:16.722 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":70599,"uptimeMs":222517326,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:16.807 17201 17201 W A05244/Reader: Search source m.zjsw.org failed: book.search HTTP status 404
+09-15 15:59:17.308 17201 17201 W A05244/Reader: Search source qd9.net failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 15:59:17.747 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":71624,"uptimeMs":222518351,"samples":19,"maxDelayMs":22,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:18.756 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":72633,"uptimeMs":222519360,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:19.391 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:19.391 17201 17201 W A05244/Reader: Search source novel.seseclub.com failed: Internal error
+09-15 15:59:19.402 17201 17201 W A05244/Reader: Search source ruarourou.top failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 15:59:19.775 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":73651,"uptimeMs":222520378,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:20.781 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":74658,"uptimeMs":222521385,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:21.798 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":75675,"uptimeMs":222522402,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:22.815 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":76692,"uptimeMs":222523419,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:23.149 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:23.159 17201 17201 W A05244/Reader: Search source sesebooks.com failed: Internal error
+09-15 15:59:23.393 17201 17201 W A05244/Reader: Search source ubook.reader.qq.com failed: book.search HTTP status 404
+09-15 15:59:23.845 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":77721,"uptimeMs":222524448,"samples":20,"maxDelayMs":13,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:24.857 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":78734,"uptimeMs":222525461,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:25.871 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":79748,"uptimeMs":222526475,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:26.283 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:26.294 17201 17201 W A05244/Reader: Search source novel.cooks.tw failed: Internal error
+09-15 15:59:26.888 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":80765,"uptimeMs":222527492,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:27.545 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:27.545 17201 17201 W A05244/Reader: Search source readnovelfull.com failed: Internal error
+09-15 15:59:27.896 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":81773,"uptimeMs":222528500,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:28.904 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":82781,"uptimeMs":222529508,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:29.914 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":83790,"uptimeMs":222530517,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:30.938 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":84814,"uptimeMs":222531541,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:31.951 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":85828,"uptimeMs":222532555,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:32.969 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":86846,"uptimeMs":222533573,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:33.989 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":87866,"uptimeMs":222534593,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:34.065 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:34.076 17201 17201 W A05244/Reader: Search source www.52dzxy.com failed: Internal error
+09-15 15:59:35.006 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":88883,"uptimeMs":222535610,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:36.021 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":89898,"uptimeMs":222536625,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:36.516 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:36.527 17201 17201 W A05244/Reader: Search source www.52shuku123.cc failed: Internal error
+09-15 15:59:37.036 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":90912,"uptimeMs":222537639,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:37.738 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:37.749 17201 17201 W A05244/Reader: Search source readnovelfull.com failed: Internal error
+09-15 15:59:38.050 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":91927,"uptimeMs":222538654,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:39.067 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":92943,"uptimeMs":222539670,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:39.977 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:39.977 17201 17201 W A05244/Reader: Search source www.biquge345.com failed: Internal error
+09-15 15:59:40.078 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":93955,"uptimeMs":222540682,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:41.091 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":94967,"uptimeMs":222541694,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:42.106 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":95983,"uptimeMs":222542710,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:43.124 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":97001,"uptimeMs":222543728,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:44.139 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":98016,"uptimeMs":222544743,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:45.159 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":99036,"uptimeMs":222545763,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:45.161 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:45.172 17201 17201 W A05244/Reader: Search source www.bzbz1024.com failed: Internal error
+09-15 15:59:46.174 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":100050,"uptimeMs":222546777,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:46.796 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:46.809 17201 17201 W A05244/Reader: Search source www.chamabooks.net failed: Internal error
+09-15 15:59:47.180 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":101057,"uptimeMs":222547784,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:48.191 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":102068,"uptimeMs":222548795,"samples":20,"maxDelayMs":1,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:48.974 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:48.974 17201 17201 W A05244/Reader: Search source www.dbxsn.com failed: Internal error
+09-15 15:59:49.206 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":103083,"uptimeMs":222549810,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:50.217 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":104094,"uptimeMs":222550821,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:50.237 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:50.237 17201 17201 W A05244/Reader: Search source www.dcrbk.com failed: Internal error
+09-15 15:59:51.233 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":105110,"uptimeMs":222551837,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:52.247 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":106124,"uptimeMs":222552851,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:53.270 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":107147,"uptimeMs":222553874,"samples":20,"maxDelayMs":5,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:54.287 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":108163,"uptimeMs":222554890,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:55.305 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":109182,"uptimeMs":222555909,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:55.470 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:55.470 17201 17201 W A05244/Reader: Search source www.deqixs.co failed: Internal error
+09-15 15:59:56.314 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":110191,"uptimeMs":222556918,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:57.045 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:57.057 17201 17201 W A05244/Reader: Search source www.douyinxs.com failed: Internal error
+09-15 15:59:57.327 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":111204,"uptimeMs":222557931,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:58.340 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":112217,"uptimeMs":222558944,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:58.448 17201 17201 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300060
+09-15 15:59:58.449 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Invalid SSL peer certificate or SSH remote key
+09-15 15:59:58.458 17201 17201 W A05244/Reader: Search source www.liyuxiangku.com failed: Invalid SSL peer certificate or SSH remote key
+09-15 15:59:58.941 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: source returned HTTP 403 without response content
+09-15 15:59:58.952 17201 17201 W A05244/Reader: Search source www.min-yuan.com failed: http.execute: source returned HTTP 403 without response content
+09-15 15:59:59.347 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":113224,"uptimeMs":222559951,"samples":20,"maxDelayMs":3,"delayedOver50Ms":0,"reason":"window"}
+09-15 15:59:59.369 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 15:59:59.379 17201 17201 W A05244/Reader: Search source www.feifanks.com failed: Internal error
+09-15 16:00:00.358 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":114235,"uptimeMs":222560962,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:00:01.367 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":115244,"uptimeMs":222561971,"samples":20,"maxDelayMs":1,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:00:02.379 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":116256,"uptimeMs":222562983,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:00:03.387 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":117263,"uptimeMs":222563990,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:00:04.403 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":118280,"uptimeMs":222565007,"samples":20,"maxDelayMs":4,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:00:05.416 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":119292,"uptimeMs":222566019,"samples":20,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"window"}
+09-15 16:00:06.126 17201 17201 I A05244/Reader: READER_EVENT_LOOP {"elapsedMs":120002,"uptimeMs":222566729,"samples":14,"maxDelayMs":2,"delayedOver50Ms":0,"reason":"duration-limit"}
+09-15 16:00:10.061 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:10.072 17201 17201 W A05244/Reader: Search source www.qiluwx.com failed: Internal error
+09-15 16:00:12.773 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:12.784 17201 17201 W A05244/Reader: Search source www.souhh.com failed: Internal error
+09-15 16:00:14.256 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:14.266 17201 17201 W A05244/Reader: Search source www.tatays.com failed: Internal error
+09-15 16:00:16.648 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:16.649 17201 17201 W A05244/Reader: Search source www.xtyxsw.org failed: Internal error
+09-15 16:00:17.083 17201 17201 E A05244/Reader: http.execute native failure phase=transport stage=request.dispatch code=2300028
+09-15 16:00:17.090 17201 17201 W A05244/Reader: Search source www.ibus233.com failed: http.execute: exceeded total deadline
+09-15 16:00:20.368 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:20.380 17201 17201 W A05244/Reader: Search source www.wanwx.com failed: Internal error
+09-15 16:00:23.697 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:23.697 17201 17201 W A05244/Reader: Search source www.xn--7dv141d.com failed: Internal error
+09-15 16:00:25.648 17201 17201 W A05244/Reader: Search source www.zggdwx.com failed: cannot auto-build searchRequest: source.searchUrl is empty
+09-15 16:00:26.857 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:26.868 17201 17201 W A05244/Reader: Search source www.ybswa.com failed: Internal error
+09-15 16:00:29.548 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): http.execute: source returned HTTP 404 without response content
+09-15 16:00:30.595 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:30.606 17201 17201 W A05244/Reader: Search source www.yiyechunxiao.com failed: Internal error
+09-15 16:00:35.313 17201 17201 E A05244/Reader: http.execute failed after 1 attempt(s): Internal error
+09-15 16:00:35.326 17201 17201 W A05244/Reader: Search source www.yysk.net failed: Internal error

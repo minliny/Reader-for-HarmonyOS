@@ -1,0 +1,65 @@
+bun test v1.2.17 (282dda62)
+
+bindings/harmony/sdk/minimal_reading_chain.test.ts:
+(pass) ChainHttpFetch > routes by URL to return matching response bodies [1.25ms]
+(pass) CapabilityRouter reading chain dispatch > dispatches reading chain host.requests in order [1.32ms]
+(pass) ReaderCoreRuntime reading chain via CapabilityRouter > handles chain through waitForResult [3.74ms]
+
+bindings/harmony/sdk/reader_core.test.ts:
+(pass) Host completion wakeup > ten immediate Host steps resume without firing any poll timer [1.16ms]
+(pass) Host completion wakeup > delayed completion resumes at completion time without the next poll tick [0.26ms]
+(pass) Host completion wakeup > reject and synchronous throw each publish one host.error immediately [1.59ms]
+(pass) Host completion wakeup > completion at the deadline loses in either timer ordering; earlier completion wins [1.75ms]
+(pass) Host completion wakeup > cancel before handler registration never invokes the Host [0.16ms]
+(pass) Host completion wakeup > cancel during Host work wakes once and ignores late resolve or reject [0.68ms]
+(pass) Host completion wakeup > synchronous cancellation inside a handler cannot lose its wakeup [0.12ms]
+(pass) Host completion wakeup > function cancellation retains its bounded check without polling completed tasks [0.18ms]
+(pass) Host completion wakeup > close releases Host and Native wait timers even if one abort hook throws [0.38ms]
+(pass) Host completion wakeup > reverse Host completions and failures stay with their concurrent request [0.31ms]
+(pass) Host completion wakeup > an immediate event storm yields and cannot overrun its deadline [0.41ms]
+(pass) ReaderCoreRuntime > exposes typed transaction-pending details without message parsing [0.03ms]
+(pass) ReaderCoreRuntime > requests runtime.ping and returns the matching result [0.08ms]
+(pass) ReaderCoreRuntime > demultiplexes concurrent requests without blocking the ArkTS event loop [1.79ms]
+(pass) ReaderCoreRuntime > releases consumed event payloads while preserving unread event order [3.79ms]
+(pass) ReaderCoreRuntime > auto-completes host.request through host.complete [0.13ms]
+(pass) ReaderCoreRuntime > keeps unrelated host.request queued while waiting for a result [0.48ms]
+(pass) ReaderCoreRuntime > rejects invalid command inputs before native dispatch [0.37ms]
+(pass) ReaderCoreRuntime > rejects invalid host.complete results before native dispatch [0.01ms]
+(pass) ReaderCoreRuntime > rejects invalid timeout options before native polling [0.23ms]
+(pass) ReaderCoreRuntime > turns host handler failures into host.error and surfaces core error [0.11ms]
+(pass) ReaderCoreRuntime > serializes actual SDK host failures into the Rust HostErrorParams fixtures [0.15ms]
+(pass) ReaderCoreRuntime > passes cancellation through to native runtime
+(pass) ReaderCoreRuntime > timeout cancels the active Host operation before returning [21.18ms]
+(pass) ReaderCoreRuntime > exposes native lifecycle smoke result shape [0.04ms]
+(pass) ReaderCoreRuntime > rejects malformed native event payloads at the SDK boundary [0.04ms]
+
+bindings/harmony/sdk/capability_router.test.ts:
+(pass) CapabilityRouter > registers http.execute when httpFetch is provided [0.02ms]
+(pass) CapabilityRouter > does not register http.execute when httpFetch is absent [0.01ms]
+(pass) CapabilityRouter > rejects empty capability name on register [0.01ms]
+(pass) CapabilityRouter > rejects non-function handler on register
+(pass) CapabilityRouter > route throws for unregistered capability [0.05ms]
+(pass) CapabilityRouter > routes cancellation to the registered Host capability
+(pass) CapabilityRouter.handleHttpExecute > forwards url/method/headers/body to HttpFetch.fetch and returns its response [0.06ms]
+(pass) CapabilityRouter.handleHttpExecute > defaults method to GET when omitted [0.03ms]
+(pass) CapabilityRouter.handleHttpExecute > coerces non-string header values to strings [0.03ms]
+(pass) CapabilityRouter.handleHttpExecute > ignores non-object headers field [0.02ms]
+(pass) CapabilityRouter.handleHttpExecute > omits body when not a string
+(pass) CapabilityRouter.handleHttpExecute > rejects empty url with INTERNAL-style error [0.05ms]
+(pass) CapabilityRouter.handleHttpExecute > rejects missing url with INTERNAL-style error [0.01ms]
+(pass) CapabilityRouter.handleHttpExecute > propagates HttpFetch failures as rejected promise (caller maps to host.error) [0.01ms]
+(pass) CapabilityRouter.handleHttpExecute > handles response shape matching http-complete-with-metadata fixture [0.04ms]
+
+bindings/harmony/sdk/smoke_report.test.ts:
+(pass) Harmony NAPI smoke report > marks a complete runtime smoke result as pass [1.66ms]
+(pass) Harmony NAPI smoke report > marks an invalid host smoke result as fail [0.07ms]
+(pass) Harmony NAPI smoke report > rejects a core.info result without a traceable build identity [0.03ms]
+(pass) Harmony NAPI smoke report > formats a parseable report for device log archival [0.03ms]
+(pass) Harmony NAPI smoke report > builds a structured failure report when smoke execution throws [0.05ms]
+(pass) Harmony NAPI smoke report > builds a device-archivable smoke artifact summary [0.04ms]
+(pass) Harmony NAPI smoke report > preserves execution failures in smoke artifacts
+
+ 51 pass
+ 0 fail
+ 416 expect() calls
+Ran 51 tests across 4 files. [218.00ms]

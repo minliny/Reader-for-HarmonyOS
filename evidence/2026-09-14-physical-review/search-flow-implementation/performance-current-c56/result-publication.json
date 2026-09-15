@@ -1,0 +1,101 @@
+{
+  "evidence": "macOS Node, production QueryRun/present/SearchResultProjection/Page.groupResults/DataSource methods; no ArkUI native layout or device timing, no deep copy emulation",
+  "samples": [
+    {
+      "count": 682,
+      "sample": 0,
+      "firstMs": 3.701999999999998,
+      "unchangedMs": 0.013666000000000622,
+      "plus32Ms": 1.1714589999999987,
+      "finalGroups": 714
+    },
+    {
+      "count": 682,
+      "sample": 1,
+      "firstMs": 1.9090000000000202,
+      "unchangedMs": 0.005750000000006139,
+      "plus32Ms": 0.617874999999998,
+      "finalGroups": 714
+    },
+    {
+      "count": 682,
+      "sample": 2,
+      "firstMs": 1.6502499999999998,
+      "unchangedMs": 0.008707999999984395,
+      "plus32Ms": 1.1907919999999876,
+      "finalGroups": 714
+    },
+    {
+      "count": 1000,
+      "sample": 0,
+      "firstMs": 2.6647920000000056,
+      "unchangedMs": 0.019624999999990678,
+      "plus32Ms": 1.0294169999999951,
+      "finalGroups": 1032
+    },
+    {
+      "count": 1000,
+      "sample": 1,
+      "firstMs": 2.1444580000000144,
+      "unchangedMs": 0.002625000000023192,
+      "plus32Ms": 0.7770419999999945,
+      "finalGroups": 1032
+    },
+    {
+      "count": 1000,
+      "sample": 2,
+      "firstMs": 1.9939159999999845,
+      "unchangedMs": 0.0019169999999917309,
+      "plus32Ms": 0.8175830000000133,
+      "finalGroups": 1032
+    },
+    {
+      "count": 5000,
+      "sample": 0,
+      "firstMs": 13.948875000000015,
+      "unchangedMs": 0.009874999999993861,
+      "plus32Ms": 5.108708000000007,
+      "finalGroups": 5032
+    },
+    {
+      "count": 5000,
+      "sample": 1,
+      "firstMs": 16.117624999999975,
+      "unchangedMs": 0.005416999999994232,
+      "plus32Ms": 7.0057079999999985,
+      "finalGroups": 5032
+    },
+    {
+      "count": 5000,
+      "sample": 2,
+      "firstMs": 10.668749999999989,
+      "unchangedMs": 0.0030830000000037217,
+      "plus32Ms": 5.765291999999988,
+      "finalGroups": 5032
+    },
+    {
+      "count": 10000,
+      "sample": 0,
+      "firstMs": 22.735124999999982,
+      "unchangedMs": 0.004292000000020835,
+      "plus32Ms": 7.25487499999997,
+      "finalGroups": 10032
+    },
+    {
+      "count": 10000,
+      "sample": 1,
+      "firstMs": 22.043375000000026,
+      "unchangedMs": 0.0037079999999605207,
+      "plus32Ms": 10.09925000000004,
+      "finalGroups": 10032
+    },
+    {
+      "count": 10000,
+      "sample": 2,
+      "firstMs": 30.443167000000017,
+      "unchangedMs": 0.01875000000001137,
+      "plus32Ms": 9.848916000000031,
+      "finalGroups": 10032
+    }
+  ]
+}

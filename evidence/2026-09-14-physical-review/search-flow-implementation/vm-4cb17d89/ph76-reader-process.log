@@ -1,0 +1,6 @@
+09-15 13:09:50.638 19802 19802 I A05244/Reader: Core build identity: {"schemaVersion":1,"buildId":"489381c90cf94c5312fd4267b90266846f95462b62308587e10e5e9650750d51","gitCommit":"9e0c008b3000afc0ecdc604d2b754c327ef3da9a","gitDirty":false,"cargoLockSha256":"2876d68af627ae95593e6d95197d1299ab4186583c09b8f0a358558f04d0cdd6","protocolSha256":"52b45af80756f0210d58a3af429eb0ff23f2ba14b9b31bf08bdf427b62552eda","rustProfile":"release"}
+09-15 13:09:50.648 19802 19802 I A05244/Reader: Core source-switch startup recovery count: 0
+09-15 13:09:52.209 19802 19802 I A05244/ReaderOssPilot: page-begin resource://rawfile/reader-oss-pilot/index.html
+09-15 13:09:52.533 19802 19802 I A05244/ReaderOssPilot: page-end resource://rawfile/reader-oss-pilot/index.html
+09-15 13:09:52.942 19802 19802 I A05244/Reader: Bundled source collection completed: records=1046 unique=919 processed=919 imported=0 failed=0 interrupted=false
+09-15 13:11:58.466 19802 19802 I A05244/ReaderPh76Pilot: READER_PH76_RESULT {"scenario":"early","pass":false,"runToken":"1789449118344-1","measurements":{"code":"NETWORK_ERROR","reason":"execution-failed-or-fixture-callback-missing"},"events":[{"kind":"start","at":1789449118450,"requestId":7600001},{"kind":"end","at":1789449118465,"requestId":7600001}],"network":"in-memory-only","scope":"one controlled run; not proof of all native callback schedules"}

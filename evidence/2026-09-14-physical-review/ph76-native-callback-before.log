@@ -1,0 +1,16 @@
+{"kind":"actual-sdk-native-old-callback-after-new-start","oldRequestId":70,"newRequestId":71,"matcherWasPendingBeforeCallback":false,"newValue":"https://93.184.216.34/old.m3u8","expected":"old callback must not settle new request","reproduced":true}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: old native callback must not settle new request
+    at file:///private/tmp/ph76-native-callback-before.mjs:43:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'https://93.184.216.34/old.m3u8',
+  expected: 'https://93.184.216.34/old.m3u8',
+  operator: 'notStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

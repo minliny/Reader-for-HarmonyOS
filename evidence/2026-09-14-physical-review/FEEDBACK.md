@@ -1,12 +1,48 @@
 # 2026-09-14 真机人工审视反馈
 
-## 最新已验证安装：d5f13a96
+## PH92：代理与搜索继续实施（2026-09-15）
+
+当前实施、最终源码/产物和未验证层统一见[当前状态](search-flow-implementation/CURRENT_STATUS_20260915.md)。没有新增产品待决事项；已确定缺口继续实施，不能把旧分包快照当成当前未修改。
+
+- 系统代理/PAC、当前网络合成DNS准入、HTTP取消锁、ArkWeb作业隔离、合法SDK错误wire、连续搜索与阅读worker隔离、正文失败候选回退、旧缓存保护均已实施。
+- 6cf包的PH76 early/cancel两项真实原生样本均PASS；初始化blank误判已经修正，旧FAIL保留原包身份。[原生记录](search-flow-implementation/vm-6cf9705d/ONLINE_RUN.md)。
+- c56实搜4.682秒采样已有正确作者，30.685秒处理66/109源；终态682组、16个源失败。详情自动选松鹤、首章可读，试读返回详情、换源复用现有候选、再返回原搜索已测通。[完整样本](search-flow-implementation/vm-c56ad545/ONLINE_RUN.md)。这不是精确首现时间或帧率测量。
+- 实际编码`.length`异常已经修复并从c56日志消失；URL规范化/跨域Host另由6f486cfa补修。@规则作者重复、临时HTTP失败及旧失败记录降权的当前实施状态见统一页，不再称为用户未定事项。
+- 最后已完成Core全量证据为c28的3860/3860、210协议及clippy/drift/ABI；后续Core/Native/HAP门禁在统一页按最终身份更新。所有旧门禁计数保留其时点，不拼成新包通过。
+- 本轮未操作手机、未改系统代理/DNS、未清数据。原15项、全部实际来源、手机代理与用户验收仍按各自证据层记账。
+
+## PH77–91 逐项复核（2026-09-15）
+
+[15项最新状态表](PH77_91_RECHECK_20260915.md)：4、6、7、8、10、12、13、15的具体主问题已有修复与VM样本；5、11、14代码已改但关键验证未全；1–3及9仍只部分修复。既有通过的几何/入口不因额外动效未验而重新记成未实现；性能及真实原书正文也不因基本交互通过而关闭。该表来自修复前逐项复核；后续代理与搜索实施以本页顶部及专项报告为准，不把早期“未改生产”当作当前状态。
+
+## 《鸣龙》全链路补充审计（2026-09-15）
+
+[完整报告与13项分层结论](minglong-full-assessment/REPORT.md)已关联 PH71/PH76/PH77–79/PH85：实际生产方法复现了正文失败不续试同组、只试3个未知候选漏掉第4个可用源、错误API消息/解析日志/JSON包装被标可读、目录JS异常退化为空目录，以及换源8源批屏障与单条坏记录拒绝整批。13项是审计分解，不是13个新需求；合成回包不等于真机原响应，具体源失败比例仍未取得。最后真机有回执包1d1f47e5/Core61a2f86e尚未包含后续搜索渲染与共享队列修复，不能用当前VM状态代替手机状态。
+
+PH76固定early/cancel两项已在6cf原生通过，c56真实搜索试读样本见顶部。不能由这些样本推导所有生产路径完成；以下“正在/当前”均限定原包时点。
+
+## 3843792a 历史安装与修复前 PH76 取消失败
+
+**`20260914T190706Z-3843792a-773d63a4`** 已在 **2026-09-14 19:09:12.959 UTC** 保数据安装到 VM `6460677a198b` 并启动。Harmony `3843792ab06ee1025d06d44d9666fbab2bd6f63f`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名、身份准入、install/launch PASS。签名HAP **167841833 bytes**，SHA-256 `badce494ce3429906ff25c066d97a5e7babb58f8ad260a70f90350923b211f07`。证据：[manifest](search-flow-implementation/vm-3843792a/manifest.json)、[部署回执](search-flow-implementation/vm-3843792a/deployment.json)、[构建](search-flow-implementation/vm-3843792a/build.log)、[身份检查](search-flow-implementation/vm-3843792a/inspect.log)、[安装](search-flow-implementation/vm-3843792a/install.log)、[校验索引](search-flow-implementation/vm-3843792a/receipt.json)。
+
+**384包时点PH76整体OPEN，取消后跨作业误归属由真实VM回调确认；当时生产隔离尚在修复。** 后续源码已实施，最新验证见顶部。两项是384同包不同受控运行，不能只取early成功而报全部通过：
+
+| 实际运行 | 真实结果及证据范围 |
+|---|---|
+| early，03:10:57当地时间 | **PASS**：`callbackToMatchMs=4`、`matchedBeforePageEnd=true`。当前内存文档已准入，`early.css`真实回调在页面结束前被匹配；不是性能timeline模拟结果。 |
+| cancel，03:11:29当地时间 | **FAIL**：旧作业7600001在`old.js`拦截后取消，新作业7600002开始；随后迟到`old.js`被记入7600002并实际`matched`，`returnedResource=unexpected`、`observedLateOldCallbacks=1`。这证明本次取消/新导航的资源归属隔离失败，不能继续当成仅fixture未准入。 |
+
+[完整原生日志](search-flow-implementation/vm-3843792a/ph76-native-results.log)、[两条结构化结果](search-flow-implementation/vm-3843792a/ph76-native-results.json)保留所有事件与时间。两场景均为`in-memory-only`、真实ArkWeb回调受控样本；不证明真实书源联网、全部平台回调顺序或修复后的隔离已通过。专项根因与修复由PH76负责人另记，本节没有新增产品决策、生产修改或设备操作。
+
+书签日期继续沿用**d5f13a96已经VM确认**的新旧显示和清理事实，不假称在384再次测过；6863/aa387其他验证也保留原包身份。Core未变化，沿用3837/3837正式门禁与既有Native；当前仍为iteration / `acceptanceEligible=false`，在线闭环、最终真机和用户验收不因包已安装而关闭。
+
+## d5f13a96 阶段验证（历史包，日期实证保留）
 
 **`20260914T185653Z-d5f13a96-803a4b82`** 已在 **2026-09-14 18:58:57.400 UTC** 保数据安装到 VM `6460677a198b` 并启动，install/launch PASS。Harmony `d5f13a965adf07e6c36fd8ad7e7315cf2ae7d686`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名与安装身份准入通过。签名HAP **167841969 bytes**，SHA-256 `325cdd424b9dea2bb90ced607d87c5d3299f8248e8aa2376ac56ac76041d3004`。
 
 [Manifest](search-flow-implementation/vm-d5f13a96/manifest.json)、[部署回执](search-flow-implementation/vm-d5f13a96/deployment.json)、[构建](search-flow-implementation/vm-d5f13a96/build.log)、[身份检查](search-flow-implementation/vm-d5f13a96/inspect.log)、[安装](search-flow-implementation/vm-d5f13a96/install.log)及[副本校验索引](search-flow-implementation/vm-d5f13a96/receipt.json)已归档。新Core正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift0和C/C++smoke通过；首次因localhost端口权限失败的运行仍保留在下方Core门禁证据，不能冒称该次也通过。
 
-**本包新书签日期尚未VM验证，PH76实际回调结果仍OPEN。** 6863的书签保存/删除与PH88几何、aa387的胶囊及其他交互均保留原包身份，不因安装d5就算重复验证。此包仍为iteration / `acceptanceEligible=false`；在线动线、真机与用户验收不因此通过。
+**本包书签日期已补VM确认**：旧第17章显示“时间未知”，新增第18章显示“09-15 03:03”，与实际创建的上海当地分钟一致；随后清理第18章，列表仅保留第17章。[日期证据](search-flow-implementation/vm-d5f13a96/bookmark-time/receipt.json)。仅该日期/清理样本通过，**PH76实际回调结果仍OPEN**。 6863的书签保存/删除与PH88几何、aa387的胶囊及其他交互均保留原包身份，不因安装d5就算重复验证。此包仍为iteration / `acceptanceEligible=false`；在线动线、真机与用户验收不因此通过。
 
 启动预检曾误用`sys.boot_completed`，返回参数错误1002；随后使用规范`bootevent.boot.completed`确认`true`，SceneBoard仍为PID1529。三份原始回执在上述索引中；这是操作参数错误，不登记为VM启动故障或HDC断联。
 
@@ -111,7 +147,7 @@ PH29已向用户提出“保留固定加底部分隔线/整行随列表滚动”
 | PH83 | 7 | 详情目录预览不应仅4章，历史为20或30且可翻动 | 已确认历史20章及内部滚动 | 已恢复20章Scroll；VM已滚动至第20章，准确点击第20章的设备验证未单列 |
 | PH84 | 8 | 详情完整目录误接阅读完整控制栏目录 | 已定外部完整目录入口 | 已直接挂外部目录，不先解析正文；VM外部入口及返回详情通过，保留原外壳历史样式 |
 | PH85 | 9 | 《鸣龙》松鹤阅读正文残留方括号及字面反斜杠r/n等 | 原始数据类型/源规则/规范化 | 已修 JSONPath 数组文本提取，正文格式升2并沿 PH75 保护位置；Core 回归通过，原书呈现待验 |
-| PH86 | 10 | 常态无书签不显示图标；已有书签才显示填充；镂空仅下拉反馈且不入正文 | 沉浸顶层书签反馈 | 6863 VM新增/约40秒稳定/列表可见/删除闭环通过；稀疏图不证明全动画。该包日期仍为01-01 08:00，后续日期修复独立待验 |
+| PH86 | 10 | 常态无书签不显示图标；已有书签才显示填充；镂空仅下拉反馈且不入正文 | 沉浸顶层书签反馈 | 6863 VM新增/约40秒稳定/列表可见/删除闭环通过；稀疏图不证明全动画。6863日期仍为01-01 08:00；d5新旧日期显示/清理样本已VM通过 |
 | PH87 | 11 | 阅读更多新增下载全部章节；弹窗缺指向凸起、应右对齐且宽度适应文本 | 复用离线下载；对照Figma菜单 | 已接下载全部、右锚菜单/凸起/文本宽度；VM稳定外观及本地书禁用通过，在线全部下载业务未验 |
 | PH88 | 12 | 亮度/自动按钮没有对齐轨道上下圆角圆心，轨道偏短 | 几何共享/用户明确增长轨道 | 已改38×190/104轨道/19、171圆心并扣除边框内缩；6863 VM快捷稳态端点每轴误差仅0.5px，符合取整；未拖亮度或点自动 |
 | PH89 | 13 | 自动翻页胶囊内部元素高度不齐，倒计时圆形轮廓形变/尺寸和文字高度错误 | 胶囊布局/用户明确16×16圆 | 已改圆与数字16×16、标签高16、24高行居中；VM稳定几何/暂停/停止通过，首次交接及全程帧率未验 |

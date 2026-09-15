@@ -1,0 +1,24 @@
+{
+  "coreHead": "0c5a3956274197578554f36b1a7fed9e1977ea78",
+  "coreDirty": false,
+  "mode": "controlled synthetic response, actual current source rule, production Core pipeline, no network",
+  "probeSha256": "02a1d7634d6f2a0316b6cf3f76aa9bffe610d941943b9222ca54d29482246adf",
+  "linkedLibraries": {
+    "reader_content": {
+      "path": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/libreader_content.rlib",
+      "sha256": "80b8ef9f18a313d4130297761b730889cbc239f1620ac8d44b1d129ee997316c"
+    },
+    "reader_domain": {
+      "path": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps/libreader_domain-7fe331e4df4cc001.rlib",
+      "sha256": "35079f58df5382e2c87fe33a5a8d113078790500b9113198b723efc7414d3eef"
+    },
+    "reader_js": {
+      "path": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps/libreader_js-173ee6baee03d67f.rlib",
+      "sha256": "03b0051dd3a3c09edbf837809dab24cd229f2d395c4e1227731bfc6b3ef10a64"
+    },
+    "serde_json": {
+      "path": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/deps/libserde_json-0003dd6fd619a93b.rlib",
+      "sha256": "bd6bffb8b834ff1f028697725b2e82f0453c468a9be490cbd6e142e1cdff5d8a"
+    }
+  }
+}
