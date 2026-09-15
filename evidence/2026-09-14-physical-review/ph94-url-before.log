@@ -1,0 +1,16 @@
+file:///private/tmp/ph94-url-exact-before.mjs:15
+  if(/[\u0000-\u0020\u007f]/u.test(value))throw Object.assign(new Error('Invalid URL format or missing URL'),{code:2300003});
+                                                              ^
+
+Error: Invalid URL format or missing URL
+    at Object.request (file:///private/tmp/ph94-url-exact-before.mjs:15:63)
+    at HttpExecuteHost.singleHopTransport (eval at <anonymous> (file:///private/tmp/ph94-url-exact-before.mjs:25:12), <anonymous>:1090:34)
+    at HttpExecuteHost.singleHop (eval at <anonymous> (file:///private/tmp/ph94-url-exact-before.mjs:25:12), <anonymous>:1022:43)
+    at async HttpExecuteHost.requestRedirectChain (eval at <anonymous> (file:///private/tmp/ph94-url-exact-before.mjs:25:12), <anonymous>:927:24)
+    at async HttpExecuteHost.requestWithPolicy (eval at <anonymous> (file:///private/tmp/ph94-url-exact-before.mjs:25:12), <anonymous>:848:16)
+    at async HttpExecuteHost.execute (eval at <anonymous> (file:///private/tmp/ph94-url-exact-before.mjs:25:12), <anonymous>:596:24)
+    at async file:///private/tmp/ph94-url-exact-before.mjs:40:15 {
+  code: 2300003
+}
+
+Node.js v26.0.0

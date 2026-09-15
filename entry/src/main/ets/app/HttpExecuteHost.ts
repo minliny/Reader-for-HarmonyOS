@@ -183,11 +183,16 @@ export class HttpExecuteHost {
     requestId?: number,
     isCancelled?: () => boolean,
   ): Promise<JsonObject> {
-    const requestUrl = params['url'];
-    if (typeof requestUrl !== 'string' || requestUrl.trim().length === 0) {
+    const inputUrl = params['url'];
+    if (typeof inputUrl !== 'string' || inputUrl.trim().length === 0) {
       throw new Error('http.execute requires non-empty url');
     }
-    this.requireHttpUrl(requestUrl);
+    // The same serialized URL must reach admission, cookies and transport.
+    // In particular, nested source JS can supply literal spaces/Unicode;
+    // validating a parsed copy but sending the original gives native HTTP a
+    // different representation. The platform URL API preserves existing
+    // percent escapes, including source-selected legacy charset bytes.
+    const requestUrl = this.requireHttpUrl(inputUrl);
     const httpsOnly = params['httpsOnly'];
     if (httpsOnly !== undefined && httpsOnly !== null && typeof httpsOnly !== 'boolean') {
       throw new Error('http.execute: httpsOnly must be a boolean');
@@ -628,6 +633,9 @@ export class HttpExecuteHost {
         this.deleteHeader(currentHeaders, 'transfer-encoding');
       }
       if (!this.sameOrigin(currentUrl, nextUrl)) {
+        // A source's explicit virtual-host override belongs to this origin.
+        // Let native HTTP derive the new authority after a cross-origin hop.
+        this.deleteHeader(currentHeaders, 'host');
         for (const name of Object.keys(currentHeaders)) {
           if (isCrossOriginSensitiveHeader(name)) {
             delete currentHeaders[name];
@@ -1000,8 +1008,7 @@ export class HttpExecuteHost {
       const message = errorMessageOf(error);
       throw new Error(`http.execute: invalid redirect Location: ${message}`);
     }
-    this.requireHttpUrl(resolved);
-    return resolved;
+    return this.requireHttpUrl(resolved);
   }
 
   private requireHttpsIfNeeded(value: string, deadline: DeadlineState): void {
@@ -1033,7 +1040,7 @@ export class HttpExecuteHost {
       effectivePort(leftUrl) === effectivePort(rightUrl);
   }
 
-  private requireHttpUrl(value: string): void {
+  private requireHttpUrl(value: string): string {
     let parsed: url.URL;
     try {
       parsed = url.URL.parseURL(value);
@@ -1045,6 +1052,7 @@ export class HttpExecuteHost {
     if ((protocol !== 'http:' && protocol !== 'https:') || parsed.hostname.length === 0) {
       throw new Error('http.execute: url must use http or https');
     }
+    return parsed.toString();
   }
 
   /** Literal targets are checked at entry and before following a redirect.
