@@ -53,6 +53,20 @@ assert.deepEqual(
   { kind: 'readable' },
   'a long real body is not misclassified by banner words');
 
+assert.equal(classifyChapterBody('请先登录并完成人机验证。' + '安全检查说明。'.repeat(60)).kind,
+  'SOURCE_AUTH_REQUIRED', 'a long repeated access notice cannot pass by length');
+assert.equal(classifyChapterBody('本章未解锁，请购买本章。'.repeat(40)).kind,
+  'SOURCE_PAYWALL', 'a long purchase notice cannot pass by length');
+assert.equal(classifyChapterBody('请求参数错误，请稍后重试').kind,
+  'SOURCE_PARSE_FAILED', 'the observed complete API diagnostic is not chapter prose');
+for (const prose of [
+  `“请先登录并完成人机验证。”屏幕上弹出这行字。${longRealBody}`,
+  `他想起未登录的账号，又看了看那本VIP章节尚未解锁的书。${longRealBody}`,
+  `请先登录并完成人机验证。这是故事中屏幕上的提示，他随即关掉窗口。${longRealBody}`,
+  `“请求参数错误，请稍后重试。”她念着提示，转身继续自己的旅行。${longRealBody}`,
+]) assert.deepEqual(classifyChapterBody(prose), { kind: 'readable' },
+  'novel prose mentioning access notices remains readable');
+
 // 2. classifyChapterBody: paywall / auth / captcha / HTML families.
 assert.equal(classifyChapterBody('本章为VIP章节，订阅本章后即可阅读').kind, 'SOURCE_PAYWALL',
   'a purchase placeholder is a paywall');
@@ -331,3 +345,56 @@ async function verifyWith(runtime, seed = SEED) {
 }
 
 console.log('remote content admission contract: PASS');
+
+// Actual Gateway cache admission: age alone preserves offline reading, rejected
+// bytes do not publish source blame, and only explicit refresh bypasses cache.
+{
+  const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+  const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
+  const session = { identity: { sourceId: 'cache-source', bookId: 'cache-book' }, sourceVersion: 'v1',
+    acquisitionMode: 'offline', detailUrl: '/book', tocUrl: '/toc', book: { title: '缓存书', author: '作者' },
+    continuationVariables: [], hostRequirements: [], entries: [{ index: 0, title: '第一章', url: '/chapter', variables: [] }] };
+  const calls = [], verdicts = [];
+  const old = { ...session.identity, chapterTitle: '第一章', via: 'cache', content: longRealBody,
+    bodyVersion: 'old-body', processingVersion: 'old-processing', contentFormatVersion: 2, contentRefreshRequired: true };
+  let data = structuredClone(old);
+  const coordinator = { beginAttempt: () => 1, currentSourceVersion: async () => 'v1',
+    reportVerdict: async (...args) => verdicts.push(args) };
+  const runtime = { bookAcquisitions: () => coordinator, request: async (method, params) => {
+    calls.push({ method, params });
+    if (method === 'cache.book.status') return { data: { ...session.identity, chapters: [{ chapterIndex: 0, state: 'cached' }] } };
+    assert.equal(method, 'chapter.content');
+    return { data: structuredClone(data) };
+  } };
+  const gateway = new RemoteReadingFlowGateway(runtime);
+  const chapter = await gateway.loadChapter(session, 0);
+  assert.equal(chapter.content, old.content);assert.equal(chapter.cacheRefreshRequired, true);
+  assert.equal(verdicts.length, 0, 'old provenance cannot manufacture a new readable proof');
+  assert.ok(calls.every(call => call.params.forceRefresh !== true), 'normal offline read never refreshes');
+  const window = new ReadingChapterWindow();window.configure('cache-source', 'cache-book', [0]);window.setCurrent(chapter);
+  assert.equal(window.get(0).cacheRefreshRequired, true, 'retained chapter window keeps the pending-validation hint');
+  data.content = '请求参数错误，请稍后重试';
+  let rejected;
+  try { await gateway.loadChapter(session, 0); } catch (error) { rejected = error; }
+  assert.ok(rejected instanceof RemoteChapterCacheRefreshError);
+  assert.equal(remoteReadingFailureKindOf(rejected), 'STORAGE_FAILED');
+  assert.equal(verdicts.length, 0, 'bad cache is not fresh evidence against the source');
+  assert.deepEqual(rejected.positionContext, { bodyVersion: 'old-body', processingVersion: 'old-processing', anchors: [] });
+  const rejectedSnapshot = structuredClone(data);
+  const before = calls.length;
+  data = { ...old, via: 'rule', bodyVersion: 'new-body', processingVersion: 'new-processing',
+    contentFormatVersion: 3, contentRefreshRequired: false, positionMigration: { status: 'committed',
+      previousBodyVersion: 'old-body', previousProcessingVersion: 'old-processing', bodyVersion: 'new-body',
+      processingVersion: 'new-processing', anchors: [] } };
+  const fresh = await gateway.loadChapter(session, 0, () => true, true, rejected.positionContext);
+  assert.equal(calls.length, before + 1);assert.equal(calls.at(-1).params.forceRefresh, true);
+  assert.deepEqual(calls.at(-1).params.positionContext, rejected.positionContext);
+  assert.equal(fresh.cacheRefreshRequired, false);assert.equal(verdicts.length, 1);
+  assert.equal(rejectedSnapshot.content, '请求参数错误，请稍后重试');
+}
+console.log('ML cache provenance, offline reading, non-source rejection and explicit protected refresh PASS');
+assert.deepEqual(classifyChapterBody('\ufffc', true), {kind:'readable'}, 'image-only chapter remains readable');
+assert.deepEqual(classifyChapterBody('插图\ufffc', true), {kind:'readable'}, 'short normal image caption remains readable');
+assert.equal(classifyChapterBody('请先登录后阅读\ufffc', true).kind, 'SOURCE_AUTH_REQUIRED', 'image cannot bypass login notice');
+assert.equal(classifyChapterBody('验证码\ufffc', true).kind, 'SOURCE_AUTH_REQUIRED', 'captcha image remains an access page');
+console.log('ML image-only chapter and short captions preserve access-notice admission PASS');

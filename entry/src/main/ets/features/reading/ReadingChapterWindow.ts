@@ -21,6 +21,8 @@ export type ReadingSessionChapter = {
   readonly bodyVersion?: string;
   readonly processingVersion?: string;
   readonly positionMigration?: RemoteReadingPositionMigration;
+  /** Older bytes remain usable offline without claiming new-extractor proof. */
+  readonly cacheRefreshRequired?: boolean;
   readonly extractionVia: 'local' | 'rule' | 'js';
 };
 
@@ -212,6 +214,7 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
       anchors: chapter.positionMigration.anchors.map((anchor) => ({ ...anchor })),
       progress: chapter.positionMigration.progress === undefined ? undefined : { ...chapter.positionMigration.progress } },
     extractionVia: chapter.extractionVia,
+    cacheRefreshRequired: chapter.cacheRefreshRequired,
   };
 }
 

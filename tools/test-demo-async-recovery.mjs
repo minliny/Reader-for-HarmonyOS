@@ -7,6 +7,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const readingAdmission=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const readingContract=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
+const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -59,7 +60,7 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
    recentFailures:()=>[]};
  const CacheClass=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
    ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
-     ...readingEvidence,...readingAdmission,...readingContract,
+     ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
      ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>coordinator})},RemoteDetailAdmission,
      RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},
      ReaderCoreGateway:class{async loadShelfBook(){return undefined;}},

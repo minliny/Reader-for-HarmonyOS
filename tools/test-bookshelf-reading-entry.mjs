@@ -12,6 +12,7 @@ import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
 const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 
 const source = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
 function method(name) {
@@ -53,7 +54,7 @@ function create(remote = false) {
     'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel',
     'remoteReadingFailureKindOf', 'verdictForFailureKind', 'isRemoteSourceFailureKind',
     'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord', 'searchCandidateRank',
-    'sameRemoteSessionEvidence','preparedRemoteChapterMatches','withPreparedRemoteChapter','copyRemoteReadingSession',
+    'sameRemoteSessionEvidence','preparedRemoteChapterMatches','withPreparedRemoteChapter','copyRemoteReadingSession','RemoteChapterCacheRefreshError',
     `${harnessCode}; return Harness;`,
   )(
     'local', { current: () => ({ bookAcquisitions: () => ({ readingProjectionRevision:()=>0, endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: (seed) => {
@@ -73,7 +74,7 @@ function create(remote = false) {
     { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',
     error => error.kind ?? 'NETWORK_FAILED', () => 'networkFailed',
     kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}), searchCandidateRank,
-    readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,
+    readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,RemoteChapterCacheRefreshError,
   );
   const h = new Harness(), routes = [], alerts = [];
   let route = 'bookshelf';

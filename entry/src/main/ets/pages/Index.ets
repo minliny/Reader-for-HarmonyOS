@@ -66,6 +66,7 @@ import type { BookAcquisitionCandidate, BookAcquisitionChange } from '../app/Boo
 import type { RemoteReadingIdentity } from '../features/reading/RemoteReadingContract';
 import { searchCandidateRank } from '../features/search/SearchCandidatePolicy';
 import {
+  RemoteChapterCacheRefreshError,
   RemoteReadingFlowGateway,
   type RemoteReadingBookSeed,
   type RemoteReadingProgressState,
@@ -351,6 +352,7 @@ struct Index {
   @State private remoteReadingSession: RemoteReadingSession | undefined = undefined;
   /** Readability verdict gating the remote detail "start reading" action. */
   @State private remoteContentVerdict: RemoteContentVerdict = 'readable';
+  private remoteCacheNoticeGeneration: number = -1;
   private remoteContentProbeGeneration: number = 0;
   private remoteSessionGeneration: number = 0;
   @State private requestedChapterIndex: number | undefined = undefined;
@@ -2832,7 +2834,7 @@ struct Index {
             }
             if (readableChapterIndex === undefined) {
               this.shelfReadingPreparation = false;
-              if (entryRoute === 'bookshelf') {
+              if (entryRoute === 'bookshelf' && this.remoteCacheNoticeGeneration !== generation) {
                 this.showReadingFailure('阅读加载失败', this.remoteContentVerdictLabel(this.remoteContentVerdict));
               }
               return;
@@ -2846,6 +2848,13 @@ struct Index {
       })
       .catch((error: Error): void => {
         if (isCurrent()) {
+          if (error instanceof RemoteChapterCacheRefreshError) {
+            this.shelfReadingPreparation = false;
+            void this.refreshCachedChapterFromPrompt(error, isCurrent).then((chapterIndex: number | undefined): void => {
+              if (chapterIndex !== undefined && resumeImmediately && isCurrent()) this.openReading();
+            });
+            return;
+          }
           if (allowGroupFallback) this.candidateAdmissionFailedGeneration = generation;
           if (error instanceof RemoteReadingGatewayError) {
             hilog.error(DOMAIN, 'Reader', 'Remote detail failure: %{public}s',
@@ -4815,6 +4824,9 @@ struct Index {
         if (!probeCurrent()) {
           return undefined;
         }
+        if (error instanceof RemoteChapterCacheRefreshError) {
+          return this.refreshCachedChapterFromPrompt(error, probeCurrent);
+        }
         const kind = remoteReadingFailureKindOf(error);
         // Only a new book may skip a blank leading announcement. A resume
         // probes its exact persisted chapter and never jumps progress silently.
@@ -4829,6 +4841,43 @@ struct Index {
       this.remoteContentVerdict = 'contentUnavailable';
     }
     return undefined;
+  }
+
+  private async refreshCachedChapterFromPrompt(error: RemoteChapterCacheRefreshError,
+    isCurrent: () => boolean): Promise<number | undefined> {
+    if (!isCurrent()) return undefined;
+    this.remoteContentVerdict = 'contentUnavailable';
+    this.remoteCacheNoticeGeneration = this.navigationGeneration;
+    if (error.refreshPreserved) {
+      this.showReadingFailure('正文未更新', error.message);
+      return undefined;
+    }
+    const accepted = await new Promise<boolean>((resolve): void => {
+      this.getUIContext().showAlertDialog({ title: '需要重新验证本章缓存', message: error.message,
+        autoCancel: false,
+        primaryButton: { value: '刷新本章', action: (): void => resolve(true) },
+        secondaryButton: { value: '保留缓存', action: (): void => resolve(false) },
+      });
+    }).catch((): boolean => false);
+    if (!accepted || !isCurrent()) return undefined;
+    this.remoteContentVerdict = 'verifying';
+    try {
+      const owner = ReaderRuntimeOwner.current();
+      const revision = owner.bookAcquisitions().readingProjectionRevision();
+      const refreshCurrent = (): boolean => isCurrent() && revision === owner.bookAcquisitions().readingProjectionRevision();
+      const chapter = await new RemoteReadingFlowGateway(owner).loadChapter(error.session,
+        error.chapterIndex, refreshCurrent, true, error.positionContext);
+      if (!refreshCurrent()) return undefined;
+      this.installRemoteReadingSession(withPreparedRemoteChapter(error.session, chapter, revision));
+      this.remoteContentVerdict = 'readable';
+      this.detailLoadingMessage = '';
+      return chapter.chapterIndex;
+    } catch (failure) {
+      if (!isCurrent()) return undefined;
+      this.remoteContentVerdict = verdictForFailureKind(remoteReadingFailureKindOf(failure));
+      this.showReadingFailure('正文未更新', errorMessageOf(failure));
+      return undefined;
+    }
   }
 
   private remoteContentVerdictLabel(verdict: RemoteContentVerdict): string {

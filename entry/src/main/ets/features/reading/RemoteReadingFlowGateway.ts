@@ -24,7 +24,6 @@ import { type ReadingSessionChapter } from './ReadingChapterWindow';
 import { materializeReadingDocument } from './ReadingDocumentProjection';
 import { classifyChapterBody, RemoteReadingSourceError } from './RemoteContentAdmission';
 import type {
-  ChapterBodyReadableVerdict,
   ChapterBodyRejectedVerdict,
   ChapterBodyVerdict,
 } from './RemoteContentAdmission';
@@ -94,6 +93,26 @@ export type RemoteReadingProgress = {
   updatedAt: number;
   locationRevision?: string;
 };
+
+/** A rejected cached body is retained with its positions until the user
+ * explicitly refreshes this chapter. Age alone never makes it unreadable. */
+export class RemoteChapterCacheRefreshError extends RemoteReadingGatewayError {
+  readonly session: RemoteReadingSession;
+  readonly chapterIndex: number;
+  readonly positionContext?: RemoteReadingPositionContext;
+  readonly refreshPreserved: boolean;
+  constructor(session: RemoteReadingSession, chapterIndex: number,
+    positionContext: RemoteReadingPositionContext | undefined, refreshPreserved: boolean) {
+    super('cacheDerivedCorrupt', refreshPreserved ?
+      '未能在保留阅读位置和书签的情况下更新正文，原缓存和位置已保留。' :
+      '本章缓存未通过正文检查。请刷新本章重新验证；原缓存和阅读位置会受到保护。', 'chapter.content');
+    this.name = 'RemoteChapterCacheRefreshError';
+    this.session = session;
+    this.chapterIndex = chapterIndex;
+    this.positionContext = positionContext;
+    this.refreshPreserved = refreshPreserved;
+  }
+}
 
 export type RemoteReadingProgressState =
   | { kind: 'missing' }
@@ -539,6 +558,9 @@ export class RemoteReadingFlowGateway {
     if (via !== 'rule' && via !== 'js' && via !== 'cache') {
       throw new RemoteReadingGatewayError('invalidResponse', 'chapter.content returned invalid via', 'chapter.content');
     }
+    const refreshContext: RemoteReadingPositionContext | undefined = positionContext ?? (bodyVersion !== undefined && processingVersion !== undefined ?
+      { bodyVersion, processingVersion, anchors: [] } : undefined);
+    const cacheRefreshRequired = result.data['contentRefreshRequired'] === true;
     const document = await materializeReadingDocument(
       result.data,
       identity.sourceId,
@@ -549,12 +571,16 @@ export class RemoteReadingFlowGateway {
     // The projected body must be real chapter text: paywall placeholders,
     // login pages, captcha interstitials and blank bodies are typed source
     // failures so the UI can offer a user-confirmed source switch. Image
-    // chapters render without text and skip the text-length probe.
-    const imageBodyVerdict: ChapterBodyReadableVerdict = { kind: 'readable' };
-    const bodyVerdict: ChapterBodyVerdict = document.images.length > 0 ?
-      imageBodyVerdict : classifyChapterBody(document.content);
+    // chapters may omit text, but an image cannot bypass an access notice.
+    const bodyVerdict: ChapterBodyVerdict = classifyChapterBody(document.content, document.images.length > 0);
     if (bodyVerdict.kind !== 'readable') {
       const rejected: ChapterBodyRejectedVerdict = bodyVerdict;
+      if (via === 'cache') {
+        // A cached rejection says nothing about the source's current health.
+        // Do not report a source verdict or automatically substitute a source.
+        throw new RemoteChapterCacheRefreshError(session, chapterIndex, refreshContext,
+          positionMigration?.status === 'preserved');
+      }
       if (coordinator !== undefined) {
         void coordinator.reportVerdict(session, selected.index, selected.url, document.contentVersion,
           this.optionalString(result.data, 'bodyVersion', 'chapter.content'),
@@ -567,7 +593,7 @@ export class RemoteReadingFlowGateway {
         'chapter.content',
       );
     }
-    if (coordinator !== undefined) {
+    if (coordinator !== undefined && !cacheRefreshRequired) {
       void coordinator.reportVerdict(session, selected.index, selected.url, document.contentVersion,
         this.optionalString(result.data, 'bodyVersion', 'chapter.content'),
         this.optionalString(result.data, 'processingVersion', 'chapter.content'),
@@ -583,6 +609,7 @@ export class RemoteReadingFlowGateway {
       images: document.images,
       contentVersion: document.contentVersion,
       bodyVersion, processingVersion, positionMigration,
+      cacheRefreshRequired,
       extractionVia: via === 'cache' ? 'rule' : via,
     };
   }

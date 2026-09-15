@@ -36,7 +36,7 @@ import {
   type ReadingContentSearchResult,
   type ReadingSessionSource,
 } from './ReadingSessionFlowGateway';
-import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
+import { RemoteChapterCacheRefreshError, type RemoteReadingSession } from './RemoteReadingFlowGateway';
 import {
   remoteReadingFailureKindOf,
   type RemoteReadingFailureKind,
@@ -1101,6 +1101,7 @@ export struct ReadingExperience {
   @State private measurementEpoch: number = 0;
   /** Logged/returned synchronously; there is no rendered failure surface. */
   private failureCode: string = '';
+  private cacheNoticeLifecycle: number = -1;
   @Prop bookTitle: string = '';
   @Prop sourceName: string = '';
   @Prop totalChapters: number = 0;
@@ -3229,19 +3230,44 @@ export struct ReadingExperience {
       if (!this.isSelectionActive(lifecycleToken, selectionToken)) {
         return;
       }
+      if (error instanceof RemoteChapterCacheRefreshError && !error.refreshPreserved && !refreshContent) {
+        const accepted = await this.requestCachedChapterRefresh(error).catch((): boolean => false);
+        if (!this.isSelectionActive(lifecycleToken, selectionToken)) return;
+        if (accepted) {
+          await this.openChapter(chapterIndex, isInitial, lifecycleToken, selectionToken,
+            requestedOffset, requestedProgress, true, error.positionContext);
+        } else {
+          this.beginExit();
+        }
+        return;
+      }
       this.fail(error as Error, lifecycleToken);
     }
   }
 
+  private requestCachedChapterRefresh(error: RemoteChapterCacheRefreshError): Promise<boolean> {
+    return new Promise<boolean>((resolve): void => {
+      this.getUIContext().showAlertDialog({ title: '需要重新验证本章缓存', message: error.message,
+        autoCancel: false,
+        primaryButton: { value: '刷新本章', action: (): void => resolve(true) },
+        secondaryButton: { value: '保留缓存并返回', action: (): void => resolve(false) },
+      });
+    });
+  }
+
   private notifyPreservedContentRefresh(chapter: ReadingSessionChapter, refreshContent: boolean,
     lifecycleToken: number, selectionToken: number): void {
-    if (!refreshContent || chapter.positionMigration?.status !== 'preserved' ||
+    const preserved = refreshContent && chapter.positionMigration?.status === 'preserved';
+    if ((!preserved && chapter.cacheRefreshRequired !== true) ||
       !this.isSelectionActive(lifecycleToken, selectionToken)) {
       return;
     }
+    if (!preserved && this.cacheNoticeLifecycle === lifecycleToken) return;
+    if (!preserved) this.cacheNoticeLifecycle = lifecycleToken;
     try {
       this.getUIContext().getPromptAction().showToast({
-        message: '为保留阅读位置和书签，本次未更新正文。原正文和阅读位置已保留。',
+        message: preserved ? '为保留阅读位置和书签，本次未更新正文。原正文和阅读位置已保留。' :
+          '正在使用旧版缓存，正文待验证。可在顶部更多中刷新本章；离线阅读和原位置不受影响。',
       });
     } catch (_) {
       // Presentation failure cannot turn a preserved, readable chapter into a

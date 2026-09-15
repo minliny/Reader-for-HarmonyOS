@@ -97,8 +97,7 @@ export type ChapterBodyVerdict =
   | ChapterBodyRejectedVerdict;
 
 const MIN_READABLE_BODY_LENGTH = 6;
-/** Placeholder/paywall banners are short; a real chapter mentioning the same
- * words at length must not be misclassified. */
+/** Keep short banner matching separate from whole-page notice recognition. */
 const BANNER_SCAN_LIMIT = 300;
 
 const AUTH_BANNER_MARKERS: string[] = [
@@ -145,16 +144,25 @@ function containsHtmlLoginMarker(text: string): boolean {
   return containsAny(text, HTML_LOGIN_MARKERS) || containsAny(lower, HTML_LOGIN_MARKERS);
 }
 
+/** A long access page must consist of notice clauses, not merely mention a
+ * login/VIP word somewhere in a chapter. Reuse the existing banner families;
+ * mixed narrative and quoted dialogue deliberately do not meet this rule. */
+function consistsOfAccessNoticeClauses(text: string): boolean {
+  const clauses = text.toLowerCase().split(/[。！？.!?\r\n]+/).map((part: string): string => part.trim())
+    .filter((part: string): boolean => part.length > 0);
+  const prefixes = AUTH_BANNER_MARKERS.concat(CAPTCHA_BANNER_MARKERS, PAYWALL_BANNER_MARKERS,
+    PLACEHOLDER_BANNER_MARKERS, ['安全检查']);
+  return clauses.length > 1 && clauses.every((clause: string): boolean =>
+    clause.length <= BANNER_SCAN_LIMIT && prefixes.some((prefix: string): boolean => clause.startsWith(prefix)));
+}
+
 /**
  * Content heuristic for a decoded chapter body. Paywall/placeholder/login
  * pages and crawler interstitials are never admitted as readable content.
  * Run against the final projected text (after image substitution).
  */
-export function classifyChapterBody(content: string): ChapterBodyVerdict {
+export function classifyChapterBody(content: string, hasImages: boolean = false): ChapterBodyVerdict {
   const trimmed = content.trim();
-  if (trimmed.length < MIN_READABLE_BODY_LENGTH) {
-    return { kind: 'SOURCE_CONTENT_EMPTY', reason: 'chapter body is blank or too short' };
-  }
   const lower = trimmed.toLowerCase();
   if (looksLikeHtmlDocument(trimmed)) {
     if (containsHtmlLoginMarker(trimmed)) {
@@ -162,7 +170,12 @@ export function classifyChapterBody(content: string): ChapterBodyVerdict {
     }
     return { kind: 'SOURCE_PARSE_FAILED', reason: 'source returned an HTML page instead of chapter text' };
   }
-  if (trimmed.length > BANNER_SCAN_LIMIT) {
+  // Match the complete observed API diagnostic, never a keyword substring in
+  // novel prose or arbitrary JSON-looking/literal source text.
+  if (trimmed.replace(/[。.!！]+$/, '') === '请求参数错误，请稍后重试') {
+    return { kind: 'SOURCE_PARSE_FAILED', reason: 'source returned an API request error' };
+  }
+  if (trimmed.length > BANNER_SCAN_LIMIT && !consistsOfAccessNoticeClauses(trimmed)) {
     return { kind: 'readable' };
   }
   if (containsAny(trimmed, AUTH_BANNER_MARKERS) || containsAny(lower, AUTH_BANNER_MARKERS)) {
@@ -176,6 +189,9 @@ export function classifyChapterBody(content: string): ChapterBodyVerdict {
   }
   if (containsAny(lower, PLACEHOLDER_BANNER_MARKERS)) {
     return { kind: 'SOURCE_CONTENT_EMPTY', reason: 'chapter body is a loading placeholder' };
+  }
+  if (!hasImages && trimmed.length < MIN_READABLE_BODY_LENGTH) {
+    return { kind: 'SOURCE_CONTENT_EMPTY', reason: 'chapter body is blank or too short' };
   }
   return { kind: 'readable' };
 }

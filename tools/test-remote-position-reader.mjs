@@ -9,11 +9,12 @@ registerHooks({resolve(specifier,context,next){try{return next(specifier,context
 const mapSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts',import.meta.url),'utf8')
   .replace('constructor(private readonly content: string) {','constructor(content: string) { this.content = content;');
 const {ReadingSurfaceLayoutMap}=await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
+const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const file=fileURLToPath(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url));
 const anchorSource=readFileSync(file,'utf8').match(/class CoreReadingAnchor[\s\S]*?\n}/)[0];
 const CoreReadingAnchor=new Function(`${stripTypeScriptTypes(anchorSource)}; return CoreReadingAnchor;`)();
 const Reader=productionMotionMethods(file,['openChapter','loadSessionChapter','configureRestoredAnchor','lastVisibleScalar',
-  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','ttsChapterRef','notifyPreservedContentRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,LOCAL_READING_SOURCE_ID:'local'});
+  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','ttsChapterRef','notifyPreservedContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local'});
 const old={sourceId:'s',bookId:'b',chapterIndex:0,chapterTitle:'章',chapterUrl:'/0',bodyVersion:'old',processingVersion:'old-p',
   contentVersion:'host-old',content:'开头\\r\\n目标文字与之后足够长的正文',images:[],extractionVia:'rule'};
 const upgraded={...old,content:'开头\n目标文字与之后足够长的正文',bodyVersion:'new',processingVersion:'new-p',contentVersion:'host-new'};
@@ -95,15 +96,16 @@ let feedbackScenarios=0;
 // is a failed replacement (a cache version hint alone is not a refresh).
 for(const status of [undefined,'committed','unchanged','preserved'])for(const force of [false,true]){
  const chapter=status==='committed'?{...upgraded,positionMigration:receipt('requested')}:
-   status===undefined?{...old,contentRefreshRequired:true}:{...preservedChapter(),positionMigration:{...preservedChapter().positionMigration,status}};
+   status===undefined?{...old,cacheRefreshRequired:true}:{...preservedChapter(),positionMigration:{...preservedChapter().positionMigration,status}};
  const {p}=page(async()=>chapter);const notices=[];
  p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>{
    assert.equal(p.chapter,chapter,'notice follows admission of the readable chapter');notices.push(row.message);
  }})});
  await p.openChapter(0,false,1,1,6,undefined,force);
  assert.equal(p.failure,undefined);assert.equal(p.chapter,chapter);
- assert.equal(notices.length,force&&status==='preserved'?1:0,`${status}, force=${force}`);
- if(notices.length){assert.match(notices[0],/本次未更新正文/);assert.match(notices[0],/原正文和阅读位置已保留/);assert.equal(p.desiredChapterOffset,6);}
+ assert.equal(notices.length,(force&&status==='preserved')||status===undefined?1:0,`${status}, force=${force}`);
+ if(status===undefined)assert.match(notices[0],/旧版缓存.*待验证/);
+ if(notices.length&&status!==undefined){assert.match(notices[0],/本次未更新正文/);assert.match(notices[0],/原正文和阅读位置已保留/);assert.equal(p.desiredChapterOffset,6);}
  feedbackScenarios++;
 }
 // All synchronous PromptAction failure sites are non-fatal. The platform's
@@ -142,3 +144,63 @@ for(const stage of ['load','metrics']){
 }
 assert.equal(feedbackScenarios,14);
 console.log(`PH85 actual LRE preserved-refresh notice: ${feedbackScenarios} admission, intent, status, generation and presentation-failure scenarios PASS`);
+
+// A normal old cache remains readable offline and is announced once per reader session.
+{
+ const cached={...old,cacheRefreshRequired:true}; const {p,calls}=page(async()=>cached);const notices=[];
+ p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row.message)})});
+ await p.openChapter(0,false,1,1);await p.openChapter(0,false,1,1);
+ assert.equal(p.failure,undefined);assert.equal(p.chapter,cached);assert.equal(notices.length,1);
+ assert.ok(calls.every(call=>call[3]===false));assert.match(notices[0],/旧版缓存.*待验证/);
+}
+// Only a rejected cache asks for explicit, per-chapter protected refresh.
+for(const accept of [false,true]){
+ const context={bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]};
+ const session={identity:{sourceId:'s',bookId:'b'}};let dialogs=0;
+ const {p,calls}=page(async(...args)=>{
+   if(!args[3])throw new RemoteChapterCacheRefreshError(session,0,context,false);
+   assert.deepEqual(args[4],context);return {...upgraded,positionMigration:receipt('requested')};
+ });
+ p.beginExit=()=>{p.exited=true;};p.getUIContext=()=>({showAlertDialog(row){dialogs++;row[accept?'primaryButton':'secondaryButton'].action();},
+   getPromptAction:()=>({showToast(){}})});
+ await p.openChapter(0,false,1,1,6);
+ assert.equal(dialogs,1);assert.equal(p.failure,undefined);assert.equal(calls.length,accept?2:1);
+ if(accept){assert.equal(p.desiredChapterOffset,3);assert.equal(p.chapter.bodyVersion,'new');}
+ else{assert.equal(p.exited,true);assert.equal(p.chapter,undefined);}
+}
+console.log('ML cache: offline readable old body, one-session notice, explicit protected refresh and decline without write PASS');
+
+// Execute the actual Index confirmation/recovery method; the RPC boundary is
+// controlled, and neither declining nor leaving the book dispatches a refresh.
+{
+ const admission=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
+ const {withPreparedRemoteChapter}=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+ const session={identity:{sourceId:'s',bookId:'b'},sourceVersion:'v',acquisitionMode:'online',
+   detailUrl:'/b',tocUrl:'/toc',book:{title:'书',author:'作者'},entries:[{index:0,title:'章',url:'/0',variables:[]}],
+   continuationVariables:[],hostRequirements:[]};
+ const position={bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]};
+ for(const scenario of ['refresh','decline','stale','preserved','failure']){
+   let active=true;const calls=[],dialogs=[],failures=[];
+   const ErrorKind=RemoteChapterCacheRefreshError;
+   const error=new ErrorKind(session,0,position,scenario==='preserved');
+   const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
+     ['refreshCachedChapterFromPrompt'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
+       ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>({readingProjectionRevision:()=>0})})},
+       RemoteReadingFlowGateway:class{async loadChapter(...args){calls.push(args);
+         if(scenario==='failure')throw Error('synthetic refresh failed');return upgraded;}}});
+   const page=Object.assign(new Index(),{navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
+     installRemoteReadingSession(value){this.remoteReadingSession=value;},getUIContext:()=>({showAlertDialog(row){
+       dialogs.push(row);if(scenario==='stale')active=false;
+       row[scenario==='decline'?'secondaryButton':'primaryButton'].action();}})});
+   const result=await page.refreshCachedChapterFromPrompt(error,()=>active);
+   assert.equal(calls.length,scenario==='refresh'||scenario==='failure'?1:0,scenario);
+   if(calls.length){assert.equal(calls[0][0],session);assert.equal(calls[0][1],0);
+     assert.equal(calls[0][3],true);assert.deepEqual(calls[0][4],position);}
+   if(scenario==='refresh'){assert.equal(result,0);assert.equal(page.remoteContentVerdict,'readable');
+     assert.equal(page.remoteReadingSession.identity,session.identity);}
+   else assert.equal(result,undefined);
+   assert.equal(failures.length,scenario==='preserved'||scenario==='failure'?1:0,scenario);
+   assert.equal(dialogs.length,scenario==='preserved'?0:1);
+ }
+}
+console.log('ML actual Index cache recovery: explicit refresh, decline, stale route, preserved positions and failure feedback PASS');
