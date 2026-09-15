@@ -87,6 +87,7 @@ export class RemoteReadingGatewayError extends Error {
   readonly diagnostic: RemoteReadingTocDiagnostic | undefined;
   readonly category: RemoteReadingFailureCategory;
   readonly causeValue: unknown;
+  readonly transientTransport: boolean;
 
   constructor(
     code: RemoteReadingErrorCode,
@@ -96,6 +97,7 @@ export class RemoteReadingGatewayError extends Error {
     diagnostic: RemoteReadingTocDiagnostic | undefined = undefined,
     causeValue: unknown = undefined,
     category?: RemoteReadingFailureCategory,
+    transientTransport: boolean = false,
   ) {
     super(message);
     this.name = 'RemoteReadingGatewayError';
@@ -105,6 +107,7 @@ export class RemoteReadingGatewayError extends Error {
     this.diagnostic = diagnostic;
     this.causeValue = causeValue;
     this.category = category ?? remoteReadingCategoryForCode(code);
+    this.transientTransport = transientTransport;
   }
 }
 
@@ -340,7 +343,14 @@ export function classifyRemoteReadingCommandFailure(
   if (category === 'STORAGE_FAILURE' || command === 'cache.book.status') {
     return new RemoteReadingGatewayError('storageFailure', message, command, undefined, diagnostic, error);
   }
-  if (category === 'SOURCE_HTTP_FAILED') return new RemoteReadingGatewayError('commandFailed', message, command, undefined, diagnostic, error);
+  if (category === 'SOURCE_HTTP_FAILED') {
+    const cause = details?.['cause'];
+    const transport = cause !== null && typeof cause === 'object' && !Array.isArray(cause) ? cause as JsonObject : details;
+    const transient = transport?.['category'] === 'SOURCE_HTTP_FAILED' && transport['phase'] === 'transport' &&
+      transport['transient'] === true;
+    return new RemoteReadingGatewayError('commandFailed', message, command, undefined, diagnostic, error,
+      'SOURCE_HTTP_FAILED', transient);
+  }
   if (category === 'SOURCE_RULE_FAILED' || category === 'SOURCE_RESPONSE_FORMAT') {
     return new RemoteReadingGatewayError('invalidResponse', message, command, undefined,
       diagnostic, error, category);

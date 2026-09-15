@@ -4,7 +4,8 @@ import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator
 import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingVariable } from '../reading/RemoteReadingContract';
 import { errorMessageOf, isNetworkEnvironmentFailure } from '../../app/ErrorMessage';
-import { acquisitionCandidateRank, acquisitionReadableCurrent, acquisitionBookFailureCurrent } from '../common/BookAcquisitionPresentation';
+import { acquisitionCandidateRank, acquisitionReadableCurrent, acquisitionBookFailureCurrent,
+  acquisitionAttemptFailureCurrent } from '../common/BookAcquisitionPresentation';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import {
@@ -25,7 +26,7 @@ const SOURCE_SWITCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  * time fields persisted through Core `search-book.*` storage.
  */
 export type SourceSwitchCandidate = {
-  acquisitionState?: 'discovered' | 'catalogReady' | 'readable' | 'failed' | 'stale';
+  acquisitionState?: 'discovered' | 'catalogReady' | 'readable' | 'failed' | 'attemptFailed' | 'stale';
   acquisitionMessage?: string;
   verifiedChapterUrl?: string;
   sourceVersion?: string;
@@ -991,12 +992,13 @@ export class SourceSwitchGateway {
       facts?.['stale'] === true || (source.sourceVersion !== undefined && version !== source.sourceVersion);
     const failure = facts?.['failure'] as JsonObject | undefined;
     const rank = acquisitionCandidateRank(facts, source.sourceVersion ?? '');
-    candidate.acquisitionState = stale ? 'stale' : rank === 3 ? 'failed' : rank === 0 ? 'readable' :
+    const unconfirmedFailure = acquisitionAttemptFailureCurrent(facts, source.sourceVersion ?? '') && rank !== 3;
+    candidate.acquisitionState = stale ? 'stale' : rank === 3 ? 'failed' : unconfirmedFailure ? 'attemptFailed' : rank === 0 ? 'readable' :
       rank === 1 ? 'catalogReady' : 'discovered';
     candidate.verifiedChapterUrl = acquisitionReadableCurrent(facts, source.sourceVersion ?? '') && facts !== undefined ?
       this.optionalString(facts, 'readableChapterUrl') : undefined;
     candidate.acquisitionMessage = acquisitionBookFailureCurrent(facts, source.sourceVersion ?? '') && failure !== undefined ?
-      this.optionalString(failure, 'message') : undefined;
+      this.optionalString(failure, 'message') : unconfirmedFailure ? '上次读取失败' : undefined;
     const variable = this.optionalString(book, 'variable');
     if (variable !== undefined) {
       try {

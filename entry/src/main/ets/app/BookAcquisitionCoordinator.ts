@@ -1,4 +1,5 @@
 import { readBookAuthorIdentity, bookAuthorIdentity, bookIdentityText } from '../features/common/BookAuthorMetadata';
+import { acquisitionFailureCategoryConfirmed } from '../features/common/BookAcquisitionPresentation';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import { BookRequestScheduler, type BookRequestExecutor, type BookRequestPriority, type BookRequestOptions } from './BookRequestScheduler';
 import { errorMessageOf } from './ErrorMessage';
@@ -600,14 +601,16 @@ export class BookAcquisitionCoordinator {
       if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
       const classified = classifyRemoteReadingCommandFailure('book.toc', error);
       const failure = cacheFailure === undefined ? classified : new RemoteReadingGatewayError(classified.code,
-        classified.message, classified.command, classified.capability, classified.diagnostic, cacheFailure, classified.category);
+        classified.message, classified.command, classified.capability, classified.diagnostic, cacheFailure, classified.category,
+        classified.transientTransport);
       this.recordFailure(failure, attemptId, failureContext('refresh'));
-      if (isCurrent() && version !== undefined && this.canTryAnotherCandidate(failure)) {
+      if (isCurrent() && version !== undefined && !failure.transientTransport &&
+        acquisitionFailureCategoryConfirmed(failure.category) && this.canTryAnotherCandidate(failure)) {
         try {
           await this.request('search-book.put', { origin: seed.sourceId, bookUrl: seed.bookId,
             acquisition: { schemaVersion: 2, sourceVersion: version, checkedAt: attemptId,
               failureStage: forceRefresh ? 'refresh' : failure.command === 'book.detail' ? 'detail' : 'catalog',
-              stage: 'failed', message: errorMessageOf(failure) } });
+              stage: 'failed', failureCategory: failure.category, message: errorMessageOf(failure) } });
         } catch (_publicationError) { /* A failed fact publication never erases the original source failure. */ }
       }
       throw failure;

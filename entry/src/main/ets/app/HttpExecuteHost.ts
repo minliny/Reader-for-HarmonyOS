@@ -139,6 +139,19 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
   }
 }
 
+/** Unknown native transport failure is evidence about one attempt, not a rule verdict. */
+class SourceHttpTransportError extends Error {
+  readonly code: string = 'INTERNAL';
+  readonly retryable: boolean = true;
+  readonly details: JsonObject;
+
+  constructor(message: string, platformCode: number) {
+    super(message);
+    this.name = 'SourceHttpTransportError';
+    this.details = { category: 'SOURCE_HTTP_FAILED', phase: 'transport', transient: true, platformCode };
+  }
+}
+
 /**
  * Host-side `http.execute` adapter for the API-23 HarmonyOS transport.
  *
@@ -765,6 +778,14 @@ export class HttpExecuteHost {
         if (!deadline.cancelled && route !== 'direct' &&
           (platformCode === 2300005 || platformCode === 2300007 || platformCode === 2300097)) {
           throw new NetworkEnvironmentError('transport', '当前代理连接未能完成请求，请检查代理后重试');
+        }
+        if (!deadline.cancelled && [2300006, 2300007, 2300028, 2300052, 2300055, 2300056, 2300999].includes(platformCode)) {
+          // DNS/connect/timeout/empty-reply/send/receive and unknown native
+          // transport failures concern this attempt. Preserve the exact code
+          // without inventing a global outage or a
+          // permanent source-rule failure. Known HTTP/TLS/URL errors keep their
+          // existing, distinct behavior.
+          throw new SourceHttpTransportError(errorMessageOf(error), platformCode);
         }
         throw error;
       }

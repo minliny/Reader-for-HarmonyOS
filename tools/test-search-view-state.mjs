@@ -340,10 +340,13 @@ console.log('R7 layout-key resolution, mid-layout list changes, query/page guard
   assert.equal(searchCandidateRank(candidate({...facts,verificationCurrent:true,catalogAt:now+1}),now),2);
   assert.equal(searchCandidateRank(candidate({...facts,verificationCurrent:true,catalogCount:0}),now),2);
   for(const failureStage of ['chapter','refresh','detail','catalog']) {
-    const failed={...facts,verificationCurrent:false,failureCurrent:true,failure:{schemaVersion:2,sourceVersion:'v2',
-      stage:'failed',failureStage,checkedAt:now,chapterIndex:5,chapterUrl:'/5'}};
+    const failed={...facts,verificationCurrent:false,failureCurrent:true,failureConfirmed:true,failure:{schemaVersion:2,sourceVersion:'v2',
+      stage:'failed',failureStage,failureCategory:'SOURCE_RULE_FAILED',checkedAt:now,chapterIndex:5,chapterUrl:'/5'}};
     assert.equal(searchCandidateRank(candidate(failed),now),failureStage==='detail'||failureStage==='catalog'?3:1);
     assert.equal(searchCandidateRank(candidate({...failed,failureCurrent:false}),now),1);
+    assert.equal(searchCandidateRank(candidate({...failed,failureConfirmed:false}),now),1);
+    const legacy=structuredClone(failed);delete legacy.failure.failureCategory;delete legacy.failureConfirmed;
+    assert.equal(searchCandidateRank(candidate(legacy),now),1,'untyped legacy failure cannot downgrade a successful catalog');
   }
 }
 console.log('R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS');

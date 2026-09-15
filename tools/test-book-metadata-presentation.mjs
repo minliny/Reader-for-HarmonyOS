@@ -26,7 +26,10 @@ const rows = sources.map((source, i) => ({ origin: source.sourceId, bookUrl: `bo
   intro: '&nbsp;&nbsp;第一段<br>第二段', time: now,
   relationKey: 'book-relation', relationRevision: '1',
   acquisition: { schemaVersion: 2, sourceVersion: i === 2 ? 'old' : 'v1', aliases: i === 0 ? [{ name: '搜索旧名', author: '作者' }] : [],
-    ...(i === 1 ? { failureCurrent: true, failure: { schemaVersion: 2, sourceVersion: 'v1', stage: 'failed', failureStage: 'catalog', checkedAt: now, at: now, message: '暂不可读' } } : {}) } }));
+    ...([1,3,4].includes(i) ? { failureCurrent: true, failureConfirmed: i === 1,
+      failure: { schemaVersion: 2, sourceVersion: 'v1', stage: 'failed', failureStage: 'catalog', checkedAt: now, at: now,
+        ...(i === 1 ? {failureCategory:'SOURCE_RULE_FAILED'} : i === 4 ? {failureCategory:'SOURCE_HTTP_FAILED'} : {}),
+        message: i === 1 ? '暂不可读' : 'Internal error' } } : {}) } }));
 rows.push({ ...rows[0], bookUrl: 'alternate-url' });
 rows.push({ ...rows[0], bookUrl: 'wrong-author', author: '其他作者', acquisition: { sourceVersion: 'v1' } });
 rows.push({ ...rows[0], bookUrl: 'unrelated', name: '别的书', acquisition: { sourceVersion: 'v1' } });
@@ -92,6 +95,10 @@ assert.equal(panel.footerText(), `正在刷新 · 已有 ${group.sourceCount} �
 panel.state.refreshError = '网络不可用';
 assert.equal(panel.footerText(), '刷新失败 · 已保留 56 个本地记录', 'record count is explicitly labelled as records');
 assert.equal(candidates.find(row => row.sourceId === 'source-1').acquisitionState, 'failed');
+for(const sourceId of ['source-3','source-4']) {
+  assert.equal(candidates.find(row => row.sourceId === sourceId).acquisitionState,'attemptFailed');
+  assert.equal(candidates.find(row => row.sourceId === sourceId).acquisitionMessage,'上次读取失败');
+}
 assert.equal(candidates.find(row => row.sourceId === 'source-2').acquisitionState, 'stale');
 assert.deepEqual((await search.refreshBooks(refreshed)).map(identity).sort(), candidates.map(identity).sort(), 'remount/refresh cannot grow or lose identities');
 // Detail acquisition and live source responses can interleave: a late result

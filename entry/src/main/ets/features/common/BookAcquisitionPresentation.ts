@@ -16,8 +16,14 @@ export function acquisitionReadableCurrent(facts: JsonObject | undefined, source
     stamp(facts, 'catalogCount') > 0 && fresh(stamp(facts, 'catalogAt'), now) && fresh(stamp(facts, 'readableAt'), now);
 }
 
-/** Only current detail/catalog admission failure applies to the whole candidate. */
-export function acquisitionBookFailureCurrent(facts: JsonObject | undefined, sourceVersion: string,
+/** Only confirmed rule/content outcomes justify durable parsing-failure priority. */
+export function acquisitionFailureCategoryConfirmed(category: unknown): boolean {
+  return category === 'SOURCE_RULE_FAILED' || category === 'SOURCE_RESPONSE_FORMAT' ||
+    category === 'SOURCE_TOC_EMPTY' || category === 'SOURCE_CONTENT_EMPTY';
+}
+
+/** A previous attempt is separate from a confirmed parser defect. Legacy facts remain readable. */
+export function acquisitionAttemptFailureCurrent(facts: JsonObject | undefined, sourceVersion: string,
   now: number = Date.now()): boolean {
   if (facts === undefined || !currentFacts(facts, sourceVersion) || facts['schemaVersion'] !== 2 || facts['failureCurrent'] !== true) return false;
   const raw = facts['failure'];
@@ -27,6 +33,13 @@ export function acquisitionBookFailureCurrent(facts: JsonObject | undefined, sou
     (failure['failureStage'] !== 'detail' && failure['failureStage'] !== 'catalog')) return false;
   const at = stamp(failure, 'checkedAt');
   return fresh(at, now) && at > Math.max(stamp(facts, 'catalogAt'), stamp(facts, 'readableAt'));
+}
+
+/** Only current, causally confirmed detail/catalog failure applies to the whole candidate. */
+export function acquisitionBookFailureCurrent(facts: JsonObject | undefined, sourceVersion: string,
+  now: number = Date.now()): boolean {
+  if (!acquisitionAttemptFailureCurrent(facts, sourceVersion, now) || facts?.['failureConfirmed'] !== true) return false;
+  return acquisitionFailureCategoryConfirmed((facts['failure'] as JsonObject)['failureCategory']);
 }
 
 /** Shared Search/Source Switch display policy: readable, catalog, unknown, failed. */

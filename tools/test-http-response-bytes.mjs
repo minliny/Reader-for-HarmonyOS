@@ -108,9 +108,19 @@ requestFailure={code:'PRIVATE_URL https://secret.invalid',message:'PRIVATE_PASSW
 await assert.rejects(execute(),error=>error===requestFailure);requestFailure=undefined;
 assert.equal(logs.filter(values=>values.includes('http.execute native failure phase=transport stage=request.dispatch code=%{public}d')).length,3);
 assert.ok(!JSON.stringify(nativeLogs).includes('PRIVATE_'));
+for(const code of [2300006,2300007,2300028,2300052,2300055,2300056,2300999,'2300999']) {
+requestFailure=Object.assign(new Error('Internal error'),{code});
+await assert.rejects(execute(),error=>{
+ assert.notEqual(error,requestFailure);assert.equal(error.code,'INTERNAL');assert.equal(error.retryable,true);
+ assert.deepEqual(error.details,{category:'SOURCE_HTTP_FAILED',phase:'transport',transient:true,platformCode:Number(code)});
+ assert.equal(error.message,'Internal error');assert.ok(!(error instanceof NetworkEnvironmentError));return true;
+});
+}
+requestFailure=undefined;
 for(let n=1;n<30;n++){
  const error=new TypeError('secret');error.stack='at call (NetworkRoutePolicy.ts:'+n+':3)';host.reportTypeError(error,'request.chain');
 }
 assert.equal(Host.reportedDiagnostics.size,16,'native-code and TypeError evidence share one fixed process ceiling');
 console.log('PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack');
 console.log('PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs without replacing original errors');
+console.log('PASS unknown native 2300999 preserves per-request transient HTTP evidence, not a global network outage or a source rule verdict');

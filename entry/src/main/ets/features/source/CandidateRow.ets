@@ -177,6 +177,7 @@ export struct CandidateRow {
     if (this.acquisitionState === 'readable') return '已验证章节可读';
     if (this.acquisitionState === 'stale') return '待更新';
     if (this.acquisitionState === 'failed') return '解析失败 · 可重试';
+    if (this.acquisitionState === 'attemptFailed') return '上次读取失败 · 可重试';
     return this.currentChapterTitle.trim().length > 0 ? this.currentChapterTitle : '—';
   }
 
