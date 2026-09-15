@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroText.ts';
+import { bookAuthorLabel } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url), 'utf8');
@@ -10,7 +11,7 @@ const card = source.slice(source.indexOf('@Component\nstruct SearchResultCard'))
 for (const scheme of ['day', 'night']) {
   for (const inBookshelf of [false, true]) {
     const { owner } = createReaderBuilderProbe(card, ['resultBody', 'displayIntro'], {
-      bookIntroText, ImageFit: { Cover: 'Cover' }, TOK_SPACE_SM: 8, TOK_SPACE_CARD_PADDING: 12, TOK_BORDER_W: 1,
+      bookIntroText, bookAuthorLabel, ImageFit: { Cover: 'Cover' }, TOK_SPACE_SM: 8, TOK_SPACE_CARD_PADDING: 12, TOK_BORDER_W: 1,
     });
     const book = { title: '终宋', author: '作者', sourceId: 'source', sourceName: '实际书源', coverUrl: 'https://example.test/cover', intro: '正文简介' };
     Object.assign(owner, { group: { book, variants: [book], sourceCount: 2, inBookshelf },
@@ -36,6 +37,12 @@ for (const scheme of ['day', 'night']) {
     owner.onSelectResult = (chosen, variants) => { selected = { chosen, variants }; };
     const hit = nodes().find(n => n.type === 'Row' && n.width === 326 && n.onClick);
     hit.onClick(); assert.equal(selected.chosen, book); assert.deepEqual(selected.variants, [book]);
+    for (const author of ['作者：关关公子', '浅草茉莉\n进入作者主页 →']) {
+      const raw = { ...book, author };
+      owner.group = { ...owner.group, book: raw }; owner.replay();
+      assert.ok(nodes().some(n => n.type === 'Text' && n.create === bookAuthorLabel(author)));
+      hit.onClick(); assert.equal(selected.chosen, raw); assert.equal(raw.author, author);
+    }
     owner.group = { ...owner.group, sourceCount: 15, book: { ...book, sourceName: '很长的真实书源名称'.repeat(15) } };
     owner.replay();
     assert.ok(tags().some(n => n.create === '已发现 15 个书源'));

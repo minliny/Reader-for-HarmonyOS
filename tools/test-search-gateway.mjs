@@ -10,6 +10,7 @@ const gatewayPath = resolve(
   'entry/src/main/ets/features/search/SearchGateway.ts',
 );
 const gatewaySource = readFileSync(gatewayPath, 'utf8');
+const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');
 const identityModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, '');
 const sourceCategoryModule = stripTypeScriptTypes(
   readFileSync(resolve(repo, 'entry/src/main/ets/features/source/ReaderSourceCategory.ts'), 'utf8'),
@@ -25,7 +26,7 @@ const errorMessageModule = stripTypeScriptTypes(
 // import so this contract test can exercise the real decoder and gateway with
 // an injected owner without replacing application code.
 const nodeSource = stripTypeScriptTypes(
-  gatewaySource
+  (authorMetadataModule + '\n' + gatewaySource
     .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\.\/source\/ReaderSourceCategory['"];$/m,
@@ -35,7 +36,7 @@ const nodeSource = stripTypeScriptTypes(
     .replace(
       /^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m,
       '',
-    ),
+    )).replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(nodeSource).toString('base64')}`;
 const { SearchGateway } = await import(moduleUrl);

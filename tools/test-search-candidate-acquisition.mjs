@@ -28,7 +28,7 @@ async function simulatedCoreGate(gate,options){
  } finally {clearTimeout(timer)}
 }
 function fixture({cooperativeCancellation=false}={}){
- const calls=[],rows=new Map(),catalogs=new Map(),modes=new Map(),gates=new Map();let version='v1',enabled=true;
+ const calls=[],rows=new Map(),catalogs=new Map(),modes=new Map(),gates=new Map(),detailAuthors=new Map();let version='v1',enabled=true;
  const key=(s,b)=>JSON.stringify([s,b]);
  const runtime=new BookAcquisitionCoordinator(async(method,params,options)=>{
   calls.push({method,params,options});const sourceId=params.sourceId??params.origin;const bookId=params.bookId??params.book?.bookId??params.bookUrl;const id=key(sourceId,bookId);
@@ -41,8 +41,9 @@ function fixture({cooperativeCancellation=false}={}){
   if(method==='reading.progress.get')return {data:{found:false,progress:null}};
   if(method==='book.detail'){
    const mode=modes.get(id);if(mode instanceof Error)throw mode;
-   rows.set(id,{origin:sourceId,bookUrl:bookId,name:'鸣龙',author:'关关公子',variable:'{}',time:Date.now(),acquisition:{sourceVersion:version,detailAt:Date.now()}});
-   return {data:{sourceId,sourceVersion:version,book:{bookId,title:'鸣龙',author:'关关公子'},tocUrl:`${bookId}/toc`,variables:{token:'detail'}}};
+   const author=detailAuthors.get(id)??'关关公子';
+   rows.set(id,{origin:sourceId,bookUrl:bookId,name:'鸣龙',author,variable:'{}',time:Date.now(),acquisition:{sourceVersion:version,detailAt:Date.now()}});
+   return {data:{sourceId,sourceVersion:version,book:{bookId,title:'鸣龙',author},tocUrl:`${bookId}/toc`,variables:{token:'detail'}}};
   }
   if(method==='book.toc'){
    const toc=modes.get(id)==='empty'?[]:[{index:0,title:'第一章',url:`${bookId}/1`,variables:{}}];
@@ -57,7 +58,7 @@ function fixture({cooperativeCancellation=false}={}){
   if(method==='book.search')return{data:{sourceId,books:[{bookId:'/new'}]}};
   throw Error(`unexpected ${method}`);
  });
- return {runtime,owner:{bookAcquisitions:()=>runtime,request:(...a)=>runtime.request(...a)},calls,rows,catalogs,modes,gates,key,setVersion:v=>version=v};
+ return {runtime,owner:{bookAcquisitions:()=>runtime,request:(...a)=>runtime.request(...a)},calls,rows,catalogs,modes,gates,detailAuthors,key,setVersion:v=>version=v};
 }
 const outcomes=[];
 async function check(name,body){try{await body();outcomes.push({name,status:'PASS'})}catch(error){outcomes.push({name,status:'FAIL',error:error.stack})}}
@@ -183,6 +184,44 @@ await check('same title with blank or conflicting author cannot authorize automa
  for(const author of ['', '其他作者']){const f=fixture();try{const a=candidate(0),b=candidate(0,'s2');a.seed.author=author;f.modes.set(f.key('s1','/b0'),'empty');
  await assert.rejects(f.runtime.acquireCandidateGroup([a,b]));assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
  }finally{f.runtime.close()}}
+});
+await check('author label variants use one identity across search candidate and acquired detail without rewriting raw metadata',async()=>{
+ for(const [primaryAuthor,candidateAuthor,detailAuthor] of [
+  ['作者：关关公子','关关公子','作者:关关公子'],
+  ['关关公子',' 作 者 : 关关公子 ','关关公子'],
+  ['浅草茉莉\n进入作者主页 →','浅草茉莉','作者：浅草茉莉\n进入作者主页 →'],
+ ]){
+  const f=fixture();try{
+   const a=candidate(0),b=candidate(0,'s2');a.seed.author=primaryAuthor;b.seed.author=candidateAuthor;
+   f.detailAuthors.set(f.key('s1','/b0'),primaryAuthor);f.detailAuthors.set(f.key('s2','/b0'),detailAuthor);
+   f.modes.set(f.key('s1','/b0'),'empty');
+   const admitted=await f.runtime.acquireCandidateGroup([a,b],{requireReadable:true});
+   assert.equal(admitted.session.identity.sourceId,'s2');assert.equal(admitted.session.book.author,detailAuthor);
+   assert.equal(f.rows.get(f.key('s2','/b0')).author,detailAuthor);
+   assert.equal(a.seed.author,primaryAuthor);assert.equal(b.seed.author,candidateAuthor);
+   assert.deepEqual(f.calls.filter(c=>c.method==='book.detail').map(c=>c.params.sourceId),['s1','s2']);
+   assert.equal(f.calls.filter(c=>c.method==='chapter.content').length,1);
+  }finally{f.runtime.close()}
+ }
+});
+await check('bounded author metadata policy cannot authorize a different or missing author',async()=>{
+ for(const author of ['作者关关公子','关关公子（笔名）','浅草茉莉','作者：','关关公子 进入作者主页 →']){
+  const f=fixture();try{
+   const a=candidate(0),b=candidate(0,'s2');b.seed.author=author;
+   f.modes.set(f.key('s1','/b0'),'empty');
+   await assert.rejects(f.runtime.acquireCandidateGroup([a,b]));
+   assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false,author);
+  }finally{f.runtime.close()}
+ }
+});
+await check('a matching normalized search author still requires the acquired detail author to match',async()=>{
+ const f=fixture();try{
+  const a=candidate(0),b=candidate(0,'s2');a.seed.author='作者：关关公子';
+  f.detailAuthors.set(f.key('s1','/b0'),'作者：其他作者');
+  const admitted=await f.runtime.acquireCandidateGroup([a,b],{requireReadable:true});
+  assert.equal(admitted.session.identity.sourceId,'s2');
+  assert.equal(f.calls.some(c=>c.method==='chapter.content'&&c.params.sourceId==='s1'),false);
+ }finally{f.runtime.close()}
 });
 await check('hidden source-wait pauses and resumes same visible group once without cancellation',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set('sources',gate);const groups=[[candidate(0)]];f.runtime.prepareGroups(groups);await pause();

@@ -1,3 +1,4 @@
+import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
 import { FrameCallback } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -116,7 +117,7 @@ class SearchResultDataSource implements IDataSource {
     const book = group.book;
     if (book.sourceId === 'local') return `local:${book.bookId}`;
     if (book.groupKey !== undefined) return `online:${book.groupKey}`;
-    const alias = `${book.title.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}\u0000${book.author.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`;
+    const alias = bookTitleAuthorKey(book.title, book.author);
     return `online:${alias}`;
   }
 
@@ -957,7 +958,7 @@ export struct SearchPage {
   }
 
   private normalizedBookKey(title: string, author: string): string {
-    return `${title.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}\u0000${author.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`;
+    return bookTitleAuthorKey(title, author);
   }
 
   private partialSearchFailure(): string {
@@ -1350,7 +1351,7 @@ struct SearchResultCard {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Text(this.group.book.author)
+        Text(bookAuthorLabel(this.group.book.author))
           .width('100%')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)

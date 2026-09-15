@@ -72,11 +72,13 @@ globalThis.ReaderRuntimeOwner = { current: () => ({ request: async method => {
 } }) };
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {} };
 const { SearchOrchestrator, SearchQueryRun } = await evaluate([
+  'features/common/BookAuthorMetadata.ts',
   'app/BookRequestScheduler.ts',
   'features/source/ReaderSourceCategory.ts', 'app/ErrorMessage.ts', 'features/search/SearchBookProjection.ts',
   'features/search/SearchGateway.ts', 'features/search/SearchOrchestrator.ets',
 ].map(name => clean(read(name))).join('\n') + '\nexport { SearchQueryRun };');
 const { SearchPublication, SearchViewState, SearchResultProjection } = await evaluate([
+  'features/common/BookAuthorMetadata.ts',
   'features/search/SearchPublication.ts', 'features/search/SearchViewState.ts',
   'features/search/SearchResultRelevance.ts', 'features/common/BookAcquisitionPresentation.ts',
   'features/search/SearchCandidatePolicy.ts', 'features/search/SearchResultProjection.ts',
@@ -85,7 +87,7 @@ const classes = pageSource.slice(pageSource.indexOf('@Observed\nclass SearchBook
   pageSource.indexOf('/**\n * Figma-backed Book Search')).replace('@Observed\n', '');
 const { SearchBookGroup, SearchResultDataSource } = await evaluate(`
 const DataOperationType = { ADD:'add', DELETE:'delete', CHANGE:'change', RELOAD:'reload', MOVE:'move' };
-${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
+${read('features/common/BookAuthorMetadata.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
 let constructedGroups = 0;
 class CountedGroup extends SearchBookGroup {
   constructor(...args) { super(...args); constructedGroups++; }

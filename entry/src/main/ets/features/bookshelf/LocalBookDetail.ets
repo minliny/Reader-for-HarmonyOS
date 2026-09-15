@@ -1,3 +1,4 @@
+import { bookAuthorLabel } from '../common/BookAuthorMetadata';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { ReadingBookDetail } from '../reading/ReadingBookDetail';
 import { bookIntroText } from '../common/BookIntroText';
@@ -165,7 +166,7 @@ export struct LocalBookDetail {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Text(`作者：${this.book.author}`)
+        Text(`作者：${bookAuthorLabel(this.book.author)}`)
           .width('100%')
           .height(17.55)
           .fontFamily('ReaderInter')

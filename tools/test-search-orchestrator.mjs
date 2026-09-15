@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(resolve(repo, rel), 'utf8');
+const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthorMetadata.ts');
 
 // SearchOrchestrator imports SearchGateway by value and ReaderRuntimeOwner /
 // hilog from Harmony-only modules. Strip the runtime imports, concatenate the
@@ -38,7 +39,8 @@ const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrches
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '');
 const combined = stripTypeScriptTypes(
-  `${sourceCategoryModule}\n${errorMessageModule}\n${gatewaySource}\n${orchestratorSource}`,
+  `${authorMetadataModule}\n${sourceCategoryModule}\n${errorMessageModule}\n${gatewaySource}\n${orchestratorSource}`
+    .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(combined).toString('base64')}`;
 
@@ -1103,9 +1105,9 @@ console.log('R3 failed local branch retries while online remains active; repeate
     pageSource.indexOf('/**\n * Figma-backed Book Search')).replace('@Observed\n', '');
   const { SearchBookGroup, SearchResultDataSource, SearchViewState } = await execute(`
     const DataOperationType = {ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};
-    ${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}
+    ${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}
     export { SearchBookGroup, SearchResultDataSource };`);
-  const { SearchResultProjection } = await execute(['features/search/SearchResultProjection.ts','features/search/SearchResultRelevance.ts',
+  const { SearchResultProjection } = await execute(['features/common/BookAuthorMetadata.ts','features/search/SearchResultProjection.ts','features/search/SearchResultRelevance.ts',
     'features/common/BookAcquisitionPresentation.ts','features/search/SearchCandidatePolicy.ts']
     .map(path=>withoutImports(read('entry/src/main/ets/'+path))).join('\n'));
   let counting = false;let groupBuilds = 0;let rowUpdates = 0;let notices = 0;let flattenRows = 0;let identityLookups = 0;

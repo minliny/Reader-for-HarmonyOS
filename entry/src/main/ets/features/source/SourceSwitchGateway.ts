@@ -1,3 +1,4 @@
+import { bookAuthorIdentity } from '../common/BookAuthorMetadata';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
@@ -1082,7 +1083,7 @@ export class SourceSwitchGateway {
   }
 
   private normalizeAuthor(value: string): string {
-    return this.normalizeBookName(value);
+    return bookAuthorIdentity(value);
   }
 
   private normalizeChapterTitle(value: string): string {

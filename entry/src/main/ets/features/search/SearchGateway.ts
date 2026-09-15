@@ -1,3 +1,4 @@
+import { bookTitleAuthorKey } from '../common/BookAuthorMetadata';
 import type { JsonObject } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { BookRequestOptions } from '../../app/BookRequestScheduler';
@@ -383,7 +384,7 @@ function decodeBookSearchResult(
     searchRequestId: identity.searchRequestId,
     sourceRuleVersion: identity.sourceRuleVersion,
     category: source.category ?? 'novel',
-    groupKey: `${requiredNonBlankString(book, 'title').trim().replace(/\s+/g, ' ').toLocaleLowerCase()}\u0000${(optionalString(book, 'author') ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`,
+    groupKey: bookTitleAuthorKey(requiredNonBlankString(book, 'title'), optionalString(book, 'author') ?? ''),
     title: requiredNonBlankString(book, 'title'),
     author: optionalString(book, 'author') ?? '',
     variables: decodeBookSearchVariables(book['variables']),

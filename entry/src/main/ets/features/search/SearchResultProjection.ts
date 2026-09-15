@@ -1,3 +1,4 @@
+import { bookTitleAuthorKey } from '../common/BookAuthorMetadata';
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { SearchViewState } from './SearchViewState';
@@ -38,7 +39,7 @@ export class SearchResultProjection {
 
   private identity(book: SearchBook): string { return `${book.sourceId}\u0000${book.bookId}`; }
   private titleKey(title: string, author: string): string {
-    return `${title.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}\u0000${author.trim().replace(/\s+/g, ' ').toLocaleLowerCase()}`;
+    return bookTitleAuthorKey(title, author);
   }
   private unlink(key: string, affected: Set<string>): void {
     const fact = this.facts.get(key);

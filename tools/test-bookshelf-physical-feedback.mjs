@@ -4,6 +4,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroText.ts';
+import { bookAuthorLabel } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
 
 const baseline = process.argv.includes('--baseline');
@@ -119,7 +120,7 @@ check('PH83 detail preview exposes 20 chapters in the original four-row scroll v
 });
 for (const scheme of ['day', 'night']) {
   check(`${scheme}: detail metadata shares source typography, label and moving source action`, () => {
-    const { owner } = createReaderBuilderProbe(detailSource, ['heroCard'], { NoCoverCover: Child, ImageFit: { Cover: 'Cover' } });
+    const { owner } = createReaderBuilderProbe(detailSource, ['heroCard'], { bookAuthorLabel, NoCoverCover: Child, ImageFit: { Cover: 'Cover' } });
     Object.assign(owner, { appThemeScheme: scheme, book: { title: '书名', author: '作者名', sourceName: '短书源', lastChapter: '最新章节', coverUrl: 'https://example.test/cover' },
       hasCover: () => true, contentWidth: () => 326, sourceSwitchEnabled: true });
     owner.heroCard();
@@ -142,10 +143,15 @@ for (const scheme of ['day', 'night']) {
     owner.sourceSwitchEnabled = false; owner.replay(); hit.onClick(); assert.equal(switches, 1, 'local action stays disabled');
     owner.book = { ...owner.book, sourceName: '非常长的实际名称'.repeat(20) }; owner.replay();
     assert.equal(texts(owner).find(n => String(n.create).startsWith('书源：')).width, undefined);
+    for (const author of ['作者：关关公子', '浅草茉莉\n进入作者主页 →']) {
+      const raw = { ...owner.book, author }; owner.book = raw; owner.replay();
+      assert.ok(texts(owner).some(n => n.create === `作者：${bookAuthorLabel(author)}`));
+      assert.equal(raw.author, author, 'detail presentation must preserve source metadata');
+    }
   });
 }
 check('PH46/47 original author typography and the entire five-line block align with the cover', () => {
-  const { owner } = createReaderBuilderProbe(detailSource, ['heroCard'], { NoCoverCover: Child, ImageFit: { Cover: 'Cover' } });
+  const { owner } = createReaderBuilderProbe(detailSource, ['heroCard'], { bookAuthorLabel, NoCoverCover: Child, ImageFit: { Cover: 'Cover' } });
   Object.assign(owner, { appThemeScheme:'day', book:{title:'Title',author:'Author',sourceName:'Source',lastChapter:'Chapter',coverUrl:'https://example.test/cover'},
     hasCover:()=>true,contentWidth:()=>326,sourceSwitchEnabled:true });
   owner.heroCard();

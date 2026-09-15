@@ -1,3 +1,4 @@
+import { bookAuthorIdentity, bookIdentityText } from '../features/common/BookAuthorMetadata';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import { BookRequestScheduler, type BookRequestExecutor, type BookRequestPriority, type BookRequestOptions } from './BookRequestScheduler';
 import { errorMessageOf } from './ErrorMessage';
@@ -229,9 +230,9 @@ export class BookAcquisitionCoordinator {
     const isCurrent = (): boolean => !this.closed && options.isCurrent?.() !== false && Date.now() < deadline;
     const actualOptions: RemoteReadingOpenOptions = { ...options, isCurrent };
     const primary = candidates[0]?.seed;
-    const normalize = (value: string): string => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+    const normalize = bookIdentityText;
     const title = normalize(primary?.title ?? '');
-    const author = normalize(primary?.author ?? '');
+    const author = bookAuthorIdentity(primary?.author ?? '');
     const seen = new Set<string>();
     const ordered = candidates.slice().sort((a: BookAcquisitionCandidate, b: BookAcquisitionCandidate): number =>
       (a.failed ? 2 : a.catalogReady ? 0 : 1) - (b.failed ? 2 : b.catalogReady ? 0 : 1));
@@ -242,7 +243,7 @@ export class BookAcquisitionCoordinator {
       // A display grouping is not proof of identity. In particular, blank
       // authors cannot authorize automatic substitution between sources.
       if (primary !== undefined && (candidate.seed.sourceId !== primary.sourceId || candidate.seed.bookId !== primary.bookId) &&
-        (author.length === 0 || normalize(candidate.seed.title) !== title || normalize(candidate.seed.author) !== author)) continue;
+        (author.length === 0 || normalize(candidate.seed.title) !== title || bookAuthorIdentity(candidate.seed.author) !== author)) continue;
       const key = acquisitionBookKey(candidate.seed.sourceId, candidate.seed.bookId);
       if (seen.has(key)) continue;
       seen.add(key);
@@ -253,7 +254,7 @@ export class BookAcquisitionCoordinator {
         let admission = await this.waitForCandidate(this.acquireBookWithBackgroundRefresh(candidate.seed, actualOptions, priority), options, deadline);
         this.assertCandidateCurrent(options, deadline);
         if (normalize(admission.session.book.title) !== title ||
-          (author.length > 0 && normalize(admission.session.book.author) !== author)) {
+          (author.length > 0 && bookAuthorIdentity(admission.session.book.author) !== author)) {
           throw new RemoteReadingGatewayError('invalidResponse', '详情书名或作者与所选书籍不一致', 'book.detail');
         }
         options.onCatalog?.(admission.session);

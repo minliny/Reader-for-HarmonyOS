@@ -5,7 +5,7 @@ import { stripTypeScriptTypes } from 'node:module';
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const executable = async source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
 const withoutImports = source => source.replace(/^import[\s\S]*?;\n/gm, '');
-const dependencies = `${read('app/ErrorMessage.ts')}\n${read('features/source/ReaderSourceCategory.ts')}\n${withoutImports(read('features/common/CachedBookIdentity.ts'))}\n${withoutImports(read('features/common/BookAcquisitionPresentation.ts'))}`;
+const dependencies = `${read('features/common/BookAuthorMetadata.ts')}\n${read('app/ErrorMessage.ts')}\n${read('features/source/ReaderSourceCategory.ts')}\n${withoutImports(read('features/common/CachedBookIdentity.ts'))}\n${withoutImports(read('features/common/BookAcquisitionPresentation.ts'))}`;
 const { SearchGateway } = await executable(dependencies + withoutImports(read('features/search/SearchBookProjection.ts')) + withoutImports(read('features/search/SearchGateway.ts')));
 const switchSource = read('features/source/SourceSwitchGateway.ts');
 const { SourceSwitchGateway, sourceSwitchCandidateKey, sourceSwitchSourceCount } = await executable(dependencies + withoutImports(read('app/BookRequestScheduler.ts')) + withoutImports(switchSource));

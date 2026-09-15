@@ -1,5 +1,4 @@
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { searchResultRelevance } from '../entry/src/main/ets/features/search/SearchResultRelevance.ts';
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -10,16 +9,20 @@ import { fileURLToPath } from 'node:url';
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
+const { searchResultRelevance } = await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
+const authorMetadata = await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFileSync(resolve(repo, path), 'utf8');
+const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthorMetadata.ts');
 const page = read('entry/src/main/ets/features/search/SearchPage.ets');
 const classes = page.slice(page.indexOf('@Observed\nclass SearchBookGroup'), page.indexOf('/**\n * Figma-backed Book Search'))
   .replace('@Observed\n', '');
-const source = stripTypeScriptTypes(`const DataOperationType = { ADD: "add", DELETE: "delete", CHANGE: "change", RELOAD: "reload", MOVE: "move" };\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
+const source = stripTypeScriptTypes(`const DataOperationType = { ADD: "add", DELETE: "delete", CHANGE: "change", RELOAD: "reload", MOVE: "move" };\n${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
 const { SearchBookGroup, SearchResultDataSource, SearchViewState } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 const projectionSource = stripTypeScriptTypes(
+  authorMetadataModule + '\n' +
   read('entry/src/main/ets/features/search/SearchResultProjection.ts').replace(/^import \{[^\n]+\} from .*;$/gm, '') + '\n' +
-  read('entry/src/main/ets/features/search/SearchResultRelevance.ts') + '\n' +
+  read('entry/src/main/ets/features/search/SearchResultRelevance.ts').replace(/^import \{[^\n]+\} from .*;$/gm, '') + '\n' +
   read('entry/src/main/ets/features/common/BookAcquisitionPresentation.ts') + '\n' +
   read('entry/src/main/ets/features/search/SearchCandidatePolicy.ts').replace(/^import \{[^\n]+\} from .*;$/gm, ''));
 const { SearchResultProjection } = await import(`data:text/javascript;base64,${Buffer.from(projectionSource).toString('base64')}`);
@@ -115,7 +118,7 @@ console.log('search stable rows, enrichment and navigation state: PASS');
 // PH25: execute the real page grouping method over progressively arriving sources.
 const Page = productionMotionMethods(process.env.READER_SEARCH_RELEVANCE_SOURCE ?? new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url),
   ['groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
-  { SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
+  { ...authorMetadata, SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
     SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } }, ScrollAlign: { START: 0 } });
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });

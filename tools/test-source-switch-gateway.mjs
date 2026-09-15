@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { stripTypeScriptTypes } from 'node:module';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');
 const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAcquisitionPresentation.ts'), 'utf8'));
 const { acquisitionCandidateRank } = await import(`data:text/javascript;base64,${Buffer.from(factModule).toString('base64')}`);
 const searchCandidateRank = (book, now) => acquisitionCandidateRank(book.acquisition, book.sourceRuleVersion, now);
@@ -59,7 +60,7 @@ const sourceCategoryModule = stripTypeScriptTypes(
 ).replace(/^export /gm, '');
 
 const executable = stripTypeScriptTypes(
-  gateway
+  (authorMetadataModule + '\n' + gateway
     .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/app/BookRequestScheduler.ts'), 'utf8'))
     .replace(/^import \{ acquisitionCandidateRank.*;$/m, () => factModule.replace(/^export /gm, ''))
@@ -71,7 +72,7 @@ const executable = stripTypeScriptTypes(
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
     .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, '')
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\/ReaderSourceCategory['"];$/m,
-      () => sourceCategoryModule),
+      () => sourceCategoryModule)).replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
 const { SourceSwitchGateway, sourceSwitchCandidateKey } = await import(moduleUrl);

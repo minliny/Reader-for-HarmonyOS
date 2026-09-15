@@ -1,10 +1,11 @@
+import { bookAuthorIdentity } from '../common/BookAuthorMetadata';
 /** Reader presentation policy, not a fuzzy matching/search engine.
  * Rank admitted books only; this cannot manufacture coverage absent from sources. */
 export function searchResultRelevance(title: string, author: string, keyword: string): number {
   const query = keyword.trim().toLocaleLowerCase();
   if (query.length === 0) return 0;
   const name = title.trim().toLocaleLowerCase();
-  const by = author.trim().toLocaleLowerCase();
+  const by = bookAuthorIdentity(author);
   if (name === query) return 0;
   if (by === query) return 1;
   if (name.startsWith(query)) return 2;

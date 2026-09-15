@@ -1,3 +1,4 @@
+import { bookAuthorLabel } from './BookAuthorMetadata';
 import type { JsonObject } from '@reader/core-harmony';
 
 /** One source-scoped record can connect its current and historical aliases. */
@@ -73,7 +74,7 @@ export class CachedBookIdentityResolver {
 
   aliasKey(name: string, author: string): string {
     // Match the complete pair. Missing authors are not a wildcard.
-    return JSON.stringify([this.normalize(name), this.normalize(author)]);
+    return JSON.stringify([this.normalize(name), this.normalize(bookAuthorLabel(author))]);
   }
 
   async build(rows: JsonObject[], enabledSourceIds: Set<string>): Promise<CachedBookIdentityIndex> {
