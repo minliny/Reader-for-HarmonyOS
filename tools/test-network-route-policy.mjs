@@ -20,7 +20,7 @@ const connection={
  NetBearType:{BEARER_VPN:4},
 };
 const {prepareNetworkTarget,NetworkEnvironmentError,isSystemProxyExcluded}=new Function('connection',code('HttpTransportPolicy.ts')+code('NetworkRoutePolicy.ts')+';return {prepareNetworkTarget,NetworkEnvironmentError,isSystemProxyExcluded};')(connection);
-const {isNetworkEnvironmentFailure}=new Function(code('ErrorMessage.ts')+';return {isNetworkEnvironmentFailure};')();
+const {isNetworkEnvironmentFailure,errorMessageOf}=new Function(code('ErrorMessage.ts')+';return {isNetworkEnvironmentFailure,errorMessageOf};')();
 function reset(){if(calls)assert.equal(calls.legacyPac,0,'legacy PAC address getter must never be called, even when it throws for no script');proxy={host:'',port:0,exclusionList:[]};pac=undefined;dns=['93.184.216.34'];networks=[systemNetwork()];bound=0;defaultNet=7;onDns=undefined;calls={dns:0,proxy:0,pacFile:0,pacResolve:0,legacyPac:0,dnsNetworks:[]};}
 function systemNetwork({id=7,route='0.0.0.0',prefix=0,excluded=false,interfaceName='eth0',routeInterface=interfaceName}={}){return {id,properties:{interfaceName,routes:[{interface:routeInterface,destination:{address:{address:route},prefixLength:prefix},gateway:{address:'10.0.2.2'},hasGateway:true,isDefaultRoute:prefix===0,isExcludedRoute:excluded}]}};}
 function vpn(options={}){return systemNetwork({interfaceName:'tun0',...options})}
@@ -73,7 +73,7 @@ let pins=0,pinHistory=[],transportCalls=0,destroys=0,optionsSeen,urlSeen,transpo
 connection.addCustomDnsRule=async(host,addresses)=>{pins++;pinHistory.push({host,addresses:[...addresses]})};connection.removeCustomDnsRule=async()=>{pins--};
 const http={InterceptorType:{REDIRECTION:1},HttpInterceptorChain:class{addChain(){return true}apply(){return true}},HttpDataType:{ARRAY_BUFFER:1},createHttp:()=>({request:async(url,options)=>{transportCalls++;optionsSeen=options;urlSeen=url;if(transportError)throw transportError;if(requestBehavior)return requestBehavior(url,options);return {responseCode,header:{},result:new ArrayBuffer(0)}},destroy(){destroys++}})};
 const url={URL:{parseURL:(value,base)=>new URL(value,base)}};
-const Host=new Function('connection','http','url','prepareNetworkTarget','NetworkEnvironmentError','hilog',code('HttpTransportPolicy.ts')+code('HttpExecuteHost.ts')+';return HttpExecuteHost;')(connection,http,url,prepareNetworkTarget,NetworkEnvironmentError,{warn(){},error(){}});
+const Host=new Function('connection','http','url','prepareNetworkTarget','NetworkEnvironmentError','hilog','errorMessageOf',code('HttpTransportPolicy.ts')+code('HttpExecuteHost.ts')+';return HttpExecuteHost;')(connection,http,url,prepareNetworkTarget,NetworkEnvironmentError,{warn(){},error(){}},errorMessageOf);
 const host=new Host(),deadline=()=>({deadlineAt:Date.now()+10000,cancelled:false,expired:new Promise(()=>{})});
 reset();proxy={host:'user-proxy',port:8080,exclusionList:[]};dns=Error('no local DNS');await host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline());assert.equal(pins,0);assert.equal(transportCalls,1);assert.equal(urlSeen,'https://source.example/path');assert.equal(optionsSeen.usingProxy,true);
 reset();dns=['198.18.1.2'];const syntheticPinCount=pinHistory.length;await host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline());assert.equal(pins,0);assert.equal(transportCalls,2);assert.equal(pinHistory.length,syntheticPinCount+1);assert.deepEqual(pinHistory.at(-1),{host:'source.example',addresses:['198.18.1.2']});assert.equal(urlSeen,'https://source.example/path');assert.equal(optionsSeen.usingProxy,false,'original synthetic address is pinned without bypassing the OS gateway or rewriting Host/TLS');
@@ -88,9 +88,9 @@ reset();proxy={host:'system-proxy',port:8080,exclusionList:[]};responseCode=407;
 await assert.rejects(host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline()),isNetworkEnvironmentFailure,'proxy authentication response must not enter source parsing');
 responseCode=401;const unauthorized=await host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline());assert.equal(unauthorized.status,401,'origin authentication remains a source response');responseCode=200;
 transportError=Object.assign(new Error('proxy resolution failed'),{code:2300005});
-await assert.rejects(host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline()),isNetworkEnvironmentFailure);
+await assert.rejects(host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline()),error=>isNetworkEnvironmentFailure(error)&&error.details.platformCode===2300005&&error.details.operation==='request.dispatch');
 transportError=Object.assign(new Error('origin peer certificate invalid'),{code:2300060});
-await assert.rejects(host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline()),error=>error===transportError&&!isNetworkEnvironmentFailure(error),'one origin TLS failure cannot poison or stop the whole proxy candidate group');transportError=undefined;
+await assert.rejects(host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline()),error=>error.message===transportError.message&&error.details?.platformCode===2300060&&error.details?.category==='SOURCE_HTTP_FAILED'&&error.retryable===false&&!isNetworkEnvironmentFailure(error),'one origin TLS failure cannot poison or stop the whole proxy candidate group');transportError=undefined;
 console.log('PASS: actual HTTP hop preserves URL/system proxy, never pins proxy DNS, direct DNS queried once');
 
 // A platform request may never settle, even after destroy. Its lease must not

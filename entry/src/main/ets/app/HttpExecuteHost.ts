@@ -139,16 +139,20 @@ class StopBeforeRedirectInterceptor implements http.HttpInterceptor {
   }
 }
 
-/** Unknown native transport failure is evidence about one attempt, not a rule verdict. */
+/** Every native request rejection is transport evidence, not a rule verdict. */
 class SourceHttpTransportError extends Error {
   readonly code: string = 'INTERNAL';
-  readonly retryable: boolean = true;
+  readonly retryable: boolean;
   readonly details: JsonObject;
 
-  constructor(message: string, platformCode: number) {
+  constructor(message: string, platformCode: number | undefined) {
     super(message);
     this.name = 'SourceHttpTransportError';
-    this.details = { category: 'SOURCE_HTTP_FAILED', phase: 'transport', transient: true, platformCode };
+    this.retryable = platformCode !== undefined &&
+      [2300006, 2300007, 2300028, 2300052, 2300055, 2300056, 2300999].includes(platformCode);
+    this.details = { category: 'SOURCE_HTTP_FAILED', phase: 'transport',
+      stage: 'request.dispatch', transient: this.retryable };
+    if (platformCode !== undefined) this.details['platformCode'] = platformCode;
   }
 }
 
@@ -287,6 +291,20 @@ export class HttpExecuteHost {
       );
       return response;
     } catch (error) {
+      if (error instanceof SourceHttpTransportError && !deadline.cancelled) {
+        // One summary per failed execute, after retries. Unlike the process
+        // code inventory below, repeated native codes retain their request
+        // association. Only numeric identity/timing and fixed tokens are logged.
+        const safeRequestId = requestId !== undefined && Number.isSafeInteger(requestId) && requestId > 0
+          ? requestId : 0;
+        const elapsedMs = Math.max(0, Date.now() - diagnosticStartedAt);
+        if (safeRequestId > 0) error.details['requestId'] = safeRequestId;
+        error.details['elapsedMs'] = elapsedMs;
+        const code = error.details['platformCode'];
+        hilog.warn(LOG_DOMAIN, 'Reader',
+          'http.execute failure requestId=%{public}d stage=request.dispatch code=%{public}s elapsedMs=%{public}d transient=%{public}s',
+          safeRequestId, typeof code === 'number' ? `${code}` : 'none', elapsedMs, `${error.retryable}`);
+      }
       this.recordSourceDiagnostic(
         diagnostic,
         parsedMethod.wireMethod,
@@ -770,24 +788,24 @@ export class HttpExecuteHost {
       try {
         response = await request.request(requestUrl, options);
       } catch (error) {
+        // A native rejection caused by our destroy() belongs to cancellation,
+        // even when the platform supplies an otherwise valid transport code.
+        if (deadline.cancelled) throw error;
         const platformCode = this.platformErrorCode(error);
         this.reportPlatformError(platformCode);
+        this.reportTypeError(error, stage);
         // libcurl-derived platform codes: unresolved proxy, proxy peer connect,
         // and proxy handshake failure. Source TLS/body/timeout failures retain
         // their source-local classification so another candidate can be tried.
-        if (!deadline.cancelled && route !== 'direct' &&
+        if (route !== 'direct' &&
           (platformCode === 2300005 || platformCode === 2300007 || platformCode === 2300097)) {
-          throw new NetworkEnvironmentError('transport', '当前代理连接未能完成请求，请检查代理后重试');
+          throw NetworkEnvironmentError.fromPlatform('transport', '当前代理连接未能完成请求，请检查代理后重试',
+            'request.dispatch', error);
         }
-        if (!deadline.cancelled && [2300006, 2300007, 2300028, 2300052, 2300055, 2300056, 2300999].includes(platformCode)) {
-          // DNS/connect/timeout/empty-reply/send/receive and unknown native
-          // transport failures concern this attempt. Preserve the exact code
-          // without inventing a global outage or a
-          // permanent source-rule failure. Known HTTP/TLS/URL errors keep their
-          // existing, distinct behavior.
-          throw new SourceHttpTransportError(errorMessageOf(error), platformCode);
-        }
-        throw error;
+        // TLS/URL/other native failures, including an Error with no code, must
+        // retain their observed HTTP origin through SDK normalization and a
+        // source's catch. Retryability is independent of that origin.
+        throw new SourceHttpTransportError(errorMessageOf(error), platformCode);
       }
       stage = 'response.policy';
       if (route === 'systemProxy' && response.responseCode === 407) {

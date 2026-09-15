@@ -35,6 +35,54 @@ export function errorMessageOf(error: unknown): string {
   return `${error}`;
 }
 
+/** Safe association for an observed native HTTP rejection, never response data. */
+export type HttpTransportFailureSummary = {
+  category: 'SOURCE_HTTP_FAILED';
+  phase: 'transport';
+  stage: 'request.dispatch';
+  requestId?: number;
+  operationId?: number;
+  platformCode?: number;
+  elapsedMs?: number;
+  transient?: boolean;
+};
+
+/** Read the SDK/Core error envelopes already used by feature error handling. */
+export function httpTransportFailureSummary(error: unknown): HttpTransportFailureSummary | undefined {
+  const raw = errorObject(error);
+  const event = errorObject(raw?.['event']);
+  const failure = errorObject(event?.['error']) ?? errorObject(raw?.['error']) ?? raw;
+  if (failure?.['code'] === 'CANCELLED' || failure?.['code'] === 'TIMEOUT') return undefined;
+  const details = errorObject(failure?.['details']);
+  // Do not recover stale nested Host evidence from a later independent rule
+  // error. Core must have retained the category on the current failure itself.
+  if (details?.['category'] !== 'SOURCE_HTTP_FAILED') return undefined;
+  const host = errorObject(details['host']);
+  const diagnostics = errorObject(host?.['diagnostics']);
+  const evidence = errorObject(details['cause']) ?? errorObject(diagnostics?.['details']) ?? details;
+  if (evidence['category'] !== 'SOURCE_HTTP_FAILED' || evidence['phase'] !== 'transport' ||
+    evidence['stage'] !== 'request.dispatch') return undefined;
+  const summary: HttpTransportFailureSummary = {
+    category: 'SOURCE_HTTP_FAILED', phase: 'transport', stage: 'request.dispatch',
+  };
+  const requestId = evidence['requestId'] ?? host?.['requestId'] ?? event?.['requestId'];
+  const operationId = host?.['operationId'];
+  if (typeof requestId === 'number' && Number.isSafeInteger(requestId) && requestId > 0) summary.requestId = requestId;
+  if (typeof operationId === 'number' && Number.isSafeInteger(operationId) && operationId > 0) summary.operationId = operationId;
+  const platformCode = evidence['platformCode'];
+  if (typeof platformCode === 'number' && Number.isSafeInteger(platformCode)) summary.platformCode = platformCode;
+  const elapsedMs = evidence['elapsedMs'];
+  if (typeof elapsedMs === 'number' && Number.isSafeInteger(elapsedMs) && elapsedMs >= 0) summary.elapsedMs = elapsedMs;
+  const transient = evidence['transient'];
+  if (typeof transient === 'boolean') summary.transient = transient;
+  return summary;
+}
+
+function errorObject(value: unknown): Record<string, Object> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, Object> : undefined;
+}
+
 /** Recognize only structured transport evidence, never words in a source's response. */
 export function isNetworkEnvironmentFailure(error: unknown): boolean {
   if (error === null || typeof error !== 'object') return false;

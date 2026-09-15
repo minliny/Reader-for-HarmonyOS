@@ -31,7 +31,7 @@ const nodeSource = stripTypeScriptTypes(
       readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\.\/source\/ReaderSourceCategory['"];$/m,
       () => sourceCategoryModule)
-    .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
+    .replace(/^import \{[^\n]*errorMessageOf[^\n]*\} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
       () => errorMessageModule)
     .replace(
       /^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m,
@@ -379,3 +379,20 @@ console.log('R5/R6 partition isolation, exact missing, related admission, stable
   assert.equal(index.get('b\u0000/r129').variables[0].value,'literal\\n');
 }
 console.log('R5/R6 130-identity atomic source partition and complete 131-member two-page relation PASS');
+
+
+for(const platformCode of [2300023,2300060,undefined]) {
+ const cause={category:'SOURCE_HTTP_FAILED',phase:'transport',stage:'request.dispatch',transient:false,requestId:771,elapsedMs:125,
+  ...(platformCode===undefined?{}:{platformCode}),url:'PRIVATE_URL',message:'PRIVATE_BODY'};
+ const error=Object.assign(new Error('Internal error'),{event:{requestId:771,error:{code:'INTERNAL',message:'Internal error',retryable:false,
+  details:{category:'SOURCE_HTTP_FAILED',cause,host:{operationId:77,requestId:771,capability:'http.execute'}}}}});
+ const outcome=await new SearchGateway({request:async()=>{throw error}}).searchBySource(source,'鸣龙');
+ assert.equal(outcome.ok,false);assert.equal(outcome.error,'Internal error','diagnostics do not change visible copy');
+ assert.deepEqual(outcome.diagnostic,{category:'SOURCE_HTTP_FAILED',phase:'transport',stage:'request.dispatch',requestId:771,operationId:77,
+  ...(platformCode===undefined?{}:{platformCode}),elapsedMs:125,transient:false});
+ assert.ok(!JSON.stringify(outcome.diagnostic).includes('PRIVATE_'));
+ error.event.error.details.category='SOURCE_RULE_FAILED';
+ const independent=await new SearchGateway({request:async()=>{throw error}}).searchBySource(source,'鸣龙');
+ assert.equal(independent.diagnostic,undefined,'later rule failures cannot inherit a prior nested HTTP cause');
+}
+console.log('PASS actual SearchGateway retains safe HTTP request/operation/code/timing summary and unchanged error copy; independent rule errors do not inherit stale evidence');

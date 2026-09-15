@@ -63,6 +63,20 @@ try{
  assert.equal(f.calls.filter(c=>c.method==='search-book.put').length,0,'unknown transport must not persist failed acquisition');
  assert.deepEqual(f.rows.get(f.key('s1','/b0')).acquisition,prior,'prior successful evidence remains untouched');
  assert.equal(f.calls.filter(c=>c.method==='book.detail').length,2,'a new request attempts the source again');
+ for(const platformCode of [2300023,2300060,undefined]) {
+  const diagnostics={category:'SOURCE_HTTP_FAILED',phase:'transport',transient:false,...(platformCode===undefined?{}:{platformCode})};
+  const native=normalize(Object.assign(new Error('Internal error'),{code:'INTERNAL',retryable:false,details:diagnostics}));
+  const commandError={event:{requestId:124,error:{...native,details:{category:'SOURCE_HTTP_FAILED',cause:native.details,
+   host:{requestId:124,operationId:2,capability:'http.execute'}}}}};
+  const nonTransient=classifyRemoteReadingCommandFailure('book.detail',commandError);
+  assert.equal(nonTransient.category,'SOURCE_HTTP_FAILED');assert.equal(nonTransient.transientTransport,false);
+  f.modes.set(f.key('s1','/b0'),nonTransient);
+  await assert.rejects(f.runtime.acquireBook(seed(0)),error=>error.category==='SOURCE_HTTP_FAILED');
+  assert.equal(f.calls.filter(c=>c.method==='search-book.put').length,0,'non-retryable TLS/23/no-code failures must not write parser verdicts');
+  assert.deepEqual(f.rows.get(f.key('s1','/b0')).acquisition,prior,'prior successful facts survive all transport categories');
+ }
+ f.modes.set(f.key('s1','/b0'),classified);
+
  const admitted=await f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]);
  assert.equal(admitted.session.identity.sourceId,'s2','transient per-source failure continues to another same-book candidate');
  assert.equal(f.calls.filter(c=>c.method==='search-book.put'&&c.params.origin==='s1').length,0);

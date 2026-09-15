@@ -6,18 +6,20 @@ const app=new URL('../entry/src/main/ets/app/',import.meta.url);
 const source=name=>stripTypeScriptTypes(readFileSync(new URL(name,app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const httpSource=source('HttpExecuteHost.ts'),policy=source('HttpTransportPolicy.ts');
 const logs=[],requests=[],admissions=[];
+const {errorMessageOf,httpTransportFailureSummary}=await import(new URL('ErrorMessage.ts',app));
+const {classifyRemoteReadingCommandFailure}=await import(new URL('../features/reading/RemoteReadingContract.ts',app));
 let response,requestFailure,cookieFailure;
 const http={RequestMethod:Object.fromEntries(['GET','HEAD','POST','PUT','DELETE','OPTIONS','CONNECT','TRACE'].map(method=>[method,method])),
  HttpDataType:{ARRAY_BUFFER:2},InterceptorType:{REDIRECTION:1},
  HttpInterceptorChain:class{addChain(items){assert.equal(items.length,1);this.items=items;return true;}apply(request){request.interceptors=this.items;return true;}},
- createHttp(){const request={destroyed:false,async request(url,options){this.url=url;this.options=options;if(requestFailure)throw requestFailure;return response;},destroy(){this.destroyed=true;}};requests.push(request);return request;}};
+ createHttp(){const request={destroyed:false,async request(url,options){this.url=url;this.options=options;if(typeof requestFailure==='function')return requestFailure(this);if(requestFailure)throw requestFailure;return response;},destroy(){this.destroyed=true;this.onDestroy?.();}};requests.push(request);return request;}};
 const cookieStore={instance:{async cookieHeader(){if(cookieFailure)throw cookieFailure;return '';},async storeResponseCookies(){return [];}}};
 const nativeUtil={TextDecoder:{create:(encoding,options)=>({decodeToString:bytes=>new TextDecoder(encoding,options).decode(bytes)})}};
 const NetworkEnvironmentError=class extends Error{};
 const Host=new Function('http','url','util','connection','prepareNetworkTarget','NetworkEnvironmentError','CookieSessionStore','errorMessageOf','hilog',
  policy+httpSource+';return HttpExecuteHost;')(http,{URL:{parseURL:(value,base)=>new URL(value,base)}},nativeUtil,{},
  async value=>{admissions.push(value);return{host:'93.184.216.34',route:'direct',addresses:['93.184.216.34']};},NetworkEnvironmentError,cookieStore,
- error=>error instanceof Error?error.message:String(error),{error:(...values)=>logs.push(values),warn:(...values)=>logs.push(values)});
+ errorMessageOf,{error:(...values)=>logs.push(values),warn:(...values)=>logs.push(values)});
 const host=new Host();
 const deadline=()=>({deadlineAt:Date.now()+5000,cancelled:false,activeRequest:null,expired:new Promise(()=>{})});
 const execute=async({method='GET',status=200,result=new ArrayBuffer(0),header={}}={})=>{
@@ -92,7 +94,7 @@ for(let n=0;n<2;n++)await assert.rejects(host.requestWithPolicy('https://93.184.
 cookieFailure=undefined;
 assert.equal(logs.filter(values=>values.includes('request.chain')&&values.includes('CookieSessionStore.ets:221:18')).length,1);
 requestFailure=new TypeError('PRIVATE_DISPATCH');requestFailure.stack='at private (https://user:PRIVATE_PASSWORD@secret.invalid/private.ts:1:2)';
-await assert.rejects(execute(),error=>error===requestFailure);requestFailure=undefined;
+await assert.rejects(execute(),error=>error.details?.category==='SOURCE_HTTP_FAILED'&&error.details.transient===false);requestFailure=undefined;
 assert.equal(logs.filter(values=>values.includes('request.dispatch')&&values.includes('no-frame')).length,1,'unknown stack locations become a fixed no-frame marker');
 await assert.rejects(execute({header:null}),TypeError);
 assert.equal(logs.filter(values=>values.includes('response.headers')).length,1,'header conversion failure keeps a distinct fixed stage');
@@ -100,19 +102,19 @@ const safeLogs=logs.filter(values=>values.includes('http.execute TypeError stage
 assert.ok(!JSON.stringify(safeLogs).includes('PRIVATE_'));assert.ok(!JSON.stringify(safeLogs).includes('https://'));
 for(const code of [2300002,'2300002',2300060,'-105']){
  requestFailure=Object.assign(new Error('Internal error PRIVATE_URL'),{code});
- await assert.rejects(execute(),error=>error===requestFailure);requestFailure=undefined;
+ await assert.rejects(execute(),error=>{assert.equal(error.details?.category,'SOURCE_HTTP_FAILED');assert.equal(error.details.platformCode,Number(code));assert.equal(error.details.transient,false);assert.equal(error.retryable,false);return true;});requestFailure=undefined;
 }
 const nativeLogs=logs.filter(values=>values.includes('http.execute native failure phase=transport stage=request.dispatch code=%{public}d'));
 assert.deepEqual(nativeLogs.map(values=>values.at(-1)),[2300002,2300060,-105],'decimal string and number codes deduplicate together');
 requestFailure={code:'PRIVATE_URL https://secret.invalid',message:'PRIVATE_PASSWORD'};
-await assert.rejects(execute(),error=>error===requestFailure);requestFailure=undefined;
+await assert.rejects(execute(),error=>{assert.equal(error.details?.category,'SOURCE_HTTP_FAILED');assert.equal(error.details.platformCode,undefined);assert.equal(error.retryable,false);return true;});requestFailure=undefined;
 assert.equal(logs.filter(values=>values.includes('http.execute native failure phase=transport stage=request.dispatch code=%{public}d')).length,3);
 assert.ok(!JSON.stringify(nativeLogs).includes('PRIVATE_'));
 for(const code of [2300006,2300007,2300028,2300052,2300055,2300056,2300999,'2300999']) {
 requestFailure=Object.assign(new Error('Internal error'),{code});
 await assert.rejects(execute(),error=>{
  assert.notEqual(error,requestFailure);assert.equal(error.code,'INTERNAL');assert.equal(error.retryable,true);
- assert.deepEqual(error.details,{category:'SOURCE_HTTP_FAILED',phase:'transport',transient:true,platformCode:Number(code)});
+ assert.deepEqual(error.details,{category:'SOURCE_HTTP_FAILED',phase:'transport',stage:'request.dispatch',transient:true,platformCode:Number(code)});
  assert.equal(error.message,'Internal error');assert.ok(!(error instanceof NetworkEnvironmentError));return true;
 });
 }
@@ -122,5 +124,64 @@ for(let n=1;n<30;n++){
 }
 assert.equal(Host.reportedDiagnostics.size,16,'native-code and TypeError evidence share one fixed process ceiling');
 console.log('PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack');
-console.log('PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs without replacing original errors');
+console.log('PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs while retaining transport origin');
 console.log('PASS unknown native 2300999 preserves per-request transient HTTP evidence, not a global network outage or a source rule verdict');
+
+
+// Exercise the public Host entry and the exact SDK normalization function.
+// The Core wrapper input below follows host_error_with_identity; the actual
+// QuickJS/wire counterpart is covered by reader-runtime's native cause tests.
+const sdk=readFileSync(new URL('../entry/vendor/core-harmony/sdk/reader_core.ts',import.meta.url),'utf8');
+const normalizeSource=sdk.slice(sdk.indexOf('function normalizeHostError('),sdk.indexOf('function readTransactionPendingDetails('));
+const normalize=new Function(stripTypeScriptTypes(normalizeSource)+";function isJsonObject(v){return typeof v==='object'&&v!==null&&!Array.isArray(v)};return normalizeHostError;")();
+const requestLog='http.execute failure requestId=%{public}d stage=request.dispatch code=%{public}s elapsedMs=%{public}d transient=%{public}s';
+let requestId=900;
+for(const code of [2300023,2300060,'2300060',undefined,2300999,2300060]) {
+ requestId++;
+ requestFailure=Object.assign(new Error('Internal error PRIVATE_PAYLOAD'),code===undefined?{}:{code});
+ const count=requests.length;
+ await assert.rejects(host.execute({url:'https://93.184.216.34/PRIVATE_URL',retry:{maxAttempts:2,backoffMillis:0}},requestId),failure=>{
+  const normalized=normalize(normalize(failure));
+  assert.equal(normalized.code,'INTERNAL');assert.equal(normalized.retryable,code===2300999);
+  assert.equal(normalized.details.category,'SOURCE_HTTP_FAILED');
+  assert.equal(normalized.details.platformCode,code===undefined?undefined:Number(code));
+  assert.equal(Object.hasOwn(normalized.details,'platformCode'),code!==undefined);
+  const core={message:normalized.message,event:{requestId,error:{...normalized,details:{category:'SOURCE_HTTP_FAILED',cause:normalized.details,
+   host:{operationId:requestId+100,requestId,capability:'http.execute'}}}}};
+  const classified=classifyRemoteReadingCommandFailure('chapter.content',core);
+  assert.equal(classified.category,'SOURCE_HTTP_FAILED');assert.equal(classified.transientTransport,code===2300999);
+  const summary=httpTransportFailureSummary(core);
+  assert.equal(summary.requestId,requestId);assert.equal(summary.operationId,requestId+100);
+  assert.equal(summary.platformCode,code===undefined?undefined:Number(code));
+  assert.ok(summary.elapsedMs>=0);assert.equal(summary.stage,'request.dispatch');
+  assert.equal(summary.transient,code===2300999);assert.ok(!JSON.stringify(summary).includes('PRIVATE_'));
+  for(const other of ['SOURCE_RULE_FAILED','SOURCE_RESPONSE_FORMAT']){
+   assert.equal(httpTransportFailureSummary({...core,event:{requestId,error:{...core.event.error,details:{...core.event.error.details,category:other}}}}),undefined,'later independent errors never inherit old HTTP evidence');
+  }
+  assert.equal(httpTransportFailureSummary({...core,event:{requestId,error:{...core.event.error,code:'CANCELLED'}}}),undefined);
+  return true;
+ });
+ assert.equal(requests.length,count+2,'explicit retry policy remains unchanged');
+ assert.equal(logs.filter(v=>v.includes(requestLog)&&v[3]===requestId).length,1,'one association per final execute failure, even after retry and diagnostic inventory saturation');
+}
+requestFailure=undefined;
+const correlated=logs.filter(v=>v.includes(requestLog));
+assert.equal(correlated.length,6);assert.ok(!JSON.stringify(correlated).includes('PRIVATE_'));
+assert.ok(!JSON.stringify(correlated).includes('https://'));
+assert.equal(correlated.filter(v=>v[4]==='2300060').length,3,'repeated same-code operations retain distinct request IDs');
+assert.equal(correlated.filter(v=>v[4]==='none').length,1,'missing code is explicit and not fabricated');
+// Our own cancellation can make native request() reject with code 23. It is
+// cancellation, not source health evidence, and the following request works.
+requestFailure=request=>new Promise((resolve,reject)=>{request.onDestroy=()=>reject(Object.assign(new Error('aborted'),{code:2300023}));});
+const before=requests.length;
+const cancelled=host.execute({url:'https://93.184.216.34/PRIVATE_URL'},999);
+for(let n=0;n<20&&requests.length===before;n++)await new Promise(resolve=>setTimeout(resolve,0));
+host.cancel(999);
+await assert.rejects(cancelled,error=>{
+ assert.match(error.message,/cancelled/);assert.equal(error.details?.category,undefined);return true;
+});
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(logs.filter(v=>v.includes(requestLog)&&v[3]===999).length,0);
+requestFailure=undefined;response={responseCode:200,result:new ArrayBuffer(0),header:{}};
+assert.equal((await host.execute({url:'https://93.184.216.34/next'},1000)).status,200);
+console.log('PASS actual Host -> SDK -> CoreError input -> reading classifier and safe search summary: TLS/23/no-code retain HTTP cause, only known transient codes retry; per-operation association survives repeats, cancellation and later independent failures stay separate');

@@ -15,7 +15,7 @@ import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { errorMessageOf } from '../../app/ErrorMessage';
+import { errorMessageOf, type HttpTransportFailureSummary } from '../../app/ErrorMessage';
 import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
 
 const DOMAIN = 0x5244;
@@ -33,6 +33,7 @@ const SEARCH_PARTIAL_PUBLISH_MAX_MS = 200;
 interface WorkerFailure {
   source: SearchSource;
   error: string;
+  diagnostic?: HttpTransportFailureSummary;
 }
 
 type SearchBranchStatus = 'running' | 'done' | 'failed';
@@ -677,9 +678,10 @@ export class SearchOrchestrator {
             run.completed.add(source.sourceId);
             run.completedVersions.set(source.sourceId, source.sourceVersion);
             if (outcome.ok === false) {
-              run.failures.set(source.sourceId, { source, error: outcome.error });
-              hilog.warn(DOMAIN, 'Reader', 'Search source %{private}s failed: %{private}s',
-                this.sourceIdentityForLog(source), this.sanitizedLogText(outcome.error));
+              run.failures.set(source.sourceId, { source, error: outcome.error, diagnostic: outcome.diagnostic });
+              hilog.warn(DOMAIN, 'Reader', 'Search source %{private}s failed: %{private}s transport=%{public}s',
+                this.sourceIdentityForLog(source), this.sanitizedLogText(outcome.error),
+                outcome.diagnostic === undefined ? 'none' : JSON.stringify(outcome.diagnostic));
             } else {
               if ((outcome.discardedCount ?? 0) > 0) hilog.warn(DOMAIN, 'Reader',
                 'Search source %{private}s discarded %{public}d malformed rows: %{public}s',

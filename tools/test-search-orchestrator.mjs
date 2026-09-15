@@ -17,7 +17,7 @@ const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthor
 const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/ErrorMessage.ts'))
   .replace('export function errorMessageOf', 'function errorMessageOf');
 const errorMessageImport =
-  /^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];\n/m;
+  /^import \{[^\n]*errorMessageOf[^\n]*\} from ['"][^'"]*ErrorMessage(\.ts)?['"];\n/m;
 const sourceCategoryModule = stripTypeScriptTypes(
   read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
 ).replace(/^export /gm, '');
@@ -1189,3 +1189,31 @@ console.log('R6 actual empty source → publication → page/list: 1000 retained
   assert.equal(search.branchFailureMessage('runtime closed'),'读取已中断，可重试');search.close();
 }
 console.log('R3 branch causes survive stop/retry, safe classified UI, successful recovery and old-run rejection PASS');
+
+// A source's safe operation association survives publication without changing
+// visible failure text, suppressing other sources or exposing request values.
+{
+ const sources=makeSources(2),owner=fakeOwner({sources,delayForSource:()=>5,
+  resultsFor:sourceId=>[{bookId:`/b-${sourceId}`,title:'鸣龙',author:'关关公子',variables:{}}]});
+ const original=owner.request;
+ const core=Object.assign(new Error('Internal error'),{event:{requestId:881,error:{code:'INTERNAL',message:'Internal error',retryable:false,
+  details:{category:'SOURCE_HTTP_FAILED',cause:{category:'SOURCE_HTTP_FAILED',phase:'transport',stage:'request.dispatch',
+   transient:false,platformCode:2300060,requestId:881,elapsedMs:32,url:'PRIVATE_URL',body:'PRIVATE_BODY'},
+   host:{operationId:882,requestId:881,capability:'http.execute'}}}}});
+ owner.request=async(command,params,options)=>{const result=await original(command,params,options);
+  if(command==='book.search'&&params.sourceId==='source-0')throw core;return result;};
+ const {orchestrator,presentations}=capture(),search=orchestrator(owner),safeLogs=[],priorWarn=hilog.warn;
+ hilog.warn=(...values)=>safeLogs.push(values);
+ try {
+  search.open();search.search('鸣龙');await settle(owner.state,2);
+  await waitUntil(owner.state,()=>search.run?.failures.size===1);
+  assert.equal(search.run.failures.get('source-0').error,'Internal error');
+  assert.equal(search.run.failures.get('source-0').diagnostic.platformCode,2300060);
+  assert.equal(search.run.failures.get('source-0').diagnostic.requestId,881);
+  const log=safeLogs.find(values=>values.includes('Search source %{private}s failed: %{private}s transport=%{public}s'));
+  assert.ok(log);const summary=JSON.parse(log.at(-1));assert.equal(summary.operationId,882);
+  assert.ok(!JSON.stringify(summary).includes('PRIVATE_'));assert.equal(last(presentations).failedSourceCount,1);
+  assert.equal(last(presentations).results[0].sourceId,'source-1');
+ } finally {hilog.warn=priorWarn;search.close();}
+}
+console.log('PASS actual search failure state and log retain safe request/operation/code summary while healthy sources and visible copy remain unchanged');

@@ -2,7 +2,7 @@ import { bookTitleAuthorKey, readBookAuthorIdentity, type BookAuthorIdentityProo
 import type { JsonObject } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { BookRequestOptions } from '../../app/BookRequestScheduler';
-import { errorMessageOf } from '../../app/ErrorMessage';
+import { errorMessageOf, httpTransportFailureSummary, type HttpTransportFailureSummary } from '../../app/ErrorMessage';
 import { SearchBookProjection, type SearchBookPatch } from './SearchBookProjection';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
@@ -86,7 +86,7 @@ export type SearchSource = {
 
 export type SearchOutcome =
   | { ok: true; results: SearchBook[]; discardedCount?: number; discardedReasons?: string[] }
-  | { ok: false; error: string };
+  | { ok: false; error: string; diagnostic?: HttpTransportFailureSummary };
 
 type SearchRequestGuard = () => boolean;
 
@@ -232,7 +232,8 @@ export class SearchGateway {
       return { ok: true, results: books };
     } catch (error) {
       const message = errorMessageOf(error);
-      return { ok: false, error: message };
+      const diagnostic = httpTransportFailureSummary(error);
+      return diagnostic === undefined ? { ok: false, error: message } : { ok: false, error: message, diagnostic };
     }
   }
 
