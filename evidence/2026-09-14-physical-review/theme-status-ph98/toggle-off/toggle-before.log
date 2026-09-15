@@ -1,0 +1,28 @@
+(node:33759) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator","status":"PASS"}
+{"name":"new theme is drained after the previous native color write rejects","status":"PASS"}
+{"name":"old window success cannot strand new window chrome","status":"PASS"}
+{"name":"old window reject cannot strand new window chrome","status":"PASS"}
+{"name":"failed latest request stays pending without an automatic retry loop and explicit reapply recovers","status":"PASS"}
+{"name":"showing controls retries a failed color even when visible-bar policy and geometry are unchanged","status":"PASS"}
+{"name":"actual cutout setting true to false preserves measured band across delayed show area and all eight themes","status":"FAIL","error":"AssertionError [ERR_ASSERTION]: day: show ACK must not erase measured band\n\n0 !== 48\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:104:11\n    at async check (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:49:36)\n    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:89:1"}
+{"name":"pending status reveal never borrows another window geometry or replacement window measurement","status":"PASS"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: production window chrome scenarios
+
+1 !== 0
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:128:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

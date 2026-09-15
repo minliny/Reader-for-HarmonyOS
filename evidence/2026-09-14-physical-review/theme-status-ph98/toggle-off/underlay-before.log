@@ -1,0 +1,24 @@
+{"name":"disabled extension: zero initial measured region recovers through the metrics dependency","status":"FAIL","error":"AssertionError [ERR_ASSERTION]: late measured geometry must reach the retained Row; metrics observers=[]\n+ actual - expected\n\n  {\n+   height: 0,\n-   height: 48,\n    position: {\n      x: 0,\n      y: 0\n    },\n+   width: 0\n-   width: 390\n  }\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-status-underlay-reactivity.mjs:87:10\n    at check (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-status-underlay-reactivity.mjs:76:5)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-status-underlay-reactivity.mjs:83:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"}
+{"name":"measured origin, width and height update without a theme change or remount","status":"FAIL","error":"AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  {\n+   height: 48,\n-   height: 46,\n    position: {\n+     x: 0,\n+     y: 0\n-     x: 4,\n-     y: 2\n    },\n+   width: 390\n-   width: 382\n  }\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-status-underlay-reactivity.mjs:95:10\n    at check (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-status-underlay-reactivity.mjs:76:5)\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-status-underlay-reactivity.mjs:92:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)"}
+{"name":"all eight reading palettes remain unchanged in the retained underlay","status":"PASS"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: SDK-emitted status-underlay observers must subscribe to the measured geometry revision
+
+2 !== 0
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-status-underlay-reactivity.mjs:110:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 2,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

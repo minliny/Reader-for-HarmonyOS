@@ -1,0 +1,6 @@
+{"name":"disabled extension: zero initial measured region recovers through the metrics dependency","status":"PASS"}
+{"name":"measured origin, width and height update without a theme change or remount","status":"PASS"}
+{"name":"all eight reading palettes remain unchanged in the retained underlay","status":"PASS"}
+PASS production SDK observers and observed-property scheduling; no native layout, device pixels or failure-frequency claim.
+(node:46244) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
