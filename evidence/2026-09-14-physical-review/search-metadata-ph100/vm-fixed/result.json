@@ -1,0 +1,68 @@
+{
+  "scope": "PH100 exact-author search/detail/retained-return on existing VM",
+  "runId": "20260915T162937Z-29fdf744-5f6a636a",
+  "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260915T162937Z-29fdf744-5f6a636a/manifest.json",
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "commit": "29fdf7440b00e86d59597940bc87bc36ab32e0a9",
+      "dirty": false,
+      "status": []
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "commit": "bf49495317798f68b98928712eb6e106af02bed1",
+      "dirty": false,
+      "status": []
+    },
+    "buildInputs": {
+      "fingerprint": "5f6a636a779b4a0c400a5ee80d1be71a13b0348b73c686c6e55580f980a172c9",
+      "fileCount": 737,
+      "snapshot": "source-snapshot.json"
+    },
+    "effectiveBuildProfile": {
+      "mode": "local",
+      "bytes": 1510,
+      "sha256": "0857c8a0897ca62681003b7507acc2048c14d5421df1ae8039143bee74301f7d",
+      "secretMaterialArchived": false
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 19749016,
+      "sha256": "075cf3f87764324dced2ee2c8847a25c6981c2c664361bd9406e7f94469cac4d"
+    }
+  },
+  "artifact": {
+    "kind": "signed",
+    "sha256": "f67b429b3eae39128304529c329a0ec91cb022bd89172b644de6676ad8dc105b",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    }
+  },
+  "deployment": {
+    "completedAt": "2026-09-15T16:36:41.002Z",
+    "install": "PASS",
+    "launch": "PASS",
+    "dataPolicy": "preserve",
+    "targetRef": "6460677a198b"
+  },
+  "checks": {
+    "plainSynopsis": "PASS",
+    "latestChapter": "PASS",
+    "detailCatalog": "PASS",
+    "returnRetainsMetadata": "PASS",
+    "sameRepresentativeSource": "PASS"
+  },
+  "notVerified": [
+    "physical-device update or interaction",
+    "whole-book content",
+    "all-source performance or availability",
+    "legacy malformed bookId migration",
+    "user acceptance"
+  ]
+}

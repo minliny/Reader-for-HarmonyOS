@@ -29,3 +29,12 @@
 - 旧本机 CLI 在详情 HTTP 401 时仍标 L3 PASS，该标签未作为有效证据。当前 Runtime 已有非 2xx 拒绝；诊断阶段准入及阶段截止能力记录于唯一开发总账，不能与此次 Runtime 修复混为一谈。
 - 初次只读日志命令被自动审批质疑参数后暂停；核对 `hilog --help` 确认 `-x` 为非阻塞查询退出、`-e` 为输出过滤，原只读命令重审通过。未清理或调整日志配置。
 
+## 修复包与 VM 结果
+
+- 新包 run：`20260915T162937Z-29fdf744-5f6a636a`，iteration，Harmony `29fdf744` / Core `bf4949531`，构建时两仓 clean；不是整项目验收包。
+- [manifest](../../../.reader-artifacts/hap/20260915T162937Z-29fdf744-5f6a636a/manifest.json)；signed debug HAP SHA-256：`f67b429b3eae39128304529c329a0ec91cb022bd89172b644de6676ad8dc105b`。Core NAPI 原始输入 SHA-256：`075cf3f87764324dced2ee2c8847a25c6981c2c664361bd9406e7f94469cac4d`，嵌入 Core identity 为 `bf49495317798f68b98928712eb6e106af02bed1`、dirty=false。
+- Native/SDK、276组 Harmony、ArkTS、非增量构建、签名及独立 manifest 复验 PASS。16:36:41 UTC 保数据覆盖安装并启动到同一 VM PASS；[部署回执](vm-fixed/deployment.json)。重新预检为原进程21552、同一实例路径、HDC Connected、boot.completed=true、SceneBoard PID1529持续运行，未重启/清数据。
+- 16:39:17 UTC 搜索《逆天邪神》，16:39:34 UTC 样本中无敌贱客条目已显示“第4462章 第四千四百六十二章 大结局”，简介从“乱世之中”开始，标签未再挤占简介；代表源仍为“阅读助手（优+++）”。[搜索截图](vm-fixed/reader-control-ph100-fixed-results.png)
+- 16:40:03 UTC 点击该条目，首个16:40:03.926 UTC布局样本已有正确简介、最新章节、章节列表与“开始阅读”；16:40:34 UTC再次采样仍一致，无原失败弹窗。本次没有点开始阅读，不能将本截图扩大为整本正文验证。[详情截图](vm-fixed/reader-control-ph100-fixed-detail-ready.png)
+- 返回搜索后16:41:26 UTC样本仍保留相同作者、简介、最新章节和代表源；后续其他搜索结果的到达未覆盖这些信息。[返回截图](vm-fixed/reader-control-ph100-fixed-return.png)
+- VM 这条“搜索→详情→返回”链路 PASS；本次未更新真机、未进行性能指标/全部源/旧错误书架记录迁移验收。用户验收 OPEN。已退出串行操作会话并释放 HDC 租约。
