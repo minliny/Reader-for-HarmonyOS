@@ -42,3 +42,9 @@ mockup-check.json 仅证明对照在浏览器宽320/390/736无横向溢出、封
 run `20260915T151630Z-356f150e-e58cc5c3`，Harmony `356f150eaf1cfad13342cc11cc312d07d23508aa` / Core `c86b6aaec60b5c60a3a73254aac03ce6ddce4de9`，构建时两仓clean。275组Harmony检查、ArkTS、非增量编译、signed/debug Profile验签、独立manifest复验PASS。[构建](build.log)、[复验](verify.log)、[归档manifest](manifest.json)。
 
 签名HAP SHA-256 `2d3c41c1aac1628a48d22810b6afb35a8f4df7c07368b4ccba5e0a42ca0aa69d`。唯一正式 [manifest](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260915T151630Z-356f150e-e58cc5c3/manifest.json) 绑定 `entry-default-signed.hap`；包内同时包含上一轮状态栏补修及本次排版修改。iteration/acceptanceEligible=false，未安装、未操作设备或应用数据；VM/真机像素、用户验收OPEN。旧浏览器提案未更新为当前排版，不将其作为本次实现截图。
+
+## 用户授权后的真机安装
+
+2026-09-15 15:23:53 UTC，以上同一run/签名HAP已在本轮发现并确认的USB真机完成保数据覆盖安装及启动，targetRef `b1f20b88963d`。签名前后身份一致、install PASS、launch PASS、dataPolicy preserve，见[正式安装回执副本](physical-deployment.json)。未操作VM，未做额外功能测试；PH98/PH99原生像素与用户验收继续OPEN。
+
+最初沙箱内只读发现返回`Connect server failed`，立即停止该通道操作。经自动审批允许在沙箱外读取既有本机调试服务后，现场发现USB真机与TCP VM；仅选择USB真机。没有重启调试服务、VM或清数据。此错误是工具访问阶段证据，不作为应用失败。
