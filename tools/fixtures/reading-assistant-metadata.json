@@ -1,0 +1,61 @@
+{
+  "provenance": {
+    "sourceId": "corpus-752f07e02faf",
+    "capturedSearchItemSha256": "a947141dcee2b1a2f95f200bbc7493710bf14bf534d8ed946dce215b0ea480e2",
+    "search": "Exact public API search item captured on 2026-09-15; detail below is synthetic and tests the same metadata fields only."
+  },
+  "searchItem": {
+    "intro": "乱世之中，拥妖、佛、魔、儒、玄、鬼、道七方强者，各自为道，夺天地之造化，称乱世之霸主。谁主沉浮间，将得万世永生，混沌之秘。\n叶家废材少年傲然崛起，平定四方，追求极致天道，终成大统。\n“邪神一怒，天地无极，乾坤逆转，饶你冠绝天下也难抵我一击之威！”",
+    "characters": "主要人物：叶凡",
+    "ptags": "杀伐果断,逆袭,多女主,爽文,玄幻",
+    "words_num": "9500608",
+    "author": "无敌贱客",
+    "id": "1793242",
+    "score": "8.7",
+    "image_link": "https://cdn.wtzw.com/bookimg/public/images/cover/ffea/7eae72ef35e3ace0879b5bcdc246921a_216x288.jpg",
+    "title": "<b><font color='#ff4242'>逆</font><font color='#ff4242'>天</font><font color='#ff4242'>邪</font><font color='#ff4242'>神</font></b>",
+    "alias_title": "",
+    "schema_baidu": "",
+    "download_url": "",
+    "data_source": "qimao",
+    "match_flag": "0",
+    "original_title": "逆天邪神",
+    "original_alias_title": "",
+    "original_author": "无敌贱客",
+    "type": "0",
+    "title_tag": ""
+  },
+  "detailBook": {
+    "id": "1793242",
+    "title": "逆天邪神",
+    "author": "无敌贱客",
+    "image_link": "https://cdn.wtzw.com/bookimg/public/images/cover/ffea/7eae72ef35e3ace0879b5bcdc246921a_216x288.jpg",
+    "intro": "乱世之中，拥妖、佛、魔、儒、玄、鬼、道七方强者，各自为道，夺天地之造化，称乱世之霸主。谁主沉浮间，将得万世永生，混沌之秘。\n叶家废材少年傲然崛起，平定四方，追求极致天道，终成大统。\n“邪神一怒，天地无极，乾坤逆转，饶你冠绝天下也难抵我一击之威！”",
+    "book_tag_list": [
+      {
+        "title": "杀伐果断"
+      },
+      {
+        "title": "逆袭"
+      },
+      {
+        "title": "多女主"
+      },
+      {
+        "title": "爽文"
+      },
+      {
+        "title": "玄幻"
+      }
+    ],
+    "update_time": 1757894400,
+    "latest_chapter_title": "第4507章 大结局",
+    "words_num": "9500608"
+  },
+  "previousRules": {
+    "searchIntro": "🏷️   标签：{{$.ptags}}\n🔖   简介：{{$.intro}}",
+    "searchKind": null,
+    "detailIntro": "🏷️   标签：{{$.book_tag_list[*].title##\\s##,}}{{'\\n'+'​'}}\n🔖   简介：{{$.intro}}##(^|[。！？]+[”」）】]?)##$1<br>",
+    "detailKind": "{{java.timeFormat(java.getString('$.update_time')*1000)}}##\\s.*"
+  }
+}

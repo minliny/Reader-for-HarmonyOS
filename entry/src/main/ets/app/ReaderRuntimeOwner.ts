@@ -56,7 +56,7 @@ const PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS = 5000;
 const LOG_DOMAIN = 0x5244;
 const BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection.json';
 // BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
-const BUNDLED_RAW_FILE_SHA256 = '2700f5402ace0ca8febfe3b2c44d937212913029cf4ccb3890c10849c85e90d7';
+const BUNDLED_RAW_FILE_SHA256 = '0efc24aa6e9c4fe393ee0aa53fc5f72adf1e6ec6d47844d25c268a2a6623c58f';
 // END bundled-source-integrity
 
 type CoreBuildIdentity = {
@@ -768,20 +768,28 @@ export class ReaderRuntimeOwner {
           managedCurrent.push(bundled);
           continue;
         }
-        if (reBundled) {
-          await this.importBundledSource(runtime, sourceId, bundled);
-        } else {
-          const importedSource: JsonObject = { ...bundled };
-          delete importedSource['readerBuiltinWithdrawn'];
-          delete importedSource['readerTestBuiltinWithdrawn'];
+        const importedSource: JsonObject = { ...bundled };
+        delete importedSource['readerBuiltinWithdrawn'];
+        delete importedSource['readerTestBuiltinWithdrawn'];
+        const metadataCorrection = (bundled['provenance'] as JsonObject | undefined)?.['metadataCorrection'] as JsonObject | undefined;
+        if (metadataCorrection?.['preserveExploreRules'] === true) {
+          // This metadata-only revision does not own discovery rules. They are
+          // outside the legacy fingerprint, so retain existing edits/deletions;
+          // a future discovery upgrade requires a separate explicit migration.
+          for (const field of ['exploreUrl', 'ruleExplore']) {
+            if (Object.prototype.hasOwnProperty.call(existing, field)) importedSource[field] = existing[field];
+            else delete importedSource[field];
+          }
+        }
+        if (!reBundled) {
           if (typeof existing['enabled'] === 'boolean') {
             importedSource['enabled'] = existing['enabled'];
           }
           if (typeof existing['enabledExplore'] === 'boolean') {
             importedSource['enabledExplore'] = existing['enabledExplore'];
           }
-          await this.importBundledSource(runtime, sourceId, importedSource);
         }
+        await this.importBundledSource(runtime, sourceId, importedSource);
         installedCount += 1;
         processedCount += 1;
         managedCurrent.push(bundled);

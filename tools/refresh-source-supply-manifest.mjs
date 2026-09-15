@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyReadingAssistantMetadataCorrection } from './reading-assistant-source-correction.mjs';
 import {
   BUILTIN_VERSION,
   SUITE_VERSION,
@@ -287,6 +288,7 @@ const ordered = [
   ...secureRecords.filter(record => bestRecords.has(record)),
 ];
 const sources = ordered.map(record => record.source);
+applyReadingAssistantMetadataCorrection(sources);
 
 // Keep the portable collection comfortably below the product's bounded JSON
 // import limit. The payload remains ordinary JSON and can be pretty-printed by
