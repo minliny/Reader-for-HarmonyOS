@@ -1,0 +1,26 @@
+(node:28197) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator","status":"PASS"}
+{"name":"new theme is drained after the previous native color write rejects","status":"PASS"}
+{"name":"old window success cannot strand new window chrome","status":"PASS"}
+{"name":"old window reject cannot strand new window chrome","status":"PASS"}
+{"name":"failed latest request stays pending without an automatic retry loop and explicit reapply recovers","status":"PASS"}
+{"name":"showing controls retries a failed color even when visible-bar policy and geometry are unchanged","status":"FAIL","error":"AssertionError [ERR_ASSERTION]: visible controls must not keep stale app color\n+ actual - expected\n\n+ '#F8F4EC'\n- '#FFEEE4D0'\n     ^\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:84:9\n    at async check (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:47:36)\n    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:79:1"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: production window chrome scenarios
+
+1 !== 0
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:88:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

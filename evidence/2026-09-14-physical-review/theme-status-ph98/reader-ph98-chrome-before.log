@@ -1,0 +1,25 @@
+(node:23395) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator","status":"PASS"}
+{"name":"new theme is drained after the previous native color write rejects","status":"FAIL","error":"AssertionError [ERR_ASSERTION]: newest theme must not be lost with old failure\n+ actual - expected\n\n+ '#F8F4EC'\n- '#FFE3EBDD'\n     ^\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:64:9\n    at async check (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:47:36)\n    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:61:1"}
+{"name":"old window success cannot strand new window chrome","status":"FAIL","error":"AssertionError [ERR_ASSERTION]: replacement must receive newest color\n+ actual - expected\n\n+ undefined\n- '#FF24382C'\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:71:9\n    at async check (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:47:36)\n    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:66:34"}
+{"name":"old window reject cannot strand new window chrome","status":"FAIL","error":"AssertionError [ERR_ASSERTION]: replacement must receive newest color\n+ actual - expected\n\n+ undefined\n- '#FF24382C'\n\n    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:71:9\n    at async check (file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:47:36)\n    at async file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:66:34"}
+{"name":"failed latest request stays pending without an automatic retry loop and explicit reapply recovers","status":"PASS"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: production window chrome scenarios
+
+3 !== 0
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:80:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 3,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

@@ -1,0 +1,51 @@
+{
+  "baseline": "0905782c",
+  "deviceOperation": false,
+  "files": [
+    {
+      "file": "REPORT.md",
+      "bytes": 3946,
+      "sha256": "240cc15b4a9700d615548fa9741738ede586f74ab132ba369cb6a9b19c342aa0"
+    },
+    {
+      "file": "UPSTREAM_AUDIT.md",
+      "bytes": 2771,
+      "sha256": "5ed62c3b36fbf4e1ba5b2ad0d31558d485e0e5d0a92f1998af0d868474aa43c5"
+    },
+    {
+      "file": "reader-ph98-chrome-before.log",
+      "bytes": 2611,
+      "sha256": "4aeb70b39899d692d1a7160266243914bf69c290c4681cc1efa2e27f4677e110"
+    },
+    {
+      "file": "reader-ph98-chrome-final.log",
+      "bytes": 946,
+      "sha256": "fed570dcc4428985ea2706c19bcb5b252d86cbebc8f06dc6b125b6ef760e5c5a"
+    },
+    {
+      "file": "reader-ph98-control-retry-before.log",
+      "bytes": 1734,
+      "sha256": "7f2221165a0b81d9a085cc064363f42d7d7c4740b540fb7d49cb26f1b32fa147"
+    },
+    {
+      "file": "reader-ph98-dedup.log",
+      "bytes": 37,
+      "sha256": "d2564142e3ccee02d9ab48d7d62f5c0bca55c2cb1f70b92aa29508dfdc12af68"
+    },
+    {
+      "file": "reader-ph98-settings.log",
+      "bytes": 43,
+      "sha256": "2c47a631d7f658ad897ca3da46b68ce4fa6a8142646e666aac4e93d7bb709757"
+    },
+    {
+      "file": "reader-ph98-window-p0.log",
+      "bytes": 222,
+      "sha256": "81a1f85853fe74889be596dd99730295206c9e3ee11e1895445907ee77648df5"
+    },
+    {
+      "file": "upstream-source-hashes.json",
+      "bytes": 2356,
+      "sha256": "ab4b21e86b79eea4c689f5af7297f9023e3b37ba1e4119ade6fd1185a2b18f56"
+    }
+  ]
+}

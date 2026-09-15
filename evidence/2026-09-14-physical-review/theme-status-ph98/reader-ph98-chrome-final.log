@@ -1,0 +1,9 @@
+(node:29603) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator","status":"PASS"}
+{"name":"new theme is drained after the previous native color write rejects","status":"PASS"}
+{"name":"old window success cannot strand new window chrome","status":"PASS"}
+{"name":"old window reject cannot strand new window chrome","status":"PASS"}
+{"name":"failed latest request stays pending without an automatic retry loop and explicit reapply recovers","status":"PASS"}
+{"name":"showing controls retries a failed color even when visible-bar policy and geometry are unchanged","status":"PASS"}
+PASS actual Coordinator + LRE palette requests; controlled Window promise completions only, no device pixel or failure-frequency claim.
