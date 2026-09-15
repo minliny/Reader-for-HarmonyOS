@@ -189,9 +189,9 @@ assert.equal(policy.redactedHttpUrl('https://user:secret@source-a.example:8443/p
 assert.equal(policy.redactedHttpUrl('file:///private/path'), '[invalid-url]');
 // Both enforcement points run the same shared judge: the Host execution entry
 // plus every redirect hop, and the source import gate.
-assert.match(hostSource, /rejectPrivateNetworkTarget\(requestUrl\)/,
+assert.match(hostSource, /prepareNetworkTarget\(requestUrl\)/,
   'the request execution entry must run the private-target gate');
-assert.match(hostSource, /await this\.rejectPrivateNetworkTarget\(nextUrl\)/,
+assert.match(hostSource, /this\.rejectPrivateNetworkUrl\(nextUrl\)/,
   'every redirect hop target must run the private-target gate');
 assert.match(hostSource, /isPrivateNetworkTarget/,
   'the Host must judge through the shared HttpTransportPolicy function');

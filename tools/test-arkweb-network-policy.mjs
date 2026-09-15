@@ -5,23 +5,28 @@ const app=new URL('../entry/src/main/ets/app/',import.meta.url);
 const read=name=>readFileSync(new URL(name,app),'utf8');
 const policy=stripTypeScriptTypes(read('HttpTransportPolicy.ts')).replace(/^export /gm,'');
 const redact=new Function(policy+';return redactedHttpUrl;')();
+const routePolicy=stripTypeScriptTypes(read('NetworkRoutePolicy.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const executor=stripTypeScriptTypes(read('ArkWebExecutor.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace('export class','class');
 let generation=0;let fetchCookies=async()=>[];let reconciled;
 let dns=async()=>[{address:'93.184.216.34'}];const pins=[];
-const Executor=new Function('connection','webview','CookieSessionStore',policy+executor+';return ArkWebExecutor;')({getAddressesByName:host=>dns(host)}, {WebviewController:{setHostIP:(...args)=>pins.push(args)},WebCookieManager:{fetchAllCookies:()=>fetchCookies()},WebHttpCookieSameSitePolicy:{STRICT:1,LAX:2,NONE:3}}, {instance:{sessionGeneration:()=>generation,reconcileArkWebCookies:async(...args)=>{reconciled=args;}}});
+const Executor=new Function('connection','webview','CookieSessionStore',policy+routePolicy+executor+';return ArkWebExecutor;')({getDefaultHttpProxy:async()=>({host:'',port:0,exclusionList:[]}),getPacUrl:()=>'',getPacFileUrl:()=>'',getAddressesByName:host=>dns(host)}, {WebviewController:{setHostIP:(...args)=>pins.push(args)},WebCookieManager:{fetchAllCookies:()=>fetchCookies()},WebHttpCookieSameSitePolicy:{STRICT:1,LAX:2,NONE:3}}, {instance:{sessionGeneration:()=>generation,reconcileArkWebCookies:async(...args)=>{reconciled=args;}}});
 const e=new Executor();
-for(const address of ['http://127.0.0.1','https://10.1.2.3','http://[::1]','file:///tmp/file','http://2130706433']) assert.equal(e.blockNetworkUrl(address),true);
-assert.equal(e.blockNetworkUrl('https://public.example/page'),true,'an unadmitted host is fail-closed');
-assert.equal(e.blockNetworkUrl('data:text/plain,hello'),false);
-const job={deadlineAt:Date.now()+10000,cancelled:false};await e.pinDocumentTarget(job,'https://public.example/page');e.active=job;
+const surface={id:1,requestId:1,controller:{stop(){}}};
+const job={requestId:1,surface,deadlineAt:Date.now()+10000,cancelled:false};
+e.surfaceLease={surface,attached:true,retired:false};e.active=job;
+for(const address of ['http://127.0.0.1','https://10.1.2.3','http://[::1]','file:///tmp/file','http://2130706433']) assert.equal(e.blockNetworkUrl(address,surface),true);
+assert.equal(e.blockNetworkUrl('https://public.example/page',surface),true,'an unadmitted host is fail-closed');
+assert.equal(e.blockNetworkUrl('data:text/plain,hello',surface),false);
+job.networkDenied=false;
+await e.pinDocumentTarget(job,'https://public.example/page');e.active=job;
 assert.equal(job.pinnedHost,'public.example');assert.deepEqual(pins[0].slice(0,2),['public.example','93.184.216.34']);
-assert.equal(e.blockNetworkUrl('https://public.example/script.js'),false,'same pinned host is admitted');
-assert.equal(e.blockNetworkUrl('https://cdn.public.example/script.js'),true,'cross-host resources require a separate job');
-assert.equal(e.blockNetworkUrl('https://other.example/redirect'),true,'cross-host redirects cannot escape the DNS pin');
+assert.equal(e.blockNetworkUrl('https://public.example/script.js',surface),false,'same pinned host is admitted');
+assert.equal(e.blockNetworkUrl('https://cdn.public.example/script.js',surface),true,'cross-host resources require a separate job');
+assert.equal(e.blockNetworkUrl('https://other.example/redirect',surface),true,'cross-host redirects cannot escape the DNS pin');
 assert.equal(redact('https://user:secret@public.example:8443/private?token=x#code'),
   'https://public.example/…');
 dns=async()=>[{address:'192.168.1.1'}];await assert.rejects(e.pinDocumentTarget({deadlineAt:Date.now()+10000,cancelled:false},'https://private-alias.example/'));
-dns=()=>new Promise(()=>{});const cancelled={deadlineAt:Date.now()+10000,cancelled:false};const pending=e.pinDocumentTarget(cancelled,'https://pending.example');cancelled.cancelled=true;await assert.rejects(pending);
+dns=()=>new Promise(()=>{});const cancelled={requestId:99,deadlineAt:Date.now()+10000,cancelled:false};e.jobs.set(99,cancelled);const pending=e.pinDocumentTarget(cancelled,'https://pending.example');e.cancel(99);await assert.rejects(pending);e.jobs.delete(99);
 console.log('PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement');
 
 // Queue admission binds the current login generation; clearing invalidates the job.
@@ -46,8 +51,8 @@ assert.equal(reconciled[2].length,1);
 assert.equal(reconciled[2][0].domain,'public.example');
 console.log('PASS: ArkWeb cookie capture keeps exact admitted host scope');
 
-const surface=read('ArkWebExecutionHost.ets');
-assert.match(surface,/this\.currentUrl = redactedHttpUrl\(pageUrl\)/,
+const hostSource=read('ArkWebExecutionHost.ets');
+assert.match(hostSource,/this\.currentUrl = redactedHttpUrl\(pageUrl\)/,
   'interactive chrome must never render a raw page URL');
 assert.match(read('ArkWebExecutor.ts'),/finalUrl: job\.finalUrl === undefined \? '' : redactedHttpUrl\(job\.finalUrl\)/,
   'timeout evidence must contain only the redacted URL projection');

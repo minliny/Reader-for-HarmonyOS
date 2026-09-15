@@ -1,6 +1,7 @@
-import connection from '@ohos.net.connection';
+import { NetworkEnvironmentError, prepareNetworkTarget, type NetworkTarget } from './NetworkRoutePolicy';
 import { httpUrlHostname, isPrivateNetworkTarget, redactedHttpUrl } from './HttpTransportPolicy';
 import webview from '@ohos.web.webview';
+import { WebNetErrorList } from '@ohos.web.netErrorList';
 import type { JsonObject } from '@reader/core-harmony';
 import {
   type ArkWebCookieSeed,
@@ -11,6 +12,7 @@ import {
 const DEFAULT_TIMEOUT_MS = 30000;
 const MAX_TIMEOUT_MS = 10 * 60 * 1000;
 const PAGE_SETTLE_MS = 500;
+const PROXY_ACK_TIMEOUT_MS = 5000;
 const SCRIPT_RETRY_MS = 500;
 const MAX_REQUEST_HEADERS = 64;
 const MAX_HEADER_NAME_LENGTH = 256;
@@ -43,6 +45,7 @@ type ArkWebDocument = {
 };
 
 type ArkWebJob = {
+  surface?: ArkWebSurface;
   requestId: number;
   document: ArkWebDocument;
   javaScript: string;
@@ -54,6 +57,13 @@ type ArkWebJob = {
   cancelled: boolean;
   networkDenied?: boolean;
   pinnedHost?: string;
+  dnsPinned?: boolean;
+  route?: NetworkTarget;
+  proxyLease?: ArkWebProxyLease;
+  nativeFailure?: ArkWebHostFailure | NetworkEnvironmentError;
+  httpFailure?: ArkWebHostFailure;
+  loadStarted?: boolean;
+  pendingWaitReject?: (error: unknown) => void;
   pageReadyAt: number;
   finalUrl?: string;
   interactive: boolean;
@@ -64,8 +74,29 @@ type ArkWebJob = {
 };
 
 export type ArkWebPresentation = {
+  surfaceId: number;
   visible: boolean;
   title: string;
+};
+
+export type ArkWebSurface = {
+  readonly id: number;
+  readonly requestId: number;
+  readonly controller: webview.WebviewController;
+};
+
+type ArkWebSurfaceLease = {
+  surface: ArkWebSurface;
+  attached: boolean;
+  retired: boolean;
+};
+
+type ArkWebProxyLease = {
+  direct: boolean;
+  phase: 'configuring' | 'ready' | 'removing' | 'retired' | 'failed';
+  releaseRequested: boolean;
+  error?: NetworkEnvironmentError;
+  listeners: Set<() => void>;
 };
 
 export type ArkWebDiagnosticEvent = {
@@ -98,7 +129,10 @@ function delay(millis: number): Promise<void> {
 export class ArkWebExecutor {
   static readonly instance: ArkWebExecutor = new ArkWebExecutor();
 
-  private controller: webview.WebviewController | undefined = undefined;
+  private surfaceLease: ArkWebSurfaceLease | undefined = undefined;
+  private nextSurfaceId: number = 1;
+  private proxyLease: ArkWebProxyLease | undefined = undefined;
+  private surfaceListener: ((surface: ArkWebSurface | undefined) => void) | undefined = undefined;
   private jobs: Map<number, ArkWebJob> = new Map<number, ArkWebJob>();
   private active: ArkWebJob | undefined = undefined;
   private tail: Promise<void> = Promise.resolve();
@@ -113,11 +147,11 @@ export class ArkWebExecutor {
     if (this.diagnosticObserver === observer) this.diagnosticObserver = undefined;
   }
 
-  observeDiagnosticPageBegin(url: string): void {
-    this.emitDiagnostic('pageBegin', this.active, url);
+  observeDiagnosticPageBegin(url: string, surface: ArkWebSurface): void {
+    this.emitDiagnostic(this.isSurfaceCurrent(surface) ? 'pageBegin' : 'pageBeginDiscarded', surface, url);
   }
 
-  private emitDiagnostic(kind: string, job?: ArkWebJob, url?: string): void {
+  private emitDiagnostic(kind: string, job?: ArkWebJob | ArkWebSurface, url?: string): void {
     // Optional observer is mounted only by the guarded diagnostic page. It
     // must never change production completion or selection behavior.
     try { this.diagnosticObserver?.({ kind, at: Date.now(), requestId: job?.requestId, url }); } catch (_) {}
@@ -126,6 +160,7 @@ export class ArkWebExecutor {
   attachPresentation(listener: (presentation: ArkWebPresentation) => void): void {
     this.presentationListener = listener;
     listener({
+      surfaceId: this.active?.surface?.id ?? 0,
       visible: this.active?.interactive === true,
       title: this.active?.presentationTitle ?? '',
     });
@@ -137,26 +172,55 @@ export class ArkWebExecutor {
     }
   }
 
-  attachController(controller: webview.WebviewController): void {
-    this.controller = controller;
+  attachSurfaceHost(listener: (surface: ArkWebSurface | undefined) => void): void {
+    this.surfaceListener = listener;
+    const surface = this.active?.surface;
+    listener(surface !== undefined && this.isSurfaceCurrent(surface) ? surface : undefined);
   }
 
-  detachController(controller: webview.WebviewController): void {
-    if (this.controller !== controller) {
+  detachSurfaceHost(listener: (surface: ArkWebSurface | undefined) => void): void {
+    if (this.surfaceListener !== listener) return;
+    this.surfaceListener = undefined;
+    const lease = this.surfaceLease;
+    if (lease !== undefined) {
+      const job = this.active;
+      if (job?.surface === lease.surface) this.cancel(job.requestId);
+      if (!lease.attached) lease.retired = true;
+    }
+  }
+
+  attachController(surface: ArkWebSurface): void {
+    const lease = this.surfaceLease;
+    if (lease?.surface !== surface || lease.retired || this.active?.surface !== surface || this.active.cancelled) {
+      try { surface.controller.stop(); } catch (_) {}
       return;
     }
-    this.controller = undefined;
-    if (this.active !== undefined) {
-      this.active.cancelled = true;
-      this.rejectResourceCapture(this.active, this.hostFailure('CANCELLED', 'ArkWeb controller detached', false, { phase: 'resource' }));
+    lease.attached = true;
+  }
+
+  detachController(surface: ArkWebSurface): void {
+    const lease = this.surfaceLease;
+    if (lease?.surface !== surface) return;
+    lease.attached = false;
+    lease.retired = true;
+    const job = this.active;
+    if (job?.surface === surface) {
+      this.cancel(job.requestId);
+      this.rejectResourceCapture(job, this.hostFailure('CANCELLED', 'ArkWeb controller detached', false, { phase: 'resource' }));
     }
+  }
+
+  isSurfaceCurrent(surface: ArkWebSurface): boolean {
+    return this.surfaceLease?.surface === surface && !this.surfaceLease.retired &&
+      this.active?.surface === surface && !this.active.cancelled;
   }
 
   /** The admitted document host is DNS-validated and pinned before loading.
    * Navigation and resources are same-host only, so a page cannot introduce
    * an unpinned DNS name or redirect into a different network target.
    */
-  blockNetworkUrl(value: string): boolean {
+  blockNetworkUrl(value: string, surface: ArkWebSurface): boolean {
+    if (!this.isSurfaceCurrent(surface)) return true;
     const normalized = value.trim().toLowerCase();
     if (normalized === 'about:blank' || normalized.startsWith('data:') || normalized.startsWith('blob:')) return false;
     const host = httpUrlHostname(value);
@@ -166,7 +230,7 @@ export class ArkWebExecutor {
     if (blocked && this.active !== undefined) {
       this.active.networkDenied = true;
       this.rejectResourceCapture(this.active, this.hostFailure('NETWORK_POLICY_DENIED', '书源网页请求了不允许的网络地址', false, { phase: 'resource' }));
-      try { this.controller?.stop(); } catch (_) {}
+      try { surface.controller.stop(); } catch (_) {}
     }
     return blocked;
   }
@@ -175,26 +239,185 @@ export class ArkWebExecutor {
     this.requireHttpUrl(value);
     const host = httpUrlHostname(value)!;
     job.pinnedHost = host;
-    if (host.includes(':') || /^[0-9.]+$/.test(host)) return;
-    let addresses: connection.NetAddress[] | undefined;
-    let failed = false;
-    void connection.getAddressesByName(host).then((resolved: connection.NetAddress[]): void => {
-      addresses = resolved;
-    }).catch((): void => { failed = true; });
-    while (addresses === undefined && !failed) {
-      this.assertCurrent(job);
-      await delay(50);
-    }
+    // IP literals still select the system route. Otherwise a public literal
+    // could accidentally bypass PAC/exclusion handling in the Web transport.
+    const target = await this.waitForOperation(job, prepareNetworkTarget(value));
     this.assertCurrent(job);
-    if (failed || addresses === undefined || addresses.length === 0 || addresses.some((item: connection.NetAddress): boolean =>
-      item.address.length === 0 || isPrivateNetworkTarget(item.address))) {
-      throw this.hostFailure('NETWORK_POLICY_DENIED', '书源网页无法确认网络目标', false, {phase:'dns'});
+    job.route = target;
+    if (target.route !== 'systemProxy' && !host.includes(':') && !/^[0-9.]+$/.test(host)) {
+      webview.WebviewController.setHostIP(host, target.addresses[0],
+        Math.max(1, Math.ceil((job.deadlineAt - Date.now()) / 1000)));
+      job.dnsPinned = true;
     }
-    webview.WebviewController.setHostIP(host, addresses[0].address,
-      Math.max(1, Math.ceil((job.deadlineAt - Date.now()) / 1000)));
   }
 
-  onPageEnd(url: string): void {
+  /** Native errors carry their originating immutable surface, just like
+   * resource events. An about:blank callback or a failed image is not evidence
+   * that the admitted main document failed. Never persist raw error text/URLs. */
+  onNativeError(url: string, mainFrame: boolean, code: number, info: string, surface: ArkWebSurface): void {
+    const job = this.nativeErrorJob(url, mainFrame, surface);
+    if (job === undefined) return;
+    // Reuse the platform's WebNetErrorList (API 12). Generic connect/DNS
+    // failures are not proof of a proxy outage. Older mapped errors can also
+    // identify an exact net::ERR_* reason; never search inside raw URL text.
+    const proxy = [WebNetErrorList.ERR_PROXY_CONNECTION_FAILED,
+      WebNetErrorList.ERR_TUNNEL_CONNECTION_FAILED, WebNetErrorList.ERR_PROXY_AUTH_UNSUPPORTED,
+      WebNetErrorList.ERR_PROXY_AUTH_REQUESTED, WebNetErrorList.ERR_MANDATORY_PROXY_CONFIGURATION_FAILED,
+      WebNetErrorList.ERR_PROXY_CERTIFICATE_INVALID, WebNetErrorList.ERR_HTTPS_PROXY_TUNNEL_RESPONSE_REDIRECT,
+      WebNetErrorList.ERR_UNABLE_TO_REUSE_CONNECTION_FOR_PROXY_AUTH, WebNetErrorList.ERR_UNEXPECTED_PROXY_AUTH,
+      WebNetErrorList.ERR_PROXY_AUTH_REQUESTED_WITH_NO_CONNECTION, WebNetErrorList.ERR_PROXY_HTTP_1_1_REQUIRED].includes(code) ||
+      /^(?:net::)?ERR_(PROXY_[A-Z_]+|TUNNEL_CONNECTION_FAILED|MANDATORY_PROXY_CONFIGURATION_FAILED)$/.test(info.trim());
+    const tls = (code <= WebNetErrorList.ERR_CERT_COMMON_NAME_INVALID && code > WebNetErrorList.ERR_CERT_END) ||
+      [WebNetErrorList.ERR_SSL_PROTOCOL_ERROR, WebNetErrorList.ERR_SSL_VERSION_OR_CIPHER_MISMATCH,
+        WebNetErrorList.ERR_BAD_SSL_CLIENT_AUTH_CERT, WebNetErrorList.ERR_SSL_CLIENT_AUTH_CERT_NEEDED].includes(code) ||
+      /^(?:net::)?ERR_(CERT_[A-Z_]+|SSL_[A-Z_]+|BAD_SSL_CLIENT_AUTH_CERT)$/.test(info.trim());
+    const failure = proxy ? new NetworkEnvironmentError('transport', '系统代理连接或认证失败，请检查代理后重试') :
+      this.hostFailure(tls ? 'TLS_ERROR' : 'NETWORK_ERROR', '书源网页加载失败', true,
+        { phase: 'transport', nativeCode: code });
+    this.failNativeJob(job, failure);
+  }
+
+  onNativeHttpError(url: string, mainFrame: boolean, status: number, surface: ArkWebSurface): void {
+    const job = this.nativeErrorJob(url, mainFrame, surface);
+    if (job === undefined || status < 400) return;
+    if (status === 407 && job.route?.route === 'systemProxy') {
+      this.failNativeJob(job, new NetworkEnvironmentError('transport', '系统代理需要认证，请检查代理后重试'));
+      return;
+    }
+    // Login/challenge pages often deliberately return 401/403/429. Preserve
+    // the existing interactive browser and HTML challenge detection first.
+    if (job.interactive) return;
+    const failure = this.hostFailure('NETWORK_ERROR', `书源网页返回 HTTP ${status}`, status >= 500,
+      { phase: 'response', status });
+    if (status === 401 || status === 403 || status === 429) job.httpFailure = failure;
+    else this.failNativeJob(job, failure);
+  }
+
+  private nativeErrorJob(url: string, mainFrame: boolean, surface: ArkWebSurface): ArkWebJob | undefined {
+    if (!this.isSurfaceCurrent(surface)) {
+      this.emitDiagnostic('nativeErrorDiscarded', surface);
+      return undefined;
+    }
+    const job = this.active;
+    if (!mainFrame || job === undefined || !job.loadStarted || job.nativeFailure !== undefined ||
+      httpUrlHostname(url) !== job.pinnedHost) return undefined;
+    return job;
+  }
+
+  private failNativeJob(job: ArkWebJob, failure: ArkWebHostFailure | NetworkEnvironmentError): void {
+    job.nativeFailure = failure;
+    this.rejectResourceCapture(job, failure);
+    job.pendingWaitReject?.(failure);
+    try { job.surface?.controller.stop(); } catch (_) {}
+  }
+
+  /** Event-driven admission has no extra polling delay on every request. */
+  private waitForOperation<T>(job: ArkWebJob, operation: Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject): void => {
+      let settled = false;
+      const finish = (value: T | undefined, error?: unknown): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (job.pendingWaitReject === fail) job.pendingWaitReject = undefined;
+        if (error !== undefined) reject(error); else resolve(value!);
+      };
+      const fail = (error: unknown): void => finish(undefined, error);
+      const timer = setTimeout((): void => {
+        try { this.assertCurrent(job); } catch (error) { fail(error); return; }
+        fail(this.hostFailure('TIMEOUT', 'WebView network admission timed out', true, { phase: 'route' }));
+      }, Math.max(0, job.deadlineAt - Date.now()));
+      job.pendingWaitReject = fail;
+      operation.then((value: T): void => finish(value), fail);
+      try { this.assertCurrent(job); } catch (error) { fail(error); }
+    });
+  }
+
+  private notifyProxyLease(lease: ArkWebProxyLease): void {
+    lease.listeners.forEach((listener: () => void): void => listener());
+  }
+
+  private waitForProxyLease(job: ArkWebJob, lease: ArkWebProxyLease, retired: boolean): Promise<void> {
+    return new Promise<void>((resolve, reject): void => {
+      const finish = (error?: unknown): void => {
+        clearTimeout(timer);
+        lease.listeners.delete(check);
+        if (job.pendingWaitReject === finish) job.pendingWaitReject = undefined;
+        if (error !== undefined) reject(error); else resolve();
+      };
+      const check = (): void => {
+        try { this.assertCurrent(job); } catch (error) { finish(error); return; }
+        if (lease.error !== undefined) { finish(lease.error); return; }
+        if (lease.phase === (retired ? 'retired' : 'ready')) finish();
+      };
+      const timer = setTimeout((): void => {
+        finish(new NetworkEnvironmentError('route', '系统网页代理配置尚未生效，请稍后重试'));
+      }, Math.max(0, Math.min(PROXY_ACK_TIMEOUT_MS, job.deadlineAt - Date.now())));
+      job.pendingWaitReject = finish;
+      lease.listeners.add(check);
+      check();
+    });
+  }
+
+  private async configureProxy(job: ArkWebJob): Promise<void> {
+    const lease: ArkWebProxyLease = {
+      direct: job.route?.bypassSystemProxy === true,
+      phase: 'configuring', releaseRequested: false, listeners: new Set<() => void>(),
+    };
+    this.proxyLease = lease;
+    job.proxyLease = lease;
+    const configured = (): void => {
+      if (lease.phase !== 'configuring') return;
+      lease.phase = 'ready';
+      this.notifyProxyLease(lease);
+      if (lease.releaseRequested) this.releaseProxyLease(lease);
+    };
+    try {
+      if (lease.direct) {
+        const config = new webview.ProxyConfig();
+        config.insertDirectRule();
+        webview.ProxyController.applyProxyOverride(config, configured);
+      } else {
+        webview.ProxyController.removeProxyOverride(configured);
+      }
+    } catch (_) {
+      // These synchronous SDK errors mean the configuration was not accepted.
+      lease.phase = 'ready';
+      lease.error = new NetworkEnvironmentError('route', '无法设置系统网页代理，请检查网络后重试');
+    }
+    await this.waitForProxyLease(job, lease, false);
+  }
+
+  private releaseProxyLease(lease: ArkWebProxyLease): void {
+    lease.releaseRequested = true;
+    if (lease.phase !== 'ready') return;
+    if (!lease.direct) {
+      lease.phase = 'retired';
+      lease.error = undefined;
+      this.notifyProxyLease(lease);
+      return;
+    }
+    lease.phase = 'removing';
+    lease.error = undefined;
+    try {
+      webview.ProxyController.removeProxyOverride((): void => {
+        if (lease.phase !== 'removing') return;
+        lease.phase = 'retired';
+        this.notifyProxyLease(lease);
+      });
+    } catch (_) {
+      // Fail closed: no later job may load with an unacknowledged old override.
+      lease.phase = 'failed';
+      lease.error = new NetworkEnvironmentError('route', '系统网页代理尚未恢复，请重新打开应用后重试');
+      this.notifyProxyLease(lease);
+    }
+  }
+
+  onPageEnd(url: string, surface: ArkWebSurface): void {
+    if (!this.isSurfaceCurrent(surface)) {
+      this.emitDiagnostic('pageEndDiscarded', surface, url);
+      return;
+    }
     const job = this.active;
     this.emitDiagnostic('pageEnd', job, url);
     if (job === undefined || job.cancelled) {
@@ -218,13 +441,17 @@ export class ArkWebExecutor {
 
   /** Actual ArkWeb resource callback; the Core-authored matcher runs in the
    * existing browser JS engine. No ResourceTiming reconstruction or refetch. */
-  onResourceLoad(url: string): void {
+  onResourceLoad(url: string, surface: ArkWebSurface): void {
+    if (!this.isSurfaceCurrent(surface)) {
+      this.emitDiagnostic('resourceDiscarded', surface, url);
+      return;
+    }
     const job = this.active;
     this.emitDiagnostic('resource', job, url);
     const capture = job?.resourceCapture;
     if (job === undefined || capture === undefined || capture.settled || capture.overflowQueued) return;
     if (url === 'about:blank' || url.trim().length === 0) return;
-    if (this.blockNetworkUrl(url)) return;
+    if (this.blockNetworkUrl(url, surface)) return;
     capture.count += 1;
     capture.totalChars += url.length;
     if (url.length > MAX_RESOURCE_URL_CHARS || capture.count > MAX_RESOURCE_EVENTS ||
@@ -243,8 +470,7 @@ export class ArkWebExecutor {
     capture.tail = capture.tail.then(async (): Promise<void> => {
       if (capture.settled || this.active !== job) return;
       this.assertCurrent(job);
-      const controller = this.controller;
-      if (controller === undefined) throw this.hostFailure('CANCELLED', 'ArkWeb controller detached', false, { phase: 'resource' });
+      const controller = surface.controller;
       let raw: string;
       try {
         this.emitDiagnostic('matcherStart', job, url);
@@ -296,14 +522,14 @@ export class ArkWebExecutor {
     });
   }
 
-  finishInteractive(): void {
-    if (this.active?.interactive === true) {
+  finishInteractive(surface: ArkWebSurface): void {
+    if (this.isSurfaceCurrent(surface) && this.active?.interactive === true) {
       this.active.userFinished = true;
     }
   }
 
-  cancelInteractive(): void {
-    if (this.active?.interactive === true) {
+  cancelInteractive(surface: ArkWebSurface): void {
+    if (this.isSurfaceCurrent(surface) && this.active?.interactive === true) {
       this.cancel(this.active.requestId);
     }
   }
@@ -315,10 +541,11 @@ export class ArkWebExecutor {
     }
     job.cancelled = true;
     this.emitDiagnostic('cancel', job);
+    job.pendingWaitReject?.(this.hostFailure('CANCELLED', 'webview.evaluateJavaScript cancelled', false, { phase: 'runtime' }));
     this.rejectResourceCapture(job, this.hostFailure('CANCELLED', 'webview.evaluateJavaScript cancelled', false, { phase: 'resource' }));
     if (this.active === job) {
       try {
-        this.controller?.stop();
+        job.surface?.controller.stop();
       } catch (_) {
         // The controller may already be detached; the shared flag still wins.
       }
@@ -327,16 +554,30 @@ export class ArkWebExecutor {
 
   private async run(job: ArkWebJob): Promise<JsonObject> {
     this.assertCurrent(job);
-    const controller = await this.waitForController(job);
-    this.active = job;
-    this.emitDiagnostic('start', job);
+    await this.waitForRetiredSurface(job);
+    if (this.proxyLease !== undefined) await this.waitForProxyLease(job, this.proxyLease, true);
     let seeds: ArkWebCookieSeed[] = [];
+    let controller: webview.WebviewController | undefined;
     try {
+      this.assertCurrent(job);
+      this.active = job;
+      const id = this.nextSurfaceId++;
+      const surface: ArkWebSurface = {
+        id, requestId: job.requestId,
+        controller: new webview.WebviewController(`reader-source-executor-${id}`),
+      };
+      job.surface = surface;
+      this.surfaceLease = { surface, attached: false, retired: false };
+      this.surfaceListener?.(surface);
+      controller = await this.waitForController(job);
+      this.emitDiagnostic('start', job);
       webview.WebCookieManager.clearAllCookiesSync(true);
       const seedUrl = this.documentUrl(job.document);
       if (seedUrl !== undefined) await this.pinDocumentTarget(job, seedUrl);
+      await this.configureProxy(job);
       if (job.profileId !== undefined && seedUrl !== undefined) {
         seeds = await CookieSessionStore.instance.arkWebSeeds(job.profileId);
+        this.assertCurrent(job);
         for (const seed of seeds) {
           webview.WebCookieManager.configCookieSync(seed.url, seed.header, true, true);
         }
@@ -344,6 +585,7 @@ export class ArkWebExecutor {
       this.assertCurrent(job);
       job.pageReadyAt = 0;
       const resourceCapture = job.resourceUrlMatcherJavaScript === undefined ? undefined : this.prepareResourceCapture(job);
+      job.loadStarted = true;
       if (job.document.kind === 'url') {
         controller.loadUrl(job.document.url!, job.headers);
       } else {
@@ -363,7 +605,7 @@ export class ArkWebExecutor {
       } else {
         await this.waitForStablePage(job);
         if (job.interactive) {
-          this.publishPresentation(true, job.presentationTitle);
+          this.publishPresentation(job, true, job.presentationTitle);
           while (!job.userFinished) {
             this.assertCurrent(job);
             await delay(100);
@@ -399,6 +641,7 @@ export class ArkWebExecutor {
           );
         }
       }
+      if (job.httpFailure !== undefined) throw job.httpFailure;
       const result: JsonObject = { value };
       if (resourceCapture !== undefined) result['resourceUrl'] = value;
       if (finalUrl !== undefined) {
@@ -413,20 +656,29 @@ export class ArkWebExecutor {
       this.rejectResourceCapture(job, this.hostFailure('CANCELLED', 'ArkWeb job ended', false, { phase: 'resource' }));
       job.resourceCapture = undefined;
       if (job.interactive) {
-        this.publishPresentation(false, '');
+        try { this.publishPresentation(job, false, ''); } catch (_) {}
       }
       try {
-        controller.stop();
-        controller.loadUrl('about:blank');
+        controller?.stop();
       } catch (_) {
         // Cleanup is best effort after a detached/render-crashed controller.
       }
-      webview.WebCookieManager.clearAllCookiesSync(true);
-      if (job.pinnedHost !== undefined) {
-        try { webview.WebviewController.clearHostIP(job.pinnedHost); } catch (_) {}
-      }
-      if (this.active === job) {
-        this.active = undefined;
+      try {
+        webview.WebCookieManager.clearAllCookiesSync(true);
+      } finally {
+        if (job.dnsPinned && job.pinnedHost !== undefined) {
+          try { webview.WebviewController.clearHostIP(job.pinnedHost); } catch (_) {}
+        }
+        if (this.active === job) this.active = undefined;
+        const lease = this.surfaceLease;
+        if (lease !== undefined && job.surface !== undefined && lease.surface === job.surface) {
+          // Revoke callbacks before requesting removal. Only the owning native
+          // disappear ACK retires an attached surface; an unmounted request can
+          // be withdrawn immediately. Late attach is then rejected by identity.
+          if (!lease.attached) lease.retired = true;
+          try { this.surfaceListener?.(undefined); } catch (_) {}
+        }
+        if (job.proxyLease !== undefined) this.releaseProxyLease(job.proxyLease);
       }
     }
   }
@@ -469,7 +721,7 @@ export class ArkWebExecutor {
 
   private async runResourceInitialization(job: ArkWebJob): Promise<void> {
     this.assertCurrent(job);
-    const controller = this.controller;
+    const controller = job.surface?.controller;
     if (controller === undefined) throw this.hostFailure('CANCELLED', 'ArkWeb controller detached', false, { phase: 'resource' });
     try {
       await controller.runJavaScript(job.javaScript);
@@ -481,11 +733,23 @@ export class ArkWebExecutor {
   }
 
   private async waitForController(job: ArkWebJob): Promise<webview.WebviewController> {
-    while (this.controller === undefined) {
+    while (true) {
       this.assertCurrent(job);
+      const lease = this.surfaceLease;
+      if (lease !== undefined && job.surface !== undefined && lease.surface === job.surface && lease.attached) {
+        return lease.surface.controller;
+      }
       await delay(100);
     }
-    return this.controller;
+  }
+
+  private async waitForRetiredSurface(job: ArkWebJob): Promise<void> {
+    while (this.surfaceLease !== undefined && !this.surfaceLease.retired) {
+      // Deadline/cancellation bounds a missing native ACK without reusing a
+      // still-live Web. The next queued job has its own independent deadline.
+      this.assertCurrent(job);
+      await delay(50);
+    }
   }
 
   private async waitForStablePage(job: ArkWebJob): Promise<void> {
@@ -705,8 +969,9 @@ export class ArkWebExecutor {
     return parsed;
   }
 
-  private publishPresentation(visible: boolean, title: string): void {
-    this.presentationListener?.({ visible, title });
+  private publishPresentation(job: ArkWebJob, visible: boolean, title: string): void {
+    if (this.active !== job || job.surface === undefined) return;
+    this.presentationListener?.({ visible, title, surfaceId: job.surface.id });
   }
 
   private documentUrl(document: ArkWebDocument): string | undefined {
@@ -729,6 +994,7 @@ export class ArkWebExecutor {
         { phase: 'runtime', requestId: job.requestId },
       );
     }
+    if (job.nativeFailure !== undefined) throw job.nativeFailure;
     if (Date.now() >= job.deadlineAt) {
       const location = job.finalUrl === undefined ? '' : ` at ${redactedHttpUrl(job.finalUrl)}`;
       throw this.hostFailure(

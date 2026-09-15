@@ -98,9 +98,10 @@ for(const after of [false,true]) for(let at=1;at<=9;at++) {
    cookie:{name:'b-overflow',value:'x'.repeat(4096)}}),/quota exceeded/);
 }
 globalThis.auditCookieStore=CookieSessionStore;
-let endDns;globalThis.auditDns={getAddressesByName:()=>new Promise((_,reject)=>{endDns=reject;})};
+let endDns;globalThis.auditDns={getDefaultHttpProxy:async()=>({host:'',port:0,exclusionList:[]}),getPacUrl:()=>'',getPacFileUrl:()=>'',getAddressesByName:()=>new Promise((_,reject)=>{endDns=reject;})};
 const policy=stripTypeScriptTypes(readFileSync(new URL('HttpTransportPolicy.ts',app),'utf8')).replace(/^export /gm,'');
-const {HttpExecuteHost}=await load('HttpExecuteHost.ts',`const http={InterceptorType:{REDIRECTION:1},RequestMethod:{GET:'GET',POST:'POST',HEAD:'HEAD',PUT:'PUT',DELETE:'DELETE',PATCH:'PATCH',OPTIONS:'OPTIONS',TRACE:'TRACE',CONNECT:'CONNECT'}};const connection=globalThis.auditDns;const CookieSessionStore=globalThis.auditCookieStore;${policy}`);
+const routePolicy=stripTypeScriptTypes(readFileSync(new URL('NetworkRoutePolicy.ts',app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
+const {HttpExecuteHost}=await load('HttpExecuteHost.ts',`const http={InterceptorType:{REDIRECTION:1},RequestMethod:{GET:'GET',POST:'POST',HEAD:'HEAD',PUT:'PUT',DELETE:'DELETE',PATCH:'PATCH',OPTIONS:'OPTIONS',TRACE:'TRACE',CONNECT:'CONNECT'}};const connection=globalThis.auditDns;const CookieSessionStore=globalThis.auditCookieStore;${policy}${routePolicy}`);
 {
   const host=new HttpExecuteHost();let probes=0;
   await assert.rejects(host.execute({url:'https://example.test',method:'GET'},42,()=>{probes++;return true;}));
@@ -127,7 +128,7 @@ console.log('PASS: 18 interrupted writes, durable clears, legacy migration and D
  });
  const host=new HttpExecuteHost();
  host.singleHopTransport=async()=>{starts++;assert.deepEqual(activePins.get('example.test'),['93.184.216.34']);if(starts===1)await firstDone;return {};};
- const deadline=()=>({deadlineAt:Date.now()+10000,cancelled:false,activeRequest:null});
+ const deadline=()=>({deadlineAt:Date.now()+10000,cancelled:false,activeRequest:null,expired:new Promise(()=>{})});
  const request=()=>host.singleHop('https://example.test/',{wireMethod:'GET',enumMethod:'GET'}, {},{kind:'none'},undefined,deadline());
  const a=request(),b=request();await new Promise(resolve=>setTimeout(resolve,0));assert.equal(starts,1);
  releaseFirst();await Promise.all([a,b]);assert.deepEqual(seen,['pin','unpin','pin','unpin']);assert.equal(HttpExecuteHost.targetTails.size,0);
@@ -141,7 +142,7 @@ console.log('PASS: DNS pins serialize concurrent leases and reject rebound priva
  const map=new Map(baseline),jar=attach(map);CookieSessionStore.instance=jar;
  const host=new HttpExecuteHost();let releaseResponse;let started;
  const transportStarted=new Promise(resolve=>{started=resolve;});
- host.rejectPrivateNetworkTarget=async()=>['93.184.216.34'];
+ host.rejectPrivateNetworkUrl=()=>['93.184.216.34'];
  host.singleHop=async()=>{started();await new Promise(resolve=>{releaseResponse=resolve;});
    return {status:200,headers:{'content-type':'text/plain'},rawHeaders:{'set-cookie':['sid=late; Max-Age=3600; Secure']},bytes:new TextEncoder().encode('ok')};};
  const pending=host.execute({url:'https://example.test/',session:{id:'audit-session'}},44);
@@ -158,7 +159,7 @@ console.log('PASS: clearing a session invalidates late HTTP/WebView cookies and 
  await assert.rejects(() => host.execute({url: 'https://example.test/start', httpsOnly: 'yes'}),
    /httpsOnly must be a boolean/);
  let hops = 0;
- host.rejectPrivateNetworkTarget = async () => ['93.184.216.34'];
+ host.rejectPrivateNetworkUrl = () => ['93.184.216.34'];
  host.singleHop = async () => {
    hops += 1;
    return {status: 302, headers: {Location: 'http://example.test/final'}, rawHeaders: {}, bytes: new Uint8Array(0)};
@@ -176,7 +177,7 @@ console.log('PASS: HTTPS-only requests reject cleartext redirect downgrades');
 {
  const host = new HttpExecuteHost();
  let hops = 0;
- host.rejectPrivateNetworkTarget = async () => ['93.184.216.34'];
+ host.rejectPrivateNetworkUrl = () => ['93.184.216.34'];
  host.singleHop = async () => {
    hops += 1;
    if (hops === 1) {
@@ -197,7 +198,7 @@ for (const location of [
 ]) {
  const host = new HttpExecuteHost();
  let hops = 0;
- host.rejectPrivateNetworkTarget = async () => ['93.184.216.34'];
+ host.rejectPrivateNetworkUrl = () => ['93.184.216.34'];
  host.singleHop = async () => {
    hops += 1;
    return {status: 302, headers: {Location: location}, rawHeaders: {}, bytes: new Uint8Array(0)};
@@ -220,7 +221,7 @@ for (const location of [
 ]) {
  const host = new HttpExecuteHost();
  let hops = 0;
- host.rejectPrivateNetworkTarget = async () => ['93.184.216.34'];
+ host.rejectPrivateNetworkUrl = () => ['93.184.216.34'];
  host.singleHop = async () => {
    hops += 1;
    return {status: 302, headers: {Location: location}, rawHeaders: {}, bytes: new Uint8Array(0)};

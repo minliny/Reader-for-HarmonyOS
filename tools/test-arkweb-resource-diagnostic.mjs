@@ -13,7 +13,7 @@ class Response {
 }
 const util={TextEncoder,Base64Helper:class {encodeToStringSync(bytes){return Buffer.from(bytes).toString('base64');}}};
 function percentBase64(body){const value=Buffer.from(body).toString('base64');return '%'+value.charCodeAt(0).toString(16)+encodeURIComponent(value.slice(1));}
-function harness({lateOld=false,throwEarly=false,shapeProbes=false}={}){
+function harness({lateOld=false,throwEarly=false,shapeProbes=false,newEvidence='complete'}={}){
  let now=1000,next=1,observer,diagnostic;const timers=new Map(),jobs=new Map(),logs=[],documents=[];
  const set=(fn,ms)=>{const id=next++;timers.set(id,{at:now+ms,fn});return id;};const clear=id=>timers.delete(id);
  const emit=(kind,id,url)=>observer?.({kind,requestId:id,url,at:now});
@@ -67,7 +67,14 @@ function harness({lateOld=false,throwEarly=false,shapeProbes=false}={}){
   }
   const response=diagnostic.provide(prefix+'new.js');
   const pending=new Promise((resolve,reject)=>jobs.set(id,{resolve,reject}));
-  response.onReady=()=>{if(!jobs.has(id))return;emit('resource',id,prefix+'new.js');emit('matcherStart',id,prefix+'new.js');emit('matched',id,prefix+'new.js');jobs.get(id).resolve({resourceUrl:prefix+'new.js'});jobs.delete(id);};
+  response.onReady=()=>{
+   if(!jobs.has(id))return;
+   if(newEvidence==='reversed')emit('matched',id,prefix+'new.js');
+   if(newEvidence!=='missing-resource')emit('resource',id,prefix+'new.js');
+   emit('matcherStart',id,prefix+'new.js');
+   if(newEvidence!=='missing-match'&&newEvidence!=='reversed')emit('matched',id,prefix+(newEvidence==='wrong-match'?'old.js':'new.js'));
+   jobs.get(id).resolve({resourceUrl:prefix+'new.js'});jobs.delete(id);
+  };
   assert.equal(new Function('return ('+params.resourceUrlMatcherJavaScript+')('+JSON.stringify(prefix+'new.js')+')')(),true);
   return pending;
  }};
@@ -116,6 +123,14 @@ function harness({lateOld=false,throwEarly=false,shapeProbes=false}={}){
  assert.ok(h.logs[0].events.length<=256);
  console.log('PASS bounded data diagnostics and exact native URI-Base64 admission: tamper/unsupported/malformed/oversized remain denied, no URL or body disclosure');
 }
+for(const newEvidence of ['missing-resource','missing-match','reversed','wrong-match']){
+ const h=harness({newEvidence});const result=h.diagnostic.run('cancel');await ticks();await h.advance(1000);await result;
+ assert.equal(h.logs[0].pass,false,'a new.js result without its ordered native callback and match evidence is not a pass');
+ assert.equal(h.logs[0].measurements.returnedResource,'new.js');
+ assert.equal(h.logs[0].measurements.observedLateOldCallbacks,0);
+ assert.equal(h.timers.size,0);assert.equal(h.jobs.size,0);assert.equal(h.observer(),undefined);
+ console.log('PASS diagnostic rejects incomplete new-surface evidence: '+newEvidence);
+}
 for(const lateOld of [false,true]){
  const h=harness({lateOld});const result=h.diagnostic.run('cancel');await ticks();await h.advance(1000);await result;
  assert.equal(h.logs[0].pass,!lateOld);assert.equal(h.logs[0].measurements.observedLateOldCallbacks,lateOld?1:0);
@@ -135,11 +150,11 @@ for(const lateOld of [false,true]){
 {
  const h=harness();const pending=h.diagnostic.run('cancel');await ticks();
  let providerCalls=0;
- const {owner}=createReaderBuilderProbe(read('ArkWebExecutionHost.ets'),['build'],{
+ const {owner}=createReaderBuilderProbe(read('ArkWebExecutionHost.ets'),['build','surfacesForRender'],{
   ArkWebExecutor:{instance:{blockNetworkUrl:url=>url==='https://denied.example/private-token'}},
   WebResourceResponse:Response,
  });
- Object.assign(owner,{interactive:false,appThemeScheme:'day',controller:{},
+ Object.assign(owner,{interactive:false,appThemeScheme:'day',surfaceId:1,currentSurface:{id:1,controller:{}},
   diagnosticResourceProvider:url=>{providerCalls++;return h.diagnostic.provide(url);}});
  owner.initialRender();
  const web=[...owner.nodes.values()].find(n=>n.type==='Web');assert.ok(web);
@@ -175,4 +190,4 @@ assert.ok(policyPosition>=0&&host.indexOf('return this.diagnosticResourceProvide
 assert.match(host,/diagnosticResourceProvider:[^\n]+undefined = undefined/);
 assert.ok(!read('ArkWebResourceDiagnostic.ts').includes('onResourceLoad('),'runner never fabricates native callbacks');
 assert.ok(!read('ArkWebResourceDiagnostic.ts').includes('performance.getEntries'));
-console.log('PH76 diagnostic runner: 8 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence');
+console.log('PH76 diagnostic runner: 12 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence');

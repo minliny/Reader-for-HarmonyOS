@@ -21,8 +21,8 @@ for (const name of ['fixedLineHeightField', 'autoLineHeightField']) {
   assert.equal(nodes.find(n => n.type === 'Row').borderRadius, 999,
     'outer authored search field retains its shape');
 }
-const { owner } = createReaderBuilderProbe(read('app/ArkWebExecutionHost'), ['build']);
-Object.assign(owner, { interactive: false, appThemeScheme: 'day', controller: {} });
+const { owner } = createReaderBuilderProbe(read('app/ArkWebExecutionHost'), ['build','surfacesForRender']);
+Object.assign(owner, { interactive: false, appThemeScheme: 'day', surfaceId: 1, currentSurface: { id: 1, controller: {} } });
 owner.initialRender();
 const web = [...owner.nodes.values()].find(n => n.type === 'Web');
 assert.ok(web);

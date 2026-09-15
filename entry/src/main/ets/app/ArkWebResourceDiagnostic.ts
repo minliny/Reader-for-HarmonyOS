@@ -250,8 +250,10 @@ export class ArkWebResourceDiagnostic {
     const result = await ArkWebExecutor.instance.execute(this.params(newHtml, this.pattern('(old|new)\\.js')), SECOND_ID);
     const late = this.records.filter((event): boolean => event.kind === 'resource' && event.requestId === SECOND_ID && event.resource === 'old.js');
     const newEvent = this.records.find((event): boolean => event.kind === 'resource' && event.requestId === SECOND_ID && event.resource === 'new.js');
-    const matched = this.records.find((event): boolean => event.kind === 'matched' && event.requestId === SECOND_ID);
-    return this.finish('cancel', result['resourceUrl'] === `${this.prefix}new.js` && late.length === 0, {
+    const matched = this.records.find((event): boolean => event.kind === 'matched' && event.requestId === SECOND_ID && event.resource === 'new.js');
+    const newCallbackMatched = newEvent !== undefined && matched !== undefined && matched.at >= newEvent.at &&
+      this.records.indexOf(matched) > this.records.indexOf(newEvent);
+    return this.finish('cancel', result['resourceUrl'] === `${this.prefix}new.js` && late.length === 0 && newCallbackMatched, {
       returnedResource: result['resourceUrl'] === `${this.prefix}new.js` ? 'new.js' : 'unexpected',
       observedLateOldCallbacks: late.length,
       callbackToMatchMs: newEvent !== undefined && matched !== undefined ? matched.at - newEvent.at : -1,

@@ -2,6 +2,7 @@ import http from '@ohos.net.http';
 import url from '@ohos.url';
 import util from '@ohos.util';
 import connection from '@ohos.net.connection';
+import { prepareNetworkTarget, NetworkEnvironmentError, type NetworkTarget } from './NetworkRoutePolicy';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { encodeSharedText, type JsonObject } from '@reader/core-harmony';
 import { CookieSessionStore } from './CookieSessionStore';
@@ -460,6 +461,15 @@ export class HttpExecuteHost {
     }
   }
 
+  private raceDeadline<T>(operation: Promise<T>, state: DeadlineState): Promise<T> {
+    // destroy() is not guaranteed to settle the platform request promise.
+    // Keep the deadline inside the DNS lease as well as at the public entry.
+    const expiry: Promise<T> = state.expired.then((): T => {
+      throw new Error('http.execute: exceeded total deadline');
+    });
+    return Promise.race([operation, expiry]);
+  }
+
   private async requestAfterTargetValidation(
     url: string,
     method: ParsedMethod,
@@ -473,7 +483,7 @@ export class HttpExecuteHost {
   ): Promise<JsonObject> {
     this.assertWithinDeadline(deadline);
     this.requireHttpsIfNeeded(url, deadline);
-    await this.rejectPrivateNetworkTarget(url);
+    this.rejectPrivateNetworkUrl(url);
     this.assertWithinDeadline(deadline);
     return this.requestWithPolicy(url, method, headers, body, requestCharset, maxRedirects, retry, deadline, sessionId);
   }
@@ -570,7 +580,7 @@ export class HttpExecuteHost {
       // A public source must not be able to redirect into private address
       // space either: every hop target passes the same byte/DNS gate as the
       // entry URL before the next hop is issued.
-      await this.rejectPrivateNetworkTarget(nextUrl);
+      this.rejectPrivateNetworkUrl(nextUrl);
       const hop: RedirectHop = {
         status: response.status,
         fromUrl: currentUrl,
@@ -605,40 +615,48 @@ export class HttpExecuteHost {
     requestCharset: string | undefined,
     deadline: DeadlineState,
   ): Promise<HopResponse> {
-    const hostname = url.URL.parseURL(requestUrl).hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
-    if (hostname.includes(':') || /^[0-9.]+$/.test(hostname)) {
-      await this.rejectPrivateNetworkTarget(requestUrl);
-      this.assertWithinDeadline(deadline);
-      return this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline);
+    const target = await prepareNetworkTarget(requestUrl);
+    this.assertWithinDeadline(deadline);
+    const hostname = target.host;
+    if (target.route === 'systemProxy' || hostname.includes(':') || /^[0-9.]+$/.test(hostname)) {
+      return this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, target.route);
     }
     // The platform DNS override is application-wide. Serialize leases for
     // this host so another hop cannot remove a pin while it is in use.
-    const prior = HttpExecuteHost.targetTails.get(hostname) ?? Promise.resolve();
+    const priorLease = HttpExecuteHost.targetTails.get(hostname);
+    const prior = priorLease ?? Promise.resolve();
     let release: () => void = (): void => {};
     const held = new Promise<void>((resolve): void => { release = resolve; });
     const tail = prior.catch((): void => {}).then((): Promise<void> => held);
     HttpExecuteHost.targetTails.set(hostname, tail);
+    void tail.then((): void => {
+      // A cancelled waiter must not erase the still-active predecessor's lock.
+      if (HttpExecuteHost.targetTails.get(hostname) === tail) HttpExecuteHost.targetTails.delete(hostname);
+    });
     let pinned = false;
     try {
-      await prior.catch((): void => {});
+      await this.raceDeadline(prior.catch((): void => {}), deadline);
       this.assertWithinDeadline(deadline);
-      const addresses = await this.rejectPrivateNetworkTarget(requestUrl);
+      // Recheck after waiting for the host lease; network/proxy settings may
+      // have changed while another request held the direct DNS pin.
+      const admitted = priorLease === undefined ? target : await prepareNetworkTarget(requestUrl);
+      if (admitted.route === 'systemProxy') {
+        return await this.raceDeadline(this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, admitted.route), deadline);
+      }
+      const addresses = admitted.addresses;
       this.assertWithinDeadline(deadline);
       await connection.addCustomDnsRule(hostname, addresses);
       pinned = true;
       this.assertWithinDeadline(deadline);
-      return await this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline);
+      return await this.raceDeadline(this.singleHopTransport(requestUrl, method, headers, body, requestCharset, deadline, admitted.route), deadline);
     } finally {
       if (pinned) {
         try { await connection.removeCustomDnsRule(hostname); } catch (_) {
-          // A retained rule still contains only validated public addresses.
+          // A retained rule contains only addresses admitted for the system route.
           hilog.warn(LOG_DOMAIN, 'Reader', 'DNS pin cleanup deferred');
         }
       }
       release();
-      if (HttpExecuteHost.targetTails.get(hostname) === tail) {
-        HttpExecuteHost.targetTails.delete(hostname);
-      }
     }
   }
 
@@ -649,6 +667,7 @@ export class HttpExecuteHost {
     body: EncodedBody,
     requestCharset: string | undefined,
     deadline: DeadlineState,
+    route: NetworkTarget['route'] = 'direct',
   ): Promise<HopResponse> {
     const request = http.createHttp();
     deadline.activeRequest = request;
@@ -676,6 +695,7 @@ export class HttpExecuteHost {
         // owns the Core response conversion decision.
         expectDataType: http.HttpDataType.ARRAY_BUFFER,
         usingCache: false,
+        usingProxy: route === 'systemProxy',
         maxLimit: MAX_RESPONSE_BYTES,
         // Clamp every per-request timeout to the remaining deadline budget.
         connectTimeout: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining),
@@ -691,7 +711,23 @@ export class HttpExecuteHost {
       if (payload !== undefined) {
         options.extraData = payload;
       }
-      const response = await request.request(requestUrl, options);
+      let response: http.HttpResponse;
+      try {
+        response = await request.request(requestUrl, options);
+      } catch (error) {
+        const platformCode = error !== null && typeof error === 'object' ? (error as { code?: number }).code : undefined;
+        // libcurl-derived platform codes: unresolved proxy, proxy peer connect,
+        // and proxy handshake failure. Source TLS/body/timeout failures retain
+        // their source-local classification so another candidate can be tried.
+        if (!deadline.cancelled && route !== 'direct' &&
+          (platformCode === 2300005 || platformCode === 2300007 || platformCode === 2300097)) {
+          throw new NetworkEnvironmentError('transport', '当前代理连接未能完成请求，请检查代理后重试');
+        }
+        throw error;
+      }
+      if (route === 'systemProxy' && response.responseCode === 407) {
+        throw new NetworkEnvironmentError('transport', '系统代理需要认证，请在代理设置中完成认证后重试');
+      }
       // A response that lands after the deadline is a stale success: reject
       // it so a cancelled cycle never returns a late result.
       this.assertWithinDeadline(deadline);
@@ -958,50 +994,14 @@ export class HttpExecuteHost {
     }
   }
 
-  /**
-   * Resolve and validate every address before connecting. singleHop binds
-   * these addresses with the platform DNS rule while preserving the original
-   * URL, TLS server name, certificate validation and Host header.
+  /** Literal targets are checked at entry and before following a redirect.
+   * DNS and the selected system route are validated together in singleHop.
    */
-  private async rejectPrivateNetworkTarget(requestUrl: string): Promise<string[]> {
-    let hostname: string;
-    try {
-      hostname = url.URL.parseURL(requestUrl).hostname;
-    } catch (_) {
-      // requireHttpUrl already rejected unparseable URLs; nothing to judge.
-      throw new Error('http.execute: invalid target');
+  private rejectPrivateNetworkUrl(requestUrl: string): void {
+    const hostname = url.URL.parseURL(requestUrl).hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
+    if (isPrivateNetworkTarget(hostname)) {
+      throw new Error('http.execute: url targets a private, loopback, or link-local address and is not allowed');
     }
-    const host = hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
-    if (isPrivateNetworkTarget(host)) {
-      throw new Error(
-        'http.execute: url targets a private, loopback, or link-local address and is not allowed',
-      );
-    }
-    if (host.indexOf(':') >= 0 || /^[0-9.]+$/.test(host)) {
-      return [host]; // IP literal: already judged by the byte rules above.
-    }
-    let addresses: Array<connection.NetAddress>;
-    try {
-      addresses = await connection.getAddressesByName(host);
-    } catch (error) {
-      // Fail closed: an unresolvable target cannot be verified public, and
-      // the subsequent request would fail on the same lookup anyway.
-      throw new Error(
-        `http.execute: cannot verify url target (DNS resolution failed): ${errorMessageOf(error)}`,
-      );
-    }
-    if (addresses.length === 0) throw new Error('http.execute: DNS returned no addresses');
-    for (const address of addresses) {
-      const resolved = address.address.trim()
-        .replace(/^\[/, '').replace(/\]$/, '').split('%')[0];
-      if (resolved.length === 0 || (!resolved.includes(':') && !/^[0-9.]+$/.test(resolved)) ||
-        isPrivateNetworkTarget(resolved)) {
-        throw new Error(
-          'http.execute: url resolves to a private, loopback, or link-local address and is not allowed',
-        );
-      }
-    }
-    return addresses.map((address: connection.NetAddress): string => address.address);
   }
 
   private parseSession(value: unknown): string | null {
