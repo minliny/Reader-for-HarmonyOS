@@ -1,0 +1,304 @@
+Reader HAP build-system docs and skills contract: PASS
+app shell safe geometry: PASS
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope
+(node:94659) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual resource callbacks: first full match before page-ready, no timeline or refetch
+PASS serialized matching preserves callback order across delayed evaluations
+PASS source initialization runs once and its real resource event completes capture
+PASS an earlier admitted match wins over a later resource-budget terminal marker
+PASS terminal cleanup and late callback suppression: timeout
+PASS terminal cleanup and late callback suppression: cancel
+PASS terminal cleanup and late callback suppression: detach
+PASS terminal cleanup and late callback suppression: cookie-generation
+PASS terminal cleanup and late callback suppression: network
+PASS terminal cleanup and late callback suppression: budget
+PASS terminal cleanup and late callback suppression: invalid-matcher
+PASS source profiles retain isolated cookie hydration/capture and generation
+PASS POST HTML capture, bounded matcher admission and production callback wiring
+PASS execution failure is terminal with bounded cleanup: matcher-reject
+PASS execution failure is terminal with bounded cleanup: matcher-sync-throw
+PASS execution failure is terminal with bounded cleanup: initialization-reject
+PASS execution failure is terminal with bounded cleanup: load-throw
+PASS late asynchronous matcher completion cannot publish into the next source profile
+PASS quotes and executable-looking text in observed URLs remain JSON-encoded data
+PASS SDK native callback isolation: old resource/pageEnd/pageBegin/network/detach/attach/actions cannot contaminate a new surface; same new URL is accepted
+PASS missing native retirement ACK times out without controller reuse, Host remount or cookie crossover, then recovers after ACK
+PASS never-mounted surface cancellation/retirement/recovery: cancel-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: timeout-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: host-detach-before-mount
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=false
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=true
+PH76 Host production-path resource capture: 26 scenario groups passed; SDK closure checks are local, native lifecycle timing still requires VM evidence
+PASS system route waits for native restore ACK before loading, including public IP literals
+PASS system synthetic DNS retains the admitted address pin and Host/TLS hostname
+PASS cancel during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS timeout during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS missing cleanup ACK bounds later jobs, retains no expired waiters, and permits recovery only after real cleanup ACK
+PASS synchronous proxy apply failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS synchronous proxy remove failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS SDK main-frame failure classification: proxy
+PASS SDK main-frame failure classification: 407
+PASS SDK main-frame failure classification: TLS
+PASS SDK main-frame failure classification: 404
+PASS SDK main-frame failure classification: generic-connect
+PASS SDK main-frame failure classification: numeric-only
+PASS SDK main-frame failure classification: direct407
+PASS SDK main-frame failure classification: lookalike-url
+PASS pre-load/about:blank/subresource failures cannot poison the main document
+PH92 ArkWeb proxy lifecycle/native failure: 16 additional scenario groups passed; no device or native timing acceptance claimed
+PASS existing HTML challenge classification precedes ordinary HTTP 401 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 403 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 429 failure
+PASS an ordinary forbidden document stays a source HTTP failure after challenge detection
+PASS native detach cancels pending proxy ACK immediately and late configuration is cleaned
+PH92 proxy/challenge compatibility: 5 additional scenario groups passed
+PASS production blank lifecycle before/after real load never sets page ready, final URL or schedules source initialization (2 scenarios)
+(node:94660) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+PASS early timing uses this run and exact target document: native blank initialization excluded, premature/foreign/incomplete evidence still fails (11 scenarios)
+PASS bounded data diagnostics and exact native URI-Base64 admission: tamper/unsupported/malformed/oversized remain denied, no URL or body disclosure
+PASS diagnostic rejects incomplete new-surface evidence: missing-resource
+PASS diagnostic rejects incomplete new-surface evidence: missing-match
+PASS diagnostic rejects incomplete new-surface evidence: reversed
+PASS diagnostic rejects incomplete new-surface evidence: wrong-match
+PASS diagnostic attributes old resource token during new job: lateOld=false
+PASS diagnostic attributes old resource token during new job: lateOld=true
+PASS disposing the pilot cancels only owned jobs and clears response timers/observer
+PASS diagnostic execution errors retain a failure receipt
+PASS actual SDK Host callback: exact main document, tamper rejection, policy-first order and redacted navigation labels
+PASS new run rejects previous run main URL and data document
+PH76 diagnostic runner: 12 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence
+PASS safe preload diagnostics: 6 native operation receipts and arbitrary-error URL/credential suppression
+(node:94663) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared book acquisition lifecycle, identities, and scheduling: PASS
+shared detail/TOC/body cancellation: each consumer owns its lifetime; Core cancellation cannot be revived PASS
+PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS
+R1/R2 cache-refresh separation, original freshness, dispatch consumers and scoped facts: PASS
+author metadata: 33 shared Core/Host cases, actual search decode/group/shelf/alias/source-switch chains PASS
+source-bound @ author: SDK result decode → initial group/relevance → candidate/switch proof, genuine @ and @@/stale/malformed negatives PASS
+(node:94667) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:94668) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:94669) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS 52 production bookshelf timeline/Builder samples; retained detail action actors and real safety gates. Native pixels remain unverified.
+(node:94670) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+PASS PH60 shelf filters: independent dimensions, real SDK live chips/toggles, shared order, legacy data and hidden batch-selection safety
+(node:94676) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf management Core ownership contract: PASS
+(node:94678) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manual update bypasses prepared sessions and executes real Gateway detail/TOC","status":"PASS"}
+{"name":"manual update also bypasses durable catalog cache after prepared eviction","status":"PASS"}
+{"name":"manual request waits for a cache-only in-flight acquisition then refreshes","status":"PASS"}
+{"name":"per-book failure/empty results preserve old records, settle flags and continue bounded batch","status":"PASS"}
+{"name":"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions","status":"PASS"}
+{"name":"multiple force waiters share one refresh after the nonforce admission settles","status":"PASS"}
+{"name":"force waiting revalidates cancel before new network work","status":"PASS"}
+{"name":"force waiting revalidates close before new network work","status":"PASS"}
+{"name":"force waiting revalidates source-delete before new network work","status":"PASS"}
+PH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS
+PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update
+(node:94680) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS TXT uses format identity without changing Core metadata
+PASS default group retains empty and explicit default identities without mutating legacy groups
+PASS real section settings callback opens the default selector without navigating to another settings surface
+PASS PH61 progress/source retain equal left/right slots and live progress after row reuse
+PASS PH83 detail preview exposes 20 chapters in the original four-row scroll viewport
+PASS day: detail metadata shares source typography, label and moving source action
+PASS night: detail metadata shares source typography, label and moving source action
+PASS PH46/47 original author typography and the entire five-line block align with the cover
+PASS missing synopsis is explained without contaminating the metadata projection
+PASS empty chapters expose status: 暂无章节信息
+PASS empty chapters expose status: 正在读取本地目录…
+PASS empty chapters expose status: 目录读取失败，请重试
+PASS source name/category/URL remain distinct and login precedes detect (no login)
+PASS source name/category/URL remain distinct and login precedes detect (login)
+PASS single-book sheet matches cover frame and both layers have straight lower corners
+PASS 44vp source SVG stays 44vp in the single-book more action
+(node:94685) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:94686) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+cache refresh admission: actual Index continuation preserves new chapter and saved offset arguments PASS
+Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS
+(node:94697) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection
+bookshelf tablet navigation contract: PASS
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation
+(node:94699) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS bookshelf route return: identity+item offset, list/filter/group state, reordered books, late callback isolation
+(node:94700) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+build provenance embedded NAPI contract: PASS
+bundled book-source import collection: PASS (1046 tested records, 919 unique identities)
+cookie exact-host and HttpOnly script-isolation policy: PASS
+core build identity startup contract: PASS
+(node:94712) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+PASS: deterministic import.persist rejection discards staged input without recovery orphan
+PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation
+PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit
+(node:94714) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production Index + actual Coordinator/Gateway: stable return/new catalog, exact evidence negatives, source/processing races, delayed offline readmission. No device pixel claim.
+(node:94719) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH84 actual external directory routing, Builder and exact initial bookmark lifecycle: PASS
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+error-message conformance: PASS (121 sources swept)
+(node:94722) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+Harmony HttpTTS credential URL encoding and expansion bounds: PASS
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:94726) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:94728) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+PASS: HTTPS-only requests reject cleartext redirect downgrades
+PASS: same-origin comparison normalizes host case and default HTTPS port
+PASS: credential-bearing URL redirects stay on the same effective origin
+PASS: custom credential-header redirects stay on the same effective origin
+Host staging recovery retry: PASS
+(node:94732) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production request payload and HTTP POST: empty/Chinese UTF-8, GBK, form join, exact/over byte limit and multipart with broken platform TextEncoder
+Encoder evidence: actual SDK wrapper with bounded UTF-8/GBK fixtures; native variant is independently runnable
+(node:94733) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual HTTP transport: HEAD/204/205/304 absent or empty bodies, 200 empty string and binary bytes (22 cases)
+PASS nonempty decoded strings and unknown body representations fail with bounded status/type diagnostics
+PASS bodyless 4xx/5xx keeps explicit HTTP source rejection; actual rejection body remains unchanged
+PASS actual redirect chain keeps empty hop Location and rejects private targets before dispatch; empty success survives final response conversion
+PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack
+PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs while retaining transport origin
+PASS unknown native 2300999 preserves per-request transient HTTP evidence, not a global network outage or a source rule verdict
+(node:94734) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Host -> SDK -> CoreError input -> reading classifier and safe search summary: TLS/23/no-code retain HTTP cause, only known transient codes retry; per-operation association survives repeats, cancellation and later independent failures stay separate
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:94735) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual execute/redirect/cookie/DNS/transport URL normalization: Chinese/space, existing GBK percent escapes, query/fragment, method/body preservation and private target rejection
+(node:94736) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+PASS import refresh: Figma C arc/source unchanged, 18vp slot, 23.754vp paint, 1.5vp stroke; retained Day/Night/Day.
+(node:94738) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 structuralNotifications=0 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS
+Legado product behavior contract: PASS
+(node:94740) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+local book format picker contract: PASS
+(node:94745) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.
+local EPUB resource architecture: PASS
+local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)
+(node:94749) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+log privacy: PASS (finite public error codes; reading details use private fields)
+navigation performance static contract: PASS
+PASS: production proxy/DNS/transparent-gateway admission, selected-network exclusions, PAC, network changes and structured errors
+PASS: actual HTTP hop preserves URL/system proxy, never pins proxy DNS, direct DNS queried once
+(node:94755) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: cancelled never-settling HTTP frees DNS lease; queued cancellation preserves predecessor and same-host recovery
+PASS: vendored SDK emits a legal CoreError code and preserves Host network semantics, message and retryability through NAPI JSON
+PASS: native proxy getter failures/missing API/invalid return preserve fixed operation and numeric code without leaking native messages or guessing DIRECT
+PASS: undefined/null/wrong-type results from each native proxy API identify the exact operation
+PASS: API 23 active PAC getter replaces throwing legacy getter; numeric string native codes survive without retaining messages
+performance regression contracts: PASS
+physical phone Figma layout regressions: PASS
+portable JSON local/online import boundary: PASS
+PASS Make V9 appearance: real selection handlers, stale menus, scroll/viewport placement, Quick/Full swatches and persisted theme identity. Native pixels remain separate.
+(node:94759) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance Figma N per-actor driver: PASS
+reader appearance Figma N fixture: PASS
+reader appearance measured-screen gesture: PASS
+reader appearance Figma N sampler: PASS
+reader appearance master motion state: PASS
+reader appearance unified production tree (structural only): PASS
+(node:94770) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance shared store, page races and persistence recovery: PASS
+appearance Preferences adapter migration and persistence compatibility: PASS
+application appearance background flush and teardown isolation: PASS
+PASS appearance theme extension: 8 unchanged, 9/12/24 geometry, registry cache, quick/full scroll reversal, SDK selection
+(node:94771) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance pure/static contract: PASS
+reader Full Auto Page pure/static contract: PASS
+AutoPage actual SDK Builder bounds, single current value, Quick +/- and Full range, 84 reversible samples PASS
+(node:94778) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader auto-page pure state: PASS
+production automatic turn and stop durations use monotonic time; calendar access rejected: PASS
+(node:94779) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Auto Full timer actual SDK Builder parent/child width budget, original306 baseline, 42 retained reversible poses, wheel paint Prop and mutation PASS
+(node:94780) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader book-turn architecture contract: PASS
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: /var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-native-event-ydKy4q/dispatch.cpp:2:10: fatal error: 'atomic' file not found
+    2 | #include <atomic>
+      |          ^~~~~~~~
+1 error generated.
+
+
+1 !== 0
+
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-reader-book-turn-event-dispatch.mjs:65:10
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
+/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/scripts/check-local.sh failed (1): <no output>
