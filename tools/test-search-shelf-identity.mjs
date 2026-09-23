@@ -10,16 +10,24 @@ const {ReaderCoreRequestError}=await import('../entry/vendor/core-harmony/sdk/re
 const index=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
 const saved={sourceId:'cat-eye',bookId:'/old',sourceName:'猫眼看书',title:'终宋',author:'怪诞的表哥',addedAt:10};
 const result={...saved,sourceId:'search-source',bookId:'/new',sourceName:'搜索来源',detailUrl:'/new',variables:[]};
+const coreOwner={};let coreLookup=async()=>undefined;const lookupCalls=[];
 const Search=productionMotionMethods(index,['onSearchResultSelected','remoteSeedForSearchBook'],{
   resolveBookshelfBook,LOCAL_SOURCE_ID:'local',
+  ReaderRuntimeOwner:{current:()=>coreOwner},
+  ReaderCoreGateway:class{constructor(owner){assert.equal(owner,coreOwner);}async loadShelfBook(...identity){
+    lookupCalls.push(identity);return coreLookup(...identity);
+  }},
 });
 function searchFixture(books){
   const searchPublication=new SearchPublication();searchPublication.updateShelf(books);
-  const calls=[],notices=[];
+  const calls=[],localCalls=[],notices=[];
   const host=Object.assign(new Search(),{searchPublication,searchPublicationRevision:1,shelfBooks:[],
     openRemoteBookDetail:(...args)=>calls.push(args),showReadingFailure:(...args)=>notices.push(args),
+    openLocalBookDetail:(...args)=>localCalls.push(args),
+    navigationGeneration:0,route:'search',nextNavigationGeneration(){return ++this.navigationGeneration;},
+    refreshSearchShelfMembership(){this.membershipRefreshed=true;},
     sourceDisplayName:sourceId=>sourceId});
-  return {host,calls,notices};
+  return {host,calls,localCalls,notices};
 }
 {
   const projection=new SearchResultProjection().update([result],[saved],'终宋',new SearchViewState());
@@ -57,6 +65,58 @@ const Add=productionMotionMethods(index,['addDetailBook','isSameDetailBook'],{
   ReaderCoreGateway:class{async upsertBook(){writeCount++;if(writeError)throw writeError;return {created:true};}},
 });
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
+const localSaved={...saved,sourceId:'local',bookId:'import-one',sourceName:'本地导入'};
+const localResult={...result,sourceId:'local',bookId:'import-one',sourceName:'本地导入'};
+{
+  const {host,localCalls}=searchFixture([localSaved]);
+  host.onSearchResultSelected(localResult);
+  assert.equal(localCalls[0][0],localSaved,'offscreen local membership opens the real detail immediately');
+  assert.equal(lookupCalls.length,0,'published local membership needs no extra Core round trip');
+}
+{
+  let release;coreLookup=()=>new Promise(resolve=>{release=resolve;});
+  const {host,localCalls,notices}=searchFixture([]);
+  host.onSearchResultSelected(localResult);
+  assert.deepEqual(lookupCalls.at(-1),['local','import-one']);
+  assert.equal(host.route,'search','a missing UI row must not fabricate an unshelved detail');
+  release(localSaved);await settle();
+  assert.equal(localCalls[0][0],localSaved,'Core identity resolves an offscreen local book');
+  assert.equal(notices.length,0);
+}
+{
+  coreLookup=async()=>undefined;
+  const {host,localCalls,notices}=searchFixture([]);
+  host.onSearchResultSelected(localResult);await settle();
+  assert.equal(localCalls.length,0);
+  assert.match(notices[0][0],/已移除/);
+  assert.equal(host.membershipRefreshed,true,'a removed local row refreshes search ownership');
+}
+{
+  coreLookup=async()=>{throw new Error('Core read failed');};
+  const {host,localCalls,notices}=searchFixture([]);
+  host.onSearchResultSelected(localResult);await settle();
+  assert.equal(localCalls.length,0);
+  assert.match(notices[0][0],/打开本地书籍失败/);
+  assert.equal(host.route,'search','lookup failure does not create an unusable detail');
+}
+{
+  let release;coreLookup=()=>new Promise(resolve=>{release=resolve;});
+  const {host,localCalls,notices}=searchFixture([]);
+  host.onSearchResultSelected(localResult);
+  host.nextNavigationGeneration();host.route='bookshelf';
+  release(localSaved);await settle();
+  assert.equal(localCalls.length,0,'a stale lookup cannot reopen a later route');
+  assert.equal(notices.length,0);
+}
+{
+  let release;coreLookup=()=>new Promise(resolve=>{release=resolve;});
+  const {host,localCalls,calls}=searchFixture([]);
+  host.onSearchResultSelected(localResult);
+  host.onSearchResultSelected(result);
+  release(localSaved);await settle();
+  assert.equal(calls.length,1,'the newer search selection is admitted');
+  assert.equal(localCalls.length,0,'an older local lookup cannot replace a newer result on the same route');
+}
 function addFixture(){const notices=[];const host=Object.assign(new Add(),{
   detailBook:result,remoteReadingSession:{identity:result,book:result},bookshelfRemovalGeneration:0,
   bookshelfAdditionGeneration:0,bookshelfAdditionActiveKey:'',bookshelfAdditionError:'',
@@ -77,4 +137,4 @@ function addFixture(){const notices=[];const host=Object.assign(new Add(),{
   assert.match(host.bookshelfAdditionError,/已加入书架/);
   assert.equal(host.bookshelfRemovalActiveKey,'');writeError=undefined;
 }
-console.log('PASS: actual search selection follows the saved work; ambiguous/local/missing-author identities are preserved; stale session and atomic duplicate replies cannot create UI ownership');
+console.log('PASS: search selection preserves saved identity; offscreen local details resolve from membership/Core with stale guards; ambiguous and duplicate ownership remains safe');

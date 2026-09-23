@@ -17,7 +17,12 @@ let progressFailure;
 let canonicalShelf;
 const cleared=[];
 class RemoteGateway { async loadProgress(){coreProgressCalls++;if(progressFailure)throw progressFailure;return {kind:'restored',progress:{chapterIndex:11,chapterOffset:52}};} }
-class ForbiddenLocalGateway { constructor(){assert.fail('shelf click must not await a parent TOC acquisition');} }
+let localGatewayConstructions=0;
+class LocalGateway {
+  constructor(){localGatewayConstructions++;}
+  async loadToc(){return {entries:[{index:0,title:'本地第一章'}]};}
+  async loadDirectoryProjection(_bookId,_title,_author,entries){return entries;}
+}
 const Host = productionMotionMethods(file('pages/Index.ets'),[
   'openReading','openLocalBookDetail','openRemoteBookDetail','onRemoteSessionReady',
   'performSourceSwitchSeam','onReadingFailure','openFullDirectory','onPickSource',
@@ -25,7 +30,7 @@ const Host = productionMotionMethods(file('pages/Index.ets'),[
   'preparePendingSourceSwitchForNextChoice','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches',
   'dismissSourceSwitchFailure','applyReadingCommit','onSearchResultSelected','consumeSystemFileOpen',
 ],{LOCAL_SOURCE_ID:'local',DOMAIN:0,ReaderRuntimeOwner:{current:()=>runtime},
-  LocalReadingFlowGateway:ForbiddenLocalGateway,RemoteReadingFlowGateway:RemoteGateway,
+  LocalReadingFlowGateway:LocalGateway,RemoteReadingFlowGateway:RemoteGateway,
   ReadingOfflineGateway:class {async clearBookIdentity(sourceId,bookId){cleared.push([sourceId,bookId]);}},
   ReaderCoreRequestError,ReaderCoreGateway:class {async loadShelfBook(){return canonicalShelf;}},
   errorMessageOf:error=>error.message,remoteReadingFailureKindOf:error=>error.kind,
@@ -43,11 +48,13 @@ function fixture(){
     detailInBookshelf:true,bookshelfRemovalActiveKey:'',remoteReadingSession:undefined,
     sourceSwitchState:{kind:'candidates',candidates:[candidate]},sourceSwitchVisible:true,
     shelfBooks:[book],remoteCatalogRefreshAt:new Map(),offlineMutationActiveKey:'',
+    directoryBookmarkMutationGeneration:0,directoryBookmarkMutationActiveKey:'',
     refreshBookshelf(){},
     nextNavigationGeneration(){return ++this.navigationGeneration;},
     isKnownDetailChapter:index=>index===11,
     installRemoteReadingSession(value){this.remoteReadingSession=value;},
     readingDetailForShelf:value=>({...value}),readingDetailForRemoteSeed:(seed,name)=>({...seed,sourceName:name}),
+    hasDeclaredCoverUrl:()=>true,
     isSourceSwitchActive(generation){return this.sourceSwitchVisible&&this.navigationGeneration===generation;},
     showReadingFailure(){assert.fail('must not trap reading failures in a modal');},
     rollbackPendingSourceSwitch(){assert.fail('body failure must not roll back source identity');},
@@ -68,7 +75,9 @@ for(const sourceId of ['local','online']) {
   assert.equal(host.remoteReadingSeed.detailUrl,book.bookId);assert.equal(host.detailInBookshelf,true);
   assert.equal(host.remoteReadingSession,undefined,'network-free first route does not invent a prepared session');
   const local=fixture();local.route='bookshelf';local.readingOriginRoute='bookshelf';
+  const beforeLocalGateway=localGatewayConstructions;
   local.openLocalBookDetail({...book,sourceId:'local'},true);
+  assert.equal(localGatewayConstructions,beforeLocalGateway,'shelf click must not await a parent TOC acquisition');
   assert.equal(local.route,'reading');assert.equal(local.readingSessionActive,true);
 }
 {
@@ -220,10 +229,12 @@ assert.match(readFileSync(file('features/shell/ReaderShell.ets'),'utf8'),/ForEac
 {
   const host=fixture();host.route='search';host.shelfBooks=[];
   const localResult={sourceId:'local',sourceName:'本地',bookId:'import-real-id',title:'真实搜索书名',author:'作者',kind:'epub'};
+  host.searchPublication={shelfAt:()=>[{...localResult,addedAt:10}]};
   host.onSearchResultSelected(localResult);
   assert.equal(host.route,'detail');assert.equal(host.detailBook.bookId,localResult.bookId);
-  assert.equal(host.detailBook.title,localResult.title);assert.equal(host.detailInBookshelf,false);
+  assert.equal(host.detailBook.title,localResult.title);assert.equal(host.detailInBookshelf,true);
   assert.equal(host.detailReturnRoute,'search');assert.equal(host.remoteReadingSeed,undefined);
+  await settle();assert.equal(host.detailToc[0].title,'本地第一章');
   host.openReading(undefined);assert.equal(host.route,'reading');assert.equal(host.readingSessionActive,true);
 }
 const Directory=productionMotionMethods(file('features/reading/FullDirectoryPanel.ets'),['catalogEmptyMessage']);

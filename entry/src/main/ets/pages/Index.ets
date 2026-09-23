@@ -2595,33 +2595,33 @@ struct Index {
         candidate.title === book.title && candidate.author === book.author))];
     if (book.sourceId === LOCAL_SOURCE_ID) {
       const localBook = this.shelfBooks.find((item: ShelfBook): boolean =>
-        item.sourceId === LOCAL_SOURCE_ID && item.bookId === book.bookId);
+        item.sourceId === LOCAL_SOURCE_ID && item.bookId === book.bookId) ??
+        this.searchPublication.shelfAt(this.searchPublicationRevision).find((item: ShelfBook): boolean =>
+          item.sourceId === LOCAL_SOURCE_ID && item.bookId === book.bookId);
       if (localBook !== undefined) {
         this.openLocalBookDetail(localBook);
       } else {
-        // A missing UI shelf row is not evidence that Core removed the file.
-        // Preserve the actual search identity; the reader owns any open error.
-        this.nextNavigationGeneration();
-        this.readingSessionActive = false;
-        this.readingExitRequest = undefined;
-        this.installRemoteReadingSession(undefined);
-        this.remoteReadingSeed = undefined;
-        this.sourceSwitchFailureMessage = '';
-        this.detailBook = { sourceId: book.sourceId, bookId: book.bookId,
-          sourceName: book.sourceName, title: book.title, author: book.author,
-          kind: book.kind, coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.latestChapterTitle };
-        this.detailToc = [];
-        this.detailInBookshelf = false;
-        this.detailLoadingMessage = '';
-        this.requestedChapterIndex = undefined;
-        this.requestedBookmarkAnchor = undefined;
-        this.directoryCurrentChapterIndex = -1;
-        this.directoryChapterTitle = '';
-        this.readingOriginRoute = 'detail';
-        this.detailReturnRoute = 'search';
-        this.preparedReaderRoute = 'reading';
-        this.shelfReadingPreparation = false;
-        this.route = 'detail';
+        // The visible shelf is a bounded window. Resolve an offscreen result by
+        // its exact Core identity before admitting a local detail and catalog.
+        const owner = ReaderRuntimeOwner.current();
+        const generation = this.nextNavigationGeneration();
+        const candidates = this.searchDetailCandidates;
+        const current = (): boolean => generation === this.navigationGeneration &&
+          this.route === 'search' && this.searchDetailCandidates === candidates &&
+          owner === ReaderRuntimeOwner.current();
+        void new ReaderCoreGateway(owner).loadShelfBook(LOCAL_SOURCE_ID, book.bookId)
+          .then((stored: ShelfBook | undefined): void => {
+            if (!current()) return;
+            if (stored === undefined) {
+              this.refreshSearchShelfMembership();
+              this.showReadingFailure('本地书籍已移除', '这本书已不在书架中，请重新搜索。');
+              return;
+            }
+            this.openLocalBookDetail(stored);
+          })
+          .catch((error: Error): void => {
+            if (current()) this.showReadingFailure('打开本地书籍失败', error.message);
+          });
       }
       return;
     }
