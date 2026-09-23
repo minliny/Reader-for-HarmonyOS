@@ -131,10 +131,12 @@ export type ReadingPaginationPrefixObservation = {
 /**
  * Exact measured run of one chapter before its complete manifest exists.
  *
- * This is pagination truth, not navigation history: every new page must start
- * from the preceding real page's end request. A run may begin at a restored or
- * searched anchor so that pages measured after it have an exact predecessor;
- * only a run beginning at chapter head may later become a complete manifest.
+ * This is pagination truth, not navigation history: a forward page starts from
+ * the preceding real page's end request. A backward page ends at the earlier
+ * of the first page's request and rendered start, preserving original shaped
+ * lines and paragraph delimiters. A run may begin at a restored or searched
+ * anchor and expand both ways. Only a run originally beginning at chapter head
+ * and never prepended may later become a canonical complete manifest.
  * Re-observing an already measured page is accepted only when all three scalar
  * boundaries are identical, so moving backward cannot erase or extend the
  * measured frontier.
@@ -142,6 +144,7 @@ export type ReadingPaginationPrefixObservation = {
 export class ReadingPaginationPrefix {
   readonly key: ReadingPaginationKey;
   private readonly observations: ReadingPaginationPrefixObservation[] = [];
+  private hasPrependedPage: boolean = false;
 
   constructor(key: ReadingPaginationKey, first: ReadingPaginationPrefixObservation) {
     validateKey(key);
@@ -164,8 +167,31 @@ export class ReadingPaginationPrefix {
     return this.observations[0].requestScalar === requestScalar;
   }
 
+  /** Local backward pagination never proves the chapter-head page grid. */
+  isCanonicalPrefixForChapterStart(chapterStartRequest: number): boolean {
+    return this.startsAtRequest(chapterStartRequest) && !this.hasPrependedPage;
+  }
+
+  /** The exact original measurement bounds, without exposing stored facts. */
+  observationForRequest(requestScalar: number): ReadingPaginationPrefixObservation | undefined {
+    validateAnchor(requestScalar);
+    for (const observation of this.observations) {
+      if (observation.requestScalar === requestScalar) {
+        return copyPrefixObservation(observation);
+      }
+    }
+    return undefined;
+  }
+
+  observationForPageStart(startScalar: number): ReadingPaginationPrefixObservation | undefined {
+    validateAnchor(startScalar);
+    const index = this.pageIndexAtOrBefore(startScalar);
+    return index >= 0 && this.observations[index].startScalar === startScalar ?
+      copyPrefixObservation(this.observations[index]) : undefined;
+  }
+
   /**
-   * Admits either one exact re-observation or the next continuous real page.
+   * Admits an exact re-observation or one adjoining real page on either side.
    * A jump, overlap, changed boundary, or unmeasured request is rejected.
    */
   admit(observation: ReadingPaginationPrefixObservation): boolean {
@@ -174,6 +200,12 @@ export class ReadingPaginationPrefix {
       if (known.requestScalar === observation.requestScalar) {
         return samePrefixObservation(known, observation);
       }
+    }
+    const first = this.observations[0];
+    if (observation.endScalarExclusive === Math.min(first.requestScalar, first.startScalar)) {
+      this.observations.unshift(copyPrefixObservation(observation));
+      this.hasPrependedPage = true;
+      return true;
     }
     const last = this.observations[this.observations.length - 1];
     if (observation.requestScalar !== last.endScalarExclusive ||
@@ -192,6 +224,15 @@ export class ReadingPaginationPrefix {
     const index = this.pageIndexAtOrBefore(startScalar);
     return index > 0 && this.observations[index].startScalar === startScalar ?
       this.observations[index - 1].requestScalar : undefined;
+  }
+
+  /** Exact original request for the known page following `start`. */
+  nextRequestForPageStart(startScalar: number): number | undefined {
+    validateAnchor(startScalar);
+    const index = this.pageIndexAtOrBefore(startScalar);
+    return index >= 0 && index + 1 < this.observations.length &&
+      this.observations[index].startScalar === startScalar ?
+      this.observations[index + 1].requestScalar : undefined;
   }
 
   /** Whether this continuous measured prefix already contains `anchor`. */
@@ -213,7 +254,7 @@ export class ReadingPaginationPrefix {
       this.observations[index - 1].requestScalar : undefined;
   }
 
-  /** Allocation-free ordinal lookup over the already ordered observations. */
+  /** Local array offset, not a chapter-wide ordinal unless canonical. */
   pageIndexAtOrBefore(anchorScalar: number): number {
     validateAnchor(anchorScalar);
     let low = 0;
@@ -258,6 +299,31 @@ class StoredReadingPaginationChapter {
 
 export class ReadingPaginationIndex {
   private readonly chapters: StoredReadingPaginationChapter[] = [];
+  private activeMeasurementGeneration: number = 0;
+  private activeMeasurementSelection: number = -1;
+
+  /** A hidden measurement tree and its selection are admitted atomically.
+   * Results may only publish while this exact lease is still current. Layout,
+   * content, selection and lifecycle changes revoke it through one path.
+   */
+  beginMeasurement(selection: number): number {
+    this.invalidateMeasurement();
+    this.activeMeasurementSelection = selection;
+    return this.activeMeasurementGeneration;
+  }
+
+  invalidateMeasurement(): void {
+    this.activeMeasurementGeneration += 1;
+    this.activeMeasurementSelection = -1;
+  }
+
+  finishMeasurement(): void { this.activeMeasurementSelection = -1; }
+  measurementGeneration(): number { return this.activeMeasurementGeneration; }
+  measurementSelection(): number { return this.activeMeasurementSelection; }
+  isMeasurementCurrent(generation: number, selection: number): boolean {
+    return this.activeMeasurementSelection >= 0 && generation === this.activeMeasurementGeneration &&
+      selection === this.activeMeasurementSelection;
+  }
 
   /**
    * Records a complete set of physical page starts for one chapter.
@@ -504,8 +570,11 @@ function validatePrefixObservation(observation: ReadingPaginationPrefixObservati
   validateAnchor(observation.requestScalar);
   validateAnchor(observation.startScalar);
   validateAnchor(observation.endScalarExclusive);
-  if (observation.startScalar < observation.requestScalar) {
-    throw new RangeError('prefix startScalar must not precede requestScalar');
+  // A restored anchor can fall inside an original shaped line. The first
+  // page retains that entire line; adjoining pages still reject overlap in
+  // admit(). Never accept a page ending before the requested position.
+  if (observation.endScalarExclusive <= observation.requestScalar) {
+    throw new RangeError('prefix endScalarExclusive must follow requestScalar');
   }
   if (observation.endScalarExclusive <= observation.startScalar) {
     throw new RangeError('prefix endScalarExclusive must follow startScalar');

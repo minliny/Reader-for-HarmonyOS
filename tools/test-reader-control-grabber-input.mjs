@@ -32,7 +32,7 @@ const names = ['handleControlTouch', 'acceptRuntime', 'rememberVisibleContentLoc
   'commitVisualSession', 'confirmLaunchSourceReady'];
 const Panel = productionMotionMethods(file, names, { ...session, TouchType, ReaderPageInputClock,
   readerMotionNowMs: () => receivedAt, DEBUG: false });
-function mount(text, module = 'settings', full = false, width = 364, height = 736, quick = 330) {
+function mount(text, module = 'settings', full = false, width = 364, height = 736, quick = 330, initialClosed = false) {
   // Only unrelated business children are replaced; the production root Builder,
   // grabber, painted bar, parents and enabled/hit-test expressions stay intact.
   const tree = ts.createSourceFile('Panel.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS);
@@ -46,18 +46,18 @@ function mount(text, module = 'settings', full = false, width = 364, height = 73
   require(`${sdk}/lib/component_map.js`).ID_ATTRS.clear();
   const { owner } = createReaderBuilderProbe(text, ['build', ...children], {
     ...motion, AccessibilityRoleType: { BUTTON: 'button' },
-  });
+  }, {allowEmptyBranchAdmission:initialClosed});
   for (const name of names) owner[name] = Panel.prototype[name];
   const home = session.openReaderControlSession(session.createReaderControlSessionState(), 0);
   const entered = session.enterReaderControlModule(home, module, 0);
-  const current = full ? session.expandReaderControlSession(entered, 0) : entered;
+  const current = initialClosed ? session.createReaderControlSessionState() : full ? session.expandReaderControlSession(entered, 0) : entered;
   const bounds = motion.readerControlMotionBounds(width, height, 19, quick), top = 89;
   const config = { axis: motion.readerControlMotionAxis(bounds, top), tapMaxDurationMs: 500,
     directionSlopVp: 8, settleDurationMs: 100, showDurationMs: 100, dismissDurationMs: 100 };
   const runtime = new ReaderControlRuntime(config);
   Object.assign(owner, { runtime, runtimeMounted: true, inputEnabled: true, controlObscured: false,
     temporaryLayerActive: false, appScheme: 'day', launchSample: undefined, moreMenuVisible: false,
-    visualHeldPointerId: -1, visualExpansionProgress: full ? 1 : 0, visualVisibilityProgress: 1,
+    visualHeldPointerId: -1, visualExpansionProgress: full ? 1 : 0, visualVisibilityProgress: initialClosed ? 0 : 1, controlActorsRetained: false,
     lastVisibleContentLocation: current.location, controlSession: current, visualSession: current,
     layout: { viewportWidth: width + 26, viewportHeight: height + 108, fullPanelWidth: width,
       topBarWidth: width, topBarTop: 19 }, rootScreenX: 0, rootScreenY: 0,
@@ -206,3 +206,16 @@ track.onChange(25, 'SliderChangeMode.End'); track.onChange(75, 'SliderChangeMode
 track.onChange(40, 'SliderChangeMode.Click');
 assert.deepEqual(values, [25, 75, 40]);
 console.log('PH48/49/55 PASS: authoritative grabber actor, actual Host/native-parent admission, 7 modules x Quick/Full reversal, 28 hidden-hold UP/CANCEL paths, .2/.7/1 captured-visibility driver crossings, tap, actual Slider End/Click; two negative mutations rejected. Native compositor/physical touch remains separate.');
+
+{
+ const f=mount(source,'settings',false,364,736,330,true);
+ assert.equal(f.node('reader-control-motion-dock'),undefined,'cold reading does not create hidden control actors');
+ const opened=session.openReaderControlSession(f.owner.controlSession,100);
+ f.owner.controlSession=opened;f.owner.acceptRuntime(f.runtime.command(opened));f.owner.replay();
+ assert.equal(f.owner.visualVisibilityProgress,0,'first command keeps the opening animation origin');
+ assert.ok(f.node('reader-control-motion-dock'),'first command admits native actors without a second tap');
+ const closed=session.dismissReaderControlSession(opened,0);
+ f.owner.controlSession=closed;f.owner.acceptRuntime(f.runtime.command(closed));f.owner.replay();
+ assert.ok(f.node('reader-control-motion-dock'),'close retains the existing actor tree for later interactions');
+}
+console.log('PASS actual SDK cold-control subtree omission, first-open command and retained close ownership');

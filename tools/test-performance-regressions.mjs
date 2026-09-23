@@ -63,8 +63,8 @@ assert.match(imageHost, /displayFileWrites/);
 assert.doesNotMatch(imageHost, /openSync|writeSync|statSync|renameSync|listFileSync|unlinkSync/);
 
 assert.match(reading, /const layoutReady = Promise\.all/);
-assert.ok(reading.indexOf('this.loadInitialToc(isCurrent)') < reading.indexOf('await layoutReady'),
-  'initial TOC/progress must begin before the appearance barrier');
+assert.match(reading, /Promise\.all\(\[\s*\((?:prepared\s*===\s*undefined\s*\?\s*this\.loadSessionChapter\([\s\S]*?\:\s*Promise\.resolve\(prepared\.chapter\)|this\.loadSessionChapter\([\s\S]*?)\)\s*\.then\([\s\S]*?\),\s*layoutReady,/,
+  'chapter I/O and initial layout readiness must join before chapter admission');
 assert.match(reading, /chapterImageByStartScalar: Map<number, ReadingSessionImage>/);
 assert.match(reading, /continuousFragmentIndexByStartScalar: Map<number, number>/);
 assert.match(continuous, /fragmentDataSource\.update\(changed/);
@@ -80,8 +80,8 @@ assert.ok(bookTurnHost.indexOf('SettlementSwapShouldFire') <
   'settlement solve diagnostics must include coverage-gate cost');
 
 assert.match(shelfFlow, /this\.bookshelf\.removeBooks\(targets\)/);
-assert.equal((shelfFlow.match(/loadBookshelf\(/g) ?? []).length, 1,
-  'one bookshelf refresh must not issue a second continue-reading list query');
+assert.match(shelfFlow, /Promise\.all\(\[this\.loadPage\(0\), this\.bookshelf\.loadContinueReading\(\)\]\)/,
+  'paged shelf uses an independent bounded continue-reading summary');
 for (const [name, source] of [
   ['multi-select', multiSelect],
   ['management', management],

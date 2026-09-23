@@ -131,8 +131,8 @@ for (const type of ['TYPE_SYSTEM', 'TYPE_CUTOUT', 'TYPE_SYSTEM_GESTURE',
   assert.ok(coordinator.includes(type), `window metrics must include ${type}`);
 }
 assert.match(coordinator,
-  /statusBarColor: request\.style\.underlayColor,[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
-  'system-bar underlay and semantic content tone must change atomically from one style');
+  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
+  'native status composition, navigation underlay and semantic content tone must change atomically from one style');
 assert.match(coordinator, /while \(ReaderWindowCoordinator\.mainWindow !== undefined[\s\S]*desiredChromeRevision/,
   'asynchronous chrome writes must use a last-write-wins revision loop');
 
@@ -173,9 +173,9 @@ for (const width of [320,360,390,430,599,600,760,1100]) {
 const retained=metrics();retained.statusBarHeight=48;
 const immersive=resolveReaderReadingLayout(390,844,false,retained,true);
 assert.equal(immersive.pageChromeTopRegionHeight,48);assert.equal(immersive.pageChromeVisualSafeTop,0);
-assert.ok(immersive.contentTop>=48+8);
+assert.equal(immersive.contentTop,48+8,'measured immersive lane replaces the former fixed 72vp body top');
 const visible=resolveReaderReadingLayout(390,844,false,retained,false);
-assert.equal(visible.pageChromeVisualSafeTop,48);assert.ok(visible.contentTop>=96+8);
+assert.equal(visible.pageChromeVisualSafeTop,48);assert.equal(visible.contentTop,96+8);
 
 const keyboardFull = resolveReaderControlLayout(390, 844, false, metrics({ keyboardBottom: 300 }));
 const keyboardResized = resolveReaderControlLayout(390, 544, false, metrics({ keyboardBottom: 300 }));

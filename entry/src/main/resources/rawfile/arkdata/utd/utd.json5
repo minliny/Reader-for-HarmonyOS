@@ -1,0 +1,14 @@
+{
+  "UniformDataTypeDeclarations": [
+    {
+      "TypeId": "io.reader.harmonyos.kf8",
+      "BelongingToTypes": [
+        "com.amazon.azw3"
+      ],
+      "FilenameExtensions": [
+        ".kf8"
+      ],
+      "Description": "Kindle Format 8 ebook"
+    }
+  ]
+}

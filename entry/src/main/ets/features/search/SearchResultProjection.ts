@@ -4,6 +4,7 @@ import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { SearchViewState } from './SearchViewState';
 import { searchResultRelevance } from './SearchResultRelevance';
 import { searchCandidateRank } from './SearchCandidatePolicy';
+import { bookshelfWorkKey } from '../bookshelf/BookshelfBookIdentity';
 
 export interface SearchGroupProjection {
   key: string;
@@ -104,7 +105,8 @@ export class SearchResultProjection {
       const identities = new Set<string>(); const titles = new Set<string>();
       for (const book of shelf) {
         identities.add(`${book.sourceId}\u0000${book.bookId}`);
-        titles.add(this.titleKey(book.title, book.author));
+        const workKey = bookshelfWorkKey(book.title, book.author);
+        if (book.sourceId !== 'local' && workKey !== undefined) titles.add(workKey);
       }
       const identityChanges = new Set<string>(); const titleChanges = new Set<string>();
       for (const key of identities) if (!this.shelfIdentities.has(key)) identityChanges.add(key);

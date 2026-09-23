@@ -13,6 +13,7 @@ function fixture(initial={},legacy=null){
  const backend={has:async k=>values.has(k),get:async(k,d)=>values.has(k)?values.get(k):d,
  put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),flush:async()=>{writes++;if(fail){fail=false;throw Error('flush');}}};
  const s=Object.assign(new Store(),{localModeWriteTail:Promise.resolve(),writeTail:Promise.resolve(),
+ contextGeneration:0,pendingBookshelfModeWrites:0,confirmedBookshelfMode:undefined,
  ensureLocalPreferences:async()=>backend,load:async()=>{reads++;return legacy;},normalize:x=>x,persist:async()=>{},remove:async()=>{}});
  return {s,values,reads:()=>reads,writes:()=>writes,fail:()=>{fail=true;}};
 }

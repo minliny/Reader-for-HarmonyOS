@@ -52,7 +52,12 @@ export const regrab: (
   previousGeneration: number,
 ) => BookTurnRegrabFrame | undefined;
 export const settle: (componentId: string, generation: number, commit: boolean) => boolean;
-export const startProgrammatic: (componentId: string, generation: number, direction: number, rapid?: boolean) => boolean;
+/** profile: 0 manual (320ms), 1 rapid manual (30ms), 2 automatic (500ms).
+ *  Automatic first-buffer event detail supplies the reveal-confirmation token. */
+export const startProgrammatic: (componentId: string, generation: number, direction: number, profile?: number) => boolean;
+/** Starts a primed automatic turn after its generation/token-matched ArkUI
+ *  reveal request. Accepted duplicates do not restart the clock. */
+export const startAutomaticTimeline: (componentId: string, generation: number, surfaceToken: number) => boolean;
 export const commitSlots: (componentId: string, generation: number, direction: number) => boolean;
 /** ArkUI presentation barrier: hold the committed terminal frame until the
  *  promoted content is confirmed composited (releaseTerminalFrame). */

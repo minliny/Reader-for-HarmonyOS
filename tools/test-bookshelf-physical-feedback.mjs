@@ -41,20 +41,35 @@ check('default group retains empty and explicit default identities without mutat
   assert.deepEqual(Projection.visible(rows, ''), rows);
   assert.equal(rows[3].group, '历史分组');
 });
-check('real section settings callback opens the default selector without navigating to another settings surface', () => {
+check('three remaining section actions preserve the filter toggle without entering settings or groups', () => {
   const source = read('bookshelf/BookshelfPage.ets');
   const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
   const tree = ts.createSourceFile('BookshelfPage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  const callbacks = [];
+  const callbacks = new Map();
   const visit = node => {
-    if (ts.isCallExpression(node) && node.expression.getText(tree) === 'this.sectionAction' && node.arguments[0]?.text === 'bookshelf_settings') callbacks.push(node.arguments[1].getText(tree));
+    if (ts.isCallExpression(node) && node.expression.getText(tree) === 'this.sectionAction') callbacks.set(node.arguments[0]?.text,node.arguments[1].getText(tree));
     ts.forEachChild(node, visit);
   };
-  visit(tree); assert.equal(callbacks.length, 1);
-  const page = { groupSelectorVisible: false, onManageRequested: () => assert.fail('unexpected CRUD route'), onBookshelfSettingsRequested: () => assert.fail('unexpected More settings route') };
-  const callback = new Function(stripTypeScriptTypes(`const callback = ${callbacks[0]};`) + '; return callback;').call(page);
-  callback(); assert.equal(page.groupSelectorVisible, true);
-  callback(); assert.equal(page.groupSelectorVisible, false);
+  visit(tree); assert.deepEqual([...callbacks.keys()],['bookshelf_grid','bookshelf_list','bookshelf_filter']);
+  const page = { filterRowVisible: false, onManageRequested: () => assert.fail('unexpected CRUD route'), onBookshelfSettingsRequested: () => assert.fail('unexpected More settings route') };
+  const callback = new Function(stripTypeScriptTypes(`const callback = ${callbacks.get('bookshelf_filter')};`) + '; return callback;').call(page);
+  callback(); assert.equal(page.filterRowVisible, true);
+  callback(); assert.equal(page.filterRowVisible, false);
+});
+check('empty shelf uses the same right-aligned three-action header', () => {
+  const source = read('bookshelf/BookshelfEmptyPage.ets');
+  const { owner } = createReaderBuilderProbe(source, ['sectionHeader','headerAction','headerActionAsset']);
+  Object.assign(owner,{appThemeScheme:'day',contentFrame:()=>({width:352})});
+  owner.sectionHeader();
+  const nodes=[...owner.nodes.values()];
+  assert.deepEqual(nodes.filter(node=>node.type==='Image').map(node=>node.create),
+    ['app.media.bookshelf_grid_outline','app.media.bookshelf_list','app.media.bookshelf_filter']);
+  assert.equal(texts(owner).find(node=>node.create==='我的书架').layoutWeight,1,
+    'the title consumes free space and keeps the remaining actions against the right edge');
+  const actions=nodes.filter(node=>node.type==='Stack');
+  assert.deepEqual(actions.map(node=>[node.width,node.height]),[[34,34],[34,34],[34,34]]);
+  assert.equal(nodes.find(node=>node.type==='Row'&&node.height===34).width,undefined,
+    'the tools shrink to their content without reserving the removed gear slot');
 });
 const list = read('bookshelf/ShelfBookListDetails.ets').replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
 check('PH61 progress/source retain equal left/right slots and live progress after row reuse', () => {
@@ -85,37 +100,49 @@ check('PH61 progress/source retain equal left/right slots and live progress afte
 });
 
 const detailSource = read('bookshelf/LocalBookDetail.ets');
-check('PH83 detail preview exposes 20 chapters in the original four-row scroll viewport', () => {
+check('PH116 detail preview expands up to 20 rows in the outer detail scroll', () => {
   for (const count of [0, 3, 20, 40]) {
     const { owner } = createReaderBuilderProbe(detailSource,
-      ['chapterSection', 'chapterRow', 'visibleToc', 'chapterEmptyMessage'], {
+      ['chapterSection', 'chapterRow', 'visibleToc', 'chapterEmptyMessage', 'chapterSectionHeight'], {
         CHAPTER_SECTION_HEIGHT: 282, CHAPTER_ROW_HEIGHT: 58, CHAPTER_PREVIEW_LIMIT: 20,
         ButtonType: { Normal: 'Normal' },
       });
-    const toc = Array.from({ length: count }, (_, index) => ({ index, title: `第${index + 1}章` }));
+    const toc = Array.from({ length: count }, (_, offset) => ({ index: 7 + offset * 3,
+      title: `第${offset + 1}章`, navigable: offset !== 1 }));
     const selected = [];
+    let directories = 0;
     Object.assign(owner, { appThemeScheme: 'day', book: { sourceId: 'source', bookId: 'book' },
       toc, loadingMessage: '', readingBlockedReason: '', contentWidth: () => 326,
-      readingActionsReady: () => count > 0, onSelectChapter: index => selected.push(index) });
+      onSelectChapter: index => selected.push(index),
+      onOpenDirectory: () => { directories += 1; } });
     owner.chapterSection();
     const nodes = [...owner.nodes.values()];
     const chapterTexts = texts(owner).filter(node => /^第\d+章$/.test(node.create));
     assert.equal(chapterTexts.length, Math.min(count, 20));
     assert.deepEqual(owner.visibleToc(), toc.slice(0, 20), 'preview retains exact chapter identity/order');
     for (const node of chapterTexts) assert.deepEqual([node.fontSize, node.fontWeight], [14, 'FontWeight.Regular']);
-    const viewport = nodes.find(node => node.type === 'Scroll');
-    assert.equal(viewport.height, count > 0 ? 232 : 0);
-    assert.equal(viewport.scrollBar, 'BarState.Auto');
-    assert.deepEqual(viewport.nestedScroll, {
-      scrollForward: 'NestedScrollMode.SELF_FIRST', scrollBackward: 'NestedScrollMode.SELF_FIRST',
-    });
-    assert.ok(nodes.some(node => node.type === 'Stack' && node.height === 282));
+    assert.equal(nodes.filter(node => node.type === 'Scroll').length, 0,
+      'chapter list must not hide its twenty rows behind a four-row inner scroll');
+    assert.ok(nodes.some(node => node.type === 'Stack' &&
+      node.height === (count > 0 ? 50 + 58 * Math.min(count, 20) : 282)));
+    const directory = nodes.find(node => node.width === 94 && node.height === 44);
+    assert.equal(directory.enabled, true);
+    directory.onClick();
+    assert.equal(directories, 1,
+      'actual full-directory hit target forwards only the directory intent');
+    assert.deepEqual(selected, []);
     const rows = nodes.filter(node => node.type === 'Row' && node.height === 58 && node.onClick);
     assert.equal(rows.length, Math.min(count, 20));
     if (rows.length) {
       rows.at(-1).onClick();
-      assert.deepEqual(selected, [Math.min(count, 20) - 1]);
+      assert.deepEqual(selected, [toc[Math.min(count, 20) - 1].index],
+        'preview keeps sparse Core indices instead of reindexing display rows');
+      rows[1].onClick();
+      assert.equal(selected.length,1,'volume heading remains visible without a chapter jump');
     }
+    owner.removing=true;owner.replay();directory.onClick();
+    assert.equal(directory.enabled,false);assert.equal(directories,1);
+    if(rows.length){rows[0].onClick();assert.equal(selected.length,1);}
   }
 });
 for (const scheme of ['day', 'night']) {
@@ -182,13 +209,14 @@ check('missing synopsis is explained without contaminating the metadata projecti
 });
 for (const [message, reason, expected] of [['', '', '暂无章节信息'], ['正在读取本地目录…', '', '正在读取本地目录…'], ['', '目录读取失败，请重试', '目录读取失败，请重试']]) {
   check(`empty chapters expose status: ${expected}`, () => {
-    const names = ['chapterSection', 'chapterRow'];
+    const names = ['chapterSection', 'chapterRow', 'chapterSectionHeight'];
     if (detailSource.includes('private chapterEmptyMessage(')) names.push('chapterEmptyMessage');
     const { owner } = createReaderBuilderProbe(detailSource, names, { CHAPTER_SECTION_HEIGHT: 282, ButtonType: { Normal: 'Normal' } });
     Object.assign(owner, { appThemeScheme: 'day', toc: [], loadingMessage: message, readingEnabled: false, readingBlockedReason: reason,
-      visibleToc: () => [], contentWidth: () => 326, readingActionsReady: () => false });
+      visibleToc: () => [], contentWidth: () => 326 });
     owner.chapterSection(); assert.ok(texts(owner).some(n => n.create === expected));
-    assert.equal([...owner.nodes.values()].find(n => n.width === 94 && n.height === 44).enabled, false);
+    assert.equal([...owner.nodes.values()].find(n => n.width === 94 && n.height === 44).enabled, true,
+      'empty or failed catalog can still enter the directory recovery surface');
   });
 }
 const sourcePage = read('source/SourceManagementPage.ets');

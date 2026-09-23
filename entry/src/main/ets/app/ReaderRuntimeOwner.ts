@@ -1,8 +1,9 @@
+import { supplyBundledSources } from './IncrementalBundledSourceSupply';
 import { BookAcquisitionCoordinator } from './BookAcquisitionCoordinator';
 import common from '@ohos.app.ability.common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
-  createReaderCoreRuntime,
+  createReaderCoreRuntimeAsync,
   type JsonObject,
   type ReaderCoreResultEvent,
   type ReaderCoreRuntime,
@@ -16,7 +17,7 @@ import {
   type PendingLocalImportFinalize,
   ReaderHostRegistry,
 } from './ReaderHostRegistry';
-import { errorMessageOf } from './ErrorMessage';
+import { errorMessageOf, httpResponseFailureSummary } from './ErrorMessage';
 import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
 import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
@@ -43,6 +44,10 @@ import {
 import { image } from '@kit.ImageKit';
 import { ReaderAppearanceStore } from '../features/reading/ReaderAppearanceStore';
 import { ReaderAppearancePreferences } from './ReaderAppearancePreferences';
+import { ReadingEntryPreparation } from '../features/reading/ReadingEntryPreparation';
+import { releaseReadingEntryMemory } from '../features/reading/ReadingEntryHandoff';
+import { ReaderPreparationNetworkHost } from './ReaderPreparationNetworkHost';
+import { ReaderStartupTrace } from './ReaderStartupTrace';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -56,7 +61,7 @@ const PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS = 5000;
 const LOG_DOMAIN = 0x5244;
 const BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection.json';
 // BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
-const BUNDLED_RAW_FILE_SHA256 = '0efc24aa6e9c4fe393ee0aa53fc5f72adf1e6ec6d47844d25c268a2a6623c58f';
+const BUNDLED_RAW_FILE_SHA256 = '40f4a666bd0ba70b4ff846ad2aa93519eb4fed04ebad080114964453bd4d4b68';
 // END bundled-source-integrity
 
 type CoreBuildIdentity = {
@@ -98,15 +103,29 @@ export class ReaderRuntimeOwner {
   private closeTask: Promise<void> | undefined = undefined;
   /** Background source seeding never gates page availability. */
   private sourceSupplyTask: Promise<void> = Promise.resolve();
+  private importFinalizeTask: Promise<void> = Promise.resolve();
   private state: RuntimeState = 'new';
+  private coreCapabilities: Set<string> = new Set<string>();
+
+  supportsCoreCapability(capability: string): boolean { return this.coreCapabilities.has(capability); }
   private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
+  private entryPreparations: ReadingEntryPreparation | undefined = undefined;
+  private preparationNetwork: ReaderPreparationNetworkHost | undefined;
+  private preparationWakeTimer: number = -1;
+  private preparationForeground: boolean = false;
+  private preparationCatalogAllowed: boolean = false;
+  private preparationIntentEpoch: number = 0;
   /** Number of live UIAbility instances sharing this process runtime. */
   private abilityLeases: number = 0;
   /** A successor never starts platform hosts before its predecessor is closed. */
   private readonly predecessorClose: Promise<void>;
+  /** Fixed at process-owner construction; never a persisted user setting. */
+  private readonly optionalEntryMemoryEnabled: boolean;
 
-  private constructor(context: common.UIAbilityContext, predecessorClose: Promise<void> = Promise.resolve()) {
+  private constructor(context: common.UIAbilityContext, predecessorClose: Promise<void> = Promise.resolve(),
+    disableOptionalEntryMemory: boolean = false) {
     this.predecessorClose = predecessorClose;
+    this.optionalEntryMemoryEnabled = !disableOptionalEntryMemory;
     this.host = new ReaderHostRegistry(context);
     this.ttsHost = new HarmonyTtsHostRouter(
       new HarmonySystemTtsHost(),
@@ -119,11 +138,12 @@ export class ReaderRuntimeOwner {
     ReadingBodyImageHost.setDisplayCacheDir(context.cacheDir);
   }
 
-  static install(context: common.UIAbilityContext): ReaderRuntimeOwner {
+  static install(context: common.UIAbilityContext, disableOptionalEntryMemory: boolean = false): ReaderRuntimeOwner {
     const current = ReaderRuntimeOwner.instance;
     if (current === undefined || current.state === 'closing' || current.state === 'closed') {
       const predecessorClose = current?.closeTask ?? Promise.resolve();
-      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose);
+      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory);
+      if (disableOptionalEntryMemory) ReaderRuntimeOwner.instance.releaseOptionalReadingEntryMemory();
     }
     ReaderRuntimeOwner.instance.abilityLeases += 1;
     return ReaderRuntimeOwner.instance;
@@ -171,6 +191,7 @@ export class ReaderRuntimeOwner {
       this.bookCoordinator = new BookAcquisitionCoordinator(
         (method: string, params: JsonObject, options: RequestOptions): Promise<ReaderCoreResultEvent> =>
           this.requestDirect(method, params, options),
+        (capability: string): boolean => this.supportsCoreCapability(capability),
       );
     }
     return this.bookCoordinator;
@@ -180,21 +201,133 @@ export class ReaderRuntimeOwner {
     return this.bookAcquisitions().request(method, params, options);
   }
 
-  private async requestDirect(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
-    await this.start();
+  readPreparedEntry(params: JsonObject): JsonObject {
+    const trace = ReaderStartupTrace.current();
+    const entryId = trace?.currentEntryId() ?? 0;
+    const traceStartedAt = trace?.begin('reader.prepared-storage', entryId) ?? -1;
     const runtime = this.runtime;
-    if (runtime === undefined) {
-      throw new Error('Reader Core runtime did not become ready');
+    if (this.state !== 'ready' || runtime === undefined ||
+      !this.supportsCoreCapability('reading.entry.firstFrame.v1')) {
+      trace?.end('reader.prepared-storage', traceStartedAt, 'unavailable.runtimeClosed', entryId);
+      return { kind: 'unavailable', sourceId: params['sourceId'], bookId: params['bookId'], reason: 'runtimeClosed' };
     }
-    if (options.timeoutMs !== undefined) {
-      return runtime.request(method, params, options);
+    // This facade must not start the runtime, join the request queue, wait on
+    // an acquisition, or opportunistically populate optional entry memory.
+    const started = Date.now();
+    let result: JsonObject;
+    try {
+      result = runtime.readPreparedEntry(params);
+    } catch (error) {
+      trace?.end('reader.prepared-storage', traceStartedAt, 'failed', entryId);
+      throw error;
     }
-    return runtime.request(method, params, {
-      timeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS,
-      pollMs: options.pollMs,
-      hostRequest: options.hostRequest,
-      shouldCancel: options.shouldCancel,
-    });
+    trace?.end('reader.prepared-storage', traceStartedAt,
+      `${String(result['kind'] ?? '')}.${String(result['reason'] ?? '')}`, entryId);
+    hilog.info(LOG_DOMAIN, 'Reader', 'PERF reader-entry prepared-storage kind=%{public}s reason=%{public}s elapsedMs=%{public}d',
+      String(result['kind'] ?? ''), String(result['reason'] ?? ''), Math.max(0, Date.now() - started));
+    return result;
+  }
+
+  readingEntryPreparations(): ReadingEntryPreparation {
+    if (this.entryPreparations === undefined)
+      this.entryPreparations = new ReadingEntryPreparation(this, this.optionalEntryMemoryEnabled);
+    return this.entryPreparations;
+  }
+
+  optionalReadingEntryMemoryEnabled(): boolean { return this.optionalEntryMemoryEnabled; }
+
+  /** Called by the app shell; no disk or network work runs in this UI turn. */
+  setReadingPreparationContext(foreground: boolean, catalogAllowed: boolean): void {
+    if (this.state === 'closing' || this.state === 'closed') return;
+    const changed = this.preparationForeground !== foreground;
+    this.preparationForeground = foreground;
+    this.preparationCatalogAllowed = catalogAllowed;
+    if (this.preparationNetwork === undefined) {
+      this.preparationNetwork = new ReaderPreparationNetworkHost((): void => {
+        this.bookCoordinator?.visibilityChanged();
+        this.wakeReadingPreparations();
+      });
+      this.preparationNetwork.setForeground(foreground);
+    } else if (changed) this.preparationNetwork.setForeground(foreground);
+    this.bookCoordinator?.visibilityChanged();
+    this.wakeReadingPreparations();
+  }
+
+  /** A real user open authorizes this book's current/nearby missing chapters.
+   * The intent write is deferred; it never gates the synchronous first page. */
+  noteReadingPreparationIntent(sourceId: string, bookId: string): void {
+    if (sourceId === 'local' || !this.supportsCoreCapability('reading.preparation.v1')) return;
+    const epoch = this.preparationIntentEpoch;
+    setTimeout((): void => {
+      if (this.state !== 'ready' || epoch !== this.preparationIntentEpoch) return;
+      void this.request('reading.preparation', { action: 'begin', sourceId, bookId, reason: 'read' })
+        .then((): void => this.wakeReadingPreparations())
+        .catch((error: Error): void => {
+          hilog.warn(LOG_DOMAIN, 'Reader', 'Reading preparation intent: %{private}s', error.message);
+        });
+    }, 0);
+  }
+
+  private wakeReadingPreparations(): void {
+    if (this.state !== 'ready' || !this.preparationForeground || this.preparationWakeTimer >= 0 ||
+      !this.supportsCoreCapability('reading.preparation.v1')) return;
+    this.preparationWakeTimer = setTimeout((): void => {
+      this.preparationWakeTimer = -1;
+      const allowed = (): boolean => this.state === 'ready' && this.preparationForeground &&
+        this.preparationNetwork?.allowed() === true;
+      if (!allowed()) return;
+      void this.bookAcquisitions().resumeReadingPreparations(allowed,
+        (): boolean => this.preparationCatalogAllowed).catch((error: Error): void => {
+          if (this.state === 'ready') hilog.warn(LOG_DOMAIN, 'Reader', 'Shelf preparation: %{private}s', error.message);
+        });
+    }, 250);
+  }
+
+  releaseOptionalReadingEntryMemory(): void {
+    this.entryPreparations?.releaseOptionalMemory();
+    releaseReadingEntryMemory(this);
+  }
+
+  captureReadingContentValidity(sourceId: string, bookId: string): () => boolean {
+    const valid = this.readingEntryPreparations().captureContentValidity(sourceId, bookId);
+    return (): boolean => this.state !== 'closing' && this.state !== 'closed' && valid();
+  }
+
+  private async requestDirect(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
+    if (method === 'cache.clear' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
+      method === 'source.delete' || method === 'source.switch.begin' || method === 'source.switch.commit' ||
+      method === 'source.switch.abort' || method === 'runtime.storage.apply' || method === 'runtime.storage.restore')
+      this.preparationIntentEpoch += 1;
+    const preparations = this.readingEntryPreparations();
+    const invalidatesPreparation = preparations.beginRequest(method, params);
+    try {
+      await this.start();
+      const runtime = this.runtime;
+      if (runtime === undefined) {
+        throw new Error('Reader Core runtime did not become ready');
+      }
+      if (options.timeoutMs !== undefined) {
+        return await runtime.request(method, params, options);
+      }
+      return await runtime.request(method, params, {
+        timeoutMs: DEFAULT_CORE_REQUEST_TIMEOUT_MS,
+        pollMs: options.pollMs,
+        hostRequest: options.hostRequest,
+        shouldCancel: options.shouldCancel,
+      });
+    } catch (error) {
+      const responseFailure = httpResponseFailureSummary(error);
+      if (responseFailure !== undefined)
+        // This helper admits only stage, hostname and status; URL paths,
+        // credentials, query strings and response bodies never reach this log.
+        hilog.warn(LOG_DOMAIN, 'Reader', 'Source response rejected: %{public}s', responseFailure);
+      throw error;
+    } finally {
+      if (invalidatesPreparation) preparations.finishRequest(method, params);
+      if (method === 'reading.progress.update' || method === 'bookshelf.add' || method === 'source.update' ||
+        method === 'source.supply' || method === 'replace.persist' || method === 'replace.undo' ||
+        method === 'reader.chinese-conversion.put') this.wakeReadingPreparations();
+    }
   }
 
   /**
@@ -254,13 +387,14 @@ export class ReaderRuntimeOwner {
       imageUrl,
       baseUrl,
     );
-    const cachedBytes = await this.readingImageDiskCache.loadResource(identity);
+    const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId, isCurrent);
+    const cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent);
     if (cachedBytes !== undefined) {
       try {
-        const cached = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, isCurrent);
-        return this.admitReadingImage(cached, isCurrent);
+        const cached = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, cacheCurrent);
+        return this.admitReadingImage(cached, cacheCurrent);
       } catch (error) {
-        await this.readingImageDiskCache.removeResource(identity);
+        await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
         if (!allowNetwork) {
           throw error;
         }
@@ -269,17 +403,17 @@ export class ReaderRuntimeOwner {
     if (!allowNetwork) {
       throw new Error('REMOTE_READING_IMAGE_NOT_DOWNLOADED');
     }
-    const request = await this.resolveReadingImageRequest(sourceId, imageUrl, identity.baseUrl, isCurrent);
-    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, isCurrent);
-    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, isCurrent);
+    const request = await this.resolveReadingImageRequest(sourceId, imageUrl, identity.baseUrl, cacheCurrent);
+    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, cacheCurrent);
+    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, cacheCurrent);
     // The display resource is already decoded and actionable. Persistent
     // cache maintenance must not keep first paint waiting for a second disk
     // write; explicit offline prefetch retains its strict awaited path below.
-    void this.readingImageDiskCache.storeResource(identity, bytes)
+    void this.readingImageDiskCache.storeResource(identity, bytes, cacheCurrent)
       .catch((error: Error): void => {
         hilog.error(LOG_DOMAIN, 'Reader', 'Reader body image cache write failed: %{private}s', error.message);
       });
-    return this.admitReadingImage(payload, isCurrent);
+    return this.admitReadingImage(payload, cacheCurrent);
   }
 
   /** Persist and decode-validate one image before an offline chapter completes. */
@@ -288,25 +422,26 @@ export class ReaderRuntimeOwner {
     isCurrent?: () => boolean,
   ): Promise<void> {
     this.assertReadingImageCurrent(isCurrent);
-    const cachedBytes = await this.readingImageDiskCache.loadResource(identity);
+    const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId, isCurrent);
+    const cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent);
     if (cachedBytes !== undefined) {
       try {
-        await ReadingBodyImageHost.instance.validateBytes(cachedBytes, isCurrent);
+        await ReadingBodyImageHost.instance.validateBytes(cachedBytes, cacheCurrent);
         return;
       } catch (_) {
-        await this.readingImageDiskCache.removeResource(identity);
+        await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
       }
     }
     const request = await this.resolveReadingImageRequest(
       identity.sourceId,
       identity.imageUrl,
       identity.baseUrl,
-      isCurrent,
+      cacheCurrent,
     );
-    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, isCurrent);
-    await ReadingBodyImageHost.instance.validateBytes(bytes, isCurrent);
-    this.assertReadingImageCurrent(isCurrent);
-    await this.readingImageDiskCache.storeResource(identity, bytes);
+    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, cacheCurrent);
+    await ReadingBodyImageHost.instance.validateBytes(bytes, cacheCurrent);
+    this.assertReadingImageCurrent(cacheCurrent);
+    await this.readingImageDiskCache.storeResource(identity, bytes, cacheCurrent);
   }
 
   async markOfflineImageChapterComplete(
@@ -438,6 +573,13 @@ export class ReaderRuntimeOwner {
     return this.host.selectLocalBookInputs();
   }
 
+  async prepareSystemLocalBookInput(uri: string): Promise<LocalBookPreparation> {
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host is no longer available after teardown');
+    }
+    return this.host.prepareSystemLocalBookInput(uri);
+  }
+
   async selectBookSourceJson(): Promise<BookSourceJsonSelection | undefined> {
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader Host is no longer available after teardown');
@@ -492,6 +634,10 @@ export class ReaderRuntimeOwner {
     return this.host.commitLocalBookInput(input);
   }
 
+  async retainedLocalBookSourcePath(bookId: string, isCurrent: () => boolean): Promise<string | undefined> {
+    return this.host.retainedLocalBookSourcePath(bookId, isCurrent);
+  }
+
   async discardLocalBookInput(input: LocalBookInput): Promise<void> {
     return this.host.discardLocalBookInput(input);
   }
@@ -517,6 +663,11 @@ export class ReaderRuntimeOwner {
   }
 
   async close(): Promise<void> {
+    this.preparationForeground = false;
+    this.preparationNetwork?.close();
+    if (this.preparationWakeTimer >= 0) clearTimeout(this.preparationWakeTimer);
+    this.preparationWakeTimer = -1;
+    this.entryPreparations?.close();
     this.bookCoordinator?.close();
     if (this.closeTask !== undefined) {
       return this.closeTask;
@@ -525,6 +676,7 @@ export class ReaderRuntimeOwner {
       return;
     }
     this.state = 'closing';
+    this.readingImageDiskCache.close();
     this.closeTask = this.closeRuntime();
     return this.closeTask;
   }
@@ -562,7 +714,7 @@ export class ReaderRuntimeOwner {
       }
       // `close()` sets state=closing first, so the supply loop stops after its
       // current local Core request. Wait for that request before closing Core.
-      await this.sourceSupplyTask;
+      await Promise.all([this.sourceSupplyTask, this.importFinalizeTask]);
       // A foreground/background flush that began before `closing` must finish
       // before the runtime is released. Later flush calls see `closing` and
       // become no-ops, so they cannot race this final flush/close pair.
@@ -581,6 +733,7 @@ export class ReaderRuntimeOwner {
         try {
           await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
         } finally {
+          this.host?.setResponseAssetBridge(undefined);
           runtime.close();
         }
       }
@@ -596,7 +749,10 @@ export class ReaderRuntimeOwner {
   }
 
   private async startAfterPredecessor(): Promise<void> {
+    const trace = ReaderStartupTrace.current();
+    const startedAt = trace?.begin('startup.predecessor-close') ?? -1;
     await this.predecessorClose;
+    trace?.end('startup.predecessor-close', startedAt);
     if (this.state !== 'starting') {
       throw new Error('Reader Core runtime was closed before successor startup');
     }
@@ -604,12 +760,29 @@ export class ReaderRuntimeOwner {
   }
 
   private async startRuntime(): Promise<void> {
-    const runtime = createReaderCoreRuntime({
-      dataDirectory: `${this.host.getContext().filesDir}/reader-core`,
-    });
-    runtime.setCapabilityRouter(this.host.createCapabilityRouter());
+    // Host file-existence checks are independent of native database open and
+    // capability negotiation. Start them together, but consume the result
+    // before the existing restore/source-switch/ready barrier.
+    const legacyMigration = ReaderStartupTrace.measure('startup.legacy-marker',
+      (): Promise<boolean> => this.host.needsLegacySnapshotMigration());
+    // Native open can fail first. Keep an early marker failure observed while
+    // retaining its original rejection for the admission barrier below.
+    void legacyMigration.catch((): void => {});
+    let runtime: ReaderCoreRuntime;
     try {
-      await runtime.request('runtime.setHostCapabilities', {
+      runtime = await ReaderStartupTrace.measure('startup.native-open', (): Promise<ReaderCoreRuntime> => createReaderCoreRuntimeAsync({
+        dataDirectory: `${this.host.getContext().filesDir}/reader-core`,
+      }, (): boolean => this.state === 'starting'));
+    } catch (error) {
+      if (this.state === 'starting') this.state = 'new';
+      throw error;
+    }
+    // The host may stream negotiated binary responses into Core-owned assets;
+    // the bridge is installed only after the runtime owns its native handle.
+    try {
+      this.host.setResponseAssetBridge(runtime.assetBridge());
+      runtime.setCapabilityRouter(this.host.createCapabilityRouter());
+      await ReaderStartupTrace.measure('startup.host-capabilities', (): Promise<ReaderCoreResultEvent> => runtime.request('runtime.setHostCapabilities', {
         capabilities: [
           'persistence.get',
           'persistence.put',
@@ -619,31 +792,38 @@ export class ReaderRuntimeOwner {
           'webview.evaluateJavaScript',
         ],
         platform: 'harmonyos',
-      }, { timeoutMs: 5000 });
+      }, { timeoutMs: 5000 }));
       // Build identity and the Host migration marker are independent reads.
       // Settle them together before the optional restore barrier.
       const startupReads = await Promise.all([
-        runtime.request('core.info', {}, { timeoutMs: 5000 }),
-        this.host.needsLegacySnapshotMigration(),
+        ReaderStartupTrace.measure('startup.core-info', (): Promise<ReaderCoreResultEvent> =>
+          runtime.request('core.info', {}, { timeoutMs: 5000 })),
+        legacyMigration,
       ]);
       const coreInfo = startupReads[0];
+      const capabilities = coreInfo.data['capabilities'];
+      this.coreCapabilities.clear();
+      if (Array.isArray(capabilities)) {
+        for (const capability of capabilities) {
+          if (typeof capability === 'string') this.coreCapabilities.add(capability);
+        }
+      }
       const buildIdentity = this.requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
       hilog.info(LOG_DOMAIN, 'Reader', 'Core build identity: %{public}s', JSON.stringify(buildIdentity));
       if (startupReads[1]) {
-        await runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 });
-        await this.host.markLegacySnapshotMigrated();
+        await ReaderStartupTrace.measure('startup.legacy-restore', (): Promise<ReaderCoreResultEvent> =>
+          runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 }));
+        await ReaderStartupTrace.measure('startup.legacy-marker-write', (): Promise<void> =>
+          this.host.markLegacySnapshotMigrated());
       }
       // A source switch is not admitted to the restored route until its first
       // canonical target progress atomically finalizes the Core transaction.
       // Recover before publishing this runtime so a cold-start page can never
       // observe the tentative shelf identity or retain a UI-owned journal.
-      const recovery = await runtime.request('source.switch.recover', {}, { timeoutMs: 30000 });
+      const recovery = await ReaderStartupTrace.measure('startup.source-switch-recovery', (): Promise<ReaderCoreResultEvent> =>
+        runtime.request('source.switch.recover', {}, { timeoutMs: 30000 }));
       const recoveredCount = this.requireSourceSwitchRecoveryCount(recovery.data['recovered']);
       hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
-      // A shelf commit may have succeeded while the UI lost the finalize
-      // reply. Drain the bounded Host queue before exposing this runtime so a
-      // cold-start page never inherits an unconsumed Core journal.
-      await this.recoverPendingLocalImportFinalizes(runtime);
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
       if (this.state !== 'starting') {
@@ -651,6 +831,8 @@ export class ReaderRuntimeOwner {
       }
       this.runtime = runtime;
       this.state = 'ready';
+      ReaderStartupTrace.current()?.mark('startup.runtime-published', 'ready');
+      this.scheduleImportFinalizeCleanup(runtime);
       // A 1,951-record collection must not hold the first frame or turn a
       // single malformed/dead source into an application startup failure.
       this.sourceSupplyTask = this.installBundledBookSourceCollection(runtime)
@@ -667,6 +849,7 @@ export class ReaderRuntimeOwner {
             errorMessageOf(error));
         });
     } catch (error) {
+      this.host.setResponseAssetBridge(undefined);
       try {
         runtime.close();
       } catch (_) {
@@ -690,6 +873,18 @@ export class ReaderRuntimeOwner {
   private async installBundledBookSourceCollection(
     runtime: ReaderCoreRuntime,
   ): Promise<BundledSourceInstallSummary> {
+    if (this.supportsCoreCapability('source.supply.v1')) {
+      return supplyBundledSources({
+        digest: BUNDLED_RAW_FILE_SHA256,
+        read: (file: string): Promise<string> => this.host.readBundledRawFileText(file),
+        request: (params: JsonObject): Promise<ReaderCoreResultEvent> => this.request('source.supply', params, { timeoutMs: 30000 }),
+        legacyIds: async (): Promise<string[]> => (await BundledSourceLedger.load(this.host.getContext())).persistedSourceIds(),
+        current: (): boolean => this.state === 'ready',
+        failure: (sourceId: string, error: Error): void => {
+          hilog.error(LOG_DOMAIN, 'Reader', 'Incremental bundled source failed: %{private}s %{private}s', sourceId, errorMessageOf(error));
+        },
+      });
+    }
     const document = await this.host.readBundledRawFileText(BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE);
     const fileDigest = await sha256Hex(document);
     if (fileDigest !== BUNDLED_RAW_FILE_SHA256) {
@@ -735,7 +930,7 @@ export class ReaderRuntimeOwner {
       try {
         const existing = existingSources.get(sourceId);
         if (existing === undefined) {
-          await this.importBundledSource(runtime, sourceId, bundled);
+          await this.importBundledSource(sourceId, bundled);
           installedCount += 1;
           processedCount += 1;
           managedCurrent.push(bundled);
@@ -772,8 +967,9 @@ export class ReaderRuntimeOwner {
         delete importedSource['readerBuiltinWithdrawn'];
         delete importedSource['readerTestBuiltinWithdrawn'];
         const metadataCorrection = (bundled['provenance'] as JsonObject | undefined)?.['metadataCorrection'] as JsonObject | undefined;
-        if (metadataCorrection?.['preserveExploreRules'] === true) {
-          // This metadata-only revision does not own discovery rules. They are
+        const contentCorrection = (bundled['provenance'] as JsonObject | undefined)?.['contentCorrection'] as JsonObject | undefined;
+        if (metadataCorrection?.['preserveExploreRules'] === true || contentCorrection?.['preserveExploreRules'] === true) {
+          // These targeted revisions do not own discovery rules. They are
           // outside the legacy fingerprint, so retain existing edits/deletions;
           // a future discovery upgrade requires a separate explicit migration.
           for (const field of ['exploreUrl', 'ruleExplore']) {
@@ -789,7 +985,7 @@ export class ReaderRuntimeOwner {
             importedSource['enabledExplore'] = existing['enabledExplore'];
           }
         }
-        await this.importBundledSource(runtime, sourceId, importedSource);
+        await this.importBundledSource(sourceId, importedSource);
         installedCount += 1;
         processedCount += 1;
         managedCurrent.push(bundled);
@@ -832,7 +1028,7 @@ export class ReaderRuntimeOwner {
       if (!userModified) {
         retired['enabled'] = false;
       }
-      await this.importBundledSource(runtime, entry.sourceId, retired);
+      await this.importBundledSource(entry.sourceId, retired);
       hilog.warn(LOG_DOMAIN, 'Reader',
         'Bundled source withdrawn from collection, marked retired (enabled=%{private}s): %{private}s',
         String(retired['enabled']), entry.sourceId);
@@ -850,11 +1046,12 @@ export class ReaderRuntimeOwner {
   }
 
   private async importBundledSource(
-    runtime: ReaderCoreRuntime,
     sourceId: string,
     bookSource: JsonObject,
   ): Promise<void> {
-    const imported = await runtime.request('source.import', {
+    // Supply runs after ready and can overlap the shelf. Use the same source
+    // registry/projection and reading-entry fences as a user source import.
+    const imported = await this.request('source.import', {
       sourceId,
       bookSource,
     }, { timeoutMs: 30000 });
@@ -953,6 +1150,19 @@ export class ReaderRuntimeOwner {
     return sources;
   }
 
+  private scheduleImportFinalizeCleanup(runtime: ReaderCoreRuntime): void {
+    // These receipts already confirmed the library commit. Removing rollback
+    // journals is cleanup; it does not own the first readable storage state.
+    this.importFinalizeTask = new Promise<void>((resolve): void => {
+      setTimeout(resolve, 0);
+    }).then(async (): Promise<void> => {
+      if (this.state !== 'ready') return;
+      await this.recoverPendingLocalImportFinalizes(runtime);
+    }).catch((error: Error): void => {
+      hilog.warn(LOG_DOMAIN, 'Reader', 'Import finalize cleanup deferred: %{private}s', errorMessageOf(error));
+    });
+  }
+
   private async recoverPendingLocalImportFinalizes(runtime: ReaderCoreRuntime): Promise<void> {
     let pending: PendingLocalImportFinalize[];
     try {
@@ -966,6 +1176,8 @@ export class ReaderRuntimeOwner {
     let finalized = 0;
     let deferred = 0;
     for (const entry of pending) {
+      // A close leaves undispatched receipts durable for the next owner.
+      if (this.state !== 'ready') break;
       try {
         const result = await runtime.request(
           'import.finalize',

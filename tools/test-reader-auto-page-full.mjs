@@ -181,33 +181,15 @@ for (const callback of ['onAutoPageToggle', 'onAutoPageStop', 'onPreviousChapter
 }
 
 const experience = await readFile(new URL('ets/features/reading/LocalReadingExperience.ets', root), 'utf8');
-assert.match(experience, /autoPageFullConfiguration: ReaderAutoPageFullConfiguration/);
-assert.match(experience, /private armAutoPageSessionTimer\(resetDeadline: boolean\): void/);
-assert.match(experience, /private onAutoPageSessionTimer\(generation: number\): void/);
-assert.match(experience, /this\.autoPageSessionRemainingSeconds <= 0[\s\S]*stopReaderAutoPage/);
+assert.match(experience, /private automaticReadingConfiguration\(\)/);
+assert.match(experience, /this\.autoPageCoordinator\.configurationAt\(this\.autoPageRevision\)/);
 assert.match(experience, /onAutoPageFollowHighlightChange:/);
-const pauseOwner = experience.match(
-  /private pauseAutoPage\(reason: ReaderAutoPagePauseReason\): void \{([\s\S]*?)\n  \}\n\n  private captureAutoPageRemaining/,
-);
-assert.ok(pauseOwner, 'the reading owner pause path must exist');
-assert.match(pauseOwner[1], /captureAutoPageSessionRemaining\(\)/);
-assert.match(pauseOwner[1], /configuredSessionSeconds > 0 && this\.autoPageSessionRemainingSeconds <= 0/);
-assert.match(pauseOwner[1], /stopReaderAutoPage\(this\.autoPageState, 'manual'\)[\s\S]*return/,
-  'an expiry racing background/touch pause must stop instead of becoming resumable');
-assert.match(experience, /pauseAutoPageForInteraction\(\): void \{\s*this\.pauseAutoPage\('touch'\)/,
-  'reading touch must use the guarded owner pause path');
-assert.match(experience, /onAppForegroundChanged\(\): void \{[\s\S]*this\.pauseAutoPage\('background'\)/,
-  'backgrounding must use the guarded owner pause path');
-const sessionArm = experience.match(
-  /private armAutoPageSessionTimer\(resetDeadline: boolean\): void \{([\s\S]*?)\n  \}\n\n  private onAutoPageSessionTimer/,
-);
-assert.ok(sessionArm, 'the session timer owner path must exist');
-assert.match(sessionArm[1], /if \(resetDeadline\) \{\s*this\.autoPageSessionRemainingSeconds = configuredSeconds/,
-  'only a new session may reset the configured duration');
-assert.match(sessionArm[1], /else if \(this\.autoPageSessionRemainingSeconds <= 0\)[\s\S]*stopReaderAutoPage[\s\S]*return/,
-  'resuming with zero remaining time must stop and must not revive the timer');
-assert.doesNotMatch(sessionArm[1], /resetDeadline \|\| this\.autoPageSessionRemainingSeconds <= 0/,
-  'an expired resumed session must never share the new-session reset branch');
+assert.match(experience, /pauseAutoPageForInteraction\(\): void \{\s*this\.pauseAutoPage\('touch'\)/);
+assert.match(experience, /onAppForegroundChanged\(\): void \{[\s\S]*this\.pauseAutoPage\('background'\)/);
+assert.match(experience, /private pauseAutoPage\(reason: ReaderAutoPagePauseReason\): void \{\s*this\.autoPageCoordinator\.pause\(reason\)/);
+assert.doesNotMatch(experience, /private autoPage(?:Timer|DeadlineMs|SessionTimer|SessionRemainingSeconds):/,
+  'the page must not retain a second automatic reading timer owner');
+await import('./test-reader-auto-page-coordinator.mjs');
 
 for (const asset of [
   'reader_auto_full_header.svg',

@@ -14,15 +14,15 @@ const results = [];
 async function check(name, fn) { try { await fn(); results.push({name,status:'PASS'}); }
   catch (e) { results.push({name,status:'FAIL',message:e.message}); } }
 function fixture(initial = []) {
-  const requests = []; let owner = {};
+  const requests = []; let owner = { setReadingPreparationContext() {} };
   const Host = productionMotionMethods(file('pages/Index.ets'),
     ['applyBookshelfState','sourceDisplayName','hydrateShelfSourceNames','copyShelfBookWithSourceName','readingDetailForShelf'], {
       LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
-      SourceGateway: class { loadSources() { const request = pending(); requests.push(request); return request.promise; } },
+      SourceGateway: class { loadSourcesForIds() { const request = pending(); requests.push(request); return request.promise; } },
     });
   const host = Object.assign(new Host(), { searchPublication:new SearchPublication(),searchPublicationRevision:0,shelfBooks: initial, bookshelfLoadGeneration: 1, bookshelfSourceNameRequest: 0,
     searchSources: [], sourceSources: [], sourceToolsSnapshot: {sources: []}, scheduleBookshelfBackgroundRefresh() {} });
-  return {host, requests, changeOwner: () => { owner = {}; }, apply: books => host.applyBookshelfState({kind:'populated',shelf:{books,total:books.length},continueReading:undefined})};
+  return {host, requests, changeOwner: () => { owner = { setReadingPreparationContext() {} }; }, apply: books => host.applyBookshelfState({kind:'populated',shelf:{books,total:books.length},continueReading:undefined})};
 }
 await check('missing/invalid name is unknown, not evidence of source removal', () => {
   for (const name of [undefined, '', 'source-a', 'https://example.test', 'www.example.test'])
@@ -65,10 +65,11 @@ await check('Core deletion admitted while name lookup is pending is never resurr
   const f = fixture([book('有效名称')]); f.host.hydrateShelfSourceNames(1);
   f.apply([book(removed)]);
   f.requests[0].resolve([sourceA('过期列表名称')]); await tick();
-  f.requests[1].resolve([sourceA('过期内存名称')]); await tick();
+  assert.equal(f.requests.length,1,'confirmed deletion needs no registry lookup');
   assert.equal(f.host.shelfBooks[0].sourceName, removed);
   // Reimport is admitted through a fresh Core shelf result, not by guessing.
-  f.apply([book('重新导入名称')]); f.requests[2].resolve([sourceA('重新导入名称')]); await tick();
+  f.apply([book('重新导入名称')]); await tick();
+  assert.equal(f.requests.length,1,'fresh Core name needs no registry lookup');
   assert.equal(f.host.shelfBooks[0].sourceName, '重新导入名称');
 });
 await check('runtime/route-generation changes reject old results without borrowing another identity', async () => {

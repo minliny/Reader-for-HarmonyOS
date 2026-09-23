@@ -202,14 +202,14 @@ assert.match(currentMutation[0], /ruleId === this\.replaceMutationActiveRuleId/,
   'an old book/session/rule response must not own the current reader');
 
 const reloadOwner = experience.match(
-  /private reloadCurrentPageAfterReplacePersist\(lifecycleToken: number, bookId: string\): void \{([\s\S]*?)\n  private refreshReaderBrightness/,
+  /private reloadCurrentPageAfterReplacePersist\(lifecycleToken: number, bookId: string\): void \{([\s\S]*?)\n  private async persistBeforeContentMutation/,
 );
 assert.ok(reloadOwner, 'post-persist reload owner path must exist');
 assert.match(reloadOwner[1], /!this\.isSessionActive\(lifecycleToken\) \|\| this\.bookId !== bookId/);
 assert.match(reloadOwner[1], /this\.contentMetrics = undefined/);
 assert.match(reloadOwner[1], /this\.paginationIndex\.invalidateBook\(this\.sourceId, this\.bookId\)/);
-assert.match(reloadOwner[1], /this\.selectChapterAnchor\(chapter\.chapterIndex, page\.startScalar, false, true, undefined, -1\)/,
-  'internal rule re-materialization must not claim a control selection and close the panel');
+assert.match(reloadOwner[1], /this\.reloadMigratedContentPosition\(lifecycleToken, bookId\)/,
+  'internal rule re-materialization must re-read the Core migrated anchor');
 assert.doesNotMatch(reloadOwner[1], /this\.phase !== 'ready'/,
   'a page turn racing persist success must not skip metric invalidation and reload');
 assert.ok(reloadOwner[1].indexOf('this.contentMetrics = undefined') <

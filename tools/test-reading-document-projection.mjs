@@ -90,6 +90,7 @@ assert.deepEqual(projected.images, [{
   fileUri: '',
   intrinsicWidth: 0,
   intrinsicHeight: 0,
+  imageWidthBasisPoints: undefined,
   revision: 'pending',
 }]);
 assert.deepEqual(loads, [], 'chapter materialization must not eagerly fetch body images');
@@ -153,3 +154,16 @@ await assert.rejects(
 );
 
 console.log('reading document projection: PASS');
+
+for (const split of [false,true]) {
+ const content='甲😀'.repeat(24000);
+ const blocks=split?Array.from({length:24000},(_,i)=>({kind:'text',text:'甲😀',startScalar:i*2,endScalar:i*2+2})):
+   [{kind:'text',text:content,startScalar:0,endScalar:48000}];
+ let ticks=0;const timer=setInterval(()=>ticks++,0);
+ const result=await materializeReadingDocument({content,blocks},'local',undefined,runtime,()=>true,0,'v');
+ clearInterval(timer);assert.equal(result.content,content);assert.ok(ticks>=4);
+ let current=true;setTimeout(()=>{current=false;},0);
+ await assert.rejects(materializeReadingDocument({content,blocks},'local',undefined,runtime,()=>current,0,'v'),/cancelled/);
+}
+await assert.rejects(materializeReadingDocument({content:'body'},'local',undefined,runtime,()=>false),/cancelled/);
+console.log('PASS document projection yields for one giant block and many small blocks; obsolete scope never publishes');

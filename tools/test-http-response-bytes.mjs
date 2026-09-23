@@ -78,6 +78,28 @@ const empty=await host.requestRedirectChain('https://93.184.216.34/start',host.p
 assert.equal(empty.body,'');assert.equal(empty.status,200);
 console.log('PASS actual redirect chain keeps empty hop Location and rejects private targets before dispatch; empty success survives final response conversion');
 
+// WebDAV pins both scheme and origin. A 307/308 can replay a backup body, so
+// verify the next hop is rejected before creating a second native request.
+for (const [status,location,expected] of [
+ [307,'http://93.184.216.34/downgrade',/HTTPS/],
+ [302,'https://93.184.216.35/other-origin',/cross-origin redirect/],
+]) {
+ response={responseCode:status,result:undefined,header:{location}};
+ const first=requests.length;
+ await assert.rejects(host.requestRedirectChain('https://93.184.216.34/start',host.parseMethod('GET'),{},
+  {kind:'none'},undefined,10,{...deadline(),httpsOnly:true,sameOriginRedirectsOnly:true},null),expected);
+ assert.equal(requests.length,first+1,'WebDAV redirect policy must reject before another native dispatch');
+}
+requestFailure=request=>request.url.endsWith('/moved')
+ ? {responseCode:200,result:new ArrayBuffer(0),header:{}}
+ : {responseCode:302,result:undefined,header:{location:'/moved'}};
+const sameOrigin=await host.requestRedirectChain('https://93.184.216.34/start',host.parseMethod('GET'),{},
+ {kind:'none'},undefined,10,{...deadline(),httpsOnly:true,sameOriginRedirectsOnly:true},null);
+assert.equal(sameOrigin.status,200);
+assert.equal(sameOrigin.finalUrl,'https://93.184.216.34/moved');
+requestFailure=undefined;
+console.log('PASS WebDAV redirect policy: downgrade and foreign origin rejected; same-origin HTTPS redirect admitted');
+
 // Keep errors from the real request-body call site and from the outer cookie
 // path visible without recording raw messages, stack paths, URLs or secrets.
 const payloadOriginal=host.requestPayload;
@@ -185,3 +207,42 @@ assert.equal(logs.filter(v=>v.includes(requestLog)&&v[3]===999).length,0);
 requestFailure=undefined;response={responseCode:200,result:new ArrayBuffer(0),header:{}};
 assert.equal((await host.execute({url:'https://93.184.216.34/next'},1000)).status,200);
 console.log('PASS actual Host -> SDK -> CoreError input -> reading classifier and safe search summary: TLS/23/no-code retain HTTP cause, only known transient codes retry; per-operation association survives repeats, cancellation and later independent failures stay separate');
+
+// AP-005: the public transport runs without a Base64 implementation. Any
+// accidental encode/decode round trip would fail this production-method probe.
+response={responseCode:200,result:payload.buffer,header:{'content-type':'image/png'}};
+const raw=await host.executeBytes({url:'https://93.184.216.34/image'},16);
+assert.deepEqual(raw.bytes,payload);
+assert.equal(raw.bytes.buffer,payload.buffer);
+assert.equal(requests.at(-1).options.maxLimit,16,'consumer budget reaches native network options');
+assert.equal(raw.status,200);
+assert.equal(raw.finalUrl,'https://93.184.216.34/image');
+await assert.rejects(host.executeBytes({url:'https://93.184.216.34/image'},3),/exceeds 3 byte limit/);
+await assert.rejects(host.executeBytes({url:'http://127.0.0.1/image'},16),/private, loopback/);
+await assert.rejects(host.executeBytes({url:'http://93.184.216.34/image',httpsOnly:true},16),/HTTPS/);
+const noDispatch=requests.length;
+await assert.rejects(host.executeBytes({url:'https://93.184.216.34/image'},16,undefined,()=>true),/cancelled/);
+assert.equal(requests.length,noDispatch);
+response={responseCode:200,result:payload.buffer,header:{'content-type':'text/html'}};
+await assert.rejects(host.executeBytes({url:'https://93.184.216.34/image'},16),/binary content type/);
+console.log('PASS raw binary Host: no Base64, same buffer, native/actual limits, private-target, HTTPS, cancellation and MIME protections');
+response={responseCode:200,result:payload.buffer,header:{'content-type':'image/png','content-length':'17'}};
+await assert.rejects(host.executeBytes({url:'https://93.184.216.34/image'},16),/exceeds 16 byte limit/);
+response={responseCode:304,result:undefined,header:{'content-length':'999999999'}};
+assert.equal((await host.executeBytes({url:'https://93.184.216.34/image'},16)).bytes.length,0);
+console.log('PASS declared body size rejects before decode; representation metadata on a bodyless response is preserved');
+
+// Portable online JSON has a smaller document budget than generic source
+// requests. The bound must reach native maxLimit on every request and reject
+// an oversized body before text decoding or Base64 allocation.
+const documentBytes=new TextEncoder().encode('{"ok":true}');
+response={responseCode:200,result:documentBytes.buffer,header:{'content-type':'application/json'}};
+const boundedDocument=await host.executeBounded({url:'https://93.184.216.34/document'},16);
+assert.equal(boundedDocument.body,'{"ok":true}');
+assert.equal(requests.at(-1).options.maxLimit,16);
+await assert.rejects(host.executeBounded({url:'https://93.184.216.34/document'},4),/exceeds 4 byte limit/);
+assert.equal(requests.at(-1).options.maxLimit,4);
+response={responseCode:200,result:documentBytes.buffer,header:{'content-type':'application/json','content-length':'17'}};
+await assert.rejects(host.executeBounded({url:'https://93.184.216.34/document'},16),/declared response exceeds 16 byte limit/);
+await assert.rejects(host.executeBounded({url:'https://93.184.216.34/document'},0),/invalid response limit/);
+console.log('PASS bounded text transport: native, declared and actual byte limits precede decoding');

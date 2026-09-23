@@ -75,6 +75,7 @@ export struct FullDirectoryPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
+  @Prop catalogMessage: string = '';
   @Prop @Watch('onReadingAnchorChanged') currentChapterIndex: number = -1;
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop isTablet: boolean = false;
@@ -418,7 +419,18 @@ export struct FullDirectoryPanel {
       if (this.activeTab === 'bookmarks') {
         this.bookmarkBody();
       } else {
-        this.chapterList();
+        Stack({ alignContent: Alignment.Center }) {
+          this.chapterList();
+          if (this.projectedEntries.length === 0) {
+            Text(this.catalogEmptyMessage())
+              .fontSize(13)
+              .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+              .textAlign(TextAlign.Center)
+              .padding({ left: 20, right: 20 });
+          }
+        }
+        .width('100%')
+        .height(this.chapterListHeight());
         this.statusFooter();
       }
     }
@@ -428,6 +440,11 @@ export struct FullDirectoryPanel {
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(12)
     .clip(true);
+  }
+
+  private catalogEmptyMessage(): string {
+    if (this.entries.length > 0) return '没有匹配的章节';
+    return this.catalogMessage.trim().length > 0 ? this.catalogMessage : '暂无可用章节，可返回阅读页重试或更换书源';
   }
 
   @Builder

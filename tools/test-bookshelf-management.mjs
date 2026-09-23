@@ -32,13 +32,13 @@ assert.match(orchestrator, /await this\.gateway\.assignGroup\(book, group\)/);
 assert.match(orchestrator, /groups: source\.data\.groups\.slice\(\)/);
 assert.doesNotMatch(gateway, /preferences|relationalStore|fileIo/);
 assert.match(page, /export struct BookshelfManagementPage/);
-// Historical CRUD remains preserved; current shelf control is the lightweight default selector.
+// Historical CRUD remains preserved after removing the shelf group-selector entry.
 assert.match(page, /在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中/);
 assert.match(shelfPage, /onManageRequested: \(\) => void/);
-// Opening the selector must not route to or mutate historical custom groups.
-assert.match(shelfPage,
-  /this\.sectionAction\('bookshelf_settings', \(\): void => \{\s*this\.groupSelectorVisible = !this\.groupSelectorVisible;/,
-  'the shelf tool must open the shared group selector');
+assert.doesNotMatch(shelfPage, /this\.sectionAction\('bookshelf_settings'/,
+  'the removed section gear must not retain a hidden callback');
+assert.doesNotMatch(shelfPage, /BookshelfGroupSelector\(/,
+  'the removed section entry no longer exposes the group selector');
 assert.doesNotMatch(shelfPage, /this\.sectionAction\('bookshelf_search'/,
   'the shelf section must not duplicate the AppTopBar search entry');
 assert.match(index,

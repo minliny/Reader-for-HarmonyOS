@@ -1,4 +1,5 @@
 import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordinator';
+import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
 import type { image } from '@kit.ImageKit';
 import type {
   JsonObject,
@@ -11,6 +12,8 @@ export type ReadingGatewayImage = {
   fileUri: string;
   width: number;
   height: number;
+  intrinsicWidth?: number;
+  intrinsicHeight?: number;
   revision: string;
 };
 
@@ -32,6 +35,17 @@ export type ReadingGatewayImageChapterIdentity = {
 
 /** The only Core request surface feature gateways may consume. */
 export interface ReadingGatewayRuntime {
+  /** Optional preparation has read authority only; foreground gateways own repairs. */
+  readonly allowSourceContentCorrection?: boolean;
+  /** Runtime/content lifetime for already displayed position persistence. */
+  captureReadingContentValidity?(sourceId: string, bookId: string): () => boolean;
+  supportsCoreCapability?(capability: string): boolean;
+  /** One bounded, read-only persisted entry; never dispatches asynchronous work. */
+  readPreparedEntry?(params: JsonObject): JsonObject;
+  /** Existing immutable local archive for optional background parser upgrades. */
+  retainedLocalBookSourcePath?(bookId: string, isCurrent: () => boolean): Promise<string | undefined>;
+  /** Read-only catalog proof for preparation runtimes without acquisition authority. */
+  hasCurrentCatalogProjection?(session: RemoteReadingSession): boolean;
   bookAcquisitions?(): BookAcquisitionCoordinator;
   request(
     method: string,

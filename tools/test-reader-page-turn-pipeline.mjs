@@ -66,7 +66,7 @@ contract('adjacent preparation stops before the normal Core commit', () => {
     'preparation must not promote the adjacent page into the visible snapshot');
 });
 
-contract('prepared slide waits for both animation and durable progress before promotion', () => {
+contract('prepared slide preserves the visual handoff and the strong durable barrier', () => {
   const start = methodSection(localReading, 'startPreparedPageTurnSettlement');
   const animate = methodSection(localReading, 'animatePreparedPageTurnSlide');
   const persist = methodSection(localReading, 'persistPreparedPageTurn');
@@ -93,7 +93,9 @@ contract('prepared slide waits for both animation and durable progress before pr
 
   assert.match(finish,
     /!this\.pageTurnAnimationFinished\s*\|\|\s*!this\.pageTurnCommitFinished/,
-    'settlement must wait for both independent completions');
+    'settlement waits for its visual endpoint and the applicable persistence admission');
+  assert.match(finish, /!presentedPersistence && stored === undefined/,
+    'strong transactions still require a verified durable receipt');
   assert.match(finish, /this\.promotePreparedPageTurn\(prepared, stored\);/,
     'one guarded join point owns page promotion');
   assert.match(promote, /this\.visiblePage = prepared\.page;/);
@@ -105,6 +107,21 @@ contract('prepared slide waits for both animation and durable progress before pr
   assert.match(motionSpec, /export function motionRemainingDistanceAnimateParam/);
   assert.match(animate, /this\.startPageTurnSlideTimeline\(targetOffset, settlementGeneration\)/,
     'a released drag must settle only the remaining viewport distance');
+});
+
+contract('ordinary CAS pages present independently while strong transactions retain their barrier', () => {
+  const begin = methodSection(localReading, 'beginPreparedPageTurnPersistence');
+  const eligible = methodSection(localReading, 'canPresentOrdinaryPage');
+  const receipt = methodSection(localReading, 'persistPresentedPageTurn');
+  assert.match(eligible, /sourceSwitchTransactionId === undefined[\s\S]*pendingControlSelection === undefined[\s\S]*canPersistPresentedProgress\(\)/);
+  assert.match(eligible, /positionMigration === undefined[\s\S]*positionMigration\.status === 'unchanged'/);
+  assert.match(begin, /canPresentOrdinaryPage\(prepared\.context\.chapter\)[\s\S]*isPreparedPageTurnCommitCurrent/);
+  assert.match(begin, /void this\.persistPresentedPageTurn\(prepared, lifecycleToken\);\s*this\.finishPreparedPageTurnSettlement\(settlementGeneration, true\);\s*return;/,
+    'eligible ordinary presentation releases only the durable gate, then rejoins the original visual handoff');
+  assert.ok(begin.indexOf('persistPresentedPageTurn') < begin.indexOf('this.persistPreparedPageTurn('));
+  assert.match(receipt, /persistPresentedProgress[\s\S]*isOrdinaryFirstPagePresentationCurrent[\s\S]*admitCommittedProgress/);
+  assert.doesNotMatch(receipt, /this\.promotePreparedPageTurn\(|this\.finishPreparedPageTurnSettlement\(|this\.visiblePage\s*=/,
+    'late ordinary receipts cannot rewind the display or finish another turn');
 });
 
 contract('failed prepared commit rolls the same stage back', () => {
@@ -126,24 +143,25 @@ contract('manual, gesture, and auto page turns converge before choosing slide or
   const perform = methodSection(localReading, 'performPageTurn');
   const manual = methodSection(localReading, 'requestPageTurn');
   const rapid = methodSection(localReading, 'drainRapidPageTurn');
-  const automatic = methodSection(localReading, 'requestAutoPageTurn');
+  const automatic = localReading;
 
   assert.match(manual, /enqueueReaderRapidPageTurn[\s\S]*return this\.drainRapidPageTurn\(\);/,
     'manual taps and committed gestures must first enter the rapid target dispatcher');
   assert.match(rapid, /const result = this\.performPageTurn\(direction\);[\s\S]*return result;/,
     'the rapid dispatcher must converge on the shared page-turn implementation');
   assert.doesNotMatch(manual, /this\.turnPreviousPage\(|this\.turnNextPage\(/);
-  assert.match(automatic, /this\.performPageTurn\('next'\)/,
-    'automatic paging must enter the same dispatcher as manual input');
-  assert.doesNotMatch(automatic, /this\.turnNextPage\(/);
+  assert.match(automatic, /this\.performPageTurn\('next', 'autoTimer'\)/,
+    'automatic paging must enter the shared dispatcher with its explicit origin');
+  assert.match(automatic, /turn: \(\): ReaderPageTurnOutcome => this\.performPageTurn\('next', 'autoTimer'\)/);
   assert.doesNotMatch(automatic, /setTimeout\([\s\S]*requestAutoPageTurn/,
     'a busy Auto Page request must be resumed by state completion, not 250ms polling');
-  assert.match(automatic, /this\.autoPageTurnPending = true/);
+  assert.match(automatic, /this\.autoPageCoordinator\.resumePendingTurn\(\)/);
+  assert.doesNotMatch(automatic, /private autoPageTurnPending:/);
 
   assert.match(perform, /this\.preparedPageTurn\(direction\)/,
     'the shared dispatcher must prefer an admitted adjacent render page');
-  assert.match(perform, /this\.startPreparedPageTurnSettlement\(direction, prepared\)/,
-    'the shared dispatcher must use the two-stage slide settlement');
+  assert.match(perform, /this\.startPreparedPageTurnSettlement\(direction, prepared, origin, ttsOwner\)/,
+    'the shared dispatcher must preserve origin and TTS ownership into the two-stage settlement');
   assert.match(perform, /this\.turnPreviousPage\(\)[\s\S]*this\.turnNextPage\(\)/,
     'none mode and cold-cache taps retain the existing committed pagination fallback');
 
@@ -246,7 +264,6 @@ contract('an unknown restored predecessor is discovered without committing the v
   const drain = methodSection(localReading, 'drainPageTurnPreparationQueue');
   const start = methodSection(localReading, 'startPreviousPagePreparationDiscovery');
   const continueMeasurement = methodSection(localReading, 'continuePreviousChapterMeasurement');
-  const prepare = methodSection(localReading, 'beginDiscoveredPreviousPagePreparation');
   const completeChapter = methodSection(localReading, 'completePreviousChapterPreparation');
 
   assert.match(drain,
@@ -256,11 +273,16 @@ contract('an unknown restored predecessor is discovered without committing the v
   assert.match(start, /new PreviousChapterMeasurement\([\s\S]*true,[\s\S]*origin,[\s\S]*this\.pageTurnGeneration/);
   assert.doesNotMatch(start, /updateProgress|resolveLocation|visiblePage\s*=/,
     'discovery must not write or promote reading progress');
+  assert.match(start, /this\.setMeasuringOffset\(page\.startScalar\)/,
+    'reverse measurement begins at the visible exclusive boundary');
+  assert.doesNotMatch(start, /contiguousEndScalar|Math\.min\(resume|beginDiscoveredPreviousPagePreparation/,
+    'an unknown local predecessor cannot resume a chapter-head pagination scan');
   assert.match(continueMeasurement,
-    /pending\.prepareOnly[\s\S]*beginDiscoveredPreviousPagePreparation/);
-  assert.match(prepare, /finishAdjacentMeasurementContext\(\)/);
-  assert.match(prepare, /beginPageTurnPreparation\('previous', target\)/,
-    'a discovered same-chapter page must rejoin the one normal preparation transaction');
+    /measuredPage\.endScalar !== pending\.endScalar[\s\S]*PREVIOUS_PAGE_BOUNDARY_MISMATCH/);
+  assert.match(continueMeasurement,
+    /pending\.prepareOnly[\s\S]*completePreviousChapterPreparation\(pending, measuredPage\)/,
+    'the one exact local reverse page becomes the prepared predecessor directly');
+  assert.match(completeChapter, /finishAdjacentMeasurementContext\(\)/);
   assert.match(completeChapter, /new PreparedReaderPageTurn\([\s\S]*'previous'/);
   assert.match(completeChapter, /this\.preparedPreviousPage = prepared/);
   assert.doesNotMatch(completeChapter, /completeFirstPage|updateProgress|resolveLocation/,
@@ -355,7 +377,7 @@ contract('a live resize updates presentation geometry without invalidating an in
     /if \(this\.pageTurnInputPhase\(\) !== 'idle'\)[\s\S]*this\.pageTurnPendingViewportWidth = width;[\s\S]*if \(this\.pageTurnSettlementActive\) this\.admitPageTurnPresentationWidth\(width\);[\s\S]*rollbackPageTurnForDeferredMutation\(\);[\s\S]*return;/,
     'tracking rolls back before resize while settlement adapts the visible endpoint and defers logical width');
   assert.ok(admitViewport.indexOf("if (this.pageTurnInputPhase() !== 'idle')") <
-    admitViewport.indexOf('Math.abs(width - this.viewportWidth)'),
+    admitViewport.lastIndexOf('Math.abs(width - this.viewportWidth)'),
   'returning to the original width during settlement must replace a newer pending width instead of being ignored');
   assert.doesNotMatch(admitViewport.match(/if \(this\.pageTurnInputPhase\(\) !== 'idle'\)[\s\S]*?\n    \}/)?.[0] ?? '',
     /this\.viewportWidth = width/,

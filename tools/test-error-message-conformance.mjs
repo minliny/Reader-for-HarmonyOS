@@ -12,7 +12,21 @@ const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const helperSource = read('entry/src/main/ets/app/ErrorMessage.ts');
 const executable = stripTypeScriptTypes(helperSource);
 const helperUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
-const { errorMessageOf } = await import(helperUrl);
+const { errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure, httpResponseFailureSummary } = await import(helperUrl);
+
+const responseDetails = { category: 'SOURCE_HTTP_FAILED', stage: 'chapter.content',
+  cause: { phase: 'response', httpStatus: 403, requestHost: 'chapter.example',
+    url: 'https://chapter.example/private?token=secret', headers: { Cookie: 'private' }, body: 'private body' } };
+assert.equal(httpResponseFailureSummary({ event: { error: { details: responseDetails } } }),
+  'stage=chapter.content host=chapter.example status=403');
+assert.equal(httpResponseFailureSummary({ event: { error: { details: {
+  ...responseDetails, stage: 'request.dispatch', outerStage: 'chapter.content',
+} } } }), 'stage=chapter.content host=chapter.example status=403',
+  'nested java.ajax failures keep Core outerStage without replacing transport evidence');
+assert.equal(httpResponseFailureSummary({ details: { ...responseDetails, category: 'SOURCE_RULE_FAILED' } }), undefined);
+assert.equal(httpResponseFailureSummary({ body: responseDetails }), undefined);
+assert.equal(httpResponseFailureSummary({ details: { ...responseDetails, cause: { ...responseDetails.cause,
+  requestHost: 'host/path?token=private' } } }), 'stage=chapter.content host=unknown status=403');
 
 // --- Behavior vectors. ------------------------------------------------------
 assert.equal(errorMessageOf(new Error('boom')), 'boom', 'Error keeps its message');
@@ -32,6 +46,16 @@ const cyclic = {};
 cyclic.self = cyclic;
 assert.equal(errorMessageOf(cyclic), String(cyclic), 'cyclic object falls back to String()');
 assert.equal(errorMessageOf({}), String({}), 'empty object falls back to String()');
+
+for (const phase of ['dns','route','transport',undefined]) {
+  const details={category:'NETWORK_ENVIRONMENT',...(phase===undefined?{}:{phase})};
+  for (const failure of [{details},{event:{error:{details:{host:{diagnostics:{details}}}}}}]) {
+    assert.equal(isNetworkEnvironmentFailure(failure),true);
+    assert.equal(isDomainResolutionFailure(failure),phase==='dns','only structured DNS may be isolated per domain');
+  }
+}
+for (const failure of [{message:'NETWORK_ENVIRONMENT dns'},{body:{category:'NETWORK_ENVIRONMENT',phase:'dns'}},
+  {details:{phase:'dns'}},cyclic]) assert.equal(isDomainResolutionFailure(failure),false);
 
 // --- Repo-wide sweep: the "[object Object]" flattening patterns are gone. ---
 const etsRoot = resolve(repo, 'entry/src/main/ets');

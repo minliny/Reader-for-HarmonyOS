@@ -11,7 +11,29 @@ float Clamp(float value, float low, float high)
     return std::max(low, std::min(high, value));
 }
 
+float Smoothstep(float progress)
+{
+    return progress * progress * (3.0F - 2.0F * progress);
+}
+
 }  // namespace
+
+bool IsProgrammaticProfileValid(ProgrammaticProfile profile)
+{
+    return profile == ProgrammaticProfile::MANUAL || profile == ProgrammaticProfile::RAPID ||
+        profile == ProgrammaticProfile::AUTOMATIC;
+}
+
+float ProgrammaticDurationSeconds(ProgrammaticProfile profile)
+{
+    if (profile == ProgrammaticProfile::AUTOMATIC) return kAutomaticCompleteSeconds;
+    return profile == ProgrammaticProfile::RAPID ? kRapidCompleteSeconds : kCompleteSeconds;
+}
+
+SettlementCurve ProgrammaticSettlementCurve(ProgrammaticProfile profile)
+{
+    return profile == ProgrammaticProfile::AUTOMATIC ? SettlementCurve::SMOOTHSTEP : SettlementCurve::EASE_OUT;
+}
 
 float SourceEdgeX(Direction direction, float width)
 {
@@ -105,12 +127,13 @@ float SettleDurationSeconds(float tau0, Direction direction, bool commit, float 
 }
 
 float SettleTauAt(float tau0, float targetTau, float elapsedSeconds, float durationSeconds,
-    bool easeOut)
+    SettlementCurve curve)
 {
     const float progress =
         durationSeconds > 0.0F ? Clamp(elapsedSeconds / durationSeconds, 0.0F, 1.0F) : 1.0F;
-    const float shaped = easeOut ?
-        1.0F - (1.0F - progress) * (1.0F - progress) * (1.0F - progress) : progress;
+    const float shaped = curve == SettlementCurve::SMOOTHSTEP ? Smoothstep(progress) :
+        (curve == SettlementCurve::EASE_OUT ?
+            1.0F - (1.0F - progress) * (1.0F - progress) * (1.0F - progress) : progress);
     return tau0 + (targetTau - tau0) * shaped;
 }
 
@@ -118,7 +141,7 @@ float SettleThetaAt(float theta0, float elapsedSeconds, float durationSeconds)
 {
     const float progress = durationSeconds > 0.0F ?
         Clamp(elapsedSeconds / durationSeconds, 0.0F, 1.0F) : 1.0F;
-    const float shaped = progress * progress * (3.0F - 2.0F * progress);
+    const float shaped = Smoothstep(progress);
     return theta0 * (1.0F - shaped);
 }
 

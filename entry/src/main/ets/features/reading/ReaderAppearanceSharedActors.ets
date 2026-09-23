@@ -4,7 +4,7 @@ import {
   readerControlAppearanceThemeLabel,
   readerControlAppearanceThemeSwatch,
 } from './ReaderControlAppearanceStyle';
-import { registerReaderFonts } from '../common/ReaderFonts';
+import { registerReaderFonts, readerRegisteredFontFamily } from '../common/ReaderFonts';
 import {
   TOK_BORDER_W,
   TOK_LINE,
@@ -224,7 +224,7 @@ export struct ReaderAppearanceSharedActors {
       Text(readerAppearanceFontSlotLabel(this.snapshot, fontId))
         .width(54.5)
         .height(10)
-        .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
+        .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceFontSlotFamily(this.snapshot, fontId)))
         .fontWeight(FontWeight.Regular)
         .fontSize(8)
         .lineHeight(10)

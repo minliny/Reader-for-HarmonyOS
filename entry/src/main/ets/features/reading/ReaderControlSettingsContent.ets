@@ -74,8 +74,10 @@ export struct ReaderControlSettingsContent {
   }
   private onMotionChanged(): void { this.syncMorphScroll(); }
   private syncMorphScroll(): void {
+    const offset = this.scroller.currentOffset()?.yOffset;
+    if (offset === undefined || !Number.isFinite(offset)) return;
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, this.scroller.currentOffset().yOffset);
+      this.interactionEnabled, offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -83,8 +85,10 @@ export struct ReaderControlSettingsContent {
     }
   }
   private onFullDidScroll(): void {
+    const offset = this.scroller.currentOffset()?.yOffset;
+    if (offset === undefined || !Number.isFinite(offset)) return;
     this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion,
-      this.scroller.currentOffset().yOffset, this.fullInput());
+      offset, this.fullInput());
   }
   private nativeScrollDelta(y: number, source: ScrollSource): OffsetResult {
     return { xOffset: 0, yOffset: readerControlMorphScrollAllowsNative(this.scrollMotion,
@@ -177,6 +181,7 @@ export struct ReaderControlSettingsContent {
     .width(this.availableWidth).height(this.availableHeight)
     .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
     .enableScrollInteraction(this.fullInput())
+    .onAppear((): void => this.syncMorphScroll())
     .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
       this.nativeScrollDelta(y, source))
     .onDidScroll((): void => this.onFullDidScroll())

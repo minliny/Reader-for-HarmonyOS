@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const appRoot = new URL('../entry/src/main/ets/', import.meta.url);
 const coordinator = await readFile(new URL('app/ReaderWindowCoordinator.ts', appRoot), 'utf8');
@@ -59,15 +60,24 @@ assert.match(coordinator,
   /private static sameWindowPolicy\(a: ReaderWindowPolicy, b: ReaderWindowPolicy\): boolean \{[\s\S]*?a\.orientation === b\.orientation &&[\s\S]*?a\.extendIntoCutout === b\.extendIntoCutout;\s*\}/,
   'policy equality must cover all five semantic fields');
 // Callers must keep awaiting the deduped promise (persistence continues).
-assert.match(experience,
-  /private applyReaderWindowPolicy\(snapshot: ReaderSettingsSnapshot,\s*forceStatusBarVisible: boolean = this\.controlsPresentedForWindow\(\)\): Promise<void> \{\s*return ReaderWindowCoordinator\.requestReaderWindowPolicy\(this\.windowPolicyFor\(snapshot, forceStatusBarVisible\)\);/,
-  'the settings commit path must keep awaiting the coordinator promise');
+{
+  let writes = 0;
+  const policy = {}, pending = new Promise(() => {});
+  const Owner = productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets', appRoot),
+    ['applyReaderWindowPolicy'], { ReaderWindowCoordinator: { requestReaderWindowPolicy(value) {
+      assert.equal(value, policy); writes++; return pending;
+    } } });
+  const owner = Object.assign(new Owner(), { windowPolicyFor: () => policy, controlsPresentedForWindow: () => false });
+  assert.equal(owner.applyReaderWindowPolicy({}), pending,
+    'the settings commit path must return the coordinator promise without releasing its persistence barrier');
+  assert.equal(writes, 1, 'each settings application forwards exactly one coordinator request');
+}
 
 // Fix 2: a refresh-only shelf read that transiently reports empty must not
 // unmount the admitted bookshelf route. Genuine user mutations keep the
 // resetting semantics.
 const applyBody = index.match(
-  /private applyBookshelfState\(state: BookshelfDataState, refreshOnly: boolean = false\): void \{([\s\S]*?)\n  \}/);
+  /private applyBookshelfState\(state: BookshelfDataState, refreshOnly: boolean = false, preserveAnchor: boolean = true\): void \{([\s\S]*?)\n  \}/);
 assert.ok(applyBody, 'applyBookshelfState must keep its refreshOnly escape hatch');
 assert.match(applyBody[1],
   /if \(refreshOnly && state\.kind !== 'populated' && this\.isBookshelfVisualAdmitted\) \{[\s\S]*?return;/,

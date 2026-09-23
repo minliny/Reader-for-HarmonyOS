@@ -18,9 +18,15 @@ export interface ReaderControlDirectorySnapshot {
   targetRow: number;
 }
 
+export interface ReaderControlDirectoryCatalog {
+  complete: boolean;
+  chapterCount: number;
+  currentPosition: number;
+}
+
 export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], tab: string,
   query: string, ascending: boolean, currentChapter: number,
-  identity?: ReaderBookIdentity): ReaderControlDirectorySnapshot {
+  identity?: ReaderBookIdentity, catalog?: ReaderControlDirectoryCatalog): ReaderControlDirectorySnapshot {
   const currentOrdinal = entries.findIndex((entry: LocalReadingTocEntry): boolean => entry.index === currentChapter);
   const rows: ReaderControlDirectoryRow[] = [];
   let targetRow = -1;
@@ -41,10 +47,14 @@ export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], 
       rows.push({ key: `chapter:${entry.index}`, chapter: entry, bookmark: undefined });
     }
   }
+  const currentPosition = catalog?.complete === false ?
+    (catalog.currentPosition >= 0 && catalog.currentPosition < catalog.chapterCount ?
+      `${catalog.currentPosition + 1} / ${catalog.chapterCount}` : '') :
+    (currentOrdinal < 0 ? '' : `${currentOrdinal + 1} / ${entries.length}`);
   return { rows: rows, loading: entries.length === 0 ||
     (tab === 'bookmarks' && readerBookmarkLoadState(entries) === 'loading'), targetRow: targetRow,
     currentTitle: currentOrdinal < 0 ? '' : entries[currentOrdinal].title,
-    currentPosition: currentOrdinal < 0 ? '' : `${currentOrdinal + 1} / ${entries.length}` };
+    currentPosition };
 }
 
 /** One placement request per actual list opening. Data arriving late can fulfill

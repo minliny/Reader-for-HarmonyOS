@@ -1,3 +1,4 @@
+import { readingChapterTextIdentity, type ReadingDocumentRange } from './ReadingSurfaceLayoutMap.ts';
 import type { RemoteReadingPositionMigration } from './RemoteReadingPositionMigration';
 
 /**
@@ -15,6 +16,9 @@ export type ReadingSessionChapter = {
   /** Exact remote TOC URL used by source-backed chapter tools. */
   readonly chapterUrl: string | undefined;
   readonly content: string;
+  readonly documentRange?: ReadingDocumentRange;
+  /** Shared text-only identity across defensive DTO copies; owns no native images. */
+  readonly textLayoutIdentity?: { readonly content: string; readonly documentRange?: ReadingDocumentRange };
   readonly images: ReadingSessionImage[];
   readonly contentVersion: string;
   /** Core canonical/processing evidence, distinct from the Host document hash. */
@@ -23,6 +27,7 @@ export type ReadingSessionChapter = {
   readonly positionMigration?: RemoteReadingPositionMigration;
   /** Older bytes remain usable offline without claiming new-extractor proof. */
   readonly cacheRefreshRequired?: boolean;
+  readonly sourceCorrectionRequired?: boolean;
   readonly extractionVia: 'local' | 'rule' | 'js';
 };
 
@@ -37,23 +42,49 @@ export type ReadingSessionImage = {
   readonly fileUri: string;
   readonly intrinsicWidth: number;
   readonly intrinsicHeight: number;
+  readonly imageWidthBasisPoints?: number;
   readonly revision: string;
 };
 
+/** Geometry from Core's bounded immutable local-image header projection.
+ * Actual locator/path validation still belongs to LocalEpubResourceHost before I/O. */
+export function hasKnownReadingImageGeometry(image: ReadingSessionImage): boolean {
+  return hasImmutableLocalReadingImageSource(image.source) &&
+    Number.isSafeInteger(image.intrinsicWidth) && image.intrinsicWidth > 0 && image.intrinsicWidth <= 4096 &&
+    Number.isSafeInteger(image.intrinsicHeight) && image.intrinsicHeight > 0 && image.intrinsicHeight <= 4096 &&
+    image.intrinsicWidth * image.intrinsicHeight <= 4 * 1024 * 1024;
+}
+
+/** Core uses padded URL-safe Base64 for both locator segments. Older Host
+ * callers also supply unpadded tokens. Full hash/path decoding remains in the
+ * existing platform resource adapter before archive access. */
+export function hasImmutableLocalReadingImageSource(source: string): boolean {
+  return /^reader-local-(epub|mobi):\/\/bG9jYWw6[A-Za-z0-9_-]{86}(?:==)?\/[A-Za-z0-9_-]+={0,2}$/.test(source);
+}
+
 /**
- * Bounded previous/current/next materialized chapter window.
+ * Bounded current chapter plus the three TOC neighbours in each direction.
  *
  * This mirrors Legado's ReadBook working set. It is not a general cache: a
- * current-chapter change immediately evicts every body outside the two TOC
+ * current-chapter change immediately evicts every body outside the six TOC
  * neighbours, and it owns no persistence, retry policy, or background queue.
  */
 export class ReadingChapterWindow {
+  private readonly neighbourBytes: number;
+  private readonly estimateBytes: (chapter: ReadingSessionChapter) => number;
   private sourceId: string = '';
   private bookId: string = '';
   private chapterOrder: number[] = [];
   private chapterPositions: Map<number, number> = new Map();
   private currentChapterIndex: number = -1;
   private chapters: ReadingSessionChapter[] = [];
+
+  constructor(neighbourBytes: number = 4 * 1024 * 1024,
+    estimateBytes: (chapter: ReadingSessionChapter) => number = readingChapterRetainedBytes) {
+    if (!Number.isSafeInteger(neighbourBytes) || neighbourBytes < 0) throw new Error('invalid neighbour byte budget');
+    this.neighbourBytes = neighbourBytes;
+    this.estimateBytes = estimateBytes;
+  }
 
   configure(sourceId: string, bookId: string, chapterOrder: number[]): void {
     requireNonBlank(sourceId, 'sourceId');
@@ -73,6 +104,7 @@ export class ReadingChapterWindow {
   }
 
   setCurrent(chapter: ReadingSessionChapter): void {
+    if (chapter.sourceCorrectionRequired === true) throw new Error('source content correction requires foreground reading');
     this.validateChapter(chapter);
     this.requireKnownChapter(chapter.chapterIndex);
     this.upsert(chapter);
@@ -81,18 +113,19 @@ export class ReadingChapterWindow {
   }
 
   admitNeighbour(chapter: ReadingSessionChapter): boolean {
+    if (chapter.sourceCorrectionRequired === true) return false;
     this.validateChapter(chapter);
     if (this.currentChapterIndex < 0) {
       return false;
     }
     const currentPosition = this.positionOf(this.currentChapterIndex);
     const chapterPosition = this.positionOf(chapter.chapterIndex);
-    if (chapterPosition < 0 || Math.abs(chapterPosition - currentPosition) > 1) {
+    if (chapterPosition < 0 || Math.abs(chapterPosition - currentPosition) > 3) {
       return false;
     }
     this.upsert(chapter);
     this.pruneToCurrentWindow();
-    return true;
+    return this.chapters.some((retained: ReadingSessionChapter): boolean => retained.chapterIndex === chapter.chapterIndex);
   }
 
   get(chapterIndex: number): ReadingSessionChapter | undefined {
@@ -131,7 +164,7 @@ export class ReadingChapterWindow {
       this.chapterOrder[target] : undefined;
   }
 
-  /** Native image handles still reachable from the bounded three-chapter set. */
+  /** Native image handles still reachable from the bounded chapter set. */
   retainedImages(): ReadingSessionImage[] {
     const retained: ReadingSessionImage[] = [];
     for (const chapter of this.chapters) {
@@ -172,8 +205,26 @@ export class ReadingChapterWindow {
     const currentPosition = this.positionOf(this.currentChapterIndex);
     this.chapters = this.chapters.filter((chapter: ReadingSessionChapter): boolean => {
       const position = this.positionOf(chapter.chapterIndex);
-      return position >= 0 && Math.abs(position - currentPosition) <= 1;
+      return position >= 0 && Math.abs(position - currentPosition) <= 3;
     });
+    // This is a reading-window policy, not an LRU cache: nearest TOC
+    // neighbours win, with forward reading first at equal distance. The
+    // admitted current chapter is never evicted to make room for speculation.
+    const neighbours = this.chapters.filter((chapter: ReadingSessionChapter): boolean =>
+      chapter.chapterIndex !== this.currentChapterIndex).sort((left: ReadingSessionChapter, right: ReadingSessionChapter): number => {
+      const a = this.positionOf(left.chapterIndex) - currentPosition;
+      const b = this.positionOf(right.chapterIndex) - currentPosition;
+      return Math.abs(a) - Math.abs(b) || b - a;
+    });
+    const retained = new Set<number>([this.currentChapterIndex]);
+    let bytes = 0;
+    for (const chapter of neighbours) {
+      const size = this.estimateBytes(chapter);
+      if (bytes + size > this.neighbourBytes) continue;
+      bytes += size;
+      retained.add(chapter.chapterIndex);
+    }
+    this.chapters = this.chapters.filter((chapter: ReadingSessionChapter): boolean => retained.has(chapter.chapterIndex));
   }
 
   private validateChapter(chapter: ReadingSessionChapter): void {
@@ -199,6 +250,31 @@ export class ReadingChapterWindow {
   }
 }
 
+/** Conservative DTO/native-image estimate for optional chapter retention. */
+export function readingChapterRetainedBytes(chapter: ReadingSessionChapter): number {
+  let bytes = 256 + 2 * (chapter.sourceId.length + chapter.bookId.length + chapter.chapterTitle.length +
+    (chapter.chapterUrl?.length ?? 0) + chapter.content.length + chapter.contentVersion.length +
+    (chapter.bodyVersion?.length ?? 0) + (chapter.processingVersion?.length ?? 0));
+  for (const item of chapter.images) {
+    bytes += 128 + 2 * (item.source.length + (item.baseUrl?.length ?? 0) + item.fileUri.length + item.revision.length);
+    if (item.pixelMap !== undefined) {
+      const pixels = item.intrinsicWidth * item.intrinsicHeight;
+      if (!Number.isFinite(pixels) || pixels <= 0) return Number.POSITIVE_INFINITY;
+      bytes += pixels * 4;
+    }
+  }
+  const migration = chapter.positionMigration;
+  if (migration !== undefined) {
+    bytes += 256 + 2 * ((migration.reason?.length ?? 0) + migration.previousBodyVersion.length +
+      migration.bodyVersion.length + migration.previousProcessingVersion.length + migration.processingVersion.length);
+    for (const anchor of migration.anchors) bytes += 64 + anchor.id.length * 2;
+    const progress = migration.progress;
+    if (progress !== undefined) bytes += 128 + 2 * (progress.sourceId.length + progress.bookId.length +
+      (progress.locationRevision?.length ?? 0) + (progress.bodyVersion?.length ?? 0) + (progress.processingVersion?.length ?? 0));
+  }
+  return bytes;
+}
+
 function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
   return {
     sourceId: chapter.sourceId,
@@ -207,6 +283,8 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
     chapterTitle: chapter.chapterTitle,
     chapterUrl: chapter.chapterUrl,
     content: chapter.content,
+    documentRange: chapter.documentRange === undefined ? undefined : { ...chapter.documentRange },
+    textLayoutIdentity: readingChapterTextIdentity(chapter),
     images: chapter.images.map(copyImage),
     contentVersion: chapter.contentVersion,
     bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
@@ -215,6 +293,7 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
       progress: chapter.positionMigration.progress === undefined ? undefined : { ...chapter.positionMigration.progress } },
     extractionVia: chapter.extractionVia,
     cacheRefreshRequired: chapter.cacheRefreshRequired,
+    sourceCorrectionRequired: chapter.sourceCorrectionRequired,
   };
 }
 
@@ -229,6 +308,7 @@ function copyImage(image: ReadingSessionImage): ReadingSessionImage {
     fileUri: image.fileUri,
     intrinsicWidth: image.intrinsicWidth,
     intrinsicHeight: image.intrinsicHeight,
+    imageWidthBasisPoints: image.imageWidthBasisPoints,
     revision: image.revision,
   };
 }
@@ -275,3 +355,14 @@ function requireNonBlank(value: string, field: string): void {
   }
 }
 import type { image } from '@kit.ImageKit';
+
+/** The visible view owns decoded handles. Expanding the same Core document
+ * retains matching handles without transferring ownership to the process cache. */
+export function retainReadingEntryImageHandles(full: ReadingSessionChapter, previous: ReadingSessionChapter): ReadingSessionChapter {
+  if (full.sourceId !== previous.sourceId || full.bookId !== previous.bookId || full.chapterIndex !== previous.chapterIndex ||
+    full.bodyVersion !== previous.bodyVersion || full.processingVersion !== previous.processingVersion ||
+    full.contentVersion !== previous.contentVersion) throw new Error('entry image ownership scope mismatch');
+  return { ...full, textLayoutIdentity: readingChapterTextIdentity(full), images: full.images.map((image: ReadingSessionImage): ReadingSessionImage =>
+    previous.images.find((old: ReadingSessionImage): boolean => old.startScalar === image.startScalar &&
+      old.endScalar === image.endScalar && old.source === image.source && old.baseUrl === image.baseUrl) ?? image) };
+}

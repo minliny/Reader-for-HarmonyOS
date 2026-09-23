@@ -11,6 +11,11 @@ export const READER_PAGE_CHROME_FOOTER_HEIGHT = 24;
 export const READER_PAGE_CHROME_FOOTER_GAP = 5;
 // A stable semantic slot keeps the clock still during bookmark drag/ACK.
 export const READER_PAGE_CHROME_BOOKMARK_SIZE = 24;
+// OpenHarmony SystemUI phone status_bar_padding_start/end. These are content
+// paddings, not statusBarRect.height-derived guesses or OEM glyph coordinates.
+// applications_systemui d0f84037f1975dd9bf13ccbd279bd2d9b56e8a01,
+// features/statusbarcomponent/src/main/resources/phone/element/float.json.
+export const READER_SYSTEM_STATUS_CONTENT_INSET = 24;
 
 export class ReaderPageChromeMeasurements {
   topStartWidth: number;
@@ -148,21 +153,21 @@ export function resolveReaderPageChromeLayout(
     Math.max(0, (layout.pageChromeTopRegionHeight - rowHeight) / 2) : top;
   const metrics = layout.pageChromeStatusMetrics;
   if (metrics !== undefined && metrics.ready && metrics.statusBarRect.height > 0) {
-    // Public Window gives a region, not OEM status-glyph baselines. Centre our
-    // measured text in that region and derive its edge clearance from the
-    // current lane/rounded corners; never use a phone-model coordinate table.
+    // Public Window gives a region, not OEM status-glyph baselines. Use the
+    // upstream SystemUI content padding independently of the measured height,
+    // then clamp it against this window's physical cutout and rounded corners.
     const rect = metrics.statusBarRect;
     rowTop = layout.pageChromeVisualSafeTop + Math.max(0, (rect.height - rowHeight) / 2);
-    const left = Math.max(layout.pageChromeVisualSafeLeft, rect.left + rect.height / 2,
-      cornerEdge(metrics.topLeftCorner, rowTop, true) + rowHeight / 2);
+    const left = Math.max(layout.pageChromeVisualSafeLeft, rect.left + READER_SYSTEM_STATUS_CONTENT_INSET,
+      cornerEdge(metrics.topLeftCorner, rowTop, true));
     const right = Math.min(layout.viewportWidth - layout.pageChromeVisualSafeRight,
-      rect.left + rect.width - rect.height / 2,
-      cornerEdge(metrics.topRightCorner, rowTop, false) - rowHeight / 2);
+      rect.left + rect.width - READER_SYSTEM_STATUS_CONTENT_INSET,
+      cornerEdge(metrics.topRightCorner, rowTop, false));
     const cutout = metrics.statusBarCutoutRect;
     const intersectsCutout = cutout.width > 0 && cutout.height > 0 &&
       rowTop < cutout.top + cutout.height && rowTop + rowHeight > cutout.top;
-    const leftLimit = intersectsCutout ? Math.min(right, cutout.left - rowHeight / 2) : right;
-    const rightFloor = intersectsCutout ? Math.max(left, cutout.left + cutout.width + rowHeight / 2) : left;
+    const leftLimit = intersectsCutout ? Math.min(right, cutout.left - READER_PAGE_CHROME_FOOTER_GAP) : right;
+    const rightFloor = intersectsCutout ? Math.max(left, cutout.left + cutout.width + READER_PAGE_CHROME_FOOTER_GAP) : left;
     topLeft = left;
     topRight = right;
     topLeftLimit = leftLimit;
@@ -177,23 +182,23 @@ export function resolveReaderPageChromeLayout(
   }
 
   if (accessoryWidth > 0) {
-    // Preserve the complete clock width. A narrow cutout-side lane moves the
-    // bookmark to the title lane instead of covering or hiding the clock.
+    // Keep the title/clock at their outer edges. Reserve the bookmark on the
+    // inside, moving it to the title lane only when the clock-side lane is full.
     const gap = READER_PAGE_CHROME_FOOTER_GAP;
     const fitsWithClock = topRight - topRightFloor >= measurements.topEndWidth + gap + accessoryWidth;
     result.topAccessoryWidth = Math.min(accessoryWidth,
       Math.max(0, fitsWithClock ? topRight - topRightFloor : topLeftLimit - topLeft - gap));
     result.topAccessoryHeight = Math.min(accessoryHeight, result.topAccessoryWidth);
-    result.topAccessoryX = fitsWithClock ? topRight - result.topAccessoryWidth : topLeft;
+    result.topEndMaxWidth = Math.max(0, topRight - topRightFloor);
+    result.topEndX = Math.max(topRightFloor, topRight - Math.min(measurements.topEndWidth, result.topEndMaxWidth));
+    result.topAccessoryX = fitsWithClock ? result.topEndX - gap - result.topAccessoryWidth :
+      Math.max(topLeft, Math.min(topLeftLimit, result.topEndX - gap) - result.topAccessoryWidth);
     result.topAccessoryY = rowTop + Math.max(0, (rowHeight - result.topAccessoryHeight) / 2);
-    const clockRight = fitsWithClock ? result.topAccessoryX - gap : topRight;
-    result.topEndMaxWidth = Math.max(0, clockRight - topRightFloor);
-    result.topEndX = Math.max(topRightFloor, clockRight - Math.min(measurements.topEndWidth, result.topEndMaxWidth));
     result.topEndY = rowTop + Math.max(0, (rowHeight - measurements.topEndHeight) / 2);
-    result.topStartX = fitsWithClock ? topLeft : topLeft + result.topAccessoryWidth + gap;
+    result.topStartX = topLeft;
     result.topStartY = rowTop + Math.max(0, (rowHeight - measurements.topStartHeight) / 2);
     result.topStartMaxWidth = Math.max(0,
-      Math.min(topLeftLimit, result.topEndX - gap) - result.topStartX);
+      Math.min(topLeftLimit, result.topAccessoryX - gap) - result.topStartX);
   }
 
   result.footerRight = Math.max(visualLeft, layout.viewportWidth - interactiveRightInset);

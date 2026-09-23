@@ -51,6 +51,7 @@ export class ReaderPageTurnRenderPage {
   chapterTitle: string;
   showChapterTitle: boolean;
   fragments: ReadingSurfacePageFragment[];
+  appearance: ReaderAppearanceSnapshot | undefined;
   bottomJustifyGap: number;
   chromeTopStartText: string;
   chromeTopEndText: string;
@@ -69,6 +70,7 @@ export class ReaderPageTurnRenderPage {
     fragments: ReadingSurfacePageFragment[],
     bottomJustifyGap: number = 0,
     chrome: ReaderPageChromeSnapshot = new ReaderPageChromeSnapshot(),
+    appearance?: ReaderAppearanceSnapshot,
   ) {
     this.identity = identity;
     this.textureIdentity = textureIdentity;
@@ -76,6 +78,7 @@ export class ReaderPageTurnRenderPage {
     this.chapterTitle = chapterTitle;
     this.showChapterTitle = showChapterTitle;
     this.fragments = fragments;
+    this.appearance = appearance;
     this.bottomJustifyGap = bottomJustifyGap;
     this.chromeTopStartText = chrome.topStartText;
     this.chromeTopEndText = chrome.topEndText;
@@ -294,7 +297,7 @@ export struct ReaderPageTurnStage {
         chromeSessionHeight: this.slotPage('a').chromeSessionHeight,
         pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage('a').fragments,
         layout: this.layout,
-        appearance: this.appearance,
+        appearance: this.slotPage('a').appearance ?? this.appearance,
         longPressSelectText: this.currentPageSlot === 'a' && this.longPressSelectText,
         translateX: this.slotX('a'),
         pageVisible: this.slotVisible('a'),
@@ -330,7 +333,7 @@ export struct ReaderPageTurnStage {
         chromeSessionHeight: this.slotPage('b').chromeSessionHeight,
         pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage('b').fragments,
         layout: this.layout,
-        appearance: this.appearance,
+        appearance: this.slotPage('b').appearance ?? this.appearance,
         longPressSelectText: this.currentPageSlot === 'b' && this.longPressSelectText,
         translateX: this.slotX('b'),
         pageVisible: this.slotVisible('b'),

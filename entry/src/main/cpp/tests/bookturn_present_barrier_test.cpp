@@ -164,6 +164,7 @@ struct Fixture {
 
     bool AttachWithTextures()
     {
+        host.Configure(390, 780);
         host.AttachSurface(reinterpret_cast<void*>(0x10), 390, 780);
         EventRecord record {};
         if (!sink.WaitFor(HostEvent::SURFACE_READY, kAnyGeneration, record, 5000)) return false;
@@ -779,7 +780,7 @@ void ScenarioRapidProgrammaticCueRetainsBarrier()
     for (const auto direction : {Direction::NEXT, Direction::PREVIOUS}) {
         Fixture fixture;
         Check("rapid programmatic attach", fixture.AttachWithTextures());
-        Check("rapid programmatic admitted", fixture.host.StartProgrammatic(100, direction, true));
+        Check("rapid programmatic admitted", fixture.host.StartProgrammatic(100, direction, ProgrammaticProfile::RAPID));
         EventRecord endpoint {};
         bool reached = false;
         for (int frame = 0; frame < 6 && !reached; ++frame) {
@@ -788,7 +789,7 @@ void ScenarioRapidProgrammaticCueRetainsBarrier()
         }
         Check("rapid cue completes within bounded display ticks", reached);
         Check("rapid endpoint still retained", fixture.host.RetainedTerminalGeneration() == 100);
-        Check("rapid successor cannot bypass retained barrier", !fixture.host.StartProgrammatic(101, direction, true));
+        Check("rapid successor cannot bypass retained barrier", !fixture.host.StartProgrammatic(101, direction, ProgrammaticProfile::RAPID));
         EventRecord slots {}, released {};
         Check("rapid slots commit admitted", fixture.host.CommitSlots(100, direction));
         Check("rapid slots committed", fixture.sink.WaitFor(HostEvent::SLOTS_COMMITTED, 100, slots, 5000));
@@ -798,6 +799,189 @@ void ScenarioRapidProgrammaticCueRetainsBarrier()
         Check("rapid hidden clear submits no transparent swap",
             CountInRange(glmock::Log(), "eglSwapBuffers", slots.glLogSize, released.glLogSize) == 0);
     }
+}
+
+EventRecord PrimeAutomatic(Fixture& fixture, uint64_t generation, Direction direction)
+{
+    Check("automatic admitted", fixture.host.StartProgrammatic(generation, direction, ProgrammaticProfile::AUTOMATIC));
+    Check("unprimed confirmation rejected", !fixture.host.StartAutomaticTimeline(generation, 1));
+    EventRecord first {};
+    bool primed = false;
+    for (int frame = 0; frame < 15 && !primed; ++frame) {
+        fixture.PumpFrame();
+        primed = fixture.sink.WaitFor(HostEvent::FRAME_PRESENTED, generation, first, 10);
+    }
+    Check("automatic initial buffer submitted", primed);
+    Check("automatic first buffer supplies a positive token", first.detail > 0);
+    return first;
+}
+
+void ReleaseAutomatic(Fixture& fixture, uint64_t generation, Direction direction, bool commit)
+{
+    EventRecord slots {}, released {};
+    if (commit) {
+        Check("automatic slot commit admitted", fixture.host.CommitSlots(generation, direction));
+        Check("automatic slot commit receipt", fixture.sink.WaitFor(HostEvent::SLOTS_COMMITTED, generation, slots, 5000));
+    }
+    const size_t beforeClear = glmock::Log().size();
+    Check("automatic retained until owner hides", fixture.host.RetainedTerminalGeneration() == generation);
+    Check("automatic hidden release admitted", fixture.host.ReleaseTerminalFrame(generation));
+    Check("automatic hidden clear admitted", fixture.host.ClearSurface(generation));
+    Check("automatic terminal release receipt", fixture.sink.WaitFor(HostEvent::TERMINAL_RELEASED, generation, released, 5000));
+    Check("automatic cleanup submits no transparent swap",
+        CountInRange(glmock::Log(), "eglSwapBuffers", beforeClear, released.glLogSize) == 0);
+}
+
+void ScenarioAutomaticTimelineAtRefreshRates()
+{
+    for (const int hz : {60, 90, 120}) {
+        for (const Direction direction : {Direction::NEXT, Direction::PREVIOUS}) {
+            Fixture fixture;
+            Check("automatic rate fixture ready", fixture.AttachWithTextures());
+            glmock::Reset();
+            const uint64_t generation = 200 + hz + (direction == Direction::NEXT ? 0 : 1);
+            const EventRecord first = PrimeAutomatic(fixture, generation, direction);
+            const size_t firstDraws = glmock::Log().size();
+            const int initialRequests = bookturntest::RequestCount();
+            // A delayed UI event may span many VSyncs. The initial pose must
+            // remain unchanged and its timeline must consume none of them.
+            for (int i = 0; i < 20; ++i) { fixture.PumpFrame(); std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+            Check("automatic waiting draws no extra frames", glmock::Log().size() == firstDraws);
+            Check("automatic waiting never rearms VSync", bookturntest::RequestCount() == initialRequests);
+            EventRecord endpoint {};
+            Check("automatic cannot finish before reveal", !fixture.sink.WaitFor(HostEvent::VISUAL_COMMIT_ENDPOINT, generation, endpoint, 0));
+            Check("automatic wrong generation rejected", !fixture.host.StartAutomaticTimeline(generation + 1, first.detail));
+            Check("automatic wrong token rejected", !fixture.host.StartAutomaticTimeline(generation, first.detail + 1));
+            Check("automatic reveal accepted", fixture.host.StartAutomaticTimeline(generation, first.detail));
+            Check("duplicate queued reveal accepted once", fixture.host.StartAutomaticTimeline(generation, first.detail));
+            Check("automatic confirmation wakes VSync", PollUntil([&]() { return bookturntest::RequestCount() > initialRequests; }, 1000));
+
+            const long long interval = 1'000'000'000LL / hz;
+            const long long start = fixture.vsyncTimeNs + 2'000'000'000LL;
+            bool finished = false;
+            long long finalTime = start;
+            for (int frame = 0; frame <= hz && !finished; ++frame) {
+                const auto before = glmock::Log().size();
+                const long long timestamp = start + frame * interval;
+                bookturntest::PumpVsync(timestamp);
+                Check("automatic timeline draws admitted VSync", PollUntil([&]() {
+                    return CountInRange(glmock::Log(), "eglSwapBuffers", before, glmock::Log().size()) > 0;
+                }, 1000));
+                finished = fixture.sink.WaitFor(HostEvent::VISUAL_COMMIT_ENDPOINT, generation, endpoint, 2);
+                if (frame == hz / 4) {
+                    Check("duplicate running confirm is idempotent", fixture.host.StartAutomaticTimeline(generation, first.detail));
+                }
+                if (finished) finalTime = timestamp;
+            }
+            const double elapsedMs = static_cast<double>(finalTime - start) / 1.0e6;
+            Check("automatic reaches endpoint", finished);
+            Check("automatic native duration is 500ms within one frame", elapsedMs >= 499.999 && elapsedMs <= 500.001 + 1000.0 / hz);
+            Check("terminal cannot be restarted by old confirm", !fixture.host.StartAutomaticTimeline(generation, first.detail));
+            Check("automatic terminal still blocks successor", !fixture.host.StartProgrammatic(generation + 2, direction));
+            ReleaseAutomatic(fixture, generation, direction, true);
+        }
+    }
+}
+
+void ScenarioAutomaticFirstDrawFailuresAndCancellation()
+{
+    for (const Direction direction : {Direction::NEXT, Direction::PREVIOUS}) {
+        Fixture fixture;
+        Check("automatic failing first frames fixture", fixture.AttachWithTextures());
+        glmock::Reset();
+        glmock::SetSwapFailureCount(5);
+        const EventRecord first = PrimeAutomatic(fixture, 401, direction);
+        // Regrab exposes the exact successfully submitted initial pose. It
+        // also exercises manual priority over a pending automatic confirm.
+        BookTurnSample sample;
+        sample.generation = 402; sample.direction = direction;
+        sample.width = 390; sample.height = 780;
+        sample.startX = 200; sample.pointerX = 200;
+        sample.startY = 390; sample.pointerY = 390;
+        const auto initial = fixture.host.Regrab(sample, 401);
+        Check("initial automatic pose remains regrabbable", initial.has_value());
+        if (initial.has_value()) Check("failed initial swaps consume no geometric progress",
+            std::abs(initial->edgeX - (direction == Direction::NEXT ? 390.0F : 0.0F)) < .001F);
+        Check("manual regrab invalidates automatic confirm", !fixture.host.StartAutomaticTimeline(401, first.detail));
+    }
+    {
+        Fixture fixture;
+        Check("automatic cancel fixture", fixture.AttachWithTextures());
+        const EventRecord first = PrimeAutomatic(fixture, 410, Direction::NEXT);
+        Check("same-owner rollback cancels missing confirm", fixture.host.Settle(410, false));
+        Check("cancelled confirmation rejected immediately", !fixture.host.StartAutomaticTimeline(410, first.detail));
+        EventRecord rollback {};
+        bool ended = false;
+        for (int frame = 0; frame < 20 && !ended; ++frame) {
+            fixture.PumpFrame(); ended = fixture.sink.WaitFor(HostEvent::ROLLBACK_COMPLETE, 410, rollback, 10);
+        }
+        Check("lost-confirm recovery reaches rollback", ended);
+        ReleaseAutomatic(fixture, 410, Direction::NEXT, false);
+        Check("rollback releases native input owner", fixture.host.StartProgrammatic(411, Direction::NEXT));
+    }
+    {
+        Fixture fixture;
+        Check("automatic early cancel fixture", fixture.AttachWithTextures());
+        Check("automatic start queued before first VSync", fixture.host.StartProgrammatic(420, Direction::NEXT, ProgrammaticProfile::AUTOMATIC));
+        Check("automatic cancel queued before first VSync", fixture.host.Settle(420, false));
+        EventRecord rollback {};
+        bool ended = false;
+        for (int frame = 0; frame < 20 && !ended; ++frame) {
+            fixture.PumpFrame(); ended = fixture.sink.WaitFor(HostEvent::ROLLBACK_COMPLETE, 420, rollback, 10);
+        }
+        Check("early cancellation produces real rollback terminal", ended);
+        ReleaseAutomatic(fixture, 420, Direction::NEXT, false);
+    }
+    {
+        Fixture fixture;
+        Check("automatic dead surface fixture", fixture.AttachWithTextures());
+        glmock::SetSwapFailureCount(50);
+        Check("automatic failing start admitted", fixture.host.StartProgrammatic(430, Direction::NEXT, ProgrammaticProfile::AUTOMATIC));
+        EventRecord failure {};
+        bool ended = false;
+        for (int frame = 0; frame < 20 && !ended; ++frame) {
+            fixture.PumpFrame(); ended = fixture.sink.WaitFor(HostEvent::RENDER_FAILURE, 430, failure, 10);
+        }
+        Check("automatic first-draw failures remain bounded", ended);
+        Check("failed prime cannot accept confirmation", !fixture.host.StartAutomaticTimeline(430, 1));
+        glmock::SetSwapFailureCount(0);
+    }
+}
+
+void ScenarioAutomaticSurfaceReplacement()
+{
+    Fixture fixture;
+    Check("automatic replacement fixture", fixture.AttachWithTextures());
+    const EventRecord old = PrimeAutomatic(fixture, 440, Direction::NEXT);
+    fixture.host.DetachSurface();
+    Check("detached automatic token rejected", !fixture.host.StartAutomaticTimeline(440, old.detail));
+    Check("automatic replacement ready", fixture.AttachWithTextures());
+    const EventRecord fresh = PrimeAutomatic(fixture, 440, Direction::NEXT);
+    Check("same generation on new surface gets fresh token", fresh.detail != old.detail);
+    Check("prior surface token cannot start new timeline", !fixture.host.StartAutomaticTimeline(440, old.detail));
+    Check("current surface token can start new timeline", fixture.host.StartAutomaticTimeline(440, fresh.detail));
+}
+
+void ScenarioAutomaticDroppedFrames()
+{
+    Fixture fixture;
+    Check("automatic dropped frames fixture", fixture.AttachWithTextures());
+    const EventRecord first = PrimeAutomatic(fixture, 450, Direction::NEXT);
+    const int requests = bookturntest::RequestCount();
+    Check("automatic dropped frames confirm", fixture.host.StartAutomaticTimeline(450, first.detail));
+    Check("automatic dropped frames wake", PollUntil([&]() { return bookturntest::RequestCount() > requests; }, 1000));
+    const long long origin = fixture.vsyncTimeNs + 3'000'000'000LL;
+    EventRecord endpoint {};
+    for (const long long elapsed : {0LL, 200'000'000LL, 499'000'000LL, 500'000'000LL}) {
+        const size_t before = glmock::Log().size();
+        bookturntest::PumpVsync(origin + elapsed);
+        Check("automatic sparse VSync draws", PollUntil([&]() {
+            return CountInRange(glmock::Log(), "eglSwapBuffers", before, glmock::Log().size()) > 0;
+        }, 1000));
+        const bool ended = fixture.sink.WaitFor(HostEvent::VISUAL_COMMIT_ENDPOINT, 450, endpoint, 2);
+        Check("automatic sparse clock retains 500ms deadline", ended == (elapsed == 500'000'000LL));
+    }
+    ReleaseAutomatic(fixture, 450, Direction::NEXT, true);
 }
 
 void ScenarioHighlightDeduplication()
@@ -911,6 +1095,10 @@ int main()
     ScenarioHighlightDeduplication();
     ScenarioReplacementHighlightMailbox();
     ScenarioRapidProgrammaticCueRetainsBarrier();
+    ScenarioAutomaticTimelineAtRefreshRates();
+    ScenarioAutomaticFirstDrawFailuresAndCancellation();
+    ScenarioAutomaticSurfaceReplacement();
+    ScenarioAutomaticDroppedFrames();
     ScenarioReplacementReadinessDuringUpload();
     ScenarioFailedReplacementInvalidatesOldPixels();
     ScenarioSurfaceEpochRejectsOldCopy();

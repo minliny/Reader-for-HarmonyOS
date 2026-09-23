@@ -2,7 +2,6 @@ import { audio } from '@kit.AudioKit';
 import { media } from '@kit.MediaKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf } from './ErrorMessage.ts';
-import util from '@ohos.util';
 import {
   type ReaderTtsHost,
   type ReaderTtsHostEvent,
@@ -152,6 +151,10 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     await this.releasePlayer();
     if (this.closed || generation !== this.speakGeneration) return;
     const player = await media.createAVPlayer();
+    if (this.closed || generation !== this.speakGeneration) {
+      await player.release();
+      return;
+    }
     this.player = player;
     this.currentRequestId = request.requestId;
     this.startReported = false;
@@ -159,7 +162,8 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       this.handlePlayerState(player, request.requestId, state);
     });
     player.on('error', (error: Error): void => {
-      if (this.player !== player || this.currentRequestId !== request.requestId) return;
+      if (this.closed || generation !== this.speakGeneration ||
+        this.player !== player || this.currentRequestId !== request.requestId) return;
       this.emit({ type: 'error', requestId: request.requestId, message: error.message });
     });
     try {
@@ -172,7 +176,8 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
         rendererFlags: 0,
       };
       await player.prepare();
-      if (this.player !== player || this.currentRequestId !== request.requestId) return;
+      if (this.closed || generation !== this.speakGeneration ||
+        this.player !== player || this.currentRequestId !== request.requestId) return;
       await player.play();
     } catch (error) {
       if (this.player === player && this.currentRequestId === request.requestId) {
@@ -215,6 +220,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       this.emit({ type: 'start', requestId });
     } else if (state === 'completed') {
       this.emit({ type: 'complete', requestId, completion: 'audio' });
+      if (this.player === player && this.currentRequestId === requestId) void this.releasePlayer();
     } else if (state === 'error') {
       this.emit({ type: 'error', requestId, message: 'Reader HttpTTS AVPlayer entered error state' });
     }
@@ -223,6 +229,9 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private async releasePlayer(): Promise<void> {
     const player = this.player;
     this.player = undefined;
+    // Detach this owner's reference before awaiting native release. A later
+    // utterance may install a new buffer while the old player is stopping.
+    this.audioBytes = undefined;
     if (player === undefined) {
       this.audioBytes = undefined;
       return;
@@ -239,8 +248,6 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       await player.release();
     } catch (error) {
       this.logError('HttpTTS AVPlayer release failed', error);
-    } finally {
-      this.audioBytes = undefined;
     }
   }
 
@@ -256,7 +263,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       !Object.keys(headers).some((key: string): boolean => key.toLowerCase() === 'content-type')) {
       headers['Content-Type'] = descriptor.contentType;
     }
-    const response = await HttpExecuteHost.instance.execute({
+    const response = await HttpExecuteHost.instance.executeBytes({
       url: resolvedRequest.url,
       method: descriptor.method,
       headers,
@@ -272,16 +279,15 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       // same boundary also covers custom credential headers (for example
       // X-API-Key), which the generic sensitive-header list cannot identify.
       sameOriginRedirectsOnly: descriptor.playback?.credentialRef !== undefined,
-    }, undefined, (): boolean => this.closed || admittedGeneration !== this.networkGeneration);
+    }, HTTP_TTS_MAX_AUDIO_BYTES, undefined, (): boolean => this.closed || admittedGeneration !== this.networkGeneration);
+    if (this.closed || admittedGeneration !== this.networkGeneration) {
+      throw new Error('Reader HttpTTS audio request cancelled');
+    }
     const status = response['status'];
     if (typeof status !== 'number' || status < 200 || status >= 300) {
       throw new Error(`Reader HttpTTS audio request failed with HTTP ${status ?? 'unknown'}`);
     }
-    const encoded = response['bodyBase64'];
-    if (typeof encoded !== 'string' || encoded.length === 0) {
-      throw new Error('Reader HttpTTS audio response must be binary');
-    }
-    const bytes = new util.Base64Helper().decodeSync(encoded, util.Type.MIME);
+    const bytes = response.bytes;
     if (bytes.length === 0 || bytes.length > HTTP_TTS_MAX_AUDIO_BYTES) {
       throw new Error(`Reader HttpTTS audio response size ${bytes.length} is outside the allowed range`);
     }

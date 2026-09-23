@@ -32,7 +32,7 @@ export class ReaderAppearanceGateway {
   }
 
   async registerCustomFont(font: Font, snapshot: ReaderAppearanceSnapshot): Promise<boolean> {
-    if (snapshot.font !== 'custom') {
+    if (snapshot.customFont === undefined) {
       return true;
     }
     return this.customFontHost.registerPersisted(font, snapshot.customFont);

@@ -11,9 +11,9 @@ const menu=read('features/bookshelf/BookshelfMoreMenu.ets');
 const action=read('features/bookshelf/BookshelfBookActionSheet.ets');
 const dialog=read('features/bookshelf/LocalImportDialog.ets');
 const index=read('pages/Index.ets');
-// PH60 accepts four semantic More actions; V1 default-only grouping and geometry remain.
-assert.match(shelf,/sectionAction\('bookshelf_settings'[\s\S]*?groupSelectorVisible = !this.groupSelectorVisible/);
-assert.match(shelf,/BookshelfGroupSelector\(/);
+// The section gear is removed; the four semantic More actions remain.
+assert.doesNotMatch(shelf,/sectionAction\('bookshelf_settings'/);
+assert.doesNotMatch(shelf,/BookshelfGroupSelector\(/);
 assert.doesNotMatch(shelf,/sectionAction\('bookshelf_search'/);
 assert.match(shelf,/sectionAction\([\s\S]*?\.width\(34\)[\s\S]*?\.height\(34\)/);
 assert.match(shelf,/responseRegion\(\{ x: -5, y: -5, width: 44, height: 44 \}/);

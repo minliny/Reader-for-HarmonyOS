@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
@@ -134,9 +135,10 @@ function method(name) {
 const methods = ['loadAppearanceSnapshot', 'sameAppearanceFont', 'commitAppearanceChange',
   'observeAppearanceSave', 'changeAppearanceIndent', 'stepAppearanceMetric', 'stepAppearanceSnapshotMetric',
   'roundAppearanceMetric', 'toggleAppearanceAlignment'];
-const Page = new Function('ReaderThemeHost', ...Object.keys(state), stripTypeScriptTypes(
+let prepareFont = async () => {};
+const Page = new Function('ReaderThemeHost', 'prepareReaderFontFamily', 'readerAppearanceSnapshotFontFamily', ...Object.keys(state), stripTypeScriptTypes(
   `${source.match(/^const READER_APPEARANCE_\w+_STEP = .*;$/gm).join('\n')}
-  class Page { ${methods.map(method).join('\n')} }`) + ';return Page;')({prepareUserChange: async()=>{}}, ...Object.values(state));
+  class Page { ${methods.map(method).join('\n')} }`) + ';return Page;')({prepareUserChange: async()=>{}}, (...args)=>prepareFont(...args), snapshot=>snapshot.font, ...Object.values(state));
 function page(store, registration = async () => true) {
   const value = new Page();
   Object.assign(value, {
@@ -201,6 +203,30 @@ assert.equal(custom.font, 'custom');
   await store.flush();
 }
 
+// A submitted but unfinished font load cannot publish an appearance or
+// resurrect a closed page. The accepted preference still persists normally.
+{
+  const disk = persistence(), store = new ReaderAppearanceStore(disk), current = page(store), gate = deferred();
+  prepareFont = () => gate.promise;
+  const loading = current.loadAppearanceSnapshot(1); await tick();
+  assert.equal(current.appearanceLoaded, true);
+  current.active = false; gate.resolve(); await loading;
+  assert.deepEqual(current.appearanceSnapshot, initial);
+  prepareFont = async () => {};
+}
+{
+  const disk = persistence(), store = new ReaderAppearanceStore(disk), current = page(store), gate = deferred();
+  await current.loadAppearanceSnapshot(1);
+  prepareFont = () => gate.promise;
+  current.commitAppearanceChange(value => state.setReaderAppearanceFont(value, 'sans'));
+  await tick(); await store.flush();
+  assert.equal(disk.snapshot.font, 'sans');
+  assert.equal(current.appearanceSnapshot.font, initial.font, 'unloaded font must not reflow visible text');
+  gate.resolve(); await tick();
+  assert.equal(current.appearanceSnapshot.font, 'sans');
+  prepareFont = async () => {};
+}
+
 console.log('reader appearance shared store, page races and persistence recovery: PASS');
 
 // Exercise the real Preferences adapter against legacy snapshots and corrupted
@@ -240,10 +266,10 @@ console.log('appearance Preferences adapter migration and persistence compatibil
   const closeStart = source.indexOf('  private async closeRuntime(): Promise<void>');
   const close = source.slice(closeStart, source.indexOf('\n  private async startRuntime', closeStart));
   let notices = 0, releases = 0;
-  const Runtime = new Function('hilog', 'LOG_DOMAIN', 'errorMessageOf', 'ReadingBodyImageHost',
+  const Runtime = new Function('hilog', 'LOG_DOMAIN', 'errorMessageOf', 'ReadingBodyImageHost', 'ReaderStartupTrace',
     stripTypeScriptTypes(`class ReaderRuntimeOwner { ${flush} ${close} }`) + ';return ReaderRuntimeOwner;')(
     { warn() { notices++; } }, 0, error => error.message,
-    { instance: { releaseAllDisplayFiles() { releases++; } } });
+    { instance: { releaseAllDisplayFiles() { releases++; } } }, ReaderStartupTrace);
   const events = [], runtime = new Runtime();
   let failCore = true, failAppearance = false;
   Object.assign(runtime, {

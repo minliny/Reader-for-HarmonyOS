@@ -102,8 +102,10 @@ export struct ReaderControlAutoPageContent {
     if (!this.sharedInput()) this.speedPreviewSeconds = -1;
   }
   private syncMorphScroll(): void {
+    const offset = this.scroller.currentOffset()?.yOffset;
+    if (offset === undefined || !Number.isFinite(offset)) return;
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, this.scroller.currentOffset().yOffset);
+      this.interactionEnabled, offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -112,8 +114,10 @@ export struct ReaderControlAutoPageContent {
   }
   private onFullDidScroll(): void {
     if (this.sourceOnly !== 'none') return;
+    const offset = this.scroller.currentOffset()?.yOffset;
+    if (offset === undefined || !Number.isFinite(offset)) return;
     this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion,
-      this.scroller.currentOffset().yOffset, this.fullInput());
+      offset, this.fullInput());
     this.reportMorphActor();
   }
   private nativeScrollDelta(y: number, source: ScrollSource): OffsetResult {
@@ -171,17 +175,24 @@ export struct ReaderControlAutoPageContent {
     if (this.sourceOnly !== 'none' || this.sourceDetached) return;
     const rect: ReaderControlPlaybackMeasuredRect = { left: Number(area.globalPosition.x),
       top: Number(area.globalPosition.y), width: Number(area.width), height: Number(area.height) };
-    if (full) { this.fullMeasurement = rect; this.fullMeasurementScrollOffset = this.scroller.currentOffset().yOffset; }
-    else this.quickMeasurement = rect;
+    if (full) {
+      const offset = this.scroller.currentOffset()?.yOffset;
+      if (offset === undefined || !Number.isFinite(offset)) return;
+      this.fullMeasurement = rect;
+      this.fullMeasurementScrollOffset = offset;
+    } else this.quickMeasurement = rect;
     this.reportMorphActor();
   }
   private reportMorphActor(): void {
     if (this.sourceOnly !== 'none' || this.sourceDetached) return;
     const full = this.fullMeasurement;
-    const scrolled: ReaderControlPlaybackMeasuredRect | undefined = full === undefined ? undefined : {
-      left: full.left, top: full.top - (this.scroller.currentOffset().yOffset - this.fullMeasurementScrollOffset),
-      width: full.width, height: full.height,
-    };
+    let scrolled: ReaderControlPlaybackMeasuredRect | undefined = undefined;
+    if (this.form === 'full' && full !== undefined) {
+      const offset = this.scroller.currentOffset()?.yOffset;
+      if (offset === undefined || !Number.isFinite(offset)) return;
+      scrolled = { left: full.left, top: full.top - (offset - this.fullMeasurementScrollOffset),
+        width: full.width, height: full.height };
+    }
     const rect = readerControlPlaybackMeasuredSource(this.form, this.quickMeasurement, scrolled);
     if (rect !== undefined) this.onMorphActorMeasured(readerControlPlaybackSourceKind('autoPage', this.form),
       rect.left, rect.top, rect.width, rect.height);
@@ -241,6 +252,7 @@ export struct ReaderControlAutoPageContent {
           .height(Math.max(this.frame().contentHeight, this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion)));
       }.width(this.availableWidth).height(this.availableHeight).scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.None).enableScrollInteraction(this.fullInput())
+        .onAppear((): void => this.syncMorphScroll())
         .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
           this.nativeScrollDelta(y, source))
         .onDidScroll((): void => this.onFullDidScroll());

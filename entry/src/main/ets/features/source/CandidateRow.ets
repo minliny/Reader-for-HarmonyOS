@@ -89,11 +89,13 @@ export struct CandidateRow {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(this.rowBackground())
     .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-    .onClick((): void => {
-      if (this.kind() === 'available') {
-        this.onSelect();
-      }
-    });
+    .onClick((): void => this.selectCandidate());
+  }
+
+  private selectCandidate(): void {
+    // A previous timeout/offline result is feedback, not a permanent lock.
+    // Selecting the row owns a fresh attempt in the current reading flow.
+    if (!this.isCurrent) this.onSelect();
   }
 
   private kind(): SourceSwitchRowKind {

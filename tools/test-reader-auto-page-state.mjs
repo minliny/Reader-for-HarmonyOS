@@ -153,23 +153,5 @@ assert.equal(retriedPausedState.generation, 2);
 console.log('reader auto-page pure state: PASS');
 
 
-// Wall-clock corrections must not advance, freeze or reverse an active duration.
-const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-let monotonicMs = 10000;
-const deadlines = [];
-const ClockOwner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
-  ['armAutoPageTimer', 'captureAutoPageRemaining', 'onAutoPageTimer', 'captureAutoPageSessionRemaining', 'armAutoPageSessionTimer'],
-  { readerMotionNowMs: () => monotonicMs, Date: { now() { throw Error('elapsed timers must not read calendar time'); } },
-    tickReaderAutoPage, isReaderAutoPageTurnDue, stopReaderAutoPage,
-    readerAutoPageFullTimerDurationSeconds: () => 60, setTimeout: (fn, ms) => { deadlines.push({ fn, ms }); return deadlines.length; } });
-const timed = Object.assign(new ClockOwner(), { mounted:true, appForeground:true, exitRequested:false, phase:'ready',
-  autoPageState: startReaderAutoPage(createReaderAutoPageState(8)), autoPageDeadlineMs:0,
-  autoPageSessionDeadlineMs:0, autoPageSessionRemainingSeconds:60, autoPageSessionTimerGeneration:1,
-  clearAutoPageTimer(){}, clearAutoPageSessionTimer(){}, requestAutoPageTurn(){ this.due = true; }, onAutoPageSessionTimer(){} });
-timed.armAutoPageTimer(true); timed.armAutoPageSessionTimer(true);
-assert.equal(timed.autoPageDeadlineMs,18000); assert.equal(timed.autoPageSessionDeadlineMs,70000);
-monotonicMs += 3000; timed.captureAutoPageRemaining(); timed.captureAutoPageSessionRemaining();
-assert.equal(timed.autoPageState.remainingSeconds,5); assert.equal(timed.autoPageSessionRemainingSeconds,57);
-monotonicMs += 5000; timed.onAutoPageTimer(timed.autoPageState.generation);
-assert.equal(timed.due,true); assert.equal(timed.autoPageState.remainingSeconds,0);
-console.log('production automatic turn and stop durations use monotonic time; calendar access rejected: PASS');
+// Exercise the production owner rather than extracting obsolete page-owned timers.
+await import('./test-reader-auto-page-coordinator.mjs');

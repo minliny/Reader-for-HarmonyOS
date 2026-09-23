@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { ReaderRectVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -7,6 +8,12 @@ import { readerAppearanceThemeStyle } from '../entry/src/main/ets/features/readi
 
 const source = readFileSync(new URL(
   '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
+const require = createRequire(import.meta.url);
+const syntax = require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/lib/validate_ui_syntax.js');
+const childSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderStatusBarPaper.ets', import.meta.url), 'utf8');
+syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
+syntax.propCollection.set('ReaderStatusBarPaper', new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
+class Child { constructor(owner,params,_storage,id) {Object.assign(this,{owner,params,id});} }
 const members = ['readerStatusBarUnderlay'];
 // Keep this test executable against the original implementation as well as
 // its geometry helper. Both are extracted from the actual production source.
@@ -24,7 +31,7 @@ function fixture(rect = new ReaderRectVp(), theme = 'warmNight') {
   const dependencies = new Map();
   const { owner } = createReaderBuilderProbe(source, members, {
     ReaderWindowCoordinator: { metrics: () => metrics },
-    readerAppearanceThemeStyle,
+    readerAppearanceThemeStyle, ReaderStatusBarPaper: Child,
   }, {
     onObserverEnter: (_owner, id) => {
       activeObservers.push(id);
@@ -44,7 +51,8 @@ function fixture(rect = new ReaderRectVp(), theme = 'warmNight') {
       },
     });
   }
-  owner.controlsPresentedForWindow = () => false;
+  owner.windowControlsPresented = true;
+  owner.readingLayout = () => ({ viewportWidth: 390, viewportHeight: 844, widthClass: 'compact' });
   owner.readerStatusBarUnderlay();
   const initialObserverCount = owner.observers.length;
   function update(key, value) {
@@ -61,7 +69,9 @@ function fixture(rect = new ReaderRectVp(), theme = 'warmNight') {
   }
   return {
     row,
-    geometry: () => ({ width: row().width, height: row().height, position: row().position }),
+    props: () => [...owner.children.values()][0].params,
+    geometry: () => { const rect = [...owner.children.values()][0].params.statusRect;
+      return {width:rect.width,height:rect.height,position:{x:rect.left,y:rect.top}}; },
     updateMetrics(nextRect) {
       metrics = { statusBarRect: nextRect, statusBarHeight: nextRect.height };
       return update('readerWindowMetricsRevision', state.readerWindowMetricsRevision + 1);
@@ -80,27 +90,30 @@ function check(name, run) {
   }
 }
 
-check('disabled extension: zero initial measured region recovers through the metrics dependency', () => {
+check('presented controls: zero initial measured region recovers through the metrics dependency', () => {
   const f = fixture();
   assert.deepEqual(f.geometry(), { width: 0, height: 0, position: { x: 0, y: 0 } });
   const observers = f.updateMetrics(new ReaderRectVp(0, 0, 390, 48));
   assert.deepEqual(f.geometry(), { width: 390, height: 48, position: { x: 0, y: 0 } },
     `late measured geometry must reach the retained Row; metrics observers=${JSON.stringify(observers)}`);
-  assert.equal(f.row().backgroundColor, '#FF413020');
+  assert.equal(f.props().fallbackColor, '#FF413020');
+  assert.equal(f.props().theme, 'warmNight');
 });
 
 check('measured origin, width and height update without a theme change or remount', () => {
   const f = fixture(new ReaderRectVp(0, 0, 390, 48), 'green');
   f.updateMetrics(new ReaderRectVp(4, 2, 382, 46));
   assert.deepEqual(f.geometry(), { width: 382, height: 46, position: { x: 4, y: 2 } });
-  assert.equal(f.row().backgroundColor, '#FFE3EBDD');
+  assert.equal(f.props().fallbackColor, '#FFE3EBDD');
+  assert.equal(f.props().theme, 'green');
 });
 
 check('all eight reading palettes remain unchanged in the retained underlay', () => {
   const f = fixture(new ReaderRectVp(3, 1, 384, 50));
   for (const theme of READER_THEME_DEFINITIONS) {
     f.updateTheme(theme.id);
-    assert.equal(f.row().backgroundColor, theme.statusBackground, theme.id);
+    assert.equal(f.props().fallbackColor, theme.paperStart, theme.id);
+    assert.equal(f.props().theme, theme.id);
     assert.deepEqual(f.geometry(), { width: 384, height: 50, position: { x: 3, y: 1 } });
     assert.equal(f.row().zIndex, 10);
   }

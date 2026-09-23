@@ -78,7 +78,7 @@ assert.match(experience, /reduceReaderControlBackdropTouch\(this\.controlBackdro
 assert.match(experience, /invalidationRevision: this\.controlInputRevision/);
 assert.match(experience, /ReaderControlPanel\(\{[\s\S]*?onDismiss: \(\): void => this\.hideControl\(\)/);
 assert.match(experience,
-  /this\.activeGateway\(\)\.searchContentPage\(this\.bookId, keyword, READER_CONTENT_SEARCH_PAGE_SIZE, 0, isCurrent\)/);
+  /this\.quickSearchPublication\.run\(this\.activeGateway\(\), this\.bookId, keyword, READER_CONTENT_SEARCH_PAGE_SIZE/);
 assert.match(experience,
   /this\.controlPage\(\) === 'quickSearch' \|\| this\.controlPage\(\) === 'fullSearch'/,
   'a running search must remain live while Quick Search expands into Full Search');
@@ -114,10 +114,10 @@ assert.doesNotMatch(experience, /\.onClick\(\(\): void => \{\s*this\.pauseAutoPa
 assert.doesNotMatch(experience, /reader\.page\.turn\.none.*animateTo/);
 assert.match(experience, /inputEnabled: this\.isControlInputEnabled\(\)/);
 assert.match(experience, /reduceMotion: this\.reduceMotion/);
-assert.match(experience, /autoPageStatus: this\.autoPageState\.status/);
+assert.match(experience, /autoPageStatus: this\.automaticReadingState\(\)\.status/);
 assert.match(experience, /private armAutoPageTimer\(resetDeadline: boolean\): void/);
 assert.match(experience, /private onAppForegroundChanged\(\): void/);
-assert.match(experience, /endReaderAutoPageAtBookEnd\(this\.autoPageState, generation\)/);
+assert.match(experience, /turn: \(\): ReaderPageTurnOutcome => this\.performPageTurn\('next', 'autoTimer'\)/);
 assert.doesNotMatch(experience, /\.width\('(33|34)%'\)/,
   'page-turn hit regions must not be separate percentage-width click rows');
 assert.match(experience, /private numericAreaLength\(value: Length\): number \{[\s\S]*typeof value === 'string'[\s\S]*Number\.parseFloat\(value\)/,
@@ -181,9 +181,10 @@ assert.match(pageInteraction, /this\.inputClock\.sample\(event\.timestamp, reade
 assert.match(experience,
   /systemGestureLeftInset: this\.readerSystemGestureLeftInset\(\)[\s\S]*systemGestureBottomInset: this\.readerSystemGestureBottomInset\(\)/,
   'the page arena must consume the current Window gesture/navigation insets');
-assert.match(experience,
-  /const pageCanReceiveInput = this\.phase === 'ready' \|\| this\.visiblePage !== undefined;/,
-  'a committed visible page must keep centre controls touchable during neighbour preparation');
+const pageInput = experience.match(/private isReaderPageInteractionEnabled\(\): boolean \{([\s\S]*?)\n  \}/)?.[1] ?? '';
+assert.match(pageInput, /return this\.mounted && !this\.exitRequested/);
+assert.doesNotMatch(pageInput, /this\.phase|this\.visiblePage/,
+  'settings remain reachable during initial loading, recoverable failure and neighbour preparation');
 const tapOnlyInput = experience.match(
   /private pageTurnTapOnlyInput\(\): boolean \{([\s\S]*?)\n  \}/,
 )?.[1] ?? '';

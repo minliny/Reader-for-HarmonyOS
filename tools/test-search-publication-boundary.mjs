@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 
+registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
+  catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const prefix = new URL('../entry/src/main/ets/', import.meta.url);
 const read = name => readFileSync(new URL(name, prefix), 'utf8');
 const clean = text => text.replace(/^import[\s\S]*?;\n/gm, '');
@@ -32,7 +34,7 @@ const boundaryDiagnostics = previousImport => {
       .replace("from './SearchPresentation'", "from './SearchPage'") : read('features/search/SearchPublication.ts')],
     [presentationPath, read('features/search/SearchPresentation.ts')],
     [fileURLToPath(new URL('features/search/SearchGateway.ts', prefix)),
-      'export interface SearchBook {} export interface SearchResultDelta {}'],
+      'export interface SearchBook {} export interface SearchResultDelta {} export interface SearchSource {}'],
     [fileURLToPath(new URL('app/ReaderCoreGateway.ts', prefix)), 'export interface ShelfBook {}'],
     [pagePath, 'export type { SearchPresentation } from "./SearchPresentation";'],
   ]);
@@ -67,7 +69,7 @@ const member = (struct, tree, name) => {
 };
 const runtime = createArkUIPropertyRuntimeProbe();
 const nativeRequests = [];
-globalThis.ReaderRuntimeOwner = { current: () => ({ request: async method => {
+globalThis.ReaderRuntimeOwner = { current: () => ({ setReadingPreparationContext() {}, request: async method => {
   nativeRequests.push(method); assert.fail(`This boundary test must not request Core/network: ${method}`);
 } }) };
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {} };
@@ -77,12 +79,11 @@ const { SearchOrchestrator, SearchQueryRun } = await evaluate([
   'features/source/ReaderSourceCategory.ts', 'app/ErrorMessage.ts', 'features/search/SearchBookProjection.ts',
   'features/search/SearchGateway.ts', 'features/search/SearchOrchestrator.ets',
 ].map(name => clean(read(name))).join('\n') + '\nexport { SearchQueryRun };');
-const { SearchPublication, SearchViewState, SearchResultProjection } = await evaluate([
-  'features/common/BookAuthorMetadata.ts',
-  'features/search/SearchPublication.ts', 'features/search/SearchViewState.ts',
-  'features/search/SearchResultRelevance.ts', 'features/common/BookAcquisitionPresentation.ts',
-  'features/search/SearchCandidatePolicy.ts', 'features/search/SearchResultProjection.ts',
-].map(name => clean(read(name))).join('\n'));
+// Pure TypeScript modules retain their real dependency graph. Only the
+// Harmony-specific orchestrator and ArkUI boundary above need extraction.
+const { SearchPublication } = await import('../entry/src/main/ets/features/search/SearchPublication.ts');
+const { SearchViewState } = await import('../entry/src/main/ets/features/search/SearchViewState.ts');
+const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
 const classes = pageSource.slice(pageSource.indexOf('@Observed\nclass SearchBookGroup'),
   pageSource.indexOf('/**\n * Figma-backed Book Search')).replace('@Observed\n', '');
 const { SearchBookGroup, SearchResultDataSource } = await evaluate(`
@@ -120,12 +121,12 @@ let initialParams;
 class ActualSearchPage extends childProbe.Component {
   constructor(...args) { initialParams = args[1]; super(...args); }
 }
-const indexMembers = ['searchPresentation', 'searchPublication', 'searchPublicationRevision',
-  'searchOrchestrator', 'getSearchOrchestrator', 'applyBookshelfState', 'copyShelfBookWithSourceName'];
+const indexMembers = ['searchPublication', 'searchPublicationRevision',
+  'searchOrchestrator', 'getSearchOrchestrator', 'preparePersistedShelfBooks', 'applyBookshelfState', 'copyShelfBookWithSourceName'];
 const parentSource = `@Component struct Index {\n${indexMembers.map(name => member(indexStruct, indexTree, name)).join('\n')}
 build() { ${searchEntry}; }\n}`;
 const { owner: host, output: parentOutput } = createReaderBuilderProbe(parentSource,
-  [...indexMembers, 'build'], { ...runtime.sdk, SearchPage: ActualSearchPage, SearchPublication,
+  [...indexMembers, 'build'], { ...runtime.sdk, SearchPage: ActualSearchPage, LOCAL_SOURCE_ID: 'local', SearchPublication,
     SearchOrchestrator, deviceInfo: { deviceType: 'phone' } }, runtime.hooks);
 Object.assign(host, { searchViewState: new SearchViewState(), settingsSnapshot: { reduceMotion: false },
   route: 'search', searchAppForeground: true, shelfBooks: [], bookshelfLoadGeneration: 1,
@@ -172,7 +173,7 @@ page.resultDataSource.registerDataChangeListener({ onDatasetChange: operations =
 constructedGroups = 0; const copiesBefore = runtime.copies.length, updatesBefore = runtime.updates.length;
 first.sourceResults.set('empty-a', first.admit([])); first.completed.add('empty-a');
 orchestrator.publishRun(first); runtime.flush();
-assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), host.searchPresentation);
+assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), host.searchPublication.presentationAt(host.searchPublicationRevision));
 assert.equal(page.presentation.results, retained);
 assert.ok(page.presentation.results.every((book, index) => book === retained[index]));
 assert.ok(page.visibleGroups === retainedGroups, 'progress retains the existing State proxy and visible rows');

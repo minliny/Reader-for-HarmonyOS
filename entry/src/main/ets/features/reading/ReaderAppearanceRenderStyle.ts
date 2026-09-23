@@ -106,7 +106,7 @@ export function readerAppearanceFontSlotLabel(
   if (font === 'lxgwWenKai') {
     return '霞鹜文楷';
   }
-  if (snapshot.customFont !== undefined) {
+  if (font === 'custom' && snapshot.customFont !== undefined) {
     return snapshot.customFont.displayName;
   }
   return '导入';
@@ -117,8 +117,9 @@ export function readerAppearanceFontSlotFamily(
   font: ReaderAppearanceFontSlot,
 ): string {
   if (font === 'import') {
-    return snapshot.customFont?.familyName ?? READER_FONT_NOTO_SANS_SC;
+    return READER_FONT_NOTO_SANS_SC;
   }
+  if (font === 'custom') return snapshot.customFont?.familyName ?? READER_FONT_NOTO_SANS_SC;
   return readerAppearanceFontFamily(font);
 }
 

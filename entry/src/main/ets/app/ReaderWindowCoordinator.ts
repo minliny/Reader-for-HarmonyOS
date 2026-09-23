@@ -1,6 +1,9 @@
 import { display, window } from '@kit.ArkUI';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+import type { BusinessError } from '@kit.BasicServicesKit';
 import { ReaderBrightnessWriter, type ReaderBrightnessWindow } from './ReaderBrightnessWriter';
 import { ReaderStatusBarMeasurement } from './ReaderStatusBarMeasurement';
+import { findReaderTheme } from '../features/common/ReaderThemeRegistry';
 import {
   ReaderInsetsVp,
   ReaderRectVp,
@@ -42,13 +45,17 @@ export class ReaderWindowChromeStyle {
   tone: ReaderWindowChromeTone;
   /** Exact opaque foreground from the owning surface's semantic palette. */
   contentColor: string;
+  /** Non-empty only when the reader paints the matching full paper below chrome. */
+  paperThemeId: string;
 
-  constructor(underlayColor: string, tone: ReaderWindowChromeTone, contentColor?: string) {
+  constructor(underlayColor: string, tone: ReaderWindowChromeTone, contentColor?: string,
+    paperThemeId: string = '') {
     this.underlayColor = underlayColor;
     this.tone = tone;
     // Keep tone as a compatibility fallback while reader-owned chrome passes
     // the active theme's exact ink color.
     this.contentColor = contentColor ?? (tone === 'light' ? '#FFFFFFFF' : '#FF000000');
+    this.paperThemeId = findReaderTheme(paperThemeId)?.id ?? '';
   }
 }
 
@@ -60,6 +67,25 @@ class ReaderWindowChromeRequest {
     this.owner = owner;
     this.style = style;
   }
+}
+
+interface ReaderWindowChromeDiagnostic {
+  result: 'applied' | 'write-failed';
+  owner: ReaderWindowChromeOwner;
+  revision: number;
+  currentWindow: boolean;
+  expectedStatusBg: string;
+  expectedForeground: string;
+  underlayColor: string;
+  paperThemeId: string;
+  nativeReadback: 'known' | 'unavailable' | 'failed' | 'not-read';
+  nativeBackground: string;
+  nativeForeground: string;
+  errorCode: string;
+  readbackErrorCode: string;
+  metricsRevisionAtRequest: number;
+  statusRectAtRequest: ReaderRectVp;
+  windowRectAtRequest: ReaderRectVp;
 }
 
 const APP_CHROME_STYLE = new ReaderWindowChromeStyle('#F8F4EC', 'dark', '#FF2B241D');
@@ -550,6 +576,7 @@ export class ReaderWindowCoordinator {
       ReaderWindowCoordinator.desiredChrome.style.underlayColor === request.style.underlayColor &&
       ReaderWindowCoordinator.desiredChrome.style.tone === request.style.tone &&
       ReaderWindowCoordinator.desiredChrome.style.contentColor === request.style.contentColor &&
+      ReaderWindowCoordinator.desiredChrome.style.paperThemeId === request.style.paperThemeId &&
       ReaderWindowCoordinator.appliedChromeRevision === ReaderWindowCoordinator.desiredChromeRevision) {
       return;
     }
@@ -558,7 +585,16 @@ export class ReaderWindowCoordinator {
     AppStorage.setOrCreate<string>('readerWindowChromeOwner', request.owner);
     AppStorage.setOrCreate<string>('readerWindowChromeUnderlayColor', request.style.underlayColor);
     AppStorage.setOrCreate<string>('readerWindowChromeTone', request.style.tone);
+    AppStorage.setOrCreate<string>('readerWindowChromeThemeId', request.owner === 'app' ? '' : request.style.paperThemeId);
     void ReaderWindowCoordinator.flushChrome();
+  }
+
+  private static nativeStatusBarColor(request: ReaderWindowChromeRequest): string {
+    // An opaque native bar hides the authored paper texture even when its RGB
+    // base matches. Only a validated reader paper owner supplies that backing;
+    // application/legacy callers retain their original opaque status color.
+    return request.owner !== 'app' && findReaderTheme(request.style.paperThemeId) !== undefined ?
+      '#00000000' : request.style.underlayColor;
   }
 
   private static async flushChrome(): Promise<void> {
@@ -573,24 +609,28 @@ export class ReaderWindowCoordinator {
         const epoch = ReaderWindowCoordinator.installEpoch;
         const revision = ReaderWindowCoordinator.desiredChromeRevision;
         const request = ReaderWindowCoordinator.desiredChrome;
+        const metricsAtRequest = ReaderWindowCoordinator.metricsSnapshot;
         // Apply the exact opaque foreground paired with the underlay. Reader
         // chrome supplies its theme ink; legacy callers use the constructor
         // tone fallback above.
         const contentColor = request.style.contentColor;
         try {
           await win.setWindowSystemBarProperties({
-            statusBarColor: request.style.underlayColor,
+            statusBarColor: ReaderWindowCoordinator.nativeStatusBarColor(request),
             navigationBarColor: request.style.underlayColor,
             statusBarContentColor: contentColor,
             navigationBarContentColor: contentColor,
           });
-        } catch (_error) {
+        } catch (error) {
+          ReaderWindowCoordinator.reportChromeWrite(win, epoch, revision, request, metricsAtRequest,
+            false, ReaderWindowCoordinator.chromeErrorCode(error as BusinessError));
           // A failed old write must not swallow a newer queued theme. A
           // failed latest intent remains pending for an explicit retry;
           // never spin on a rejected native operation.
           if (revision !== ReaderWindowCoordinator.desiredChromeRevision) continue;
           return;
         }
+        ReaderWindowCoordinator.reportChromeWrite(win, epoch, revision, request, metricsAtRequest, true);
         if (win !== ReaderWindowCoordinator.mainWindow || epoch !== ReaderWindowCoordinator.installEpoch) {
           // install() can enqueue its new window style while this old write
           // still owns the drain. Release only if no newer intent arrived.
@@ -601,6 +641,57 @@ export class ReaderWindowCoordinator {
       }
     } finally {
       ReaderWindowCoordinator.chromeFlushRunning = false;
+    }
+  }
+
+  private static chromeErrorCode(error: BusinessError | undefined | null): string {
+    // Native messages may contain unrelated runtime details. Record only a
+    // finite numeric platform code, never message/stack or arbitrary strings.
+    try {
+      const code = error?.code;
+      return typeof code === 'number' && Number.isFinite(code) ? `${code}` : 'unknown';
+    } catch (_error) {
+      return 'unknown';
+    }
+  }
+
+  private static reportChromeWrite(win: window.Window, epoch: number, revision: number,
+    request: ReaderWindowChromeRequest, metrics: ReaderWindowMetricsSnapshot,
+    succeeded: boolean, errorCode: string = 'none'): void {
+    // One record per actual write completion, never per layout/frame. The
+    // synchronous API12 readback is a window property, not compositor pixels.
+    // A missing API, destroyed window or logging failure cannot affect policy.
+    try {
+      const diagnostic: ReaderWindowChromeDiagnostic = {
+        result: succeeded ? 'applied' : 'write-failed', owner: request.owner, revision: revision,
+        currentWindow: ReaderWindowCoordinator.installStillCurrent(epoch, win),
+        expectedStatusBg: ReaderWindowCoordinator.nativeStatusBarColor(request),
+        expectedForeground: request.style.contentColor, underlayColor: request.style.underlayColor,
+        paperThemeId: request.owner === 'app' ? '' : request.style.paperThemeId,
+        nativeReadback: succeeded ? 'unavailable' : 'not-read',
+        nativeBackground: 'unknown', nativeForeground: 'unknown',
+        errorCode: errorCode, readbackErrorCode: 'none',
+        metricsRevisionAtRequest: metrics.revision,
+        statusRectAtRequest: metrics.statusBarRect, windowRectAtRequest: metrics.windowRect,
+      };
+      if (succeeded && typeof win.getWindowSystemBarProperties === 'function') {
+        try {
+          const properties = win.getWindowSystemBarProperties();
+          diagnostic.nativeReadback = 'known';
+          diagnostic.nativeBackground = properties?.statusBarColor ?? 'unknown';
+          diagnostic.nativeForeground = properties?.statusBarContentColor ?? 'unknown';
+        } catch (error) {
+          diagnostic.nativeReadback = 'failed';
+          diagnostic.readbackErrorCode = ReaderWindowCoordinator.chromeErrorCode(error as BusinessError);
+        }
+      }
+      if (succeeded) {
+        hilog.info(0x5244, 'Reader', 'READER_WINDOW_CHROME %{public}s', JSON.stringify(diagnostic));
+      } else {
+        hilog.warn(0x5244, 'Reader', 'READER_WINDOW_CHROME %{public}s', JSON.stringify(diagnostic));
+      }
+    } catch (_error) {
+      // Diagnostics must not prevent the latest requested color from draining.
     }
   }
 }

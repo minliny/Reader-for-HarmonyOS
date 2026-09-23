@@ -1,6 +1,8 @@
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { ReadingExperience, ReadingCommit, ReaderBookmarkAnchorRequest } from '../reading/LocalReadingExperience';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import type { ReaderWindowMetricsSnapshot } from '../common/ReaderWindowMetrics';
+import { ReadingExperience, ReadingCommit, ReaderBookmarkAnchorRequest, ReaderRetainedPresentation } from '../reading/LocalReadingExperience';
 import { ReaderFullDirectory } from '../reading/ReaderFullDirectory';
 import { SourceSwitchPanel, SourceSwitchPanelState } from '../reading/SourceSwitchPanel';
 import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
@@ -10,8 +12,10 @@ import type {
   ReaderPageBookmarkToggleRequest,
 } from '../reading/ReaderDirectoryMarkerState';
 import type { ReaderBookIdentity } from '../reading/ReaderBookmarkProjection';
-import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
+import type { RemoteReadingBookSeed, RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 import type { RemoteReadingFailureKind } from '../reading/RemoteContentAdmission';
+import { ReaderStatusBarPaper } from '../reading/ReaderStatusBarPaper';
+import { readerWidthClass } from '../reading/ReaderLayoutGeometry';
 
 
 // ReaderShell —— 阅读会话的 UI 组合层 (Batch 2, FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §六)。
@@ -32,6 +36,10 @@ type PreparedReaderRoute = 'reading' | 'directory';
 @Component
 export struct ReaderShell {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
+    readerAppColor('app.window.background', 'day');
+  @StorageLink('readerWindowChromeThemeId') private chromePaperThemeId: string = '';
+  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
 
   // 阅读内容。
   @Prop bookId: string = '';
@@ -40,6 +48,9 @@ export struct ReaderShell {
   @Prop sourceName: string = '';
   @Prop bookKind: string | undefined = undefined;
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
+  @Prop remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
+  entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
+  @Prop sourceSwitchFailureMessage: string = '';
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
   @Prop totalChapters: number = 0;
   @Prop requestedChapterIndex: number | undefined = undefined;
@@ -50,6 +61,7 @@ export struct ReaderShell {
   @Prop route: PreparedReaderRoute = 'reading';
   // 目录 overlay。
   @Prop tocEntries: LocalReadingTocEntry[] = [];
+  @Prop catalogMessage: string = '';
   @Prop bookmarkLoadMessage: string = '';
   @Prop directoryCurrentChapterIndex: number = -1;
   @Prop directoryChapterTitle: string = '';
@@ -70,6 +82,11 @@ export struct ReaderShell {
   onExit: () => void = (): void => {};
   onExitCancelled: () => void = (): void => {};
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
+  onRetryFailedSourceSwitch: () => void = (): void => {};
+  onDismissSourceSwitchFailure: () => void = (): void => {};
+  resolveSourceSwitchTransactionId: (sourceId: string, bookId: string) => Promise<string | undefined> =
+    (_sourceId: string, _bookId: string): Promise<string | undefined> => Promise.resolve(undefined);
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
   onReadingFailure: (sourceId: string, bookId: string, message: string,
     failureKind?: RemoteReadingFailureKind) => void =
@@ -112,11 +129,31 @@ export struct ReaderShell {
       // true viewport/layout pass; `Visibility` would make the TextController
       // metrics unavailable.
       Stack({ alignContent: Alignment.TopStart }) {
+        // A new source/book needs fresh gateways and lifecycle tokens. Theme,
+        // font, chapter and overlay changes retain this same reading owner.
+        ForEach([this.readingIdentityKey()], (_identity: string) => {
         ReadingExperience({
           sourceId: this.sourceId,
           bookId: this.bookId,
+          isReaderIdentityCurrent: (): boolean => _identity === this.readingIdentityKey(),
           bookKind: this.bookKind,
           remoteSession: this.remoteSession,
+          remoteBookSeed: this.remoteBookSeed,
+          entryPresentationProvider: (): ReaderRetainedPresentation | undefined =>
+            _identity === this.readingIdentityKey() ? this.entryPresentationProvider() : undefined,
+          sourceSwitchFailureMessage: this.sourceSwitchFailureMessage,
+          onRetryFailedSourceSwitch: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onRetryFailedSourceSwitch();
+          },
+          onDismissSourceSwitchFailure: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onDismissSourceSwitchFailure();
+          },
+          resolveSourceSwitchTransactionId: (sourceId: string, bookId: string): Promise<string | undefined> =>
+            _identity === this.readingIdentityKey() ?
+              this.resolveSourceSwitchTransactionId(sourceId, bookId) : Promise.resolve(undefined),
+          onRemoteSessionReady: (session: RemoteReadingSession): void => {
+            if (_identity === this.readingIdentityKey()) this.onRemoteSessionReady(session);
+          },
           sourceSwitchTransactionId: this.sourceSwitchTransactionId,
           requestedChapterIndex: this.requestedChapterIndex,
           requestedBookmarkAnchor: this.requestedBookmarkAnchor,
@@ -133,37 +170,68 @@ export struct ReaderShell {
           controlObscured: this.route === 'directory',
           interactionBlocked: !this.visible || this.route !== 'reading' || this.sourceSwitchVisible,
           reduceMotion: this.reduceMotion,
-          onExitRequestHandler: (requestExit: (intent?: 'navigation') => void): void => this.onExitRequestHandler(requestExit),
-          onExit: (): void => this.onExit(),
-          onExitCancelled: (): void => this.onExitCancelled(),
-          onReadingReady: (chapterIndex: number): void => this.onReadingReady(chapterIndex),
-          onReadingCommitted: (commit: ReadingCommit): void => this.onReadingCommitted(commit),
+          onExitRequestHandler: (requestExit: (intent?: 'navigation') => void): void => {
+            if (_identity === this.readingIdentityKey()) this.onExitRequestHandler(requestExit);
+          },
+          onExit: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onExit();
+          },
+          onExitCancelled: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onExitCancelled();
+          },
+          onReadingReady: (chapterIndex: number): void => {
+            if (_identity === this.readingIdentityKey()) this.onReadingReady(chapterIndex);
+          },
+          onReadingCommitted: (commit: ReadingCommit): void => {
+            if (_identity === this.readingIdentityKey()) this.onReadingCommitted(commit);
+          },
           onReadingFailure: (sourceId: string, bookId: string, message: string,
-            failureKind?: RemoteReadingFailureKind): void =>
-            this.onReadingFailure(sourceId, bookId, message, failureKind),
-          onChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
-            this.onChapterCommitted(chapterIndex, chapterTitle),
-          onOpenDirectory: (): void => this.onOpenDirectory(),
-          onOpenBookInfo: (): void => this.onOpenBookInfo(),
-          onSwitchSource: (): void => this.onSwitchSource(),
-          onOpenRulesManagement: (): void => this.onOpenRulesManagement(),
-          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+            failureKind?: RemoteReadingFailureKind): void => {
+            if (_identity === this.readingIdentityKey()) this.onReadingFailure(sourceId, bookId, message, failureKind);
+          },
+          onChapterCommitted: (chapterIndex: number, chapterTitle: string): void => {
+            if (_identity === this.readingIdentityKey()) this.onChapterCommitted(chapterIndex, chapterTitle);
+          },
+          onOpenDirectory: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onOpenDirectory();
+          },
+          onOpenBookInfo: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onOpenBookInfo();
+          },
+          onSwitchSource: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onSwitchSource();
+          },
+          onOpenRulesManagement: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onOpenRulesManagement();
+          },
+          onDownloadChapter: (chapterIndex: number): void => {
+            if (_identity === this.readingIdentityKey()) this.onDownloadChapter(chapterIndex);
+          },
           offlineBookOperationActive: this.offlineBookOperationActive,
-          onDownloadBook: (): void => this.onDownloadBook(),
-          onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
-          onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void =>
-            this.onDirectoryProjectionChanged(entries),
+          onDownloadBook: (): void => {
+            if (_identity === this.readingIdentityKey()) this.onDownloadBook();
+          },
+          onDeleteBookmarks: (bookmarkTimes: number[]): void => {
+            if (_identity === this.readingIdentityKey()) this.onDeleteBookmarks(bookmarkTimes);
+          },
+          onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void => {
+            if (_identity === this.readingIdentityKey()) this.onDirectoryProjectionChanged(entries);
+          },
           onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean): Promise<void> =>
-            this.onLoadControlBookmarks(sourceId, bookId, isCurrent),
+            _identity === this.readingIdentityKey() ? this.onLoadControlBookmarks(sourceId, bookId,
+              (): boolean => _identity === this.readingIdentityKey() && isCurrent()) : Promise.resolve(),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
-          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-            this.onCreateChapterStartBookmark(request),
-          onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest): void =>
-            this.onTogglePageBookmark(request),
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => {
+            if (_identity === this.readingIdentityKey()) this.onCreateChapterStartBookmark(request);
+          },
+          onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest): void => {
+            if (_identity === this.readingIdentityKey()) this.onTogglePageBookmark(request);
+          },
         })
           .width('100%')
           .height('100%')
           .opacity(this.route === 'reading' || this.route === 'directory' ? 1 : 0);
+        }, (identity: string): string => identity);
       }
       .width('100%')
       .height('100%')
@@ -176,6 +244,7 @@ export struct ReaderShell {
           bookTitle: this.bookTitle,
           chapterTitle: this.directoryChapterTitle,
           entries: this.tocEntries,
+          catalogMessage: this.catalogMessage,
           currentChapterIndex: this.directoryCurrentChapterIndex,
           sourceId: this.sourceId,
           animateFromControl: this.directoryOpenedFromControl,
@@ -216,11 +285,44 @@ export struct ReaderShell {
         .width('100%')
         .height('100%');
       }
+      this.overlayStatusBarUnderlay();
     }
     .width('100%')
     .height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    // Keep the route opaque while the reading owner measures and admits its
+    // first physical page. Without a shell-owned underlay, the route switch
+    // can expose the Index/window background for a few frames before
+    // ReadingSurface mounts its paper composition.
+    .backgroundColor(this.chromeUnderlayColor)
     .opacity(this.visible ? 1 : 0)
     .hitTestBehavior(this.visible ? HitTestMode.Default : HitTestMode.Transparent);
+  }
+
+  private readingIdentityKey(): string {
+    return JSON.stringify([this.sourceId, this.bookId]);
+  }
+
+  private chromeMetrics(_revision: number): ReaderWindowMetricsSnapshot {
+    return ReaderWindowCoordinator.metrics();
+  }
+
+  @Builder
+  private overlayStatusBarUnderlay() {
+    // Sibling directory and source-switch surfaces can paint over the band's
+    // child in ReadingExperience. Repaint above those surfaces with the same
+    // owner-requested color; do not derive an independent application tone.
+    if (this.visible && (this.route === 'directory' || this.sourceSwitchVisible)) {
+      ReaderStatusBarPaper({
+        theme: this.chromePaperThemeId,
+        fallbackColor: this.chromeUnderlayColor,
+        viewportWidth: this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
+        viewportHeight: this.chromeMetrics(this.windowMetricsRevision).windowRect.height,
+        statusRect: this.chromeMetrics(this.windowMetricsRevision).statusBarRect,
+        expanded: readerWidthClass(this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
+          this.isTablet) === 'expanded',
+      }).zIndex(10).hitTestBehavior(HitTestMode.None)
+        .id('reader-overlay-status-bar-underlay');
+    }
   }
 }

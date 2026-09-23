@@ -48,13 +48,14 @@ function fixture(books=[book('/one')]) {
     throw Error(`unexpected command ${method}`);
   });
   const owner={bookAcquisitions:()=>runtime,request:(...args)=>runtime.request(...args)};
-  const Index=productionMotionMethods(indexFile,['scheduleBookshelfBackgroundRefresh','refreshBookshelfCatalogBatch','startManualBookshelfUpdate','refreshOneShelfBook'],{
+  const Index=productionMotionMethods(indexFile,['canRunBookshelfBackgroundRefresh','scheduleBookshelfBackgroundRefresh','refreshBookshelfCatalogBatch','startManualBookshelfUpdate','refreshOneShelfBook'],{
     ReaderRuntimeOwner:{current:()=>owner},RemoteReadingFlowGateway,
-    BookshelfFlowGateway:class { async load(){projections++;return {books,continueReading:undefined};} },
+    BookshelfFlowGateway:class { async load(){projections++;return {books,continueReading:undefined};} async loadAll(current){await pause();return current()?{books,total:books.length}:undefined;} },
     LOCAL_SOURCE_ID:'local',CATALOG_REFRESH_INTERVAL_MS:600000,DOMAIN:0,
     hilog:{info:(...args)=>log.push(args),warn:(...args)=>log.push(args)}
   });
   const page=Object.assign(new Index(),{route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
+    applicationSettingsSnapshot:{autoCheckUpdate:true},searchAppForeground:true,readingSessionActive:false,
     bookshelfUpdateRunning:false,bookshelfBackgroundRefreshRunning:false,bookshelfUpdateDone:0,bookshelfUpdateTotal:0,
     bookshelfLoadGeneration:0,prefetchReadingWindow:async session=>prefetched.push(session),applyBookshelfState(){}});
   return {runtime,owner,page,calls,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;},
@@ -119,7 +120,40 @@ await check('automatic checks retain 10-minute threshold and disabled/local/acti
     f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);assert.equal(f.calls.length,0);f.page.bookshelfUpdateRunning=false;
     f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
     assert.deepEqual(f.calls.filter(c=>c.method==='book.detail').map(c=>c.params.book.bookId),['/due']);
-    assert.equal(f.prefetched.at(-1).entries.length,2,'an already-due automatic check must get a new catalog too');
+    assert.equal(f.catalogs.get('/due').length,2,'automatic check still gets the new catalog');
+    assert.equal(f.prefetched.length,0,'automatic catalogs cannot launch competing body sweeps');
+  }finally{f.runtime.close();}
+});
+await check('automatic work waits for settings and yields to reading; manual work stays explicit',async()=>{
+  const f=fixture([book('/a'),book('/b'),book('/c')]);try {
+    f.page.applicationSettingsSnapshot=undefined;
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await pause();assert.equal(f.calls.length,0);
+    f.page.applicationSettingsSnapshot={autoCheckUpdate:true};
+    const priorities=[];const acquire=f.runtime.acquireBook.bind(f.runtime);
+    f.runtime.acquireBook=async(seed,options,priority)=>{
+      priorities.push(priority);const session=await acquire(seed,options,priority);
+      f.page.readingSessionActive=true;f.page.route='reading';return session;
+    };
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.ok(priorities.length>0 && priorities.every(p=>p==='background'));
+    assert.ok(!f.calls.some(c=>c.params.book?.bookId==='/c'));
+    assert.equal(f.projections(),0,'no late shelf read when foreground reading takes over');
+    assert.equal(f.prefetched.length,0);
+  } finally {f.runtime.close();}
+});
+await check('paged filtered shelf automatic sweep covers offscreen targets and cancels before network',async()=>{
+  const f=fixture([book('/visible',{lastCheckAt:Date.now()/1000}),book('/offscreen')]);try {
+    f.page.shelfProjectionRevision='r';f.page.shelfBooks=f.page.shelfBooks.slice(0,1);
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.deepEqual(f.calls.filter(c=>c.method==='book.detail').map(c=>c.params.book.bookId),['/offscreen']);
+    f.calls.length=0;
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    f.page.route='reading';f.page.readingSessionActive=true;
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.equal(f.calls.length,0,'cancelled target read cannot start network acquisition');
   }finally{f.runtime.close();}
 });
 await check('multiple force waiters share one refresh after the nonforce admission settles',async()=>{

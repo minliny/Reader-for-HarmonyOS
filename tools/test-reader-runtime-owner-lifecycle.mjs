@@ -5,7 +5,7 @@ const owner = readFileSync('entry/src/main/ets/app/ReaderRuntimeOwner.ts', 'utf8
 const ability = readFileSync('entry/src/main/ets/entryability/EntryAbility.ets', 'utf8');
 
 assert.match(owner,
-  /current === undefined \|\| current\.state === 'closing' \|\| current\.state === 'closed'[\s\S]*new ReaderRuntimeOwner\(context, predecessorClose\)/,
+  /current === undefined \|\| current\.state === 'closing' \|\| current\.state === 'closed'[\s\S]*new ReaderRuntimeOwner\(context, predecessorClose, disableOptionalEntryMemory\)/,
   'a recreated Ability must receive a fresh owner instead of a closing singleton');
 assert.match(owner, /abilityLeases \+= 1/);
 assert.match(owner, /async release\(\): Promise<void>[\s\S]*abilityLeases -= 1[\s\S]*await this\.close\(\)/,

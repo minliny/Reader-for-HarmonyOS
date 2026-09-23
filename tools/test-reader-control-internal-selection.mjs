@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as selectionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 import { wholeBookAnchorForPercent } from '../entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts';
+import { ReaderTtsPageFollow, readerTtsFollowActive } from '../entry/src/main/ets/features/reading/ReaderTtsPageFollow.ts';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
@@ -23,12 +24,12 @@ function method(name) {
   return balanced(match.index);
 }
 const deferredClass = balanced(source.indexOf('class ReaderDeferredChapterSelection {'));
-const names = ['positionContextForScope', 'loadNextTtsChapter', 'clearTtsChapterEndTimer', 'reloadCurrentChapterAfterContentProjectionChange', 'selectChapterAnchor',
+const names = ['isUnknownCatalogEdge', 'entryChapterPosition', 'ttsFollowScope', 'isTtsFollowLeaseCurrent', 'positionContextForScope', 'loadNextTtsChapter', 'clearTtsChapterEndTimer', 'reloadCurrentChapterAfterContentProjectionChange', 'reloadMigratedContentPosition', 'selectChapterAnchor',
   'onRequestedBookmarkAnchorChanged', 'selectSearchResult', 'selectBookmarkAnchor', 'selectControlChapter',
   'stepControlChapter', 'readingTocEntries', 'seekControlProgress', 'controlSelectionOwner', 'completeControlSelectionAfterCommit',
   'resumeDeferredPageTurnWork', 'clearDeferredPageTurnWork'];
 function Host(mutate = code => code) {
-  const deps = { ...selectionPolicy, wholeBookAnchorForPercent, LOCAL_READING_SOURCE_ID: 'local' };
+  const deps = { ...selectionPolicy, wholeBookAnchorForPercent, readerTtsFollowActive, LOCAL_READING_SOURCE_ID: 'local' };
   const code = mutate(names.map(method).join('\n'));
   return new Function(...Object.keys(deps), stripTypeScriptTypes(deferredClass +
     '\nclass InternalSelectionProbe {' + code + '}') + ';return InternalSelectionProbe;')(
@@ -40,12 +41,14 @@ function owner(Type = Host()) {
     exitRequested: false, controlOpenRevision: 41, chapterSelectionToken: 10,
     materializedChapterSelectionToken: 10, visiblePageSelectionToken: 10,
     pageTurnSettlementActive: false, chapter: { chapterIndex: 2 }, visiblePage: { startScalar: 70 },
-    phase: 'ready', contentMetrics: undefined, knownContentVersions: [1],
+    phase: 'ready', sessionGateway: {}, contentMetrics: undefined, knownContentVersions: [1],
     pendingControlSelection: undefined, hideCalls: 0, stops: 0, opens: [],
     tocEntries: [{ index: 2 }, { index: 3 }, { index: 4 }],
     controlVisible: () => true, controlShellExitArmed: () => false,
     isKnownControlChapter: index => [2, 3, 4].includes(index),
     isSessionActive(token) { return this.mounted && !this.exitRequested && this.lifecycleToken === token; },
+    isSelectionActive(token, selection) { return this.isSessionActive(token) && this.chapterSelectionToken === selection; },
+    activeGateway: () => ({ loadProgress: async () => ({kind:'restored',progress:{chapterIndex:2,chapterOffset:81}}) }),
     captureControlSelectionOrigin: () => undefined,
     currentChapterIndex() { return this.chapter.chapterIndex; },
     adjacentChapterIndex: (index, delta) => index + delta,
@@ -53,7 +56,9 @@ function owner(Type = Host()) {
     admitChapterContentVersion() {}, chapterWindow: { get:()=>undefined, admitNeighbour() {}, clear() {} },
     ttsChapterRef: chapter => ({ sourceId: 'source', bookId: 'book', chapterIndex: chapter.chapterIndex }),
     ttsTimerMode: 'duration', ttsTimerMinutes: 25, ttsTimerSeconds: 0,
-    ttsState: { chapterKey: 'source\u0000book\u00002' },
+    ttsPageFollow: new ReaderTtsPageFollow(),
+    ttsState: { status: 'playing', sessionGeneration: 1, utteranceGeneration: 1,
+      chapterIndex: 2, chapterKey: 'source\u0000book\u00002', contentVersion: 'v1' },
     ttsCoordinator: { stop: async () => { host.stops++; }, setTimer: value => { host.timerSet = value; } },
     logTtsFailure() {}, resetForChapterSelection() {}, armFirstPageReadyDeadline() {},
     openChapter: async (...args) => { host.opens.push(args); },
@@ -99,10 +104,11 @@ async function checkTts(Type = Host()) {
   assert.equal(host.ttsTimerMinutes, 0);
   assert.equal(host.timerSet, undefined, 'timer is already unarmed before a new chapter session starts');
 }
-function checkProjection(Type = Host()) {
+async function checkProjection(Type = Host()) {
   const host = owner(Type);
   host.controlOpenRevision++;
   host.reloadCurrentChapterAfterContentProjectionChange(1, 2);
+  await Promise.resolve();
   assert.equal(host.pendingControlSelection, undefined,
     'internal conversion/projection reflow must not capture the new control session');
   assert.equal(host.pendingControlSelectionRetry.controlOwnerRevision, -1);
@@ -111,20 +117,50 @@ function checkProjection(Type = Host()) {
   assert.equal(host.hideCalls, 0);
 }
 await checkTts();
-checkProjection();
+{
+  const host = owner();
+  host.ttsState.chapterIndex = 3;
+  host.ttsState.chapterKey = 'source\u0000book\u00003';
+  const next = await host.loadNextTtsChapter({ sourceId: 'source', bookId: 'book', chapterIndex: 3 }, 1);
+  assert.equal(next?.chapter.chapterIndex, 4,
+    'audio may advance again while the visible chapter still waits behind a page-turn transaction');
+  assert.equal(host.chapter.chapterIndex, 2, 'audio preparation must not mutate the visible chapter');
+}
+{
+  const host = owner();
+  let finish;
+  host.loadSessionChapter = () => new Promise(resolve => { finish = resolve; });
+  const loading = host.loadNextTtsChapter({ sourceId: 'source', bookId: 'book', chapterIndex: 2 }, 1);
+  host.ttsPageFollow.invalidate(host.ttsFollowScope(), host.ttsState);
+  finish({ chapterIndex: 3, content: 'text', contentVersion: 'v1' });
+  const next = await loading;
+  assert.ok(next, 'manual UI navigation does not interrupt independent audio preparation');
+  next.onAdmitted();
+  assert.equal(host.opens.length, 0, 'invalidated UI lease cannot later select the audio chapter');
+}
+{
+  const host = owner();
+  let finish;
+  host.loadSessionChapter = () => new Promise(resolve => { finish = resolve; });
+  const loading = host.loadNextTtsChapter({ sourceId: 'source', bookId: 'book', chapterIndex: 2 }, 1);
+  host.ttsState.sessionGeneration++;
+  finish({ chapterIndex: 3, content: 'text', contentVersion: 'v1' });
+  assert.equal(await loading, undefined, 'stopped or replaced audio session rejects a late chapter read');
+}
+await checkProjection();
 const oldTts = code => {
-  const old = code.replace('this.selectChapterAnchor(target, 0, true, false, undefined, -1)',
-    'this.selectChapterAnchor(target, 0, true, false)');
+  const old = code.replace('this.selectChapterAnchor(target, 0, true, false, undefined, -1,',
+    'this.selectChapterAnchor(target, 0, true, false, undefined, -2,');
   assert.notEqual(old, code); return old;
 };
 await assert.rejects(checkTts(Host(oldTts)), /automatic TTS chapter admission must not capture/,
   're-injecting the old callback reproduces capture of a newer control session');
 const oldProjection = code => {
-  const old = code.replace('this.selectChapterAnchor(chapterIndex, page.startScalar, false, true, undefined, -1)',
-    'this.selectChapterAnchor(chapterIndex, page.startScalar, false)');
+  const old = code.replace('progress.chapterOffset, false, true, undefined, -1,',
+    'progress.chapterOffset, false, true, undefined, -2,');
   assert.notEqual(old, code); return old;
 };
-assert.throws(() => checkProjection(Host(oldProjection)), /internal conversion\/projection reflow must not capture/);
+await assert.rejects(checkProjection(Host(oldProjection)), /internal conversion\/projection reflow must not capture/);
 
 // A delayed projection reload still carries an internal (-1) owner after page
 // settlement. Neither automatic deferral nor resume turns it into a user pick.
@@ -136,6 +172,7 @@ assert.throws(() => checkProjection(Host(oldProjection)), /internal conversion\/
   assert.equal(host.opens.length, 0);
   host.pageTurnSettlementActive = false; host.controlOpenRevision++;
   host.resumeDeferredPageTurnWork();
+  await Promise.resolve();
   assert.equal(host.pendingControlSelection, undefined);
   commit(host, 2, 70); assert.equal(host.hideCalls, 0);
 }
@@ -202,6 +239,7 @@ assert.match(method('showControlSelectionFailure'), /retry\.controlOwnerRevision
   assert.equal(host.pageTurnPendingChapterSelection.controlOwnerRevision, 41);
   host.pageTurnSettlementActive = false; host.controlOpenRevision = 42;
   host.resumeDeferredPageTurnWork();
+  await Promise.resolve();
   assert.equal(host.pendingControlSelection.controlOpenRevision, 41,
     'deferred user choice reuses the origin owner instead of capturing a new opening');
   commit(host, 3, 70); assert.equal(host.hideCalls, 0);

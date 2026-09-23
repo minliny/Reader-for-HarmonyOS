@@ -140,7 +140,7 @@ const httpHostSource = await readFile(
 assert.match(httpHostSource, /gateway\.buildRequest\(configId, request\.text, ratePercent\)/,
   'HttpTTS must forward the exact five-point speed percentage to Core');
 assert.match(httpHostSource, /HTTP_TTS_MAX_AUDIO_BYTES/);
-assert.match(httpHostSource, /HttpExecuteHost\.instance\.execute\(/,
+assert.match(httpHostSource, /HttpExecuteHost\.instance\.executeBytes\(/,
   'HttpTTS must reuse the hardened redirect/DNS transport');
 assert.match(httpHostSource, /followRedirects: true/);
 assert.match(httpHostSource, /maxRedirects: HTTP_TTS_MAX_REDIRECTS/);
@@ -150,7 +150,7 @@ assert.match(httpHostSource, /sameOriginRedirectsOnly: descriptor\.playback\?\.c
   'all credential-bearing redirects, including custom headers, must remain on the same effective origin');
 assert.match(httpHostSource, /admittedGeneration !== this\.networkGeneration/,
   'stop/close must cancel the shared transport through its ownership probe');
-assert.match(httpHostSource, /new util\.Base64Helper\(\)\.decodeSync/);
+assert.doesNotMatch(httpHostSource, /Base64Helper|bodyBase64/);
 assert.match(httpHostSource, /descriptor\.method/);
 assert.match(httpHostSource, /descriptor\.body/);
 assert.match(httpHostSource, /normalizeAudioBytes/);

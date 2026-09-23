@@ -153,15 +153,14 @@ assert.match(readingSurface,
 assert.match(readingSurface,
   /return this\.isParagraphStart \? readerAppearanceParagraphIndentPrefix\(this\.appearance\.indent\) : ''/,
   'the shared paged/continuous text primitive must gate indentation on the canonical paragraph start');
-assert.match(experience,
-  /readerAppearanceParagraphDisplayText\([\s\S]*?paragraph\.isParagraphStart[\s\S]*?this\.appearanceSnapshot\.indent/,
-  'the hidden measurement text must include the same explicit paragraph-start prefix');
-assert.match(experience, /readerAppearanceParagraphContentScalarOffset\(/,
-  'display-only indentation must be projected out of canonical Core scalar offsets');
-assert.doesNotMatch(readingSurface, /\.textIndent\(/,
-  'the line-fragment surface must not rely on paragraph-only textIndent');
-assert.doesNotMatch(experience, /\.textIndent\(/,
-  'the hidden measurement path must use the same explicit prefix as the visible surface');
+assert.match(experience, /return paragraph\.text === '\\uFFFC' \? 'A' : paragraph\.text/,
+  'native paragraph measurement uses exact original text');
+assert.match(experience, /indentVp: paragraph\.isParagraphStart/,
+  'native paragraph indentation belongs to the original paragraph start');
+assert.doesNotMatch(experience, /readerAppearanceParagraphContentScalarOffset\(/,
+  'native measurement must not subtract nonexistent placeholder indices');
+assert.match(readingSurface, /ReaderNativeParagraphView\(/,
+  'paged native paragraphs render through the native window component');
 assert.doesNotMatch(experience, /const paragraphDivider =/,
   'the reading owner must not reintroduce an untyped blank-line-only paragraph guess');
 

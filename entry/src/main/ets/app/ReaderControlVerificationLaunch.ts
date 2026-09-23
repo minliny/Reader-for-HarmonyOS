@@ -20,3 +20,10 @@ export function readerControlVerificationColdStartPage(debug: boolean,
   if (motion) return 'pages/ReaderControlMotionVerification';
   return 'pages/Index';
 }
+
+/** Diagnostic cold-start flag, independent of route selection. Never coerce
+ * Want values: release builds and warm intents cannot enable this mode. */
+export function readerDisableOptionalEntryMemory(debug: boolean, buildModeName: string,
+  parameterValue: Object | undefined): boolean {
+  return debug === true && buildModeName === 'debug' && parameterValue === true;
+}

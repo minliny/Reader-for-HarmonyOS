@@ -46,6 +46,7 @@ export struct ReaderFullDirectory {
   @Prop bookTitle: string = '';
   @Prop chapterTitle: string = '';
   @Prop entries: LocalReadingTocEntry[] = [];
+  @Prop catalogMessage: string = '';
   @Prop currentChapterIndex: number = -1;
   // Source switch is only reachable for remote books (sourceId !== 'local');
   // local books render the top-bar 换源 affordance disabled. This is the
@@ -120,6 +121,7 @@ export struct ReaderFullDirectory {
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({
           entries: this.entries,
+          catalogMessage: this.catalogMessage,
           currentChapterIndex: this.currentChapterIndex,
           chapterDownloadEnabled: this.sourceId !== 'local',
           isTablet: this.usesExpandedLayout(),

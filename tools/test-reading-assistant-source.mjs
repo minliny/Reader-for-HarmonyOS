@@ -69,10 +69,10 @@ async function upgrade(stored) {
   const owner = new Owner();
   const imports = []; const removed = [];
   ledger = { all: () => [], remove: id => removed.push(id), syncCurrentBundle() {}, save: async () => {} };
-  Object.assign(owner, { state: 'ready', host: { readBundledRawFileText: async () => oneDocument, getContext: () => ({}) },
+  Object.assign(owner, { supportsCoreCapability: () => false, state: 'ready', host: { readBundledRawFileText: async () => oneDocument, getContext: () => ({}) },
     requireBundledBookSourceCollection: JSON.parse,
     loadExistingBundledSources: async () => new Map(stored === undefined ? [] : [[source.bookSourceUrl, stored]]),
-    importBundledSource: async (_runtime, id, value) => imports.push({ id, source: structuredClone(value) }) });
+    importBundledSource: async (id, value) => imports.push({ id, source: structuredClone(value) }) });
   const summary = await owner.installBundledBookSourceCollection({});
   assert.equal(summary.failed, 0);
   return { imports, removed };

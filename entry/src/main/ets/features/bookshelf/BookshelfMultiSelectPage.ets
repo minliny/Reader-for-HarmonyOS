@@ -37,6 +37,7 @@ export struct BookshelfMultiSelectPage {
   @Prop @Watch('reconcileSelection') books: ShelfBook[] = [];
   @Prop initialSelectedKey: string = '';
   @Prop busy: boolean = false;
+  @Prop ready: boolean = true;
   onCancel: () => void = (): void => {};
   onRemoveSelected: (keys: string[]) => void = (_keys: string[]): void => {};
   @State private viewportWidth: number = 0;
@@ -102,7 +103,7 @@ export struct BookshelfMultiSelectPage {
         .lineHeight(15.6)
         .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF2D4A3E', this.appThemeScheme))
         .onClick((): void => {
-          if (!this.busy) {
+          if (!this.busy && this.ready) {
             this.onCancel();
           }
         });
@@ -126,7 +127,7 @@ export struct BookshelfMultiSelectPage {
         .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF2D4A3E', this.appThemeScheme))
         .textAlign(TextAlign.End)
         .onClick((): void => {
-          if (!this.busy) {
+          if (!this.busy && this.ready) {
             this.toggleAll();
           }
         });
@@ -198,7 +199,7 @@ export struct BookshelfMultiSelectPage {
     .alignItems(HorizontalAlign.Start)
     .accessibilityText(`${book.title}，${this.isSelected(book) ? '已选择' : '未选择'}`)
     .onClick((): void => {
-      if (!this.busy) {
+      if (!this.busy && this.ready) {
         this.toggleBook(book);
       }
     });
@@ -211,7 +212,7 @@ export struct BookshelfMultiSelectPage {
         Image($r('app.media.bookshelf_multiselect_trash'))
           .width(22)
           .height(22);
-        Text(this.busy ? '正在移除' : '移除书架')
+        Text(!this.ready ? '正在读取书架' : this.busy ? '正在移除' : '移除书架')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Bold)
           .fontSize(11)
@@ -220,7 +221,7 @@ export struct BookshelfMultiSelectPage {
       }
       .width(74)
       .alignItems(HorizontalAlign.Center)
-      .opacity(this.selectedKeys.length > 0 && !this.busy ? 1 : 0.38)
+      .opacity(this.selectedKeys.length > 0 && !this.busy && this.ready ? 1 : 0.38)
       .onClick((): void => this.removeVisibleSelection());
     }
     .width('100%')
@@ -237,7 +238,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private removeVisibleSelection(): void {
-    if (this.busy) return;
+    if (this.busy || !this.ready) return;
     // Protect a click delivered before the Prop watcher has reconciled a
     // book whose progress/group changed underneath an active filter.
     this.reconcileSelection();
@@ -245,6 +246,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private toggleBook(book: ShelfBook): void {
+    if (this.busy || !this.ready) return;
     if (!this.hasBookKey(this.bookKey(book))) return;
     const key = this.bookKey(book);
     if (this.selectedKeys.includes(key)) {
@@ -255,6 +257,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private toggleAll(): void {
+    if (this.busy || !this.ready) return;
     const visible = this.visibleBooks();
     if (this.allSelected()) {
       this.selectedKeys = [];
@@ -319,7 +322,7 @@ export struct BookshelfMultiSelectPage {
     .alignItems(VerticalAlign.Center)
     .accessibilityText(`${book.title}，${this.isSelected(book) ? '已选择' : '未选择'}`)
     .onClick((): void => {
-      if (!this.busy) this.toggleBook(book);
+      if (!this.busy && this.ready) this.toggleBook(book);
     });
   }
 

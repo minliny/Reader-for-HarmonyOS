@@ -1,3 +1,4 @@
+import { installContentSearchOwnerProbe } from './lib/reader-content-search-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -75,6 +76,7 @@ function owner(Type = Host()) {
     controlVisible() { return this.visible; }, controlPage() { return this.page; },
     isSessionActive(token) { return this.mounted && !this.exitRequested && this.lifecycleToken === token; },
     errorMessage(error) { return error.message; },
+    persistBeforeContentMutation: async () => () => true,
     reloadCurrentPageAfterReplacePersist(token, book) {
       assert.equal(token, this.lifecycleToken); assert.equal(book, this.bookId); this.reloadBookCalls++;
     },
@@ -108,6 +110,7 @@ function closeReopen(host) {
 async function reopenedImport(Type = Host()) {
   const host = owner(Type), write = deferred();
   const pending = host.runControlReplaceMutation(-2, () => write.promise);
+  await Promise.resolve(); // visible-position confirmation precedes dispatch
   const active = host.replaceMutationActiveGeneration;
   closeReopen(host);
   assert.equal(host.controlReplaceState.mutationPending, true);
@@ -127,28 +130,37 @@ async function reopenedImport(Type = Host()) {
 // Exercise the actual reload method with its heavy reading dependencies mocked.
 // A default (-2) selection owner would capture whichever control session happens
 // to be open when an old write returns and close that new session after ready.
-function checkInternalReload(code = method('reloadCurrentPageAfterReplacePersist')) {
-  const ReloadHost = new Function(stripTypeScriptTypes('class ReloadProbe {' +
-    code + '}') + ';return ReloadProbe;')();
+async function checkInternalReload(code = method('reloadMigratedContentPosition')) {
+  const ReloadHost = new Function('hilog', stripTypeScriptTypes('class ReloadProbe {' +
+    method('reloadCurrentPageAfterReplacePersist') + code + method('publishQuickSearchState') + '}') + ';return ReloadProbe;')({error(){}});
   const host = new ReloadHost(), selections = [];
-  Object.assign(host, { sourceId: 'source', bookId: 'book', pageTurnSettlementActive: false,
-    isSessionActive: () => true, invalidatePageTurnRuntime() {}, contentMetrics: {},
+  Object.assign(host, { sourceId: 'source', bookId: 'book', chapterSelectionToken: 1, pageTurnSettlementActive: false,
+    isSessionActive: () => true, isSelectionActive: () => true, invalidatePageTurnRuntime() {}, contentMetrics: {},
     paginationIndex: { invalidateBook() {} }, chapterWindow: { clear() {} },
     knownContentVersions: [1], resetPaginationDraft() {}, chapter: { chapterIndex: 4 },
+    searchGeneration: 0, quickSearchQuery: '原关键词', quickSearchState: { kind: 'results', results: [] },
+    quickSearchPublication: new ReaderContentSearchPublication(), quickSearchRevision: 0,
+    activeGateway: () => ({ loadProgress: async () => ({kind: 'restored', progress: {
+      chapterIndex: 4, chapterOffset: 95, bodyVersion: 'new-body', processingVersion: 'new-rules' }}) }),
     visiblePage: { startScalar: 72 }, selectChapterAnchor: (...args) => selections.push(args) });
+  installContentSearchOwnerProbe(host);
   host.reloadCurrentPageAfterReplacePersist(1, 'book');
+  await Promise.resolve();
+  assert.deepEqual(host.quickSearchState, { kind: 'idle' });
+  assert.equal(host.searchGeneration, 1); assert.equal(host.quickSearchQuery, '原关键词');
   assert.equal(selections.length, 1);
-  assert.deepEqual(selections[0].slice(0, 3), [4, 72, false]);
+  assert.deepEqual(selections[0].slice(0, 3), [4, 95, false], 'Core migrated anchor replaces the old numeric offset');
   assert.equal(selections[0][5], -1,
     'internal Replace reload must never capture/close the currently visible control selection session');
+  assert.equal(selections[0][8].processingVersion, 'new-rules');
 }
-checkInternalReload();
-const internalReloadSource = method('reloadCurrentPageAfterReplacePersist');
+await checkInternalReload();
+const internalReloadSource = method('reloadMigratedContentPosition');
 const oldInternalReload = internalReloadSource.replace(
-  'this.selectChapterAnchor(chapter.chapterIndex, page.startScalar, false, true, undefined, -1);',
-  'this.selectChapterAnchor(chapter.chapterIndex, page.startScalar, false);');
+  'progress.chapterOffset, false, true, undefined, -1,',
+  'progress.chapterOffset, false, true, undefined, -2,');
 assert.notEqual(oldInternalReload, internalReloadSource);
-assert.throws(() => checkInternalReload(oldInternalReload), /internal Replace reload must never capture/,
+await assert.rejects(checkInternalReload(oldInternalReload), /internal Replace reload must never capture/,
   'restoring the old default owner reproduces the close-after-internal-reload regression');
 await reopenedImport();
 const oldGeneration = code => {
@@ -164,6 +176,7 @@ await assert.rejects(reopenedImport(Host(oldGeneration)), /new visible Replace s
 for (const operation of ['save', 'delete']) {
   const host = owner(), write = deferred();
   const pending = host.runControlReplaceMutation(1, () => write.promise);
+  await Promise.resolve();
   closeReopen(host);
   write.resolve(operation === 'save' ? { rule: rule(1, false), changed: true, needsReload: false } :
     { deletedId: 1, changed: true, needsReload: false });
@@ -236,6 +249,7 @@ for (const operation of ['save', 'delete']) {
 {
   const host = owner(), oldWrite = deferred();
   const pending = host.runControlReplaceMutation(1, () => oldWrite.promise);
+  await Promise.resolve();
   host.invalidateReplaceMutationOwner();
   host.lifecycleToken = 2; host.bookId = 'other';
   host.controlReplaceState = ready('source:other:2', [rule(9)]);

@@ -31,7 +31,8 @@ enum class HostEvent : int32_t {
     /** The retained terminal frame was cleared after the generation-matched
      *  ArkUI content-ready confirmation (barrier closed). */
     TERMINAL_RELEASED = 8,
-    /** First successfully drawn frame for a new gesture/settlement generation. */
+    /** First successfully drawn frame; AUTOMATIC detail carries the start token.
+     *  EGL submission only, not a physical display acknowledgement. */
     FRAME_PRESENTED = 9,
 };
 
@@ -70,7 +71,11 @@ public:
     std::optional<BookTurnFrameState> Regrab(const BookTurnSample& sample, uint64_t previousGeneration);
     bool EndGesture(const BookTurnSample& sample, bool commit);
     bool Settle(uint64_t generation, bool commit);
-    bool StartProgrammatic(uint64_t generation, Direction direction, bool rapid = false);
+    bool StartProgrammatic(uint64_t generation, Direction direction,
+        ProgrammaticProfile profile = ProgrammaticProfile::MANUAL);
+    /** Confirm the generation/token after ArkUI schedules the surface reveal.
+     *  An accepted duplicate never restarts an already running timeline. */
+    bool StartAutomaticTimeline(uint64_t generation, int32_t surfaceToken);
     bool CommitSlots(uint64_t generation, Direction direction);
     /** ArkUI presentation barrier (2026-08-31): a commit settlement never
      *  clears the surface; the new-page terminal frame stays presented until
@@ -99,6 +104,7 @@ public:
 
 private:
     enum class Settlement : int32_t { NONE = 0, COMMIT = 1, ROLLBACK = 2 };
+    enum class AutomaticStart : int32_t { NONE = 0, PRIMING = 1, WAITING = 2, RUNNING = 3 };
 
     void Run();
     void Notify(HostEvent event, uint64_t generation, int32_t detail, uint64_t surfaceEpoch);
@@ -110,7 +116,8 @@ private:
     static void VsyncEntry(long long timestamp, void* data);
     void OnVsyncFrame(long long timestamp);
     bool ProcessChaseFrame(float frameSeconds, int64_t frameTimeNs, uint64_t surfaceSerial);
-    bool ProcessSettlementFrame(float frameSeconds, uint64_t surfaceSerial);
+    bool ProcessSettlementFrame(float frameSeconds, int64_t frameTimeNs, uint64_t surfaceSerial);
+    void ResetAutomaticStart();
     void UpdateFrameLoopWanted();
     void RequestFrameIfWanted();
     void EmitFrameDiag();
@@ -159,8 +166,9 @@ private:
     bool inputEnded_ = false;
     uint64_t consumedSampleSerial_ = 0;
     Settlement pendingSettlement_ = Settlement::NONE;
-    bool pendingSettlementRapid_ = false;
+    ProgrammaticProfile pendingProgrammaticProfile_ = ProgrammaticProfile::MANUAL;
     bool pendingSettlementEased_ = false;
+    bool pendingAutomaticTimeline_ = false;
     std::optional<Direction> pendingProgrammaticDirection_;
     uint64_t pendingSettlementGeneration_ = 0;
     bool pendingCommitSlots_ = false;
@@ -206,12 +214,20 @@ private:
     uint64_t chaseGeneration_ = 0;
     BookTurnPose pose_;
     Settlement settlement_ = Settlement::NONE;
-    bool settlementEased_ = false;
+    SettlementCurve settlementCurve_ = SettlementCurve::LINEAR;
     float settlementTau0_ = 0.0F;
     float settlementTargetTau_ = 0.0F;
     float settlementDuration_ = 0.0F;
     float settlementElapsed_ = 0.0F;
     float settlementStartTheta_ = 0.0F;
+    // Render thread and StartAutomaticTimeline serialize these fields through
+    // frameMutex_. Waiting holds the initial frame without requesting VSync.
+    AutomaticStart automaticStart_ = AutomaticStart::NONE;
+    uint64_t automaticStartGeneration_ = 0;
+    uint64_t automaticStartSurfaceEpoch_ = 0;
+    int32_t automaticStartToken_ = 0;
+    int32_t nextAutomaticStartToken_ = 0;
+    int64_t automaticTimelineStartNs_ = 0;
     // §7.3 tau_swap: set when this settlement rotated the slots early; the
     // ArkTS commitSlots for the same generation is then a no-op rotation.
     bool settlementSwapped_ = false;

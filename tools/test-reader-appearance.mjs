@@ -96,8 +96,10 @@ assert.equal(customSnapshot.font, 'custom');
 assert.equal(customSnapshot.customFont?.displayName, '我的字体');
 assert.equal(readerAppearanceSnapshotFontFamily(customSnapshot), 'ReaderCustom_0123456789abcdef');
 assert.equal(readerAppearanceFontSlotLabel(initial, 'lxgwWenKai'), '霞鹜文楷');
-assert.equal(readerAppearanceFontSlotLabel(customSnapshot, 'import'), '我的字体');
-assert.equal(readerAppearanceFontSlotFamily(customSnapshot, 'import'), 'ReaderCustom_0123456789abcdef');
+assert.equal(readerAppearanceFontSlotLabel(customSnapshot, 'custom'), '我的字体');
+assert.equal(readerAppearanceFontSlotFamily(customSnapshot, 'custom'), 'ReaderCustom_0123456789abcdef');
+assert.equal(readerAppearanceFontSlotLabel(customSnapshot, 'import'), '导入');
+assert.ok(customSnapshot.fontOrder.includes('custom'));
 assert.equal(normalizeReaderAppearanceSnapshot({ ...customSnapshot, customFont: undefined }).font, 'serif',
   'a custom font choice without a Host-validated descriptor must fail closed');
 
@@ -322,7 +324,7 @@ assert.doesNotMatch(fullPanel, /handleSelectRequest/,
 assert.match(fullPanel, /return '原文'/);
 assert.match(fullPanel, /this\.isSelectableFont\(fontId\)/,
   'every bundled font slot must be selectable');
-assert.match(fullPanel, /fontId === 'import' \|\| \(isReaderAppearanceFont\(fontId\)/,
+assert.match(fullPanel, /fontId === 'import' \|\| isReaderAppearanceFont\(fontId\)/,
   'the full panel must enable both every built-in font and the Host-owned import actor');
 assert.match(fullPanel, /this\.onCustomFontImport\(\)/,
   'the Figma Import cell must invoke the custom-font Host flow');
@@ -367,7 +369,7 @@ assert.match(customFontHost, /\.ttf,\.otf/);
 assert.match(customFontHost, /MaximumFontBytes = 32 \* 1024 \* 1024/);
 assert.match(customFontHost, /isSupportedSfntHeader/);
 assert.match(customFontHost, /ReaderCustom_/);
-assert.match(customFontHost, /font\.registerFont/);
+assert.match(customFontHost, /await loadReaderFontChecked/);
 assert.doesNotMatch(gateway, /\.request\(/,
   'appearance settings must not misuse the fixed Reader Core persistence snapshot');
 assert.match(conversionGateway, /reader\.chinese-conversion\.get/);
@@ -399,8 +401,8 @@ assert.match(readingSurface, /\.fontSize\(this\.appearance\.fontSize\)/);
 assert.match(readingSurface, /\.lineHeight\(readerAppearanceLineHeight\(this\.appearance\)\)/);
 assert.match(readingSurface, /\.letterSpacing\(this\.appearance\.letterSpacing\)/);
 assert.match(experience,
-  /const layoutReady = Promise\.all\(\[[\s\S]*?this\.loadAppearanceSnapshot\(lifecycleToken\)[\s\S]*?\]\)[\s\S]*?this\.loadInitialChapter\(lifecycleToken, layoutReady\)[\s\S]*?await layoutReady;[\s\S]*?await this\.openChapter/,
-  'layout-affecting appearance must settle at the pagination barrier while TOC and progress load concurrently');
+  /const layoutReady = Promise\.all\(\[[\s\S]*?this\.loadAppearanceSnapshot\(lifecycleToken\)[\s\S]*?\]\)[\s\S]*?this\.loadInitialChapter\(lifecycleToken, layoutReady\)[\s\S]*?bookmarkContext, layoutReady, unreadCandidates\.slice\(1\)\)[\s\S]*?const loaded = await Promise\.all\(\[[\s\S]*?\((?:prepared\s*===\s*undefined\s*\?\s*this\.loadSessionChapter\([\s\S]*?\:\s*Promise\.resolve\(prepared\.chapter\)|this\.loadSessionChapter\([\s\S]*?)\)\s*\.then\([\s\S]*?\),\s*layoutReady,[\s\S]*?(?:const|let) chapter = loaded\[0\];/,
+  'layout-affecting appearance must settle before chapter publication while chapter I/O proceeds concurrently');
 assert.match(experience, /private prepareControlPage\(page: ReaderControlPage\)[\s\S]*?page === 'moduleAppearance' \|\| page === 'fullAppearance'[\s\S]*?loadChineseConversionMode/,
   'conversion controls load through the derived Appearance business-page entry');
 assert.match(experience, /if \(module !== this\.observedControlModule\) \{\s*this\.controlModuleVisitRevision \+= 1;\s*this\.observedControlModule = module;\s*this\.prepareControlPage\(page\);/,

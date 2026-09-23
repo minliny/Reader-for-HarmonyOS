@@ -7,6 +7,11 @@ import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBod
 const LOCAL_EPUB_SCHEME = 'reader-local-epub://';
 const LOCAL_MOBI_SCHEME = 'reader-local-mobi://';
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
+const MAX_LOCAL_IMAGE_BOOK_ID_BASE64_CHARS = 96; // Base64("local:" + 64 hex digits).
+// A 2048 UTF-16-unit path occupies at most 6144 UTF-8 bytes.
+const MAX_LOCAL_IMAGE_PATH_BASE64_CHARS = 8192;
+const MAX_LOCAL_IMAGE_LOCATOR_CHARS = Math.max(LOCAL_EPUB_SCHEME.length, LOCAL_MOBI_SCHEME.length) +
+  MAX_LOCAL_IMAGE_BOOK_ID_BASE64_CHARS + 1 + MAX_LOCAL_IMAGE_PATH_BASE64_CHARS;
 
 type LocalEpubResourceLocator = {
   hash: string;
@@ -34,6 +39,12 @@ export class LocalEpubResourceHost {
   ): Promise<ReadingBodyImagePayload> {
     this.assertCurrent(isCurrent);
     const locator = this.parseLocator(locatorValue);
+    return ReadingBodyImageHost.instance.loadResource(locatorValue,
+      (current: () => boolean): Promise<Uint8Array> => this.readResource(locator, current), isCurrent);
+  }
+
+  private async readResource(locator: LocalEpubResourceLocator, isCurrent: () => boolean): Promise<Uint8Array> {
+    this.assertCurrent(isCurrent);
     let archivePath = `${this.context.filesDir}/reader-import/books/${locator.hash}.source`;
     if (!(await fileIo.access(archivePath))) {
       archivePath = `${this.context.filesDir}/reader-import/books/${locator.hash}.epub`;
@@ -48,7 +59,7 @@ export class LocalEpubResourceHost {
       MAX_READING_IMAGE_BYTES,
     );
     this.assertCurrent(isCurrent);
-    return ReadingBodyImageHost.instance.loadBytes(bytes, isCurrent);
+    return bytes;
   }
 
   private assertCurrent(isCurrent?: () => boolean): void {
@@ -58,12 +69,17 @@ export class LocalEpubResourceHost {
   }
 
   private parseLocator(value: string): LocalEpubResourceLocator {
+    if (value.length > MAX_LOCAL_IMAGE_LOCATOR_CHARS) {
+      throw new Error('local EPUB image locator exceeds its path limit');
+    }
     const scheme = value.startsWith(LOCAL_MOBI_SCHEME) ? LOCAL_MOBI_SCHEME : LOCAL_EPUB_SCHEME;
     if (!value.startsWith(scheme)) {
       throw new Error('local EPUB image locator uses an unsupported scheme');
     }
     const tokens = value.substring(scheme.length).split('/');
-    if (tokens.length !== 2 || tokens[0].length === 0 || tokens[1].length === 0) {
+    if (tokens.length !== 2 || tokens[0].length === 0 || tokens[1].length === 0 ||
+      tokens[0].length > MAX_LOCAL_IMAGE_BOOK_ID_BASE64_CHARS ||
+      tokens[1].length > MAX_LOCAL_IMAGE_PATH_BASE64_CHARS) {
       throw new Error('local EPUB image locator is malformed');
     }
     const decoder = util.TextDecoder.create('utf-8', { fatal: true, ignoreBOM: true });

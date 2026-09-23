@@ -25,17 +25,17 @@ assert.equal(ids(ShelfBookPresentation.visible(books, '默认', 'finished', 'loc
 assert.equal(books[2].group, '历史');
 
 const shelfSource = source('BookshelfPage');
-const memberNames = ['isFilterSelected','hasActiveFilters','selectFilter','clearFilters','clearGroup',
+const memberNames = ['isFilterSelected','hasActiveFilters','selectFilter','clearFilters',
   'onShelfFiltersChanged','queueShelfProjection','requestCheckUpdates','isSectionActionActive','sectionActionLabel','sectionActionAsset','canonicalFilterActiveAsset'];
 const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',...memberNames]);
-Object.assign(shelf, { appThemeScheme:'day', selectedGroup:'默认',storedSelectedGroup:'默认', readingFilter:'all',sourceFilter:'all',
-  filterRowVisible:true, groupSelectorVisible:false, viewMode:'list', mounted:true,projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
+Object.assign(shelf, { appThemeScheme:'day', storedSelectedGroup:'', readingFilter:'all',sourceFilter:'all',
+  filterRowVisible:true, viewMode:'list', mounted:true,projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
 shelf.filterRow();
 const texts = owner => [...owner.nodes.values()].filter(n => n.type === 'Text');
 const button = label => texts(shelf).find(n => n.create === label);
 button('在读').onClick(); shelf.onShelfFiltersChanged(); button('在线').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,1,'same gesture/storage notifications publish the final projection only once');
-assert.equal(shelf.readingFilter,'reading');assert.equal(shelf.sourceFilter,'online');assert.equal(shelf.selectedGroup,'默认');
+assert.equal(shelf.readingFilter,'reading');assert.equal(shelf.sourceFilter,'online');
 assert.equal(button('在读').backgroundColor, readerAppColor('TOK_PRIMARY_SOFT','day'));
 assert.equal(button('未读').backgroundColor, readerAppColor('TOK_CARD_BG','day'));
 shelf.filterRowVisible=false;
@@ -43,10 +43,9 @@ assert.equal(shelf.isSectionActionActive('bookshelf_filter'),true,'closed filter
 assert.match(shelf.sectionActionLabel('bookshelf_filter',true),/已有筛选条件/);
 button('清除').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,2,'clearing both dimensions is one reload');
-assert.equal(shelf.readingFilter,'all');assert.equal(shelf.sourceFilter,'all');assert.equal(shelf.selectedGroup,'默认','state/type clear does not clear group');
+assert.equal(shelf.readingFilter,'all');assert.equal(shelf.sourceFilter,'all');
 assert.equal(shelf.isSectionActionActive('bookshelf_filter'),false);
-shelf.clearGroup(); assert.equal(shelf.storedSelectedGroup,'');
-// Run the actual two toolbar closures, rather than recreating their toggle logic.
+// Run the surviving production filter closure after the group entry is removed.
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -56,8 +55,8 @@ const visit = node => { if(ts.isCallExpression(node) && node.expression.getText(
   callbacks.set(node.arguments[0].text,node.arguments[1].getText(tree));
 } ts.forEachChild(node,visit); }; visit(tree);
 const invoke = key => new Function(stripTypeScriptTypes(`const action = ${callbacks.get(key)};`)+'; action();').call(shelf);
-invoke('bookshelf_settings'); assert.equal(shelf.groupSelectorVisible,true); assert.equal(shelf.filterRowVisible,false);
-invoke('bookshelf_filter'); assert.equal(shelf.groupSelectorVisible,false); assert.equal(shelf.filterRowVisible,true);
+assert.deepEqual([...callbacks.keys()],['bookshelf_grid','bookshelf_list','bookshelf_filter']);
+invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,true);
 invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,false);
 let updates=0; Object.assign(shelf,{hasOnlineBooks:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
 shelf.requestCheckUpdates(); assert.equal(updates,1);
@@ -67,7 +66,7 @@ assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow()'),shelfSou
 
 const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection','toggleBook','hasBookKey','toggleAll','allSelected'],{ShelfBookPresentation});
 let removed=[];
-const batch = Object.assign(new Batch(),{books,storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',selectedKeys:[],busy:false,onRemoveSelected:k=>removed.push(k)});
+const batch = Object.assign(new Batch(),{books,storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',selectedKeys:[],busy:false,ready:true,onRemoveSelected:k=>removed.push(k)});
 assert.equal(ids(batch.visibleBooks()),'bd');batch.toggleAll();assert.equal(batch.selectedKeys.length,2);
 batch.books=books.map(b=>b.bookId==='b'?{...b,readProgress:10000}:b);
 batch.removeVisibleSelection();assert.deepEqual(removed,[['online\u0000d']],'a selected book hidden by a new progress value is never removed');
@@ -77,9 +76,4 @@ batch.removeVisibleSelection();assert.equal(removed.length,1);
 for(const text of [shelfSource,source('BookshelfMultiSelectPage')]) {
   for(const key of ['readerBookshelfSelectedGroup','readerBookshelfReadingFilter','readerBookshelfSourceFilter'])assert.ok(text.includes(`@StorageLink('${key}')`));
 }
-const groupSource=source('BookshelfGroupSelector').replace('  build() {','  build() { Column() {} }\n  @Builder\n  groupPanel() {');
-const {owner:group}=createReaderBuilderProbe(groupSource,['groupPanel']);
-let selected=0,cleared=0;Object.assign(group,{selected:false,activeGroup:'',busy:false,appThemeScheme:'day',onSelect:()=>selected++,onClear:()=>cleared++});
-group.groupPanel();texts(group).find(n=>n.create==='默认').onClick();assert.equal(selected,1);
-group.activeGroup='历史';group.replay();const clear=texts(group).find(n=>n.create==='清除');assert.equal(clear.enabled,true);clear.onClick();assert.equal(cleared,1);
-console.log('PASS PH60 shelf filters: independent dimensions, real SDK live chips/toggles, shared order, legacy data and hidden batch-selection safety');
+console.log('PASS shelf filters: state/type dimensions and live chips survive gear removal; shared order, legacy data and hidden batch-selection safety');

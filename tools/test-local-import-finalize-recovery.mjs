@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { localImportFailure } from '../entry/src/main/ets/app/LocalImportFailure.ts';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
@@ -8,7 +9,7 @@ const owner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
 const gateway = read('entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts');
 
 // Static contract: the cleanup token is app-private, bounded, atomically
-// replaced, and drained before a runtime is published. These checks do not
+// replaced, and drained after a runtime is published. These checks do not
 // claim VM/device behavior; they fence regressions in the production source.
 assert.match(host, /pending-finalize-v1\.json/);
 assert.match(host, /PendingLocalImportFinalizeMaxEntries = 8/);
@@ -137,4 +138,53 @@ assert.equal(ownerProbe.isAlreadyFinalizedLocalImportError({
   event: { error: { code: 'INVALID_PARAMS', message: 'import transactionId is invalid' } },
 }), false);
 
-console.log('local import finalize recovery queue: PASS (bounded app-private atomic queue, startup drain, strict envelope)');
+// Exercise the complete production import transaction. An old same-identity
+// shelf row is not proof that this metadata upsert committed after a timeout.
+const importCode = stripTypeScriptTypes(gateway.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
+const ImportGateway = new Function('ReaderRuntimeOwner', 'hilog', 'errorMessageOf', 'localImportFailure',
+  `${importCode}\nreturn LocalBookImportGateway;`)(
+  {}, { warn() {}, error() {} }, error => error.message, localImportFailure);
+const importBook = { bookId: 'same-bytes', title: '新书名', author: '新作者',
+  coverUrl: 'cover', intro: '简介', kind: 'txt', lastChapter: '第二章' };
+for (const scenario of ['normal', 'committed', 'sourceId', 'bookId', 'title', 'author', 'coverUrl', 'intro', 'kind', 'lastChapter']) {
+  const calls = [];
+  const owner = {
+    async request(name, params) {
+      calls.push(name);
+      if (name === 'import.parse') return { data: { preview: {
+        summary: { integrity: { schemaVersion: 1, readability: 'complete' } },
+      } } };
+      if (name === 'import.persist') return { data: { rollbackToken: token,
+        persisted: { kind: 'localBook', data: { book: importBook } } } };
+      if (name === 'bookshelf.add') {
+        assert.deepEqual(params, { sourceId: 'local', ...importBook });
+        if (scenario === 'normal') return { data: { created: false } };
+        throw Error('lost add response');
+      }
+      if (name === 'bookshelf.get') {
+        const shelf = { sourceId: 'local', ...importBook };
+        if (scenario !== 'committed') shelf[scenario] = 'previous value';
+        return { data: { book: shelf } };
+      }
+      if (name === 'import.finalize') return { data: {} };
+      assert.fail(`ambiguous upsert must preserve Core journal: ${name}`);
+    },
+    async commitLocalBookInput() { calls.push('assets.commit'); return { created: false }; },
+    async rollbackLocalBookAsset() { assert.fail('possible durable shelf reference must preserve assets'); },
+  };
+  const result = await new ImportGateway(owner).importPreparedSelections([
+    { state: 'ready', input: { bookId: importBook.bookId, fileName: '新书名.txt', stagedPath: '/private/input' } },
+  ]);
+  if (scenario === 'normal' || scenario === 'committed') {
+    assert.equal(result.imported, 1); assert.equal(result.failed, 0);
+    assert.equal(calls.at(-1), 'import.finalize');
+    assert.equal(calls.filter(name => name === 'bookshelf.get').length, scenario === 'normal' ? 0 : 1);
+  } else {
+    assert.equal(result.failed, 1); assert.equal(result.items[0].failure.code, 'recoveryPending');
+    assert.ok(!calls.includes('import.finalize'));
+  }
+  assert.ok(!calls.some(name => name.includes('progress') || name.includes('chapter.content')),
+    'import membership has no reader page preparation or progress side effects');
+}
+
+console.log('local import finalize recovery queue and lost-upsert metadata reconciliation: PASS');

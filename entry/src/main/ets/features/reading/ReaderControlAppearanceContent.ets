@@ -1,3 +1,4 @@
+import { readerRegisteredFontFamily } from '../common/ReaderFonts';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback } from '@kit.ArkUI';
@@ -127,10 +128,12 @@ export struct ReaderControlAppearanceContent {
   private cachedWidth: number = 286;
   private cachedFullHeight: number = 666;
   private cachedThemeCount: number = -1;
+  private cachedFontCount: number = -1;
 
   private endpointWidth: number = -1;
   private endpointHeight: number = -1;
   private endpointThemeCount: number = -1;
+  private endpointFontCount: number = -1;
   private quickEndpoint: ReaderControlAppearanceFrame | undefined = undefined;
   private fullEndpoint: ReaderControlAppearanceFrame | undefined = undefined;
   private paintProgress: number = -1;
@@ -146,7 +149,6 @@ export struct ReaderControlAppearanceContent {
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
-    if (this.extendedThemes()) this.syncExtendedThemeScroll();
   }
   aboutToDisappear(): void { this.dismissTemporaryLayer(); this.cancelFontDrag(); }
 
@@ -154,26 +156,30 @@ export struct ReaderControlAppearanceContent {
     // Many declarative attributes read the frame. Share that one sampled value
     // rather than allocate actor arrays again for every width/position/opacity.
     const count = this.themeIds().length;
+    const fonts = this.fontIds().length - 1;
     if (this.cachedProgress !== this.motionProgress || this.cachedWidth !== this.availableWidth ||
-      this.cachedFullHeight !== this.fullContentHeight || this.cachedThemeCount !== count) {
+      this.cachedFullHeight !== this.fullContentHeight || this.cachedThemeCount !== count || this.cachedFontCount !== fonts) {
       this.cachedProgress = this.motionProgress;
       this.cachedWidth = this.availableWidth;
       this.cachedFullHeight = this.fullContentHeight;
       this.cachedThemeCount = count;
+      this.cachedFontCount = fonts;
       this.cachedFrame = sampleReaderControlAppearance(this.motionProgress, this.availableWidth,
-        this.fullContentHeight, count);
+        this.fullContentHeight, count, fonts);
     }
     return this.cachedFrame;
   }
   private endpointFrame(full: boolean): ReaderControlAppearanceFrame {
     const count = this.themeIds().length;
+    const fonts = this.fontIds().length - 1;
     if (this.endpointWidth !== this.availableWidth || this.endpointHeight !== this.fullContentHeight ||
-      this.endpointThemeCount !== count || this.quickEndpoint === undefined || this.fullEndpoint === undefined) {
+      this.endpointThemeCount !== count || this.endpointFontCount !== fonts || this.quickEndpoint === undefined || this.fullEndpoint === undefined) {
       this.endpointWidth = this.availableWidth;
       this.endpointHeight = this.fullContentHeight;
       this.endpointThemeCount = count;
-      this.quickEndpoint = sampleReaderControlAppearance(0, this.availableWidth, this.fullContentHeight, count);
-      this.fullEndpoint = sampleReaderControlAppearance(1, this.availableWidth, this.fullContentHeight, count);
+      this.endpointFontCount = fonts;
+      this.quickEndpoint = sampleReaderControlAppearance(0, this.availableWidth, this.fullContentHeight, count, fonts);
+      this.fullEndpoint = sampleReaderControlAppearance(1, this.availableWidth, this.fullContentHeight, count, fonts);
     }
     return full ? this.fullEndpoint! : this.quickEndpoint!;
   }
@@ -183,7 +189,7 @@ export struct ReaderControlAppearanceContent {
   private sharedInput(): boolean {
     return readerControlAppearanceEndpoint(this.motionProgress, this.interactionEnabled) !== 'none';
   }
-  private extendedThemes(): boolean { return this.themeIds().length > 8; }
+  private extendedThemes(): boolean { return this.themeIds().length > 8 || this.fontIds().length > 9; }
   private scrollInput(): boolean { return this.extendedThemes() ? this.sharedInput() : this.fullInput(); }
   private scrollContentHeight(): number {
     if (!this.extendedThemes()) return Math.max(this.frame().contentHeight,
@@ -236,8 +242,12 @@ export struct ReaderControlAppearanceContent {
   }
   private syncMorphScroll(): void {
     if (this.extendedThemes()) { this.syncExtendedThemeScroll(); return; }
+    const offset = this.scroller.currentOffset()?.yOffset;
+    // Watch callbacks may run before the native Scroll binds its controller.
+    // Unknown is not zero: retain the existing scroll state until attachment.
+    if (offset === undefined || !Number.isFinite(offset)) return;
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, this.scroller.currentOffset().yOffset);
+      this.interactionEnabled, offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -245,12 +255,14 @@ export struct ReaderControlAppearanceContent {
     }
   }
   private onFullDidScroll(): void {
+    const offset = this.scroller.currentOffset()?.yOffset;
+    if (offset === undefined || !Number.isFinite(offset)) return;
     if (this.extendedThemes()) {
-      this.extendedScrollOffset = Math.max(0, this.scroller.currentOffset().yOffset);
+      this.extendedScrollOffset = Math.max(0, offset);
       return;
     }
     this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion,
-      this.scroller.currentOffset().yOffset, this.fullInput());
+      offset, this.fullInput());
   }
   private nativeScrollDelta(y: number, source: ScrollSource): OffsetResult {
     if (this.extendedThemes()) return { xOffset: 0,
@@ -270,7 +282,9 @@ export struct ReaderControlAppearanceContent {
   }
 
   private syncExtendedThemeScroll(): void {
-    const offset = Math.max(0, this.scroller.currentOffset().yOffset);
+    const current = this.scroller.currentOffset()?.yOffset;
+    if (current === undefined || !Number.isFinite(current)) return;
+    const offset = Math.max(0, current);
     this.extendedScrollOffset = offset;
     if (!this.sharedInput()) {
       if (!this.extendedScrollInMotion) {
@@ -356,6 +370,7 @@ export struct ReaderControlAppearanceContent {
       .edgeEffect(EdgeEffect.None)
       .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
         this.nativeScrollDelta(y, source))
+      .onAppear((): void => this.syncMorphScroll())
       .onDidScroll((): void => this.onFullDidScroll());
       this.selectOverlay();
     }
@@ -503,7 +518,7 @@ export struct ReaderControlAppearanceContent {
       font === 'import', this.importLayout);
   }
   private activeFont(font: ReaderAppearanceFontSlot): boolean {
-    return font === 'import' ? this.snapshot.font === 'custom' : this.snapshot.font === font;
+    return font !== 'import' && this.snapshot.font === font;
   }
 
   @Builder
@@ -519,8 +534,8 @@ export struct ReaderControlAppearanceContent {
         .borderRadius(12).clip(true).hitTestBehavior(HitTestMode.None);
       Text(readerAppearanceFontSlotLabel(this.snapshot, font))
         .width(this.fontActor(font).width).height(this.fontActor(font).height)
-        .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, font) === 'ReaderNotoSansSC' ?
-          'ReaderNotoSansSCUIRegular' : readerAppearanceFontSlotFamily(this.snapshot, font)).fontSize(12)
+        .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceFontSlotFamily(this.snapshot, font) === 'ReaderNotoSansSC' ?
+          'ReaderNotoSansSCUIRegular' : readerAppearanceFontSlotFamily(this.snapshot, font))).fontSize(12)
         .fontWeight(FontWeight.Regular, { enableVariableFontWeight: true })
         .fontColor(this.activeFont(font) ? readerAppColor('app.ReaderControlAppearanceContent.fontCell.fontColor.FFFFFAF4', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })

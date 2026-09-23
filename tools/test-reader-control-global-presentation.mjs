@@ -19,7 +19,7 @@ const props = () => ({
   pathCache: new paint.ReaderControlMotionPathCache(p => new PathShape().commands(p)),
   clipEndpointWidth: -1, clipFullRects: [], clipQuickRects: [], motionProgress: 0, availableWidth: 286, availableHeight: 190, fullViewportHeight: 666,
   fullContentHeight: 666, quickContentHeight: 190, interactionEnabled: true,
-  scrollMotion: scroll.createReaderControlMorphScroll(), getUIContext: () => ({ vp2px: x => 3 * x }) });
+  scrollMotion: scroll.createReaderControlMorphScroll(), getUIContext: () => ({ getFont: () => ({}), vp2px: x => 3 * x }) });
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-7, `${a} != ${b}`);
 const deps = { ...paint, ...scroll, ...actors, PathShape };
 
@@ -65,10 +65,19 @@ const { owner: font } = createReaderBuilderProbe(source('Appearance'),
   { ...deps, ...appearance, ...appearanceState, ...render, READER_CONTROL_APPEARANCE_THEMES,
     BorderStyle: enums, GesturePriority: enums, Gesture: native, LongPressGesture: native,
     globalThis: { Gesture: native, LongPressGesture: native } });
-Object.assign(font, props(), { snapshot: appearanceState.createDefaultReaderAppearanceSnapshot(),
+Object.assign(font, props(), { snapshot: appearanceState.setReaderAppearanceCustomFont(appearanceState.createDefaultReaderAppearanceSnapshot(),
+    new appearanceState.ReaderCustomFontDescriptor('测试字体', 'ReaderCustom_aaaaaaaaaaaaaaaa', '/fonts/a.ttf', 'a'.repeat(64))),
   draggedFontId: '', previewFontOrder: [], fontTracks: new Map(), importLayout: 'ordered-slot-approved',
   cachedProgress: -1, cachedWidth: -1, cachedFullHeight: -1 });
 for (const slot of font.fontIds()) font.fontCell(slot);
+const actions = [];
+Object.assign(font, { motionProgress: 1, interactionEnabled: true, suppressFontClick: false, onCustomFontImport: () => actions.push('import'),
+  onFontChange: selected => actions.push(selected) });
+for (const name of ['切换到测试字体', '导入自定义字体']) {
+  const node = [...font.nodes.values()].find(n => n.accessibilityText === name);
+  assert.ok(node, name); node.onClick();
+}
+assert.deepEqual(actions, ['custom', 'import'], 'custom selection and import retain independent actions');
 const outlineNodes = [...font.nodes.values()].filter(n => n.type === 'Stack');
 const surfaceNodes = [...font.nodes.values()].filter(n => n.type === 'Row');
 const textNodes = [...font.nodes.values()].filter(n => n.type === 'Text');
@@ -79,7 +88,7 @@ for (const selected of ['serif', 'sans', 'kai', 'system', 'custom']) {
   font.replay();
   assert.equal(surfaceNodes.filter(n => n.backgroundColor === '#FF2F6373').length, 1);
   for (const [i, slot] of font.fontIds().entries()) {
-    const active = slot === 'import' ? selected === 'custom' : selected === slot;
+    const active = slot !== 'import' && selected === slot;
     assert.equal(surfaceNodes[i].backgroundColor, active ? '#FF2F6373' : '#FFFFFCF8');
     assert.equal(textNodes[i].fontColor, active ? '#FFFFFAF4' : '#FF332C25');
   }

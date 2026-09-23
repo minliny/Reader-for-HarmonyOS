@@ -3,7 +3,8 @@ import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingVariable } from '../reading/RemoteReadingContract';
-import { errorMessageOf, isNetworkEnvironmentFailure } from '../../app/ErrorMessage';
+import type { RemoteReadingBookSeed, RemoteReadingSession, RemoteReadingTocEntry } from '../reading/RemoteReadingFlowGateway';
+import { errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure } from '../../app/ErrorMessage';
 import { acquisitionCandidateRank, acquisitionReadableCurrent, acquisitionBookFailureCurrent,
   acquisitionAttemptFailureCurrent } from '../common/BookAcquisitionPresentation';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -115,12 +116,16 @@ export type SourceSwitchTargetTocEntry = {
 };
 
 export type SourceSwitchTargetToc = {
+  /** The already acquired catalog/context is handed to the existing reader. */
+  readingSession: RemoteReadingSession;
   sourceId: string;
   bookId: string;
   bookName: string;
   author: string;
   coverUrl?: string;
   latestChapterTitle?: string;
+  intro?: string;
+  kind?: string;
   tocUrl: string;
   variables: JsonObject;
   entries: SourceSwitchTargetTocEntry[];
@@ -139,6 +144,9 @@ export type SourceSwitchTarget = {
   title: string;
   author?: string;
   coverUrl?: string;
+  intro?: string;
+  kind?: string;
+  lastChapter?: string;
 };
 
 export type SourceSwitchCommitParams = {
@@ -433,12 +441,25 @@ export class SourceSwitchGateway {
       return { kind: 'noSources' };
     }
     const candidates: SourceSwitchCandidate[] = [];
+    let domainFailures = 0;
     await runBookSourceWorkers(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY,
       async (source: SourceSwitchRegistryEntry): Promise<void> => {
-        const group = await this.discoverFromSource(sourceId, bookId, keyword, source, isCurrent);
-        if (isCurrent?.() !== false) candidates.push(...group);
+        try {
+          const group = await this.discoverFromSource(sourceId, bookId, keyword, source, isCurrent);
+          if (isCurrent?.() !== false) candidates.push(...group);
+        } catch (error) {
+          if (!isDomainResolutionFailure(error)) throw error;
+          // A failed candidate hostname must not cancel independent sources.
+          // Route/proxy configuration failures still stop the shared batch.
+          domainFailures += 1;
+        }
       }, async (): Promise<boolean> => isCurrent?.() !== false);
     if (isCurrent?.() === false) return { kind: 'noSources' };
+    if (candidates.length === 0 && domainFailures > 0) {
+      throw new Error(domainFailures === sources.length
+        ? '本次换源搜索的书源均出现域名解析失败，请稍后重试或调整书源。'
+        : `本次换源搜索未找到可用候选，其中${domainFailures}个书源域名解析失败，请稍后重试或调整书源。`);
+    }
     candidates.sort((left: SourceSwitchCandidate, right: SourceSwitchCandidate): number =>
       (left.sourceOrder ?? 0) - (right.sourceOrder ?? 0));
     const uniqueCandidates = deduplicateSourceSwitchCandidates(candidates);
@@ -538,20 +559,40 @@ export class SourceSwitchGateway {
     sourceId: string,
     bookId: string,
     isCurrent: (() => boolean) | undefined = undefined,
+    candidate: SourceSwitchCandidate | undefined = undefined,
   ): Promise<SourceSwitchTargetToc> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
 
     const coordinator = this.runtimeOwner.bookAcquisitions?.();
     if (coordinator !== undefined) {
-      const stored = await this.runtimeOwner.request('search-book.get', { origin: sourceId, bookUrl: bookId });
-      const book = this.requireObject(stored.data['book'], 'search-book.get');
-      const session = await coordinator.acquireBook({ sourceId, bookId, detailUrl: bookId,
-        title: this.requireString(book, 'name', 'search-book.get'), author: this.optionalString(book, 'author') ?? '' }, { isCurrent });
+      if (candidate !== undefined && (candidate.sourceId !== sourceId || candidate.bookUrl !== bookId)) {
+        throw new Error('source switch candidate identity mismatch');
+      }
+      // Live candidates can precede their durable search row. The shared
+      // coordinator already reconciles that row and its rule-bound variables.
+      let seed: RemoteReadingBookSeed;
+      if (candidate !== undefined) {
+        seed = { sourceId, bookId, detailUrl: bookId, title: candidate.bookName,
+          author: candidate.author ?? '', authorIdentity: candidate.authorIdentity,
+          sourceVersion: candidate.sourceVersion, searchVariables: candidate.searchVariables,
+          coverUrl: candidate.coverUrl, lastChapter: candidate.latestChapterTitle };
+      } else {
+        const stored = await this.runtimeOwner.request('search-book.get', { origin: sourceId, bookUrl: bookId });
+        const book = this.requireObject(stored.data['book'], 'search-book.get');
+        seed = { sourceId, bookId, detailUrl: bookId,
+          title: this.requireString(book, 'name', 'search-book.get'), author: this.optionalString(book, 'author') ?? '' };
+      }
+      if (isCurrent?.() === false) throw new Error('source switch aborted');
+      const session = await coordinator.acquireBook(seed, { isCurrent });
+      if (session.identity.sourceId !== sourceId || session.identity.bookId !== bookId) {
+        throw new Error('source switch returned a mismatched reading session');
+      }
       const variables: JsonObject = {};
       for (const variable of session.continuationVariables) variables[variable.name] = variable.value;
-      return { sourceId, bookId, bookName: session.book.title, author: session.book.author,
+      return { readingSession: session, sourceId, bookId, bookName: session.book.title, author: session.book.author,
         coverUrl: session.book.coverUrl, latestChapterTitle: session.book.lastChapter,
+        intro: session.book.intro, kind: session.book.kind,
         tocUrl: session.tocUrl, variables,
         entries: session.entries.map((entry): SourceSwitchTargetTocEntry => {
           const entryVariables: JsonObject = {};
@@ -582,6 +623,8 @@ export class SourceSwitchGateway {
     const author = this.optionalString(detailBook, 'author') ?? '';
     const coverUrl = this.optionalString(detailBook, 'coverUrl');
     const latestChapterTitle = this.optionalString(detailBook, 'lastChapter');
+    const intro = this.optionalString(detailBook, 'intro');
+    const kind = this.optionalString(detailBook, 'kind');
     // `book.toc` variables are optional in the Core contract (serde default
     // empty map); `book.detail` only emits them when the source's rules produce
     // any. Requiring an object here would fail-closed against real sources
@@ -621,11 +664,37 @@ export class SourceSwitchGateway {
         : this.requireStringMap(rawEntryVariables, 'variables', 'book.toc');
       entries.push({ index, title, url, variables: entryVariables });
     }
+    const continuationVariables: RemoteReadingVariable[] = [];
+    for (const name of Object.keys(variables)) {
+      continuationVariables.push({ name, value: variables[name] as string });
+    }
+    const catalogAt = this.optionalNumber(result.data, 'catalogAt');
+    if (catalogAt !== undefined && (!Number.isSafeInteger(catalogAt) || catalogAt < 0)) {
+      throw new Error('book.toc returned invalid catalogAt');
+    }
+    const readingSession: RemoteReadingSession = {
+      acquisitionMode: 'online', identity: { sourceId, bookId }, detailUrl: bookId, tocUrl,
+      sourceVersion: this.optionalString(result.data, 'sourceVersion') ?? this.optionalString(detail.data, 'sourceVersion'),
+      catalogAt, catalogVersion: this.optionalString(result.data, 'catalogVersion'),
+      contextVersion: this.optionalString(result.data, 'contextVersion'),
+      book: { title: bookName, author, coverUrl, lastChapter: latestChapterTitle, intro, kind },
+      continuationVariables, hostRequirements: ['httpExecute'],
+      entries: entries.map((entry): RemoteReadingTocEntry => {
+        const entryVariables: RemoteReadingVariable[] = [];
+        for (const name of Object.keys(entry.variables)) {
+          entryVariables.push({ name, value: entry.variables[name] as string });
+        }
+        return { index: entry.index, title: entry.title, url: entry.url, variables: entryVariables };
+      }),
+    };
     const target: SourceSwitchTargetToc = {
+      readingSession,
       sourceId,
       bookId,
       bookName,
       author,
+      intro,
+      kind,
       tocUrl,
       variables,
       entries,
@@ -676,7 +745,11 @@ export class SourceSwitchGateway {
     this.assertNonBlankString(params.target.sourceId, 'target.sourceId');
     this.assertNonBlankString(params.target.bookId, 'target.bookId');
     this.assertNonBlankString(params.target.title, 'target.title');
-    this.assertNonBlankString(params.currentChapterTitle, 'currentChapterTitle');
+    // A durable chapter index remains usable when the old body's processing
+    // context is stale and its title cannot be proven. Core owns index matching.
+    if (typeof params.currentChapterTitle !== 'string') {
+      throw new Error('currentChapterTitle must be a string');
+    }
     if (params.newToc.length === 0) {
       throw new Error('source.switch.commit requires a non-empty newToc');
     }
@@ -1139,16 +1212,21 @@ export function buildSourceSwitchCommitParams(
   currentChapterIndex: number,
   updatedAt: number,
 ): SourceSwitchCommitParams {
-  const target: SourceSwitchTarget = {
-    sourceId: candidate.sourceId,
-    bookId: candidate.bookUrl,
-    title: candidate.bookName,
-  };
-  if (candidate.author !== undefined) {
-    target.author = candidate.author;
+  if (candidate.sourceId !== toc.sourceId || candidate.bookUrl !== toc.bookId ||
+    toc.readingSession.identity.sourceId !== toc.sourceId || toc.readingSession.identity.bookId !== toc.bookId) {
+    throw new Error('source switch candidate and acquired catalog identities do not match');
   }
-  if (candidate.coverUrl !== undefined) {
-    target.coverUrl = candidate.coverUrl;
+  const target: SourceSwitchTarget = {
+    sourceId: toc.sourceId,
+    bookId: toc.bookId,
+    title: toc.bookName,
+    author: toc.author,
+    intro: toc.intro,
+    kind: toc.kind,
+    lastChapter: toc.latestChapterTitle,
+  };
+  if (toc.coverUrl !== undefined) {
+    target.coverUrl = toc.coverUrl;
   }
   const newToc: SourceSwitchNewTocEntry[] = [];
   for (const entry of toc.entries) {

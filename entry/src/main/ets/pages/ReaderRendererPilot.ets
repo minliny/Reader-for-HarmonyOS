@@ -5,12 +5,16 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { router } from '@kit.ArkUI';
 import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
 import { ArkWebResourceDiagnostic } from '../app/ArkWebResourceDiagnostic';
+import { ReaderParagraphDiagnostic } from './ReaderParagraphDiagnostic';
+import { ReaderTextNodeDiagnostic } from './ReaderTextNodeDiagnostic';
 
 @Entry
 @Component
 struct ReaderRendererPilot {
   @State private result: string = '隔离正文试点载入中';
   @State private resourceMode: boolean = false;
+  @State private paragraphMode: boolean = false;
+  @State private textNodeMode: boolean = false;
   @State private resourceBusy: boolean = false;
   private resourceDiagnostic: ArkWebResourceDiagnostic = new ArkWebResourceDiagnostic();
   private readonly controller: webview.WebviewController = new webview.WebviewController('reader-oss-pilot');
@@ -38,7 +42,13 @@ struct ReaderRendererPilot {
         Button('返回书架').onClick((): void => { router.replaceUrl({ url: 'pages/Index' }); });
         Text(this.result).fontSize(12).layoutWeight(1).id('reader-oss-pilot-status');
       }.width('100%').padding(12)
-      if (this.resourceMode) {
+      if (this.textNodeMode) {
+        Button('返回正文试点').onClick((): void => { this.textNodeMode = false; });
+        ReaderTextNodeDiagnostic();
+      } else if (this.paragraphMode) {
+        Button('返回正文试点').onClick((): void => { this.paragraphMode = false; });
+        ReaderParagraphDiagnostic();
+      } else if (this.resourceMode) {
         Column({ space: 12 }) {
           Text('PH76 · 真实 WebView 回调，内存响应样本；不读写用户书籍').fontSize(14);
           Button('验证早期资源回调').enabled(!this.resourceBusy).id('reader-ph76-early')
@@ -52,6 +62,12 @@ struct ReaderRendererPilot {
           ArkWebExecutionHost({ diagnosticResourceProvider: this.resourceDiagnostic.provide });
         }.width('100%').layoutWeight(1);
       } else {
+      Button('原生 Text 同节点诊断').id('reader-textnode-open').onClick((): void => {
+        this.textNodeMode = true;
+      });
+      Button('系统 Paragraph 诊断').id('reader-paragraph-open').onClick((): void => {
+        this.paragraphMode = true;
+      });
       Button('PH76 资源验证').id('reader-ph76-open').onClick((): void => {
         this.resourceDiagnostic = new ArkWebResourceDiagnostic();
         this.result = '选择一项 PH76 受控验证';

@@ -1,0 +1,1303 @@
+{
+  "provenance": {
+    "fixture": "ReaderImageAudit20260911.epub",
+    "sha256": "9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+    "source": "Actual Runtime import + persisted SQLite + read_prepared_entry; legacy only strips geometry in temporary database; repaired prepares same source. Values copied verbatim from 2026-09-23 evidence, no VM database claim.",
+    "scope": "Core DTO contract; no pixels or platform paint timing."
+  },
+  "cases": [
+    {
+      "chapter": 1,
+      "variant": "fresh",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/0",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第1章 图片位置验证\n\n【章1段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章1段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章1段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章1段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 0,
+        "chapterTitle": "第1章 图片位置验证",
+        "content": "第1章 图片位置验证\n\n【章1段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "kind": "ready",
+        "navigation": {
+          "after": [
+            {
+              "index": 1,
+              "navigable": true,
+              "position": 1,
+              "readablePosition": 1,
+              "title": "第2章 图片位置验证"
+            },
+            {
+              "index": 2,
+              "navigable": true,
+              "position": 2,
+              "readablePosition": 2,
+              "title": "第3章 图片位置验证"
+            }
+          ],
+          "before": [],
+          "chapterCount": 3,
+          "current": {
+            "index": 0,
+            "navigable": true,
+            "position": 0,
+            "readablePosition": 0,
+            "title": "第1章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "cf3ceedbd7975075f110fb296ef249f3264aa66709be3a4cc3107ed3fe9cc065",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 0,
+          "processingVersion": "d4082ac66c593bbaade6df1a94e2aab3f64ef5603cf4ef3a5c8e109922d62eaa",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    },
+    {
+      "chapter": 1,
+      "variant": "legacy",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/0",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第1章 图片位置验证\n\n【章1段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章1段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章1段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章1段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 0,
+        "chapterTitle": "第1章 图片位置验证",
+        "content": "第1章 图片位置验证\n\n【章1段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "kind": "ready",
+        "navigation": {
+          "after": [
+            {
+              "index": 1,
+              "navigable": true,
+              "position": 1,
+              "readablePosition": 1,
+              "title": "第2章 图片位置验证"
+            },
+            {
+              "index": 2,
+              "navigable": true,
+              "position": 2,
+              "readablePosition": 2,
+              "title": "第3章 图片位置验证"
+            }
+          ],
+          "before": [],
+          "chapterCount": 3,
+          "current": {
+            "index": 0,
+            "navigable": true,
+            "position": 0,
+            "readablePosition": 0,
+            "title": "第1章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "4a2ad7cf5d511465769f75bc6cf0b116d463d6a9739c656d9b58973e7e6039da",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 0,
+          "processingVersion": "7cc3bc9492858c7885ae9bca5efbe0e2605ac8361f10d1bbe4098f43311341a4",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    },
+    {
+      "chapter": 1,
+      "variant": "repaired",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/0",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第1章 图片位置验证\n\n【章1段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章1段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章1段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTEucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章1段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 0,
+        "chapterTitle": "第1章 图片位置验证",
+        "content": "第1章 图片位置验证\n\n【章1段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章1段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章1段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "imagePresentationVersion": "bdc37479a84926e0d1dfe1921d971137c7af9ab3dfb7ef525ba7235121b03c00",
+        "kind": "ready",
+        "navigation": {
+          "after": [
+            {
+              "index": 1,
+              "navigable": true,
+              "position": 1,
+              "readablePosition": 1,
+              "title": "第2章 图片位置验证"
+            },
+            {
+              "index": 2,
+              "navigable": true,
+              "position": 2,
+              "readablePosition": 2,
+              "title": "第3章 图片位置验证"
+            }
+          ],
+          "before": [],
+          "chapterCount": 3,
+          "current": {
+            "index": 0,
+            "navigable": true,
+            "position": 0,
+            "readablePosition": 0,
+            "title": "第1章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "4a2ad7cf5d511465769f75bc6cf0b116d463d6a9739c656d9b58973e7e6039da",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 0,
+          "processingVersion": "7cc3bc9492858c7885ae9bca5efbe0e2605ac8361f10d1bbe4098f43311341a4",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    },
+    {
+      "chapter": 2,
+      "variant": "fresh",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/1",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第2章 图片位置验证\n\n【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章2段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 1,
+        "chapterTitle": "第2章 图片位置验证",
+        "content": "第2章 图片位置验证\n\n【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "kind": "ready",
+        "navigation": {
+          "after": [
+            {
+              "index": 2,
+              "navigable": true,
+              "position": 2,
+              "readablePosition": 2,
+              "title": "第3章 图片位置验证"
+            }
+          ],
+          "before": [
+            {
+              "index": 0,
+              "navigable": true,
+              "position": 0,
+              "readablePosition": 0,
+              "title": "第1章 图片位置验证"
+            }
+          ],
+          "chapterCount": 3,
+          "current": {
+            "index": 1,
+            "navigable": true,
+            "position": 1,
+            "readablePosition": 1,
+            "title": "第2章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "abbe317a3117a70e0cb90b8596bdc1dce48743004b3b4088bce5099354128aeb",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 1,
+          "processingVersion": "472cdc711b565a0cca1b2e3b2b63e93f60d28d27913fe104158c56ace70c364c",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    },
+    {
+      "chapter": 2,
+      "variant": "legacy",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/1",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第2章 图片位置验证\n\n【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章2段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 1,
+        "chapterTitle": "第2章 图片位置验证",
+        "content": "第2章 图片位置验证\n\n【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "kind": "ready",
+        "navigation": {
+          "after": [
+            {
+              "index": 2,
+              "navigable": true,
+              "position": 2,
+              "readablePosition": 2,
+              "title": "第3章 图片位置验证"
+            }
+          ],
+          "before": [
+            {
+              "index": 0,
+              "navigable": true,
+              "position": 0,
+              "readablePosition": 0,
+              "title": "第1章 图片位置验证"
+            }
+          ],
+          "chapterCount": 3,
+          "current": {
+            "index": 1,
+            "navigable": true,
+            "position": 1,
+            "readablePosition": 1,
+            "title": "第2章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "724853bcf7706fa7c49b59ac1788d1e4d85072e9e9fe568cded6aad36768e757",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 1,
+          "processingVersion": "64b8f71e01d75f00794da2b94eae4dbfa4df315486ce46157b50895c1f4d75ea",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    },
+    {
+      "chapter": 2,
+      "variant": "repaired",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/1",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第2章 图片位置验证\n\n【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTIucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章2段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 1,
+        "chapterTitle": "第2章 图片位置验证",
+        "content": "第2章 图片位置验证\n\n【章2段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章2段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章2段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "imagePresentationVersion": "6335620bc3d7d27cabe1af9851513c04d2cedd330fda7fbc36d59d7075ced65a",
+        "kind": "ready",
+        "navigation": {
+          "after": [
+            {
+              "index": 2,
+              "navigable": true,
+              "position": 2,
+              "readablePosition": 2,
+              "title": "第3章 图片位置验证"
+            }
+          ],
+          "before": [
+            {
+              "index": 0,
+              "navigable": true,
+              "position": 0,
+              "readablePosition": 0,
+              "title": "第1章 图片位置验证"
+            }
+          ],
+          "chapterCount": 3,
+          "current": {
+            "index": 1,
+            "navigable": true,
+            "position": 1,
+            "readablePosition": 1,
+            "title": "第2章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "724853bcf7706fa7c49b59ac1788d1e4d85072e9e9fe568cded6aad36768e757",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 1,
+          "processingVersion": "64b8f71e01d75f00794da2b94eae4dbfa4df315486ce46157b50895c1f4d75ea",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    },
+    {
+      "chapter": 3,
+      "variant": "fresh",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/2",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第3章 图片位置验证\n\n【章3段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章3段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章3段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章3段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 2,
+        "chapterTitle": "第3章 图片位置验证",
+        "content": "第3章 图片位置验证\n\n【章3段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "kind": "ready",
+        "navigation": {
+          "after": [],
+          "before": [
+            {
+              "index": 0,
+              "navigable": true,
+              "position": 0,
+              "readablePosition": 0,
+              "title": "第1章 图片位置验证"
+            },
+            {
+              "index": 1,
+              "navigable": true,
+              "position": 1,
+              "readablePosition": 1,
+              "title": "第2章 图片位置验证"
+            }
+          ],
+          "chapterCount": 3,
+          "current": {
+            "index": 2,
+            "navigable": true,
+            "position": 2,
+            "readablePosition": 2,
+            "title": "第3章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "052bcd02a9baa215c7af2852e3ff44d9e17776c2aa35212fed3c2f692342179f",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 2,
+          "processingVersion": "a14650a5bbc3bb710e63868a226ac716685a1ed6ee00ff25b3d5901ac9f7c4e9",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    },
+    {
+      "chapter": 3,
+      "variant": "legacy",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/2",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第3章 图片位置验证\n\n【章3段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章3段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章3段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章3段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 2,
+        "chapterTitle": "第3章 图片位置验证",
+        "content": "第3章 图片位置验证\n\n【章3段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "kind": "ready",
+        "navigation": {
+          "after": [],
+          "before": [
+            {
+              "index": 0,
+              "navigable": true,
+              "position": 0,
+              "readablePosition": 0,
+              "title": "第1章 图片位置验证"
+            },
+            {
+              "index": 1,
+              "navigable": true,
+              "position": 1,
+              "readablePosition": 1,
+              "title": "第2章 图片位置验证"
+            }
+          ],
+          "chapterCount": 3,
+          "current": {
+            "index": 2,
+            "navigable": true,
+            "position": 2,
+            "readablePosition": 2,
+            "title": "第3章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "1beb3ac7cb23264217f0e6b2e8e1cf114ed01355b80284a28dbd56fe404b1e80",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 2,
+          "processingVersion": "0c40755efff3781a5e4ba0902a2fcc0453dcdf12f5c909f43d8d3ee419157b9e",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    },
+    {
+      "chapter": 3,
+      "variant": "repaired",
+      "dto": {
+        "baseUrl": "local://local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41/chapter/2",
+        "blocks": [
+          {
+            "endScalar": 108,
+            "kind": "text",
+            "startScalar": 0,
+            "text": "第3章 图片位置验证\n\n【章3段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 110,
+            "kind": "text",
+            "startScalar": 108,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 111,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 110
+          },
+          {
+            "endScalar": 113,
+            "kind": "text",
+            "startScalar": 111,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 405,
+            "kind": "text",
+            "startScalar": 113,
+            "text": "【章3段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 407,
+            "kind": "text",
+            "startScalar": 405,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 408,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 407
+          },
+          {
+            "endScalar": 410,
+            "kind": "text",
+            "startScalar": 408,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 702,
+            "kind": "text",
+            "startScalar": 410,
+            "text": "【章3段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          },
+          {
+            "endScalar": 704,
+            "kind": "text",
+            "startScalar": 702,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 705,
+            "imageIntrinsicHeight": 480,
+            "imageIntrinsicWidth": 720,
+            "kind": "image",
+            "source": "reader-local-epub://bG9jYWw6OTkzOGNjNjRhMzlkOGVkMjEwZmYzNDRkMmVhM2QzMmRmZDk1ZTYxYmY0ZWQyNWQ2ZDdkMDg3MWE2MTlkYWQ0MQ==/aTMucG5n",
+            "startScalar": 704
+          },
+          {
+            "endScalar": 707,
+            "kind": "text",
+            "startScalar": 705,
+            "text": "\n\n"
+          },
+          {
+            "endScalar": 901,
+            "kind": "text",
+            "startScalar": 707,
+            "text": "【章3段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。"
+          }
+        ],
+        "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+        "chapterIndex": 2,
+        "chapterTitle": "第3章 图片位置验证",
+        "content": "第3章 图片位置验证\n\n【章3段1】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段2】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段3】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段4】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段5】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段6】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段7】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n￼\n\n【章3段8】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。\n\n【章3段9】这段自写文字用于检查图片前后的位置。向前阅读和向后返回时，正文应保持连续，图片边框和色块应完整显示。改变页面主题后再翻页，当前页与相邻页都应使用新的背景，退出后恢复的位置也应一致。",
+        "contentFormatVersion": 0,
+        "contentRefreshRequired": false,
+        "documentWindow": {
+          "endScalar": 901,
+          "requestedScalar": 0,
+          "startScalar": 0,
+          "totalScalars": 901
+        },
+        "imagePresentationVersion": "675d8605d2a348fb2aaff149863c2a4f5e3a62619c9608e017d5cd01324ce056",
+        "kind": "ready",
+        "navigation": {
+          "after": [],
+          "before": [
+            {
+              "index": 0,
+              "navigable": true,
+              "position": 0,
+              "readablePosition": 0,
+              "title": "第1章 图片位置验证"
+            },
+            {
+              "index": 1,
+              "navigable": true,
+              "position": 1,
+              "readablePosition": 1,
+              "title": "第2章 图片位置验证"
+            }
+          ],
+          "chapterCount": 3,
+          "current": {
+            "index": 2,
+            "navigable": true,
+            "position": 2,
+            "readablePosition": 2,
+            "title": "第3章 图片位置验证"
+          },
+          "readableChapterCount": 3,
+          "revision": "992ff0992ee5f046b08fde504eaf9640010f2b65ed335a6144d7685442dcd67b"
+        },
+        "positionScope": {
+          "bodyVersion": "1beb3ac7cb23264217f0e6b2e8e1cf114ed01355b80284a28dbd56fe404b1e80",
+          "bookId": "local:9938cc64a39d8ed210ff344d2ea3d32dfd95e61bf4ed25d6d7d0871a619dad41",
+          "chapterIndex": 2,
+          "processingVersion": "0c40755efff3781a5e4ba0902a2fcc0453dcdf12f5c909f43d8d3ee419157b9e",
+          "sourceId": "local"
+        },
+        "progress": null,
+        "progressRevision": "reader-progress-v1:80c1118a592a9a0df932695804e4dbc3ae2fa7f15bdba7bc5f172cb26bc0eb24",
+        "sourceId": "local"
+      }
+    }
+  ]
+}

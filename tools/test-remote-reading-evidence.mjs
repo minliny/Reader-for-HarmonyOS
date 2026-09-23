@@ -109,12 +109,12 @@ for (const oldFailure of [false, true]) {
   let opened;
   p.openRemoteBookDetail = (...args) => { opened = args; };
   await p.switchPreviewSource({ sourceId: 'source', bookUrl: 'book', bookName: '书', author: '作者' }, () => true);
-  assert.deepEqual(calls, [0, 1]); assert.equal(opened[6], 'search');
+  assert.deepEqual(calls, [], 'source selection transfers its catalog directly to the original reader');
+  assert.equal(opened[3], true, 'source selection opens reading rather than another detail preview');
+  assert.equal(opened[6], 'search');
   const transferred = opened[7];
-  assert.equal(transferred.preparedChapter.chapter.chapterIndex, 1);
-  const detail = page(transferred);
-  assert.equal(await detail.probeRemoteContentVerdict(new Gateway(), transferred, () => true), 1);
-  assert.deepEqual(calls, [0, 1], 'source picker to detail hands over the successful body without another probe');
+  assert.equal(transferred, selectedSession, 'the already acquired full catalog/context is retained exactly');
+  assert.equal(transferred.preparedChapter, undefined, 'no preliminary body probe is required to change reading identity');
   load = async (value, index) => chapter(value, index);
 }
 

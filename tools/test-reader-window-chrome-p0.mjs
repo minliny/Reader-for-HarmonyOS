@@ -9,14 +9,19 @@ const coordinator = read('entry/src/main/ets/app/ReaderWindowCoordinator.ts');
 const index = read('entry/src/main/ets/pages/Index.ets');
 const experience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 
+assert.doesNotMatch(index, /\$r\('app\.color\.reader_surface'\)/,
+  'app safe-area root must not paint a fixed day resource behind night window chrome');
+assert.equal((index.match(/backgroundColor\(readerAppColor\('app.window.background', this.appThemeScheme\)\)/g) ?? []).length, 2,
+  'normal and startup-failure roots share the same app palette as ReaderThemeHost window chrome');
+
 assert.match(coordinator,
   /class ReaderWindowChromeStyle[\s\S]*underlayColor: string;[\s\S]*tone: ReaderWindowChromeTone;/,
   'system-bar underlay and icon tone must be one style value');
 assert.match(coordinator,
-  /statusBarColor: request\.style\.underlayColor,[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
-  'one revision must atomically apply the paired underlay and content tone');
+  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
+  'one revision must expose the owned paper while preserving paired navigation base and content ink');
 assert.match(coordinator,
-  /contentColor: string;[\s\S]*constructor\(underlayColor: string, tone: ReaderWindowChromeTone, contentColor\?: string\)[\s\S]*this\.contentColor = contentColor \?\? /,
+  /contentColor: string;[\s\S]*constructor\(underlayColor: string, tone: ReaderWindowChromeTone, contentColor\?: string,[\s\S]*paperThemeId: string = ''\)[\s\S]*this\.contentColor = contentColor \?\? /,
   'chrome style must carry an explicit foreground color with a tone fallback');
 assert.doesNotMatch(coordinator, /#99000000/, 'system-bar content must not use translucent black');
 assert.doesNotMatch(coordinator, /requestOverlayChrome\(tone:/,
@@ -34,15 +39,19 @@ assert.match(experience, /requestOverlayChrome\(chromeStyle\)/,
 assert.match(index,
   /padding\(\{ top: this\.readerOwnsWindowEdges\(\) \? 0 : this\.appContentTopInset\(\) \}\)/,
   'safe-top removal must depend on visible reader edge ownership');
+assert.match(index,
+  /expandSafeArea\(\[SafeAreaType\.SYSTEM\], this\.readerOwnsWindowEdges\(\) \?\s*\[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\] : \[SafeAreaEdge\.BOTTOM\]\)/,
+  'the root must also grant the reader the full top edge; a child cannot restore an excluded ancestor viewport');
 const EdgeOwner = productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url)), ['readerOwnsWindowEdges']);
-for (const [route, readingSessionActive, expected] of [
-  ['detail', false, false], ['detail', true, false],
-  ['directory', false, true], ['directory', true, true],
-  ['reading', true, true], ['reading', false, false],
+for (const [route, readingSessionActive, directoryReturnTarget, expected] of [
+  ['detail', false, 'detail', false], ['detail', true, 'detail', false],
+  ['directory', false, 'detail', false], ['directory', true, 'detail', false],
+  ['directory', false, 'readerControl', false], ['directory', true, 'readerControl', true],
+  ['reading', true, 'detail', true], ['reading', false, 'detail', false],
 ]) {
-  const owner = Object.assign(new EdgeOwner(), { route, readingSessionActive });
+  const owner = Object.assign(new EdgeOwner(), { route, readingSessionActive, directoryReturnTarget });
   assert.equal(owner.readerOwnsWindowEdges(), expected,
-    'external directory owns its safe geometry; hidden detail reader never removes app safe top');
+    'ordinary catalog inherits App safe top; only visible reading control owns window edges');
 }
 assert.match(experience,
   /applyWindowPolicyForChromeOwner\(\)[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?applyReaderWindowPolicy[\s\S]*?requestAppWindowPolicy/,

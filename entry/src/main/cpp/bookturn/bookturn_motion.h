@@ -16,7 +16,16 @@ constexpr float kCompleteSeconds = 0.320F;
 // Queued completed taps use a short cue; finger release still uses the
 // independent 80..320 ms velocity-based settlement below.
 constexpr float kRapidCompleteSeconds = 0.030F;
+constexpr float kAutomaticCompleteSeconds = 0.500F;
 constexpr float kSettleMinSeconds = 0.080F;
+
+// Values are shared with the ArkTS/NAPI bridge. A request owns its profile;
+// the active automatic-reading/TTS mode never changes a manual request.
+enum class ProgrammaticProfile : int32_t { MANUAL = 0, RAPID = 1, AUTOMATIC = 2 };
+enum class SettlementCurve : int32_t { LINEAR = 0, EASE_OUT = 1, SMOOTHSTEP = 2 };
+bool IsProgrammaticProfileValid(ProgrammaticProfile profile);
+float ProgrammaticDurationSeconds(ProgrammaticProfile profile);
+SettlementCurve ProgrammaticSettlementCurve(ProgrammaticProfile profile);
 
 // Raw gesture sample. No edge fields: the edge is native-owned state.
 struct BookTurnSample {
@@ -84,9 +93,9 @@ float SettleTargetTau(Direction direction, bool commit);
 float SettleDurationSeconds(float tau0, Direction direction, bool commit,
     float velocityPagesPerSecond = 0.0F);
 // tau(t): linear in tau for release settle / cancel (INV-3 exact time
-// reversal); ease-out tail for the click/auto path.
+// reversal); manual clicks use ease-out, automatic turns use smoothstep.
 float SettleTauAt(float tau0, float targetTau, float elapsedSeconds, float durationSeconds,
-    bool easeOut);
+    SettlementCurve curve);
 
 // Release takeover keeps the exact gesture-end tilt on its first frame, then
 // removes it over the same duration as the remaining tau settlement. A cubic

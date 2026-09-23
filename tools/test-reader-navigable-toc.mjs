@@ -7,7 +7,7 @@ const entries = [{ index: 0, title: 'volume one', navigable: false }, { index: 1
   { index: 2, title: 'volume two', navigable: false }, { index: 3, title: 'volume three', navigable: false },
   { index: 4, title: 'two', navigable: true }];
 const selected = [], window = new ReadingChapterWindow();
-const host = Object.assign(new Host(), { tocEntries: entries, chapterWindow: window,
+const host = Object.assign(new Host(), { mounted:true,entryCatalogSeekRevision:0,tocEntries: entries, chapterWindow: window,
   currentChapterIndex: () => 1, captureControlSelectionOrigin: () => undefined,
   clearTtsChapterEndTimer() {}, selectChapterAnchor: i => selected.push(i) });
 const reading = host.readingTocEntries();

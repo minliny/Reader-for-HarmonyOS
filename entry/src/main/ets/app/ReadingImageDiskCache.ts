@@ -10,7 +10,8 @@ import {
   ReadingOfflineMaterializationError,
 } from '../features/reading/ReadingOfflineContract';
 
-const CACHE_FORMAT_VERSION = 1;
+const CACHE_FORMAT_VERSION = 2;
+const LEGACY_CACHE_FORMAT_VERSION = 1;
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
 const MIN_READING_IMAGE_FREE_RESERVE_BYTES = 16 * 1024 * 1024;
 const FILE_SYSTEM_NO_SPACE_ERROR = 13900025;
@@ -72,6 +73,8 @@ export class ReadingImageDiskCache {
    * Different books remain independent and still use the two write lanes.
    */
   private readonly bookMutationTails = new Map<string, Promise<void>>();
+  private readonly bookClearGenerations = new Map<string, number>();
+  private closed: boolean = false;
   private writeLaneA: Promise<void> = Promise.resolve();
   private writeLaneB: Promise<void> = Promise.resolve();
   private nextWriteLane: number = 0;
@@ -85,66 +88,117 @@ export class ReadingImageDiskCache {
     this.freeSpaceProbe = freeSpaceProbe;
   }
 
-  async loadResource(identity: ReadingImageCacheIdentity): Promise<Uint8Array | undefined> {
-    this.assertResourceIdentity(identity);
-    const path = await this.resourcePath(identity);
-    if (!(await fileIo.access(path))) {
-      return undefined;
-    }
-    const stat = await fileIo.stat(path);
-    if (!Number.isSafeInteger(stat.size) || stat.size <= 0 || stat.size > MAX_READING_IMAGE_BYTES) {
-      await this.unlinkIfPresent(path);
-      return undefined;
-    }
-    const buffer = new fileIo.AtomicFile(path).readFully();
-    if (buffer.byteLength !== stat.size) {
-      throw new Error('offline reading image changed while being read');
-    }
-    return new Uint8Array(buffer);
+  /** Capture before a network request; a later clear/close cannot admit its bytes. */
+  captureValidity(sourceId: string, bookId: string, isCurrent?: () => boolean): () => boolean {
+    const key = this.bookMutationKey(sourceId, bookId);
+    const generation = this.bookClearGenerations.get(key) ?? 0;
+    return (): boolean => !this.closed && (this.bookClearGenerations.get(key) ?? 0) === generation &&
+      (isCurrent === undefined || isCurrent());
   }
 
-  async storeResource(identity: ReadingImageCacheIdentity, bytes: Uint8Array): Promise<void> {
+  close(): void {
+    this.closed = true;
+  }
+
+  async loadResource(
+    identity: ReadingImageCacheIdentity,
+    isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
+  ): Promise<Uint8Array | undefined> {
+    this.assertResourceIdentity(identity);
+    const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
+    let result: Uint8Array | undefined;
+    await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+      this.assertCurrent(isCurrent);
+      await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
+      const path = await this.resourcePath(requestedIdentity);
+      result = await this.readResourceBytes(path);
+      const legacyRevocation = `${await this.clearMarkerPath(requestedIdentity.sourceId, requestedIdentity.bookId)}.legacy-revoked`;
+      if (result === undefined && this.hasUnambiguousLegacyResourceIdentity(requestedIdentity) &&
+        !(await fileIo.access(legacyRevocation))) {
+        // A legacy ordinal alone is never evidence. Only its exact manifest
+        // identity/version and listed resource hash authorize byte migration.
+        const directory = await this.legacyChapterDirectory(requestedIdentity);
+        const manifest = await this.readValidManifest(directory, LEGACY_CACHE_FORMAT_VERSION);
+        const hash = await this.legacyResourceHash(requestedIdentity);
+        if (manifest !== undefined && this.sameChapter(manifest, requestedIdentity) &&
+          manifest.resourceHashes.indexOf(hash) >= 0) {
+          result = await this.readResourceBytes(`${directory}/${hash}.bin`);
+          if (result !== undefined) {
+            const target = await this.chapterDirectory(requestedIdentity);
+            await this.ensureDirectory(target);
+            await this.assertWriteCapacity(target, result.byteLength);
+            await this.writeAtomicBytes(path, result, isCurrent);
+          }
+        }
+      }
+      this.assertCurrent(isCurrent);
+    });
+    return result;
+  }
+
+  async storeResource(
+    identity: ReadingImageCacheIdentity,
+    bytes: Uint8Array,
+    isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
+  ): Promise<void> {
     this.assertResourceIdentity(identity);
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
       throw new Error(`offline reading image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
     }
-    // Snapshot caller-owned values before waiting behind an earlier mutation;
-    // page/session teardown must not be able to retarget a queued write.
     const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
     const payload = bytes.slice();
     await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
-      const chapterDirectory = await this.chapterDirectory(requestedIdentity);
-      await this.ensureDirectory(chapterDirectory);
-      await this.assertWriteCapacity(chapterDirectory, payload.byteLength);
-      await this.writeAtomicBytes(await this.resourcePath(requestedIdentity), payload);
+      this.assertCurrent(isCurrent);
+      await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
+      const directory = await this.chapterDirectory(requestedIdentity);
+      await this.ensureDirectory(directory);
+      await this.assertWriteCapacity(directory, payload.byteLength);
+      await this.writeAtomicBytes(await this.resourcePath(requestedIdentity), payload, isCurrent);
     });
   }
 
-  async removeResource(identity: ReadingImageCacheIdentity): Promise<void> {
+  async removeResource(
+    identity: ReadingImageCacheIdentity,
+    isCurrent: () => boolean = this.captureValidity(identity.sourceId, identity.bookId),
+  ): Promise<void> {
     this.assertResourceIdentity(identity);
     const requestedIdentity: ReadingImageCacheIdentity = { ...identity };
     await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
+      this.assertCurrent(isCurrent);
+      await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
       await this.unlinkIfPresent(await this.resourcePath(requestedIdentity));
+      // Do not permit a corrupt migrated resource to be loaded again from v1.
+      const legacyDirectory = await this.legacyChapterDirectory(requestedIdentity);
+      const manifest = await this.readValidManifest(legacyDirectory, LEGACY_CACHE_FORMAT_VERSION);
+      const hash = await this.legacyResourceHash(requestedIdentity);
+      if (manifest !== undefined && this.sameChapter(manifest, requestedIdentity) &&
+        this.hasUnambiguousLegacyResourceIdentity(requestedIdentity) && manifest.resourceHashes.indexOf(hash) >= 0) {
+        await this.unlinkIfPresent(`${legacyDirectory}/${hash}.bin`);
+      }
     });
   }
 
   async markChapterComplete(
     chapter: ReadingImageChapterIdentity,
     resources: ReadingImageCacheIdentity[],
+    isCurrent: () => boolean = this.captureValidity(chapter.sourceId, chapter.bookId),
   ): Promise<void> {
     this.assertChapterIdentity(chapter);
     const requestedChapter: ReadingImageChapterIdentity = { ...chapter };
     const requestedResources = resources.map((resource: ReadingImageCacheIdentity): ReadingImageCacheIdentity => ({ ...resource }));
     await this.enqueueBookMutation(this.bookMutationKey(chapter.sourceId, chapter.bookId), async (): Promise<void> => {
+      this.assertCurrent(isCurrent);
+      await this.finishPendingClear(requestedChapter.sourceId, requestedChapter.bookId);
       const resourceHashes: string[] = [];
       const directory = await this.chapterDirectory(requestedChapter);
       for (const resource of requestedResources) {
+        this.assertResourceIdentity(resource);
         this.assertSameChapter(requestedChapter, resource);
         const hash = await this.resourceHash(resource);
-        if (!(await fileIo.access(`${directory}/${hash}.bin`))) {
+        if (!(await this.validResourceFile(`${directory}/${hash}.bin`))) {
           throw new Error('offline reading image manifest cannot reference missing bytes');
         }
-        resourceHashes.push(hash);
+        if (resourceHashes.indexOf(hash) < 0) resourceHashes.push(hash);
       }
       resourceHashes.sort();
       const manifest: ReadingImageChapterManifest = {
@@ -157,60 +211,48 @@ export class ReadingImageDiskCache {
         completedAt: Date.now(),
       };
       await this.ensureDirectory(directory);
-      const manifestText = JSON.stringify(manifest);
-      const manifestBytes = new util.TextEncoder().encodeInto(manifestText);
+      const manifestBytes = new util.TextEncoder().encodeInto(JSON.stringify(manifest));
       await this.assertWriteCapacity(directory, manifestBytes.byteLength);
-      await this.writeAtomicBytes(`${directory}/manifest.json`, manifestBytes);
-      try {
-        await this.pruneUnreferencedResources(directory, resourceHashes);
-      } catch (_) {
-        // The atomic manifest is already authoritative. Stale unreachable bytes
-        // may be reclaimed by the next successful prefetch or exact book clear.
-      }
+      await this.writeAtomicBytes(`${directory}/manifest.json`, manifestBytes, isCurrent);
+      // Publication never reclaims another version (or an active display's
+      // resources). Only an explicit Core-first book clear owns that decision.
     });
   }
 
   async isChapterComplete(chapter: ReadingImageChapterIdentity): Promise<boolean> {
     this.assertChapterIdentity(chapter);
-    const directory = await this.chapterDirectory(chapter);
-    const value = await this.readValidManifest(directory);
-    return value !== undefined && value.sourceId === chapter.sourceId && value.bookId === chapter.bookId &&
-      value.chapterIndex === chapter.chapterIndex && value.contentVersion === chapter.contentVersion;
+    const requestedChapter: ReadingImageChapterIdentity = { ...chapter };
+    const isCurrent = this.captureValidity(chapter.sourceId, chapter.bookId);
+    let complete = false;
+    await this.enqueueBookMutation(this.bookMutationKey(chapter.sourceId, chapter.bookId), async (): Promise<void> => {
+      this.assertCurrent(isCurrent);
+      await this.finishPendingClear(requestedChapter.sourceId, requestedChapter.bookId);
+      const value = await this.readValidManifest(await this.chapterDirectory(requestedChapter), CACHE_FORMAT_VERSION);
+      this.assertCurrent(isCurrent);
+      complete = value !== undefined && this.sameChapter(value, requestedChapter);
+    });
+    return complete;
   }
 
-  /** Lightweight directory projection; exact version is rechecked on use. */
+  /** An ordinal without a body version cannot prove the current catalog's assets. */
   async isChapterMaterialized(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean> {
     this.assertNonBlank(sourceId, 'sourceId');
     this.assertNonBlank(bookId, 'bookId');
     if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) {
       throw new Error('chapterIndex must be a non-negative safe integer');
     }
-    const directory = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}/${chapterIndex}`;
-    const value = await this.readValidManifest(directory);
-    return value !== undefined && value.sourceId === sourceId && value.bookId === bookId &&
-      value.chapterIndex === chapterIndex;
+    // Core must supply its stable chapter/body scope before this projection
+    // can report completeness. Exact version checks remain available above.
+    return false;
   }
 
-  private async readValidManifest(directory: string): Promise<ReadingImageChapterManifest | undefined> {
-    const manifestPath = `${directory}/manifest.json`;
-    if (!(await fileIo.access(manifestPath))) {
-      return undefined;
-    }
+  private async readValidManifest(directory: string, formatVersion: number): Promise<ReadingImageChapterManifest | undefined> {
     try {
-      const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(
-        new Uint8Array(new fileIo.AtomicFile(manifestPath).readFully()),
-      );
-      const value = JSON.parse(raw) as ReadingImageChapterManifest;
-      if (value.formatVersion !== CACHE_FORMAT_VERSION || typeof value.sourceId !== 'string' ||
-        typeof value.bookId !== 'string' || !Number.isSafeInteger(value.chapterIndex) ||
-        typeof value.contentVersion !== 'string' || !Array.isArray(value.resourceHashes)) {
-        return undefined;
-      }
+      const value = await this.readManifestIdentity(directory, formatVersion);
+      if (value === undefined || !Array.isArray(value.resourceHashes)) return undefined;
       for (const hash of value.resourceHashes) {
         if (typeof hash !== 'string' || !/^[0-9a-f]{64}$/.test(hash) ||
-          !(await fileIo.access(`${directory}/${hash}.bin`))) {
-          return undefined;
-        }
+          !(await this.validResourceFile(`${directory}/${hash}.bin`))) return undefined;
       }
       return value;
     } catch (_) {
@@ -218,18 +260,73 @@ export class ReadingImageDiskCache {
     }
   }
 
+  private async readManifestIdentity(directory: string, formatVersion: number): Promise<ReadingImageChapterManifest | undefined> {
+    const path = `${directory}/manifest.json`;
+    if (!(await fileIo.access(path))) return undefined;
+    try {
+      const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(
+        new Uint8Array(new fileIo.AtomicFile(path).readFully()),
+      );
+      const value = JSON.parse(raw) as ReadingImageChapterManifest;
+      if (value.formatVersion !== formatVersion || typeof value.sourceId !== 'string' ||
+        typeof value.bookId !== 'string' || !Number.isSafeInteger(value.chapterIndex) || value.chapterIndex < 0 ||
+        typeof value.contentVersion !== 'string' || value.contentVersion.trim().length === 0) return undefined;
+      return value;
+    } catch (_) {
+      return undefined;
+    }
+  }
+
+  /** Called only after Core has invalidated the corresponding usable refs. */
   async clearBook(sourceId: string, bookId: string): Promise<void> {
     this.assertNonBlank(sourceId, 'sourceId');
     this.assertNonBlank(bookId, 'bookId');
-    await this.enqueueBookMutation(this.bookMutationKey(sourceId, bookId), async (): Promise<void> => {
-      const path = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
-      await this.removeTree(path);
+    const key = this.bookMutationKey(sourceId, bookId);
+    this.bookClearGenerations.set(key, (this.bookClearGenerations.get(key) ?? 0) + 1);
+    await this.enqueueBookMutation(key, async (): Promise<void> => {
+      const marker = await this.clearMarkerPath(sourceId, bookId);
+      await this.ensureDirectory(`${this.rootDirectory()}/.clear`);
+      // Keep this small durable intent until deletion finishes. After a crash,
+      // reads/writes resume the already-authorized deletion before admission.
+      await this.writeAtomicBytes(marker, new util.TextEncoder().encodeInto('clear'));
+      await this.finishPendingClear(sourceId, bookId);
     });
   }
 
+  private async finishPendingClear(sourceId: string, bookId: string): Promise<void> {
+    const marker = await this.clearMarkerPath(sourceId, bookId);
+    if (!(await fileIo.access(marker))) return;
+    await this.removeTree(`${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`);
+    const legacyBook = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}`;
+    if (await fileIo.access(legacyBook)) {
+      for (const name of await fileIo.listFile(legacyBook)) {
+        if (!/^(0|[1-9][0-9]*)$/.test(name)) continue;
+        const directory = `${legacyBook}/${name}`;
+        const value = await this.readManifestIdentity(directory, LEGACY_CACHE_FORMAT_VERSION);
+        // v1 delimiter keys could collide. Never delete another pair's data,
+        // nor claim unidentifiable legacy garbage merely by directory number.
+        if (value !== undefined && value.sourceId === sourceId && value.bookId === bookId &&
+          `${value.chapterIndex}` === name) await this.removeTree(directory);
+      }
+    }
+    // Revocation survives successful cleanup too: unreadable/unidentifiable
+    // legacy leftovers must never become readable after a later restart.
+    await this.writeAtomicBytes(`${marker}.legacy-revoked`, new util.TextEncoder().encodeInto('cleared'));
+    await this.unlinkIfPresent(marker);
+  }
+
+  private async clearMarkerPath(sourceId: string, bookId: string): Promise<string> {
+    return `${this.rootDirectory()}/.clear/${await this.bookHash(sourceId, bookId)}.pending`;
+  }
+
   private async chapterDirectory(identity: ReadingImageChapterIdentity): Promise<string> {
+    // This is the existing exact identity, not a fabricated stable chapter ID.
     return `${this.rootDirectory()}/${await this.bookHash(identity.sourceId, identity.bookId)}/` +
-      `${identity.chapterIndex}`;
+      `${identity.chapterIndex}/${await this.sha256(identity.contentVersion)}`;
+  }
+
+  private async legacyChapterDirectory(identity: ReadingImageChapterIdentity): Promise<string> {
+    return `${this.legacyRootDirectory()}/${await this.legacyBookHash(identity.sourceId, identity.bookId)}/${identity.chapterIndex}`;
   }
 
   private async resourcePath(identity: ReadingImageCacheIdentity): Promise<string> {
@@ -237,6 +334,10 @@ export class ReadingImageDiskCache {
   }
 
   private async bookHash(sourceId: string, bookId: string): Promise<string> {
+    return this.sha256(JSON.stringify([sourceId, bookId]));
+  }
+
+  private async legacyBookHash(sourceId: string, bookId: string): Promise<string> {
     return this.sha256(`${sourceId}\u0000${bookId}`);
   }
 
@@ -264,6 +365,17 @@ export class ReadingImageDiskCache {
 
   private async resourceHash(identity: ReadingImageCacheIdentity): Promise<string> {
     const baseUrl = canonicalReadingImageBaseUrl(identity.baseUrl);
+    return this.sha256(JSON.stringify([identity.contentVersion, identity.imageUrl, baseUrl ?? '']));
+  }
+
+  private hasUnambiguousLegacyResourceIdentity(identity: ReadingImageCacheIdentity): boolean {
+    // v1 has no URL metadata to disambiguate delimiter-bearing resource keys.
+    return identity.imageUrl.indexOf('\u0000') < 0 &&
+      (canonicalReadingImageBaseUrl(identity.baseUrl) ?? '').indexOf('\u0000') < 0;
+  }
+
+  private async legacyResourceHash(identity: ReadingImageCacheIdentity): Promise<string> {
+    const baseUrl = canonicalReadingImageBaseUrl(identity.baseUrl);
     return this.sha256(`${identity.contentVersion}\u0000${identity.imageUrl}\u0000${baseUrl ?? ''}`);
   }
 
@@ -281,16 +393,20 @@ export class ReadingImageDiskCache {
   }
 
   private rootDirectory(): string {
+    return `${this.context.filesDir}/reader-offline/images-v2`;
+  }
+
+  private legacyRootDirectory(): string {
     return `${this.context.filesDir}/reader-offline/images-v1`;
   }
 
-  private async writeAtomicBytes(path: string, bytes: Uint8Array): Promise<void> {
+  private async writeAtomicBytes(path: string, bytes: Uint8Array, isCurrent?: () => boolean): Promise<void> {
     const existing = this.inFlightWrites.get(path);
     if (existing !== undefined) {
       return existing;
     }
     const operation = this.enqueueWrite(async (): Promise<void> => {
-      await this.performAtomicWrite(path, bytes);
+      await this.performAtomicWrite(path, bytes, isCurrent);
     });
     this.inFlightWrites.set(path, operation);
     try {
@@ -323,10 +439,11 @@ export class ReadingImageDiskCache {
     }
   }
 
-  private async performAtomicWrite(path: string, bytes: Uint8Array): Promise<void> {
+  private async performAtomicWrite(path: string, bytes: Uint8Array, isCurrent?: () => boolean): Promise<void> {
     this.nextTemporaryFile += 1;
     const tmpPath = `${path}.tmp-${this.nextTemporaryFile}`;
     try {
+      this.assertCurrent(isCurrent);
       const file = await fileIo.open(
         tmpPath,
         fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
@@ -345,6 +462,7 @@ export class ReadingImageDiskCache {
       } finally {
         await fileIo.close(file);
       }
+      this.assertCurrent(isCurrent);
       await fileIo.rename(tmpPath, path);
     } catch (error) {
       try {
@@ -406,17 +524,27 @@ export class ReadingImageDiskCache {
     await fileIo.rmdir(path);
   }
 
-  private async pruneUnreferencedResources(directory: string, resourceHashes: string[]): Promise<void> {
-    const names = await fileIo.listFile(directory);
-    for (const name of names) {
-      if (!name.endsWith('.bin')) {
-        continue;
-      }
-      const hash = name.substring(0, name.length - 4);
-      if (resourceHashes.indexOf(hash) < 0) {
-        await fileIo.unlink(`${directory}/${name}`);
-      }
-    }
+  private async validResourceFile(path: string): Promise<boolean> {
+    if (!(await fileIo.access(path))) return false;
+    const stat = await fileIo.stat(path);
+    return !stat.isDirectory() && Number.isSafeInteger(stat.size) && stat.size > 0 && stat.size <= MAX_READING_IMAGE_BYTES;
+  }
+
+  private async readResourceBytes(path: string): Promise<Uint8Array | undefined> {
+    if (!(await this.validResourceFile(path))) return undefined;
+    const stat = await fileIo.stat(path);
+    const buffer = new fileIo.AtomicFile(path).readFully();
+    if (buffer.byteLength !== stat.size) throw new Error('offline reading image changed while being read');
+    return new Uint8Array(buffer);
+  }
+
+  private sameChapter(left: ReadingImageChapterIdentity, right: ReadingImageChapterIdentity): boolean {
+    return left.sourceId === right.sourceId && left.bookId === right.bookId &&
+      left.chapterIndex === right.chapterIndex && left.contentVersion === right.contentVersion;
+  }
+
+  private assertCurrent(isCurrent?: () => boolean): void {
+    if (isCurrent !== undefined && !isCurrent()) throw new Error('offline reading image operation was superseded');
   }
 
   private assertResourceIdentity(identity: ReadingImageCacheIdentity): void {

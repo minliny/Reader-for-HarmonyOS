@@ -43,8 +43,91 @@
             "actions": [
               "action.system.home"
             ]
+          },
+          {
+            "actions": [
+              "ohos.want.action.viewData"
+            ],
+            "entities": [
+              "entity.system.default"
+            ],
+            "uris": [
+              {
+                "scheme": "file",
+                "type": "general.plain-text",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "general.epub",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "com.amazon.mobi",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "com.amazon.azw",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "com.amazon.azw3",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "text/plain",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "application/epub+zip",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "application/x-mobipocket-ebook",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "application/vnd.amazon.ebook",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "application/x-mobi8-ebook",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "application/vnd.amazon.mobi8-ebook",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              },
+              {
+                "scheme": "file",
+                "type": "io.reader.harmonyos.kf8",
+                "linkFeature": "FileOpen",
+                "maxFileSupported": 1
+              }
+            ]
           }
-        ]
+        ],
+        "launchType": "singleton"
       }
     ]
   }

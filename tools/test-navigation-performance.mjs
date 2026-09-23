@@ -10,13 +10,12 @@ const method = (source, start, end) => {
   return source.slice(startIndex, endIndex);
 };
 
-const fonts = read('entry/src/main/ets/features/common/ReaderFonts.ets');
-assert.match(fonts, /let readerFontsRegistered: boolean = false/);
-assert.match(fonts, /if \(readerFontsRegistered\) \{\s*return;\s*\}/);
-assert.ok(fonts.indexOf('if (readerFontsRegistered)') < fonts.indexOf('font.registerFont({'),
-  'the process font latch must run before opening any bundled font file');
-assert.ok(fonts.lastIndexOf('readerFontsRegistered = true') > fonts.lastIndexOf('font.registerFont({'),
-  'the latch must be committed only after every bundled font is registered');
+const fonts = read('entry/src/main/ets/features/common/ReaderFonts.ets') + read('entry/src/main/ets/app/ReaderFontLoadHost.ts');
+assert.match(fonts, /const fontLoads: Map<string, Promise<void>>/);
+assert.ok(fonts.indexOf('if (existing !== undefined) return existing') < fonts.indexOf('.loadFontWithCheck('),
+  'a completed or pending font receipt must be reused before opening a bundled font');
+assert.match(fonts, /fontLoads.delete\(family\)/, 'failed load permits a real retry');
+assert.doesNotMatch(fonts, /font\.registerFont/, 'an unchecked submission cannot authorize layout');
 
 const index = read('entry/src/main/ets/pages/Index.ets');
 const localDetail = method(index, 'private openLocalBookDetail(', 'private openRemoteBookDetail(');
@@ -29,14 +28,15 @@ assert.match(remoteDetail, /shelfSnapshot: ShelfBook \| undefined = undefined/);
 assert.match(remoteDetail,
   /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
   'only an exact shelf identity may reuse the already admitted remote session');
-assert.match(remoteDetail,
-  /const sessionAdmission: Promise<RemoteDetailAdmission> = suppliedSession !== undefined \?[\s\S]*?Promise\.resolve\(new RemoteDetailAdmission\(suppliedSession\)\) : \(allowGroupFallback \?[\s\S]*?: owner\.bookAcquisitions\(\)\s*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
-  'shelf re-entry must reuse a live session or admit the durable Core catalog before any network refresh');
+assert.match(remoteDetail, /if \(suppliedSession !== undefined\) return new RemoteDetailAdmission\(suppliedSession\)/,
+  'admitted exact session remains reusable');
+assert.match(remoteDetail, /acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
+  'fixed-source catalog admission retains cache-first background refresh');
 assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
   'remote detail must project its inert shell before network/session admission');
 assert.match(remoteDetail, /let suppliedShelfBook = shelfSnapshot\?\.sourceId === session\.identity\.sourceId/);
-assert.doesNotMatch(remoteDetail, /await bookshelf\.loadShelfBook/,
-  'durable shelf membership reconciliation must not gate remote detail publication');
+assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('await bookshelf.loadShelfBook'),
+  'exact membership protects source choice after publishing the detail surface');
 assert.ok(remoteDetail.indexOf('this.detailToc = session.entries.map') <
   remoteDetail.indexOf('void bookshelf.loadShelfBook'),
   'the admitted session and TOC must publish before shelf membership reconciliation');
@@ -53,11 +53,10 @@ assert.doesNotMatch(returnToShelf, /this\.remoteReadingSession = undefined/,
   'the exact remote session must not be discarded on an immediate shelf round-trip');
 
 const detail = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
-assert.match(detail, /private readingActionsReady\(\): boolean \{\s*return this\.toc\.length > 0;/);
-assert.match(detail, /\.enabled\(this\.readingActionsReady\(\)\)/,
-  'the directory action must remain inert while the TOC is loading');
-assert.match(detail, /\.enabled\(this\.readingActionsReady\(\) && !this\.removing && this\.readingEnabled\)/,
-  'continue reading must remain inert while the TOC loads, removal is active, or the content verdict has not admitted reading');
+assert.doesNotMatch(detail, /readingActionsReady|\.enabled\([^\n]*readingEnabled/,
+  'catalog and body errors must be recoverable inside the reader instead of disabling entry');
+assert.match(detail, /\.enabled\(!this\.removing\)/,
+  'active shelf mutation still owns the book during entry');
 
 const reading = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 assert.match(reading, /this\.loadInitialToc\(isCurrent\)/);
@@ -85,8 +84,10 @@ assert.match(initialReading,
   /const layoutReady = Promise\.all\(\[[\s\S]*?this\.loadAppearanceSnapshot\(lifecycleToken\)[\s\S]*?this\.loadReaderSettingsSnapshot\(lifecycleToken\)[\s\S]*?\]\)[\s\S]*this\.loadInitialChapter\(lifecycleToken, layoutReady\)/,
   'layout snapshots must start in parallel with initial TOC/progress acquisition');
 const initialChapter = method(reading, 'private async loadInitialChapter(', 'private loadInitialToc(');
-assert.ok(initialChapter.indexOf('this.loadInitialToc(isCurrent)') < initialChapter.indexOf('await layoutReady'),
-  'TOC/progress must start before the layout barrier is awaited');
+assert.doesNotMatch(initialChapter, /await layoutReady/,
+  'chapter acquisition must not wait behind the independent layout barrier');
+assert.match(initialChapter, /bookmarkContext, layoutReady, unreadCandidates\.slice\(1\)\)/,
+  'the initial layout barrier must travel to chapter publication');
 assert.doesNotMatch(initialChapter, /loadContentMetrics/,
   'whole-book metrics must not remain on the first-page critical path');
 assert.match(reading, /private lastCommittedProgress: ReadingCommit \| undefined/);

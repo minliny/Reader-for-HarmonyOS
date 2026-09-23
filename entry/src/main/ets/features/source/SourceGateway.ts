@@ -96,8 +96,24 @@ export class SourceGateway {
     this.runtimeOwner = runtimeOwner;
   }
 
-  async loadSources(): Promise<BookSource[]> {
-    const result = await this.runtimeOwner.request('source.list', {});
+  /** Compatibility labels for only the admitted shelf identities. Serial reads
+   * avoid flooding the foreground lane; source management retains its full list. */
+  async loadSourcesForIds(sourceIds: string[], isCurrent: () => boolean): Promise<BookSource[]> {
+    const sources: BookSource[] = [];
+    for (const sourceId of new Set(sourceIds)) {
+      if (!isCurrent()) return [];
+      if (sourceId.trim().length === 0 || sourceId === 'local') continue;
+      try {
+        const exact = await this.loadSources(sourceId);
+        if (!isCurrent()) return [];
+        for (const source of exact) if (source.sourceId === sourceId) sources.push(source);
+      } catch (_) { /* A missing label never erases a valid shelf projection. */ }
+    }
+    return sources;
+  }
+
+  async loadSources(sourceId?: string): Promise<BookSource[]> {
+    const result = await this.runtimeOwner.request('source.list', sourceId === undefined ? {} : { sourceId });
     const rawSources = result.data['sources'];
     if (!Array.isArray(rawSources)) {
       throw new Error('source.list returned invalid data');

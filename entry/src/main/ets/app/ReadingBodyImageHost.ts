@@ -21,10 +21,20 @@ export type ReadingBodyImagePayload = {
   fileUri: string;
   width: number;
   height: number;
+  intrinsicWidth: number;
+  intrinsicHeight: number;
   revision: string;
 };
 
+type ReadingImageResourceRead = {
+  consumers: Set<() => boolean>;
+  task: Promise<ReadingBodyImagePayload>;
+};
+
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
+// MIME base64 may contain line breaks, but must be bounded before trim, regex,
+// or the synchronous platform decoder sees a source-controlled string.
+const MAX_READING_IMAGE_DATA_URI_CHARS = Math.ceil(MAX_READING_IMAGE_BYTES / 3) * 4 + 4096;
 const MAX_READING_IMAGE_PIXELS = 4 * 1024 * 1024;
 const MAX_READING_IMAGE_DIMENSION = 4096;
 const MAX_READING_DISPLAY_FILE_BYTES = 32 * 1024 * 1024;
@@ -37,9 +47,9 @@ const LEGACY_DISPLAY_TEMP_PREFIX = '.reading-body-tmp-';
  *
  * It reuses the production `http.execute` transport and only adds the Host
  * work ArkUI pagination needs: bounded byte validation, intrinsic dimensions,
- * and one materialized display file. Base64 is accepted only as a transient
- * JSON transport representation for remote/data-URI images; it is never
- * retained in reading-session state. Durable offline bytes remain owned by
+ * and one materialized display file. Network images use bounded raw bytes;
+ * Base64 remains only for explicit data-URI inputs and is never retained in
+ * reading-session state. Durable offline bytes remain owned by
  * the narrow ReadingImageDiskCache; this adapter owns no queue or URL
  * semantics.
  */
@@ -48,6 +58,12 @@ export class ReadingBodyImageHost {
   private displayCacheDir: string | undefined = undefined;
   private readonly displayFileReferences: Map<string, number> = new Map<string, number>();
   private readonly displayFileWrites: Map<string, Promise<void>> = new Map<string, Promise<void>>();
+  private readonly displayFileRemovals: Map<string, Promise<void>> = new Map<string, Promise<void>>();
+  // These are aliases of live display-file references, not another cache:
+  // the last session owner releases both the file and every resource alias.
+  private readonly resourcePayloads: Map<string, ReadingBodyImagePayload> = new Map<string, ReadingBodyImagePayload>();
+  private readonly resourceReads: Map<string, ReadingImageResourceRead> = new Map<string, ReadingImageResourceRead>();
+  private resourceGeneration: number = 0;
   private displayCacheCleanupGeneration: number = 0;
   private nextTemporaryFile: number = 0;
 
@@ -69,8 +85,9 @@ export class ReadingBodyImageHost {
     isCurrent?: () => boolean,
   ): Promise<Uint8Array> {
     this.assertCurrent(isCurrent);
-    const response = await HttpExecuteHost.instance.execute(
+    const response = await HttpExecuteHost.instance.executeBytes(
       request,
+      MAX_READING_IMAGE_BYTES,
       undefined,
       (): boolean => isCurrent !== undefined && !isCurrent(),
     );
@@ -79,11 +96,7 @@ export class ReadingBodyImageHost {
     if (typeof status !== 'number' || !Number.isSafeInteger(status) || status < 200 || status >= 300) {
       throw new Error('reading body image request returned a non-success HTTP status');
     }
-    const bodyBase64 = response['bodyBase64'];
-    if (typeof bodyBase64 !== 'string' || bodyBase64.length === 0) {
-      throw new Error('reading body image response did not contain bytes');
-    }
-    const bytes = new util.Base64Helper().decodeSync(bodyBase64, util.Type.MIME);
+    const bytes = response.bytes;
     this.assertCurrent(isCurrent);
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
       throw new Error(`reading body image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
@@ -93,9 +106,15 @@ export class ReadingBodyImageHost {
 
   async loadDataUri(value: string, isCurrent?: () => boolean): Promise<ReadingBodyImagePayload> {
     this.assertCurrent(isCurrent);
+    if (value.length > MAX_READING_IMAGE_DATA_URI_CHARS) {
+      throw new Error(`reading body image data URI exceeds ${MAX_READING_IMAGE_BYTES} byte limit`);
+    }
     const match = /^data:(image\/[a-z0-9.+-]+);base64,([\s\S]+)$/i.exec(value.trim());
     if (match === null) {
       throw new Error('reading body image data URI must be base64 image data');
+    }
+    if (match[2].length > MAX_READING_IMAGE_DATA_URI_CHARS) {
+      throw new Error(`reading body image data URI exceeds ${MAX_READING_IMAGE_BYTES} byte limit`);
     }
     return this.decodeBase64(match[2], isCurrent);
   }
@@ -106,6 +125,54 @@ export class ReadingBodyImageHost {
       throw new Error(`reading body image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
     }
     return this.decodeBytes(bytes, isCurrent);
+  }
+
+  /** Share an immutable local resource across active page/chapter owners.
+   * Each caller receives its own existing display-file lease. Cancelling one
+   * caller cannot cancel another, and no pixels survive the last lease. */
+  async loadResource(resourceKey: string, readBytes: (current: () => boolean) => Promise<Uint8Array>,
+    isCurrent?: () => boolean): Promise<ReadingBodyImagePayload> {
+    this.assertCurrent(isCurrent);
+    const generation = this.resourceGeneration;
+    const current = (): boolean => generation === this.resourceGeneration && isCurrent?.() !== false;
+    const retained = this.resourcePayloads.get(resourceKey);
+    if (retained !== undefined && this.retainPayload(retained)) return { ...retained };
+    let reading = this.resourceReads.get(resourceKey);
+    if (reading === undefined) {
+      const consumers = new Set<() => boolean>();
+      consumers.add(current);
+      const active = (): boolean => generation === this.resourceGeneration &&
+        Array.from(consumers).some((consumer: () => boolean): boolean => consumer());
+      const task = readBytes(active).then((bytes: Uint8Array): Promise<ReadingBodyImagePayload> =>
+        this.loadBytes(bytes, active));
+      reading = { consumers, task };
+      this.resourceReads.set(resourceKey, reading);
+    } else reading.consumers.add(current);
+    let payload: ReadingBodyImagePayload | undefined;
+    try {
+      payload = await reading.task;
+      this.assertCurrent(current);
+      if (!this.retainPayload(payload)) throw new Error('reading body image resource was released');
+      this.resourcePayloads.set(resourceKey, payload);
+      return { ...payload };
+    } finally {
+      reading.consumers.delete(current);
+      if (reading.consumers.size === 0) {
+        if (this.resourceReads.get(resourceKey) === reading) this.resourceReads.delete(resourceKey);
+        // The shared operation holds one lease until every waiting caller
+        // has acquired its own reference or observed cancellation.
+        if (payload !== undefined) this.release(payload.fileUri, payload.pixelMap);
+      }
+    }
+  }
+
+  private retainPayload(payload: ReadingBodyImagePayload): boolean {
+    const path = this.pathFromFileUri(payload.fileUri);
+    if (path === undefined) return false;
+    const references = this.displayFileReferences.get(path);
+    if (references === undefined) return false;
+    this.displayFileReferences.set(path, references + 1);
+    return true;
   }
 
   /** Decode-validate one offline resource without creating a display file. */
@@ -139,13 +206,19 @@ export class ReadingBodyImageHost {
       return;
     }
     this.displayFileReferences.delete(path);
-    void this.unlinkBestEffort(path);
+    for (const [key, payload] of this.resourcePayloads) {
+      if (payload.fileUri === fileUri) this.resourcePayloads.delete(key);
+    }
+    this.removeDisplayFile(path);
   }
 
   /** Ability teardown fallback for resources whose UI owner was interrupted. */
   releaseAllDisplayFiles(): void {
+    this.resourceGeneration += 1;
+    this.resourcePayloads.clear();
+    this.resourceReads.clear();
     for (const path of this.displayFileReferences.keys()) {
-      void this.unlinkBestEffort(path);
+      this.removeDisplayFile(path);
     }
     this.displayFileReferences.clear();
   }
@@ -164,20 +237,25 @@ export class ReadingBodyImageHost {
     bytes: Uint8Array,
     isCurrent?: () => boolean,
   ): Promise<ReadingBodyImagePayload> {
-    this.assertCurrent(isCurrent);
+    const generation = this.resourceGeneration;
+    const current = (): boolean => generation === this.resourceGeneration && isCurrent?.() !== false;
+    this.assertCurrent(current);
     if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
       throw new Error(`reading body image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
     }
-    return this.withDecodedPixelMap(bytes, isCurrent, async (
+    return this.withDecodedPixelMap(bytes, current, async (
       pixelMap: image.PixelMap,
       width: number,
       height: number,
       downsampled: boolean,
+      intrinsicWidth: number,
+      intrinsicHeight: number,
     ): Promise<ReadingBodyImagePayload> => {
       const hash = await this.sha256(bytes);
-      const fileUri = await this.materializeDisplayFile(bytes, pixelMap, width, height, hash, downsampled);
+      this.assertCurrent(current);
+      const fileUri = await this.materializeDisplayFile(bytes, pixelMap, width, height, hash, downsampled, generation);
       try {
-        this.assertCurrent(isCurrent);
+        this.assertCurrent(current);
       } catch (error) {
         this.release(fileUri);
         throw error;
@@ -187,6 +265,8 @@ export class ReadingBodyImageHost {
         fileUri,
         width,
         height,
+        intrinsicWidth,
+        intrinsicHeight,
         revision: `body-image-v2:${width}x${height}:${hash}`,
       };
     });
@@ -204,6 +284,8 @@ export class ReadingBodyImageHost {
       width: number,
       height: number,
       downsampled: boolean,
+      intrinsicWidth: number,
+      intrinsicHeight: number,
     ) => Promise<T>,
   ): Promise<T> {
     const imageSource = image.createImageSource(bytes.buffer);
@@ -240,7 +322,7 @@ export class ReadingBodyImageHost {
         !Number.isSafeInteger(decodedPixels) || decodedPixels > MAX_READING_IMAGE_PIXELS) {
         throw new Error('reading body image decoder exceeded the configured pixel budget');
       }
-      return await consume(pixelMap, width, height, options.desiredSize !== undefined);
+      return await consume(pixelMap, width, height, options.desiredSize !== undefined, intrinsicWidth, intrinsicHeight);
     } finally {
       if (pixelMap !== undefined) {
         try {
@@ -269,13 +351,16 @@ export class ReadingBodyImageHost {
     height: number,
     hash: string,
     downsampled: boolean,
+    generation: number,
   ): Promise<string> {
     const dir = this.displayCacheDir;
     if (dir === undefined || dir.trim().length === 0) {
       throw new Error('reading body image display cache is not configured');
     }
     const extension = downsampled ? '.png' : this.imageExtensionFor(bytes);
-    const finalPath = `${dir}/reading-body-${width}x${height}-${hash}${extension}`;
+    // A late release from the previous ability/session generation must not
+    // decrement the current owner's lease for identical image bytes.
+    const finalPath = `${dir}/reading-body-g${generation}-${width}x${height}-${hash}${extension}`;
     const existing = this.displayFileWrites.get(finalPath);
     if (existing !== undefined) {
       await existing;
@@ -306,6 +391,9 @@ export class ReadingBodyImageHost {
     hash: string,
     downsampled: boolean,
   ): Promise<void> {
+    // A just-released page can still have an asynchronous unlink in flight.
+    // Complete that removal before a newer page publishes the same path.
+    await this.displayFileRemovals.get(finalPath);
     await this.ensureDirectory(dir);
     this.nextTemporaryFile += 1;
     const tmpPath = `${dir}/.reading-body-tmp-${hash}-${this.nextTemporaryFile}`;
@@ -333,7 +421,10 @@ export class ReadingBodyImageHost {
             writtenBytes += written;
           }
         }
-        await fs.fsync(file.fd);
+        // This is a disposable display derivative, never the retained book
+        // or offline original. Closing the completed write before atomic
+        // rename is sufficient for the image loader; a durability barrier
+        // on every page would stall pagination for no recoverable user data.
       } finally {
         await fs.close(file);
       }
@@ -347,6 +438,21 @@ export class ReadingBodyImageHost {
       await this.unlinkBestEffort(tmpPath);
       throw error;
     }
+  }
+
+  private removeDisplayFile(path: string): Promise<void> {
+    const existing = this.displayFileRemovals.get(path);
+    if (existing !== undefined) return existing;
+    const writing = this.displayFileWrites.get(path);
+    const removal = (async (): Promise<void> => {
+      await writing;
+      if (!this.displayFileReferences.has(path)) await this.unlinkBestEffort(path);
+    })().catch((): void => {});
+    this.displayFileRemovals.set(path, removal);
+    void removal.finally((): void => {
+      if (this.displayFileRemovals.get(path) === removal) this.displayFileRemovals.delete(path);
+    });
+    return removal;
   }
 
   private boundedDecodeSize(width: number, height: number): image.Size {
@@ -368,7 +474,7 @@ export class ReadingBodyImageHost {
       throw new Error('reading body image display cache is not configured');
     }
     const directory = `${cacheDir}/${DISPLAY_CACHE_DIRECTORY}`;
-    this.displayFileReferences.clear();
+    this.releaseAllDisplayFiles();
     this.displayCacheDir = directory;
     const generation = ++this.displayCacheCleanupGeneration;
     void this.cleanupDisplayCache(cacheDir, directory, generation);
@@ -385,7 +491,7 @@ export class ReadingBodyImageHost {
       // only their exact prefixes so unrelated app-cache files remain untouched.
       for (const name of await fs.listFile(cacheDir)) {
         if (name.startsWith(LEGACY_DISPLAY_FILE_PREFIX) || name.startsWith(LEGACY_DISPLAY_TEMP_PREFIX)) {
-          await this.unlinkBestEffort(`${cacheDir}/${name}`);
+          await this.removeDisplayFile(`${cacheDir}/${name}`);
         }
       }
       // Runtime installation happens before a reading session exists. Files
@@ -395,7 +501,9 @@ export class ReadingBodyImageHost {
         if (generation !== this.displayCacheCleanupGeneration || this.displayFileReferences.has(path)) {
           continue;
         }
-        await this.unlinkBestEffort(path);
+        // Join the same removal/write ordering as normal owner release.
+        // Generation checks cannot cancel an unlink already inside the OS.
+        await this.removeDisplayFile(path);
       }
     } catch (_) {
       // Cache cleanup is maintenance-only and must never block app startup.

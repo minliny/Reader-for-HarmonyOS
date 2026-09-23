@@ -3,7 +3,6 @@ import type { ReaderTextStyle } from '../common/ReaderTypography';
 import {
   TYPE_READER_IMMERSIVE_PAGE_ORDINAL,
   TYPE_READER_IMMERSIVE_PROGRESS,
-  TYPE_READER_IMMERSIVE_TIME,
 } from '../common/ReaderTypography';
 import {
   TOK_READ_IMMERSIVE_META,
@@ -25,7 +24,8 @@ import {
   type ReaderPageChromeLayoutSnapshot,
 } from './ReaderPageChromeLayout';
 
-import { measureReaderPageChromeText, readerPageChromeTextMeasurements } from './ReaderPageChromeTextMeasurement';
+import { measureReaderPageChromeText, readerPageChromeTextMeasurements,
+  readerPageChromeTopTextStyle } from './ReaderPageChromeTextMeasurement';
 
 /**
  * Figma `Reader/ImmersiveInfo` + the page-owned part of
@@ -62,16 +62,18 @@ export struct ReaderPageChrome {
   private chromeLayoutCacheKey: string = '';
   private chromeLayoutCache: ReaderPageChromeLayoutSnapshot | undefined = undefined;
   private noSessionChromeLayout: ReaderPageChromeLayoutSnapshot | undefined = undefined;
+  private topTextStyleCacheKey: string = '';
+  private topTextStyleCache: ReaderTextStyle | undefined = undefined;
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (!this.topInfoSuppressed && this.topStartText.length > 0) {
         Text(this.topStartText)
-          .fontFamily(TYPE_READER_IMMERSIVE_TIME.fontFamily)
-          .fontWeight(TYPE_READER_IMMERSIVE_TIME.fontWeight)
-          .fontSize(TYPE_READER_IMMERSIVE_TIME.fontSizeFp)
-          .lineHeight(TYPE_READER_IMMERSIVE_TIME.lineHeightFp)
-          .letterSpacing(TYPE_READER_IMMERSIVE_TIME.letterSpacingFp)
+          .fontFamily(this.topTextStyle().fontFamily)
+          .fontWeight(this.topTextStyle().fontWeight)
+          .fontSize(this.topTextStyle().fontSizeFp)
+          .lineHeight(this.topTextStyle().lineHeightFp)
+          .letterSpacing(this.topTextStyle().letterSpacingFp)
           .fontColor(this.metaColor())
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -82,11 +84,11 @@ export struct ReaderPageChrome {
 
       if (!this.topInfoSuppressed && this.topEndText.length > 0) {
         Text(this.topEndText)
-          .fontFamily(TYPE_READER_IMMERSIVE_TIME.fontFamily)
-          .fontWeight(TYPE_READER_IMMERSIVE_TIME.fontWeight)
-          .fontSize(TYPE_READER_IMMERSIVE_TIME.fontSizeFp)
-          .lineHeight(TYPE_READER_IMMERSIVE_TIME.lineHeightFp)
-          .letterSpacing(TYPE_READER_IMMERSIVE_TIME.letterSpacingFp)
+          .fontFamily(this.topTextStyle().fontFamily)
+          .fontWeight(this.topTextStyle().fontWeight)
+          .fontSize(this.topTextStyle().fontSizeFp)
+          .lineHeight(this.topTextStyle().lineHeightFp)
+          .letterSpacing(this.topTextStyle().letterSpacingFp)
           .fontColor(this.metaColor())
           .maxLines(1)
           .constraintSize({ maxWidth: this.chromeLayout().topEndMaxWidth })
@@ -134,6 +136,7 @@ export struct ReaderPageChrome {
   private chromeLayout(): ReaderPageChromeLayoutSnapshot {
     const layout = this.layout;
     const context = this.getUIContext();
+    const topStyle = this.topTextStyle();
     const key = JSON.stringify([this.topStartText, this.topEndText, this.bottomStartText,
       this.bottomEndText, this.sessionVisible, this.sessionWidth, this.sessionHeight,
       layout.viewportWidth, layout.viewportHeight, layout.systemFontScale,
@@ -141,10 +144,11 @@ export struct ReaderPageChrome {
       layout.pageChromeVisualSafeTop, layout.pageChromeTopRegionHeight, layout.pageChromeVisualSafeBottom,
       layout.pageChromeStatusMetrics?.revision,
       layout.pageChromeInteractiveSafeRight, layout.pageChromeInteractiveSafeBottom,
-      context.px2vp(1), context.fp2px(1)]);
+      context.px2vp(1), context.fp2px(1), topStyle.fontFamily, topStyle.fontSizeFp,
+      topStyle.fontWeight, topStyle.lineHeightFp, topStyle.letterSpacingFp]);
     if (key === this.chromeLayoutCacheKey && this.chromeLayoutCache !== undefined) return this.chromeLayoutCache;
-    const topStart = this.textMeasure(this.topStartText, TYPE_READER_IMMERSIVE_TIME);
-    const topEnd = this.textMeasure(this.topEndText, TYPE_READER_IMMERSIVE_TIME);
+    const topStart = this.textMeasure(this.topStartText, topStyle);
+    const topEnd = this.textMeasure(this.topEndText, topStyle);
     const bottomStart = this.textMeasure(this.bottomStartText, TYPE_READER_IMMERSIVE_PROGRESS);
     const bottomEnd = this.textMeasure(this.bottomEndText, TYPE_READER_IMMERSIVE_PAGE_ORDINAL);
     const result = resolveReaderPageChromeLayout(layout, new ReaderPageChromeMeasurements(
@@ -182,6 +186,18 @@ export struct ReaderPageChrome {
 
   private textMeasure(text: string, style: ReaderTextStyle): Size {
     return measureReaderPageChromeText(text, style, this.layout, this.getUIContext(), this.textMeasureCache);
+  }
+
+  private topTextStyle(): ReaderTextStyle {
+    const context = this.getUIContext();
+    const key = JSON.stringify([this.layout.pageChromeStatusMetrics?.revision,
+      this.layout.pageChromeStatusMetrics?.ready, this.layout.pageChromeTopRegionHeight,
+      this.layout.systemFontScale, context.px2vp(1), context.fp2px(1)]);
+    if (key === this.topTextStyleCacheKey && this.topTextStyleCache !== undefined) return this.topTextStyleCache;
+    const style = readerPageChromeTopTextStyle(this.layout, context);
+    this.topTextStyleCacheKey = key;
+    this.topTextStyleCache = style;
+    return style;
   }
 
   private metaColor(): string {

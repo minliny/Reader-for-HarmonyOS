@@ -96,7 +96,7 @@ contract('the first-page completion lane has a watchdog with bounded re-measurem
     'the watchdog must only fire while a completion is genuinely stuck');
   assert.match(watchdog, /this\.firstPageCompletionRetryCount >= FIRST_PAGE_COMPLETION_MAX_RETRIES/,
     're-measurement must be capped before giving up');
-  assert.match(watchdog, /this\.measurementGeneration \+= 1;[\s\S]*this\.measurementCompleting = false;[\s\S]*this\.beginMeasurement\(this\.lifecycleToken\)/,
+  assert.match(watchdog, /this\.paginationIndex\.invalidateMeasurement\(\);[\s\S]*this\.measurementCompleting = false;[\s\S]*this\.beginMeasurement\(this\.lifecycleToken\)/,
     'a retry must break the suspended chain and re-measure');
   assert.match(watchdog, /READING_FIRST_PAGE_COMPLETION_TIMEOUT/,
     'exhausted retries must fail closed instead of staying wedged');

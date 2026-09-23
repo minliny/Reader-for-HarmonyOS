@@ -11,12 +11,13 @@ import { errorMessageOf } from './ErrorMessage';
 import {
   CapabilityRouter,
   type JsonObject,
+  type ReaderCoreAssetBridge,
   type ReaderCoreHostRequestEvent,
 } from '@reader/core-harmony';
 import { HttpExecuteHost, type SourceHttpDiagnosticRecord } from './HttpExecuteHost';
 import { CookieSessionStore } from './CookieSessionStore';
 import { ArkWebExecutor } from './ArkWebExecutor';
-import { READER_LOCAL_BOOK_PICKER_FILTER } from './ReaderLocalBookFormatAdmission';
+import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from './ReaderLocalBookFormatAdmission';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
 
@@ -105,6 +106,7 @@ export class ReaderHostRegistry {
   private static readonly PendingLocalImportFinalizeMaxTokenBytes = 256 * 1024;
   private static readonly PendingLocalImportFinalizeMaxFileBytes = 2 * 1024 * 1024;
   private readonly context: common.UIAbilityContext;
+  private responseAssetBridge: ReaderCoreAssetBridge | undefined;
   private writeTail: Promise<void> = Promise.resolve();
   /** Serializes read/modify/write operations on the finalize queue. */
   private pendingFinalizeWriteTail: Promise<void> = Promise.resolve();
@@ -139,10 +141,21 @@ export class ReaderHostRegistry {
     return this.context;
   }
 
+  /** Install the live Core asset writer after the runtime has been created. */
+  setResponseAssetBridge(bridge: ReaderCoreAssetBridge | undefined): void {
+    this.responseAssetBridge = bridge;
+  }
+
   /** Read one application-owned raw resource as strict UTF-8 text. */
   async readBundledRawFileText(fileName: string): Promise<string> {
-    if (fileName.trim().length === 0 || fileName.includes('/') || fileName.includes('\\')) {
-      throw new Error('Bundled raw-file name must be a non-empty basename');
+    const isBasename = fileName.trim().length > 0 && fileName !== '.' && fileName !== '..' &&
+      !fileName.includes('/') && !fileName.includes('\\');
+    // The incremental supply index names these packaged resources. Other
+    // subdirectories remain outside this Host boundary.
+    const isBundledSourcePath = fileName === 'bundled-sources/index.json' ||
+      /^bundled-sources\/[0-9a-f]{64}\.json$/.test(fileName);
+    if (!isBasename && !isBundledSourcePath) {
+      throw new Error('Bundled raw-file name must be a non-empty basename or a supported bundled-source path');
     }
     let bytes: Uint8Array;
     try {
@@ -203,6 +216,14 @@ export class ReaderHostRegistry {
       return this.writeSnapshot(event);
     });
     router.register('http.execute', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      if (this.responseAssetBridge !== undefined && event.params['responseAsset'] === true) {
+        return HttpExecuteHost.instance.executeForCore(
+          event.params,
+          event.requestId,
+          event.operationId,
+          this.responseAssetBridge,
+        );
+      }
       return HttpExecuteHost.instance.execute(event.params, event.requestId);
     }, (event: ReaderCoreHostRequestEvent): void => {
       HttpExecuteHost.instance.cancel(event.requestId);
@@ -281,6 +302,22 @@ export class ReaderHostRegistry {
     return prepared;
   }
 
+  /** Same bounded read/hash/private staging as the picker, using the OS URI grant. */
+  async prepareSystemLocalBookInput(uri: string): Promise<LocalBookPreparation> {
+    let fileName = '未命名文件';
+    try {
+      if (uri.length > 8192 || !uri.startsWith('file://') || /[\u0000\r\n]/.test(uri)) {
+        throw new Error('Selected document URI is invalid');
+      }
+      fileName = this.requireSelectedFileName(uri);
+      if (!isReaderLocalBookFileName(fileName)) throw new Error('Unsupported local book format');
+      await this.ensureStageRecovery();
+      return { state: 'ready', input: await this.stageLocalBook(uri, fileName) };
+    } catch (error) {
+      return { state: 'failed', fileName, failure: localImportFailure(errorMessageOf(error)) };
+    }
+  }
+
   private async ensureStageRecovery(): Promise<void> {
     try {
       await this.stageRecovery;
@@ -323,7 +360,7 @@ export class ReaderHostRegistry {
    * source requests; feature gateways still own JSON schema and persistence.
    */
   async loadOnlineJsonDocument(onlineUrl: string): Promise<JsonImportDocument> {
-    const response = await HttpExecuteHost.instance.execute({
+    const response = await HttpExecuteHost.instance.executeBounded({
       url: onlineUrl.trim(),
       method: 'GET',
       headers: {
@@ -332,7 +369,7 @@ export class ReaderHostRegistry {
       followRedirects: true,
       maxRedirects: 10,
       retry: { maxAttempts: 2, backoffMillis: 250 },
-    });
+    }, ReaderHostRegistry.JsonDocumentLimitBytes);
     const status = response['status'];
     if (typeof status !== 'number' || !Number.isSafeInteger(status) || status < 200 || status >= 300) {
       throw new Error(`在线 JSON 请求失败：HTTP ${typeof status === 'number' ? status : '未知'}`);
@@ -469,6 +506,20 @@ export class ReaderHostRegistry {
       }
       throw error;
     }
+  }
+
+  /** Optional parser-upgrade input, confined to the retained immutable archive.
+   * No picker permission, copying, hashing or parsing belongs on this Host path. */
+  async retainedLocalBookSourcePath(bookId: string, isCurrent: () => boolean): Promise<string | undefined> {
+    if (!isCurrent() || !/^local:[0-9a-f]{64}$/.test(bookId)) return undefined;
+    const hash = this.requireLocalBookHash(bookId);
+    for (const extension of ['source', 'epub']) {
+      const path = `${this.localBookAssetDirectory()}/${hash}.${extension}`;
+      const exists = await fileIo.access(path);
+      if (!isCurrent()) return undefined;
+      if (exists) return path;
+    }
+    return undefined;
   }
 
   async discardLocalBookInput(input: LocalBookInput): Promise<void> {

@@ -75,10 +75,12 @@ export struct ReaderControlReplaceContent {
   aboutToDisappear(): void { this.dismissTemporaryLayer(); this.presentationRevision += 1; }
   private onSourceChanged(): void {
     if (this.lastSessionKey !== this.state.sessionKey) {
+      const offset = this.scroller.currentOffset()?.yOffset;
+      if (offset === undefined || !Number.isFinite(offset)) return;
       this.lastSessionKey = this.state.sessionKey;
       this.dismissTemporaryLayer();
       this.localError = '';
-      this.scrollMotion = { fullScrollOffset: 0, nativeScrollOffset: this.scroller.currentOffset().yOffset,
+      this.scrollMotion = { fullScrollOffset: 0, nativeScrollOffset: offset,
         fullScrollActive: this.fullInput(), resettingFullScroll: true };
       this.scroller.scrollTo({ xOffset: 0, yOffset: 0, animation: false });
       this.onFullDidScroll();
@@ -127,8 +129,10 @@ export struct ReaderControlReplaceContent {
       full, current, quick, f.list.height, 0), this.getUIContext().vp2px(1)));
   }
   private syncMorphScroll(): void {
+    const offset = this.scroller.currentOffset()?.yOffset;
+    if (offset === undefined || !Number.isFinite(offset)) return;
     const update = advanceReaderControlMorphScroll(this.scrollMotion, this.motionProgress,
-      this.interactionEnabled, this.scroller.currentOffset().yOffset);
+      this.interactionEnabled, offset);
     this.scrollMotion = update.state;
     if (update.targetOffset !== undefined) {
       this.scroller.scrollTo({ xOffset: 0, yOffset: update.targetOffset, animation: false });
@@ -136,8 +140,10 @@ export struct ReaderControlReplaceContent {
     }
   }
   private onFullDidScroll(): void {
+    const offset = this.scroller.currentOffset()?.yOffset;
+    if (offset === undefined || !Number.isFinite(offset)) return;
     this.scrollMotion = observeReaderControlMorphScroll(this.scrollMotion,
-      this.scroller.currentOffset().yOffset, this.fullInput());
+      offset, this.fullInput());
   }
   private nativeScrollDelta(y: number, source: ScrollSource): OffsetResult {
     return { xOffset: 0, yOffset: readerControlMorphScrollAllowsNative(this.scrollMotion,
@@ -306,6 +312,7 @@ export struct ReaderControlReplaceContent {
       .position({ x: this.frame().list.x, y: this.frame().list.y })
       .scrollBar(BarState.Off).enableScrollInteraction(this.fullInput() && this.layer === '')
       .edgeEffect(EdgeEffect.None)
+      .onAppear((): void => { this.onSourceChanged(); this.syncMorphScroll(); })
       .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
         this.nativeScrollDelta(y, source))
       .onDidScroll((): void => this.onFullDidScroll())

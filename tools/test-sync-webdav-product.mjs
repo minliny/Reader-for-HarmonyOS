@@ -44,7 +44,8 @@ for (const method of [
 ]) {
   assert.ok(gateway.includes(method), `SyncGateway must drive Core method ${method}`);
 }
-assert.match(gateway, /HttpExecuteHost\.instance\.execute\(current\.requests\[index\]\)/);
+assert.match(gateway, /HttpExecuteHost\.instance\.execute\(\{[\s\S]*?\.\.\.current\.requests\[index\],[\s\S]*?httpsOnly: true,[\s\S]*?sameOriginRedirectsOnly: true,/,
+  'every WebDAV transport hop must stay on the configured HTTPS origin');
 assert.match(gateway, /runtime\.storage\.apply/);
 assert.match(gateway, /runtime\.storage\.flush/);
 assert.doesNotMatch(gateway, /sync\.webdav\.plan|sync\.webdav\.directory\.list\.plan|sync\.webdav\.multistatus\.parse/,

@@ -5,6 +5,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({resolve(s,c,n){try{return n(s,c)}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const base=new URL('../entry/src/main/ets/',import.meta.url), path=p=>new URL(p,base);
 const evidence=await import(path('features/reading/RemoteReadingEvidence.ts'));
+const {readingParagraphBoundaryMode}=await import(path('features/reading/ReadingParagraphProjection.ts'));
 const {captureRemotePositionContext}=await import(path('features/reading/RemoteReadingPositionMigration.ts'));
 const {ReadingSessionFlowGateway}=await import(path('features/reading/ReadingSessionFlowGateway.ts'));
 const {RemoteReadingFlowGateway,RemoteChapterCacheRefreshError}=await import(path('features/reading/RemoteReadingFlowGateway.ts'));
@@ -16,7 +17,7 @@ const {ReadingSurfaceLayoutMap}=await import(`data:text/javascript;base64,${Buff
 const initialTocSource=readFileSync(path('features/reading/LocalReadingExperience.ets'),'utf8')
  .match(/class InitialReadingToc implements LocalReadingToc[\s\S]*?\n}/)[0];
 const InitialReadingToc=new Function(`${stripTypeScriptTypes(initialTocSource)}; return InitialReadingToc;`)();
-const {remoteReadingFailureKindOf,verdictForFailureKind}=await import(path('features/reading/RemoteContentAdmission.ts'));
+const {RemoteReadingSourceError,remoteReadingFailureKindOf,verdictForFailureKind}=await import(path('features/reading/RemoteContentAdmission.ts'));
 const {errorMessageOf}=await import(path('app/ErrorMessage.ts'));
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
 const settle=async()=>{for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));};
@@ -31,18 +32,25 @@ const context=offset=>({bodyVersion:'body-v1',processingVersion:'processing-v1',
 
 // The actual Index admission and LRE progress/context construction feed the
 // actual two gateways. Only Core RPC replies and native layout are controlled.
-function fixture({changedOffset=false,missingProgress=false,legacyProgress=false}={}){
- const calls=[],errors=[],readers=[],opened=[];let revision=0,progressReads=0;
- const statusGate=deferred(),progressGate=deferred();let holdProgress=false;
+function fixture({changedOffset=false,missingProgress=false,legacyProgress=false,holdCatalog=false,
+  warmed=false,layout}={}){
+ const calls=[],errors=[],readers=[],opened=[];let revision=0;
+ const statusGate=deferred(),progressGate=deferred(),catalogGate=deferred();let holdProgress=changedOffset;
  const progress={sourceId:'source',bookId:'book',chapterIndex:1,chapterOffset:10,chapterProgress:0.2,updatedAt:100,
   ...(legacyProgress?{}:{bodyVersion:'body-v1',processingVersion:'processing-v1'})};
+ let warmCurrent=true;
+ let snapshot=warmed?{sourceId:'source',bookId:'book',gateway:{remoteSession:()=>session},
+  toc:{bookId:'book',entries:session.entries.map(e=>({index:e.index,title:e.title}))},
+  progress:{kind:'restored',progress:{...progress}},chapter:chapter(1),isCurrent:()=>warmCurrent}:undefined;
+ const preparation={take(sourceId,bookId){assert.equal(sourceId,'source');assert.equal(bookId,'book');
+  const ready=snapshot;snapshot=undefined;return ready;},setPaused(){}};
  const coordinator={readingProjectionRevision:()=>revision,currentSourceVersion:async()=> 'v1',beginAttempt:()=>1,
-  reportVerdict:async()=>{},setPreparationVisible(){},acquireBookWithBackgroundRefresh:async()=>({session})};
- const owner={bookAcquisitions:()=>coordinator,request:async(method,params,options)=>{
+  reportVerdict:async()=>{},setPreparationVisible(){},acquireBookWithBackgroundRefresh:async()=>{
+   if(holdCatalog)await catalogGate.promise;return {session};}};
+ const owner={readingEntryPreparations:()=>preparation,bookAcquisitions:()=>coordinator,request:async(method,params,options)=>{
   calls.push({method,params});
   if(method==='reading.progress.get'){
    if(holdProgress)await progressGate.promise;
-   progressReads++;if(changedOffset&&progressReads===2)progress.chapterOffset=30;
    return {data:missingProgress?{found:false,progress:null}:{found:true,progress:{...progress}}};
   }
   if(method==='chapter.content')return {data:{sourceId:'source',bookId:'book',chapterTitle:`第${params.chapterIndex+1}章`,
@@ -56,13 +64,14 @@ function fixture({changedOffset=false,missingProgress=false,legacyProgress=false
   throw Error(`unexpected ${method}`);
  }};
  const Index=productionMotionMethods(path('pages/Index.ets'),['openRemoteBookDetail','probeRemoteContentVerdict',
-  'installRemoteReadingSession','nextNavigationGeneration','openReading','isKnownDetailChapter','presentPreparedReading','loadRemoteDirectoryProjection','mergeDirectoryBookmarks','remoteContentVerdictLabel'],{
+  'installRemoteReadingSession','onRemoteSessionReady','nextNavigationGeneration','openReading','isKnownDetailChapter','presentPreparedReading','loadRemoteDirectoryProjection','mergeDirectoryBookmarks','remoteContentVerdictLabel'],{
   ...evidence,captureRemotePositionContext,ReaderRuntimeOwner:{current:()=>owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,
   ReadingOfflineGateway,LocalReadingFlowGateway,ReaderCoreGateway:class{},RemoteDetailAdmission:class{constructor(session){this.session=session;}},
   remoteReadingFailureKindOf,verdictForFailureKind,errorMessageOf,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){},error(){}},
  });
  const LRE=productionMotionMethods(path('features/reading/LocalReadingExperience.ets'),
-  ['loadInitialChapter','loadInitialToc','openChapter','loadSessionChapter'],{ReadingSurfaceLayoutMap,InitialReadingToc,RemoteChapterCacheRefreshError});
+  ['loadInitialReading','ensureReadingSession','restartPreparedReadingEntry','activeGateway','loadInitialChapter','tryInitialEntrySnapshot','loadInitialToc','openChapter','loadSessionChapter'],{readingParagraphBoundaryMode,ReadingSurfaceLayoutMap,InitialReadingToc,RemoteChapterCacheRefreshError,
+   LOCAL_READING_SOURCE_ID:'local',RemoteReadingSourceError,remoteReadingFailureKindOf,ReadingSessionFlowGateway,ReaderRuntimeOwner:{current:()=>owner}});
  const shelf={sourceId:'source',bookId:'book',title:'书',author:'作者',currentChapterIndex:0};
  const p=Object.assign(new Index(),{route:'bookshelf',readingOriginRoute:'bookshelf',navigationGeneration:0,
   remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteReadabilityProjectionRevision:-1,detailToc:[],
@@ -74,30 +83,55 @@ function fixture({changedOffset=false,missingProgress=false,legacyProgress=false
  const openReading=p.openReading.bind(p);
  p.openReading=index=>{
   opened.push(index);openReading(index);assert.equal(p.readingSessionActive,true);
-  const gateway=new ReadingSessionFlowGateway('source','book',{kind:'remote',session:p.remoteReadingSession},owner);
-  const reader=Object.assign(new LRE(),{sourceId:'source',bookId:'book',chapterSelectionToken:1,directoryEntries:p.detailToc,
-   requestedChapterIndex:index,chapterWindow:{get:()=>undefined,configure(){}},isSelectionActive:()=>p.readingSessionActive,
-   activeGateway:()=>gateway,admitTocEntries:entries=>reader.tocEntries=entries,readingTocEntries:()=>reader.tocEntries,
+  const generation=p.navigationGeneration;
+  const reader=Object.assign(new LRE(),{sourceId:'source',bookId:'book',chapterSelectionToken:1,directoryEntries:p.detailToc,remoteSession:p.remoteReadingSession,
+   remoteBookSeed:shelf,phase:'loading',loadAppearanceSnapshot:async()=>{await layout;},loadReaderSettingsSnapshot:async()=>{},
+   onRemoteSessionReady(session){p.onRemoteSessionReady(session);reader.directoryEntries=p.detailToc;},
+   onDirectoryProjectionChanged(){},resolveSourceSwitchTransactionId:async()=>undefined,
+   requestedChapterIndex:index,chapterWindow:{get:()=>undefined,configure(){}},isSelectionActive:()=>p.readingSessionActive&&generation===p.navigationGeneration,
+   admitTocEntries:entries=>reader.tocEntries=entries,readingTocEntries:()=>reader.tocEntries,
    normalizedRequestedChapter:()=>index,requireKnownChapter:value=>value??p.detailToc[0].index,
    ensureCurrentContentMetrics:async()=>false,fail:error=>errors.push(error),
   });
-  readers.push(reader.loadInitialChapter(1,Promise.resolve([])));
+  readers.push(reader.loadInitialReading(1));
  };
- return {p,shelf,calls,errors,readers,opened,progress,statusGate,progressGate,
-  holdProgress:()=>{holdProgress=true;},bumpRevision:()=>{revision++;}};
+ return {p,shelf,calls,errors,readers,opened,progress,statusGate,progressGate,catalogGate,
+  holdProgress:()=>{holdProgress=true;},bumpRevision:()=>{revision++;},invalidateWarm:()=>{warmCurrent=false;}};
+}
+
+// Completed shelf preparation removes entry I/O, including a book never opened
+// in this reader instance. The exact saved chapter/offset belongs to the snapshot.
+{
+ const f=fixture({warmed:true});f.p.openRemoteBookDetail(f.shelf,'书源',f.shelf,true);
+ await settle();await Promise.all(f.readers);
+ assert.deepEqual(f.errors,[]);
+ assert.equal(f.calls.some(c=>c.method==='reading.progress.get'||c.method==='chapter.content'),false);
+ assert.equal(f.readers.length,1);assert.equal(f.p.route,'reading');
+}
+// Rule/content mutations during pending native layout must reload authoritative
+// progress AND body, not retain a stale prepared gateway or old offset.
+{
+ const layout=deferred(),f=fixture({warmed:true,layout:layout.promise});
+ f.p.openRemoteBookDetail(f.shelf,'书源',f.shelf,true);await settle();
+ assert.equal(f.calls.length,0);f.invalidateWarm();f.progress.chapterOffset=30;
+ layout.resolve();await settle();await Promise.all(f.readers);
+ assert.deepEqual(f.errors,[]);
+ assert.equal(f.calls.filter(c=>c.method==='reading.progress.get').length,1);
+ const bodies=f.calls.filter(c=>c.method==='chapter.content');assert.equal(bodies.length,1);
+ assert.deepEqual(bodies[0].params.positionContext,context(30));
 }
 
 for(const options of [{},{changedOffset:true},{missingProgress:true},{legacyProgress:true}]){
  const f=fixture(options);f.p.openRemoteBookDetail(f.shelf,'书源',f.shelf,true);
+ if(options.changedOffset){await settle();f.progress.chapterOffset=30;f.progressGate.resolve();}
  await settle();await Promise.all(f.readers);
  assert.deepEqual(f.errors,[]);assert.equal(f.readers.length,1);
  const bodies=f.calls.filter(c=>c.method==='chapter.content');
- assert.equal(bodies.length,options.changedOffset?2:1,'only changed authority requires another body validation');
- assert.equal(f.calls.filter(c=>c.method==='reading.progress.get').length,2,'reader still reloads authoritative progress');
+ assert.equal(bodies.length,1,'reader loads the body once after reading authoritative progress');
+ assert.equal(f.calls.filter(c=>c.method==='reading.progress.get').length,1,'no outer progress read precedes the reader');
  assert.equal(bodies[0].params.chapterIndex,options.missingProgress?0:1,'stale shelf index never overrides Core current progress');
- assert.deepEqual(f.opened,[options.missingProgress?0:undefined]);
- if(!options.missingProgress&&!options.legacyProgress)assert.deepEqual(bodies[0].params.positionContext,context(10));
- if(options.changedOffset)assert.deepEqual(bodies[1].params.positionContext,context(30));
+ assert.deepEqual(f.opened,[undefined]);
+ if(!options.missingProgress&&!options.legacyProgress)assert.deepEqual(bodies[0].params.positionContext,context(options.changedOffset?30:10));
  assert.equal(f.calls.some(c=>c.method==='cache.book.status'||c.method==='bookmark.list'),false,
   'optional download/bookmark reads must not queue before committed first page');
  f.p.presentPreparedReading(options.missingProgress?0:1);await settle();
@@ -115,11 +149,18 @@ for(const options of [{},{changedOffset:true},{missingProgress:true},{legacyProg
  f.statusGate.resolve();await settle();assert.equal(f.p.detailToc[1].downloadState,'cached');
  assert.equal(f.p.detailToc[1].bookmarks[0].time,42);
 }
-for(const invalidate of [f=>f.p.navigationGeneration++,f=>f.p.remoteSessionGeneration++]){
+{
+ const f=fixture({holdCatalog:true});f.p.openRemoteBookDetail(f.shelf,'书源',f.shelf,true);await settle();
+ f.p.navigationGeneration++;f.catalogGate.resolve();await settle();
+ assert.equal(f.calls.some(c=>c.method==='chapter.content'),false);
+ assert.equal(f.readers.length,1,'the normal reader mounts before acquisition; late results remain cancelled');
+}
+{
  const f=fixture();f.holdProgress();f.p.openRemoteBookDetail(f.shelf,'书源',f.shelf,true);await settle();
- invalidate(f);if(f.p.remoteSessionGeneration>0)f.p.remoteReadingSession=undefined;
- f.progressGate.resolve();await settle();assert.equal(f.calls.some(c=>c.method==='chapter.content'),false);
- assert.equal(f.readers.length,0);
+ assert.equal(f.readers.length,1,'mount and font/window work can start before progress returns');
+ f.p.readingSessionActive=false;f.progressGate.resolve();await settle();await Promise.all(f.readers);
+ assert.equal(f.calls.some(c=>c.method==='chapter.content'),false,'an exited reader does not open a late restored chapter');
+ assert.deepEqual(f.errors,[]);
 }
 
 // Context is a value snapshot, and only evidence previously sent to Core can
@@ -144,5 +185,5 @@ for(const invalidate of [f=>f.p.navigationGeneration++,f=>f.p.remoteSessionGener
   session,()=>true,1,context(10));
  assert.equal(result,1);
 }
-console.log('PASS actual Index→Core progress→body probe→LRE authoritative progress→prepared chapter: one body when exact, reread changed anchor');
+console.log('PASS actual Index→LRE→Core progress/body: one authoritative progress read and body request, current offset wins over stale shelf projection');
 console.log('PASS committed-first-page optional projection, late bookmark preservation, cancellation and refresh revision ownership; no native timing claims');

@@ -39,3 +39,9 @@ export const READER_LOCAL_BOOK_FORMAT_ADMISSIONS: ReaderLocalBookFormatAdmission
 
 export const READER_LOCAL_BOOK_PICKER_FILTER: string =
   'TXT、EPUB、MOBI、AZW3|.txt,.epub,.mobi,.azw,.azw3,.kf8';
+
+export function isReaderLocalBookFileName(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  return READER_LOCAL_BOOK_FORMAT_ADMISSIONS.some((entry: ReaderLocalBookFormatAdmission): boolean =>
+    entry.state === 'l0' && entry.suffixes.some((suffix: string): boolean => lower.endsWith(suffix)));
+}

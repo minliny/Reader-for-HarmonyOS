@@ -1,3 +1,5 @@
+import { ReaderNativeParagraphRecipe } from './ReaderNativeParagraph';
+import { ReaderNativeParagraphView } from './ReaderNativeParagraphView';
 import { readerThemeDefinition } from '../common/ReaderThemeRegistry';
 import { readerHighlightCanvasColor, readerDynamicHighlightRectsEqual, ReaderHighlightTextCache,
   type ReaderHighlightTextSlice, type ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
@@ -6,7 +8,7 @@ import { text as graphicsText } from '@kit.ArkGraphics2D';
 import type { image } from '@kit.ImageKit';
 import { copyReaderSelection } from '../../app/ReaderClipboardHost';
 import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
-import { registerReaderFonts } from '../common/ReaderFonts';
+import { registerReaderFonts, readerRegisteredFontFamily } from '../common/ReaderFonts';
 import { TYPE_READER_CHAPTER_TITLE } from '../common/ReaderTypography';
 import {
   createDefaultReaderAppearanceSnapshot,
@@ -25,6 +27,7 @@ import {
   createDefaultReaderReadingLayout,
 } from './ReaderLayoutGeometry';
 import { ReaderPageChrome } from './ReaderPageChrome';
+import { ReaderPaperBackground } from './ReaderPaperBackground';
 
 export type { ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
 
@@ -62,7 +65,12 @@ export class ReadingSurfacePageFragment {
   imageSource: image.PixelMap | undefined;
   fileUri: string | undefined;
   imageHeight: number;
+  imageWidthBasisPoints: number;
   layoutHeight: number;
+  nativeParagraph: ReaderNativeParagraphRecipe | undefined;
+  nativeTitle: ReaderNativeParagraphRecipe | undefined;
+  nativeParagraphFirst: boolean = false;
+  continuousSpaceBefore: boolean | undefined = undefined;
 
   constructor(
     id: string,
@@ -74,6 +82,7 @@ export class ReadingSurfacePageFragment {
     imageHeight: number = 0,
     fileUri?: string,
     layoutHeight: number = imageHeight,
+    imageWidthBasisPoints: number = 10000,
   ) {
     this.id = id;
     this.text = text;
@@ -82,6 +91,7 @@ export class ReadingSurfacePageFragment {
     this.endScalar = endScalar ?? startScalar + text.length;
     this.imageSource = imageSource;
     this.imageHeight = imageHeight;
+    this.imageWidthBasisPoints = imageWidthBasisPoints;
     this.fileUri = fileUri;
     this.layoutHeight = layoutHeight;
   }
@@ -145,7 +155,7 @@ export struct ReaderReadingTextFragment {
       }
     }
       .width('100%')
-      .fontFamily(readerAppearanceSnapshotFontFamily(this.appearance))
+      .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceSnapshotFontFamily(this.appearance)))
       .fontWeight(FontWeight.Regular)
       .fontSize(this.appearance.fontSize)
       .lineHeight(readerAppearanceLineHeight(this.appearance))
@@ -336,47 +346,17 @@ export struct ReadingSurface {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
-      // The Figma background-image list is painted front-to-back: texture,
-      // gradient, highlight, shade. Stack children paint back-to-front, so
-      // keep the equivalent order explicit here rather than coalescing the
-      // texture with the gradient and accidentally covering it with lighting.
-      if (this.themeStyle().sourcePaperLighting) {
-        Image(this.paperShade())
-          .syncLoad(this.snapshotSynchronousImages)
-          .width('100%')
-          .height('100%')
-          .objectFit(ImageFit.Fill)
-          .interpolation(ImageInterpolation.High);
-
-        Image(this.paperHighlight())
-          .syncLoad(this.snapshotSynchronousImages)
-          .width('100%')
-          .height('100%')
-          .objectFit(ImageFit.Fill)
-          .interpolation(ImageInterpolation.High);
-      }
-
-      Stack() {
-      }
-        .width('100%')
-        .height('100%')
-        .linearGradient({
-          direction: GradientDirection.Bottom,
-          colors: [[this.themeStyle().paperStart, 0], [this.themeStyle().paperEnd, 1]],
-        });
-
-      if (this.themeStyle().paperTexture) {
-        Stack() {
-        }
-          .width('100%')
-          .height('100%')
-          .backgroundImage(this.paperTexture(), ImageRepeat.XY)
-          .backgroundImageSize({ width: 100, height: 100 })
-          .backgroundImagePosition(Alignment.TopStart);
-      }
+      ReaderPaperBackground({
+        theme: this.appearance.activeTheme,
+        expanded: this.layout.widthClass === 'expanded',
+        synchronousImages: this.snapshotSynchronousImages,
+      });
 
       Column({ space: this.layout.titleToBodySpacingVp }) {
         if (this.showChapterTitle) {
+          if (this.pageFragments[0]?.nativeTitle !== undefined) {
+            ReaderNativeParagraphView({ recipe: this.pageFragments[0].nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+          } else {
           Text(this.chapterTitle)
             .width('100%')
             .fontFamily(TYPE_READER_CHAPTER_TITLE.fontFamily)
@@ -386,11 +366,13 @@ export struct ReadingSurface {
             .fontColor(this.themeStyle().ink)
             .textAlign(TextAlign.Center)
             .wordBreak(WordBreak.BREAK_ALL);
+          }
         }
 
         Column() {
           if (this.renderFragments().length > 0) {
             ForEach(this.renderFragments(), (fragment: ReadingSurfacePageFragment, index: number) => {
+              if (fragment.nativeParagraph === undefined || fragment.nativeParagraphFirst) {
               if (index > 0 && this.bottomJustifyGap > 0) {
                 Blank().height(this.bottomJustifyGap);
               }
@@ -402,14 +384,14 @@ export struct ReadingSurface {
               if (fragment.fileUri !== undefined && fragment.fileUri.length > 0) {
                 Image(fragment.fileUri)
           .syncLoad(this.snapshotSynchronousImages)
-                  .width('100%')
+                  .width(`${fragment.imageWidthBasisPoints / 100}%`)
                   .height(fragment.imageHeight)
                   .objectFit(ImageFit.Contain)
                   .interpolation(ImageInterpolation.High);
               } else if (fragment.imageSource !== undefined) {
                 Image(fragment.imageSource)
           .syncLoad(this.snapshotSynchronousImages)
-                  .width('100%')
+                  .width(`${fragment.imageWidthBasisPoints / 100}%`)
                   .height(fragment.imageHeight)
                   .objectFit(ImageFit.Contain)
                   .interpolation(ImageInterpolation.High);
@@ -417,6 +399,21 @@ export struct ReadingSurface {
                 // One stable, measurable failed-resource block. Resource
                 // failure must not discard the rest of the chapter.
                 Blank().height(fragment.imageHeight);
+              } else if (fragment.nativeParagraph !== undefined) {
+                ReaderNativeParagraphView({
+                  recipe: fragment.nativeParagraph,
+                  inkColor: this.themeStyle().ink,
+                  gapVp: this.bottomJustifyGap,
+                  selectionEnabled: this.longPressSelectText,
+                  selectionColor: readerThemeDefinition(this.appearance.activeTheme).selection,
+                  highlightStart: this.ttsHighlightStart ?? this.autoPageHighlightStart,
+                  highlightEnd: this.ttsHighlightEnd ?? this.autoPageHighlightEnd,
+                  highlightColor: this.ttsHighlightStart !== undefined ? this.themeStyle().ink :
+                    readerThemeDefinition(this.appearance.activeTheme).selection,
+                  underline: this.ttsHighlightStart !== undefined,
+                  queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
+                  onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]): void => this.acceptHighlightGeometry(fragment.id, rects),
+                });
               } else {
                 ReaderReadingTextFragment({
                   text: fragment.text,
@@ -436,7 +433,9 @@ export struct ReadingSurface {
                   },
                 });
               }
-            }, (fragment: ReadingSurfacePageFragment): string => fragment.id);
+              }
+            }, (fragment: ReadingSurfacePageFragment): string => fragment.text.length === 0 && fragment.imageHeight > 0 ?
+              `${fragment.id}:image:${fragment.fileUri ?? ''}:${fragment.imageSource === undefined ? 'file' : 'pixel'}` : fragment.id);
           } else {
             // Retain the original public input for existing static callers.
             ForEach(this.pageParagraphs, (paragraph: string, index: number) => {
@@ -489,7 +488,7 @@ export struct ReadingSurface {
       // Offscreen static rasters and ordinary inline-highlight pages do not
       // need a full-viewport Canvas. Hidden Canvas nodes still carry native
       // backing resources and add GC/disposal work after texture capture.
-      if (this.staticSnapshotId.length > 0) {
+      if (this.usesHighlightCanvas()) {
       Canvas(this.highlightCanvas)
         .blendMode(this.dynamicHighlightBlend(), BlendApplyType.FAST)
         .width('100%').height('100%').enabled(false).hitTestBehavior(HitTestMode.None)
@@ -512,8 +511,13 @@ export struct ReadingSurface {
     .clip(true);
   }
 
+  private usesHighlightCanvas(): boolean {
+    return this.staticSnapshotId.length > 0 || (!this.snapshotSynchronousImages &&
+      this.renderFragments().some((fragment: ReadingSurfacePageFragment): boolean => fragment.nativeParagraph !== undefined));
+  }
+
   private onHighlightContentChanged(): void {
-    if (this.staticSnapshotId.length === 0) this.highlightCanvasReady = false;
+    if (!this.usesHighlightCanvas()) this.highlightCanvasReady = false;
     this.scheduleDynamicHighlights();
   }
 
@@ -533,7 +537,7 @@ export struct ReadingSurface {
   }
 
   private scheduleDynamicHighlights(): void {
-    if (!this.highlightMounted || !this.highlightCanvasReady || this.staticSnapshotId.length === 0 ||
+    if (!this.highlightMounted || !this.highlightCanvasReady || !this.usesHighlightCanvas() ||
       this.highlightDrawQueued || this.highlightDraining) return;
     this.highlightDrawQueued = true;
     const lifecycle = this.highlightLifecycle;
@@ -558,7 +562,7 @@ export struct ReadingSurface {
   }
 
   private drawDynamicHighlights(): void {
-    if (!this.highlightCanvasReady || this.staticSnapshotId.length === 0) return;
+    if (!this.highlightCanvasReady || !this.usesHighlightCanvas()) return;
     const canvas = this.highlightCanvas;
     const result: ReaderDynamicHighlightRect[] = [];
     if (this.highlightRects.size > 0) {
@@ -615,21 +619,6 @@ export struct ReadingSurface {
       bottom: this.layout.contentBottom,
       left: this.layout.contentLeft,
     };
-  }
-
-  private paperTexture(): Resource {
-    return this.layout.widthClass === 'expanded' ?
-      $r('app.media.reading_paper_tablet') : $r('app.media.reading_paper_phone');
-  }
-
-  private paperHighlight(): Resource {
-    return this.layout.widthClass === 'expanded' ? $r('app.media.reading_paper_tablet_highlight') :
-      $r('app.media.reading_paper_phone_highlight');
-  }
-
-  private paperShade(): Resource {
-    return this.layout.widthClass === 'expanded' ? $r('app.media.reading_paper_tablet_shade') :
-      $r('app.media.reading_paper_phone_shade');
   }
 
   private themeStyle(): ReaderAppearanceThemeStyle {

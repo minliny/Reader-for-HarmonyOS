@@ -26,7 +26,7 @@ export type ReaderAppearanceFont =
   | 'custom';
 
 /** The nine reorderable slots authored in Figma's full font library. */
-export type ReaderAppearanceFontSlot = Exclude<ReaderAppearanceFont, 'custom'> | 'import';
+export type ReaderAppearanceFontSlot = ReaderAppearanceFont | 'import';
 
 export const READER_APPEARANCE_DEFAULT_FONT_ORDER: ReaderAppearanceFontSlot[] = [
   'system',
@@ -201,8 +201,8 @@ export function normalizeReaderAppearanceSnapshot(
     nightTheme,
     font,
     customFont,
-    fontOrder: candidate.version === 3 || candidate.version === 4 ? normalizeReaderAppearanceFontOrder(candidate.fontOrder) :
-      fallback.fontOrder,
+    fontOrder: readerFontOrderWithCustom(candidate.version === 3 || candidate.version === 4 ?
+      candidate.fontOrder : fallback.fontOrder, customFont !== undefined),
     fontSize: isPositiveFinite(candidate.fontSize) ?
       clampReaderAppearanceMetric('fontSize', candidate.fontSize) : fallback.fontSize,
     lineHeightMultiplier: isPositiveFinite(candidate.lineHeightMultiplier) ?
@@ -374,7 +374,15 @@ export function isReaderAppearanceFont(value: string): value is ReaderAppearance
 }
 
 export function isReaderAppearanceFontSlot(value: string): value is ReaderAppearanceFontSlot {
-  return value === 'import' || (isReaderAppearanceFont(value) && value !== 'custom');
+  return value === 'import' || isReaderAppearanceFont(value);
+}
+
+function readerFontOrderWithCustom(candidate: ReaderAppearanceFontSlot[] | undefined,
+  hasCustom: boolean): ReaderAppearanceFontSlot[] {
+  const order = normalizeReaderAppearanceFontOrder(candidate)
+    .filter((slot: ReaderAppearanceFontSlot): boolean => slot !== 'custom' || hasCustom);
+  if (hasCustom && !order.includes('custom')) order.splice(order.indexOf('import'), 0, 'custom');
+  return order;
 }
 
 export function normalizeReaderAppearanceFontOrder(

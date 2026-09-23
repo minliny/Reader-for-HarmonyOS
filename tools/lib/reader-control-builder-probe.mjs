@@ -88,6 +88,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       this.watches = new Map();
     }
     finalizeConstruction() {}
+    createStorageLink(_key, value, name) {
+      return new dependencies.ObservedPropertySimplePU(value, this, name);
+    }
+    getUIContext() { return dependencies.uiContext?.getFont ? dependencies.uiContext : { ...dependencies.uiContext, getFont: () => ({}) }; }
     declareWatch(name, callback) { this.watches.set(name, callback); }
     observeComponentCreation2(callback, component) {
       const id = this.observers.length;
@@ -105,7 +109,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     replay() {
       const before = this.observers.length;
       for (let id = 0; id < before; id++) this.runObserver(id, false);
-      assert.equal(this.observers.length, before, 'state update does not remount Builder actors');
+      if (!hooks.allowEmptyBranchAdmission) assert.equal(this.observers.length, before, 'state update does not remount Builder actors');
     }
     forEachUpdateFunction(id, data, generator, key) {
       const seen = this.keys.get(id) ?? new Set(); this.keys.set(id, seen);
@@ -115,7 +119,15 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       });
     }
     ifElseBranchUpdateFunction(id, generator) {
-      if (!this.keys.has(`if-${activeId}`)) { this.keys.set(`if-${activeId}`, id); generator(); }
+      const key = `if-${activeId}`;
+      if (!this.keys.has(key)) {
+        this.keys.set(key, id); const before = this.observers.length; generator();
+        this.keys.set(`${key}-empty`, before === this.observers.length);
+      } else if (hooks.allowEmptyBranchAdmission && this.keys.get(key) !== id) {
+        assert.equal(this.keys.get(`${key}-empty`), true, 'probe only admits previously empty branches; it does not model removal');
+        this.keys.set(key, id); const before = this.observers.length; generator();
+        this.keys.set(`${key}-empty`, before === this.observers.length);
+      }
     }
     updateStateVarsOfChildByElmtId(id, params) {
       const record = this.children.get(id); assert.ok(record, 'native child retained');
@@ -128,13 +140,15 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   class Child {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
   }
-  const globals = { readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
-    ...Object.fromEntries(['Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
+  // Geometry/property probes do not register physical platform fonts. The
+  // actual registrar has a separate demand/failure/retry test.
+  const globals = { readerRegisteredFontFamily: (_font, family) => family, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
+    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...dependencies };
   const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));
-  return { owner: new Component(undefined, {}), Component, output };
+  return { owner: new Component(undefined, hooks.initialParams ?? {}), Component, output };
 }

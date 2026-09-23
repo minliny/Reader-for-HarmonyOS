@@ -6,9 +6,7 @@ import {
   READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
 } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
-// This exact platform module contains only type imports; execute its real body.
-const { measureReaderPageChromeText } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
-  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ets', import.meta.url), 'utf8'))));
+import { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
 import {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
@@ -91,7 +89,7 @@ assert.equal(formatReaderPageOrdinal(new ReaderPageOrdinal(8)), '第 9 页');
 const chromeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), 'utf8');
 const measureSource = chromeSource.slice(chromeSource.indexOf('  private textMeasure('),
   chromeSource.indexOf('  private metaColor('));
-const ChromeMeasure = new Function('measureReaderPageChromeText', `${stripTypeScriptTypes(`class ChromeMeasure { ${measureSource} }`)}; return ChromeMeasure;`)(measureReaderPageChromeText);
+const ChromeMeasure = new Function('measureReaderPageChromeText', 'readerPageChromeTopTextStyle', `${stripTypeScriptTypes(`class ChromeMeasure { ${measureSource} }`)}; return ChromeMeasure;`)(measureReaderPageChromeText, readerPageChromeTopTextStyle);
 let measurements = 0;
 let density = 3;
 let fontScale = 1;
@@ -153,10 +151,10 @@ assert.equal(clockOwner.refreshes, 1, 'new minute schedules the existing idle-on
 console.log('page chrome/native snapshot invalidation: PASS');
 
 const LayoutChrome = productionMotionMethods(
-  new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), ['chromeLayout'],
+  new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), ['chromeLayout', 'topTextStyle'],
   { TYPE_READER_IMMERSIVE_TIME: style, TYPE_READER_IMMERSIVE_PROGRESS: style,
     TYPE_READER_IMMERSIVE_PAGE_ORDINAL: style, ReaderPageChromeMeasurements, resolveReaderPageChromeLayout,
-    READER_PAGE_CHROME_BOOKMARK_SIZE });
+    READER_PAGE_CHROME_BOOKMARK_SIZE, readerPageChromeTopTextStyle });
 let layoutMeasures = 0;
 const layoutChrome = Object.assign(new LayoutChrome(), { ...chrome, layout: layout(390, 844),
   topStartText: 'Book', topEndText: '12:30', bottomStartText: '9%', bottomEndText: '第 2 页',
@@ -175,7 +173,7 @@ console.log('page chrome complete layout reuse and safe-area/session invalidatio
 
 const CaptureOwner = productionMotionMethods(
   new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
-  ['performBookTurnTextureRefresh', 'onBookTurnArkUIFramePresented'],
+  ['sessionLaunchRenderWorkBlocked', 'performBookTurnTextureRefresh', 'onBookTurnArkUIFramePresented'],
   { BOOK_TURN_TEXTURE_CURRENT: 1, BOOK_TURN_TEXTURE_PREVIOUS: 0, BOOK_TURN_TEXTURE_NEXT: 2 });
 const snapshots = [], captures = Object.assign(new CaptureOwner(), {
   mounted: true, exitRequested: false, phase: 'ready', bookTurnTextureCaptureGeneration: 7,

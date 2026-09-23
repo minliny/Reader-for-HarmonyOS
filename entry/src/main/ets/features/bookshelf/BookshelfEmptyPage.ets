@@ -178,7 +178,6 @@ export struct BookshelfEmptyPage {
         this.headerAction('bookshelf_grid');
         this.headerAction('bookshelf_list');
         this.headerAction('bookshelf_filter');
-        this.headerAction('bookshelf_settings');
       }
       .height(34);
     }
@@ -199,7 +198,7 @@ export struct BookshelfEmptyPage {
     if (asset === 'bookshelf_filter') {
       return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_theme_night') : $r('app.media.bookshelf_filter'));
     }
-    return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_settings_theme_night') : $r('app.media.bookshelf_settings'));
+    return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_theme_night') : $r('app.media.bookshelf_filter'));
   }
 
   @Builder

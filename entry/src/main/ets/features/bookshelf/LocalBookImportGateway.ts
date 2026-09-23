@@ -196,7 +196,13 @@ export class LocalBookImportGateway {
         return 'absent';
       }
       const book = this.requiredObject(result.data, 'book');
-      return book['sourceId'] === sourceId && book['bookId'] === bookId ? 'committed' : 'unknown';
+      // An older row with the same identity does not prove this upsert landed.
+      // Keep the compensation journal if any submitted metadata still differs.
+      const submittedFields: string[] = ['sourceId', 'bookId', 'title', 'author', 'coverUrl', 'intro', 'kind', 'lastChapter'];
+      for (const field of submittedFields) {
+        if ((book[field] ?? null) !== (params[field] ?? null)) return 'unknown';
+      }
+      return 'committed';
     } catch (_) {
       return 'unknown';
     }

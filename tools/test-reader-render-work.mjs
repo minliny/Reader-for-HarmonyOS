@@ -41,7 +41,7 @@ fragment.ttsHighlightStart = 600; fragment.ttsHighlightEnd = 610;
 assert.equal(fragment.highlightBody().length, 10, 'TTS retains priority over auto page');
 
 const Surface = productionMotionMethods(source('ReadingSurface'), ['enqueueHighlightMeasurement', 'acceptHighlightGeometry',
-  'scheduleDynamicHighlights', 'drawDynamicHighlights', 'renderFragments', 'onHighlightContentChanged', 'aboutToDisappear'],
+  'usesHighlightCanvas', 'scheduleDynamicHighlights', 'drawDynamicHighlights', 'renderFragments', 'onHighlightContentChanged', 'aboutToDisappear'],
   { ...marks, ReaderHighlightFrame: Frame });
 function makePage(number) {
   const queue = [], stats = { scheduled: 0, measured: 0, clears: 0, fills: 0, providerReads: 0, idReads: 0, outputs: [] };
@@ -104,7 +104,7 @@ assert.equal(pageCase.stats.outputs.length, beforeDisappear, 'queued work cannot
 let uploads = 0, accepted = true;
 const Session = productionMotionMethods(source('BookTurnPresentationSession'), ['setDynamicHighlights', 'configure', 'onNativeEvent'],
   { ...marks, bookTurnNative: { setDynamicHighlights: () => { uploads++; return accepted; }, configure: () => true },
-    BOOK_TURN_EVENT_SURFACE_READY: 1, BOOK_TURN_EVENT_SURFACE_LOST: 5, BOOK_TURN_EVENT_RENDER_FAILURE: 6,
+    BOOK_TURN_EVENT_SURFACE_READY: 1, BOOK_TURN_EVENT_SURFACE_LOST: 5, BOOK_TURN_EVENT_RENDER_FAILURE: 6, BOOK_TURN_EVENT_SLOTS_COMMITTED: 7,
     BookTurnNativeEvent: class { constructor(event) { this.event = event; } } });
 const session = Object.assign(new Session(), { componentId: 'surface', highlightIdentity: '', highlightValues: [], eventListener: () => {} });
 session.setDynamicHighlights('a', []); session.setDynamicHighlights('a', []); assert.equal(uploads, 1);

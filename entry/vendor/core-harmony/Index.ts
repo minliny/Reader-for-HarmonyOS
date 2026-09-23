@@ -4,6 +4,7 @@ import {
   ReaderCoreRuntime,
   type JsonObject,
   type NativeReaderCoreModule,
+  type ReaderCoreAssetBridge,
 } from './sdk/reader_core';
 import {
   assertHarmonyNapiSmokeReport,
@@ -28,6 +29,7 @@ export {
   type JsonObject,
   type NativeReaderCoreModule,
   type NativeRuntimeHandle,
+  type ReaderCoreAssetBridge,
   type ReaderCoreCommand,
   type ReaderCoreError,
   type ReaderCoreErrorEvent,
@@ -58,6 +60,11 @@ const nativeReaderCore = readerCoreNapi as NativeReaderCoreModule;
 
 export function createReaderCoreRuntime(config: JsonObject = {}): ReaderCoreRuntime {
   return new ReaderCoreRuntime(nativeReaderCore, config);
+}
+
+export async function createReaderCoreRuntimeAsync(config: JsonObject = {},
+  isCurrent: () => boolean = () => true): Promise<ReaderCoreRuntime> {
+  return ReaderCoreRuntime.createAsync(nativeReaderCore, config, isCurrent);
 }
 
 export function readLocalEpubEntry(

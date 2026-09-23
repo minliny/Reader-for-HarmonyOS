@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import * as autoPolicy from '../entry/src/main/ets/features/reading/ReaderAutoPageState.ts';
+import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts';
 import { readerTtsSessionBlocksAutoPageStart } from '../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts';
 import { buildReaderSessionLaunchGeometry } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts';
 import { ReaderSessionLaunchController } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts';
@@ -10,7 +11,7 @@ import { ReaderPageChromeMeasurements } from '../entry/src/main/ets/features/rea
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url).pathname;
 const names=['toggleTts','stopTts','toggleAutoPage','startAutoPageSession','stopAutoPage','cancelPendingAutoPageStart',
-  'nextAutoPageStartGeneration','cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent',
+  'cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent',
   'captureControlPlaybackPresentation','isControlPlaybackPresentationCurrent','toggleSessionCapsule'];
 const Host=productionMotionMethods(file,names,{...autoPolicy,readerTtsSessionBlocksAutoPageStart,
   readerControlContentLocation:s=>s.location});
@@ -32,10 +33,16 @@ function owner(){
   cancelSessionLaunch(reason){calls.push(`cancel:${reason}`);this.sessionLaunch=undefined;},
   hideControl:()=>calls.push('hide'),onSessionLaunchTtsState:()=>calls.push('ack'),
   armAutoPageTimer:()=>calls.push('autoTimer'),armAutoPageSessionTimer:()=>{},clearAutoPageTimer:()=>{},clearAutoPageSessionTimer:()=>{},resetAutoPageSessionDuration:()=>{},
-  pauseAutoPage(reason){this.autoPageState=autoPolicy.pauseReaderAutoPage(this.autoPageState,reason);},
+  pauseAutoPage(reason){this.autoPageCoordinator.pause(reason);},
   pageTurnInputPhase:()=> 'idle',sessionCapsuleSnapshot:()=>undefined,
   getUIContext:()=>({getPromptAction:()=>({showToast:()=>{}})}),
  });
+ host.autoPageCoordinator = new ReaderAutoPageCoordinator({ now:()=>10000,
+  schedule:()=>1,cancel:()=>{},active:()=>host.mounted&&!host.exitRequested,ready:()=>true,
+  canResumeTurn:()=>true,turn:()=>({kind:'started'}),changed:()=>{} });
+ Object.defineProperty(host,'autoPageState',{get:()=>host.autoPageCoordinator.snapshot()});
+ host.automaticReadingState = () => host.autoPageCoordinator.snapshot();
+ host.automaticReadingConfiguration = () => host.autoPageCoordinator.configurationAt();
  host.sessionLaunchController={mayStartBusiness:()=>host.sessionLaunch?.desiredPlaying===true,
   acknowledgeBusiness:(_g,s)=>{host.sessionLaunch.businessStatus=s;},snapshot:()=>host.sessionLaunch,
   setDesiredPlaying:(_g,v)=>{host.sessionLaunch.desiredPlaying=v;}};
@@ -112,6 +119,8 @@ const visual=Object.assign(new Visual(),{mounted:true,appForeground:true,exitReq
  currentChapterIndex:()=>4,visiblePage:{startScalar:20},pageChromeClockText:'10:00',
  latestControlVisualSession:createReaderControlSessionState(),currentPageTurnRenderPage:()=>({chromeTopStartText:'book',chromeTopEndText:'10:00',chromeBottomStartText:'1%',chromeBottomEndText:'1/50'}),
  ttsState:{status:'idle'},autoPageState:autoPolicy.createReaderAutoPageState(8),
+ automaticReadingState(){return this.autoPageState;},
+ suspendAdjacentMeasurement:()=>{},drainPageTurnPreparationQueue:()=>{},bookTurnTextureCaptureGeneration:0,
  invalidateControlBackdrop:()=>{},windowCalls:0,hiddenCalls:0,
  applyWindowPolicyForChromeOwner(){this.windowCalls++;},commitSessionLaunchControlHidden(){this.hiddenCalls++;},
  getUIContext:()=>({postFrameCallback:f=>frames.push(f)}),cancelSessionLaunch:()=>{throw Error('unexpected invalidation');},

@@ -118,10 +118,11 @@ export class RemoteChapterCacheRefreshError extends RemoteReadingGatewayError {
 }
 
 export type RemoteReadingProgressState =
-  | { kind: 'missing' }
-  | { kind: 'restored'; progress: RemoteReadingProgress };
+  | { kind: 'missing'; progressRevision?: string }
+  | { kind: 'restored'; progress: RemoteReadingProgress; progressRevision?: string };
 
 export type RemoteReadingProgressUpdate = {
+  expectedProgressRevision?: string;
   expectedBodyVersion?: string;
   expectedProcessingVersion?: string;
   chapterIndex: number;
@@ -438,6 +439,7 @@ export class RemoteReadingFlowGateway {
       sourceId: identity.sourceId,
       bookId: identity.bookId,
       includeGlobalStats: false,
+      includeChapterStates: false,
     }, isCurrent);
     this.assertIdentity(result.data, identity, 'cache.book.status');
     if ((session.catalogVersion !== undefined && result.data['catalogVersion'] !== session.catalogVersion) ||
@@ -517,21 +519,6 @@ export class RemoteReadingFlowGateway {
           sourceVersion: currentVersion, requiresContextRefresh: currentVersion !== undefined }, chapterIndex, isCurrent, forceRefresh, positionContext);
       }
     }
-    if (session.acquisitionMode === 'offline' && !forceRefresh) {
-      try {
-        await this.assertOfflineChapterAvailable(identity, chapterIndex, isCurrent);
-      } catch (error) {
-        if (!(error instanceof RemoteReadingGatewayError) || error.code !== 'chapterNotDownloaded' ||
-          session.requiresContextRefresh !== true) throw error;
-        const fresh = await this.openSession({ ...session.book, ...identity, detailUrl: session.detailUrl,
-          sourceVersion: session.sourceVersion, searchVariables: [] }, { forceRefresh: true, isCurrent });
-        const refreshedEntry = fresh.entries.find((entry): boolean => entry.index === selected.index && entry.url === selected.url);
-        if (refreshedEntry === undefined) {
-          throw new RemoteReadingGatewayError('sourceVersionChanged', '目录已更新，请重新打开本书以恢复阅读位置', 'book.toc');
-        }
-        return this.loadChapter(fresh, chapterIndex, isCurrent, false, positionContext);
-      }
-    }
     assertRemoteReadingNonBlankString(selected.title, 'session chapter title');
     assertRemoteReadingNonBlankString(selected.url, 'session chapter URL');
     const variables = mergeRemoteReadingVariables(session.continuationVariables, selected.variables);
@@ -545,7 +532,29 @@ export class RemoteReadingFlowGateway {
     };
     if (forceRefresh) params['forceRefresh'] = true;
     if (positionContext !== undefined) params['positionContext'] = encodeRemotePositionContext(positionContext);
-    const result = await this.request('chapter.content', params, isCurrent);
+    const offline = session.acquisitionMode === 'offline' && !forceRefresh;
+    const cacheOnly = offline &&
+      this.runtimeOwner.supportsCoreCapability?.('chapter.content.cacheOnly.v1') === true;
+    if (cacheOnly) params['cacheOnly'] = true;
+    let result: ReaderCoreResultEvent;
+    try {
+      // Compatibility with older Core versions only. New Core reads the target
+      // atomically, so a cache clear cannot turn this read into a network fetch.
+      if (offline && !cacheOnly) await this.assertOfflineChapterAvailable(identity, chapterIndex, isCurrent);
+      result = await this.request('chapter.content', params, isCurrent);
+    } catch (error) {
+      if (!offline || !(error instanceof RemoteReadingGatewayError) ||
+        error.code !== 'chapterNotDownloaded' || session.requiresContextRefresh !== true) throw error;
+      // Rule/context refresh is an existing explicit acquisition transition;
+      // the cache-only request itself never invokes the source.
+      const fresh = await this.openSession({ ...session.book, ...identity, detailUrl: session.detailUrl,
+        sourceVersion: session.sourceVersion, searchVariables: [] }, { forceRefresh: true, isCurrent });
+      const refreshedEntry = fresh.entries.find((entry): boolean => entry.index === selected.index && entry.url === selected.url);
+      if (refreshedEntry === undefined) {
+        throw new RemoteReadingGatewayError('sourceVersionChanged', '目录已更新，请重新打开本书以恢复阅读位置', 'book.toc');
+      }
+      return this.loadChapter(fresh, chapterIndex, isCurrent, false, positionContext);
+    }
     this.assertIdentity(result.data, identity, 'chapter.content');
     const bodyVersion = this.optionalString(result.data, 'bodyVersion', 'chapter.content');
     const processingVersion = this.optionalString(result.data, 'processingVersion', 'chapter.content');
@@ -618,6 +627,7 @@ export class RemoteReadingFlowGateway {
       contentVersion: document.contentVersion,
       bodyVersion, processingVersion, positionMigration,
       cacheRefreshRequired,
+      sourceCorrectionRequired: result.data['sourceCorrectionRequired'] === true,
       extractionVia: via === 'cache' ? 'rule' : via,
     };
   }
@@ -708,6 +718,9 @@ export class RemoteReadingFlowGateway {
       bookId: identity.bookId,
     }, isCurrent);
     const found = result.data['found'];
+    const progressRevision = this.optionalString(result.data, 'progressRevision', 'reading.progress.get');
+    if (this.runtimeOwner.supportsCoreCapability?.('reading.progress.compareAndSet.v1') === true && !progressRevision)
+      throw new Error('READING_PROGRESS_REVISION_MISSING');
     if (typeof found !== 'boolean') {
       throw new RemoteReadingGatewayError(
         'invalidResponse',
@@ -723,10 +736,11 @@ export class RemoteReadingFlowGateway {
           'reading.progress.get',
         );
       }
-      return { kind: 'missing' };
+      return { kind: 'missing', ...(progressRevision === undefined ? {} : { progressRevision }) };
     }
     return {
       kind: 'restored',
+      ...(progressRevision === undefined ? {} : { progressRevision }),
       progress: this.decodeProgress(result.data['progress'], identity, 'reading.progress.get'),
     };
   }
@@ -869,6 +883,10 @@ export class RemoteReadingFlowGateway {
     };
     appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
       update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);
+    if (update.expectedProgressRevision !== undefined) {
+      assertRemoteReadingNonBlankString(update.expectedProgressRevision, 'expectedProgressRevision');
+      params['expectedProgressRevision'] = update.expectedProgressRevision;
+    }
     if (update.locationRevision !== undefined) {
       params['locationRevision'] = update.locationRevision;
     }

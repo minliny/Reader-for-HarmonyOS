@@ -18,6 +18,12 @@ const httpHost = readFileSync(
   'utf8',
 );
 
+function productionMethod(name) {
+  const method = source.match(new RegExp(`  private (?:async )?${name}\\([\\s\\S]*?\\n  \\}`));
+  assert.ok(method, `production method ${name} must exist`);
+  return method[0];
+}
+
 assert.match(source, /createReadingPaginationLayoutSignature\(\{[\s\S]*?deviceForm:[\s\S]*?viewportWidth:[\s\S]*?viewportHeight:[\s\S]*?fontFamily:[\s\S]*?fontSize:[\s\S]*?lineHeight:[\s\S]*?topInset:[\s\S]*?bottomInset:[\s\S]*?leftInset:[\s\S]*?rightInset:/,
   'the production key must include viewport, device form, typography, and all four insets');
 assert.match(sessionGateway, /materializeReadingDocument\(/,
@@ -44,7 +50,7 @@ assert.match(imageHost, /MAX_READING_DISPLAY_FILE_BYTES[\s\S]*await fs\.stat\(tm
   'downsampled display files must remain byte-bounded and clean partial writes');
 assert.match(imageHost, /configureDisplayCache[\s\S]*void this\.cleanupDisplayCache/,
   'startup must launch display-cache maintenance asynchronously');
-assert.match(imageHost, /async cleanupDisplayCache[\s\S]*displayFileReferences\.size > 0[\s\S]*await fs\.listFile\(directory\)[\s\S]*await this\.unlinkBestEffort/,
+assert.match(imageHost, /async cleanupDisplayCache[\s\S]*displayFileReferences\.size > 0[\s\S]*await fs\.listFile\(directory\)[\s\S]*await this\.removeDisplayFile/,
   'a new process must reclaim crash-left display files without racing an active reading session');
 assert.match(imageHost, /cleanupDisplayCache[\s\S]*await fs\.listFile\(cacheDir\)[\s\S]*LEGACY_DISPLAY_FILE_PREFIX[\s\S]*LEGACY_DISPLAY_TEMP_PREFIX[\s\S]*unlinkBestEffort/,
   'an upgraded process must reclaim legacy display files outside the startup critical path');
@@ -75,7 +81,7 @@ assert.match(surface, /else if \(fragment\.imageHeight > 0\)[\s\S]*Blank\(\)\.he
 assert.match(surface, /if \(this\.showChapterTitle\) \{[\s\S]*Text\(this\.chapterTitle\)/,
   'the presentation surface must mount the semantic chapter heading only when admitted by the paginator');
 const pagedTitle = surface.match(
-  /if \(this\.showChapterTitle\) \{\s*Text\(this\.chapterTitle\)([\s\S]*?)\n\s*\}/,
+  /if \(this\.showChapterTitle\) \{[\s\S]*?Text\(this\.chapterTitle\)([\s\S]*?)\n\s*\}/,
 );
 assert.ok(pagedTitle, 'the paged chapter-title block must exist');
 assert.match(pagedTitle[1], /\.wordBreak\(WordBreak\.BREAK_ALL\)/,
@@ -83,10 +89,10 @@ assert.match(pagedTitle[1], /\.wordBreak\(WordBreak\.BREAK_ALL\)/,
 assert.doesNotMatch(pagedTitle[1], /\.maxLines\(1\)|TextOverflow\.Ellipsis/,
   'paged chapter titles must never collapse to a one-line ellipsis');
 const continuousTitle = continuousStage.match(
-  /if \(this\.chapterTitle\.length > 0\) \{[\s\S]*?Text\(this\.chapterTitle\)([\s\S]*?)\n\s*\}/,
+  /if \(fragment\.id === CONTINUOUS_TITLE_ID\) \{[\s\S]*?ReaderNativeParagraphView\(\{([\s\S]*?)\n\s*\}/,
 );
 assert.ok(continuousTitle, 'the continuous chapter-title block must exist');
-assert.match(continuousTitle[1], /\.wordBreak\(WordBreak\.BREAK_ALL\)/,
+assert.match(source, /this\.continuousTitleRecipe =[\s\S]*?alignment: TextAlign\.Center, breakAll: true/,
   'continuous chapter titles must use the same wrapping contract');
 assert.doesNotMatch(continuousTitle[1], /\.maxLines\(1\)|TextOverflow\.Ellipsis/,
   'continuous chapter titles must never collapse to a one-line ellipsis');
@@ -103,20 +109,17 @@ for (const slot of ['a', 'b']) {
 assert.match(source, /this\.showChapterTitle = this\.isChapterFirstPageStart\(visiblePage\.startScalar\)/,
   'only the physical page beginning at the chapter head may expose the chapter heading');
 assert.match(source,
-  /captureChapterTitleMeasurementAfterLayout\(lifecycleToken\)[\s\S]*allBatchParagraphsHaveLayout\(\)/,
+  /captureChapterTitleMeasurementAfterLayout\(lifecycleToken\)[\s\S]*this\.consumeMeasuredBatch\(generation, selectionToken, lifecycleToken\)/,
   'the wrapped title must be measured before body lines can be consumed');
-assert.match(source,
-  /Text\(this\.requireMeasurementChapter\(\)\.chapterTitle, \{ controller: this\.chapterTitleMeasurementController \}\)[\s\S]*?\.fontFamily\(TYPE_READER_CHAPTER_TITLE\.fontFamily\)[\s\S]*?\.fontWeight\(TYPE_READER_CHAPTER_TITLE\.fontWeight\)[\s\S]*?\.fontSize\(TYPE_READER_CHAPTER_TITLE\.fontSizeFp\)[\s\S]*?\.lineHeight\(this\.readingLayout\(\)\.titleLineHeightFp\)[\s\S]*?\.wordBreak\(WordBreak\.BREAK_ALL\)/,
-  'the hidden title measurement must use the same typography and wrapping as the visible title');
-assert.match(source,
-  /ForEach\(\[this\.measurementEpoch\], \(_epoch: number\) => \{\s*if \(this\.measurementIncludesChapterTitle\(\)\) \{\s*Text\(this\.requireMeasurementChapter\(\)\.chapterTitle, \{ controller: this\.chapterTitleMeasurementController \}\)/,
-  'the hidden title Text must be rebuilt per measurement epoch: a plain if branch keeps its first ' +
-  'TextController binding across re-begins while beginMeasurement swaps in a new controller, so ' +
-  'getLayoutManager() throws until the 6s deadline (regression: restore/directory chapter-head ' +
-  'open stalled PAGINATION_LAYOUT_METRICS_UNAVAILABLE)');
-assert.match(source,
-  /\}, \(_epoch: number\): string => `chapterTitle:\$\{this\.measurementEpoch\}`\)/,
-  'the title rebuild key must track the same measurement epoch the batch ForEach keys on');
+assert.match(source, /this\.nativeTextMeasurement\.measure\(this\.getUIContext\(\),\s*this\.requireMeasurementChapter\(\)\.chapterTitle, this\.chapterTitleMeasurementController/,
+  'title uses the same synchronous native measurement owner');
+for (const field of ['fontFamily', 'fontWeight', 'fontSizeFp']) assert.ok(source.includes(`TYPE_READER_CHAPTER_TITLE.${field}`));
+assert.match(source, /lineHeight: this\.readingLayout\(\)\.titleLineHeightFp/);
+assert.match(source, /alignment: TextAlign.Center, breakAll: true/);
+assert.doesNotMatch(source, /hiddenMeasurementTree|UIObserver\(\)\.on\('didLayout'/,
+  'first-page measurement must not depend on mounting a hidden tree');
+assert.match(source, /this\.chapterTitleMeasurementController = new TextController\(\)/,
+  'each page generation gets a fresh title controller');
 assert.match(source,
   /const CHAPTER_TITLE_GATE_ATTEMPT_LIMIT = \d+;/,
   'the title gate must declare its fail-closed retry bound');
@@ -146,13 +149,15 @@ assert.ok(observation, 'the physical-page observation path must exist');
 assert.match(observation[1], /new ReadingPaginationPrefix\(key, observation\)/,
   'any real measured anchor may seed a continuous run for exact successor-to-predecessor lookup');
 assert.match(observation[1], /draft\.matches\(key\) && draft\.admit\(observation\)/,
-  'the measured prefix must admit only exact re-observations or a continuous real successor');
+  'local page facts must admit only exact re-observations or a real adjoining page');
 assert.match(observation[1], /page\.endScalar <= this\.lastVisibleScalar/,
   'a partial draft must not be admitted before the measured final page');
 assert.match(observation[1], /this\.paginationIndex\.recordChapter\(/,
   'only the completed continuous draft may enter the pagination index');
-assert.match(observation[1], /activeDraft\.startsAtRequest\(chapterStartRequest\)/,
-  'only a continuous run that began at chapter head may become a full manifest');
+assert.match(observation[1], /activeDraft\.isCanonicalPrefixForChapterStart\(chapterStartRequest\)/,
+  'reaching chapter head by prepending must not promote a local grid to a canonical manifest');
+assert.doesNotMatch(observation[1], /if \(this\.paginationIndex\.has\(key\)\) \{\s*return/,
+  'an older full manifest must not prevent recording a newly measured local page');
 
 const previousTurn = source.match(
   /private turnPreviousPage\(\): ReaderPageTurnOutcome \{([\s\S]*?)\n  \}\n\n  private turnToPreviousChapter/,
@@ -168,7 +173,9 @@ assert.match(previousTurn[1], /prefix\.previousRequestForPageStart\(page\.startS
 assert.match(previousTurn[1], /measureCommittedPageAt\(previousRequest\)/,
   'the prefix path must remeasure the exact request that produced the preceding page');
 assert.match(previousTurn[1], /startCurrentChapterPredecessorMeasurement\(chapter\.chapterIndex, page\.startScalar\)/,
-  'restore/search/directory jumps must start a chapter-head measurement for an exact predecessor');
+  'an unseen predecessor must be measured relative to the actual current page');
+assert.match(previousTurn[1], /indexed\?\.startScalar === page\.startScalar && indexed\.endScalarExclusive === page\.endScalar/,
+  'a containing canonical page cannot replace a different locally measured page');
 assert.match(previousTurn[1], /measureCommittedPageAt\(previous\.page\.startScalar\)/,
   'an indexed previous page must reuse the existing real ArkUI measurement and Core commit path');
 assert.match(previousTurn[1], /turnToPreviousChapter\(previousChapterIndex/,
@@ -187,34 +194,61 @@ assert.match(source, /readerPageTransitionUsesPreparedPages\(this\.readerSetting
 assert.doesNotMatch(previousTurn[1], /animateTo|animation\(/,
   'previous-page replacement must not invent a transition');
 
-const predecessorMeasurement = source.match(
-  /private continuePreviousChapterMeasurement\(([\s\S]*?)\n  \}\n\n  private async completeFirstPage/,
-);
-assert.ok(predecessorMeasurement, 'the cold predecessor measurement path must exist');
-assert.match(predecessorMeasurement[1], /measuredPage\.endScalar/,
-  'cold measurement must advance from the real preceding physical-page end');
-assert.match(predecessorMeasurement[1], /draft\.containsAnchor\(pending\.originalChapterOffset\)/,
-  'same-chapter predecessor measurement must stop once the real prefix contains the jumped anchor');
-assert.match(predecessorMeasurement[1], /paginationIndex\.findContainingPage\([\s\S]*pending\.originalChapterOffset/,
-  'a jump into the final page must survive promotion of the prefix into a completed manifest');
-assert.match(predecessorMeasurement[1], /draft\.previousRequestForAnchor\(pending\.originalChapterOffset\)/,
-  'the jumped anchor must resolve through continuous layout observations rather than session history');
-assert.match(predecessorMeasurement[1], /paginationIndex\.findLastPage\(this\.measurementPaginationKey\(\)\)/,
-  'the cold path must enter the exact indexed final page only after EOF');
-assert.doesNotMatch(predecessorMeasurement[1], /updateProgress|resolveLocation/,
-  'intermediate predecessor pages must not produce transient Core progress writes');
-const predecessorBatch = source.match(
-  /private recordPendingPreviousChapterPage\(\): void \{([\s\S]*?)\n  \}\n\n  private requireChapterLayoutMap/,
-);
-assert.ok(predecessorBatch, 'cold predecessor measurement must batch already-laid-out physical pages');
-assert.match(predecessorBatch[1], /observeMeasuredPhysicalPage\(page\)/,
-  'each batched predecessor page must enter the existing exact pagination prefix');
-assert.match(predecessorBatch[1], /setMeasuringRequestedAnchor\(page\.endScalar\)/,
-  'the next batched observation must use the preceding real page end as its request anchor');
-assert.doesNotMatch(predecessorBatch[1], /updateProgress|resolveLocation|beginMeasurement/,
-  'batching must not add transient persistence or remount the hidden tree per ordinary page');
-assert.match(source, /this\.previousChapterMeasurement === undefined \|\| paragraph\.isRangeTruncated/,
-  'giant truncated paragraphs must retain the conservative one-page fallback');
+const predecessorMeasurement = productionMethod('continuePreviousChapterMeasurement');
+assert.match(predecessorMeasurement, /measuredPage\.endScalar !== pending\.endScalar/,
+  'a predecessor must finish at the immutable original-page seam');
+assert.match(predecessorMeasurement, /completePreviousChapterPreparation\(pending, measuredPage\)/,
+  'preparation must retain the actual measured predecessor');
+assert.match(predecessorMeasurement, /completeFirstPage\(measuredPage, generation, selectionToken, lifecycleToken\)/,
+  'a direct predecessor turn must commit the measured page through the ordinary owner');
+assert.doesNotMatch(predecessorMeasurement, /containsAnchor|findLastPage|beginMeasurement|updateProgress|resolveLocation/,
+  'reverse completion must not scan earlier pages or write intermediate positions');
+
+const reverseBegin = productionMethod('beginReversePageMeasurement');
+assert.match(reverseBegin, /observationForPageStart\(pending\.originalChapterOffset\)/,
+  'reverse measurement must recover the current page original request');
+assert.match(reverseBegin, /Math\.min\(pending\.originalChapterOffset, known\?\.requestScalar/,
+  'the seam must preserve both leading paragraph delimiters and the restored whole line');
+assert.match(reverseBegin, /pending\.endScalar < 0/,
+  'expanding the paragraph window must not change the reverse destination');
+assert.match(productionMethod('preparePreviousMeasurementParagraph'), /content\.substring\(range\.startUtf16, range\.endUtf16\)/,
+  'reverse layout must shape the complete original paragraph context');
+const reverseLines = productionMethod('measuredReverseLines');
+assert.match(reverseLines, /manager\.getLineMetrics\(middle\)\.endIndex <= endUtf16/,
+  'the reverse line lookup must use actual native UTF-16 boundaries');
+assert.match(reverseLines, /map\.linesFromArkUI\(\[metric\]\)/,
+  'reverse native metrics must retain the existing scalar mapping');
+assert.match(reverseLines, /readerNativeParagraphHeight\(manager, index, lastLine\)/,
+  'reverse admission must use the same native ink geometry as forward pages');
+const reverseConsume = productionMethod('consumeReversePageParagraph');
+assert.match(reverseConsume, /reversePageCapacityAt\(line\.startScalar\)/,
+  'admitting the chapter-head line must account for its wrapped title');
+assert.match(reverseConsume, /new ReaderNativeTextWindow\([\s\S]*?nativeTextMeasurement\.take\(paragraph\.controller\)/,
+  'the reverse page must retain its actual measured native node');
+assert.match(reverseConsume, /expandMeasurementParagraphWindow\('before'/,
+  'missing preceding paragraph context must expand the bounded window');
+assert.doesNotMatch(reverseConsume, /hydrateEntryWindow|completeEntryChapter|updateProgress|resolveLocation/,
+  'reverse layout must not fetch or persist a chapter-wide pagination pass');
+
+const knownEnd = productionMethod('measuredPageEndLimit');
+assert.match(knownEnd, /observationForRequest\(request\) \?\? draft\.observationForPageStart\(request\)/,
+  'rematerializing a local page must reuse its exact measured end');
+assert.match(knownEnd, /indexed\?\.startScalar === request/,
+  'only an exact canonical start may supply a fallback end bound');
+const firstCommit = productionMethod('beginFirstPageCommit');
+assert.match(firstCommit, /resident\.endScalar < knownEnd[\s\S]*?expandMeasurementParagraphWindow\('after'/,
+  'a known end beyond the resident window must be fetched before committing');
+assert.match(firstCommit, /gap\.trim\(\)\.length !== 0[\s\S]*?PAGINATION_KNOWN_PAGE_BOUNDARY_CHANGED/,
+  'only a proven non-rendering gap may extend the last glyph to the known end');
+const expansion = productionMethod('expandMeasurementParagraphWindow');
+assert.match(expansion, /loadParagraphWindow\(chapter,/,
+  'measurement extensions must use the bounded paragraph-window gateway');
+assert.match(expansion, /isMeasurementCurrent\(generation, selectionToken, lifecycleToken\)/,
+  'a late paragraph window must retain the measurement lifecycle lease');
+assert.doesNotMatch(expansion, /hydrateEntryWindow|completeEntryChapter/,
+  'one missing measurement window must not trigger whole-chapter hydration');
+assert.match(source, /manager\.getLineMetrics\(middle\)\.endIndex <= requestedUtf16/,
+  'resume keeps original paragraph context and selects its containing native line');
 assert.match(source, /private readonly chapterWindow: ReadingChapterWindow/,
   'the reader must own one bounded previous-current-next materialized chapter window');
 assert.match(source, /retainChapterWindow\(this\.sourceId, this\.bookId, retained\)/,

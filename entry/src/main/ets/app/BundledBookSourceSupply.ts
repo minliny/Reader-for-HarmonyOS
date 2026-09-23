@@ -153,7 +153,7 @@ type StoredLedger = {
  * when they disappear from a newer bundle.
  */
 export class BundledSourceLedger {
-  private constructor(private readonly entries: BundledSourceLedgerEntry[]) {
+  private constructor(private readonly entries: BundledSourceLedgerEntry[], private readonly persisted: boolean = false) {
   }
 
   static async load(context: common.UIAbilityContext): Promise<BundledSourceLedger> {
@@ -185,7 +185,7 @@ export class BundledSourceLedger {
       if (entries.length === 0) {
         return BundledSourceLedger.seedV1();
       }
-      return new BundledSourceLedger(entries);
+      return new BundledSourceLedger(entries, true);
     } catch (error) {
       hilog.error(LOG_DOMAIN, 'Reader',
         'Bundled source ledger unreadable, resetting to v1 seed: %{private}s', errorMessageOf(error));
@@ -211,6 +211,8 @@ export class BundledSourceLedger {
       sourceId,
     })));
   }
+
+  persistedSourceIds(): string[] { return this.persisted ? this.entries.map(entry => entry.sourceId) : []; }
 
   all(): BundledSourceLedgerEntry[] {
     return [...this.entries];

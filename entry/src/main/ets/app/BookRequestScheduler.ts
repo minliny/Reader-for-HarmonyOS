@@ -31,6 +31,8 @@ type RequestJob = {
   reject: (error: Error) => void;
 };
 
+class BookRequestNotDispatchedError extends Error {}
+
 function priorityRank(priority: BookRequestPriority): number {
   return priority === 'foreground' ? 0 : priority === 'search' ? 1 : 2;
 }
@@ -116,10 +118,34 @@ export class BookRequestScheduler {
 
   visibilityChanged(): void { this.drain(); }
 
+  /** Wait for cancelled owned RPCs, not the caller's early cancellation race. */
+  async settleCancelledRequests(requests: Promise<ReaderCoreResultEvent>[]): Promise<void> {
+    const completions: Promise<void>[] = [];
+    for (const request of requests) {
+      let sharedLive = false;
+      for (const job of this.jobs.values()) {
+        if (job.promise === request && !this.cancelled(job)) { sharedLive = true; break; }
+      }
+      // Another live foreground consumer still owns this shared RPC. This
+      // companion must neither cancel it nor hold cleanup on its behalf.
+      if (sharedLive) continue;
+      completions.push(request.then((): void => {}, (error: Error): void => {
+        const event = (error as Error & { event?: { type?: string; requestId?: number } }).event;
+        const coreTerminal = error.name === 'ReaderCoreRequestError' && event?.type === 'error' &&
+          Number.isSafeInteger(event.requestId);
+        // SDK emits these only after synchronous native.cancelRequest returns.
+        // An arbitrary transport/cancel failure is not a termination receipt.
+        const cancelled = /^Reader-Core request (cancelled by caller|timed out): \d+$/.test(error.message);
+        if (!(error instanceof BookRequestNotDispatchedError) && !coreTerminal && !cancelled) throw error;
+      }));
+    }
+    await Promise.all(completions);
+  }
+
   close(): void {
     this.closed = true;
     for (const job of this.queue) {
-      job.reject(new Error('书籍任务已关闭'));
+      job.reject(new BookRequestNotDispatchedError('书籍任务已关闭'));
       if (this.jobs.get(job.key) === job) this.jobs.delete(job.key);
     }
     this.queue = [];
@@ -148,7 +174,7 @@ export class BookRequestScheduler {
       if (this.cancelled(job)) {
         this.queue.splice(index, 1);
         if (this.jobs.get(job.key) === job) this.jobs.delete(job.key);
-        job.reject(new Error('书籍请求已取消'));
+        job.reject(new BookRequestNotDispatchedError('书籍请求已取消'));
         continue;
       }
       if (!job.consumers.some((consumer: Consumer): boolean =>

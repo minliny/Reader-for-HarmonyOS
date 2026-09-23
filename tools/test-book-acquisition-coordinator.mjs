@@ -10,6 +10,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
 const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 const { BookRequestScheduler } = await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const { withPreparedRemoteChapter, preparedRemoteChapterMatches } = await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 const deferred = () => { let resolve; let reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 async function until(predicate) { for (let i=0;i<150;i++) { if (predicate()) return; await tick(); } assert.fail('fixture did not settle'); }
@@ -402,3 +403,126 @@ for (const scenario of ['stop', 'hide-resume', 'foreground-takeover']) {
   f.runtime.close();
 }
 console.log('R1/R2 cache-refresh separation, original freshness, dispatch consumers and scoped facts: PASS');
+
+// A normal prefetch fills missing bodies and materializes assets. It does not
+// replace an admitted body, including when it belongs to a different book.
+const handoffSession = {
+  identity: { sourceId: 's1', bookId: 'current' }, sourceVersion: 'v1', acquisitionMode: 'online',
+  catalogVersion: 'catalog', contextVersion: 'context', detailUrl: '/current', tocUrl: '/toc',
+  book: { title: '当前书', author: '作者' }, continuationVariables: [], hostRequirements: [],
+  entries: [{ index: 0, title: '第一章', url: '/current/1', variables: [] }],
+};
+const handoffChapter = { sourceId: 's1', bookId: 'current', chapterIndex: 0,
+  chapterTitle: '第一章', chapterUrl: '/current/1', content: '真实正文', images: [],
+  contentVersion: 'content', bodyVersion: 'body', processingVersion: 'processing', extractionVia: 'rule' };
+const mutationCases = [
+  ['cache.book.prefetch', { sourceId: 'other-source', bookId: 'other-book', chapterIndexes: [1] }, false],
+  ['cache.book.prefetch', { sourceId: 's1', bookId: 'current', chapterIndexes: [0, 1] }, false],
+  ['chapter.content', { sourceId: 's1', bookId: 'current', forceRefresh: false }, false],
+  ['chapter.content', { sourceId: 's1', bookId: 'current', forceRefresh: true }, true],
+  ...['cache.clear', 'reader.chinese-conversion.put', 'replace.persist', 'replace-rule.put',
+    'replace-rule.delete', 'dict-rule.put', 'dict-rule.delete', 'rule-bundle.import',
+    'source.import', 'source.update', 'source.delete', 'runtime.storage.apply', 'runtime.storage.restore']
+    .map(method => [method, {}, true]),
+];
+for (const [method, params, invalidates] of mutationCases) for (const rejects of [false, true]) {
+  const gate = deferred();
+  const runtime = new BookAcquisitionCoordinator(async () => {
+    await gate.promise;
+    if (rejects) throw Error('synthetic Core rejection');
+    return { data: {} };
+  });
+  const revision = runtime.readingProjectionRevision();
+  const session = withPreparedRemoteChapter(handoffSession, handoffChapter, revision);
+  const matches = () => preparedRemoteChapterMatches(session.preparedChapter, session, 0, runtime.readingProjectionRevision());
+  assert.equal(matches(), true);
+  const pending = runtime.request(method, params).then(() => undefined, error => error);
+  assert.equal(matches(), !invalidates, `${method}: pending mutation preserves exactly the valid handoff`);
+  gate.resolve(); const outcome = await pending;
+  assert.equal(outcome instanceof Error, rejects);
+  assert.equal(matches(), !invalidates, `${method}: settlement preserves invalidation policy even on error`);
+  assert.equal(runtime.readingProjectionRevision() - revision, invalidates ? 2 : 0);
+  runtime.close();
+}
+
+// The real TOC title projection needs no body/download metadata. Keep catalog,
+// context and chapter identity checks while skipping those two Core scans.
+{
+  const requests = [];
+  let wrongCatalog = false;
+  const gateway = new RemoteReadingFlowGateway({ request: async (method, params) => {
+    requests.push({ method, params });
+    assert.equal(method, 'cache.book.status');
+    return { data: { sourceId: 's1', bookId: 'current', catalogVersion: wrongCatalog ? 'new' : 'catalog',
+      contextVersion: 'context', chapters: [{ chapterIndex: 0, title: '第一章投影', url: '/current/1', state: 'missing' }] } };
+  } });
+  const titles = await gateway.loadCachedTocProjection(handoffSession);
+  assert.deepEqual(titles, [{ index: 0, title: '第一章投影', url: '/current/1', variables: [] }]);
+  assert.equal(requests[0].params.includeGlobalStats, false);
+  assert.equal(requests[0].params.includeChapterStates, false);
+  wrongCatalog = true;
+  await assert.rejects(gateway.loadCachedTocProjection(handoffSession), error => error.code === 'sourceVersionChanged');
+  wrongCatalog = false;
+  await assert.rejects(gateway.loadChapter({ ...handoffSession, acquisitionMode: 'offline' }, 0),
+    error => error.code === 'chapterNotDownloaded');
+  assert.notEqual(requests.at(-1).params.includeChapterStates, false,
+    'offline body existence must still inspect cached/download state');
+}
+console.log('PASS actual cache handoff: ordinary prefetch preserves other/current books; real mutations invalidate; title projection skips chapter-state scans');
+
+// Entry reuses a current Core catalog, but conversion, refresh and source
+// mutations must retain the canonical projection fallback.
+{
+  const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+  const f = fixture();
+  const session = await f.runtime.acquireBook(seed('/catalog-reuse'));
+  const gateway = new ReadingSessionFlowGateway('s1', '/catalog-reuse', { kind: 'remote', session }, {
+    bookAcquisitions: () => f.runtime,
+    request: (...args) => f.runtime.request(...args),
+  });
+  const count = f.calls.filter(c => c.method === 'cache.book.status').length;
+  assert.equal((await gateway.loadToc('/catalog-reuse')).entries[0].title, '第一章');
+  assert.equal(f.calls.filter(c => c.method === 'cache.book.status').length, count,
+    'opening the admitted session does not decode/transfer its whole catalog twice');
+  await assert.rejects(gateway.loadToc('/catalog-reuse', () => false), /cancelled/);
+  await f.runtime.request('reader.chinese-conversion.put', { mode: 't2s' }).catch(() => {});
+  assert.equal(f.runtime.hasCurrentCatalogProjection(session), false,
+    'even an uncertain conversion outcome invalidates the former title projection');
+  await assert.rejects(gateway.loadToc('/catalog-reuse'));
+  assert.equal(f.calls.filter(c => c.method === 'cache.book.status').length, count + 1,
+    'invalidated titles require a new canonical projection');
+  f.runtime.close();
+}
+{
+  const f = fixture();
+  const session = await f.runtime.acquireBook(seed('/external-catalog'));
+  assert.equal(f.runtime.hasCurrentCatalogProjection(session), true);
+  await f.runtime.request('book.toc', { sourceId: 's1', bookId: '/external-catalog', tocUrl: '/toc' });
+  assert.equal(f.runtime.hasCurrentCatalogProjection(session), false, 'an external catalog replacement cannot reuse old entries');
+  f.runtime.close();
+}
+console.log('Entry catalog reuse: exact admitted projection, cancellation, conversion and external catalog invalidation PASS');
+
+// Metadata-only background work must use actual admission, not just a label.
+{
+  const calls=[],gates=[];
+  const runtime=new BookAcquisitionCoordinator(async(method,params)=>{
+    calls.push({method,params});
+    if(method==='runtime.ping')return {data:{}};
+    const gate=deferred();gates.push(gate);await gate.promise;return {data:{kind:'ready'}};
+  });
+  let allowed=false;
+  const held=runtime.request('reading.entry.prepare',{sourceId:'s',bookId:'0',neighborOffset:0},{canDispatch:()=>allowed},'background');
+  await tick();assert.equal(calls.length,0,'metadata must respect dispatch admission');
+  allowed=true;runtime.visibilityChanged();await until(()=>calls.length===1);
+  const second=runtime.request('bookshelf.list',{limit:48,pageProjection:true},{},'background');
+  let cancelled=false;
+  const third=runtime.request('reading.entry.snapshot',{sourceId:'s',bookId:'1'},{shouldCancel:()=>cancelled},'background');
+  const thirdResult=Promise.allSettled([third]);
+  await until(()=>calls.length===2);await tick();assert.equal(calls.length,2,'metadata shares the two-background-request limit');
+  await runtime.request('runtime.ping');assert.equal(calls.at(-1).method,'runtime.ping','foreground metadata bypasses queued optional work');
+  cancelled=true;runtime.visibilityChanged();assert.equal((await thirdResult)[0].status,'rejected');
+  gates.forEach(g=>g.resolve());await Promise.all([held,second]);runtime.close();
+  assert.equal(calls.filter(c=>c.params.bookId==='1').length,0);
+}
+console.log('PASS real coordinator metadata scheduling: admission, background cap, foreground dispatch and pre-dispatch cancellation');

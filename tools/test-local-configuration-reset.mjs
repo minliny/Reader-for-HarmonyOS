@@ -99,6 +99,19 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
  await f.appGateway.update({autoCheckUpdate:false,tapBottomScrollTop:false,reduceMotion:true,crashLog:false},false,'autoCheckUpdate');
  const current=await f.appGateway.load();assert.equal(current.autoCheckUpdate,false);assert.equal(current.tapBottomScrollTop,true);assert.equal(current.reduceMotion,false);assert.equal(current.crashLog,true);
 }
+// Application consumers observe coherent, confirmed settings across instances.
+{
+ const f=await fixture(),events=[];
+ const unsubscribe=f.appGateway.subscribe(snapshot=>{events.push({...snapshot});snapshot.autoCheckUpdate=true;});
+ const other=new f.settingModule.SettingsGateway(f.context);
+ assert.equal((await other.load()).autoCheckUpdate,false,'subscriber cannot mutate the read result');
+ f.fail('reader_settings_v1');
+ await assert.rejects(other.update({...f.settingModule.createDefaultSettingsSnapshot(),autoCheckUpdate:true}),/flush/);
+ assert.equal(events.length,1,'failed writes cannot enable background work');
+ await other.update(f.settingModule.createDefaultSettingsSnapshot());
+ assert.equal(events.at(-1).autoCheckUpdate,true);
+ unsubscribe();await other.load();assert.equal(events.length,2,'unmounted consumers release their subscription');
+}
 // Real page confirmation and callback semantics; the native modal/pixels are not simulated.
 const Page=productionMotionMethods(new URL('features/settings/SettingsPage.ets',base),['requestRestoreDefaults','performRestoreDefaults']);
 let dialog,calls=0;const page=Object.assign(new Page(),{mounted:true,resetRevision:0,resetInFlight:false,appThemeScheme:'day',getUIContext:()=>({showAlertDialog:d=>dialog=d}),onRestoreDefaults:async()=>{calls++;return true;}});

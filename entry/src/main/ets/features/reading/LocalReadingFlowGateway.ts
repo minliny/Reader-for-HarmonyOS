@@ -48,6 +48,7 @@ export type LocalReadingPositionBookmarkInput = LocalReadingChapterStartBookmark
 
 export type LocalReadingToc = {
   bookId: string;
+  revision?: string;
   entries: LocalReadingTocEntry[];
 };
 
@@ -56,6 +57,8 @@ export type LocalReadingToc = {
  * lay this out, but it never receives the Core result envelope.
  */
 export type LocalReadingChapter = {
+  bodyVersion?: string;
+  processingVersion?: string;
   bookId: string;
   chapterIndex: number;
   chapterTitle: string;
@@ -99,10 +102,14 @@ export type LocalReadingProgress = {
 };
 
 export type LocalReadingProgressState =
-  | { kind: 'missing' }
-  | { kind: 'restored'; progress: LocalReadingProgress };
+  | { kind: 'missing'; progressRevision?: string }
+  | { kind: 'restored'; progress: LocalReadingProgress;
+      progressRevision?: string;
+      /** In-process displayed intent only; locationRevision/updatedAt are not a durable receipt. */
+      presentationPending?: boolean };
 
 export type LocalReadingProgressUpdate = {
+  expectedProgressRevision?: string;
   expectedBodyVersion?: string;
   expectedProcessingVersion?: string;
   chapterIndex: number;
@@ -495,12 +502,17 @@ export class LocalReadingFlowGateway {
     if (returnedIndex !== chapterIndex) {
       throw new Error('local_book.chapter.content returned a mismatched chapterIndex');
     }
+    const bodyVersion = this.optionalString(result.data, 'bodyVersion', 'local_book.chapter.content');
+    const processingVersion = this.optionalString(result.data, 'processingVersion', 'local_book.chapter.content');
+    appendExpectedPositionVersions({}, bodyVersion, processingVersion);
     return {
       bookId,
       chapterIndex: returnedIndex,
       chapterTitle: this.requireString(result.data, 'chapterTitle', 'local_book.chapter.content'),
       content: this.requireString(result.data, 'content', 'local_book.chapter.content'),
       blocks: this.optionalArray(result.data, 'blocks', 'local_book.chapter.content'),
+      ...(bodyVersion === undefined ? {} : { bodyVersion }),
+      ...(processingVersion === undefined ? {} : { processingVersion }),
     };
   }
 
@@ -601,14 +613,18 @@ export class LocalReadingFlowGateway {
       throw new Error('reading.progress.get returned invalid found');
     }
     const rawProgress = result.data['progress'];
+    const progressRevision = this.optionalString(result.data, 'progressRevision', 'reading.progress.get');
+    if (this.runtimeOwner.supportsCoreCapability?.('reading.progress.compareAndSet.v1') === true && !progressRevision)
+      throw new Error('READING_PROGRESS_REVISION_MISSING');
     if (!found) {
       if (rawProgress !== null) {
         throw new Error('reading.progress.get returned progress for a missing row');
       }
-      return { kind: 'missing' };
+      return { kind: 'missing', ...(progressRevision === undefined ? {} : { progressRevision }) };
     }
     return {
       kind: 'restored',
+      ...(progressRevision === undefined ? {} : { progressRevision }),
       progress: this.decodeProgress(rawProgress, bookId, 'reading.progress.get'),
     };
   }
@@ -734,6 +750,10 @@ export class LocalReadingFlowGateway {
     };
     appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
       update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);
+    if (update.expectedProgressRevision !== undefined) {
+      this.assertNonBlankString(update.expectedProgressRevision, 'expectedProgressRevision');
+      params['expectedProgressRevision'] = update.expectedProgressRevision;
+    }
     if (update.locationRevision !== undefined) {
       params['locationRevision'] = update.locationRevision;
     }

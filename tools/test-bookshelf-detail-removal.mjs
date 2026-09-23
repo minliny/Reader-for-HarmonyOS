@@ -15,8 +15,8 @@ assert.match(detail, /onRemove: \(\) => void/);
 assert.match(detail, /Text\(this\.shelfActionLabel\(\)\)/);
 assert.match(detail, /return this\.inBookshelf \? '移除书架' : '加入书架';/,
   'the same admitted detail action must support explicit shelf join and removal');
-assert.match(detail, /\.enabled\(this\.removalEnabled && !this\.removing\)/);
-assert.match(detail, /if \(this\.removalEnabled && !this\.removing\) \{\s*this\.onRemove\(\);/,
+assert.match(detail, /\.enabled\(this\.removalEnabled && !this\.removing && !this\.cancellingAdd\)/);
+assert.match(detail, /if \(this\.removalEnabled && !this\.removing && !this\.cancellingAdd\) \{\s*if \(this\.adding\) this\.onCancelAdd\(\);\s*else this\.onRemove\(\);/,
   'the destructive visual must dispatch only through the admitted removal callback');
 
 assert.match(index, /onRemove: \(\): void => this\.requestDetailShelfMutation\(\)/);
@@ -30,7 +30,7 @@ assert.match(index, /应用内解析内容、阅读进度和离线任务将一�
   'local deletion copy must disclose the Core purge without claiming to delete the system file');
 assert.match(index, /书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架/,
   'remote deletion copy must disclose that removal is shelf-only');
-assert.match(index, /new BookshelfFlowGateway\(owner\)[\s\S]*gateway\.remove\(book\.sourceId, book\.bookId\)/,
+assert.match(index, /new BookshelfFlowGateway\(owner, this\.shelfFilter\(\)\)[\s\S]*gateway\.remove\(book\.sourceId, book\.bookId\)/,
   'the page must reuse the feature gateway instead of issuing a second Core contract');
 assert.doesNotMatch(index, /request\('bookshelf\.remove'/,
   'Index must not bypass ReaderCoreGateway with a duplicate removal protocol');

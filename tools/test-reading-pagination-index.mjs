@@ -137,11 +137,22 @@ assert.equal(prefix.admit({
 }), false, 'changed boundaries for an old request must fail closed');
 assert.equal(prefix.matches({ ...prefixKey, contentVersion: 'body-v2' }), false,
   'a changed body cannot reuse the measured prefix');
-assert.throws(() => new ReadingPaginationPrefix(prefixKey, {
+const restoredPrefix = new ReadingPaginationPrefix(prefixKey, {
   requestScalar: 10,
   startScalar: 9,
   endScalarExclusive: 20,
-}), /must not precede/);
+});
+assert.equal(restoredPrefix.startsAtRequest(10), true);
+assert.equal(restoredPrefix.startsAtRequest(0), false);
+assert.equal(restoredPrefix.admit({requestScalar:10,startScalar:9,endScalarExclusive:20}), true);
+assert.equal(restoredPrefix.admit({requestScalar:20,startScalar:19,endScalarExclusive:30}), false,
+  'only the initial restored page can contain text preceding its request');
+assert.equal(restoredPrefix.admit({requestScalar:20,startScalar:20,endScalarExclusive:30}), true);
+assert.equal(restoredPrefix.previousRequestForPageStart(20), 10);
+assert.deepEqual(restoredPrefix.pageStartScalars(), [9,20]);
+assert.throws(() => new ReadingPaginationPrefix(prefixKey, {
+  requestScalar:10,startScalar:9,endScalarExclusive:10,
+}), /must follow requestScalar/);
 
 const index = new ReadingPaginationIndex();
 const chapter = key(4);

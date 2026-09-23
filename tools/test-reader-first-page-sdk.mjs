@@ -1,3 +1,5 @@
+import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
+import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -7,7 +9,8 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 const sdk = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
-const names = ['beginMeasurement', 'admitReaderViewportSize', 'hasMeasuredViewport',
+const names = ['automaticReadingState', 'automaticReadingConfiguration', 'currentMeasurementGeneration', 'currentMeasurementSelection',
+  'beginMeasurement', 'admitReaderViewportSize', 'hasMeasuredViewport',
   'hasCurrentMaterializedChapter', 'isSelectionCurrent', 'requireMeasurementLayoutMap',
   'measuringChapter', 'measuringLayoutMap', 'measuringRanges', 'measuringDraft',
   'measuringOffset', 'measuringProgress', 'measuringRequestedAnchor',
@@ -48,10 +51,10 @@ if (!existsSync(`${sdk}/lib/process_component_class.js`)) {
     `${stripTypeScriptTypes(emitted)}; return ReaderFirstPageSdkProbe;`)(
     class { finalizeConstruction() {} }, class {});
   const chapter = { chapterIndex: 0, chapterTitle: 'Test chapter', content: 'Original paragraph.' };
-  const map = { scalarCount: () => chapter.content.length };
+  const map = { scalarCount: () => chapter.content.length, residentStart: () => 0, residentEnd: () => chapter.content.length };
   const ranges = [{ startScalar: 0, endScalar: chapter.content.length }];
   function owner() {
-    return Object.assign(new Owner(undefined, {}), {
+    return installReaderMeasurementOwner(Object.assign(new Owner(undefined, {}), {
       mounted: true, lifecycleToken: 1, isSessionActive: token => token === 1,
       chapter, chapterLayoutMap: map, paragraphRanges: ranges.slice(),
       chapterSelectionToken: 0, materializedChapterSelectionToken: 0,
@@ -66,9 +69,21 @@ if (!existsSync(`${sdk}/lib/process_component_class.js`)) {
       pageTurnInputPhase: () => 'idle', invalidatePageTurnRuntime() {},
       usesBookTurnSimulation: () => false, windowMetricsLayoutKey: () => 'real-device-layout',
       paginationLayoutSignature: () => 'real-device-layout',
-    });
+    }));
   }
   const ready = owner();
+  for (const name of ['automaticReadingState', 'automaticReadingConfiguration', 'currentMeasurementGeneration', 'currentMeasurementSelection']) {
+    assert.equal(typeof Owner.prototype[name], 'function', `SDK preserves ordinary owner projection ${name}`);
+  }
+  delete ready.currentMeasurementGeneration; delete ready.currentMeasurementSelection;
+  ready.autoPageRevision = 0;
+  ready.autoPageCoordinator = new ReaderAutoPageCoordinator({ now: () => 1, schedule: () => 1, cancel() {},
+    active: () => true, ready: () => true, canResumeTurn: () => true, turn: () => ({ kind: 'started' }),
+    changed: () => { ready.autoPageRevision++; } });
+  ready.autoPageCoordinator.setSpeed(6); ready.autoPageCoordinator.start();
+  assert.equal(ready.automaticReadingState().status, 'running');
+  assert.equal(ready.automaticReadingConfiguration().speedSeconds, 6);
+  assert.ok(ready.autoPageRevision > 0);
   const materialized = typeof ready.measuringChapter === 'function' ? ready.measuringChapter() : ready.measuringChapter;
   assert.equal(materialized, chapter,
     'SDK-emitted component must retain the materialized chapter; missing accessor caused shelf timeout');

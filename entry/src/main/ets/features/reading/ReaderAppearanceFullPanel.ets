@@ -1,6 +1,6 @@
 import { readerControlAppearanceThemeSwatch, readerControlAppearanceThemeLabel } from './ReaderControlAppearanceStyle';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { registerReaderFonts } from '../common/ReaderFonts';
+import { registerReaderFonts, readerRegisteredFontFamily } from '../common/ReaderFonts';
 import { ReaderSelect } from '../common/ReaderSelect';
 import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import {
@@ -559,7 +559,7 @@ export struct ReaderAppearanceFullPanel {
         style: fontId === 'import' ? BorderStyle.Dashed : BorderStyle.Solid,
       })
       .borderRadius(6)
-      .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
+      .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceFontSlotFamily(this.snapshot, fontId)))
       .fontWeight(FontWeight.Regular)
       .fontSize(10)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
@@ -1277,11 +1277,11 @@ export struct ReaderAppearanceFullPanel {
   }
 
   private isActiveFont(fontId: string): boolean {
-    return fontId === 'import' ? this.snapshot.font === 'custom' : fontId === this.snapshot.font;
+    return fontId !== 'import' && fontId === this.snapshot.font;
   }
 
   private isSelectableFont(fontId: string): boolean {
-    return fontId === 'import' || (isReaderAppearanceFont(fontId) && fontId !== 'custom');
+    return fontId === 'import' || isReaderAppearanceFont(fontId);
   }
 
   private selectEnabled(kind: string): boolean {

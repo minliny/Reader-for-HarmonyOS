@@ -52,6 +52,8 @@ export class WebDavCredentialStore {
   private context: common.UIAbilityContext | undefined;
   private localPreferences: preferences.Preferences | undefined;
   private contextGeneration: number = 0;
+  private confirmedBookshelfMode: 'cover' | 'list' | undefined;
+  private pendingBookshelfModeWrites: number = 0;
 
   /** Attach the ability context for non-secret WebDAV-adjacent preferences. */
   attachContext(context: common.UIAbilityContext): void {
@@ -59,6 +61,7 @@ export class WebDavCredentialStore {
     this.contextGeneration += 1;
     this.context = context;
     this.localPreferences = undefined;
+    this.confirmedBookshelfMode = undefined;
   }
 
   async load(): Promise<StoredWebDavConfig | null> {
@@ -101,14 +104,32 @@ export class WebDavCredentialStore {
     };
   }
 
+  /** Reuse the current context's acknowledged choice after startup/recovery.
+   * Pending writes must take the serialized read path on a route remount. */
+  currentBookshelfViewMode(): 'cover' | 'list' | undefined {
+    return this.pendingBookshelfModeWrites === 0 ? this.confirmedBookshelfMode : undefined;
+  }
+
   loadBookshelfViewMode(): Promise<'cover' | 'list'> {
-    const next = this.localModeWriteTail.then((): Promise<'cover' | 'list'> => this.readOrMigrateViewMode());
+    const generation = this.contextGeneration;
+    const next = this.localModeWriteTail.then(async (): Promise<'cover' | 'list'> => {
+      try {
+        const mode = await this.readOrMigrateViewMode();
+        if (generation === this.contextGeneration) this.confirmedBookshelfMode = mode;
+        return mode;
+      } catch (error) {
+        if (generation === this.contextGeneration) this.confirmedBookshelfMode = undefined;
+        throw error;
+      }
+    });
     this.localModeWriteTail = next.then((): void => {}, (): void => {});
     return next;
   }
 
   /** One serialized non-secret authority; credential edits never mirror mode. */
   saveBookshelfViewMode(mode: 'cover' | 'list', restoreOperationId?: string): Promise<void> {
+    const generation = this.contextGeneration;
+    this.pendingBookshelfModeWrites += 1;
     const next = this.localModeWriteTail.then(async (): Promise<void> => {
       await this.readOrMigrateViewMode();
       const store = await this.ensureLocalPreferences();
@@ -120,6 +141,12 @@ export class WebDavCredentialStore {
         if (journal.operationId !== restoreOperationId) throw new Error('BOOKSHELF_RESTORE_PENDING');
       }
       await this.writeLocalViewMode(store, mode);
+      if (generation === this.contextGeneration) this.confirmedBookshelfMode = mode;
+    }).catch((error: Error): never => {
+      if (generation === this.contextGeneration) this.confirmedBookshelfMode = undefined;
+      throw error;
+    }).finally((): void => {
+      this.pendingBookshelfModeWrites -= 1;
     });
     this.localModeWriteTail = next.catch((): void => {});
     return next;

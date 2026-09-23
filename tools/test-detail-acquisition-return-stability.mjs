@@ -96,12 +96,23 @@ function fixture() {
 {
   const f = fixture();
   try {
-    await f.coordinator.request('cache.book.prefetch', { sourceId: 'unrelated', bookId: 'other' });
-    assert.equal(f.coordinator.readingProjectionRevision(), 2, 'real coordinator changes on both request boundaries');
-    f.page.route = 'reading'; f.page.readingSessionActive = true;
+    const prepared = f.page.remoteReadingSession.preparedChapter;
+    for (const route of ['detail', 'reading']) {
+      f.page.route = route; f.page.readingSessionActive = route === 'reading';
+      for (const identity of [{ sourceId: 'unrelated', bookId: 'other' }, session.identity]) {
+        await f.coordinator.request('cache.book.prefetch', identity);
+        await until(() => !f.page.bookProjectionLoading);
+        assert.equal(f.coordinator.readingProjectionRevision(), 0, 'ordinary prefetch does not replace existing body projections');
+        assert.equal(f.page.route, route, 'ordinary prefetch leaves the current route mounted');
+        assert.equal(f.page.readingSessionActive, route === 'reading');
+        assert.equal(f.page.remoteReadingSession.preparedChapter, prepared, 'ordinary prefetch retains the validated chapter handoff');
+        assert.ok(evidence.preparedRemoteChapterMatches(prepared, f.page.remoteReadingSession, undefined,
+          f.coordinator.readingProjectionRevision()));
+      }
+    }
     f.page.returnToReadingOrigin(); await until(() => !f.page.bookProjectionLoading);
     assert.ok(f.verdicts.every(value => value === 'readable'), 'Core-confirmed return cannot flash verifying');
-    assert.equal(f.page.remoteReadingSession.preparedChapter, undefined, 'stale materialized body is not rebased');
+    assert.equal(f.page.remoteReadingSession.preparedChapter, prepared, 'unchanged materialized body remains reusable on return');
     assert.equal(f.page.remoteContentVerdict, 'readable');
     assert.equal(f.calls.filter(method => method === 'chapter.content').length, 0);
     for (let i = 0; i < 3; i++) await f.page.refreshDetailAcquisitionProjection();
@@ -109,7 +120,7 @@ function fixture() {
 
     f.facts.verificationCurrent = false;
     await f.coordinator.request('replace-rule.put', { id: 'rule' });
-    assert.equal(f.coordinator.readingProjectionRevision(), 4);
+    assert.equal(f.coordinator.readingProjectionRevision(), 2, 'real processing mutation still changes both request boundaries');
     const gate = f.gateBody();
     const recheck = f.page.refreshDetailAcquisitionProjection();
     await until(() => f.calls.includes('chapter.content'));
@@ -118,7 +129,7 @@ function fixture() {
     gate.resolve(); await recheck; await Promise.all(queued); await until(() => !f.page.bookProjectionLoading);
     assert.equal(f.page.remoteContentVerdict, 'readable');
     assert.equal(f.calls.filter(method => method === 'chapter.content').length, 1, 'duplicate metadata notifications share one body probe');
-    assert.equal(f.page.remoteReadingSession.preparedChapter.projectionRevision, 4);
+    assert.equal(f.page.remoteReadingSession.preparedChapter.projectionRevision, 2);
   } finally { f.coordinator.close(); }
 }
 
@@ -160,13 +171,13 @@ for (const inShelf of [false, true]) {
     f.source.enabled = false; f.catalog.tocAvailable = false; f.facts.stale = true;
     await f.coordinator.request('source.update', { sourceId: 'source' });
     await f.page.refreshDetailAcquisitionProjection();
-    await until(() => f.failures.length === 1 && f.page.candidateAdmissionGeneration === -1);
+    await until(() => f.page.detailLoadingMessage.length > 0 && f.page.candidateAdmissionGeneration === -1);
     assert.notEqual(f.page.remoteContentVerdict, 'verifying', 'missing offline cache reaches the existing failure/retry state');
     assert.equal(f.page.route, 'detail'); assert.equal(f.page.detailReturnRoute, 'search');
     const generation = f.page.navigationGeneration;
     for (let i = 0; i < 3; i++) await f.page.refreshDetailAcquisitionProjection();
     assert.equal(f.page.navigationGeneration, generation, 'terminal readmission failure is not retried by metadata notifications');
-    assert.equal(f.failures.length, 1);
+    assert.equal(f.failures.length, 0, 'failed preview stays readable without a modal');
   } finally { f.coordinator.close(); }
 }
 

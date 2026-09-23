@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { registerHooks } from 'node:module';
+import { createRequire, registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
@@ -48,13 +48,22 @@ for(const extended of [false,true])for(const scale of [1,1.5]){
  const control=resolveReaderControlLayout(390,844,false,metrics);assert.ok(control.topBarTop>=48);
 }
 const source=readFileSync(lre,'utf8');
-for(const [extended,controls,active,visible]of [[true,false,true,false],[true,true,true,true],[false,false,true,true],[false,true,false,false]]){
+const require=createRequire(import.meta.url);
+const syntax=require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/lib/validate_ui_syntax.js');
+const paperSource=readFileSync(file('features/reading/ReaderStatusBarPaper.ets'),'utf8');
+syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
+syntax.propCollection.set('ReaderStatusBarPaper',new Set([...paperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
+class PaperChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
+for(const [extended,controls,active,visible]of [[true,false,true,false],[true,true,true,true],[false,false,true,false],[false,true,true,true],[false,true,false,false]]){
  const {owner:b}=createReaderBuilderProbe(source,['readerStatusBarUnderlay','readerStatusBarMetrics'],{ReaderWindowCoordinator:{metrics:()=>metrics},
- readerAppearanceThemeStyle:()=>({paperStart:'#FFE8D8B9'})});
+ readerAppearanceThemeStyle:()=>({paperStart:'#FFE8D8B9'}),ReaderStatusBarPaper:PaperChild});
  Object.assign(b,{windowChromeActive:active,readerSettingsSnapshot:{extendIntoCutout:extended},controlsPresentedForWindow:()=>controls,
- appearanceSnapshot:{activeTheme:'paper'}});b.readerStatusBarUnderlay();
+ windowControlsPresented:controls,appearanceSnapshot:{activeTheme:'paper'},readingLayout:()=>({viewportWidth:390,viewportHeight:844,widthClass:'compact'})});b.readerStatusBarUnderlay();
  const rows=[...b.nodes.values()].filter(n=>n.id==='reader-status-bar-underlay');assert.equal(rows.length,visible?1:0,JSON.stringify([...b.nodes.values()]));
- if(visible){assert.equal(rows[0].height,48);assert.equal(rows[0].backgroundColor,'#FFE8D8B9');assert.equal(rows[0].zIndex,10);}
+ assert.equal(b.children.size,visible?1:0);
+ if(visible){const props=[...b.children.values()][0].params;
+  assert.equal(props.theme,'paper');assert.equal(props.fallbackColor,'#FFE8D8B9');assert.equal(props.statusRect.height,48);
+  assert.equal(props.viewportWidth,390);assert.equal(props.viewportHeight,844);assert.equal(props.expanded,false);assert.equal(rows[0].zIndex,10);}
 }
 const B=productionMotionMethods(lre,['bookmarkMatchesCurrentChapter','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','canStartReaderBookmarkGesture'],{LOCAL_READING_SOURCE_ID:'local'});
 let entries=[{index:0,title:'C',bookmarks:[]}],requests=[];

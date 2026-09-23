@@ -3,8 +3,10 @@ import { acquisitionFailureCategoryConfirmed } from '../features/common/BookAcqu
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import { BookRequestScheduler, type BookRequestExecutor, type BookRequestPriority, type BookRequestOptions } from './BookRequestScheduler';
 import { errorMessageOf } from './ErrorMessage';
+import { ReadingPreparationRunner, decodeReadingPreparationIntents, type ReadingPreparationIntent } from './ReadingPreparationRunner';
 import { isRemoteSourceFailureKind, remoteReadingFailureKindOf, RemoteReadingSourceError } from '../features/reading/RemoteContentAdmission';
 import { preparedRemoteChapterMatches, withPreparedRemoteChapter } from '../features/reading/RemoteReadingEvidence';
+import { readingChapterRetainedBytes, type ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import {
   RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingOpenOptions,
   type RemoteReadingSession,
@@ -16,6 +18,7 @@ import { decodeRemoteReadingVariables, RemoteReadingGatewayError, classifyRemote
 export interface BookAcquisitionChange {
   reset: boolean;
   identities: RemoteReadingIdentity[];
+  shelfChanged?: boolean;
 }
 
 const PREPARED_SESSION_LIMIT = 32;
@@ -25,7 +28,10 @@ export interface BookAcquisitionCandidate {
   catalogReady: boolean;
   failed: boolean;
 }
-export interface BookCandidateOpenOptions extends RemoteReadingOpenOptions {
+export interface BookPreparationOpenOptions extends RemoteReadingOpenOptions {
+  preparationRevision?: number;
+}
+export interface BookCandidateOpenOptions extends BookPreparationOpenOptions {
   /** Only the explicitly opened new-book group validates bodies. Viewport preparation stays catalog-only. */
   requireReadable?: boolean;
   /** The visible catalog is available while the bounded body probe continues. */
@@ -36,8 +42,10 @@ export interface BookCandidateOpenOptions extends RemoteReadingOpenOptions {
 type Preparation = { candidates: BookAcquisitionCandidate[]; scope: number; forceRefresh: boolean };
 type BookConsumer = { active: boolean; isCurrent?: () => boolean; canDispatch?: () => boolean };
 type BookJob = { promise: Promise<RemoteReadingSession>; priority: BookRequestPriority; forceRefresh: boolean;
-  started: boolean; consumers: BookConsumer[]; sourceId: string; bookId: string; preempted: boolean; cancelled: boolean };
-type PreparedSession = { session: RemoteReadingSession; at: number };
+  started: boolean; consumers: BookConsumer[]; sourceId: string; bookId: string; preempted: boolean; cancelled: boolean; preparationRevision?: number };
+type PreparedSession = { session: RemoteReadingSession; at: number; projectionRevision: number };
+type ReadableBookAddition = { active: boolean; promise: Promise<ReaderCoreResultEvent>;
+  begin?: Promise<ReaderCoreResultEvent> };
 
 export type BookAcquisitionAdmission = {
   session: RemoteReadingSession;
@@ -58,6 +66,8 @@ export class BookAcquisitionCoordinator {
   private scheduler: BookRequestScheduler;
   private versions: Map<string, string> = new Map();
   private sourceLoad: Promise<void> | undefined = undefined;
+  private sourceLoads: Map<string, Promise<void>> = new Map();
+  private knownSources: Set<string> = new Set();
   private registryReady: boolean = false;
   private registryRevision: number = 0;
   private projectionRevision: number = 0;
@@ -75,17 +85,38 @@ export class BookAcquisitionCoordinator {
   private listeners: Set<(change: BookAcquisitionChange) => void> = new Set();
   private changedIdentities: Map<string, RemoteReadingIdentity> = new Map();
   private changedReset: boolean = false;
+  private changedShelf: boolean = false;
   private notifyTimer: number = -1;
   private attemptClock: number = 0;
   private failures: RemoteReadingFailureRecord[] = [];
   private failureIdentities: Map<string, number> = new Map();
   private identityCounter: number = 0;
+  private readingPreparations: ReadingPreparationRunner;
+  private preparationGeneration: number = 0;
+  private preparationMutations: number = 0;
+  private preparationRequests: Set<Promise<ReaderCoreResultEvent>> = new Set();
+  private preparationRetirementError: Error | undefined = undefined;
+  private addingBooks: Map<string, ReadableBookAddition> = new Map();
+  private additionEpochs: Map<string, number> = new Map();
+  private additionClock: number = 0;
 
   private execute: BookRequestExecutor;
+  private supportsCapability: (capability: string) => boolean;
 
-  constructor(execute: BookRequestExecutor) {
+  constructor(execute: BookRequestExecutor, supportsCapability: (capability: string) => boolean = (): boolean => false) {
     this.execute = execute;
+    this.supportsCapability = supportsCapability;
     this.scheduler = new BookRequestScheduler(execute);
+    this.readingPreparations = new ReadingPreparationRunner({
+      request: (method: string, params: JsonObject, options: BookRequestOptions, priority: BookRequestPriority): Promise<ReaderCoreResultEvent> =>
+        this.request(method, params, options, priority),
+      add: (intent: ReadingPreparationIntent, current: () => boolean, priority: BookRequestPriority): Promise<ReaderCoreResultEvent> =>
+        this.completeReadableAdd(intent, current, priority),
+      catalog: async (intent: ReadingPreparationIntent, book: JsonObject, current: () => boolean): Promise<void> => {
+        await this.acquireBook(this.preparationSeed(book), { isCurrent: current, canDispatch: current,
+          preparationRevision: intent.revision }, 'background');
+      },
+    });
   }
 
   subscribe(listener: (change: BookAcquisitionChange) => void): () => void {
@@ -98,10 +129,23 @@ export class BookAcquisitionCoordinator {
 
   readingProjectionRevision(): number { return this.projectionRevision; }
 
+  /** Only reuse the exact Core projection still owned by this coordinator. */
+  hasCurrentCatalogProjection(session: RemoteReadingSession): boolean {
+    if (this.closed || session.catalogVersion === undefined || session.contextVersion === undefined ||
+      this.versions.get(session.identity.sourceId) !== session.sourceVersion) return false;
+    const key = JSON.stringify([session.identity.sourceId, session.identity.bookId, session.sourceVersion]);
+    const ready = this.prepared.get(key);
+    return ready !== undefined && ready.projectionRevision === this.projectionRevision &&
+      ready.session.entries === session.entries && ready.session.catalogVersion === session.catalogVersion &&
+      ready.session.contextVersion === session.contextVersion &&
+      !this.jobs.has(key) && !this.refreshes.has(key);
+  }
+
   private invalidateSourceRegistry(): void {
     this.registryRevision += 1;
     this.registryReady = false;
     this.versions.clear();
+    this.knownSources.clear();
     this.prepared.clear();
     this.attempted.clear();
   }
@@ -118,21 +162,43 @@ export class BookAcquisitionCoordinator {
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {},
     priority?: BookRequestPriority): Promise<ReaderCoreResultEvent> {
     if (this.closed) throw new Error('书籍任务已关闭');
-    const changesSources = method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
+    const changesSources = (method === 'source.supply' && (params['operation'] === 'apply' || params['operation'] === 'withdraw')) || method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
       method === 'runtime.storage.apply' || method === 'runtime.storage.restore';
+    // Ordinary prefetch fills missing bodies and materializes assets without
+    // replacing a cached body. It must not cancel another book's validated
+    // chapter handoff or active body admission.
     const changesProjection = changesSources || method === 'reader.chinese-conversion.put' ||
       method === 'replace.persist' || method === 'replace-rule.put' || method === 'replace-rule.delete' ||
       method === 'dict-rule.put' || method === 'dict-rule.delete' || method === 'rule-bundle.import' ||
-      method === 'cache.clear' || method === 'cache.book.prefetch' ||
-      (method === 'chapter.content' && params['forceRefresh'] === true);
+      method === 'cache.clear' ||
+      (method === 'chapter.content' && (params['forceRefresh'] === true || params['upgradeCachedContent'] === true));
+    // Cancellation happens before a destructive/configuration request begins.
+    // A completed clear/remove must never restart this optional acquisition.
+    const changesAddedBook = changesProjection || method === 'replace.undo' || method === 'replace-rule.create' ||
+      method === 'replace-rule.update' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
+      (method.startsWith('source.switch.') && method !== 'source.switch.pending.list');
+    if (changesAddedBook) {
+      this.preparationMutations += 1;
+      this.preparationGeneration += 1;
+      this.readingPreparations.suspend();
+      this.scheduler.visibilityChanged();
+    }
     if (changesProjection) this.projectionRevision += 1;
     if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
     const registryAtStart = this.registryRevision;
     let foregroundRequest = false;
     try {
+      if (changesAddedBook) {
+        if (this.preparationRetirementError !== undefined) throw this.preparationRetirementError;
+        try { await this.scheduler.settleCancelledRequests(Array.from(this.preparationRequests)); }
+        catch (_) {
+          this.preparationRetirementError = new Error('后台书籍请求尚未确认终止，已保留数据，请重新打开应用后重试清理');
+          throw this.preparationRetirementError;
+        }
+      }
       const sourceId = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : '';
       const network = method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
-        method === 'chapter.content' || method === 'change.bookSource';
+        method === 'chapter.content' || method === 'cache.book.prefetch' || method === 'change.bookSource';
       const actualPriority = priority ?? (method === 'book.search' || method === 'change.bookSource' ? 'search' : 'foreground');
       foregroundRequest = network && actualPriority === 'foreground';
       if (foregroundRequest) {
@@ -140,11 +206,37 @@ export class BookAcquisitionCoordinator {
         const bookId = params['bookId'] ?? objectValue(params['book'])?.['bookId'];
         this.preemptBackgroundAcquisitions(sourceId, typeof bookId === 'string' ? bookId : '');
       }
-      const result = network ? await this.scheduler.request(method, params, options,
-        this.versions.get(sourceId) ?? '', actualPriority) :
-        await this.execute(method, params, options);
+      // Cached-only preparation also consumes the single Core/SQLite resource.
+      // A background label must reach the scheduler, not bypass it merely
+      // because this work has no HTTP. Keep ordinary writes out of deduplication.
+      const scheduled = network || (actualPriority === 'background' &&
+        (method === 'reading.entry.prepare' || method === 'reading.entry.snapshot' || method === 'reading.preparation' ||
+          method === 'bookshelf.get' || method === 'bookshelf.list'));
+      const operation = scheduled ? this.scheduler.request(method, params, options,
+        this.versions.get(sourceId) ?? '', actualPriority) : this.execute(method, params, options);
+      if (network && typeof params['preparationRevision'] === 'number') {
+        this.preparationRequests.add(operation);
+        void operation.then((): void => { this.preparationRequests.delete(operation); }, (error: Error): void => {
+          // Keep an uncertain terminal result available to the cleanup fence.
+          const event = (error as Error & { event?: { type?: string; requestId?: number } }).event;
+          const terminal = error.name === 'ReaderCoreRequestError' && event?.type === 'error' && Number.isSafeInteger(event.requestId);
+          if (terminal || /^Reader-Core request (cancelled by caller|timed out): \d+$/.test(error.message))
+            this.preparationRequests.delete(operation);
+        });
+      }
+      const result = await operation;
       if (method === 'source.list' && registryAtStart === this.registryRevision) {
-        this.observeSources(result.data, params['enabledOnly'] !== true);
+        const exactSource = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : undefined;
+        if (exactSource !== undefined) {
+          const rows = result.data['sources'];
+          if (!Array.isArray(rows) || rows.length > 1 ||
+            (rows.length === 1 && objectValue(rows[0])?.['sourceId'] !== exactSource)) {
+            throw new RemoteReadingGatewayError('invalidResponse', 'source.list returned a different source identity', 'source.list');
+          }
+          this.versions.delete(exactSource);
+        }
+        this.observeSources(result.data, params['enabledOnly'] !== true && exactSource === undefined);
+        if (exactSource !== undefined && Array.isArray(result.data['sources'])) this.knownSources.add(exactSource);
       }
       if (method === 'book.toc' && result.data['catalogInstalled'] !== false) {
         const book = objectValue(params['book']);
@@ -164,8 +256,17 @@ export class BookAcquisitionCoordinator {
         this.observeChangedBooks(method, params, result.data);
         this.changed();
       }
+      if (method === 'bookshelf.add') {
+        this.changedShelf = true;
+        this.observeChangedBooks(method, params, result.data);
+        this.changed();
+      }
       return result;
     } finally {
+      if (changesAddedBook) {
+        this.preparationGeneration += 1;
+        this.preparationMutations -= 1;
+      }
       if (foregroundRequest) {
         this.foregroundRequests -= 1;
         this.scheduler.visibilityChanged();
@@ -195,6 +296,128 @@ export class BookAcquisitionCoordinator {
   }
 
   visibilityChanged(): void { this.scheduler.visibilityChanged(); }
+
+  /** Explicit add succeeds only after Core confirms a locally readable body. */
+  addReadableBook(book: JsonObject): Promise<ReaderCoreResultEvent> {
+    const seed = this.preparationSeed(book);
+    if (seed.sourceId === 'local') return this.request('bookshelf.add', book);
+    const key = acquisitionBookKey(seed.sourceId, seed.bookId);
+    const existing = this.addingBooks.get(key);
+    if (existing?.active === true) return existing.promise;
+    const addition: ReadableBookAddition = { active: true, promise: Promise.resolve(undefined as unknown as ReaderCoreResultEvent) };
+    const additionEpoch = ++this.additionClock;
+    this.additionEpochs.set(key, additionEpoch);
+    const generation = this.preparationGeneration;
+    const current = (): boolean => !this.closed && this.preparationMutations === 0 &&
+      generation === this.preparationGeneration && this.preparationRetirementError === undefined && addition.active &&
+      this.additionEpochs.get(key) === additionEpoch;
+    const run = async (): Promise<ReaderCoreResultEvent> => {
+      if (!current()) throw new RemoteReadingGatewayError('cancelled', '书籍准备已取消');
+      // Publish the begin owner before dispatch, including reentrant adapters.
+      // Cancel waits for this metadata request only, never for chapter HTTP.
+      addition.begin = Promise.resolve().then((): Promise<ReaderCoreResultEvent> => {
+        if (!current()) throw new RemoteReadingGatewayError('cancelled', '书籍准备已取消');
+        return this.request('reading.preparation', { action: 'begin', sourceId: seed.sourceId,
+          bookId: seed.bookId, reason: 'add', pendingAdd: book });
+      });
+      const result = await addition.begin;
+      const intent = decodeReadingPreparationIntents(result.data).find((row: ReadingPreparationIntent): boolean =>
+        row.sourceId === seed.sourceId && row.bookId === seed.bookId && row.state === 'active');
+      if (intent === undefined) throw new Error('READING_PREPARATION_ADD_INTENT_MISSING');
+      try { return await this.completeReadableAdd(intent, current, 'foreground'); }
+      catch (error) { await this.readingPreparations.block(intent, error as Error, current); throw error; }
+    };
+    addition.promise = Promise.resolve().then(run).finally((): void => {
+      if (this.addingBooks.get(key) === addition) this.addingBooks.delete(key);
+    });
+    this.addingBooks.set(key, addition);
+    return addition.promise;
+  }
+
+  async cancelReadableBook(sourceId: string, bookId: string): Promise<void> {
+    if (sourceId.trim().length === 0 || bookId.trim().length === 0) throw new Error('READING_PREPARATION_INVALID_BOOK');
+    const key = acquisitionBookKey(sourceId, bookId);
+    const addition = this.addingBooks.get(key);
+    if (addition !== undefined) addition.active = false;
+    const cancellationEpoch = ++this.additionClock;
+    this.additionEpochs.set(key, cancellationEpoch);
+    this.scheduler.visibilityChanged();
+    let uncertainBegin: Error | undefined;
+    if (addition?.begin !== undefined) {
+      try { await addition.begin; }
+      catch (error) {
+        const failure = error as Error;
+        const event = (failure as Error & { event?: { type?: string; requestId?: number } }).event;
+        const terminal = failure.name === 'ReaderCoreRequestError' && event?.type === 'error' && Number.isSafeInteger(event.requestId);
+        if (!(failure instanceof RemoteReadingGatewayError && failure.code === 'cancelled') && !terminal &&
+          !/^Reader-Core request (cancelled by caller|timed out): \d+$/.test(failure.message)) uncertainBegin = failure;
+      }
+    }
+    // A competing strict add or failure can advance the revision once while
+    // cancellation is dispatched. Re-read its fact; never cancel read intent.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (this.additionEpochs.get(key) !== cancellationEpoch) return;
+      const status = await this.request('reading.preparation', { action: 'status', sourceId, bookId });
+      if (this.additionEpochs.get(key) !== cancellationEpoch) return;
+      const intent = decodeReadingPreparationIntents(status.data).find((row: ReadingPreparationIntent): boolean =>
+        row.sourceId === sourceId && row.bookId === bookId);
+      if (intent === undefined) {
+        if (uncertainBegin !== undefined) throw new Error('入架请求终止状态尚未确认，请稍后重试取消');
+        return;
+      }
+      if (intent.reason !== 'add' || intent.pendingAdd === undefined || intent.state === 'cancelled') return;
+      try {
+        await this.request('reading.preparation', { action: 'cancel', sourceId, bookId, revision: intent.revision });
+        return;
+      } catch (error) { if (attempt > 0) throw error; }
+    }
+  }
+
+  resumeReadingPreparations(allowed: () => boolean,
+    allowCatalogAcquisition: () => boolean = (): boolean => true): Promise<void> {
+    if (!this.supportsCapability('reading.preparation.v1')) return Promise.resolve();
+    return this.readingPreparations.resume((): boolean => allowed() && !this.closed &&
+      this.preparationMutations === 0 && this.preparationRetirementError === undefined && this.foregroundRequests === 0,
+      allowCatalogAcquisition);
+  }
+
+  private preparationSeed(book: JsonObject): RemoteReadingBookSeed {
+    const sourceId = book['sourceId'], bookId = book['bookId'], title = book['title'], author = book['author'];
+    if (typeof sourceId !== 'string' || sourceId.trim().length === 0 || typeof bookId !== 'string' ||
+      bookId.trim().length === 0 || typeof title !== 'string' || title.trim().length === 0 || typeof author !== 'string')
+      throw new Error('READING_PREPARATION_INVALID_BOOK');
+    return { sourceId, bookId, title, author, detailUrl: bookId,
+      coverUrl: typeof book['coverUrl'] === 'string' ? book['coverUrl'] as string : undefined,
+      intro: typeof book['intro'] === 'string' ? book['intro'] as string : undefined,
+      kind: typeof book['kind'] === 'string' ? book['kind'] as string : undefined,
+      lastChapter: typeof book['lastChapter'] === 'string' ? book['lastChapter'] as string : undefined };
+  }
+
+  private async completeReadableAdd(intent: ReadingPreparationIntent, current: () => boolean,
+    priority: BookRequestPriority): Promise<ReaderCoreResultEvent> {
+    const key = acquisitionBookKey(intent.sourceId, intent.bookId);
+    const epoch = this.additionEpochs.get(key);
+    const ownerCurrent = current;
+    current = (): boolean => ownerCurrent() && this.additionEpochs.get(key) === epoch;
+    const book = intent.pendingAdd;
+    if (book === undefined) throw new Error('READING_PREPARATION_PENDING_ADD_MISSING');
+    const options: BookPreparationOpenOptions = { isCurrent: current, canDispatch: current,
+      preparationRevision: intent.revision };
+    const session = await this.acquireBook(this.preparationSeed(book), options, priority);
+    this.assertCandidateCurrent(options, Number.POSITIVE_INFINITY);
+    const readable = await this.verifyCandidateBody(session, options, priority);
+    this.assertCandidateCurrent(options, Number.POSITIVE_INFINITY);
+    const chapterIndex = readable.preparedChapter?.chapter.chapterIndex;
+    if (chapterIndex === undefined) throw new Error('READING_PREPARATION_READABLE_BODY_MISSING');
+    const prepared = await this.request('reading.entry.prepare', { sourceId: intent.sourceId, bookId: intent.bookId,
+      chapterIndex, neighborOffset: 0 }, { shouldCancel: (): boolean => !current(), canContinue: current, canDispatch: current }, priority);
+    this.assertCandidateCurrent(options, Number.POSITIVE_INFINITY);
+    if (prepared.data['sourceId'] !== intent.sourceId || prepared.data['bookId'] !== intent.bookId ||
+      prepared.data['chapterIndex'] !== chapterIndex || prepared.data['kind'] !== 'ready')
+      throw new Error(`READING_PREPARATION_ADD_NOT_READY:${prepared.data['reason'] ?? 'invalidResult'}`);
+    return this.request('bookshelf.add', { ...book, requireReadable: true, preparationRevision: intent.revision },
+      { shouldCancel: (): boolean => !current(), canContinue: current, canDispatch: current }, priority);
+  }
 
   prepare(seeds: RemoteReadingBookSeed[], forceRefresh: boolean = false): void {
     this.prepareGroups(seeds.slice(0, 6).map((seed): BookAcquisitionCandidate[] =>
@@ -304,20 +527,34 @@ export class BookAcquisitionCoordinator {
     finally { if (timer >= 0) clearTimeout(timer); }
   }
 
-  private async verifyCandidateBody(session: RemoteReadingSession, options: RemoteReadingOpenOptions,
+  private async verifyCandidateBody(session: RemoteReadingSession, options: BookPreparationOpenOptions,
     priority: BookRequestPriority): Promise<RemoteReadingSession> {
     const revision = this.readingProjectionRevision();
     if (preparedRemoteChapterMatches(session.preparedChapter, session, undefined, revision)) return session;
     const isCurrent = (): boolean => options.isCurrent?.() !== false && revision === this.readingProjectionRevision();
     const gateway = new RemoteReadingFlowGateway({ bookAcquisitions: (): BookAcquisitionCoordinator => this,
+      supportsCoreCapability: (capability: string): boolean => this.supportsCapability(capability),
       request: (method: string, params: JsonObject = {}, requestOptions: RequestOptions = {}): Promise<ReaderCoreResultEvent> =>
-        this.request(method, params, { ...requestOptions, canContinue: isCurrent }, priority) });
+        this.request(method, this.withPreparationRevision(method, params, options.preparationRevision), { ...requestOptions, canContinue: isCurrent,
+          canDispatch: options.canDispatch }, priority) });
     const entries = session.entries.filter((entry): boolean => entry.url.trim().length > 0).slice(0, 3);
     for (let index = 0; index < entries.length; index += 1) {
       try {
         const chapter = await gateway.loadChapter(session, entries[index].index, isCurrent);
         if (!isCurrent()) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
-        return withPreparedRemoteChapter(session, chapter, revision);
+        const admitted = withPreparedRemoteChapter(session, chapter, revision);
+        // Search validation, detail, add-to-shelf and reading must share the
+        // exact admitted body, not just the earlier catalog-only session.
+        // A concurrent catalog publication must never be overwritten here.
+        const key = JSON.stringify([session.identity.sourceId, session.identity.bookId, session.sourceVersion]);
+        const ready = this.prepared.get(key);
+        if (ready !== undefined && ready.projectionRevision === revision &&
+          ready.session.entries === session.entries && ready.session.catalogVersion === session.catalogVersion &&
+          ready.session.contextVersion === session.contextVersion &&
+          this.versions.get(session.identity.sourceId) === session.sourceVersion && this.canRetainPreparedBody(key, chapter)) {
+          this.prepared.set(key, { ...ready, session: admitted });
+        }
+        return admitted;
       } catch (error) {
         if (!isCurrent()) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
         if (remoteReadingFailureKindOf(error) === 'SOURCE_CONTENT_EMPTY' && index + 1 < entries.length) continue;
@@ -327,21 +564,33 @@ export class BookAcquisitionCoordinator {
     throw new RemoteReadingSourceError('SOURCE_CONTENT_EMPTY', '目录没有可验证的正文章节', 'chapter.content');
   }
 
-  async acquireBook(seed: RemoteReadingBookSeed, options: RemoteReadingOpenOptions = {},
+  private canRetainPreparedBody(key: string, chapter: ReadingSessionChapter): boolean {
+    let bytes = readingChapterRetainedBytes(chapter);
+    if (bytes > 1024 * 1024) return false;
+    for (const [otherKey, ready] of this.prepared) {
+      const body = ready.session.preparedChapter?.chapter;
+      if (otherKey !== key && body !== undefined) bytes += readingChapterRetainedBytes(body);
+      if (bytes > 4 * 1024 * 1024) return false;
+    }
+    return true;
+  }
+
+  async acquireBook(seed: RemoteReadingBookSeed, options: BookPreparationOpenOptions = {},
     priority: BookRequestPriority = 'foreground'): Promise<RemoteReadingSession> {
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     if (priority === 'foreground') this.preemptBackgroundAcquisitions(seed.sourceId, seed.bookId);
     // Register a known-source join before yielding: another caller may leave
     // in this same turn, but must not orphan a request this caller now needs.
-    if (!this.registryReady) await this.ensureSources();
+    if (!this.registryReady) await this.ensureSources(seed.sourceId);
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     const version = this.versions.get(seed.sourceId);
-    const key = JSON.stringify([seed.sourceId, seed.bookId, version]);
-    const ready = this.prepared.get(key);
+    const cacheKey = JSON.stringify([seed.sourceId, seed.bookId, version]);
+    const key = options.preparationRevision === undefined ? cacheKey : JSON.stringify([seed.sourceId, seed.bookId, version, options.preparationRevision]);
+    const ready = this.prepared.get(cacheKey);
     if (!options.forceRefresh && ready !== undefined && Date.now() - ready.at < CACHE_FRESH_MS) {
       const session = this.withCatalogFreshness(ready.session);
-      this.prepared.delete(key);
-      this.prepared.set(key, { session, at: ready.at });
+      this.prepared.delete(cacheKey);
+      this.prepared.set(cacheKey, { ...ready, session });
       return session;
     }
     const consumer: BookConsumer = { active: true, isCurrent: options.isCurrent, canDispatch: options.canDispatch };
@@ -369,13 +618,15 @@ export class BookAcquisitionCoordinator {
     }
     const next: BookJob = { priority, forceRefresh: options.forceRefresh === true,
       started: false, consumers: [consumer], sourceId: seed.sourceId, bookId: seed.bookId, preempted: false, cancelled: false,
+      preparationRevision: options.preparationRevision,
       promise: Promise.resolve(undefined as unknown as RemoteReadingSession) };
     // The process shares one detail→TOC chain only while a real consumer owns it.
     // Starting a request does not grant it a lifetime beyond every caller.
+    const projectionAtStart = this.projectionRevision;
     next.promise = this.openBook(seed, version, next, options.forceRefresh === true)
       .then((session: RemoteReadingSession): RemoteReadingSession => {
         if (this.versions.get(seed.sourceId) === version && !this.bookJobCancelled(next)) {
-          this.prepared.set(key, { session, at: Date.now() });
+          this.prepared.set(cacheKey, { session, at: Date.now(), projectionRevision: projectionAtStart });
           while (this.prepared.size > PREPARED_SESSION_LIMIT) {
             const oldest = this.prepared.keys().next().value;
             if (oldest !== undefined) this.prepared.delete(oldest);
@@ -455,7 +706,7 @@ export class BookAcquisitionCoordinator {
   async acquireBookWithBackgroundRefresh(seed: RemoteReadingBookSeed,
     options: RemoteReadingOpenOptions = {}, priority: BookRequestPriority = 'foreground'):
     Promise<BookAcquisitionAdmission> {
-    if (!this.registryReady) await this.ensureSources();
+    if (!this.registryReady) await this.ensureSources(seed.sourceId);
     if (options.isCurrent?.() === false || this.closed) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
     const version = this.versions.get(seed.sourceId);
     const session = await this.acquireBook(seed, options, priority);
@@ -470,7 +721,7 @@ export class BookAcquisitionCoordinator {
   }
 
   async currentSourceVersion(sourceId: string): Promise<string | undefined> {
-    await this.ensureSources();
+    await this.ensureSources(sourceId);
     return this.versions.get(sourceId);
   }
 
@@ -497,6 +748,8 @@ export class BookAcquisitionCoordinator {
 
   close(): void {
     this.closed = true;
+    this.preparationGeneration += 1;
+    this.readingPreparations.close();
     this.scope += 1;
     this.pending.clear();
     this.scheduler.close();
@@ -507,6 +760,11 @@ export class BookAcquisitionCoordinator {
     this.failureIdentities.clear();
     if (this.notifyTimer >= 0) clearTimeout(this.notifyTimer);
     this.notifyTimer = -1;
+  }
+
+  private withPreparationRevision(method: string, params: JsonObject, revision: number | undefined): JsonObject {
+    return revision !== undefined && (method === 'book.detail' || method === 'book.toc' || method === 'chapter.content' ||
+      method === 'cache.book.prefetch') ? { ...params, preparationRevision: revision } : params;
   }
 
   private async openBook(seed: RemoteReadingBookSeed, version: string | undefined, job: BookJob,
@@ -567,7 +825,7 @@ export class BookAcquisitionCoordinator {
       consumer.active && consumer.isCurrent?.() !== false && consumer.canDispatch?.() !== false));
     const gateway = new RemoteReadingFlowGateway({
       request: (method: string, params?: JsonObject, options?: RequestOptions): Promise<ReaderCoreResultEvent> =>
-        this.request(method, params, { ...options, shouldCancel: (): boolean => !isCurrent(),
+        this.request(method, this.withPreparationRevision(method, params ?? {}, job.preparationRevision), { ...options, shouldCancel: (): boolean => !isCurrent(),
           canContinue: processCurrent, canDispatch, onDispatch: (): void => { job.started = true; } }, job.priority),
     });
     let cacheFailure: RemoteReadingGatewayError | undefined;
@@ -601,8 +859,8 @@ export class BookAcquisitionCoordinator {
       if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
       const classified = classifyRemoteReadingCommandFailure('book.toc', error);
       const failure = cacheFailure === undefined ? classified : new RemoteReadingGatewayError(classified.code,
-        classified.message, classified.command, classified.capability, classified.diagnostic, cacheFailure, classified.category,
-        classified.transientTransport);
+        classified.message, classified.command, classified.capability, classified.diagnostic, classified, classified.category,
+        classified.transientTransport, cacheFailure.category);
       this.recordFailure(failure, attemptId, failureContext('refresh'));
       if (isCurrent() && version !== undefined && !failure.transientTransport &&
         acquisitionFailureCategoryConfirmed(failure.category) && this.canTryAnotherCandidate(failure)) {
@@ -650,8 +908,23 @@ export class BookAcquisitionCoordinator {
       canDispatch: (): boolean => this.preparationVisible }, 'background');
   }
 
-  private async ensureSources(): Promise<void> {
-    if (this.registryReady) return;
+  private async ensureSources(sourceId: string): Promise<void> {
+    if (this.registryReady || this.knownSources.has(sourceId)) return;
+    if (this.supportsCapability('source.list.byId.v1')) {
+      let pending = this.sourceLoads.get(sourceId);
+      if (pending === undefined) {
+        pending = this.request('source.list', { sourceId }).then((): void => {}).finally((): void => {
+          this.sourceLoads.delete(sourceId);
+        });
+        this.sourceLoads.set(sourceId, pending);
+      }
+      await pending;
+      if (this.closed) throw new Error('书籍任务已关闭');
+      // A rule mutation may have invalidated this response while it was in
+      // flight. Re-read the one identity instead of admitting a stale version.
+      if (!this.registryReady && !this.knownSources.has(sourceId)) await this.ensureSources(sourceId);
+      return;
+    }
     if (this.sourceLoad === undefined) {
       this.sourceLoad = this.request('source.list', {}).then((): void => {}).finally((): void => { this.sourceLoad = undefined; });
     }
@@ -696,7 +969,9 @@ export class BookAcquisitionCoordinator {
     this.notifyTimer = setTimeout((): void => {
       this.notifyTimer = -1;
       const change: BookAcquisitionChange = { reset: this.changedReset, identities: Array.from(this.changedIdentities.values()) };
+      if (this.changedShelf) change.shelfChanged = true;
       this.changedReset = false;
+      this.changedShelf = false;
       this.changedIdentities.clear();
       for (const listener of this.listeners) {
         try { listener(change); } catch (_error) { /* One disposed projection cannot block others. */ }

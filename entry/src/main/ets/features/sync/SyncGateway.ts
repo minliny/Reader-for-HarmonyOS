@@ -365,7 +365,14 @@ export class SyncGateway {
         }
         const responses: JsonObject[] = [];
         for (let index = 0; index < current.requests.length; index += 1) {
-          responses.push(await HttpExecuteHost.instance.execute(current.requests[index]));
+          // Core owns WebDAV verbs and payloads; Host pins every hop to the
+          // configured HTTPS origin so backup bytes cannot follow a downgrade
+          // or cross-origin redirect.
+          responses.push(await HttpExecuteHost.instance.execute({
+            ...current.requests[index],
+            httpsOnly: true,
+            sameOriginRedirectsOnly: true,
+          }));
         }
         const event = await this.runtimeOwner.request('sync.webdav.transaction.advance', {
           transactionId: current.transactionId,

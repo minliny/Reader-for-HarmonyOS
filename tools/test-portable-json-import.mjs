@@ -14,7 +14,9 @@ const index = read('entry/src/main/ets/pages/Index.ets');
 
 // One Host transport for every portable JSON feature; no feature-local HTTP stack.
 assert.match(host, /async loadOnlineJsonDocument\(onlineUrl: string\)/);
-assert.match(host, /HttpExecuteHost\.instance\.execute\(\{[\s\S]*method: 'GET'/);
+assert.match(host, /HttpExecuteHost\.instance\.executeBounded\(\{[\s\S]*?ReaderHostRegistry\.JsonDocumentLimitBytes\)/,
+  'online JSON must pass its document budget into native transport');
+assert.match(host, /HttpExecuteHost\.instance\.executeBounded\(\{[\s\S]*method: 'GET'/);
 assert.match(host, /followRedirects: true/);
 assert.match(host, /maxRedirects: 10/);
 assert.match(host, /JsonDocumentLimitBytes = 16 \* 1024 \* 1024/);

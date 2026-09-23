@@ -77,3 +77,15 @@ assert.equal(closed, 1, 'failure retains selection for retry');
 assert.equal(warned, 1);
 assert.match(surface, /\.editMenuOptions\([\s\S]*this\.onTextMenuItemClick\(item, range\)/);
 console.log('reader copy: native selection maps to original UTF-16 text, synchronous INAPP write and failure recovery PASS');
+
+// A full native paragraph can be clipped to a page; copy stays in the visible
+// original range and keeps original Unicode/whitespace intact.
+for (const prefix of [0,2]) {
+ assert.equal(readerSelectedOriginalText(original,prefix,undefined,undefined,3,7),'😀e\u0301');
+ assert.equal(readerSelectedOriginalText(original,prefix,0,prefix+2,3,7),'');
+ assert.equal(readerSelectedOriginalText(original,prefix,prefix+7,prefix+original.length,3,7),'');
+ assert.equal(readerSelectedOriginalText(original,prefix,prefix+5,prefix+original.length,3,7),'e\u0301');
+}
+for(const range of [[-1,3],[5,4],[0,999],[NaN,2],[0,2.5]])
+ assert.equal(readerSelectedOriginalText(original,0,undefined,undefined,...range),undefined);
+console.log('PASS native paragraph selection clamps to original visible page range');

@@ -29,14 +29,17 @@ assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('.a
 assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.bookshelfRemovalActiveKey\.length === 0/,
   'source browsing remains available even when the current source catalog failed');
 assert.match(index, /readingEnabled: this\.remoteContentVerdict === 'readable'/,
-  'the start-reading action is enabled only after the leading-chapter verdict admits the content');
-assert.match(remoteOpen, /gateway\.loadProgress\(session\.identity, isCurrent\)[\s\S]*this\.probeRemoteContentVerdict\(gateway, session, isCurrent, restored\?\.chapterIndex, positionContext\)/,
-  'resume must use Core current progress and its scoped anchor, not a stale bookshelf projection');
-assert.match(remoteOpen,
-  /if \(resumeImmediately\) \{[\s\S]*contentProbe\.then[\s\S]*readableChapterIndex === undefined[\s\S]*this\.openReading/,
-  'a shelf resume must wait for a readable chapter verdict before mounting the reader');
-assert.doesNotMatch(remoteOpen, /if \(resumeImmediately\) \{\s*this\.openReading\(/,
-  'a shelf resume must never bypass chapter-body admission');
+  'the detail retains its diagnostic verdict independently from reading admission');
+assert.doesNotMatch(remoteOpen, /gateway\.loadProgress\(/,
+  'shelf admission must not duplicate the reader Core progress read');
+assert.match(remoteOpen, /if \(resumeImmediately\) \{[\s\S]*?this\.openReading\(undefined\);\s*return;/,
+  'shelf entry immediately mounts the original reader before the detail acquisition path');
+assert.ok(remoteOpen.indexOf('this.openReading(undefined)') < remoteOpen.indexOf('const sessionAdmission'),
+  'catalog acquisition is owned by the already visible reader');
+assert.match(experience, /this\.activeGateway\(\)\.loadProgress\(this\.bookId, isCurrent\)[\s\S]*restored\?\.chapterIndex/,
+  'the original reader selects from current Core progress');
+assert.match(experience, /anchors: \[\{ id: 'restored', offset: restored\.chapterOffset \}\]/,
+  'the body request retains the exact scoped restored offset');
 assert.doesNotMatch(remoteOpen, /remoteShelf|remoteBookshelf|shelfBooks\s*=\s*new Map/,
   'remote books must not create a second UI-owned shelf store');
 assert.match(remoteOpen, /this\.installRemoteReadingSession\(session\)/,
@@ -46,15 +49,15 @@ assert.ok(remoteOpen.indexOf('this.detailToc = session.entries.map') <
   remoteOpen.indexOf('void bookshelf.loadShelfBook'),
   'remote detail readiness must not wait for the non-mutating shelf reconciliation');
 assert.match(remoteOpen, /const entryRoute = resumeImmediately \? this\.readingOriginRoute : 'detail';[\s\S]*this\.route = entryRoute/,
-  'a remote preview enters detail while shelf resume retains its already chosen origin');
+  'a remote preview keeps its detail origin while resume immediately advances to reading');
 assert.doesNotMatch(index, /remote search result has no admitted detail flow/);
 assert.doesNotMatch(index, /remote reading not yet wired/);
-assert.match(index, /private reopenSwitchedBook\(book: ShelfBook\): void \{\s*this\.openShelfBook\(book\)/,
-  'source-switch success must re-enter the cache-first shelf reading dispatcher');
+assert.match(index, /private reopenSwitchedBook\(book: ShelfBook\): void \{[\s\S]*?this\.openLocalBookDetail\(book, true\)[\s\S]*?this\.openRemoteBookDetail\(\{ sourceId: book\.sourceId, bookId: book\.bookId, detailUrl: book\.bookId,/,
+  'source-switch recovery must revalidate the committed local/remote identity');
 
 assert.match(shell, /remoteSession: this\.remoteSession/);
 assert.match(shell, /sourceId: this\.sourceId/);
-assert.match(experience, /new ReadingSessionFlowGateway\([\s\S]*this\.readingSessionSource\(\)/,
+assert.match(experience, /ReadingSessionFlowGateway\.open\([\s\S]*remoteBookSeed: this\.remoteBookSeed/,
   'the renderer must depend on one source-normalizing execution boundary');
 assert.doesNotMatch(experience, /new RemoteReadingFlowGateway/,
   'the renderer must not grow a second remote pagination path');

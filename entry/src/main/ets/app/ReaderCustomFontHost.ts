@@ -1,3 +1,4 @@
+import { loadReaderFontChecked } from './ReaderFontLoadHost';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import picker from '@ohos.file.picker';
@@ -50,7 +51,7 @@ export class ReaderCustomFontHost {
         finalPath,
         fingerprint,
       );
-      font.registerFont({ familyName: descriptor.familyName, familySrc: descriptor.filePath });
+      await loadReaderFontChecked(descriptor.familyName, `file://${descriptor.filePath}`);
       return descriptor;
     } catch (error) {
       await this.unlinkIfPresent(temporaryPath);
@@ -58,7 +59,7 @@ export class ReaderCustomFontHost {
     }
   }
 
-  async registerPersisted(font: Font, descriptor: ReaderCustomFontDescriptor | undefined): Promise<boolean> {
+  async registerPersisted(_font: Font | undefined, descriptor: ReaderCustomFontDescriptor | undefined): Promise<boolean> {
     const admitted = normalizeReaderCustomFontDescriptor(descriptor);
     if (admitted === undefined || !this.isOwnedFontPath(admitted.filePath) ||
       !(await fileIo.access(admitted.filePath))) {
@@ -68,7 +69,7 @@ export class ReaderCustomFontHost {
     if (!fileName.startsWith(`${admitted.fingerprint}.`)) {
       return false;
     }
-    font.registerFont({ familyName: admitted.familyName, familySrc: admitted.filePath });
+    await loadReaderFontChecked(admitted.familyName, `file://${admitted.filePath}`);
     return true;
   }
 

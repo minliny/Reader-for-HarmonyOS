@@ -593,6 +593,9 @@ export class ReaderTtsSessionCoordinator {
     if (active === undefined || active.plan === undefined) return Promise.resolve();
     const wasPaused = this.state.status === 'paused' || this.state.status === 'interrupted';
     this.invalidateUtterance();
+    const positionGeneration = this.nextGeneration(this.state.positionGeneration ?? 0);
+    this.setState({ ...this.state, positionGeneration,
+      charStart: undefined, charEnd: undefined, requestId: undefined });
     const identity = active.identity;
     const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
@@ -600,7 +603,7 @@ export class ReaderTtsSessionCoordinator {
       if (hostStopError !== undefined) throw hostStopError;
       if (!this.isSessionCurrent(identity)) return;
       const snapshot = await this.gateway.seek(active.input.chapter, sliceIndex);
-      if (!this.isSessionCurrent(identity)) return;
+      if (!this.isSessionCurrent(identity) || this.state.positionGeneration !== positionGeneration) return;
       this.applyCoreSnapshot(snapshot);
       if (wasPaused || snapshot.state === 'paused') return;
       await this.speakSlice(active, this.requireSnapshotIndex(snapshot, 'tts.queue.seek'), 'preparing');
@@ -1354,7 +1357,10 @@ export class ReaderTtsSessionCoordinator {
     const active = this.active;
     if (active === undefined || active.plan === undefined) return Promise.resolve();
     this.invalidateUtterance();
-    this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined });
+    const positionGeneration = this.nextGeneration(this.state.positionGeneration ?? 0);
+    this.setState({ ...this.state, status: 'preparing', requestId: undefined, errorMessage: undefined,
+      positionGeneration,
+      charStart: undefined, charEnd: undefined });
     const identity = active.identity;
     const hostStopTask = this.stopHostTransportImmediately();
     return this.enqueue(async (): Promise<void> => {
@@ -1364,7 +1370,7 @@ export class ReaderTtsSessionCoordinator {
       const snapshot = direction === 'next'
         ? await this.gateway.skip(active.input.chapter)
         : await this.gateway.previous(active.input.chapter);
-      if (!this.isSessionCurrent(identity)) return;
+      if (!this.isSessionCurrent(identity) || this.state.positionGeneration !== positionGeneration) return;
       this.applyCoreSnapshot(snapshot);
       if (snapshot.state === 'completed') {
         await this.advanceOrComplete(active, snapshot);

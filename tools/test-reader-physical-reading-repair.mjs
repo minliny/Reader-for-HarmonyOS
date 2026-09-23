@@ -4,6 +4,7 @@ import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module'
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderSessionLaunchController } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts';
+import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 import { ReaderSessionMorphSourceMeasurement } from '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
 import { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts';
 import { readerAppearanceCubicBezierProgress as b } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
@@ -15,9 +16,6 @@ registerHooks({ resolve(specifier, context, next) { try { return next(specifier,
 const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 import { projectReaderBookmarkRows } from '../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts';
 const file = n => new URL(`../entry/src/main/ets/features/reading/${n}`, import.meta.url);
-const mapCode=stripTypeScriptTypes(readFileSync(file('ReadingSurfaceLayoutMap.ts'),'utf8')
-  .replace('constructor(private readonly content: string) {','constructor(content: string) { this.content = content;'));
-const ReadingSurfaceLayoutMap=new Function(mapCode.replace('export class','class')+';return ReadingSurfaceLayoutMap;')();
 const curves = {flight:p=>b(p,.4,0,.2,1),expand:p=>b(p,.2,0,0,1),easeIn:p=>b(p,.42,0,1,1),
   easeOut:p=>b(p,0,0,.58,1),easeInOut:p=>b(p,.42,0,.58,1)};
 const identity = {lifecycle:1,bookIdentity:'src:book',moduleVisit:1,viewportRevision:1,scrollRevision:1,
@@ -104,7 +102,8 @@ host.scheduleSessionLaunchFrame(tx.generation);host.scheduleSessionLaunchFrame(t
 assert.equal(frames.length,0);assert.equal(timers.length,1);assert.equal(timers[0].ms,600);
 c.cancel('openControl');now=1750;timers[0].fn();assert.equal(host.sessionLaunch.sample.timeMs,2300);
 Object.assign(host,{phase:'ready',controlObscured:false,interactionBlocked:false,controlVisible:()=>true,
-  controlShellExitArmed:()=>true,autoPageState:{status:'paused',remainingSeconds:8},ttsState:{status:'idle'}});
+  controlShellExitArmed:()=>true,autoPageState:{status:'paused',remainingSeconds:8},ttsState:{status:'idle'},
+  automaticReadingState(){return this.autoPageState;}});
 assert.equal(host.liveSessionCapsuleSnapshot()?.type,'autoPage','existing capsule is admitted on first closing frame');
 host.controlShellExitArmed=()=>false;assert.equal(host.liveSessionCapsuleSnapshot(),undefined);
 host.pageTurnRenderRevision=0;host.sessionControlClosing=false;

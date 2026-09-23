@@ -29,9 +29,10 @@ export class ReaderReadingSystemEventHost {
     if (this.disposed) {
       return;
     }
-    this.unregisterVolumeKeys();
     this.volumeHandler = handler;
+    if (handler !== undefined && this.volumeRegistered) return;
     if (handler === undefined) {
+      this.unregisterVolumeKeys();
       return;
     }
     try {
@@ -40,6 +41,8 @@ export class ReaderReadingSystemEventHost {
         action: KEY_PRESSED_ACTION,
         isRepeat: false,
       }, this.volumeUpListener);
+      // A failure registering DOWN must still release the already-owned UP.
+      this.volumeRegistered = true;
       inputConsumer.on('keyPressed', {
         key: KeyCode.KEYCODE_VOLUME_DOWN,
         action: KEY_PRESSED_ACTION,

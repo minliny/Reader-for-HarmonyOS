@@ -19,13 +19,9 @@ const classes = page.slice(page.indexOf('@Observed\nclass SearchBookGroup'), pag
   .replace('@Observed\n', '');
 const source = stripTypeScriptTypes(`const DataOperationType = { ADD: "add", DELETE: "delete", CHANGE: "change", RELOAD: "reload", MOVE: "move" };\n${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
 const { SearchBookGroup, SearchResultDataSource, SearchViewState } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
-const projectionSource = stripTypeScriptTypes(
-  authorMetadataModule + '\n' +
-  read('entry/src/main/ets/features/search/SearchResultProjection.ts').replace(/^import \{[^\n]+\} from .*;$/gm, '') + '\n' +
-  read('entry/src/main/ets/features/search/SearchResultRelevance.ts').replace(/^import \{[^\n]+\} from .*;$/gm, '') + '\n' +
-  read('entry/src/main/ets/features/common/BookAcquisitionPresentation.ts') + '\n' +
-  read('entry/src/main/ets/features/search/SearchCandidatePolicy.ts').replace(/^import \{[^\n]+\} from .*;$/gm, ''));
-const { SearchResultProjection } = await import(`data:text/javascript;base64,${Buffer.from(projectionSource).toString('base64')}`);
+// Keep the production module graph intact, including bookshelf identity and
+// candidate policy. Stripping every import hides new real dependencies.
+const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
 function listen(ds, listener) {
   ds.registerDataChangeListener({ ...listener, onDatasetChange(operations) {
     for (const op of operations) {

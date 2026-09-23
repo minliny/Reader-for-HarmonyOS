@@ -87,7 +87,7 @@ for (const exact of [false, true]) {
     loadChapter: async () => { bodyReads++; throw Error('body must not load for progress'); } };
   const owner = Object.assign(new MetricOwner(), { bookId: 'book-1', tocEntries: toc,
     contentMetrics: undefined, contentMetricsLoading: false, chapter: undefined, chapterLayoutMap: undefined,
-    isSessionActive: () => true, isMountedToken: () => true, activeGateway: () => gateway });
+    sessionGateway: gateway, isSessionActive: () => true, isMountedToken: () => true, activeGateway: () => gateway });
   await owner.loadContentMetricsIfNeeded(1);
   assert.equal(metricReads, exact ? 1 : 0); assert.equal(bodyReads, 0);
   assert.equal(owner.contentMetrics, exact ? metrics : undefined);

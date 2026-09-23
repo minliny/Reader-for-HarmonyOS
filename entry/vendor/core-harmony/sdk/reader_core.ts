@@ -2,6 +2,14 @@ export type JsonObject = { [key: string]: unknown };
 
 export type NativeRuntimeHandle = unknown;
 
+/** Bounded Core-owned bytes used by Host responses that exceed JSON comfort. */
+export type ReaderCoreAssetBridge = {
+  begin(requestId: number, operationId: number, declaredBytes: number): number;
+  write(requestId: number, operationId: number, assetId: number, chunk: Uint8Array): number;
+  commit(requestId: number, operationId: number, assetId: number): number;
+  release(requestId: number, operationId: number, assetId: number): void;
+};
+
 export type NativeReaderCoreModule = {
   abiVersion(): number;
   lastError(): { code: number; message: string };
@@ -9,11 +17,20 @@ export type NativeReaderCoreModule = {
   readEpubEntryAsync(archivePath: string, entryPath: string, maxBytes: number): Promise<Uint8Array>;
   encodeText(text: string, charset: string, maxBytes: number): Uint8Array;
   createRuntime(config?: JsonObject | string): NativeRuntimeHandle;
+  createRuntimeAsync?(config?: JsonObject | string): Promise<NativeRuntimeHandle>;
   releaseRuntime(runtime: NativeRuntimeHandle): void;
   sendCommand(runtime: NativeRuntimeHandle, command: JsonObject | string): void;
+  readPreparedEntry?(runtime: NativeRuntimeHandle, paramsJson: string): string;
   cancelRequest(runtime: NativeRuntimeHandle, requestId: number): void;
   readEvent(runtime: NativeRuntimeHandle, timeoutMs?: number): string | null;
   pendingEventCount(runtime: NativeRuntimeHandle): number;
+  /** Both functions must be present before selecting receipt-based delivery. */
+  enableEventAcknowledgements?(runtime: NativeRuntimeHandle): void;
+  acknowledgeEvent?(runtime: NativeRuntimeHandle, deliveryId: number): void;
+  beginAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, declaredBytes: number): number;
+  writeAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number, chunk: Uint8Array): number;
+  commitAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number): number;
+  releaseAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number): void;
   completeHostRequest(
     runtime: NativeRuntimeHandle,
     operationId: number,
@@ -41,6 +58,7 @@ export type ReaderCoreCommand = {
 };
 
 export type ReaderCoreResultEvent = {
+  deliveryId?: number;
   protocolVersion: 1;
   requestId: number;
   type: "result";
@@ -55,6 +73,7 @@ export type ReaderCoreError = {
 };
 
 export type ReaderCoreErrorEvent = {
+  deliveryId?: number;
   protocolVersion: 1;
   requestId: number;
   type: "error";
@@ -73,6 +92,7 @@ export type ReaderCoreTransactionPendingDetails = {
 };
 
 export type ReaderCoreHostRequestEvent = {
+  deliveryId?: number;
   protocolVersion: 1;
   requestId: number;
   type: "host.request";
@@ -225,6 +245,9 @@ export class ReaderCoreRuntime {
 
   private readonly native: NativeReaderCoreModule;
   private readonly runtime: NativeRuntimeHandle;
+  readonly deliveryMode: "explicitAck" | "legacyCallback";
+  private readonly consumedDeliveries = new WeakSet<object>();
+  private readonly acceptedRequestIds = new Set<number>();
   // Both indexes own only unread events. Ordered sets let either reader remove
   // a payload from both indexes immediately, without scans or retained tombstones.
   private readonly pendingEvents = new Set<QueuedReaderCoreEvent>();
@@ -240,9 +263,28 @@ export class ReaderCoreRuntime {
   private readonly activeHostRequests = new Map<number, ReaderCoreHostRequestEvent>();
   private readonly resultWaiters = new Map<number, Set<ResultWaiter>>();
 
-  constructor(nativeModule: NativeReaderCoreModule, config: JsonObject = {}) {
+  constructor(nativeModule: NativeReaderCoreModule, config: JsonObject = {}, initializedHandle?: NativeRuntimeHandle) {
     this.native = nativeModule;
-    this.runtime = nativeModule.createRuntime(config);
+    this.runtime = initializedHandle === undefined ? nativeModule.createRuntime(config) : initializedHandle;
+    this.deliveryMode = nativeModule.enableEventAcknowledgements !== undefined && nativeModule.acknowledgeEvent !== undefined
+      ? "explicitAck" : "legacyCallback";
+    if (this.deliveryMode === "explicitAck") {
+      try { nativeModule.enableEventAcknowledgements!(this.runtime); }
+      catch (error) { nativeModule.releaseRuntime(this.runtime); throw error; }
+    }
+  }
+
+  static async createAsync(nativeModule: NativeReaderCoreModule, config: JsonObject = {},
+    isCurrent: () => boolean = () => true): Promise<ReaderCoreRuntime> {
+    if (!isCurrent()) throw new Error('Reader Core startup cancelled');
+    const handle = nativeModule.createRuntimeAsync === undefined ? nativeModule.createRuntime(config) :
+      await nativeModule.createRuntimeAsync(config);
+    // A close/successor may have won while native initialization was running.
+    if (!isCurrent()) {
+      nativeModule.releaseRuntime(handle);
+      throw new Error('Reader Core startup cancelled');
+    }
+    return new ReaderCoreRuntime(nativeModule, {}, handle);
   }
 
   setCapabilityRouter(router: CapabilityRouter | null): void {
@@ -255,6 +297,30 @@ export class ReaderCoreRuntime {
 
   lastError(): ReaderCoreLastError {
     return this.native.lastError();
+  }
+
+  /**
+   * Return the capability-backed asset writer for a Host capability handler.
+   * The returned methods keep the runtime handle private and fail closed when
+   * an older native module has no asset ABI.
+   */
+  assetBridge(): ReaderCoreAssetBridge {
+    const native = this.native;
+    const runtime = this.runtime;
+    if (native.beginAsset === undefined || native.writeAsset === undefined ||
+      native.commitAsset === undefined || native.releaseAsset === undefined) {
+      throw new Error('Reader-Core native module does not support response assets');
+    }
+    return {
+      begin: (requestId, operationId, declaredBytes): number =>
+        native.beginAsset!(runtime, requestId, operationId, declaredBytes),
+      write: (requestId, operationId, assetId, chunk): number =>
+        native.writeAsset!(runtime, requestId, operationId, assetId, chunk),
+      commit: (requestId, operationId, assetId): number =>
+        native.commitAsset!(runtime, requestId, operationId, assetId),
+      release: (requestId, operationId, assetId): void =>
+        native.releaseAsset!(runtime, requestId, operationId, assetId),
+    };
   }
 
   get pendingEventCount(): number {
@@ -286,7 +352,37 @@ export class ReaderCoreRuntime {
     this.pendingEventCountValue = 0;
     this.activeHostRequests.clear();
     this.abandonedRequestIds.clear();
+    this.acceptedRequestIds.clear();
     this.native.releaseRuntime(this.runtime);
+  }
+
+  /** Prepared-only synchronous lane; never dispatches or polls ordinary requests. */
+  readPreparedEntry(params: JsonObject): JsonObject {
+    this.ensureOpen();
+    const read = this.native.readPreparedEntry;
+    if (read === undefined) return { kind: "unavailable", sourceId: params["sourceId"],
+      bookId: params["bookId"], reason: "storageUnsupported" };
+    const encoded = JSON.stringify(params);
+    // Native validates UTF-8 bytes before copying. This cheap check also rejects
+    // large ASCII payloads before crossing the bridge.
+    if (encoded.length > 8192) throw new Error("prepared entry params exceed limit");
+    let raw: string;
+    try { raw = this.native.readPreparedEntry!(this.runtime, encoded); }
+    catch (error) {
+      if (error !== null && typeof error === "object" && (error as JsonObject)["code"] === "READING_ENTRY_BUSY")
+        return { kind: "unavailable", sourceId: params["sourceId"], bookId: params["bookId"], reason: "storageBusy" };
+      throw error;
+    }
+    if (typeof raw !== "string" || raw.length > 1024 * 1024) throw new Error("invalid prepared entry result");
+    const result: unknown = JSON.parse(raw);
+    if (result === null || typeof result !== "object" || Array.isArray(result)) throw new Error("invalid prepared entry result");
+    const data = result as JsonObject;
+    if (data["sourceId"] !== params["sourceId"] || data["bookId"] !== params["bookId"] ||
+        (data["kind"] !== "ready" && data["kind"] !== "unavailable")) throw new Error("invalid prepared entry identity or outcome");
+    if (data["kind"] === "unavailable" && !["storageUnsupported", "storageBusy", "runtimeClosed", "catalogMissing",
+      "documentMissing", "sourceSwitchPending", "positionUnresolved", "resourceLimit", "corruptDocument"].includes(data["reason"] as string))
+      throw new Error("unknown prepared entry outcome");
+    return data;
   }
 
   send(method: string, params: JsonObject = {}, requestId = this.allocateRequestId()): number {
@@ -302,6 +398,7 @@ export class ReaderCoreRuntime {
     };
     this.abandonedRequestIds.delete(requestId);
     this.native.sendCommand(this.runtime, command);
+    if (this.deliveryMode === "explicitAck") this.acceptedRequestIds.add(requestId);
     return requestId;
   }
 
@@ -317,10 +414,13 @@ export class ReaderCoreRuntime {
     this.discardAbandonedPendingEvents();
     const queued = this.takeNextPendingEvent();
     if (queued !== undefined) {
+      this.acknowledgeConsumedEvent(queued);
       return queued;
     }
 
-    return this.readNativeEvent(timeoutMs);
+    const event = this.readNativeEvent(timeoutMs);
+    if (event !== null) this.acknowledgeConsumedEvent(event);
+    return event;
   }
 
   completeHostRequest(
@@ -374,6 +474,10 @@ export class ReaderCoreRuntime {
     this.ensureOpen();
     const timeoutMs = readTimeoutMs(options.timeoutMs);
     const pollMs = readPollMs(options.pollMs);
+    if (this.deliveryMode === "explicitAck") {
+      if (!this.acceptedRequestIds.has(requestId)) throw new Error("request was not admitted by this SDK runtime");
+      if (this.resultWaiters.has(requestId)) throw new Error("request already has a result consumer");
+    }
     const deadline = Date.now() + timeoutMs;
     const waiter: ResultWaiter = { requestId };
     const waiters = this.resultWaiters.get(requestId) ?? new Set<ResultWaiter>();
@@ -412,6 +516,7 @@ export class ReaderCoreRuntime {
             : undefined;
           const inlineHandler = options.hostRequest;
           if (routerHandler === undefined && inlineHandler === undefined) {
+            this.acknowledgeConsumedEvent(event);
             this.cancelPendingRequest(requestId);
             throw new Error(`Reader-Core host.request requires a handler: ${event.operationId}`);
           }
@@ -442,11 +547,14 @@ export class ReaderCoreRuntime {
               throw error;
             }
             this.failHostRequest(event, normalizeHostError(error));
+          } finally {
+            this.acknowledgeConsumedEvent(event);
           }
           continue;
         }
 
         if (event.requestId === requestId) {
+          this.acknowledgeConsumedEvent(event);
           if (event.type === "error") {
             throw new ReaderCoreRequestError(event);
           }
@@ -619,7 +727,14 @@ export class ReaderCoreRuntime {
     if (raw === null) {
       return null;
     }
-    const event = parseReaderCoreEvent(raw);
+    let event: ReaderCoreEvent;
+    try { event = parseReaderCoreEvent(raw); }
+    catch (error) {
+      // A malformed negotiated envelope cannot be acknowledged safely.
+      // Closing settles waiters and releases the runtime-owned quota.
+      if (this.deliveryMode === "explicitAck") this.close();
+      throw error;
+    }
     return this.discardAbandonedEvent(event) ? null : event;
   }
 
@@ -680,6 +795,7 @@ export class ReaderCoreRuntime {
       let terminalSeen = false;
       for (const queued of requestQueue) {
         this.consumePendingEvent(queued);
+        this.acknowledgeConsumedEvent(queued.event);
         terminalSeen = terminalSeen || this.isTerminalEvent(queued.event);
       }
       this.pendingEventsByRequest.delete(requestId);
@@ -723,10 +839,21 @@ export class ReaderCoreRuntime {
     if (!this.abandonedRequestIds.has(event.requestId)) {
       return false;
     }
+    this.acknowledgeConsumedEvent(event);
     if (this.isTerminalEvent(event)) {
       this.abandonedRequestIds.delete(event.requestId);
     }
     return true;
+  }
+
+  private acknowledgeConsumedEvent(event: ReaderCoreEvent): void {
+    if (this.closed || this.deliveryMode !== "explicitAck" || this.consumedDeliveries.has(event)) return;
+    if (!Number.isSafeInteger(event.deliveryId) || event.deliveryId! <= 0) {
+      throw new Error("negotiated Reader-Core event is missing a delivery receipt");
+    }
+    this.native.acknowledgeEvent!(this.runtime, event.deliveryId!);
+    if (this.isTerminalEvent(event)) this.acceptedRequestIds.delete(event.requestId);
+    this.consumedDeliveries.add(event);
   }
 
   private isTerminalEvent(event: ReaderCoreEvent): boolean {
@@ -770,6 +897,9 @@ export function parseReaderCoreEvent(raw: string): ReaderCoreEvent {
   const requestId = value.requestId;
   if (value.protocolVersion !== 1 || !isNonNegativeSafeInteger(requestId)) {
     throw new Error("invalid Reader-Core event envelope");
+  }
+  if (value.deliveryId !== undefined && (!isNonNegativeSafeInteger(value.deliveryId) || value.deliveryId === 0)) {
+    throw new Error("invalid Reader-Core delivery receipt");
   }
 
   if (value.type === "result") {

@@ -4,9 +4,7 @@ import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module'
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as chromeLayout from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
-// This exact platform module contains only type imports; execute its real body.
-const { measureReaderPageChromeText, readerPageChromeTextMeasurements } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
-  readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChromeTextMeasurement.ets', import.meta.url), 'utf8'))));
+import { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import * as gesture from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
 import * as rapid from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
@@ -21,7 +19,7 @@ const file = name => new URL(`../entry/src/main/ets/features/reading/${name}`, i
 const typography = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
 const roles = new Function(...Object.keys(fonts), stripTypeScriptTypes(typography.replace(/import\s*\{[\s\S]*?\}\s*from[^;]*;/g, '')).replace(/\bexport /g, '') +
   ';return {TYPE_READER_IMMERSIVE_TIME,TYPE_READER_IMMERSIVE_PROGRESS,TYPE_READER_IMMERSIVE_PAGE_ORDINAL};')(...Object.values(fonts));
-const dependencies = { ...chromeLayout, ...roles, measureReaderPageChromeText };
+const dependencies = { ...chromeLayout, ...roles, measureReaderPageChromeText, readerPageChromeTopTextStyle };
 const lreSource = readFileSync(file('LocalReadingExperience.ets'), 'utf8');
 const chromeSource = readFileSync(file('ReaderPageChrome.ets'), 'utf8');
 function windowLayout(width, cutout, extended, scale = 1, barHeight = 48, safeSide = 0) {
@@ -36,10 +34,12 @@ function windowLayout(width, cutout, extended, scale = 1, barHeight = 48, safeSi
   return layout;
 }
 function context(scale) {
-  return { px2vp: v => v / 3, fp2px: v => v * 3 * scale,
-    getMeasureUtils: () => ({ measureText: ({ textContent }) => textContent.length * 7.2 * 3 * scale }) };
+  return { px2vp: v => v / 3, fp2px: v => v * 3 * scale, px2fp: v => v / (3 * scale),
+    getHostContext: () => ({resourceManager: {getNumber: () => 16 * 3 * scale}}),
+    getMeasureUtils: () => ({ measureText: ({ textContent }) => textContent.length * 7.2 * 3 * scale,
+      measureTextSize: ({textContent}) => ({width: textContent.length * 7.2 * 3 * scale, height: 20 * 3 * scale}) }) };
 }
-const chromeMembers = ['build', 'chromeLayout', 'textMeasure', 'footerExitX', 'footerExitY', 'metaColor'];
+const chromeMembers = ['build', 'chromeLayout', 'textMeasure', 'topTextStyle', 'footerExitX', 'footerExitY', 'metaColor'];
 const bookmarkMembers = ['bookmarkCornerFeedback', 'bookmarkCornerLayout', 'bookmarkFeedbackLabel',
   'pageBookmarkFeedbackFilled', 'pageBookmarkFeedbackAnchor'];
 function render(layout, state = {}, time = '12:30') {
@@ -75,6 +75,9 @@ for (const layout of cases) {
   const { clock, title, icon, chrome, bookmark } = render(layout);
   assert.ok(clock && icon, 'both native Text clock and native Image bookmark exist');
   assert.equal(clock.opacity, 1, 'clock is never hidden to make room');
+  assert.equal(clock.fontFamily, 'HarmonyOS Sans', 'both Builders use the platform top text role');
+  assert.equal(clock.fontSize, 16, 'resolved resource pixels are converted back to fp exactly once');
+  assert.equal(clock.lineHeight, undefined, 'native AUTO line height remains authoritative');
   const clockWidth = Math.min(36 * layout.systemFontScale, clock.constraintSize.maxWidth);
   const a = { ...icon.position, width: icon.width }, b = { ...clock.position, width: clockWidth };
   assert.ok(noOverlap(a, b), `clock and bookmark intersect: ${JSON.stringify({ a, b })}`);
@@ -159,9 +162,11 @@ function normalHost(bookmarked = false) {
     tocEntries: [], currentChapterIndex: () => 16, currentPageBookmarkText: () => 'text', canTurnPage: () => true,
     bookmarkPendingTarget: '', bookmarkPreviewChanged: false, bookmarkRollbackGeneration: 0, bookmarkMutationGeneration: 0,
     reduceMotion: false, appForeground: false, flushDeferredPageChromeState() {},
+    autoPageCoordinator: { cancelPendingTurn() {} },
     onTogglePageBookmark: r => requests.push(r),
     getUIContext: () => ({ animateTo: (options, closure) => { animations.push(options.onFinish); closure(); } }),
     rapidPageTurnState: rapid.createReaderRapidPageTurnState(),
+    autoPageCoordinator: { cancelPendingTurn() {} },
     clearPageTurnProjection() {}, finishPageTurnPerf() {}, cancelPageTurnSettlementDeadline() {},
     clearBookTurnCapturedIdentities() {}, releaseBookTurnTextureContent() {}, releaseBookTurnPendingSnapshot() {},
     releaseUnretainedReadingImages() {},
@@ -245,7 +250,9 @@ function registerChild(name, source) {
   syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
 }
 registerChild('ReaderPageTurnSurface', stageSource); registerChild('ReadingSurface', readingSource);
+registerChild('ReaderNativeParagraphView', readFileSync(file('ReaderNativeParagraphView.ets'), 'utf8'));
 registerChild('ReaderPageChrome', chromeSource); registerChild('ReaderReadingTextFragment', readingSource);
+registerChild('ReaderPaperBackground', readFileSync(file('ReaderPaperBackground.ets'), 'utf8'));
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 for (const pull of [0, 8, 32, 18, 0]) {
   const source = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
@@ -265,13 +272,13 @@ for (const pull of [0, 8, 32, 18, 0]) {
     slot.initialRender();
     const readingParams = [...slot.children.values()][0].params;
     assert.equal(readingParams.chromeTopTranslateY + pull, 0);
-    const reading = createReaderBuilderProbe(readingSource.slice(readingSource.lastIndexOf('@Component', readingSource.indexOf('export struct ReadingSurface'))), ['build'], { ReaderPageChrome: Child,
-      ReaderReadingTextFragment: Child, GradientDirection: { Bottom: 'bottom' } }).owner;
+    const reading = createReaderBuilderProbe(readingSource.slice(readingSource.lastIndexOf('@Component', readingSource.indexOf('export struct ReadingSurface'))), ['build', 'usesHighlightCanvas'], { ReaderPageChrome: Child, ReaderNativeParagraphView: Child,
+      ReaderReadingTextFragment: Child, ReaderPaperBackground: Child, GradientDirection: { Bottom: 'bottom' } }).owner;
     Object.assign(reading, readingParams, { themeStyle: () => ({ sourcePaperLighting: false, paperTexture: false,
       paperStart: '#FFFFFF', paperEnd: '#FFFFFF' }), renderFragments: () => [], pageParagraphs: [],
       showChapterTitle: false, staticSnapshotId: '', contentInsets: () => ({}), layout });
     reading.initialRender();
-    const finalParams = [...reading.children.values()][0].params;
+    const finalParams = [...reading.children.values()].find(child => 'topTranslateY' in child.params).params;
     assert.equal(finalParams.topTranslateY + pull, 0, 'actual Stage → slot → surface → Chrome forwards primitive cancellation');
   }
 }

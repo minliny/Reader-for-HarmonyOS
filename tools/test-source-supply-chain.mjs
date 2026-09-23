@@ -186,3 +186,6 @@ assert.deepEqual(suiteVersionUsages,
   'the collection must retain both the full-corpus and later admission evidence suites');
 
 console.log('source supply chain: PASS');
+
+const { spawnSync } = await import('node:child_process');
+assert.equal(spawnSync(process.execPath, ['tools/generate-bundled-source-index.mjs', '--check'], { encoding: 'utf8' }).status, 0, 'indexed resource artifacts must match portable bundle');

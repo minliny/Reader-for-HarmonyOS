@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -522,13 +523,34 @@ napi_value StartProgrammatic(napi_env env, napi_callback_info info)
     napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
     std::string id;
     double generation = 0;
-    int32_t direction = -1;
-    bool rapid = false;
-    if (count == 4 && !GetBool(env, arguments[3], rapid)) return Boolean(env, false);
+    double direction = -1;
+    double profile = 0;
+    if (count == 4 && (!GetDouble(env, arguments[3], profile) || !std::isfinite(profile) ||
+        profile != std::floor(profile) || profile < 0 || profile > 2)) return Boolean(env, false);
     const std::shared_ptr<BookTurnHost> host = (count == 3 || count == 4) && GetString(env, arguments[0], id) &&
-        GetDouble(env, arguments[1], generation) && GetInt32(env, arguments[2], direction) ? HostForId(id) : nullptr;
+        GetDouble(env, arguments[1], generation) && std::isfinite(generation) && generation > 0 &&
+        generation <= 9007199254740991.0 && generation == std::floor(generation) &&
+        GetDouble(env, arguments[2], direction) && (direction == -1 || direction == 1) ? HostForId(id) : nullptr;
     return Boolean(env, host != nullptr &&
-        host->StartProgrammatic(static_cast<uint64_t>(generation), DecodeDirection(direction), rapid));
+        host->StartProgrammatic(static_cast<uint64_t>(generation), DecodeDirection(static_cast<int32_t>(direction)),
+            static_cast<ProgrammaticProfile>(profile)));
+}
+
+napi_value StartAutomaticTimeline(napi_env env, napi_callback_info info)
+{
+    size_t count = 3;
+    napi_value arguments[3] = {};
+    napi_get_cb_info(env, info, &count, arguments, nullptr, nullptr);
+    std::string id;
+    double generation = 0;
+    double token = 0;
+    const std::shared_ptr<BookTurnHost> host = count == 3 && GetString(env, arguments[0], id) &&
+        GetDouble(env, arguments[1], generation) && std::isfinite(generation) && generation > 0 &&
+        generation <= 9007199254740991.0 && generation == std::floor(generation) &&
+        GetDouble(env, arguments[2], token) && std::isfinite(token) && token > 0 && token <= INT32_MAX &&
+        token == std::floor(token) ? HostForId(id) : nullptr;
+    return Boolean(env, host != nullptr &&
+        host->StartAutomaticTimeline(static_cast<uint64_t>(generation), static_cast<int32_t>(token)));
 }
 
 napi_value CommitSlots(napi_env env, napi_callback_info info)
@@ -664,6 +686,7 @@ napi_value Init(napi_env env, napi_value exports)
         { "setDynamicHighlights", nullptr, SetDynamicHighlights, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "settle", nullptr, Settle, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "startProgrammatic", nullptr, StartProgrammatic, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "startAutomaticTimeline", nullptr, StartAutomaticTimeline, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "commitSlots", nullptr, CommitSlots, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "retainTerminalFrame", nullptr, RetainTerminalFrame, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "releaseTerminalFrame", nullptr, ReleaseTerminalFrame, nullptr, nullptr, nullptr, napi_default, nullptr },

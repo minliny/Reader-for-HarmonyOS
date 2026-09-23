@@ -33,7 +33,7 @@ const Content = productionMotionMethods(url, ['frame', 'endpointFrame', 'fullInp
   'sharedScrollTranslation', 'fullOnlyScrollTranslation'], { ...geometry, ...scroll });
 let ids = Array.from({ length: 9 }, (_, i) => `theme-${i}`), native = 0;
 const c = Object.assign(new Content(), {
-  themeIds: () => ids, motionProgress: 0, interactionEnabled: true, availableWidth: 286,
+  fontIds: () => ['system','serif','sans','kai','fangSong','mono','sourceHanSerif','lxgwWenKai','import'], themeIds: () => ids, motionProgress: 0, interactionEnabled: true, availableWidth: 286,
   availableHeight: 190, fullContentHeight: 666, cachedThemeCount: -1, endpointThemeCount: -1,
   extendedScrollOffset: 0, extendedScrollPath: scroll.readerControlMorphScrollPath(0, 0),
   extendedScrollInMotion: false, extendedScrollEndpoint: 0,

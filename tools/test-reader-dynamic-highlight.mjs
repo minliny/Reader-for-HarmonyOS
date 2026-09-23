@@ -18,5 +18,11 @@ const Overlay=productionMotionMethods(new URL('../entry/src/main/ets/features/re
 const overlay=new Overlay();assert.equal(overlay.dynamicHighlightBlend(),'multiply');overlay.ttsHighlightStart=0;overlay.ttsHighlightEnd=8;assert.equal(overlay.dynamicHighlightBlend(),'over');overlay.ttsHighlightStart=NaN;assert.equal(overlay.dynamicHighlightBlend(),'multiply');
 assert.match(readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets',import.meta.url),'utf8'),/\.blendMode\(this.dynamicHighlightBlend\(\), BlendApplyType.FAST\)/,'blend against the underlying page, not transparent canvas');
 
-assert.match(surface, /if \(this\.staticSnapshotId\.length > 0\) \{\s*Canvas\(this\.highlightCanvas\)/,
+assert.match(surface, /if \(this\.usesHighlightCanvas\(\)\) \{\s*Canvas\(this\.highlightCanvas\)/,
   'offscreen texture trees must not allocate an unused viewport Canvas');
+
+const CanvasAdmission=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets',import.meta.url),['usesHighlightCanvas']);
+const admission=Object.assign(new CanvasAdmission(),{staticSnapshotId:'',snapshotSynchronousImages:true,renderFragments:()=>[{nativeParagraph:{key:'native'}}]});
+assert.equal(admission.usesHighlightCanvas(),false,'offscreen native paragraphs do not allocate dynamic overlays');
+admission.snapshotSynchronousImages=false;assert.equal(admission.usesHighlightCanvas(),true);
+admission.renderFragments=()=>[];assert.equal(admission.usesHighlightCanvas(),false);

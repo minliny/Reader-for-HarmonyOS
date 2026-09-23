@@ -21,35 +21,37 @@ const commitSuccess = index.slice(
 );
 assert.ok(commitSuccess.indexOf('new PendingSourceSwitchTransaction(') >= 0);
 assert.ok(commitSuccess.indexOf('new PendingSourceSwitchTransaction(') <
-  commitSuccess.indexOf('this.performSourceSwitchSeam(outcome.book)'),
+  commitSuccess.indexOf('this.performSourceSwitchSeam(outcome.book, targetSession, outcome.matchedChapter.order)'),
   'the Core transaction id must be retained before the old reader seam is destroyed');
 assert.match(commitSuccess, /outcome\.matchedChapter\.order/);
 assert.match(commitSuccess, /outcome\.transactionId/);
 assert.doesNotMatch(index, /rollbackToken|SourceSwitchRollbackToken/,
   'ArkUI must not retain the Core before-image journal');
 
-assert.match(index, /pending\.targetSourceId === session\.identity\.sourceId[\s\S]*this\.openReading\(pending\.targetChapterIndex\)/,
-  'target admission must enter the normal physical reader at Core matched chapter');
-assert.match(index, /Remote detail failure:[\s\S]*this\.rollbackPendingSourceSwitch\(error\.message\)/);
-assert.match(index, /private onReadingFailure\([\s\S]*this\.rollbackPendingSourceSwitch\(message\)/);
-assert.match(index, /private onReadingFailure\([\s\S]*isRemoteSourceFailureKind\(kind\)/,
-  'reading failures must be classified before the visible failure surface');
-assert.match(index, /private onReadingFailure\([\s\S]*this\.showReadingFailure\(kind === 'STORAGE_FAILED' \? '本地缓存不可用' : '阅读失败', message\)/,
-  'ordinary reading failures must remain visible after source-switch handling is excluded');
+const failureStart = index.indexOf('private onReadingFailure(');
+const failure = index.slice(failureStart,index.indexOf('private onRemoteSessionReady(',failureStart));
+assert.match(failure, /this\.detailLoadingMessage = message/);
+assert.doesNotMatch(failure, /rollbackPendingSourceSwitch|showReadingFailure|returnToReadingOrigin/,
+  'typed body errors retain the mounted reader and pending transaction for retry');
+assert.match(index, /performSourceSwitchSeam\(outcome\.book, targetSession, outcome\.matchedChapter\.order\)/,
+  'committed switching reuses the admitted target catalog and matched chapter directly');
 assert.match(index, /gateway\.rollbackSwitch\([\s\S]*pending\.transactionId/);
-assert.match(index, /pending\.targetChapterIndex === commit\.chapterIndex[\s\S]*this\.pendingSourceSwitch = undefined/,
-  'only the first durable target chapter progress commit may release rollback');
+assert.match(index, /pending\.targetBookId === commit\.bookId[\s\S]*this\.pendingSourceSwitch = undefined/,
+  'the first durable target identity progress commit releases rollback, including another chapter selected during recovery');
 assert.match(index, /clearBookIdentity\(pending\.fromSourceId, pending\.fromBookId\)/,
   'old per-book body/image cache is cleared only after target admission succeeds');
 assert.match(index, /this\.sourceSwitchState\.kind === 'switching'[\s\S]*transactionId !== undefined[\s\S]*return;/,
   'the switch overlay cannot close while Core commit might be publishing its journal');
 
-assert.match(reader, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode, failureKind\)[\s\S]*this\.beginExit\(\)/,
-  'reader failure must notify the transaction owner with the typed kind before its normal exit seam');
+const failStart = reader.indexOf('private fail(');
+const failureOwner = reader.slice(failStart, reader.indexOf('\n  private ', failStart + 10));
+assert.match(failureOwner, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode, failureKind\)/);
+assert.doesNotMatch(failureOwner, /beginExit\(/,
+  'reader error presentation must not begin an exit');
 assert.match(shell, /onReadingFailure: \(sourceId: string, bookId: string, message: string,\s*failureKind\?: RemoteReadingFailureKind\)/);
 assert.match(shell, /this\.onReadingFailure\(sourceId, bookId, message, failureKind\)/);
 assert.match(shell, /sourceSwitchTransactionId: this\.sourceSwitchTransactionId/);
-assert.match(reader, /new ReadingSessionFlowGateway\([\s\S]*this\.sourceSwitchTransactionId/);
+assert.match(reader, /ReadingSessionFlowGateway\.open\([\s\S]*sourceSwitchTransactionId: this\.sourceSwitchTransactionId/);
 
 assert.match(detail, /@Prop sourceSwitchEnabled: boolean = false/);
 assert.match(detail, /onSwitchSource: \(\) => void/);
@@ -98,8 +100,16 @@ assert.match(pickSource, /new RemoteReadingFlowGateway\(ReaderRuntimeOwner\.curr
 assert.match(pickSource, /buildSourceSwitchCommitParams\([\s\S]*anchor\.chapterTitle,[\s\S]*anchor\.chapterIndex/);
 assert.match(index, /private async reconcilePendingSourceSwitches\(\): Promise<void>/);
 assert.match(index, /listPendingSwitches/);
-assert.match(index, /fromBook !== undefined \|\| targetBook === undefined[\s\S]*continue;/,
-  'page reconstruction may compensate only a Core-published migrated shelf state');
+const recoveryStart = index.indexOf('private async reconcilePendingSourceSwitches()');
+const recovery = index.slice(recoveryStart, index.indexOf('\n  private ', recoveryStart + 10));
+assert.match(recovery, /listPendingSwitches/);
+assert.doesNotMatch(recovery, /rollbackSwitch|finalizeSwitch/,
+  'startup records Core pending facts and does not silently change the selected source');
+assert.match(index, /private async resolveReaderSourceSwitchTransaction/);
+assert.match(index, /record\.targetSourceId === sourceId && record\.targetBookId === bookId/);
+assert.match(index, /private async preparePendingSourceSwitchForNextChoice/);
+assert.match(index, /error instanceof ReaderCoreRequestError/,
+  'only the typed Core finalized reason can enter canonical reconciliation');
 assert.doesNotMatch(index, /AppStorage.*transactionId|StorageLink.*sourceSwitch/,
   'source switch journal identity must not be copied into an ArkUI store');
 

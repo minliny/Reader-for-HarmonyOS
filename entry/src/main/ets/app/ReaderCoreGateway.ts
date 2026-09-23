@@ -24,11 +24,27 @@ export type ShelfBook = {
   chapterCount?: number;
   /** Whole-book progress in basis points, 0..10000. */
   readProgress?: number;
+  readingPosition?: ShelfReadingPosition;
+};
+
+export type ShelfReadingPosition = {
+  chapterIndex: number;
+  chapterOffset: number;
+  updatedAt: number;
+  locationRevision?: string;
+  bodyVersion?: string;
+  processingVersion?: string;
 };
 
 export type BookshelfState = {
   books: ShelfBook[];
   total: number;
+  unfilteredTotal?: number;
+  unfilteredOnlineTotal?: number;
+  projectionRevision?: string;
+  changed?: boolean;
+  offset?: number;
+  anchorFound?: boolean;
 };
 
 export type ShelfBookUpsert = {
@@ -49,7 +65,14 @@ export type BookshelfAddReceipt = {
   addedAt: number;
 };
 
-type BookshelfListParams = {
+export type BookshelfListParams = {
+  anchor?: BookshelfRemoveTarget;
+  pageProjection?: boolean;
+  membershipOnly?: boolean;
+  projectionRevision?: string;
+  readingState?: string;
+  sourceKind?: string;
+  offset?: number;
   hasReadingProgress?: boolean;
   sortBy?: 'manual' | 'addedAt' | 'lastReadAt' | 'title' | 'author';
   sortDirection?: 'ascending' | 'descending';
@@ -80,8 +103,12 @@ export class ReaderCoreGateway {
     this.runtimeOwner = runtimeOwner;
   }
 
-  async loadBookshelf(params: BookshelfListParams = {}): Promise<BookshelfState> {
-    const result = await this.runtimeOwner.request('bookshelf.list', params);
+  async loadBookshelf(params: BookshelfListParams = {}, isCurrent?: () => boolean, background: boolean = false): Promise<BookshelfState> {
+    if (isCurrent?.() === false) throw new Error('BOOKSHELF_READ_CANCELLED');
+    const options = { shouldCancel: (): boolean => isCurrent?.() === false };
+    const result = background ? await this.runtimeOwner.bookAcquisitions().request('bookshelf.list', params, options, 'background') :
+      await this.runtimeOwner.request('bookshelf.list', params, options);
+    if (isCurrent?.() === false) throw new Error('BOOKSHELF_READ_CANCELLED');
     const rawBooks = result.data['books'];
     const total = result.data['total'];
     if (!Array.isArray(rawBooks) || typeof total !== 'number' || !Number.isInteger(total) || total < 0) {
@@ -91,7 +118,34 @@ export class ReaderCoreGateway {
     for (const rawBook of rawBooks) {
       books.push(this.decodeShelfBook(rawBook));
     }
-    return { books, total };
+    const projectionRevision = result.data['projectionRevision'];
+    const changed = result.data['changed'];
+    const unfilteredTotal = result.data['unfilteredTotal'];
+    const unfilteredOnlineTotal = result.data['unfilteredOnlineTotal'];
+    if (params.pageProjection === true && (typeof projectionRevision !== 'string' || projectionRevision.length === 0 ||
+      typeof changed !== 'boolean' || typeof unfilteredTotal !== 'number' || !Number.isSafeInteger(unfilteredTotal) || unfilteredTotal < total || typeof unfilteredOnlineTotal !== 'number' || !Number.isSafeInteger(unfilteredOnlineTotal) ||
+      unfilteredOnlineTotal < 0 || unfilteredOnlineTotal > unfilteredTotal || books.length > (params.limit ?? 0) || (changed && books.length !== 0)))
+      throw new Error('bookshelf.list returned invalid page projection');
+    const offset = result.data['offset'];
+    const anchorFound = result.data['anchorFound'];
+    if (params.pageProjection === true && this.supportsShelfAnchorPages() &&
+      (typeof offset !== 'number' || !Number.isSafeInteger(offset) || offset < 0 ||
+       (!changed && params.anchor !== undefined && typeof anchorFound !== 'boolean') ||
+       (!changed && params.anchor === undefined && offset !== (params.offset ?? 0))))
+      throw new Error('bookshelf.list returned invalid page offset');
+    return { books, total, offset: typeof offset === 'number' ? offset : params.offset,
+      anchorFound: typeof anchorFound === 'boolean' ? anchorFound : undefined, unfilteredOnlineTotal: typeof unfilteredOnlineTotal === 'number' ? unfilteredOnlineTotal : undefined, unfilteredTotal: typeof unfilteredTotal === 'number' ? unfilteredTotal : undefined,
+      projectionRevision: typeof projectionRevision === 'string' ? projectionRevision : undefined,
+      changed: typeof changed === 'boolean' ? changed : undefined };
+
+  }
+
+  supportsShelfAnchorPages(): boolean {
+    return this.runtimeOwner.supportsCoreCapability?.('bookshelf.anchorPage.v1') === true;
+  }
+
+  supportsShelfPages(): boolean {
+    return this.runtimeOwner.supportsCoreCapability?.('bookshelf.pageProjection.v1') === true;
   }
 
   async loadContinueReading(): Promise<ShelfBook | undefined> {
@@ -122,7 +176,8 @@ export class ReaderCoreGateway {
     if (book.intro !== undefined) params['intro'] = book.intro;
     if (book.kind !== undefined) params['kind'] = book.kind;
     if (book.lastChapter !== undefined) params['lastChapter'] = book.lastChapter;
-    const result = await this.runtimeOwner.request('bookshelf.add', params);
+    const result = book.sourceId === 'local' ? await this.runtimeOwner.request('bookshelf.add', params) :
+      await this.runtimeOwner.bookAcquisitions().addReadableBook(params);
     const sourceId = this.requiredString(result.data, 'sourceId');
     const bookId = this.requiredString(result.data, 'bookId');
     const created = result.data['created'];
@@ -245,6 +300,8 @@ export class ReaderCoreGateway {
     const currentChapterTitle = this.optionalString(book, 'currentChapterTitle');
     const currentChapterIndex = this.optionalNumber(book, 'currentChapterIndex');
     const readProgress = this.optionalNumber(book, 'readProgress');
+    const readingPosition = this.decodeShelfReadingPosition(book['readingPosition']);
+    if (readingPosition !== undefined) decoded.readingPosition = readingPosition;
     if (coverUrl !== undefined) {
       decoded.coverUrl = coverUrl;
     }
@@ -282,6 +339,26 @@ export class ReaderCoreGateway {
       decoded.readProgress = readProgress;
     }
     return decoded;
+  }
+
+  private decodeShelfReadingPosition(value: unknown): ShelfReadingPosition | undefined {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+    // A malformed optional projection is a preparation miss, never a failure
+    // to load an otherwise valid bookshelf. Core progress remains authoritative.
+    try {
+      const position = value as JsonObject;
+      const chapterIndex = this.requiredNonNegativeInteger(position, 'chapterIndex', 'bookshelf.list');
+      const chapterOffset = this.requiredNonNegativeInteger(position, 'chapterOffset', 'bookshelf.list');
+      const updatedAt = this.requiredNonNegativeInteger(position, 'updatedAt', 'bookshelf.list');
+      const bodyVersion = this.optionalString(position, 'bodyVersion');
+      const processingVersion = this.optionalString(position, 'processingVersion');
+      if ((bodyVersion === undefined) !== (processingVersion === undefined) ||
+        bodyVersion?.trim().length === 0 || processingVersion?.trim().length === 0) return undefined;
+      return { chapterIndex, chapterOffset, updatedAt,
+        locationRevision: this.optionalString(position, 'locationRevision'), bodyVersion, processingVersion };
+    } catch (_) {
+      return undefined;
+    }
   }
 
   private requiredString(value: JsonObject, key: string): string {

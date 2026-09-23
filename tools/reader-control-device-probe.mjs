@@ -208,6 +208,13 @@ function operationPlan(operation, outputDir) {
     exactFields(operation, []);
     return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry');
   }
+  if (operation.op === 'startColdEntryMemoryMiss') {
+    exactFields(operation, []);
+    // Debug-only cold onCreate gate in the app. Normal Index/reader routing and
+    // all durable data stay intact; only optional entry RAM reuse is disabled.
+    return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
+      '--pb', 'readerDisableOptionalEntryMemory', 'true');
+  }
   if (operation.op === 'listGeometryLog') {
     exactFields(operation, []);
     return shell('hilog', '-x', '-e', 'ReaderControlListProbe');
@@ -612,6 +619,11 @@ function selfTest() {
   assert.deepEqual(plan({ op: 'startNormal' }).args,
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry']);
   assert.throws(() => plan({ op: 'startNormal', bundle: 'other' }));
+  assert.deepEqual(plan({ op: 'startColdEntryMemoryMiss' }).args,
+    ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
+      '--pb', 'readerDisableOptionalEntryMemory', 'true']);
+  assert.throws(() => plan({ op: 'startColdEntryMemoryMiss', bundle: 'other' }));
+  assert.throws(() => operationPlan({ op: 'startColdEntryMemoryMiss', preflightConfirmed: false }, directory));
   assert.throws(() => plan({ op: 'force-stop' }));
   assert.throws(() => plan({ op: 'force-stop', explicitPermit: 'true' }));
   assert.deepEqual(plan({ op: 'force-stop', explicitPermit: true }).args, ['shell', 'aa', 'force-stop', BUNDLE]);

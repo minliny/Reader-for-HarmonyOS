@@ -7,13 +7,14 @@ class Clock extends InputClock { constructor() { super(); Object.assign(this, { 
 let receivedMs = 1000;
 const TouchType = { Down: 0, Move: 1, Up: 2, Cancel: 3 };
 const Stage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
-  ['handleTouch', 'resetTouch', 'reportManualInteraction', 'reportVisibleRange', 'reportCurrentVisibleRange', 'handleStationaryTap'],
+  ['handleTouch', 'resetTouch', 'reportManualInteraction', 'reportVisibleRange', 'reportCurrentVisibleRange', 'handleStationaryTap', 'cancelInitialScrollForInput'],
   { TouchType, CONTINUOUS_TAP_SLOP: 12, ReaderPageInputClock: Clock, readerMotionNowMs: () => receivedMs, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
 let interaction = 0, boundary = 0, rectY = -20;
 const reports = [];
 const stage = Object.assign(new Stage(), {
   layout: { contentTop: 0 }, mounted: true, interactionEnabled: true, touchActive: false, touchPointerId: -1,
   initialScrollPending: false, visibleFragmentStart: 0, visibleFragmentEnd: 0,
+  paragraphPositions: new Map(), appearance: {paragraphSpacing:0},
   fragmentsProvider: () => [{ startScalar: 0, endScalar: 100 }], hasTitleItem: () => false,
   listScroller: { getItemRect: () => ({ y: rectY, height: 200 }) },
   onVisibleRangeChanged: (...args) => reports.push(args),
@@ -68,7 +69,7 @@ const ImageStage=productionMotionMethods(new URL('ReaderContinuousReadingStage.e
 for(const currentImage of [false,true]){
  const frames=[],deltas=[];let y=-50,height=100;
  const data=[{id:'above'},{id:'anchor'}];const imageStage=Object.assign(new ImageStage(),{layout:{contentTop:0},mounted:true,initialScrollPending:false,changedFragmentIndex:currentImage?1:0,visibleFragmentStart:1,imageAnchorGeneration:2,
- fragmentsProvider:()=>data,fragmentDataSource:{getData:i=>data[i],update(){},replace(){}},hasTitleItem:()=>false,listScroller:{getItemRect:()=>({y,height}),scrollBy:(_x,d)=>{deltas.push(d);y-=d;}},reportCurrentVisibleRange(){},getUIContext:()=>({postFrameCallback:f=>frames.push(f)})});
+ titleItemCount:0,continuousListItems:()=>data,fragmentsProvider:()=>data,fragmentDataSource:{getData:i=>data[i],extend:()=>false,update(){},replace(){}},hasTitleItem:()=>false,listScroller:{getItemRect:()=>({y,height}),scrollBy:(_x,d)=>{deltas.push(d);y-=d;}},reportCurrentVisibleRange(){},getUIContext:()=>({postFrameCallback:f=>frames.push(f)})});
  imageStage.onContentRevisionChanged();imageStage.onContentRevisionChanged();assert.equal(frames.length,1,'a batch retains one pre-layout semantic anchor');
  imageStage.onContentScrolled(20,1);y-=20;if(currentImage)height=200;else y+=100;
  frames[0].action();assert.deepEqual(deltas,[currentImage?50:100]);assert.equal(y,currentImage?-120:-70,'image correction preserves simultaneous manual displacement');
@@ -91,39 +92,9 @@ let finishStop;let consumed=0;const stop=Object.assign(new StopOwner(),{rapidPag
 stop.onContinuousScrollStopped();stop.pageTurnTransactionSerial++;finishStop();await new Promise(r=>setImmediate(r));assert.equal(consumed,0,'late saved stop cannot consume a newer rapid transaction');
 console.log('continuous mode change save/error/obsolete ownership and late stop receipt: PASS');
 
-const RestoreStage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
-  ['scheduleInitialScroll', 'onContentScrollStopped'], { ContinuousLayoutFrame: class { constructor(action) { this.action = action; } },
-    ScrollAlign: { START: 0 } });
-for (const stale of [false, true]) {
-  const frames = [], calls = [];
-  let height = 0;
-  const restore = Object.assign(new RestoreStage(), {
-    layout: { contentTop: 60 }, mounted: true, initialScrollGeneration: 0, initialFragmentIndex: 1, initialFragmentProgress: .4,
-    fragmentsProvider: () => [{}, {}], hasTitleItem: () => true,
-    getUIContext: () => ({ postFrameCallback: frame => frames.push(frame) }),
-    listScroller: { scrollToIndex: index => calls.push(['index', index]),
-      getItemRect: () => ({ height, y: 60 }), scrollBy: (_x, y) => calls.push(['offset', y]) },
-    reportCurrentVisibleRange: () => calls.push(['report']), onScrollStopped: () => calls.push(['save']),
-  });
-  restore.scheduleInitialScroll();
-  assert.deepEqual(calls, [], 'restoration cannot read unlaid-out geometry in the timer queue');
-  frames.shift().action();
-  assert.deepEqual(calls, [['index', 2]]);
-  assert.equal(restore.initialScrollPending, true, 'intermediate List callbacks cannot overwrite the requested anchor');
-  height = 1000;
-  if (stale) restore.initialScrollGeneration++;
-  frames.shift().action();
-  assert.deepEqual(calls, stale ? [['index', 2]] : [['index', 2], ['offset', 400]],
-    'requesting scrollBy is not permission to overwrite the saved anchor');
-  if (!stale) {
-    restore.onContentScrollStopped();
-    assert.equal(calls.length, 2, 'intermediate native stop remains fenced');
-    frames.shift().action();
-    assert.deepEqual(calls, [['index', 2], ['offset', 400], ['report'], ['save']],
-      'save only after the offset layout has completed');
-  }
-}
-console.log('production continuous restore waits for layout and rejects stale frame callbacks: PASS');
+// Initial geometry/attach ordering and stale receipts are covered by the
+// production-method suite test-reader-continuous-initial-offset.mjs. Keep
+// this suite focused on real input and progress serialization.
 
 const ProjectionOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
   ['hasContinuousRenderContent']);
@@ -177,33 +148,60 @@ for (const missing of ['zero', 'throw']) {
 }
 console.log('continuous restore suppresses premature stops and unknown-geometry progress writes: PASS');
 
+const RestoreStage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
+ ['scheduleInitialScroll','tryApplyInitialScroll','confirmInitialScroll','initialListIndex','onListAttached','releaseInitialParagraph','onContentScrollStopped'],
+ {ContinuousLayoutFrame:class{constructor(action){this.action=action;}},ScrollAlign:{START:0},LengthMetrics:{vp:value=>({value,unit:'vp'})},
+ prepareReaderNativeParagraph:context=>({resource:{},owned:false,position:context.position})});
 // Regression from VM: row top 207px is 45px above the 252px content edge,
 // despite its positive List-relative y. Clamping -y/height loses that anchor.
 for (const top of [252, 207, 1, -3242]) {
   let y = top / 3.5; const height = 4059 / 3.5;
   const frames = []; let savedProgress;
+  const nativeOffset = (252 - top) / 3.5;
+  const lineScalar = new Map([[252, 100], [207, 113], [1, 158], [-3242, 382]]).get(top);
+  const fragment = { id: 'inset-native', text: '正文', startScalar: 100, endScalar: 500,
+    isParagraphStart: true, nativeParagraph: { key: 'inset-owner' } };
+  const position = { scalarForY: offset => {
+    assert.ok(Math.abs(offset - nativeOffset) < 1e-10); return lineScalar;
+  }, yForScalar: scalar => { assert.equal(scalar, lineScalar); return nativeOffset; } };
   const inset = Object.assign(new RestoreStage(), {
-    mounted: true, initialScrollGeneration: 0, initialFragmentIndex: 0,
-    layout: { contentTop: 72 }, fragmentsProvider: () => [{}], hasTitleItem: () => false,
-    getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
+    mounted: true, listAttached: false, listMountIdentity:'', initialAnchorRevision:1,chapterIdentity:'c',geometryKey:'g',initialScrollGeneration: 0, initialFragmentIndex: 0,
+    paragraphPositions: new Map([['inset-native', position]]), paragraphPositionOwners: new Map([['inset-native', 'inset-owner']]),
+    appearance: {paragraphSpacing:0},
+    layout: { contentTop: 72 }, fragmentsProvider: () => [fragment], hasTitleItem: () => false,
+    getUIContext: () => ({position, postFrameCallback: f => frames.push(f) }),
     listScroller: { getItemRect: () => ({ y, height }),
-      scrollToIndex() { y = 72; }, scrollBy(_x, delta) { y -= delta; } },
+      scrollToIndex(_index, _animated, _align, options) { y = 72 - options.extraOffset.value; },
+      scrollBy() { assert.fail('initial native line restoration uses no relative correction'); } },
     reportCurrentVisibleRange() {}, onScrollStopped() {},
     initialScrollPending: false, onVisibleRangeChanged(_start, _end, progress) { savedProgress = progress; },
   });
   Stage.prototype.reportVisibleRange.call(inset, 0, 0);
-  assert.ok(Math.abs(savedProgress - (252 - top) / 4059) < 1e-12);
+  assert.equal(savedProgress, (lineScalar - 100) / 400, 'reported progress is native line scalar, not row-height fraction');
   inset.initialFragmentProgress = savedProgress;
-  inset.scheduleInitialScroll(); while (frames.length) frames.shift().action();
+  inset.scheduleInitialScroll(); inset.onListAttached(inset.listMountIdentity); while (frames.length) frames.shift().action();
   assert.ok(Math.abs(y * 3.5 - top) < 1e-8, 'positive/negative List y restores the same content-edge anchor');
 }
-console.log('continuous padded viewport: START, positive y and negative y round trips: PASS');
+console.log('continuous padded viewport: native line offsets at START, positive y and negative y round trips: PASS');
+
+{
+  const fragment={id:'native',startScalar:100,endScalar:300,nativeParagraph:{},isParagraphStart:true};
+  const saved=[];
+  const native=Object.assign(new Stage(),{layout:{contentTop:72},appearance:{paragraphSpacing:12},
+    initialScrollPending:false,fragmentsProvider:()=>[fragment],hasTitleItem:()=>false,
+    paragraphPositions:new Map([['native',{scalarForY:y=>{assert.equal(y,60);return 123;}}]]),
+    listScroller:{getItemRect:()=>({y:12,height:1000})},onVisibleRangeChanged:(...args)=>saved.push(args)});
+  native.reportVisibleRange(0,0);
+  assert.deepEqual(saved,[[0,0,23/200]],'progress uses original line scalar, not 60/1000 pixel fraction');
+  native.paragraphPositions.clear();native.reportVisibleRange(0,0);
+  assert.equal(saved.length,1,'unmounted text geometry cannot replace the saved position');
+}
 
 const LeaseOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
   ['acquirePagePointer', 'releasePagePointer', 'drainRapidPageTurn', 'performPageTurn'],
   { setTimeout: action => deferred.push(action) });
 const LeaseStage = productionMotionMethods(new URL('ReaderContinuousReadingStage.ets', reading),
-  ['handleTouch', 'resetTouch', 'onInteractionEnabledChanged', 'reportManualInteraction'],
+  ['handleTouch', 'resetTouch', 'onInteractionEnabledChanged', 'reportManualInteraction', 'cancelInitialScrollForInput'],
   { TouchType, CONTINUOUS_TAP_SLOP: 12, ReaderPageInputClock: Clock, readerMotionNowMs: () => receivedMs, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
 let deferred = [];
 for (const ending of ['up', 'cancel', 'disabled', 'unmount']) {
@@ -358,3 +356,19 @@ for (const direction of ['next', 'previous']) {
   assert.equal(chapters, 2, 'a genuinely new manual scroll retains chapter-edge behavior');
 }
 console.log('native List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS');
+
+const Source=productionMotionMethods(new URL('ReaderContinuousReadingStage.ets',reading),
+ ['totalCount','getData','registerDataChangeListener','unregisterDataChangeListener','replace','extend','update'],
+ {DataOperationType:{ADD:'add'}});
+{
+ const source=Object.assign(new Source(),{items:[],listeners:[]}),events=[];
+ source.registerDataChangeListener({onDataReloaded(){events.push('reload');},onDatasetChange(operations){events.push({operations,items:Array.from({length:source.totalCount()},(_,i)=>source.getData(i))});}});
+ const body=[{id:'p40'},{id:'p80'}],title={id:'title'},prefix={id:'p0'},suffix={id:'p100'};
+ source.replace(body);events.length=0;
+ assert.equal(source.extend([title,prefix,...body,suffix]),true);
+ assert.deepEqual(events.map(e=>e.operations),[[{type:'add',index:2,count:1}],[{type:'add',index:0,count:2}]]);
+ assert.equal(events[0].items[0],body[0]);assert.equal(source.getData(2),body[0]);
+ assert.equal(source.extend([title,prefix,{id:'p40'},body[1],suffix]),false,'a replacement cannot masquerade as a preserving insertion');
+ assert.equal(source.getData(2),body[0]);
+}
+console.log('PASS native continuous insertion notifications preserve original rows and exact intermediate source state');

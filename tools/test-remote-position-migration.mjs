@@ -166,7 +166,7 @@ console.log('PH75 directory chapter-start proof: exact cache read, source/index 
   assert.equal(failure.causeValue,cause);assert.equal(isRemoteReadingCacheFallbackEligible(failure),false);
   assert.equal(isRemoteSourceFailureKind(remoteReadingFailureKindOf(failure)),false);
   assert.match(failure.message,/原阅读位置|原位置/);
-  if(reason==='PROCESSING_CONTEXT_STALE')assert.match(failure.message,/恢复此前的简繁转换或正文替换设置/);
+  if(reason==='PROCESSING_CONTEXT_STALE')assert.match(failure.message,/阅读设置中检查简繁转换和正文替换/);
  }
  console.log('PH75 recoverable position conflicts are localized and never treated as source/network failures PASS');
 }

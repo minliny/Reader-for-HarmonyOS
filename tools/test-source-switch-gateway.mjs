@@ -67,7 +67,7 @@ const executable = stripTypeScriptTypes(
       () => factModule.replace(/^export /gm, ''))
     .replace(/^import \{ CachedBookIdentityResolver \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/common/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, ''))
-    .replace(/^import \{ errorMessageOf, isNetworkEnvironmentFailure \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
+    .replace(/^import \{ errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
       () => errorMessageModule)
     .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
@@ -76,7 +76,7 @@ const executable = stripTypeScriptTypes(
       () => sourceCategoryModule)).replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
-const { SourceSwitchGateway, sourceSwitchCandidateKey } = await import(moduleUrl);
+const { SourceSwitchGateway, sourceSwitchCandidateKey, buildSourceSwitchCommitParams } = await import(moduleUrl);
 const transactionId = 'ss-core-owned-transaction';
 
 assert.notEqual(
@@ -176,6 +176,36 @@ assert.deepEqual(
   await assert.rejects(gateway.discoverCandidates('original', '/book', '鸣龙'), error => error === environment);
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(requests.length, 8, 'environment error propagates and stops dispatch beyond active lanes');
+}
+
+// A per-domain DNS rejection is not evidence that every enabled source or the
+// device network is unavailable. Exercise the real batch and worker cursor.
+for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
+  const requests=[];
+  const dns=Object.assign(new Error('当前网络无法解析书源域名，请检查代理或网络连接后重试'),{
+    event:{error:{code:'HOST_ERROR',details:{category:'NETWORK_ENVIRONMENT',host:{diagnostics:{details:{
+      category:'NETWORK_ENVIRONMENT',phase:'dns',
+    }}}}}},
+  });
+  const gateway=new SourceSwitchGateway({async request(method,params){
+    if(method==='source.list') return {data:{sources:Array.from({length:12},(_,i)=>({sourceId:`dns-${i}`,enabled:true}))}};
+    assert.equal(params.sourceId,'unresolvable-old-source');assert.equal(params.keyword,'终宋');
+    const id=params.sourceIds[0];requests.push(id);
+    const fail=scenario==='all-dns'||id===(scenario==='late-dns'?'dns-10':'dns-0');
+    if(fail)throw dns;
+    return {data:{candidates:scenario==='dns-and-empty'?[]:[{sourceId:id,bookUrl:'/book',bookName:'终宋'}]}};
+  }});
+  if(scenario==='all-dns'||scenario==='dns-and-empty'){
+    await assert.rejects(gateway.discoverCandidates('unresolvable-old-source','/old','终宋'),error=>{
+      assert.notEqual(error,dns,'aggregate describes this candidate batch, not a single domain as the whole network');
+      assert.match(error.message,/本次换源搜索/);assert.match(error.message,/域名解析失败/);return true;
+    });
+  }else{
+    const result=await gateway.discoverCandidates('unresolvable-old-source','/old','终宋');
+    assert.equal(result.kind,'sources');assert.equal(result.candidates.length,11);
+    assert.ok(result.candidates.some(item=>item.sourceId==='dns-11'),'DNS cannot stop undispatched candidates');
+  }
+  assert.equal(requests.length,12,'each enabled candidate is tried once, without automatic retries');
 }
 
 const identityRuntime = {
@@ -393,6 +423,24 @@ const committed = await liveGateway.commitSwitch({
 assert.equal(committed.status, 'success');
 assert.strictEqual(committed.transactionId, transactionId);
 assert.equal(committed.matchedChapter.order, 4);
+// A processing-context failure may preserve only the verified durable chapter
+// index. Forward the absent title honestly; do not invent a chapter or offset.
+{
+  const received=[];
+  const coarseGateway=new SourceSwitchGateway({request:async(method,params)=>{
+    received.push({method,params});return runtime.request(method,params);
+  }});
+  const params={from:{sourceId:'old',bookId:'old-book'},target:{sourceId:'new',bookId:'new-book',title:'Book'},
+    newToc:[{chapterId:'/chapter/4',chapterTitle:'Chapter 4',chapterUrl:'/chapter/4',order:4}],
+    currentChapterTitle:'',currentChapterIndex:4,updatedAt:1};
+  await coarseGateway.commitSwitch(params);
+  assert.equal(received.length,1);assert.equal(received[0].params.currentChapterTitle,'');
+  assert.equal(received[0].params.currentChapterIndex,4);
+  assert.equal('chapterOffset' in received[0].params,false);
+  await assert.rejects(coarseGateway.commitSwitch({...params,currentChapterTitle:undefined}),/must be a string/);
+  await assert.rejects(coarseGateway.commitSwitch({...params,currentChapterIndex:-1}),/non-negative/);
+  assert.equal(received.length,1,'invalid anchors cannot reach the transaction');
+}
 const rolledBack = await liveGateway.rollbackSwitch(committed.transactionId);
 assert.equal(rolledBack.changed, true);
 assert.equal(rolledBack.restoredBook.sourceId, 'old');
@@ -553,3 +601,90 @@ console.log('PH70 actual Index/Gateway retain failed delta/reset without automat
   assert.equal((await gateway.loadCachedCandidates(query,undefined,first)).length,1);
 }
 console.log('R5 SourceSwitch relation pagination, stale retry, continuation, scoped verdict and deletion preservation PASS');
+
+// PH116: source selection hands the acquired target context to the reader and
+// commits resolved metadata, never an old search alias or a different URL.
+{
+  const calls = [];
+  const session = { acquisitionMode: 'online', identity: { sourceId: 'target', bookId: '/book' },
+    sourceVersion: 'rule-v2', catalogAt: 42, catalogVersion: 'catalog-v2', contextVersion: 'context-v2',
+    detailUrl: '/book', tocUrl: '/catalog', hostRequirements: ['httpExecute'],
+    book: { title: '详情规范书名', author: '详情作者', coverUrl: '/new-cover', intro: '详情简介', kind: '历史', lastChapter: '第二十章' },
+    continuationVariables: [{ name: 'token', value: 'exact & token' }],
+    entries: [{ index: 0, title: '第一章', url: '/chapter', variables: [{ name: 'page', value: '1' }] }] };
+  const owner = { request: async (method, params) => {
+    calls.push(method); assert.equal(method, 'search-book.get');
+    assert.deepEqual(params, { origin: 'target', bookUrl: '/book' });
+    return { data: { book: { name: '持久化详情名', author: '持久化作者' } } };
+  }, bookAcquisitions: () => ({ acquireBook: async (seed, options) => {
+    calls.push('acquireBook'); assert.equal(seed.title, '持久化详情名'); assert.equal(options.isCurrent(), true);
+    return session;
+  } }) };
+  const toc = await new SourceSwitchGateway(owner).fetchTargetToc('target', '/book', () => true);
+  assert.equal(toc.readingSession, session, 'preserve the exact catalog proof and continuation for the existing reader');
+  assert.deepEqual(calls, ['search-book.get', 'acquireBook'], 'source switch must not refetch the already acquired session');
+  assert.deepEqual(toc.variables, { token: 'exact & token' });
+  assert.deepEqual(toc.entries[0].variables, { page: '1' });
+  const candidate = { sourceId: 'target', bookUrl: '/book', bookName: '搜索旧别名', author: '旧作者', coverUrl: '/old-cover' };
+  const params = buildSourceSwitchCommitParams({ sourceId: 'original', bookId: '/old' }, candidate, toc, '第一章', 0, 42);
+  assert.deepEqual(params.target, { sourceId: 'target', bookId: '/book', title: '详情规范书名', author: '详情作者',
+    coverUrl: '/new-cover', intro: '详情简介', kind: '历史', lastChapter: '第二十章' });
+  assert.deepEqual(params.newToc, [{ chapterId: '/chapter', chapterTitle: '第一章', chapterUrl: '/chapter', order: 0 }]);
+  for (const wrong of [{ ...candidate, sourceId: 'other' }, { ...candidate, bookUrl: '/other' }]) {
+    assert.throws(() => buildSourceSwitchCommitParams({ sourceId: 'original', bookId: '/old' }, wrong, toc, '第一章', 0, 42), /identities/);
+  }
+  session.identity = { sourceId: 'wrong', bookId: '/book' };
+  await assert.rejects(new SourceSwitchGateway(owner).fetchTargetToc('target', '/book', () => true), /mismatched reading session/);
+}
+{
+  const calls = [];
+  const owner = { request: async (method, params) => {
+    calls.push(method);
+    if (method === 'book.detail') return { data: { sourceId: 'target', sourceVersion: 'rule-v2', tocUrl: '/toc',
+      variables: { token: 'detail token' }, book: { bookId: '/book', title: '详情书名', author: '作者' } } };
+    assert.equal(method, 'book.toc'); assert.deepEqual(params.variables, { token: 'detail token' });
+    return { data: { sourceId: 'target', bookId: '/book', sourceVersion: 'rule-v2', catalogAt: 43,
+      catalogVersion: 'catalog-proof', contextVersion: 'context-proof',
+      toc: [{ index: 0, title: '第一章', url: '/chapter', variables: { chapterToken: 'chapter token' } }] } };
+  } };
+  const toc = await new SourceSwitchGateway(owner).fetchTargetToc('target', '/book');
+  assert.deepEqual(calls, ['book.detail', 'book.toc']);
+  assert.equal(toc.readingSession.catalogVersion, 'catalog-proof');
+  assert.equal(toc.readingSession.contextVersion, 'context-proof');
+  assert.equal(toc.readingSession.book.title, '详情书名');
+  assert.deepEqual(toc.readingSession.continuationVariables, [{ name: 'token', value: 'detail token' }]);
+  assert.deepEqual(toc.readingSession.entries[0].variables, [{ name: 'chapterToken', value: 'chapter token' }]);
+}
+console.log('PH116 source switch preserves target session and canonical metadata PASS');
+
+{
+  const candidate={sourceId:'live-source',bookUrl:'/not-yet-persisted',bookName:'终宋',author:'怪诞的表哥',
+    sourceVersion:'rule-v1',searchVariables:[{name:'token',value:'live-token'}],category:'novel'};
+  const session={identity:{sourceId:candidate.sourceId,bookId:candidate.bookUrl},
+    book:{title:candidate.bookName,author:candidate.author},tocUrl:'/toc',continuationVariables:[],
+    entries:[{index:0,title:'第一章',url:'/chapter',variables:[]}]};
+  let acquisitions=0;
+  const owner={request(){assert.fail('live candidate must not require a durable search row before acquisition');},
+    bookAcquisitions:()=>({async acquireBook(seed){acquisitions++;
+      assert.deepEqual(seed.searchVariables,candidate.searchVariables);assert.equal(seed.sourceVersion,'rule-v1');
+      return session;}})};
+  const gateway=new SourceSwitchGateway(owner);
+  const toc=await gateway.fetchTargetToc(candidate.sourceId,candidate.bookUrl,()=>true,candidate);
+  assert.equal(toc.readingSession,session);assert.equal(acquisitions,1);
+  await assert.rejects(gateway.fetchTargetToc('other',candidate.bookUrl,()=>true,candidate),/candidate identity/);
+  await assert.rejects(gateway.fetchTargetToc(candidate.sourceId,candidate.bookUrl,()=>false,candidate),/aborted/);
+  assert.equal(acquisitions,1,'mismatch/cancel cannot submit work');
+}
+console.log('PASS: unpersisted selected source preserves exact version/variables through shared acquisition');
+
+{
+  const Candidate = productionMotionMethods(resolve(repo, 'entry/src/main/ets/features/source/CandidateRow.ets'),
+    ['selectCandidate'], {});
+  for (const offline of [false, true]) for (const timeout of [false, true]) for (const isCurrent of [false, true]) {
+    let selected = 0;
+    const row = Object.assign(new Candidate(), { offline, timeout, isCurrent, onSelect: () => selected++ });
+    row.selectCandidate();
+    assert.equal(selected, isCurrent ? 0 : 1, 'historical availability feedback must not lock source selection');
+  }
+}
+console.log('PH116 every non-current source row permits a new attempt PASS');

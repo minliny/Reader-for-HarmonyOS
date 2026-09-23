@@ -18,6 +18,13 @@ int g_nextHandle = 1;
 bool g_blendEnabled = false;
 bool g_depthMaskOn = true;
 std::function<void()> g_textureUploadHook;
+int g_swapFailureCount = 0;
+
+void SetSwapFailureCount(int count)
+{
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_swapFailureCount = count;
+}
 
 void SetTextureUploadHook(std::function<void()> hook)
 {
@@ -39,6 +46,7 @@ void Reset()
     g_nextHandle = 1;
     g_blendEnabled = false;
     g_depthMaskOn = true;
+    g_swapFailureCount = 0;
 }
 
 std::vector<Entry> Log()
@@ -94,6 +102,11 @@ EGLBoolean eglMakeCurrent(EGLDisplay, EGLSurface, EGLSurface, EGLContext)
 EGLBoolean eglSwapBuffers(EGLDisplay, EGLSurface)
 {
     Record("eglSwapBuffers", 0, 0);
+    std::lock_guard<std::mutex> lock(g_mutex);
+    if (g_swapFailureCount > 0) {
+        --g_swapFailureCount;
+        return EGL_FALSE;
+    }
     return EGL_TRUE;
 }
 

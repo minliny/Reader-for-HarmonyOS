@@ -3,8 +3,14 @@ import { readFileSync } from 'node:fs';
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const index = read('pages/Index.ets');
 const coordinator = read('app/BookAcquisitionCoordinator.ts');
-assert.match(index, /const allowGroupFallback = shelfSnapshot === undefined && !resumeImmediately && originRoute === 'search'/,
-  'automatic candidate recovery is restricted to a search preview');
+assert.match(index, /allowGroupFallback = shelfSnapshot === undefined && originRoute === 'search' &&\s*this\.pendingSourceSwitch === undefined/,
+  'automatic candidate recovery is restricted to an unshelved search preview without a pending explicit switch');
+const remoteStart = index.indexOf('private openRemoteBookDetail(');
+const fallbackStart = index.indexOf('let allowGroupFallback =', remoteStart);
+assert.ok(remoteStart >= 0 && fallbackStart > remoteStart);
+assert.match(index.slice(remoteStart, fallbackStart),
+  /if \(resumeImmediately\) \{[\s\S]*this\.openReading\(undefined\);\s*return;\s*\}/,
+  'direct reading returns before candidate fallback or acquisition; it must keep the selected identity');
 assert.match(index, /acquireCandidateGroup\(candidates, \{ isCurrent, requireReadable: true, onCatalog: showCandidateCatalog \}\)/);
 assert.match(index, /acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'fixed shelf/manual identities retain single-book admission');

@@ -239,12 +239,17 @@ export function resolveReaderReadingLayout(
   metrics: ReaderWindowMetricsSnapshot,
   extendIntoCutout: boolean = false,
   insetProfile?: ReaderContentInsetProfile,
+  measuredTopInfoHeightVp: number = 0,
 ): ReaderReadingLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
   const width = viewportWidth > 0 ? viewportWidth : profile.referenceWidth;
   const height = viewportHeight > 0 ? viewportHeight : profile.referenceHeight;
-  const cutoutSafeTop = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.top);
+  // Extending places only the top information on either side of the cutout.
+  // The full-width body must remain below the physical cutout in both modes.
+  const cutoutSafeTop = Math.max(0, metrics.cutoutInsets.top,
+    metrics.statusBarCutoutRect.height > 0 ?
+      metrics.statusBarCutoutRect.top + metrics.statusBarCutoutRect.height : 0);
   const cutoutSafeBottom = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.bottom);
   const systemHorizontal = Math.max(
     Number.isFinite(metrics.systemInsets.left) ? Math.max(0, metrics.systemInsets.left) : 0,
@@ -263,9 +268,17 @@ export function resolveReaderReadingLayout(
   // Reserve the information lane exactly once. With system chrome visible,
   // it starts below the retained status region; when extended it owns that region.
   const informationTop = metrics.statusBarRect.top + (extendIntoCutout ? 0 : metrics.statusBarHeight);
-  const informationBottom = informationTop + metrics.statusBarHeight;
+  const measuredInformationHeight = Number.isFinite(measuredTopInfoHeightVp) ? Math.max(0, measuredTopInfoHeightVp) : 0;
+  // Keep the real status band for chrome alignment, while reserving every
+  // measured text line when accessibility or fallback glyphs make it taller.
+  const informationBottom = informationTop + Math.max(metrics.statusBarHeight, measuredInformationHeight);
   const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop,
     informationBottom > 0 ? informationBottom + 8 : 0);
+  // Once the real status region is known, its information lane owns this
+  // budget. The authored 72/92.44vp fallback would otherwise pin both modes
+  // to the same top and reserve a second, unrelated blank region.
+  const resolvedContentTop = metrics.ready && metrics.statusBarHeight > 0 ? contentTop :
+    Math.max(profile.contentTop, contentTop);
   const contentBottom = Math.max(
     metrics.systemInsets.bottom,
     cutoutSafeBottom,
@@ -277,7 +290,7 @@ export function resolveReaderReadingLayout(
     widthClass,
     width,
     height,
-    Math.max(profile.contentTop, contentTop),
+    resolvedContentTop,
     contentHorizontal,
     Math.max(profile.contentBottom, contentBottom),
     contentHorizontal,

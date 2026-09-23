@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import { createBookTurnTextureOwner } from './lib/reader-book-turn-owner-fixture.mjs';
+const nativeCalls = [];
+const session = createBookTurnTextureOwner(async (_slot, _map, _id, current) => current(), (...args) => { nativeCalls.push(args); return true; });
+for (const [slot, id] of [[0,'previous'],[1,'current'],[2,'next']]) assert.equal(await session.uploadTexture(slot, {}, id, () => true), true);
+session.commitSlots(5, 'next');
+assert.deepEqual([0,1,2].map(slot => session.capturedIdentity(slot)), ['previous','current','next']);
+session.onNativeEvent(7, 4, 0);
+assert.equal(session.capturedIdentity(1), 'current', 'stale acknowledgement never promotes');
+session.onNativeEvent(7, 5, 0);
+assert.deepEqual([0,1,2].map(slot => session.capturedIdentity(slot)), ['current','next','']);
+session.onNativeEvent(7, 5, 0);
+assert.deepEqual([0,1,2].map(slot => session.capturedIdentity(slot)), ['current','next',''], 'duplicate ack promotes once');
+session.commitSlots(6, 'previous'); session.onNativeEvent(7, 6, 0);
+assert.deepEqual([0,1,2].map(slot => session.capturedIdentity(slot)), ['', 'current','next']);
+
+let released = 0;
+const pixel = () => ({ release() { released++; } });
+session.retainPendingSnapshot('a', 10, pixel());
+session.retainPendingSnapshot('b', 10, pixel()); assert.equal(released, 1);
+assert.equal(session.takePendingSnapshot('other', 10), undefined); assert.equal(released, 1);
+assert.equal(session.takePendingSnapshot('b', 11), undefined); assert.equal(released, 2);
+const owned = pixel(); session.retainPendingSnapshot('c', 12, owned);
+assert.equal(session.takePendingSnapshot('c', 12), owned); session.releasePendingSnapshot(); assert.equal(released, 2);
+owned.release(); assert.equal(released, 3);
+session.retainPendingSnapshot('d', 12, pixel()); session.clearCapturedTextures(); session.clearCapturedTextures();
+assert.equal(released, 4); assert.deepEqual([0,1,2].map(slot => session.capturedIdentity(slot)), ['', '', '']);
+
+let resolve;
+const late = createBookTurnTextureOwner(() => new Promise(r => { resolve = r; }));
+const pending = late.uploadTexture(1, {}, 'obsolete', () => true);
+late.clearCapturedTextures(); resolve(true);
+assert.equal(await pending, false); assert.equal(late.capturedIdentity(1), '');
+const rejected = createBookTurnTextureOwner(async () => false);
+assert.equal(await rejected.uploadTexture(1, {}, 'rejected', () => true), false);
+assert.equal(rejected.capturedIdentity(1), '');
+console.log('native presentation owner: uploaded identity, matching slot ACK, stale upload and single bitmap release PASS');

@@ -35,7 +35,6 @@ import { ReaderIconButton } from '../common/ReaderIconButton';
 import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
-import { BookshelfGroupSelector } from './BookshelfGroupSelector';
 import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
@@ -85,6 +84,9 @@ class BookshelfMotionFrameCallback extends FrameCallback {
 class BookshelfRowDataSource implements IDataSource {
   private items: ShelfBook[][] = [];
   private listeners: DataChangeListener[] = [];
+  private keys: string[] = [];
+  private readonly renderKey: (row: ShelfBook[]) => string;
+  constructor(renderKey: (row: ShelfBook[]) => string) { this.renderKey = renderKey; }
 
   totalCount(): number { return this.items.length; }
   getData(index: number): ShelfBook[] { return this.items[index]; }
@@ -96,8 +98,26 @@ class BookshelfRowDataSource implements IDataSource {
     if (index >= 0) this.listeners.splice(index, 1);
   }
   replace(items: ShelfBook[][]): void {
+    const keys = items.map((row: ShelfBook[]): string => this.renderKey(row));
+    const previous = this.keys;
+    const shared = Math.min(previous.length, keys.length);
+    const samePrefix = previous.slice(0, shared).every((key: string, index: number): boolean => key === keys[index]);
     this.items = items;
-    for (const listener of this.listeners) listener.onDataReloaded();
+    this.keys = keys;
+    if (samePrefix && previous.length === keys.length) return;
+    // Paging appends/removes whole rows. Tell ArkUI the exact operation so
+    // existing covers/text retain their mounted state. Arbitrary regrouping
+    // remains the platform's keyed comparison, not a Reader diff engine.
+    for (const listener of this.listeners) {
+      if (samePrefix && keys.length > previous.length) listener.onDatasetChange([{
+        type: DataOperationType.ADD, index: previous.length,
+        count: keys.length - previous.length, key: keys.slice(previous.length),
+      }]);
+      else if (samePrefix && keys.length < previous.length) listener.onDatasetChange([{
+        type: DataOperationType.DELETE, index: keys.length, count: previous.length - keys.length,
+      }]);
+      else listener.onDataReloaded();
+    }
   }
 }
 
@@ -122,10 +142,16 @@ export struct BookshelfPage {
   // Keep the user's projection choice in app storage so route recreation does
   // not silently restore the cover projection.
   @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
-  @StorageLink('readerBookshelfSelectedGroup') @Watch('onShelfFiltersChanged') private storedSelectedGroup: string = '';
+  // Retire the removed group selector's transient filter without changing book groups.
+  @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
   @StorageLink('readerBookshelfReadingFilter') @Watch('onShelfFiltersChanged') private readingFilter: string = 'all';
   @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
+  @Prop serverFiltered: boolean = false;
+  @Prop unfilteredOnlineBooks: boolean = false;
+  onNextPageRequested: () => void = (): void => {};
+  onPreviousPageRequested: () => void = (): void => {};
+  onFilterRequested: (readingState: string, sourceKind: string) => void = (_readingState: string, _sourceKind: string): void => {};
   @Prop continueReading: ShelfBook | undefined;
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   onImportRequested: () => void = (): void => {};
@@ -139,6 +165,7 @@ export struct BookshelfPage {
   // The host owns the settings route; this page only emits the semantic action.
   onBookshelfSettingsRequested: () => void = (): void => {};
   onBookSelected: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
+  onVisibleBooksChanged: (books: ShelfBook[]) => void = (_books: ShelfBook[]): void => {};
   onBookMultiSelectRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookGroupRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookInfoRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
@@ -159,7 +186,6 @@ export struct BookshelfPage {
   @State private viewSwitchDestinationCoverOpacity: number = 1;
   @State private viewSwitchMorphCoverOpacity: number = 0;
   @State private filterRowVisible: boolean = false;
-  @State private groupSelectorVisible: boolean = false;
   @State private viewModeError: string = '';
   private mounted: boolean = false;
   private projectionQueued: boolean = false;
@@ -168,7 +194,6 @@ export struct BookshelfPage {
   private confirmedViewMode: BookshelfViewMode = 'cover';
   private requestedViewMode: BookshelfViewMode = 'cover';
   private viewModeReadFailed: boolean = false;
-  @State private selectedGroup: string = '';
   @State private actionBook: ShelfBook | undefined = undefined;
   @State private moreMenuVisible: boolean = false;
   @State private moreAnchorRight: number = 0;
@@ -188,22 +213,27 @@ export struct BookshelfPage {
   private readonly viewContentCurve = curves.cubicBezierCurve(.4, 0, .2, 1);
   private readonly viewMoveCurve = curves.cubicBezierCurve(.2, 0, 0, 1);
   private readonly viewScaleCurve = curves.cubicBezierCurve(.25, .1, 0, 1);
-  private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource();
+  private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource((row: ShelfBook[]): string => this.bookRowRenderKey(row, 0));
   private readonly webDavCredentials: WebDavCredentialStore = WebDavCredentialStore.instance;
 
   aboutToAppear(): void {
     this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
-    const restoredMode: BookshelfViewMode = this.storedViewMode === 'list' ? 'list' : 'cover';
+    const confirmedMode = this.webDavCredentials.currentBookshelfViewMode();
+    const restoredMode: BookshelfViewMode = confirmedMode ?? (this.storedViewMode === 'list' ? 'list' : 'cover');
     this.viewMode = restoredMode;
     this.confirmedViewMode = restoredMode;
-    this.selectedGroup = this.storedSelectedGroup;
+    this.requestedViewMode = restoredMode;
+    this.storedViewMode = restoredMode;
+    this.storedSelectedGroup = '';
     this.filterRowVisible = this.viewState.filterExpanded;
-    this.groupSelectorVisible = !this.filterRowVisible && this.viewState.groupExpanded;
     this.viewportRestored = false;
     this.setRestingProjectionOpacity(restoredMode);
     this.rebuildShelfProjection();
-    this.loadViewMode();
+    // EntryAbility has already read this choice and recovery may have replaced
+    // it. Reuse the store's acknowledged value; retries and a remount during
+    // an in-flight write still use the existing serialized load path.
+    if (confirmedMode === undefined) this.loadViewMode();
   }
 
   private retryViewMode(): void {
@@ -220,6 +250,7 @@ export struct BookshelfPage {
       this.confirmedViewMode = mode;
       this.requestedViewMode = mode;
       this.storedViewMode = mode;
+      if (this.viewMode === mode && !this.viewSwitchRunning) return;
       this.resetViewSwitchMotion();
       this.viewMode = mode;
       this.setRestingProjectionOpacity(mode);
@@ -236,7 +267,6 @@ export struct BookshelfPage {
     this.projectionQueued = false;
     this.saveShelfViewport();
     this.viewState.filterExpanded = this.filterRowVisible;
-    this.viewState.groupExpanded = this.groupSelectorVisible;
     this.viewportRestoreGeneration += 1;
     this.mounted = false;
     this.viewModeRevision += 1;
@@ -495,11 +525,6 @@ export struct BookshelfPage {
             });
             this.sectionAction('bookshelf_filter', (): void => {
               this.filterRowVisible = !this.filterRowVisible;
-              this.groupSelectorVisible = false;
-            });
-            this.sectionAction('bookshelf_settings', (): void => {
-              this.groupSelectorVisible = !this.groupSelectorVisible;
-              this.filterRowVisible = false;
             });
           }
           .height(34);
@@ -509,17 +534,6 @@ export struct BookshelfPage {
         // The title follows the projection transition. Its persistent action
         // siblings must stay visible while their selected asset changes.
         .alignItems(VerticalAlign.Center);
-      }
-
-      if (this.groupSelectorVisible) {
-        ListItem() {
-          BookshelfGroupSelector({ selected: this.selectedGroup === '默认', activeGroup: this.selectedGroup,
-            onSelect: (): void => {
-              this.selectedGroup = '默认';
-              this.storedSelectedGroup = '默认';
-              this.queueShelfProjection();
-            }, onClear: (): void => this.clearGroup() });
-        }
       }
 
       if (this.filterRowVisible) {
@@ -540,7 +554,7 @@ export struct BookshelfPage {
           Column({ space: 8 }) {
             Text('没有符合条件的书籍').fontSize(14).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
             Text('清除全部条件').fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-              .height(36).onClick((): void => { this.clearFilters(); this.clearGroup(); });
+              .height(36).onClick((): void => this.clearFilters());
           }.width('100%').padding({ top: 16, bottom: 16 });
         }
       }
@@ -563,14 +577,19 @@ export struct BookshelfPage {
       if (!this.viewportRestored) return;
       this.firstVisibleItem = start;
       this.saveShelfViewport();
+      this.publishVisibleReadingBooks();
+      if (start <= this.shelfHeaderItems() + 4) this.onPreviousPageRequested();
+      if (start + 8 >= this.shelfHeaderItems() + this.rowDataSource.totalCount()) this.onNextPageRequested();
     })
+    .onReachStart((): void => this.onPreviousPageRequested())
+    .onReachEnd((): void => this.onNextPageRequested())
     .onScroll((): void => this.saveShelfViewport())
     .onAppear((): void => this.restoreShelfViewport());
   }
 
   private shelfHeaderItems(): number {
     return 1 + (this.continueReading === undefined ? 0 : 1) +
-      (this.filterRowVisible ? 1 : 0) + (this.groupSelectorVisible ? 1 : 0) +
+      (this.filterRowVisible ? 1 : 0) +
       (this.viewModeError.length > 0 ? 1 : 0);
   }
 
@@ -603,6 +622,7 @@ export struct BookshelfPage {
       if (anchor < 0) {
         this.shelfScroller.scrollTo({ xOffset: 0, yOffset: Math.max(0, offset), animation: false });
         this.viewportRestored = true;
+        this.publishVisibleReadingBooks();
         return;
       }
       const item = anchor + this.shelfHeaderItems();
@@ -613,6 +633,7 @@ export struct BookshelfPage {
         try { this.shelfScroller.scrollBy(0, this.shelfScroller.getItemRect(item).y - itemY); }
         catch (_error) { /* A concurrent removal may discard the saved anchor. */ }
         this.viewportRestored = true;
+        this.publishVisibleReadingBooks();
       }));
     }));
   }
@@ -677,14 +698,8 @@ export struct BookshelfPage {
     this.queueShelfProjection();
   }
 
-  private clearGroup(): void {
-    this.selectedGroup = '';
-    this.storedSelectedGroup = '';
-    this.queueShelfProjection();
-  }
-
   private onShelfFiltersChanged(): void {
-    this.selectedGroup = this.storedSelectedGroup;
+    if (this.mounted && this.serverFiltered) this.onFilterRequested(this.readingFilter, this.sourceFilter);
     this.queueShelfProjection();
   }
 
@@ -719,7 +734,7 @@ export struct BookshelfPage {
     if (assetName === 'bookshelf_filter') {
       return this.filterRowVisible || this.hasActiveFilters();
     }
-    return assetName === 'bookshelf_settings' && (this.groupSelectorVisible || this.selectedGroup.length > 0);
+    return false;
   }
 
   // Keep the canonical active asset referenced for provenance and future
@@ -746,7 +761,7 @@ export struct BookshelfPage {
         ? this.canonicalFilterActiveAsset()
         : (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_theme_night') : $r('app.media.bookshelf_filter'));
     }
-    return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_settings_theme_night') : $r('app.media.bookshelf_settings'));
+    return (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_filter_theme_night') : $r('app.media.bookshelf_filter'));
   }
 
   @Builder
@@ -838,9 +853,9 @@ export struct BookshelfPage {
   }
 
   /**
-   * Figma renders a shared morph cover above a separately fading destination
-   * collection. Keeping both actors avoids the old jump where one cover had to
-   * be both the moving layer and the final static layer at the same instant.
+   * Keep the shared morph actor above a continuously opaque destination cover.
+   * Both have the same parent transform, so fading the lower cover with the
+   * incoming text would expose the shelf when the upper actor hands off.
    */
   @Builder
   private projectionBookCoverLayer(book: ShelfBook, isTablet: boolean, morphLayer: boolean, index: number) {
@@ -880,6 +895,10 @@ export struct BookshelfPage {
     })
     .borderRadius(this.projectionCoverRadius(isTablet, index))
     .clip(true)
+    // Alpha belongs to the complete cover, including the fallback's paper,
+    // rules and text. Otherwise the fading paper can cover the lower text
+    // before its own fading glyphs draw. Keep this group stable at rest too.
+    .renderGroup(true)
     .opacity(this.projectionCoverLayerOpacity(morphLayer))
     .hitTestBehavior(HitTestMode.Transparent);
   }
@@ -1038,7 +1057,7 @@ export struct BookshelfPage {
     if (assetName === 'bookshelf_filter') {
       return this.hasActiveFilters() ? '筛选书架，已有筛选条件' : this.filterRowVisible ? '筛选书架，已展开' : '筛选书架';
     }
-    return this.selectedGroup.length > 0 ? `整理分组，当前${this.selectedGroup}` : this.groupSelectorVisible ? '整理分组，已展开' : '整理分组';
+    return '';
   }
 
   private listCoverWidth(isTablet: boolean): number {
@@ -1190,28 +1209,54 @@ export struct BookshelfPage {
   }
 
   private rebuildShelfProjection(): void {
-    const visible = ShelfBookPresentation.visible(this.books, this.selectedGroup, this.readingFilter, this.sourceFilter);
+    const visible = this.serverFiltered ? this.books : ShelfBookPresentation.visible(this.books, '', this.readingFilter, this.sourceFilter);
     this.visibleBookCount = visible.length;
-    this.hasOnlineBooks = this.books.some((book: ShelfBook): boolean => book.sourceId !== 'local');
+    this.hasOnlineBooks = this.serverFiltered ? this.unfilteredOnlineBooks : this.books.some((book: ShelfBook): boolean => book.sourceId !== 'local');
     const rows: ShelfBook[][] = [];
     for (let index = 0; index < visible.length; index += 3) {
       rows.push(visible.slice(index, index + 3));
     }
+    const oldFirst = this.rowDataSource.totalCount() > 0 ? this.rowDataSource.getData(0)[0] : undefined;
+    const newFirst = rows.length > 0 ? rows[0][0] : undefined;
+    const shifted = oldFirst !== undefined && newFirst !== undefined &&
+      (oldFirst.sourceId !== newFirst.sourceId || oldFirst.bookId !== newFirst.bookId);
+    const restore = shifted && this.mounted && this.viewportRestored && this.viewState.anchorKey.length > 0;
+    // Native reload can synchronously report a new index. Fence that callback
+    // before replacing rows so it cannot overwrite the old book/Y anchor.
+    if (restore) this.viewportRestored = false;
     this.rowDataSource.replace(rows);
+    if (restore) this.restoreShelfViewport();
+    else this.publishVisibleReadingBooks();
+  }
+
+  /** The displayed rows own preparation; scrolling replaces this fixed window. */
+  private publishVisibleReadingBooks(): void {
+    if (!this.mounted || !this.viewportRestored) return;
+    const books: ShelfBook[] = [];
+    if (this.firstVisibleItem < this.shelfHeaderItems() && this.continueReading !== undefined) {
+      books.push(this.continueReading);
+    }
+    const firstRow = Math.max(0, this.firstVisibleItem - this.shelfHeaderItems());
+    for (let index = firstRow; index < this.rowDataSource.totalCount() && books.length < 6; index += 1) {
+      for (const book of this.rowDataSource.getData(index)) {
+        if (books.length >= 6) break;
+        if (!books.some((value: ShelfBook): boolean => value.sourceId === book.sourceId && value.bookId === book.bookId)) {
+          books.push(book);
+        }
+      }
+    }
+    this.onVisibleBooksChanged(books);
   }
 
   private bookRowRenderKey(row: ShelfBook[], rowIndex: number): string {
-    // The row index alone is not a content identity: an import can replace
-    // the books in row 0 while ForEach keeps the old row builder alive.  Bind
-    // the key to every field rendered by bookCard so imports, progress, cover,
-    // and catalog badges all redraw from the latest Core projection.
-    let key = `bookshelf-row-${rowIndex}`;
-    for (const book of row) {
-      key += `|${book.sourceId}:${book.bookId}:${book.title}:${book.author}:` +
-        `${book.sourceName ?? ''}:${book.coverUrl ?? ''}:${book.currentChapterTitle ?? ''}:${book.lastChapter ?? ''}:` +
-        `${book.unreadCount ?? 0}:${book.readProgress ?? 0}`;
-    }
-    return key;
+    // Row position is not identity. Reordering or trimming a page must not
+    // replace all following native covers. Mutable display fields still
+    // invalidate the affected row; tuple encoding avoids delimiter collisions.
+    return JSON.stringify(row.map((book: ShelfBook): Array<string | number> => [
+      book.sourceId, book.bookId, book.title, book.author,
+      book.sourceName ?? '', book.coverUrl ?? '', book.currentChapterTitle ?? '', book.lastChapter ?? '',
+      book.unreadCount ?? 0, book.readProgress ?? 0,
+    ]));
   }
 
   private async persistRequestedViewMode(mode: BookshelfViewMode, revision: number): Promise<boolean> {
@@ -1303,13 +1348,17 @@ export struct BookshelfPage {
       motionSegment(t, m.headerIncomingStartMs, m.headerIncomingDurationMs, content);
     this.viewSwitchGridContentOpacity = this.viewSwitchSourceMode === 'cover' ? outgoing : incoming;
     this.viewSwitchListContentOpacity = this.viewSwitchSourceMode === 'list' ? outgoing : incoming;
+    // Cover continuity is independent of the text reveal. In G, the upper
+    // cover fades at 690–720ms but text is not opaque until 820ms. In H, the
+    // upper cover fades in at 150–180ms. A second partial alpha beneath either
+    // handoff dims the same book before it brightens again (most visible on
+    // NoCoverCover's text/rules). The lower actor must remain opaque.
+    this.viewSwitchDestinationCoverOpacity = 1;
     if (this.viewSwitchDestinationMode === 'list') {
-      this.viewSwitchDestinationCoverOpacity = incoming;
       this.viewSwitchMorphCoverOpacity = 1 - motionSegment(t,
         m.movingCoverFadeStartMs, m.movingCoverFadeDurationMs, fade);
     } else {
       const handoff = motionSegment(t, m.morphCoverIncomingStartMs, m.morphCoverIncomingDurationMs, fade);
-      this.viewSwitchDestinationCoverOpacity = 1 - handoff + incoming;
       this.viewSwitchMorphCoverOpacity = handoff;
     }
     this.viewMode = t < m.layoutCommitMs ? this.viewSwitchSourceMode : this.viewSwitchDestinationMode;

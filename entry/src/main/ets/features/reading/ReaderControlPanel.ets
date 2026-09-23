@@ -193,6 +193,7 @@ export struct ReaderControlPanel {
   private visualSession: ReaderControlSessionState = createReaderControlSessionState();
   @State private visualExpansionProgress: number = 0;
   @State private visualVisibilityProgress: number = 0;
+  @State private controlActorsRetained: boolean = false;
   @State private visualHeldPointerId: number = -1;
   @State private visualTransitionKind: string = '';
   @State private motionOffsetY: number = 0;
@@ -241,6 +242,10 @@ export struct ReaderControlPanel {
   @Prop totalChapters: number = 0;
   @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();
   @Prop tocEntries: LocalReadingTocEntry[] = [];
+  @Prop catalogComplete: boolean = true;
+  @Prop catalogChapterCount: number = 0;
+  @Prop catalogCurrentPosition: number = -1;
+  onRequireCompleteCatalog: () => void = (): void => {};
   @Prop currentChapterIndex: number = -1;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   @Prop chapterDownloadEnabled: boolean = false;
@@ -290,6 +295,7 @@ export struct ReaderControlPanel {
   onDownloadBook: () => void = (): void => {};
   @Prop chapterRefreshEnabled: boolean = false;
   @Prop bookDownloadEnabled: boolean = false;
+  @Prop bookDownloadActive: boolean = false;
   @State private moreMenuVisible: boolean = false;
   private moreMenuMeasuredWidth: number = 0;
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
@@ -510,6 +516,11 @@ export struct ReaderControlPanel {
       this.visualSession = update.session;
     }
     const visual = sampleReaderControlSession(update.session);
+    // Keep only the lightweight command owner on reading entry. Once opened,
+    // retain the actor tree through every close to preserve compositor/input
+    // continuity. The first open command itself admits the tree at progress 0.
+    if (visual.visibilityProgress > 0 || (update.session.transition?.to.visibilityProgress ?? 0) > 0 ||
+      update.session.heldPointerId >= 0) this.controlActorsRetained = true;
     if (this.moreMenuVisible && visual.visibilityProgress <= 0) this.dismissMoreMenu();
     this.visualExpansionProgress = visual.expansionProgress;
     this.visualVisibilityProgress = visual.visibilityProgress;
@@ -827,6 +838,7 @@ export struct ReaderControlPanel {
   // The production component owns both the clock and every actor builder.
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
+      if (this.controlActorsRetained || this.frame().visibility > 0 || this.launchSample !== undefined) {
       Stack({ alignContent: Alignment.Top }) { this.topBar(); }
         .width(this.layout.topBarWidth).height(54)
         .position({ x: (this.layout.viewportWidth - this.layout.topBarWidth) / 2,
@@ -976,6 +988,7 @@ export struct ReaderControlPanel {
           onToggle: (): void => this.onLaunchToggle(),
         }).opacity(this.launchStageOpacity).zIndex(9);
       }
+      }
     }
     .visibility(this.controlObscured ? Visibility.Hidden : Visibility.Visible)
     .width(this.layout.viewportWidth)
@@ -1059,7 +1072,7 @@ export struct ReaderControlPanel {
       Column() {
         this.readerMoreAction('书籍信息', 'info');
         this.readerMoreAction('刷新本章', 'refresh');
-        this.readerMoreAction('下载全部章节', 'download');
+        this.readerMoreAction(this.bookDownloadActive ? '正在下载章节…' : '下载全部章节', 'download');
       }.width('100%');
     }.width('100%')
       .height(Math.min(150, Math.max(0, this.layout.viewportHeight - 36)))
@@ -1188,6 +1201,9 @@ export struct ReaderControlPanel {
       } else if (this.contentLocation().module === 'directory') {
         ReaderControlDirectoryContent({
           entries: this.tocEntries, currentChapterIndex: this.currentChapterIndex,
+          catalogComplete: this.catalogComplete, catalogChapterCount: this.catalogChapterCount,
+          catalogCurrentPosition: this.catalogCurrentPosition,
+          onRequireCompleteCatalog: (): void => this.onRequireCompleteCatalog(),
           bookmarkLoadFailed: this.bookmarkLoadFailed,
           bookmarkLoadMessage: this.bookmarkLoadMessage,
           onRetryBookmarkLoad: (): void => this.onRetryBookmarkLoad(),

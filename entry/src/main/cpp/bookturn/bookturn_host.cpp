@@ -226,9 +226,9 @@ bool BookTurnHost::Settle(uint64_t generation, bool commit)
     return true;
 }
 
-bool BookTurnHost::StartProgrammatic(uint64_t generation, Direction direction, bool rapid)
+bool BookTurnHost::StartProgrammatic(uint64_t generation, Direction direction, ProgrammaticProfile profile)
 {
-    if (generation == 0) return false;
+    if (generation == 0 || !IsProgrammaticProfileValid(profile)) return false;
     std::lock_guard<std::mutex> lock(mutex_);
     if (!CanStart(direction)) return false;
     if (inputOwnerGeneration_ != 0) return false;
@@ -238,10 +238,35 @@ bool BookTurnHost::StartProgrammatic(uint64_t generation, Direction direction, b
     pendingProgrammaticDirection_ = direction;
     pendingSettlement_ = Settlement::COMMIT;
     pendingSettlementEased_ = true;
-    pendingSettlementRapid_ = rapid;
+    pendingProgrammaticProfile_ = profile;
     pendingSettlementGeneration_ = generation;
     condition_.notify_all();
     return true;
+}
+
+bool BookTurnHost::StartAutomaticTimeline(uint64_t generation, int32_t surfaceToken)
+{
+    if (generation == 0 || surfaceToken <= 0) return false;
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (stop_ || detachRequested_ || attachRequested_ || inputOwnerGeneration_ != generation ||
+        pendingSettlement_ != Settlement::NONE || !rendererReady_.load(std::memory_order_acquire)) return false;
+    std::lock_guard<std::mutex> frameLock(frameMutex_);
+    if (automaticStartGeneration_ != generation || automaticStartToken_ != surfaceToken ||
+        automaticStartSurfaceEpoch_ != surfaceRequestSerial_ || settlement_ != Settlement::COMMIT) return false;
+    if (automaticStart_ == AutomaticStart::RUNNING) return true;
+    if (automaticStart_ != AutomaticStart::WAITING) return false;
+    pendingAutomaticTimeline_ = true;
+    condition_.notify_all();
+    return true;
+}
+
+void BookTurnHost::ResetAutomaticStart()
+{
+    automaticStart_ = AutomaticStart::NONE;
+    automaticStartGeneration_ = 0;
+    automaticStartSurfaceEpoch_ = 0;
+    automaticStartToken_ = 0;
+    automaticTimelineStartNs_ = 0;
 }
 
 bool BookTurnHost::CommitSlots(uint64_t generation, Direction direction)
@@ -407,7 +432,8 @@ void BookTurnHost::RequestFrameIfWanted()
 void BookTurnHost::UpdateFrameLoopWanted()
 {
     const bool was = frameLoopWanted_.load(std::memory_order_acquire);
-    const bool wanted = settlement_ != Settlement::NONE || pendingSettlement_ != Settlement::NONE ||
+    const bool wanted = (settlement_ != Settlement::NONE && automaticStart_ != AutomaticStart::WAITING) ||
+        pendingSettlement_ != Settlement::NONE || pendingAutomaticTimeline_ ||
         (fingerDown_ && inputFrameDirty_) || pendingSample_.has_value() ||
         (highlightFrameDirty_ && terminalRetainedGeneration_ != 0);
     frameLoopWanted_.store(wanted, std::memory_order_release);
@@ -438,7 +464,7 @@ void BookTurnHost::Run()
     while (!stop_) {
         condition_.wait(lock, [this]() {
             return stop_ || attachRequested_ || detachRequested_ || resizeRequested_ ||
-                pendingSample_.has_value() || pendingSettlement_ != Settlement::NONE ||
+                pendingSample_.has_value() || pendingSettlement_ != Settlement::NONE || pendingAutomaticTimeline_ ||
                 pendingHighlights_.has_value() || pendingCommitSlots_ || pendingRetain_ || pendingRelease_ || pendingClearSurface_ ||
                 (inputOwnerGeneration_ == 0 && (pendingTextures_[0].has_value() ||
                 pendingTextures_[1].has_value() || pendingTextures_[2].has_value())) ||
@@ -479,6 +505,7 @@ void BookTurnHost::Run()
             consumedSampleSerial_ = sampleSerial_;
             pendingSettlement_ = Settlement::NONE;
             pendingSettlementEased_ = false;
+            pendingAutomaticTimeline_ = false;
             pendingProgrammaticDirection_.reset();
             pendingSettlementGeneration_ = 0;
             pendingCommitSlots_ = false;
@@ -516,11 +543,12 @@ void BookTurnHost::Run()
             chaseGeneration_ = 0;
             pose_ = BookTurnPose {};
             settlement_ = Settlement::NONE;
-            settlementEased_ = false;
+            settlementCurve_ = SettlementCurve::LINEAR;
             settlementTau0_ = 0.0F;
             settlementTargetTau_ = 0.0F;
             settlementDuration_ = 0.0F;
-            pendingSettlementRapid_ = false;
+            pendingProgrammaticProfile_ = ProgrammaticProfile::MANUAL;
+            ResetAutomaticStart();
             settlementElapsed_ = 0.0F;
             settlementStartTheta_ = 0.0F;
             inputOwnerGeneration_ = 0;
@@ -670,7 +698,11 @@ void BookTurnHost::Run()
             consumedSampleSerial_ = sampleSerial_;
             const std::optional<BookTurnFrameState> regrab = pendingRegrabFrame_;
             pendingRegrabFrame_.reset();
-            if (regrab.has_value()) settlement_ = Settlement::NONE;
+            if (regrab.has_value()) {
+                settlement_ = Settlement::NONE;
+                pendingAutomaticTimeline_ = false;
+                ResetAutomaticStart();
+            }
             // Only an explicitly admitted Regrab can replace settlement ownership.
             // Ordinary late samples cannot interrupt the current transaction.
             if (settlement_ == Settlement::NONE && (pendingSettlement_ == Settlement::NONE ||
@@ -746,9 +778,13 @@ void BookTurnHost::Run()
         if (pendingSettlement_ != Settlement::NONE) {
             const bool commit = pendingSettlement_ == Settlement::COMMIT;
             settlement_ = pendingSettlement_;
-            settlementEased_ = pendingSettlementEased_;
+            const bool programmatic = pendingSettlementEased_ && pendingProgrammaticDirection_.has_value();
+            const ProgrammaticProfile profile = pendingProgrammaticProfile_;
+            settlementCurve_ = programmatic ? ProgrammaticSettlementCurve(profile) : SettlementCurve::LINEAR;
             pendingSettlement_ = Settlement::NONE;
             pendingSettlementEased_ = false;
+            pendingAutomaticTimeline_ = false;
+            ResetAutomaticStart();
             fingerDown_ = false;
             if (terminalRetainedGeneration_ != 0) {
                 CheckTerminalRetainTimeout();
@@ -760,26 +796,55 @@ void BookTurnHost::Run()
             rollbackTerminalGenerationAtomic_.store(0, std::memory_order_release);
             committedSlotsGenerationAtomic_.store(0, std::memory_order_release);
             renderer_.SetSheetVisible(true);
-            if (settlementEased_ && pendingProgrammaticDirection_.has_value()) {
+            // A cancellation can supersede the queued start before its first
+            // draw. Materialize that request's original page so rollback still
+            // produces a terminal barrier and eventually releases its owner.
+            if (pendingProgrammaticDirection_.has_value()) {
                 liveInput_ = ProgrammaticInput(pendingSettlementGeneration_,
                     *pendingProgrammaticDirection_);
                 pose_ = BookTurnSolver::Solve(liveInput_, nullptr);
                 active_ = true;
                 pendingProgrammaticDirection_.reset();
+                if (programmatic && profile == ProgrammaticProfile::AUTOMATIC) {
+                    automaticStart_ = AutomaticStart::PRIMING;
+                    automaticStartGeneration_ = pendingSettlementGeneration_;
+                    automaticStartSurfaceEpoch_ = surfaceLifecycleSerialAtomic_.load(std::memory_order_acquire);
+                    nextAutomaticStartToken_ = nextAutomaticStartToken_ == INT32_MAX ? 1 : nextAutomaticStartToken_ + 1;
+                    automaticStartToken_ = nextAutomaticStartToken_;
+                    // Even generation reuse after teardown needs a fresh first-frame token.
+                    firstFrameNotifiedGeneration_ = 0;
+                }
             }
             liveInput_.generation = pendingSettlementGeneration_;
             pose_.generation = pendingSettlementGeneration_;
             settlementTau0_ = pose_.tau;
             settlementTargetTau_ = SettleTargetTau(liveInput_.direction, commit);
-            settlementDuration_ = settlementEased_ ?
-                (pendingSettlementRapid_ ? kRapidCompleteSeconds : kCompleteSeconds) :
+            settlementDuration_ = programmatic ? ProgrammaticDurationSeconds(profile) :
                 SettleDurationSeconds(settlementTau0_, liveInput_.direction, commit,
                     -chase_.fingerVelocityX / std::max(1.0F, liveInput_.width));
-            pendingSettlementRapid_ = false;
+            pendingProgrammaticProfile_ = ProgrammaticProfile::MANUAL;
             settlementElapsed_ = 0.0F;
             settlementStartTheta_ = pose_.theta;
             terminalCommit_ = false;
             UpdateFrameLoopWanted();
+        }
+
+        if (pendingAutomaticTimeline_) {
+            pendingAutomaticTimeline_ = false;
+            if (automaticStart_ == AutomaticStart::WAITING &&
+                automaticStartGeneration_ == inputOwnerGeneration_ &&
+                automaticStartSurfaceEpoch_ == surfaceRequestSerial_ && settlement_ == Settlement::COMMIT) {
+                automaticStart_ = AutomaticStart::RUNNING;
+                automaticTimelineStartNs_ = 0;
+                settlementElapsed_ = 0.0F;
+                // A tail callback queued before the reveal confirmation may
+                // carry an arbitrarily old timestamp. Only a fresh VSync can
+                // establish the admitted timeline's origin.
+                vsyncTickPending_ = false;
+                OH_LOG_INFO(LOG_APP, "automatic timeline admitted gen=%{public}llu token=%{public}d",
+                    static_cast<unsigned long long>(automaticStartGeneration_), automaticStartToken_);
+                UpdateFrameLoopWanted();
+            }
         }
 
         if (pendingCommitSlots_) {
@@ -942,15 +1007,17 @@ void BookTurnHost::Run()
             }
             if (settlement_ != Settlement::NONE) {
                 lock.unlock();
-                ProcessSettlementFrame(frameSeconds, lifecycleSerial);
+                ProcessSettlementFrame(frameSeconds, timestamp, lifecycleSerial);
                 lock.lock();
                 if (!IsSurfaceLifecycleCurrent(lifecycleSerial) || detachRequested_ || stop_) {
                     frameLoopWanted_.store(false, std::memory_order_release);
                     fingerDown_ = false;
                     active_ = false;
                     settlement_ = Settlement::NONE;
+                    ResetAutomaticStart();
                     continue;
                 }
+                UpdateFrameLoopWanted();
             } else if (fingerDown_ && inputFrameDirty_) {
                 lock.unlock();
                 const bool trackingAlive = ProcessChaseFrame(frameSeconds, timestamp, lifecycleSerial);
@@ -1126,22 +1193,37 @@ bool BookTurnHost::ProcessChaseFrame(float frameSeconds, int64_t frameTimeNs,
     return true;
 }
 
-bool BookTurnHost::ProcessSettlementFrame(float frameSeconds, uint64_t surfaceSerial)
+bool BookTurnHost::ProcessSettlementFrame(float frameSeconds, int64_t frameTimeNs, uint64_t surfaceSerial)
 {
     std::lock_guard<std::mutex> frameLock(frameMutex_);
     if (!IsSurfaceLifecycleCurrent(surfaceSerial) ||
         inputOwnerGenerationAtomic_.load(std::memory_order_acquire) != liveInput_.generation) return false;
     if (terminalCommit_ || settlement_ == Settlement::NONE) return false;
+    if (automaticStart_ == AutomaticStart::WAITING) return true;
     if (!active_) {
         // Defensive §7.4 closure: nothing visual to settle.
         settlement_ = Settlement::NONE;
+        ResetAutomaticStart();
         NotifySurfaceEvent(surfaceSerial, HostEvent::ROLLBACK_COMPLETE, liveInput_.generation, 0);
         return false;
     }
-    settlementElapsed_ += frameSeconds;
+    const bool primingAutomatic = automaticStart_ == AutomaticStart::PRIMING;
+    if (automaticStart_ == AutomaticStart::RUNNING) {
+        // The first admitted VSync establishes time zero. Neither hidden
+        // preparation nor an arbitrarily late ArkUI confirmation consumes it.
+        if (automaticTimelineStartNs_ == 0) {
+            automaticTimelineStartNs_ = frameTimeNs;
+            OH_LOG_INFO(LOG_APP, "automatic timeline origin gen=%{public}llu vsyncNs=%{public}lld",
+                static_cast<unsigned long long>(liveInput_.generation), static_cast<long long>(frameTimeNs));
+        }
+        settlementElapsed_ = std::max(settlementElapsed_, static_cast<float>(
+            std::max<int64_t>(0, frameTimeNs - automaticTimelineStartNs_)) * 1.0e-9F);
+    } else if (!primingAutomatic) {
+        settlementElapsed_ += frameSeconds;
+    }
     const bool commit = settlement_ == Settlement::COMMIT;
     const float tau = SettleTauAt(settlementTau0_, settlementTargetTau_, settlementElapsed_,
-        settlementDuration_, settlementEased_);
+        settlementDuration_, settlementCurve_);
     float xNorm = 1.0F;
     float beta = 0.0F;
     float scale = 1.0F;
@@ -1181,6 +1263,7 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds, uint64_t surfaceSe
         if (!IsSurfaceLifecycleCurrent(surfaceSerial)) return false;
         active_ = false;
         settlement_ = Settlement::NONE;
+        ResetAutomaticStart();
         SetRetainedTerminalGeneration(0);
         NotifySurfaceEvent(surfaceSerial, HostEvent::RENDER_FAILURE, liveInput_.generation,
             static_cast<int32_t>(renderer_.LastDrawRefusal()));
@@ -1189,13 +1272,28 @@ bool BookTurnHost::ProcessSettlementFrame(float frameSeconds, uint64_t surfaceSe
     if (!IsSurfaceLifecycleCurrent(surfaceSerial)) return false;
     submittedFrame_ = { pose_.generation, pose_.direction, pose_.target.x, pose_.target.y, pose_.theta, surfaceSerial, liveInput_.width, liveInput_.height };
     consecutiveDrawFailures_ = 0;
+    if (primingAutomatic) {
+        automaticStart_ = AutomaticStart::WAITING;
+        // One already queued VSync may arrive; it must neither draw nor
+        // re-arm. The existing ArkUI settlement watchdog owns lost confirms.
+        frameLoopWanted_.store(false, std::memory_order_release);
+        OH_LOG_INFO(LOG_APP, "automatic initial buffer submitted gen=%{public}llu token=%{public}d",
+            static_cast<unsigned long long>(liveInput_.generation), automaticStartToken_);
+    }
     if (firstFrameNotifiedGeneration_ != liveInput_.generation) {
         firstFrameNotifiedGeneration_ = liveInput_.generation;
-        NotifySurfaceEvent(surfaceSerial, HostEvent::FRAME_PRESENTED, liveInput_.generation, 0);
+        NotifySurfaceEvent(surfaceSerial, HostEvent::FRAME_PRESENTED, liveInput_.generation,
+            primingAutomatic ? automaticStartToken_ : 0);
     }
+    if (primingAutomatic) return true;
     const bool tauFinished = settlementElapsed_ >= settlementDuration_;
     const bool tiltFinished = std::abs(liveInput_.settledTheta) <= 1.0e-4F;
     if (!tauFinished || !tiltFinished) return true;
+    if (automaticStart_ == AutomaticStart::RUNNING) {
+        OH_LOG_INFO(LOG_APP, "automatic terminal submitted gen=%{public}llu elapsedMs=%{public}.2f",
+            static_cast<unsigned long long>(liveInput_.generation), settlementElapsed_ * 1000.0F);
+    }
+    ResetAutomaticStart();
     if (commit) {
         terminalCommit_ = true;
         settlement_ = Settlement::NONE;

@@ -6,13 +6,14 @@ import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import { readerControlDirectorySnapshot, ReaderControlDirectoryPosition,
   type ReaderControlDirectoryRow, type ReaderControlDirectorySnapshot } from './ReaderControlDirectoryModel';
-import { readerDirectoryBookmarkMarkerState, type ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
+import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
 import { ReaderBookmarkRow } from './ReaderBookmarkRow';
 import { ReaderBookmarkEmptyState } from './ReaderBookmarkEmptyState';
 import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
 import { ReaderBookmarkErrorState } from './ReaderBookmarkErrorState';
-import { ReaderSearchField } from '../common/ReaderSearchField';
-import { TOK_ACCENT, TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
+import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
+import { ReaderDirectoryChapterRow } from './ReaderDirectoryChapterRow';
+import { TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
   TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT, TOK_SPACE_SM } from '../common/ReaderTokens';
 
 class ControlDirectoryDataSource implements IDataSource {
@@ -60,6 +61,10 @@ export struct ReaderControlDirectoryContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop @Watch('refreshData') entries: LocalReadingTocEntry[] = [];
+  @Prop @Watch('refreshData') catalogComplete: boolean = true;
+  @Prop @Watch('refreshData') catalogChapterCount: number = 0;
+  @Prop @Watch('refreshData') catalogCurrentPosition: number = -1;
+  onRequireCompleteCatalog: () => void = (): void => {};
   @Prop @Watch('refreshData') currentChapterIndex: number = -1;
   @Prop @Watch('openList') tab: string = 'directory';
   @Prop @Watch('openList') sessionKey: string = '';
@@ -85,6 +90,7 @@ export struct ReaderControlDirectoryContent {
   @State private snapshot: ReaderControlDirectorySnapshot =
     readerControlDirectorySnapshot([], 'directory', '', true, -1);
   private query: string = '';
+  private pendingCatalogAction: string = '';
   private scroller: Scroller = new Scroller();
   private dataSource: ControlDirectoryDataSource = new ControlDirectoryDataSource();
   private placement: ReaderControlDirectoryPosition = new ReaderControlDirectoryPosition();
@@ -107,6 +113,7 @@ export struct ReaderControlDirectoryContent {
 
   private openList(): void {
     if (!this.mounted) return;
+    this.pendingCatalogAction = '';
     this.placement.open(`${this.sessionKey}:${this.tab}`);
     this.leadingRow = undefined;
     this.leadingKey = undefined;
@@ -117,7 +124,9 @@ export struct ReaderControlDirectoryContent {
   private refreshData(): void {
     if (!this.mounted) return;
     const next = readerControlDirectorySnapshot(this.entries, this.tab, this.query,
-      this.ascending, this.currentChapterIndex, this.bookmarkIdentity);
+      this.ascending, this.currentChapterIndex, this.bookmarkIdentity, {
+        complete: this.catalogComplete, chapterCount: this.catalogChapterCount,
+        currentPosition: this.catalogCurrentPosition });
     if (this.leadingKey !== undefined) {
       const index = next.rows.findIndex((row: ReaderControlDirectoryRow): boolean => row.key === this.leadingKey);
       this.leadingRow = index < 0 ? undefined : index + this.leadingFraction;
@@ -126,6 +135,18 @@ export struct ReaderControlDirectoryContent {
     this.snapshot = next;
     this.queuePosition();
     if (this.leadingRow !== undefined) this.queueLeadingCorrection();
+    if (this.catalogComplete && this.pendingCatalogAction.length > 0) {
+      const lifecycle = this.lifecycle, key = this.sessionKey;
+      this.getUIContext().postFrameCallback(new ControlDirectoryFrame((): void => {
+        if (!this.mounted || lifecycle !== this.lifecycle || key !== this.sessionKey || !this.catalogComplete) return;
+        const action = this.pendingCatalogAction;
+        this.pendingCatalogAction = '';
+        if (action === 'search') this.search();
+        else if (action === 'sort') this.sort();
+        else if (action === 'top') this.scrollCatalogEdge(false);
+        else if (action === 'bottom') this.scrollCatalogEdge(true);
+      }));
+    }
   }
 
   private queuePosition(): void {
@@ -241,19 +262,26 @@ export struct ReaderControlDirectoryContent {
   private placeholder(): string { return this.tab === 'bookmarks' ? '搜索书签内容' : '搜索章节名称'; }
 
   private search(): void {
+    if (this.deferCatalogAction('search')) return;
     this.query = this.draft.trim(); this.userScroll(); this.refreshData();
     this.scroller.scrollEdge(Edge.Top);
   }
   private sort(): void {
+    if (this.deferCatalogAction('sort')) return;
     this.ascending = !this.ascending; this.userScroll(); this.refreshData();
     this.scroller.scrollEdge(Edge.Top);
   }
-  private marker(entry: LocalReadingTocEntry): void {
-    const state = readerDirectoryBookmarkMarkerState(entry);
-    if (state.kind === 'bookmarked') this.onDeleteBookmarks(state.bookmarkTimes);
-    else if (state.kind === 'empty' && this.chapterStartBookmarkCreationEnabled) {
-      this.onCreateChapterStartBookmark(state.createRequest);
-    }
+
+  private deferCatalogAction(action: string): boolean {
+    if (this.tab !== 'directory' || this.catalogComplete) return false;
+    this.pendingCatalogAction = action;
+    this.onRequireCompleteCatalog();
+    return true;
+  }
+
+  private scrollCatalogEdge(bottom: boolean): void {
+    if (this.deferCatalogAction(bottom ? 'bottom' : 'top')) return;
+    this.userScroll(); this.scroller.scrollEdge(bottom ? Edge.Bottom : Edge.Top);
   }
 
   @Builder
@@ -280,34 +308,17 @@ export struct ReaderControlDirectoryContent {
   }
 
   @Builder
-  private tool(icon: Resource, title: string, action: () => void) {
-    Stack() { Image(icon).width(16).height(16); }
-      .width(32).height(32).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
-      .accessibilityText(title).onClick(action);
-  }
-
-  @Builder
   private directoryToolbar() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row({ space: 5 }) {
-        Row() {
-          ReaderSearchField({ variant: 'readerDirectory', mode: 'submit', text: this.draft,
-            placeholder: this.placeholder(), accessibilityLabel: this.placeholder(),
-            onTextChange: (value: string): void => { this.draft = value; },
-            onSubmit: (): void => this.search() });
-        }.layoutWeight(1).height(32);
-        this.tool((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search')), '搜索', (): void => this.search());
-        if (this.tab === 'directory') {
-          this.tool((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_top_theme_night') : $r('app.media.reader_directory_top')), '到顶部', (): void => {
-            this.userScroll(); this.scroller.scrollEdge(Edge.Top);
-          });
-          this.tool((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_bottom_theme_night') : $r('app.media.reader_directory_bottom')), '到底部', (): void => {
-            this.userScroll(); this.scroller.scrollEdge(Edge.Bottom);
-          });
-          this.tool(this.ascending ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_sort_ascending_theme_night') : $r('app.media.reader_directory_sort_ascending')) :
-            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_sort_descending_theme_night') : $r('app.media.reader_directory_sort_descending')), '切换排序', (): void => this.sort());
-        }
-      }.width('100%').height(50).padding({ left: 10, right: 10, top: 9 });
+      ReaderDirectoryToolbar({
+        text: this.draft, placeholder: this.placeholder(), ascending: this.ascending,
+        showChapterTools: this.tab === 'directory',
+        onTextChange: (value: string): void => { this.draft = value; },
+        onSearch: (): void => this.search(),
+        onTop: (): void => this.scrollCatalogEdge(false),
+        onBottom: (): void => this.scrollCatalogEdge(true),
+        onToggleSort: (): void => this.sort(),
+      });
       Row().width('100%').height(1).backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
         .position({ x: 0, y: this.value(63, 51) }).opacity(this.progress);
     }.width(Math.max(0, this.availableWidth - 2)).height(52);
@@ -315,35 +326,16 @@ export struct ReaderControlDirectoryContent {
 
   @Builder
   private chapterRow(entry: LocalReadingTocEntry) {
-    Row() {
-      Row() {
-        if (entry.index === this.currentChapterIndex) {
-          Row().width(3).height(this.rowHeight()).borderRadius(999).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
-        }
-        Text(entry.title).layoutWeight(1).padding({ left: 9, right: 9 })
-          .fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.layoutWeight(1).height(this.rowHeight()).accessibilityText(entry.navigable === false ? `卷标题：${entry.title}` : `打开章节：${entry.title}`)
-        .enabled(entry.navigable !== false)
-        .onClick((): void => { if (entry.navigable !== false) this.onSelectChapter(entry.index); });
-      if (entry.navigable !== false && this.chapterDownloadEnabled && entry.downloadState !== 'unknown') {
-        Stack() {
-          Image(entry.downloadState === 'completed' ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
-            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download'))).width(15).height(15);
-        }.width(26).height(this.rowHeight()).accessibilityText(entry.downloadState === 'completed' ? '已下载' : '下载章节')
-          .enabled(entry.downloadState === 'missing' || entry.downloadState === 'cached' ||
-            entry.downloadState === 'failed' || entry.downloadState === 'cancelled')
-          .onClick((): void => this.onDownloadChapter(entry.index));
-      }
-      if (entry.navigable !== false && entry.bookmarks !== undefined) {
-        Stack() {
-          Image(entry.bookmarks.length > 0 ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')) :
-            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark'))).width(15).height(15);
-        }.width(26).height(this.rowHeight()).accessibilityText(entry.bookmarks.length > 0 ? '删除本章已有书签' : '添加本章章首书签')
-          .onClick((): void => this.marker(entry));
-      }
-    }.width('100%').height(this.rowHeight()).borderRadius(6)
-      .backgroundColor(entry.index === this.currentChapterIndex ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent);
+    ReaderDirectoryChapterRow({
+      entry: entry, rowHeight: this.rowHeight(), currentChapterIndex: this.currentChapterIndex,
+      chapterDownloadEnabled: this.chapterDownloadEnabled,
+      chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+      onSelectChapter: (index: number): void => this.onSelectChapter(index),
+      onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
+      onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+      onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+        this.onCreateChapterStartBookmark(request),
+    });
   }
 
   @Builder

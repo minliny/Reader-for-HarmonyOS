@@ -27,21 +27,64 @@ export class ReaderSettingsGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private store: preferences.Preferences | undefined = undefined;
   private static updateTails: Map<ReaderRuntimeOwner, Promise<void>> = new Map();
+  private static snapshots: WeakMap<ReaderRuntimeOwner, ReaderSettingsSnapshot> = new WeakMap();
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
   }
 
+  /** Last admitted application snapshot, available before the reader's first build. */
+  current(): ReaderSettingsSnapshot | undefined {
+    const snapshot = ReaderSettingsGateway.snapshots.get(this.runtimeOwner);
+    return snapshot === undefined ? undefined : copyReaderSettingsSnapshot(snapshot);
+  }
+
   async load(): Promise<ReaderSettingsSnapshot> {
     await ReaderThemeHost.prepareUserChange();
-    await ReaderSettingsGateway.updateTails.get(this.runtimeOwner);
-    const store = await this.ensureStore();
-    return this.readSnapshot(store);
+    return this.loadAdmittedSnapshot((): boolean => true);
+  }
+
+  /** Startup has already completed configuration recovery. Re-entering its
+   * user-change barrier here would recursively wait on the same recovery. */
+  loadAfterConfigurationRecovery(isCurrentOwner: () => boolean): Promise<ReaderSettingsSnapshot> {
+    return this.loadAdmittedSnapshot(isCurrentOwner);
+  }
+
+  private loadAdmittedSnapshot(isCurrentOwner: () => boolean): Promise<ReaderSettingsSnapshot> {
+    return this.withSettingsAccess(async (): Promise<ReaderSettingsSnapshot> => {
+      if (!isCurrentOwner()) throw new Error('READER_SETTINGS_OWNER_CHANGED');
+      const current = this.current();
+      if (current !== undefined) return current;
+      const store = await this.ensureStore();
+      if (!isCurrentOwner()) throw new Error('READER_SETTINGS_OWNER_CHANGED');
+      const snapshot = await this.readSnapshot(store);
+      if (!isCurrentOwner()) throw new Error('READER_SETTINGS_OWNER_CHANGED');
+      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, snapshot);
+      return copyReaderSettingsSnapshot(snapshot);
+    });
   }
 
   async update(snapshot: ReaderSettingsSnapshot, resetOwned: boolean = false): Promise<ReaderSettingsSnapshot> {
     const requestedSnapshot = normalizeReaderSettingsSnapshot(snapshot);
     if (!resetOwned) await ReaderThemeHost.prepareUserChange();
+    return this.withSettingsAccess(async (): Promise<ReaderSettingsSnapshot> => {
+      const store = await this.ensureStore();
+      const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
+      try {
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(requestedSnapshot));
+        await store.flush();
+      } catch (error) {
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, previous);
+        throw error;
+      }
+      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, requestedSnapshot);
+      return copyReaderSettingsSnapshot(requestedSnapshot);
+    });
+  }
+
+  /** Initial reads/migrations share the existing write queue: they must not
+   * publish a Preferences put that a pending failed flush will roll back. */
+  private async withSettingsAccess<T>(operation: () => Promise<T>): Promise<T> {
     const previousUpdate = ReaderSettingsGateway.updateTails.get(this.runtimeOwner) ?? Promise.resolve();
     let releaseUpdate: (() => void) | undefined = undefined;
     const nextUpdate = new Promise<void>((resolve: () => void): void => {
@@ -54,16 +97,7 @@ export class ReaderSettingsGateway {
     await previousUpdate.catch((): void => {});
 
     try {
-      const store = await this.ensureStore();
-      const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
-      try {
-        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(requestedSnapshot));
-        await store.flush();
-      } catch (error) {
-        await store.put(READER_SETTINGS_SNAPSHOT_KEY, previous);
-        throw error;
-      }
-      return copyReaderSettingsSnapshot(requestedSnapshot);
+      return await operation();
     } finally {
       if (releaseUpdate !== undefined) {
         releaseUpdate();

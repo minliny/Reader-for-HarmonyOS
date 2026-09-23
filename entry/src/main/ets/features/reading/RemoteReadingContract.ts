@@ -4,7 +4,7 @@ import { errorMessageOf, isNetworkEnvironmentFailure } from '../../app/ErrorMess
 export type RemoteReadingCommand =
   'book.detail' | 'book.toc' | 'chapter.content' |
   'reading.progress.get' | 'reader.location.resolve' | 'reading.progress.update' |
-  'cache.book.status';
+  'cache.book.status' | 'search.content' | 'source.list';
 
 export type RemoteReadingErrorCode =
   'invalidInput' | 'unsupportedHostCapability' | 'invalidResponse' |
@@ -88,6 +88,7 @@ export class RemoteReadingGatewayError extends Error {
   readonly category: RemoteReadingFailureCategory;
   readonly causeValue: unknown;
   readonly transientTransport: boolean;
+  readonly previousCategory: RemoteReadingFailureCategory | undefined;
 
   constructor(
     code: RemoteReadingErrorCode,
@@ -98,6 +99,7 @@ export class RemoteReadingGatewayError extends Error {
     causeValue: unknown = undefined,
     category?: RemoteReadingFailureCategory,
     transientTransport: boolean = false,
+    previousCategory?: RemoteReadingFailureCategory,
   ) {
     super(message);
     this.name = 'RemoteReadingGatewayError';
@@ -108,6 +110,7 @@ export class RemoteReadingGatewayError extends Error {
     this.causeValue = causeValue;
     this.category = category ?? remoteReadingCategoryForCode(code);
     this.transientTransport = transientTransport;
+    this.previousCategory = previousCategory;
   }
 }
 
@@ -137,7 +140,8 @@ export function remoteReadingFailureRecord(error: RemoteReadingGatewayError, att
     const value = error.diagnostic?.[name];
     if (typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value)) record[name] = value;
   }
-  if (error.causeValue instanceof RemoteReadingGatewayError) record.previousCategory = error.causeValue.category;
+  if (error.previousCategory !== undefined) record.previousCategory = error.previousCategory;
+  else if (error.causeValue instanceof RemoteReadingGatewayError) record.previousCategory = error.causeValue.category;
   return record;
 }
 
@@ -329,15 +333,22 @@ export function classifyRemoteReadingCommandFailure(
   if (code === 'CANCELLED' || /cancelled|canceled|已取消/i.test(message)) {
     return new RemoteReadingGatewayError('cancelled', message, command, undefined, diagnostic, error);
   }
+  if (command === 'search.content' && (details?.['reason'] === 'CONTENT_SEARCH_STALE' || details?.['reason'] === 'CONTENT_SEARCH_EXPIRED')) {
+    return new RemoteReadingGatewayError('positionContextStale',
+      '搜索期间正文或处理状态已更新，请重新搜索。', command, undefined, diagnostic, error);
+  }
   if (details?.['requiresPositionMigration'] === true || details?.['reason'] === 'POSITION_CONTEXT_STALE' ||
     details?.['reason'] === 'PROCESSING_CONTEXT_STALE') {
     const recovery = details?.['reason'] === 'PROCESSING_CONTEXT_STALE' ?
-      '正文处理设置已改变，原阅读位置已保留。请恢复此前的简繁转换或正文替换设置后重试。' :
+      '当前正文处理结果与原阅读位置暂时无法核对，原位置已保留。可在阅读设置中检查简繁转换和正文替换后重试，或切换书源。' :
       '正文版本与原阅读位置暂时无法核对，已保留原位置。请重新打开章节，或从目录选择其他章节。';
     return new RemoteReadingGatewayError('positionContextStale', recovery, command, undefined, diagnostic, error);
   }
   if (details?.['reason'] === 'sourceVersionDrift' || category === 'SOURCE_VERSION_CHANGED') {
     return new RemoteReadingGatewayError('sourceVersionChanged', message, command, undefined, diagnostic, error);
+  }
+  if (category === 'CACHE_MISSING' && command === 'chapter.content') {
+    return new RemoteReadingGatewayError('chapterNotDownloaded', message, command, undefined, diagnostic, error);
   }
   if (category === 'CACHE_DERIVED_CORRUPT') return new RemoteReadingGatewayError('cacheDerivedCorrupt', message, command, undefined, diagnostic, error);
   if (category === 'STORAGE_FAILURE' || command === 'cache.book.status') {

@@ -23,7 +23,7 @@ const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderUIFrameCallb
   ReaderTtsGateway: class { constructor(owner) { return owner.gateway; } },
   ReaderHttpTtsGateway: class { constructor(owner) { return owner.http; } },
   hilog: { error: () => {} } };
-const methods = ['notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
+const methods = ['notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
   'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
   'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate'];
 function fixture(file = lre) {
@@ -34,7 +34,7 @@ function fixture(file = lre) {
   host.listSystemVoices = () => { events.push('voices'); return voice.promise; };
   runtime = { gateway, getTtsHost: () => host, http: { list: () => { events.push('http'); return http.promise; } } };
   Object.assign(owner, { mounted: true, exitRequested: false, lifecycleToken: 1, phase: 'ready', sourceId: 'source', bookId: 'book',
-    chapter: { chapterIndex: 0, chapterTitle: 'chapter' }, visiblePage: { startScalar: 0 },
+    chapter: { chapterIndex: 0, chapterTitle: 'chapter', images: [] }, visiblePage: { startScalar: 0, fragments: [] },
     chapterSelectionToken: 1, visiblePageSelectionToken: 1,
     ttsWarmupScheduled: false, ttsInitialization: undefined, ttsPresentationMetadata: undefined, ttsAvailabilityResolved: false,
     ttsPreferenceMutationGeneration: 0, ttsConfigMutationGeneration: 0,

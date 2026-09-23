@@ -1,3 +1,4 @@
+import { installContentSearchOwnerProbe } from './lib/reader-content-search-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -89,15 +90,18 @@ const Lre=productionMotionMethods(new URL('../entry/src/main/ets/features/readin
 const entry=Object.assign(new Lre(),{lifecycleToken:1,searchGeneration:0,quickSearchQuery:'',quickSearchState:{kind:'idle'},
   quickSearchPublication:new ReaderContentSearchPublication(),quickSearchRevision:0,
   activeGateway(){throw Error('opening and typing must not call Core');}});
+installContentSearchOwnerProbe(entry);
 for(const page of ['quickSearch','fullSearch'])entry.prepareControlPage(page);
 entry.updateQuickSearchQuery('新关键词');assert.deepEqual(entry.quickSearchState,{kind:'idle'});
 const all=rows(2000),requests=[];
 const search=Object.assign(new Lre(),{lifecycleToken:1,bookId:'b',searchGeneration:0,quickSearchQuery:'关键词',quickSearchState:{kind:'idle'},
   quickSearchPublication:new ReaderContentSearchPublication(),quickSearchRevision:0,controlVisible:()=>true,
   controlPage:()=> 'fullSearch',isSessionActive:()=>true,
+  sessionGateway:{},
   activeGateway:()=>({searchContentPage:async(book,keyword,limit,offset)=>{
     requests.push({book,keyword,limit,offset});return{results:all.slice(offset,offset+limit),offset,hasMore:offset+limit<all.length};
   }})});
+installContentSearchOwnerProbe(search);
 const turn=()=>new Promise(resolve=>setImmediate(resolve));
 search.runQuickSearch();await turn();assert.equal(search.quickSearchState.results.length,50);
 assert.equal(search.quickSearchRevision,2,'one loading and one terminal publication per initial search');

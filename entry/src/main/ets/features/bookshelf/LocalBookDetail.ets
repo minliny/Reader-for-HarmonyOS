@@ -67,20 +67,23 @@ export struct LocalBookDetail {
   @Prop book: ReadingBookDetail;
   @Prop toc: LocalReadingTocEntry[] = [];
   @Prop sourceSwitchEnabled: boolean = false;
-  // Remote detail readability verdict: the start-reading action is enabled
-  // only when the leading-chapter probe admits the content. Local books keep
-  // the defaults (enabled, empty reason) and never see the gate.
+  // Remote acquisition errors may explain the chapter area, but never gate
+  // entry to reading: the reader owns its loading, retry and error surface.
   @Prop readingEnabled: boolean = true;
   @Prop readingBlockedReason: string = '';
   @Prop inBookshelf: boolean = true;
   @Prop removalEnabled: boolean = true;
   @Prop removing: boolean = false;
+  @Prop adding: boolean = false;
+  @Prop cancellingAdd: boolean = false;
+  @Prop shelfMessage: string = '';
   @Prop loadingMessage: string = '';
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
   onRemove: () => void = (): void => {};
+  onCancelAdd: () => void = (): void => {};
   onBack: () => void = (): void => {};
   @State private viewportWidth: number = 0;
 
@@ -94,6 +97,13 @@ export struct LocalBookDetail {
       Column() {
         this.detailScroll();
         this.actionArea();
+        if (this.shelfMessage.length > 0) {
+          Text(this.shelfMessage)
+            .fontSize(12)
+            .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme))
+            .width(this.contentWidth())
+            .padding({ bottom: TOK_SPACE_MD });
+        }
       }
       .layoutWeight(1)
       .width('100%')
@@ -325,18 +335,9 @@ export struct LocalBookDetail {
         .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
         .alignItems(VerticalAlign.Center);
 
-        Scroll() {
-          Column() {
-            ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
-              this.chapterRow(entry);
-            }, (entry: LocalReadingTocEntry): string => `book-detail-toc-${this.book.sourceId}-${this.book.bookId}-${entry.index}`);
-          }
-          .width('100%');
-        }
-        .width('100%')
-        .height(this.toc.length > 0 ? CHAPTER_ROW_HEIGHT * 4 : 0)
-        .scrollBar(BarState.Auto)
-        .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
+        ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
+          this.chapterRow(entry);
+        }, (entry: LocalReadingTocEntry): string => `book-detail-toc-${this.book.sourceId}-${this.book.bookId}-${entry.index}`);
         if (this.toc.length === 0) {
           Text(this.chapterEmptyMessage())
             .width('100%')
@@ -369,16 +370,17 @@ export struct LocalBookDetail {
         .border({ width: 0 })
         .borderRadius(0)
         .stateEffect(false)
-        .enabled(this.readingActionsReady())
+        .accessibilityText('完整目录')
+        .enabled(!this.removing)
         .onClick((): void => {
-          if (this.readingActionsReady()) {
+          if (!this.removing) {
             this.onOpenDirectory();
           }
         });
 
     }
     .width(this.contentWidth())
-    .height(CHAPTER_SECTION_HEIGHT)
+    .height(this.chapterSectionHeight())
     .padding(1)
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -403,7 +405,12 @@ export struct LocalBookDetail {
       .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
       .border({ width: { top: TOK_BORDER_W }, color: { top: readerAppColor('TOK_CHAPTER_DIVIDER', this.appThemeScheme) } })
       .alignItems(VerticalAlign.Center)
-      .onClick((): void => this.onSelectChapter(entry.index));
+      .enabled(entry.navigable !== false && !this.removing)
+      .onClick((): void => {
+        if (entry.navigable !== false && !this.removing) {
+          this.onSelectChapter(entry.index);
+        }
+      });
   }
 
   @Builder
@@ -422,11 +429,11 @@ export struct LocalBookDetail {
       .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) })
       .borderRadius(999)
-      .opacity(this.readingActionsReady() && !this.removing && this.readingEnabled ? 1 : 0.5)
-      .enabled(this.readingActionsReady() && !this.removing && this.readingEnabled)
+      .opacity(this.removing ? 0.5 : 1)
+      .enabled(!this.removing)
       .accessibilityText(this.readingActionLabel())
       .onClick((): void => {
-        if (this.readingActionsReady() && !this.removing && this.readingEnabled) {
+        if (!this.removing) {
           this.onContinue();
         }
       });
@@ -444,12 +451,13 @@ export struct LocalBookDetail {
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_ACTION_DIVIDER', this.appThemeScheme) })
       .borderRadius(999)
-      .enabled(this.removalEnabled && !this.removing)
-      .opacity(this.removalEnabled && !this.removing ? 1 : 0.4)
+      .enabled(this.removalEnabled && !this.removing && !this.cancellingAdd)
+      .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd ? 1 : 0.4)
       .accessibilityText(this.shelfActionLabel())
       .onClick((): void => {
-        if (this.removalEnabled && !this.removing) {
-          this.onRemove();
+        if (this.removalEnabled && !this.removing && !this.cancellingAdd) {
+          if (this.adding) this.onCancelAdd();
+          else this.onRemove();
         }
       });
     }
@@ -535,30 +543,23 @@ export struct LocalBookDetail {
   }
 
   private visibleToc(): LocalReadingTocEntry[] {
-    // The four Figma sample rows define the viewport, not the preview limit.
-    // PH83 restores the confirmed 20-chapter preview within that scrollable viewport.
+    // PH116: show the confirmed twenty-row preview in the detail page's own
+    // scroll. Four static Figma example rows are not a runtime height cap.
     return this.toc.slice(0, CHAPTER_PREVIEW_LIMIT);
   }
 
-  private readingActionsReady(): boolean {
-    return this.toc.length > 0;
-  }
-
-  private pendingReadingLabel(): string {
-    return this.loadingMessage.trim().length > 0 ? this.loadingMessage : '正在准备阅读…';
+  private chapterSectionHeight(): number {
+    return this.toc.length > 0 ? 50 + CHAPTER_ROW_HEIGHT * Math.min(this.toc.length, CHAPTER_PREVIEW_LIMIT) :
+      CHAPTER_SECTION_HEIGHT;
   }
 
   private readingActionLabel(): string {
-    if (!this.readingActionsReady()) {
-      return this.pendingReadingLabel();
-    }
-    if (!this.readingEnabled && this.readingBlockedReason.trim().length > 0) {
-      return this.readingBlockedReason;
-    }
     return this.inBookshelf ? '继续阅读' : '开始阅读';
   }
 
   private shelfActionLabel(): string {
+    if (this.cancellingAdd) return '正在取消…';
+    if (this.adding) return '取消加入';
     if (this.removing) {
       return this.inBookshelf ? '正在移除…' : '正在加入…';
     }

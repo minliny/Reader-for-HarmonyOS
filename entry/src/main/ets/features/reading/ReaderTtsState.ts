@@ -29,6 +29,8 @@ export type ReaderTtsState = {
   status: ReaderTtsSessionStatus;
   sessionGeneration: number;
   utteranceGeneration: number;
+  /** Explicit next/previous/seek intent; ordinary speech callbacks cannot rewind it. */
+  positionGeneration?: number;
   contentVersion: ReaderTtsContentVersion;
   chapterKey?: string;
   chapterIndex?: number;

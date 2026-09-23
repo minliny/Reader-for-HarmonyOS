@@ -46,7 +46,7 @@ export type ReaderControlAppearanceImportLayout =
   'source-overlap-pending' | 'ordered-slot-approved';
 
 export function sampleReaderControlAppearance(progress: number, viewportWidth: number,
-  fullContentHeight: number, themeCount: number = 8): ReaderControlAppearanceFrame {
+  fullContentHeight: number, themeCount: number = 8, fontCount: number = 8): ReaderControlAppearanceFrame {
   const p = unit(progress);
   const currentWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ?
     viewportWidth : lerp(286, 338, p);
@@ -81,7 +81,7 @@ export function sampleReaderControlAppearance(progress: number, viewportWidth: n
   return {
     progress: p, fullViewportWidth: fullWidth, sectionWidth: sectionWidth,
     contentHeight: Math.max(height, 689 + fullExtra),
-    quickContentHeight: 190 + quickExtra,
+    quickContentHeight: 190 + quickExtra + Math.max(0, Math.ceil(fontCount / 4) - 2) * 31,
     themeExtraRows: extraRows,
     // Appearance-only viewport X track. Stage already applies its Y track.
     contentTranslateX: -0.9 * (1 - p),

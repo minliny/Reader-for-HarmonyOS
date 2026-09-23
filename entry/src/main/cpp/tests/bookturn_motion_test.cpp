@@ -39,6 +39,10 @@ using reader::bookturn::SettleTauAt;
 using reader::bookturn::SettleThetaAt;
 using reader::bookturn::SettleTargetTau;
 using reader::bookturn::SettlementSwapShouldFire;
+using reader::bookturn::SettlementCurve;
+using reader::bookturn::ProgrammaticProfile;
+using reader::bookturn::ProgrammaticDurationSeconds;
+using reader::bookturn::ProgrammaticSettlementCurve;
 
 constexpr float kW = 390.0F;
 constexpr float kH = 780.0F;
@@ -188,31 +192,58 @@ void TestSettleTargetsAndDurations()
 void TestSettleTauAt()
 {
     // Linear settle: exact endpoints and midpoint.
-    CheckNear("tau/linear-start", SettleTauAt(0.2F, 1.0F, 0.0F, 0.4F, false), 0.2F, 1e-6);
-    CheckNear("tau/linear-mid", SettleTauAt(0.2F, 1.0F, 0.2F, 0.4F, false), 0.6F, 1e-6);
-    CheckNear("tau/linear-end", SettleTauAt(0.2F, 1.0F, 0.4F, 0.4F, false), 1.0F, 1e-6);
-    CheckNear("tau/linear-past-end-clamped", SettleTauAt(0.2F, 1.0F, 10.0F, 0.4F, false), 1.0F,
+    CheckNear("tau/linear-start", SettleTauAt(0.2F, 1.0F, 0.0F, 0.4F, SettlementCurve::LINEAR), 0.2F, 1e-6);
+    CheckNear("tau/linear-mid", SettleTauAt(0.2F, 1.0F, 0.2F, 0.4F, SettlementCurve::LINEAR), 0.6F, 1e-6);
+    CheckNear("tau/linear-end", SettleTauAt(0.2F, 1.0F, 0.4F, 0.4F, SettlementCurve::LINEAR), 1.0F, 1e-6);
+    CheckNear("tau/linear-past-end-clamped", SettleTauAt(0.2F, 1.0F, 10.0F, 0.4F, SettlementCurve::LINEAR), 1.0F,
         1e-6);
 
     // Ease-out (programmatic): starts at tau0, lands on target, monotone.
-    CheckNear("tau/eased-start", SettleTauAt(0.0F, 1.0F, 0.0F, 0.6F, true), 0.0F, 1e-6);
-    CheckNear("tau/eased-end", SettleTauAt(0.0F, 1.0F, 0.6F, 0.6F, true), 1.0F, 1e-6);
-    CheckNear("tau/eased-mid", SettleTauAt(0.0F, 1.0F, 0.3F, 0.6F, true),
+    CheckNear("tau/eased-start", SettleTauAt(0.0F, 1.0F, 0.0F, 0.6F, SettlementCurve::EASE_OUT), 0.0F, 1e-6);
+    CheckNear("tau/eased-end", SettleTauAt(0.0F, 1.0F, 0.6F, 0.6F, SettlementCurve::EASE_OUT), 1.0F, 1e-6);
+    CheckNear("tau/eased-mid", SettleTauAt(0.0F, 1.0F, 0.3F, 0.6F, SettlementCurve::EASE_OUT),
         1.0F - (1.0F - 0.5F) * (1.0F - 0.5F) * (1.0F - 0.5F), 1e-6);
     float previous = -1.0F;
     bool monotone = true;
     for (int step = 0; step <= 60; ++step) {
-        const float tau = SettleTauAt(0.0F, 1.0F, 0.01F * step, 0.6F, true);
+        const float tau = SettleTauAt(0.0F, 1.0F, 0.01F * step, 0.6F, SettlementCurve::EASE_OUT);
         if (tau < previous - 1e-6) monotone = false;
         previous = tau;
     }
     CheckTrue(monotone, "tau/eased-monotone", "ease-out must be non-decreasing");
 
     // Direction reversal exercises the same interpolation downward.
-    CheckNear("tau/downward-linear", SettleTauAt(0.8F, 0.0F, 0.2F, 0.4F, false), 0.4F, 1e-6);
+    CheckNear("tau/downward-linear", SettleTauAt(0.8F, 0.0F, 0.2F, 0.4F, SettlementCurve::LINEAR), 0.4F, 1e-6);
 
     // Zero duration lands on the target immediately.
-    CheckNear("tau/zero-duration", SettleTauAt(0.3F, 0.0F, 0.0F, 0.0F, false), 0.0F, 1e-6);
+    CheckNear("tau/zero-duration", SettleTauAt(0.3F, 0.0F, 0.0F, 0.0F, SettlementCurve::LINEAR), 0.0F, 1e-6);
+}
+
+void TestAutomaticProfile()
+{
+    CheckNear("profile/manual-320", ProgrammaticDurationSeconds(ProgrammaticProfile::MANUAL), .320F, 1e-6);
+    CheckNear("profile/rapid-30", ProgrammaticDurationSeconds(ProgrammaticProfile::RAPID), .030F, 1e-6);
+    CheckNear("profile/automatic-500", ProgrammaticDurationSeconds(ProgrammaticProfile::AUTOMATIC), .500F, 1e-6);
+    CheckTrue(ProgrammaticSettlementCurve(ProgrammaticProfile::MANUAL) == SettlementCurve::EASE_OUT,
+        "profile/manual-ease-out", "manual timing must stay unchanged");
+    CheckTrue(ProgrammaticSettlementCurve(ProgrammaticProfile::RAPID) == SettlementCurve::EASE_OUT,
+        "profile/rapid-ease-out", "rapid timing must stay unchanged");
+    CheckTrue(!reader::bookturn::IsProgrammaticProfileValid(static_cast<ProgrammaticProfile>(3)),
+        "profile/unknown-rejected", "unknown profile must not silently select a timeline");
+    const auto curve = ProgrammaticSettlementCurve(ProgrammaticProfile::AUTOMATIC);
+    CheckTrue(curve == SettlementCurve::SMOOTHSTEP, "profile/automatic-smoothstep", "automatic profile curve");
+    const float times[] = {0, .1F, .2F, .25F, .3F, .4F, .5F, 1.0F};
+    const float expected[] = {0, .104F, .352F, .5F, .648F, .896F, 1, 1};
+    for (size_t i = 0; i < sizeof(times) / sizeof(times[0]); ++i) {
+        CheckNear("automatic/next", SettleTauAt(0, 1, times[i], .5F, curve), expected[i], 1e-6);
+        CheckNear("automatic/previous", SettleTauAt(1, 0, times[i], .5F, curve), 1 - expected[i], 1e-6);
+    }
+    float previous = 0;
+    for (int i = 0; i <= 500; ++i) {
+        const float tau = SettleTauAt(0, 1, static_cast<float>(i) / 1000, .5F, curve);
+        CheckTrue(tau >= previous && tau <= 1, "automatic/monotone", "no overshoot or reverse motion");
+        previous = tau;
+    }
 }
 
 void TestSettleThetaAt()
@@ -298,7 +329,7 @@ void TestSwapCoverageGate()
                 float fireCoverage = 1.0F;
                 float elapsed = 0.0F;
                 for (int step = 0; step <= 240; ++step) {
-                    const float tau = SettleTauAt(tau0, target, elapsed, duration, false);
+                    const float tau = SettleTauAt(tau0, target, elapsed, duration, SettlementCurve::LINEAR);
                     const BookTurnPose pose = SettlementPose(base, tau);
                     if (!fired && SettlementSwapShouldFire(commit, direction, tau, pose)) {
                         fired = true;
@@ -345,6 +376,7 @@ int main()
     TestSparseSamplePresentation();
     TestSettleTargetsAndDurations();
     TestSettleTauAt();
+    TestAutomaticProfile();
     TestSettleThetaAt();
     TestSwapCoverageGate();
     std::printf("bookturn_motion_test: %d checks, %d failures\n", g_checks, g_fails);

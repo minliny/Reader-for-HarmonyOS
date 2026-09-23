@@ -13,20 +13,40 @@ release(); await new Promise(r => setImmediate(r));
 assert.equal(reads, 0, 'an expired queued query is inert without releasing or overtaking the actual write');
 
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const Page = productionMotionMethods(file, ['beginPreparedPageTurnPersistence', 'admitPageTurnPersistenceOutcome'],
+const Page = productionMotionMethods(file, ['beginPreparedPageTurnPersistence', 'admitPageTurnPersistenceOutcome', 'canPresentOrdinaryPage'],
   { observeReaderProgressOperation: observe });
 let completeWrite, completed = 0, dialogs = 0, current = true;
 const write = new Promise(resolve => { completeWrite = resolve; });
 const page = Object.assign(new Page(), { pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
+  activeGateway:()=>({canPersistPresentedProgress:()=>false}),
   persistPreparedPageTurn: () => write, isPreparedPageTurnCommitCurrent: () => current,
   cancelPageTurnSettlementDeadline() {}, getUIContext: () => ({ showAlertDialog: () => dialogs++ }),
   finishPreparedPageTurnSettlement() { completed++; current = false; } });
-page.beginPreparedPageTurnPersistence({}, 1, 7);
+const prepared={context:{chapter:{chapterIndex:2}}};
+page.beginPreparedPageTurnPersistence(prepared, 1, 7);
 await new Promise(r => setTimeout(r, 12));
 assert.equal(page.pageTurnPersistenceState, 'unknown'); assert.equal(dialogs, 1); assert.equal(completed, 0);
 completeWrite(true); await new Promise(r => setImmediate(r));
 assert.equal(completed, 1); assert.equal(page.pageTurnPersistenceState, 'durable');
-page.admitPageTurnPersistenceOutcome({}, 1, 7, true); assert.equal(completed, 1);
+page.admitPageTurnPersistenceOutcome(prepared, 1, 7, true); assert.equal(completed, 1);
+
+for (const kind of ['ordinary','unchanged-migration','source-switch','control','migrated','legacy']) {
+  const calls=[];
+  const chapter={chapterIndex:2,...(kind==='migrated'?{positionMigration:{status:'migrated'}}:
+    kind==='unchanged-migration'?{positionMigration:{status:'unchanged'}}:{})};
+  const owner=Object.assign(new Page(),{pageTurnSettlementGeneration:8,pageTurnCommitStarted:false,
+    sourceSwitchTransactionId:kind==='source-switch'?'transaction':undefined,
+    pendingControlSelection:kind==='control'?{selectionToken:1}:undefined,
+    activeGateway:()=>({canPersistPresentedProgress:()=>kind!=='legacy'}),isPreparedPageTurnCommitCurrent:()=>true,
+    persistPresentedPageTurn(){calls.push('ordinary-save');return new Promise(()=>{});},
+    persistPreparedPageTurn(){calls.push('strong-save');return Promise.resolve(true);},
+    finishPreparedPageTurnSettlement(_generation,presented=false){calls.push(presented?'presented':'durable');},
+    cancelPageTurnSettlementDeadline(){},getUIContext:()=>({showAlertDialog(){calls.push('dialog');}})});
+  owner.beginPreparedPageTurnPersistence({context:{chapter}},1,8);
+  await new Promise(r=>setImmediate(r));
+  assert.deepEqual(calls,['ordinary','unchanged-migration'].includes(kind)?['ordinary-save','presented']:['strong-save','durable'],kind);
+  if(kind==='ordinary')assert.equal(owner.pageTurnPersistenceState,'queued','pending CAS save is not mislabeled durable');
+}
 
 class Anchor { constructor(chapterIndex, chapterOffset, chapterProgress) { Object.assign(this, { chapterIndex, chapterOffset, chapterProgress }); } }
 const Continuous = productionMotionMethods(file, ['commitContinuousProgress', 'drainContinuousProgress',

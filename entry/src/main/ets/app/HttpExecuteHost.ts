@@ -4,7 +4,7 @@ import util from '@ohos.util';
 import connection from '@ohos.net.connection';
 import { prepareNetworkTarget, NetworkEnvironmentError, type NetworkTarget } from './NetworkRoutePolicy';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { encodeSharedText, type JsonObject } from '@reader/core-harmony';
+import { encodeSharedText, type JsonObject, type ReaderCoreAssetBridge } from '@reader/core-harmony';
 import { CookieSessionStore } from './CookieSessionStore';
 import { errorMessageOf } from './ErrorMessage';
 import {
@@ -47,7 +47,28 @@ type RetryPolicy = {
 
 type ResponseHeaders = Record<string, string>;
 
+export interface HttpBytesResponse {
+  status: number;
+  headers: ResponseHeaders;
+  bytes: Uint8Array;
+  finalUrl: string;
+}
+
+interface BinaryResponseSink {
+  maxBytes: number;
+  response?: HttpBytesResponse;
+}
+
+/** Optional Core-owned sink for a host.request response body. */
+export interface HttpAssetSink {
+  bridge: ReaderCoreAssetBridge;
+  requestId: number;
+  operationId: number;
+}
+
 type DeadlineState = {
+  binarySink?: BinaryResponseSink;
+  responseMaxBytes?: number;
   deadlineAt: number;
   cookieGeneration?: number;
   /** Restrict this request and every redirect hop to HTTPS. */
@@ -55,6 +76,7 @@ type DeadlineState = {
   /** Do not carry credential-bearing URL query values to another origin. */
   sameOriginRedirectsOnly?: boolean;
   cancelled: boolean;
+  failureReason?: string;
   activeRequest: http.HttpRequest | null;
   timer: number | undefined;
   expired: Promise<JsonObject>;
@@ -195,10 +217,50 @@ export class HttpExecuteHost {
   private readonly activeByRequestId = new Map<number, DeadlineState>();
   private readonly sourceDiagnosticsByRequestId = new Map<number, SourceHttpDiagnosticRecord[]>();
 
-  async execute(
+  async execute(params: JsonObject, requestId?: number, isCancelled?: () => boolean): Promise<JsonObject> {
+    return this.executeRequest(params, requestId, isCancelled);
+  }
+
+  /** Host-only text/document consumers can set a transport limit before decoding. */
+  async executeBounded(params: JsonObject, maxBytes: number, requestId?: number,
+    isCancelled?: () => boolean): Promise<JsonObject> {
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_RESPONSE_BYTES) {
+      throw new Error('http.execute: invalid response limit');
+    }
+    return this.executeRequest(params, requestId, isCancelled, undefined, undefined, maxBytes);
+  }
+
+  /** Execute a Core host request and stream binary response bytes into its asset store. */
+  async executeForCore(
+    params: JsonObject,
+    requestId: number,
+    operationId: number,
+    bridge: ReaderCoreAssetBridge,
+    isCancelled?: () => boolean,
+  ): Promise<JsonObject> {
+    return this.executeRequest(params, requestId, isCancelled, undefined, {
+      bridge, requestId, operationId,
+    });
+  }
+
+  /** Host-only consumers share the exact network policy and cancellation path. */
+  async executeBytes(params: JsonObject, maxBytes: number, requestId?: number, isCancelled?: () => boolean): Promise<HttpBytesResponse> {
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_RESPONSE_BYTES) {
+      throw new Error('http.execute: invalid binary response limit');
+    }
+    const sink: BinaryResponseSink = { maxBytes };
+    await this.executeRequest(params, requestId, isCancelled, sink);
+    if (sink.response === undefined) throw new Error('http.execute: missing binary response');
+    return sink.response;
+  }
+
+  private async executeRequest(
     params: JsonObject,
     requestId?: number,
     isCancelled?: () => boolean,
+    binarySink?: BinaryResponseSink,
+    assetSink?: HttpAssetSink,
+    responseMaxBytes?: number,
   ): Promise<JsonObject> {
     const inputUrl = params['url'];
     if (typeof inputUrl !== 'string' || inputUrl.trim().length === 0) {
@@ -242,6 +304,8 @@ export class HttpExecuteHost {
     const diagnostic = this.parseSourceDiagnostic(params['diagnostic']);
     const diagnosticStartedAt = Date.now();
     const deadline = this.createDeadline(TOTAL_DEADLINE_MS);
+    deadline.binarySink = binarySink;
+    deadline.responseMaxBytes = responseMaxBytes;
     deadline.httpsOnly = httpsOnly === true;
     deadline.sameOriginRedirectsOnly = sameOriginRedirectsOnly === true;
     if (sessionId !== null) {
@@ -279,6 +343,7 @@ export class HttpExecuteHost {
         this.requestAfterTargetValidation(
           requestUrl, parsedMethod, headers, body, requestCharset,
           maxRedirects, retry, deadline, useCookieJar ? sessionId : null,
+          assetSink,
         ),
         deadline.expired,
       ]);
@@ -474,6 +539,7 @@ export class HttpExecuteHost {
       return;
     }
     state.cancelled = true;
+    state.failureReason = message;
     const active = state.activeRequest;
     if (active !== null) {
       try {
@@ -494,7 +560,7 @@ export class HttpExecuteHost {
 
   private assertWithinDeadline(state: DeadlineState): void {
     if (state.cancelled || state.deadlineAt - Date.now() <= 0) {
-      throw new Error('http.execute: exceeded total deadline');
+      throw new Error(state.failureReason ?? 'http.execute: exceeded total deadline');
     }
   }
 
@@ -517,12 +583,13 @@ export class HttpExecuteHost {
     retry: RetryPolicy | null,
     deadline: DeadlineState,
     sessionId: string | null,
+    assetSink?: HttpAssetSink,
   ): Promise<JsonObject> {
     this.assertWithinDeadline(deadline);
     this.requireHttpsIfNeeded(url, deadline);
     this.rejectPrivateNetworkUrl(url);
     this.assertWithinDeadline(deadline);
-    return this.requestWithPolicy(url, method, headers, body, requestCharset, maxRedirects, retry, deadline, sessionId);
+    return this.requestWithPolicy(url, method, headers, body, requestCharset, maxRedirects, retry, deadline, sessionId, assetSink);
   }
 
   private async requestWithPolicy(
@@ -535,6 +602,7 @@ export class HttpExecuteHost {
     retry: RetryPolicy | null,
     deadline: DeadlineState,
     sessionId: string | null,
+    assetSink?: HttpAssetSink,
   ): Promise<JsonObject> {
     const attempts = retry === null ? 1 : Math.max(1, Math.floor(retry.maxAttempts));
     let lastError: Error | null = null;
@@ -542,7 +610,7 @@ export class HttpExecuteHost {
       this.assertWithinDeadline(deadline);
       try {
         return await this.requestRedirectChain(
-          url, method, headers, body, requestCharset, maxRedirects, deadline, sessionId,
+          url, method, headers, body, requestCharset, maxRedirects, deadline, sessionId, assetSink,
         );
       } catch (error) {
         if (deadline.cancelled) {
@@ -602,6 +670,7 @@ export class HttpExecuteHost {
     maxRedirects: number,
     deadline: DeadlineState,
     sessionId: string | null,
+    assetSink?: HttpAssetSink,
   ): Promise<JsonObject> {
     let currentUrl = initialUrl;
     let currentMethod = initialMethod;
@@ -633,7 +702,7 @@ export class HttpExecuteHost {
       const location = this.headerValue(response.headers, 'location');
       if (!this.isRedirectStatus(response.status) || location === null || maxRedirects === 0) {
         return this.buildResponse(
-          response, currentUrl, redirects, observedCookies, sessionId, requestCharset,
+          response, currentUrl, redirects, observedCookies, sessionId, requestCharset, deadline.binarySink, assetSink,
         );
       }
       if (!allowNextRedirect(true, maxRedirects, redirects.length)) {
@@ -768,7 +837,7 @@ export class HttpExecuteHost {
         expectDataType: http.HttpDataType.ARRAY_BUFFER,
         usingCache: false,
         usingProxy: route === 'systemProxy',
-        maxLimit: MAX_RESPONSE_BYTES,
+        maxLimit: deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES,
         // Clamp every per-request timeout to the remaining deadline budget.
         connectTimeout: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining),
         readTimeout: Math.min(DEFAULT_READ_TIMEOUT_MS, remaining),
@@ -814,6 +883,19 @@ export class HttpExecuteHost {
       // A response that lands after the deadline is a stale success: reject
       // it so a cancelled cycle never returns a late result.
       this.assertWithinDeadline(deadline);
+      const maxResponseBytes = deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES;
+      stage = 'response.headers';
+      const responseHeaders = this.flattenHeaders(response.header);
+      const declaredLength = this.headerValue(responseHeaders, 'content-length');
+      // HEAD/304 metadata may describe a representation that was not sent.
+      // Native maxLimit bounds reception; this also rejects an oversized
+      // declaration before text/audio/image decoding occurs.
+      const permitsBody = method.wireMethod !== 'HEAD' && response.responseCode !== 204 &&
+        response.responseCode !== 205 && response.responseCode !== 304 && !this.isRedirectStatus(response.responseCode);
+      if (permitsBody && declaredLength !== null && /^\d+$/.test(declaredLength.trim()) &&
+        Number(declaredLength) > maxResponseBytes) {
+        throw new Error(`http.execute: declared response exceeds ${maxResponseBytes} byte limit`);
+      }
       stage = 'response.bytes';
       let bytes: Uint8Array;
       if (response.result instanceof ArrayBuffer) {
@@ -843,13 +925,13 @@ export class HttpExecuteHost {
         }
         throw new Error(`http.execute: platform did not return the requested raw response bytes (status=${status}, type=${resultType})`);
       }
-      if (bytes.length > MAX_RESPONSE_BYTES) {
-        throw new Error(`http.execute: response exceeds ${MAX_RESPONSE_BYTES} byte limit`);
+      if (bytes.length > maxResponseBytes) {
+        throw new Error(`http.execute: response exceeds ${maxResponseBytes} byte limit`);
       }
       stage = 'response.headers';
       return {
         status: response.responseCode,
-        headers: this.flattenHeaders(response.header),
+        headers: responseHeaders,
         rawHeaders: response.header,
         bytes,
       };
@@ -877,6 +959,8 @@ export class HttpExecuteHost {
     cookies: JsonObject[],
     sessionId: string | null,
     requestCharset: string | undefined,
+    binarySink?: BinaryResponseSink,
+    assetSink?: HttpAssetSink,
   ): JsonObject {
     const contentType = this.headerValue(response.headers, 'content-type');
     // Binary payloads (images, fonts, downloads) have no text representation;
@@ -886,7 +970,13 @@ export class HttpExecuteHost {
     const binaryBody = contentType !== null && this.isBinaryContentType(contentType);
     let responseCharset = 'utf-8';
     let decoded = '';
-    if (!binaryBody) {
+    if (binarySink !== undefined) {
+      if (!binaryBody && response.bytes.length > 0) {
+        throw new Error('http.execute: binary consumer requires a binary content type');
+      }
+      binarySink.response = { status: response.status, headers: response.headers, bytes: response.bytes, finalUrl };
+    }
+    if (!binaryBody && binarySink === undefined) {
       responseCharset = resolveResponseCharset(response.headers, requestCharset);
       decoded = this.decodeTextStrictly(response.bytes, responseCharset, requestCharset);
     }
@@ -902,8 +992,39 @@ export class HttpExecuteHost {
     // Text rules consume the already-decoded body. Keeping a second Base64
     // string for the same payload adds another full encoding pass and roughly
     // four thirds of the response size. Binary consumers still need it.
-    if (binaryBody && response.bytes.length > 0) {
+    if (binaryBody && response.bytes.length > 0 && binarySink === undefined && assetSink === undefined) {
       result['bodyBase64'] = new util.Base64Helper().encodeToStringSync(response.bytes);
+    }
+    if (binaryBody && response.bytes.length > 0 && binarySink === undefined && assetSink !== undefined) {
+      let assetId: number | undefined;
+      try {
+        assetId = assetSink.bridge.begin(assetSink.requestId, assetSink.operationId, response.bytes.byteLength);
+        const chunkBytes = 1024 * 1024;
+        for (let offset = 0; offset < response.bytes.byteLength; offset += chunkBytes) {
+          assetSink.bridge.write(
+            assetSink.requestId,
+            assetSink.operationId,
+            assetId,
+            response.bytes.subarray(offset, Math.min(response.bytes.byteLength, offset + chunkBytes)),
+          );
+        }
+        const committedBytes = assetSink.bridge.commit(assetSink.requestId, assetSink.operationId, assetId);
+        if (committedBytes !== response.bytes.byteLength) {
+          throw new Error('Core response asset length mismatch after commit');
+        }
+        result['body'] = '';
+        result['bodyAsset'] = {
+          assetId,
+          operationId: assetSink.operationId,
+          bytes: committedBytes,
+          contentType: contentType ?? undefined,
+        };
+      } catch (error) {
+        if (assetId !== undefined) {
+          try { assetSink.bridge.release(assetSink.requestId, assetSink.operationId, assetId); } catch (_) { /* Core teardown owns cleanup. */ }
+        }
+        throw error;
+      }
     }
     if (sessionId !== null) {
       result['session'] = { id: sessionId };

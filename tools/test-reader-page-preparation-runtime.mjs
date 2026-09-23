@@ -1,11 +1,13 @@
+import { createBookTurnTextureOwner } from './lib/reader-book-turn-owner-fixture.mjs';
+import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { ReadingSurfaceLayoutMap, readingChapterLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
 class ReaderMaterializedChapterContext {
   constructor(chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar){Object.assign(this,{chapter,layoutMap,contentVersion,paragraphRanges,paginationDraft,desiredChapterOffset,desiredChapterProgress,measurementRequestedAnchorScalar});}
 }
 class ReaderPageTurnPreparation {constructor(direction,origin,originChapterIndex,originPageStartScalar,generation){Object.assign(this,{direction,origin,originChapterIndex,originPageStartScalar,generation});}}
-class ReadingSurfaceLayoutMap {constructor(content){this.content=content;}scalarCount(){return this.content.length;}}
 const Owner=productionMotionMethods(file,['beginPageTurnPreparation','captureMaterializedChapterContext','measuringChapter','measuringOffset','measuringProgress','measuringRanges','measuringDraft','measuringRequestedAnchor','setMeasuringOffset','setMeasuringProgress','setMeasuringDraft','setMeasuringRequestedAnchor','suspendAdjacentMeasurement','finishAdjacentMeasurementContext'],{ReaderMaterializedChapterContext,ReaderPageTurnPreparation,ReadingSurfaceLayoutMap});
 const origin={chapterIndex:1,content:'old chapter text',contentVersion:'v1'};
 const target={chapterIndex:2,content:'new adjacent chapter text',contentVersion:'v2'};
@@ -15,6 +17,7 @@ const owner=Object.assign(new Owner(),{mounted:true,chapter:origin,chapterLayout
  beginMeasurement(){this.phase='measuring';this.setMeasuringOffset(8);this.measuringRanges().push({startScalar:8,endScalar:20});},
  measurementGeneration:1,measurementEpoch:1,measurementBatch:[{}],pageTurnPreparationQueue:[],resetPendingPage(){},cancelMeasurementDeadline(){},currentPaginationKey:()=>({}),
 });
+installReaderMeasurementOwner(owner);
 assert.equal(owner.beginPageTurnPreparation('next',{chapterIndex:2,chapterOffset:4}),'begun');
 assert.equal(owner.measuringChapter(),target);assert.equal(owner.measuringOffset(),8);
 assert.equal(owner.chapter,origin);assert.equal(owner.chapterLayoutMap,map);assert.equal(owner.desiredChapterOffset,3);assert.equal(owner.paragraphRanges,ranges);assert.equal(ranges.length,1,'adjacent range construction cannot mutate visible ranges');
@@ -23,12 +26,12 @@ owner.beginMeasurement=()=>{owner.phase='ready';};
 assert.equal(owner.beginPageTurnPreparation('previous',{chapterIndex:2,chapterOffset:0}),'retry');assert.equal(owner.adjacentMeasurementContext,undefined);assert.equal(owner.chapter,origin);
 console.log('production adjacent measurement isolation, cancellation and rejected admission: PASS');
 
-const draft={matches:()=>true};owner.adjacentMeasurementContext={chapter:origin,paginationDraft:draft};owner.finishAdjacentMeasurementContext();assert.equal(owner.paginationDraft,draft,'normal discovery completion keeps observed head prefix for next reverse lookup');assert.equal(owner.adjacentMeasurementContext,undefined);
+const draft={matches:()=>true};owner.adjacentMeasurementContext={chapter:origin,paginationDraft:draft};owner.finishAdjacentMeasurementContext();assert.equal(owner.paginationDraft,draft,'completed adjacent measurement keeps observed exact-page facts');assert.equal(owner.adjacentMeasurementContext,undefined);
 
 // A clock-only refresh after promotion must read the physical current subtree,
 // never the stale role ID registered on the now-empty reserve subtree.
 class PendingSnapshot { constructor(identity,pageGeneration,pixelMap){Object.assign(this,{identity,pageGeneration,pixelMap});} }
-const Capture = productionMotionMethods(file, ['captureBookTurnTexture','takeBookTurnPendingSnapshot','releaseBookTurnPendingSnapshot'], {
+const Capture = productionMotionMethods(file, ['sessionLaunchRenderWorkBlocked', 'captureBookTurnTexture','takeBookTurnPendingSnapshot','releaseBookTurnPendingSnapshot'], {
   ReaderBookTurnSnapshot:PendingSnapshot,
   BOOK_TURN_TEXTURE_CURRENT: 0, READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID: 'native-current',
   errorMessageOf: e => String(e),
@@ -39,7 +42,7 @@ const capture = Object.assign(new Capture(), {
   usesBookTurnSimulation: () => true, controlVisible: () => false, pageTurnInputPhase: () => 'idle',
   bookTurnCapturedIdentity: () => '', bookTurnTextureSnapshotScale: () => 1,
   setBookTurnCapturedIdentity: () => {}, failBookTurnTextureCapture: (_s,_g,m) => { throw Error(m); },
-  bookTurnSession: { uploadTexture: (slot, pixels) => { uploads.push(pixels.id); return true; } },
+  bookTurnSession: createBookTurnTextureOwner((slot, pixels) => { uploads.push(pixels.id); return true; }),
   getUIContext: () => ({getComponentSnapshot: () => ({get: async (id, opts) => {
     assert.equal(opts.waitUntilRenderFinished, true); reads.push(id);
     assert.equal(id, `native-current-${capture.pageTurnCurrentSlot}`);
@@ -71,7 +74,7 @@ assert.equal(released, 1, 'stale copied pixels still release their PixelMap');
 console.log('async texture copy preserves lifetime and rejects superseded capture: PASS');
 
 // Reproduce eviction after walking forward across many chapters, then coming
-// back two chapter boundaries: a pagination target is not a materialized body.
+// back four chapter boundaries: a pagination target is not a materialized body.
 const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
 const Demand = productionMotionMethods(file,
   ['requestPageTurnChapter', 'isStableVisiblePageOwner', 'startPreviousPagePreparationDiscovery', 'beginPageTurnPreparation'],
@@ -80,12 +83,13 @@ const makeChapter = index => ({ sourceId:'s', bookId:'b', chapterIndex:index, ch
   content:`body ${index}`, contentVersion:`version ${index}`, images:[], extractionVia:'local' });
 for (const outcome of ['success', 'generation', 'page', 'exit', 'failure', 'wrong-identity']) {
   const window = new ReadingChapterWindow(); window.configure('s','b',Array.from({length:30},(_,i)=>i));
-  for (let i=0;i<27;i++) window.setCurrent(makeChapter(i));
+  for (let i=0;i<29;i++) window.setCurrent(makeChapter(i));
   const current = makeChapter(25); window.setCurrent(current);
   assert.equal(window.get(24), undefined, 'previous body really was pruned during forward traversal');
   let resolve, reject, loads=0; const queued=[], messages=[], admitted=[];
   const subject = Object.assign(new Demand(), { mounted:true, exitRequested:false, sourceId:'s', bookId:'b',
     chapter:current, visiblePage:{startScalar:0}, pageTurnGeneration:10, lifecycleToken:3, chapterSelectionToken:5,
+    chapterLayoutMap:readingChapterLayoutMap(current),requireChapterLayoutMap(){return this.chapterLayoutMap;},
     visiblePageSelectionToken:5, pageTurnChapterLoads:new Set(), chapterWindow:window,
     isMountedToken: token=>subject.mounted && token===subject.lifecycleToken,
     isSelectionCurrent: token=>token===subject.chapterSelectionToken, isKnownControlChapter: index=>window.contains(index),
@@ -120,6 +124,35 @@ for (const outcome of ['success', 'generation', 'page', 'exit', 'failure', 'wron
 }
 console.log('production evicted previous chapter: demand refill, coalescing, stale/failed replies and explicit retry: PASS');
 
+class PreviousChapterMeasurement {
+  constructor(originalChapterIndex,originalChapterOffset,targetChapterIndex,prepareOnly,origin,pageTurnGeneration) {
+    Object.assign(this,{originalChapterIndex,originalChapterOffset,targetChapterIndex,prepareOnly,origin,pageTurnGeneration,endScalar:-1,nextRangeIndex:-1});
+  }
+}
+const ReverseDiscovery=productionMotionMethods(file,
+ ['startPreviousPagePreparationDiscovery','captureMaterializedChapterContext','setMeasuringOffset','measuringOffset','setMeasuringProgress'],
+ {PreviousChapterMeasurement,ReaderMaterializedChapterContext});
+for (const residentStart of [0,140]) {
+ const current={...makeChapter(4),content:'文'.repeat(200-residentStart),
+  ...(residentStart===0?{}:{documentRange:{startScalar:residentStart,endScalar:200,totalScalars:1000}})};
+ const map=readingChapterLayoutMap(current), ranges=[{startScalar:residentStart,endScalar:200}];
+ const measured=[];
+ const subject=Object.assign(new ReverseDiscovery(),{mounted:true,chapter:current,visiblePage:{startScalar:160},
+  chapterLayoutMap:map,paragraphRanges:ranges,materializedContentVersion:current.contentVersion,
+  desiredChapterOffset:160,desiredChapterProgress:.5,pageTurnGeneration:9,lifecycleToken:2,
+  paginationDraft:{matches(){throw Error('reverse discovery must not resume a chapter-head prefix walk');}},
+  canTurnPage:()=>true,adjacentChapterIndex:()=>undefined,requireChapter:()=>current,requireChapterLayoutMap:()=>map,
+  copyParagraphRanges:items=>items.slice(),beginMeasurement(){measured.push(this.measuringOffset());this.phase='measuring';}});
+ assert.equal(subject.startPreviousPagePreparationDiscovery(),true);
+ assert.deepEqual(measured,[160],'unknown predecessor starts at the visible exclusive end, not the resident/whole-chapter head');
+ assert.equal(subject.previousChapterMeasurement.originalChapterOffset,160);
+ assert.equal(subject.previousChapterMeasurement.prepareOnly,true);
+ assert.equal(subject.adjacentMeasurementContext.layoutMap,map);
+ assert.equal(subject.chapter,current);assert.equal(subject.paragraphRanges,ranges);
+ assert.equal(subject.desiredChapterOffset,160,'reverse preparation cannot move the visible position');
+}
+console.log('production reverse discovery: deep full/resident windows keep the visible anchor and never scan from chapter head: PASS');
+
 const nextTasks=[];
 const PreparationOrder=productionMotionMethods(file,['schedulePageTurnPreparation'], {
   readerPageTransitionUsesPreparedPages:()=>true, setTimeout:callback=>nextTasks.push(callback),
@@ -139,7 +172,7 @@ console.log('production promotion preparation honors requested direction and sta
 const bodyCaptures=[];
 class ImageContent { constructor(_ui,_builder,input){this.input=input;this.disposed=0;bodyCaptures.push(this);} update(input){this.input=input;} dispose(){this.disposed++;} }
 class TextureInput {constructor(page){this.page=page;}}
-const ImageCapture=productionMotionMethods(file,['captureBookTurnTexture','captureDecodedBookTurnPage','releaseBookTurnTextureContent','takeBookTurnPendingSnapshot','releaseBookTurnPendingSnapshot'], {
+const ImageCapture=productionMotionMethods(file,['sessionLaunchRenderWorkBlocked','captureBookTurnTexture','captureDecodedBookTurnPage','releaseBookTurnTextureContent','takeBookTurnPendingSnapshot','releaseBookTurnPendingSnapshot'], {
   ReaderBookTurnSnapshot:PendingSnapshot,
   BOOK_TURN_TEXTURE_CURRENT:0, READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID:'native-current',
   ComponentContent:ImageContent, BookTurnTextureBuildInput:TextureInput, BookTurnTextureBuilder:()=>{},
@@ -153,7 +186,7 @@ for (const scenario of ['ready','cold','exhausted','other-error','stale','held']
     pageTurnInputPhase(){return this.inputPhase;},readingLayout:()=>({}),bookTurnTextureSnapshotScale:()=>1,
     bookTurnCapturedIdentity:()=>'',setBookTurnCapturedIdentity:(...v)=>published.push(v),
     failBookTurnTextureCapture:(...v)=>failures.push(v),
-    bookTurnSession:{uploadTexture:async(_slot,_map,_identity,admit)=>admit()},
+    bookTurnSession:createBookTurnTextureOwner(async(slot,_map,identity,admit)=>{ if (!admit()) return false; published.push([slot,identity]); return true; }),
     getUIContext:()=>({getComponentSnapshot:()=>({
       get:()=>{throw Error('image-bearing current must not bypass image readiness');},
       createFromComponent:async(content,delay,checked,opts)=>{
@@ -209,7 +242,7 @@ for (const invalidation of ['pointer','page','exit']) {
   bookTurnCapturedIdentity:()=>'',setBookTurnCapturedIdentity(){},bookTurnTextureSnapshotScale:()=>1,
   getUIContext:()=>({getComponentSnapshot:()=>({get:async()=>{reads++;return {release(){releaseCount++;}};}})}),
   failBookTurnTextureCapture(){throw Error('unexpected failure');},
-  bookTurnSession:{uploadTexture:async(_s,_p,_i,admit)=>{uploads++; if(uploads===1){o.bookTurnTextureCaptureGeneration++;if(invalidation==='page')o.pageTurnGeneration++;if(invalidation==='exit')o.exitRequested=true;}return admit();}},
+  bookTurnSession:createBookTurnTextureOwner(async(_s,_p,_i,admit)=>{uploads++; if(uploads===1){o.bookTurnTextureCaptureGeneration++;if(invalidation==='page')o.pageTurnGeneration++;if(invalidation==='exit')o.exitRequested=true;}return admit();}),
  });
  const page={textureIdentity:'exact-page-layout-chrome',fragments:[]};
  assert.equal(await o.captureBookTurnTexture(0,page,1),false);

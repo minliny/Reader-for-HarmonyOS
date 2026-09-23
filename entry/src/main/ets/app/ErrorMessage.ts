@@ -83,6 +83,28 @@ function errorObject(value: unknown): Record<string, Object> | undefined {
     ? value as Record<string, Object> : undefined;
 }
 
+/** Bounded response rejection evidence. Never serialize an error envelope,
+ * URL, headers or body into the ordinary reading diagnostics. */
+export function httpResponseFailureSummary(error: unknown): string | undefined {
+  const raw = errorObject(error);
+  const event = errorObject(raw?.['event']);
+  const failure = errorObject(event?.['error']) ?? errorObject(raw?.['error']) ?? raw;
+  const details = errorObject(failure?.['details']);
+  if (details?.['category'] !== 'SOURCE_HTTP_FAILED') return undefined;
+  const evidence = errorObject(details['cause']) ?? details;
+  const status = evidence['httpStatus'];
+  if (evidence['phase'] !== 'response' || typeof status !== 'number' ||
+    !Number.isInteger(status) || status < 400 || status > 599) return undefined;
+  const rawHost = evidence['requestHost'];
+  const host = typeof rawHost === 'string' && rawHost.length <= 253 &&
+    /^[a-zA-Z0-9.:[\]-]+$/.test(rawHost) ? rawHost : 'unknown';
+  // Nested script HTTP errors retain their transport stage; Core records the
+  // owning book operation separately so it cannot overwrite that evidence.
+  const rawStage = details['outerStage'] ?? details['stage'];
+  const stage = rawStage === 'book.toc' || rawStage === 'chapter.content' || rawStage === 'book.detail' ? rawStage : 'unknown';
+  return `stage=${stage} host=${host} status=${status}`;
+}
+
 /** Recognize only structured transport evidence, never words in a source's response. */
 export function isNetworkEnvironmentFailure(error: unknown): boolean {
   if (error === null || typeof error !== 'object') return false;
@@ -93,13 +115,19 @@ export function isNetworkEnvironmentFailure(error: unknown): boolean {
   return networkEnvironmentEnvelope(raw, 0);
 }
 
-function networkEnvironmentEnvelope(value: Object, depth: number): boolean {
+/** DNS is evidence about this requested domain, not every source in a batch. */
+export function isDomainResolutionFailure(error: unknown): boolean {
+  if (error === null || typeof error !== 'object') return false;
+  return networkEnvironmentEnvelope(error as Object, 0, 'dns');
+}
+
+function networkEnvironmentEnvelope(value: Object, depth: number, phase?: string): boolean {
   if (depth > 6 || value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const raw = value as Record<string, Object>;
-  if (raw['category'] === 'NETWORK_ENVIRONMENT') return true;
+  if (raw['category'] === 'NETWORK_ENVIRONMENT' && (phase === undefined || raw['phase'] === phase)) return true;
   for (const key of ['details', 'host', 'diagnostics', 'event', 'error', 'causeValue']) {
     const nested = raw[key];
-    if (nested !== undefined && networkEnvironmentEnvelope(nested, depth + 1)) return true;
+    if (nested !== undefined && networkEnvironmentEnvelope(nested, depth + 1, phase)) return true;
   }
   return false;
 }

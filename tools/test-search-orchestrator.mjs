@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
+  catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(resolve(repo, rel), 'utf8');
 const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthorMetadata.ts');
@@ -1099,7 +1101,6 @@ console.log('R3 failed local branch retries while online remains active; repeate
 {
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
   const execute = source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
-  const withoutImports = source => source.replace(/^import[\s\S]*?;\n/gm, '');
   const pageSource = read('entry/src/main/ets/features/search/SearchPage.ets');
   const classes = pageSource.slice(pageSource.indexOf('@Observed\nclass SearchBookGroup'),
     pageSource.indexOf('/**\n * Figma-backed Book Search')).replace('@Observed\n', '');
@@ -1107,9 +1108,7 @@ console.log('R3 failed local branch retries while online remains active; repeate
     const DataOperationType = {ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'};
     ${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}
     export { SearchBookGroup, SearchResultDataSource };`);
-  const { SearchResultProjection } = await execute(['features/common/BookAuthorMetadata.ts','features/search/SearchResultProjection.ts','features/search/SearchResultRelevance.ts',
-    'features/common/BookAcquisitionPresentation.ts','features/search/SearchCandidatePolicy.ts']
-    .map(path=>withoutImports(read('entry/src/main/ets/'+path))).join('\n'));
+  const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
   let counting = false;let groupBuilds = 0;let rowUpdates = 0;let notices = 0;let flattenRows = 0;let identityLookups = 0;
   class CountedGroup extends SearchBookGroup { constructor(...args){super(...args);if(counting)groupBuilds++;} }
   const Page = productionMotionMethods(resolve(repo,'entry/src/main/ets/features/search/SearchPage.ets'),['groupResults'],

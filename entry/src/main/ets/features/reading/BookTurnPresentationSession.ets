@@ -8,6 +8,10 @@ export const BOOK_TURN_TEXTURE_PREVIOUS = 0;
 export const BOOK_TURN_TEXTURE_CURRENT = 1;
 export const BOOK_TURN_TEXTURE_NEXT = 2;
 
+export const BOOK_TURN_PROFILE_MANUAL = 0;
+export const BOOK_TURN_PROFILE_RAPID = 1;
+export const BOOK_TURN_PROFILE_AUTOMATIC = 2;
+
 export const BOOK_TURN_EVENT_SURFACE_READY = 1;
 export const BOOK_TURN_EVENT_TEXTURE_READY = 2;
 export const BOOK_TURN_EVENT_VISUAL_COMMIT_ENDPOINT = 3;
@@ -18,12 +22,19 @@ export const BOOK_TURN_EVENT_SLOTS_COMMITTED = 7;
 /** The retained terminal frame was cleared after the generation-matched
  *  ArkUI content admission and scheduled hide (barrier closed; no display fence). */
 export const BOOK_TURN_EVENT_TERMINAL_RELEASED = 8;
-/** Native surface has drawn the first frame for a new generation. */
+/** Native submitted the first buffer, not a display fence. For an automatic
+ *  turn, detail is the positive token required by startAutomaticTimeline. */
 export const BOOK_TURN_EVENT_FRAME_PRESENTED = 9;
 
 export interface BookTurnRegrabFrame { generation: number; edgeX: number; edgeY: number; theta: number; }
 
 export type BookTurnTextureSlot = 0 | 1 | 2;
+
+interface BookTurnPendingSnapshot {
+  identity: string;
+  pageGeneration: number;
+  pixelMap: image.PixelMap;
+}
 
 export class BookTurnNativeEvent {
   event: number;
@@ -43,6 +54,10 @@ export class BookTurnNativeEvent {
  */
 export class BookTurnPresentationSession {
   readonly componentId: string;
+  private capturedIdentities: string[] = ['', '', ''];
+  private pendingSlotGeneration: number = -1;
+  private pendingSlotDirection: ReaderPageTurnDirection | undefined = undefined;
+  private pendingSnapshot: BookTurnPendingSnapshot | undefined = undefined;
   private highlightIdentity: string = '';
   private highlightValues: number[] = [];
   private configuredWidth: number = 0;
@@ -60,7 +75,44 @@ export class BookTurnPresentationSession {
   private onNativeEvent(event: number, generation: number, detail: number): void {
     if (event === BOOK_TURN_EVENT_SURFACE_READY || event === BOOK_TURN_EVENT_SURFACE_LOST ||
       event === BOOK_TURN_EVENT_RENDER_FAILURE) this.highlightIdentity = '';
+    if (event === BOOK_TURN_EVENT_SLOTS_COMMITTED && generation === this.pendingSlotGeneration) {
+      const direction = this.pendingSlotDirection;
+      this.pendingSlotGeneration = -1;
+      this.pendingSlotDirection = undefined;
+      if (direction === 'next') this.capturedIdentities = [this.capturedIdentities[1], this.capturedIdentities[2], ''];
+      else if (direction === 'previous') this.capturedIdentities = ['', this.capturedIdentities[0], this.capturedIdentities[1]];
+    }
     this.eventListener(new BookTurnNativeEvent(event, generation, detail));
+  }
+
+  capturedIdentity(slot: BookTurnTextureSlot): string { return this.capturedIdentities[slot]; }
+
+  /** Revokes in-flight upload publication and the retained CPU bitmap together. */
+  clearCapturedTextures(): void {
+    this.capturedIdentities = ['', '', ''];
+    this.pendingSlotGeneration = -1;
+    this.pendingSlotDirection = undefined;
+    this.releasePendingSnapshot();
+  }
+
+  retainPendingSnapshot(identity: string, pageGeneration: number, pixelMap: image.PixelMap): void {
+    this.releasePendingSnapshot();
+    this.pendingSnapshot = { identity, pageGeneration, pixelMap };
+  }
+
+  takePendingSnapshot(identity: string, pageGeneration: number): image.PixelMap | undefined {
+    const pending = this.pendingSnapshot;
+    if (pending === undefined) return undefined;
+    if (pending.pageGeneration !== pageGeneration) { this.releasePendingSnapshot(); return undefined; }
+    if (pending.identity !== identity) return undefined;
+    this.pendingSnapshot = undefined;
+    return pending.pixelMap;
+  }
+
+  releasePendingSnapshot(): void {
+    const pending = this.pendingSnapshot;
+    this.pendingSnapshot = undefined;
+    if (pending !== undefined) { try { pending.pixelMap.release(); } catch (_) {} }
   }
 
   setEventListener(listener: (event: BookTurnNativeEvent) => void): void {
@@ -93,9 +145,15 @@ export class BookTurnPresentationSession {
     return bookTurnNative.canStart(this.componentId, nativeDirection(direction));
   }
 
-  uploadTexture(slot: BookTurnTextureSlot, pixelMap: image.PixelMap, identity: string,
+  async uploadTexture(slot: BookTurnTextureSlot, pixelMap: image.PixelMap, identity: string,
     canPublish: () => boolean): Promise<boolean> {
-    return bookTurnNative.uploadTexture(this.componentId, slot, pixelMap, identity, canPublish);
+    if (!canPublish()) return false;
+    const identities = this.capturedIdentities;
+    const canUpload = (): boolean => identities === this.capturedIdentities && canPublish();
+    const accepted: boolean = await bookTurnNative.uploadTexture(this.componentId, slot, pixelMap, identity, canUpload);
+    if (!accepted || !canUpload()) return false;
+    this.capturedIdentities[slot] = identity;
+    return true;
   }
 
   updateInput(input: BookTurnInput): boolean {
@@ -152,12 +210,23 @@ export class BookTurnPresentationSession {
     return bookTurnNative.settle(this.componentId, generation, commit);
   }
 
-  startProgrammatic(generation: number, direction: ReaderPageTurnDirection, rapid: boolean = false): boolean {
-    return bookTurnNative.startProgrammatic(this.componentId, generation, nativeDirection(direction), rapid);
+  startProgrammatic(generation: number, direction: ReaderPageTurnDirection,
+    profile: number = BOOK_TURN_PROFILE_MANUAL): boolean {
+    return bookTurnNative.startProgrammatic(this.componentId, generation, nativeDirection(direction), profile);
+  }
+
+  startAutomaticTimeline(generation: number, surfaceToken: number): boolean {
+    return bookTurnNative.startAutomaticTimeline(this.componentId, generation, surfaceToken);
   }
 
   commitSlots(generation: number, direction: ReaderPageTurnDirection): boolean {
-    return bookTurnNative.commitSlots(this.componentId, generation, nativeDirection(direction));
+    this.pendingSlotGeneration = generation;
+    this.pendingSlotDirection = direction;
+    const accepted: boolean = bookTurnNative.commitSlots(this.componentId, generation, nativeDirection(direction));
+    if (!accepted && this.pendingSlotGeneration === generation) {
+      this.pendingSlotGeneration = -1; this.pendingSlotDirection = undefined;
+    }
+    return accepted;
   }
 
   /** ArkUI presentation barrier: after promote, hold the new-page terminal

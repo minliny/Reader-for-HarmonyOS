@@ -18,6 +18,7 @@ struct Entry {
 
 void Reset();
 void SetTextureUploadHook(std::function<void()> hook);
+void SetSwapFailureCount(int count);
 std::vector<Entry> Log();
 void Record(const char* name, int64_t a, int64_t b);
 

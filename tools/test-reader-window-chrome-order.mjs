@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {createRequire, registerHooks} from 'node:module';
 import {ReaderBrightnessWriter} from '../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
 import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {READER_THEME_DEFINITIONS, readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import {READER_THEME_DEFINITIONS, readerAppColor, findReaderTheme} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import {readerAppearanceThemeStyle, readerAppearanceChromeTone} from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
@@ -20,7 +20,9 @@ function fixture(){
  const kit={window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
    AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1,TYPE_SYSTEM_GESTURE:2,TYPE_NAVIGATION_INDICATOR:3,TYPE_KEYBOARD:4}},
    display:{getDefaultDisplaySync:()=>displayInfo,on(){},off(){}}};
- const deps={'@kit.ArkUI':kit,'./ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
+ const deps={'@kit.ArkUI':kit,'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(){}}},
+   '../features/common/ReaderThemeRegistry':{findReaderTheme},
+   './ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
    '../features/common/ReaderWindowMetrics':metrics};
  const source=readFileSync(new URL('app/ReaderWindowCoordinator.ts',base),'utf8');
  const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
@@ -46,7 +48,7 @@ function fixture(){
  }
  function theme(id,overlay=true){const e=Object.assign(new E(),{windowChromeActive:true,windowChromeOverlayActive:overlay,appearanceSnapshot:{activeTheme:id}});e.applyWindowChrome();}
  const colors=w=>w.calls.filter(x=>x[0]==='color');
- return{C,S,P,E,windowPort,theme,colors,displayInfo};
+ return{C,S,P,E,windowPort,theme,colors,displayInfo,app};
 }
 const cases=[];
 async function check(name,run){try{await run();cases.push({name,status:'PASS'});}catch(e){cases.push({name,status:'FAIL',error:e.stack});}}
@@ -57,7 +59,10 @@ await check('eight real reading palettes survive hide/show and same/cross-scheme
    f.theme(t.id,false);await settle();
    await f.C.requestReaderWindowPolicy(new f.P('system',false,true,false,true));
    f.theme(t.id,true);await f.C.requestReaderWindowPolicy(new f.P('system',false,false,false,true));await settle();
-   assert.equal(w.barEnabled.status,true);assert.equal(w.properties.statusBarColor,t.statusBackground,t.id);
+   assert.equal(w.barEnabled.status,true);assert.equal(w.properties.statusBarColor,'#00000000',t.id);
+   assert.equal(w.properties.navigationBarColor,t.statusBackground,t.id);
+   assert.equal(f.app.get('readerWindowChromeThemeId'),t.id);
+   assert.equal(f.app.get('readerWindowChromeUnderlayColor'),t.statusBackground);
    assert.equal(w.properties.statusBarContentColor,t.statusForeground,t.id);
    const count=f.colors(w).length;f.theme(t.id,true);await settle();assert.equal(f.colors(w).length,count,'settled same theme is deduplicated');
  }
@@ -66,27 +71,31 @@ await check('eight real reading palettes survive hide/show and same/cross-scheme
 await check('new theme is drained after the previous native color write rejects',async()=>{
  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const gate=deferred();w.nextColor=gate;f.theme('warm');await tick();f.theme('green');gate.reject(Error('1300003 simulated old request failure'));await settle();
- assert.equal(w.properties.statusBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='green').paperStart,'newest theme must not be lost with old failure');f.C.detach();
+ assert.equal(w.properties.statusBarColor,'#00000000');
+ assert.equal(w.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='green').paperStart,'newest paired theme must not be lost with old failure');f.C.detach();
 });
 for(const failed of [false,true])await check(`old window ${failed?'reject':'success'} cannot strand new window chrome`,async()=>{
  const f=fixture(),a=f.windowPort();await f.C.install(a);await settle();
  const gate=deferred();a.nextColor=gate;f.theme('paperNight');await tick();
  const b=f.windowPort();await f.C.install(b);f.theme('greenNight');
  if(failed)gate.reject(Error('1300002 simulated destroyed window'));else gate.resolve();await settle();
- assert.equal(b.properties.statusBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='greenNight').paperStart,'replacement must receive newest color');f.C.detach();
+ assert.equal(b.properties.statusBarColor,'#00000000');
+ assert.equal(b.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='greenNight').paperStart,'replacement must receive newest paired color');f.C.detach();
 });
 await check('failed latest request stays pending without an automatic retry loop and explicit reapply recovers',async()=>{
  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const count=f.colors(w).length,gate=deferred();w.nextColor=gate;f.theme('warmNight');await tick();gate.reject(Error('1300003 simulated latest failure'));await settle();
  assert.equal(f.colors(w).length,count+1,'same failed intent must not spin');f.C.reapplyChrome();await settle();
- assert.equal(w.properties.statusBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='warmNight').paperStart);f.C.detach();
+ assert.equal(w.properties.statusBarColor,'#00000000');
+ assert.equal(w.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='warmNight').paperStart);f.C.detach();
 });
 await check('showing controls retries a failed color even when visible-bar policy and geometry are unchanged',async()=>{
  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const visible=new f.P('system',false,false,false,false);await f.C.requestReaderWindowPolicy(visible);
  const gate=deferred();w.nextColor=gate;f.theme('paper');await tick();gate.reject(Error('1300003 simulated theme failure'));await settle();
  const before=w.calls.length;await f.C.requestReaderWindowPolicy(visible);await settle();
- assert.equal(w.properties.statusBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='paper').paperStart,'visible controls must not keep stale app color');
+ assert.equal(w.properties.statusBarColor,'#00000000','visible controls must expose the shared paper');
+ assert.equal(w.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='paper').paperStart,'visible controls must not keep stale app color');
  assert.equal(w.calls.slice(before).filter(c=>c[0]==='visible').length,0,'unchanged visibility remains deduplicated');f.C.detach();
 });
 await check('actual cutout setting true to false preserves measured band across delayed show area and all eight themes',async()=>{
@@ -112,7 +121,8 @@ await check('actual cutout setting true to false preserves measured band across 
    }
    controls=false;await e.applyReaderWindowPolicy(e.readerSettingsSnapshot);
    assert.equal(w.barEnabled.status,true,'closing controls with cutout off keeps status visible');
-   assert.equal(w.properties.statusBarColor,t.statusBackground);assert.equal(w.properties.statusBarContentColor,t.statusForeground);
+   assert.equal(w.properties.statusBarColor,'#00000000');assert.equal(w.properties.statusBarContentColor,t.statusForeground);
+   assert.equal(w.properties.navigationBarColor,t.statusBackground);
    w.avoidTop={left:0,top:0,width:0,height:0};w.events.get('avoidAreaChange')({});
    assert.equal(f.C.metrics().statusBarHeight,0,'after positive reveal, a later authoritative zero can clear the band');
    f.C.detach();

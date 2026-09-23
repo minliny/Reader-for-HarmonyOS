@@ -17,11 +17,11 @@ function index(sourceId='local'){
 }
 for(const sourceId of ['local','remote']){
  const host=index(sourceId);host.openFullDirectory();
- assert.equal(host.route,'directory');assert.equal(host.readingSessionActive,false);assert.equal(host.navigationGeneration,1,'catalog viewing retains detail admission generation');assert.equal(host.readerOwnsWindowEdges(),true);
+ assert.equal(host.route,'directory');assert.equal(host.readingSessionActive,false);assert.equal(host.navigationGeneration,1,'catalog viewing retains detail admission generation');assert.equal(host.readerOwnsWindowEdges(),false);
  assert.equal(host.onBackPress(),true);assert.equal(host.route,'detail');assert.equal(host.readingSessionActive,false);assert.equal(host.navigationGeneration,1);
  host.openFullDirectory();host.onDirectoryChapterSelected(19);
- assert.equal(host.readingSessionActive,true);assert.equal(host.requestedChapterIndex,19);assert.equal(host.route,'directory','external catalog remains while exact selection prepares');
- host.presentPreparedReading(0);assert.equal(host.route,'directory');host.presentPreparedReading(19);assert.equal(host.route,'reading');
+ assert.equal(host.readingSessionActive,true);assert.equal(host.requestedChapterIndex,19);assert.equal(host.route,'reading','PH116 selection enters the normal reader immediately');
+ host.presentPreparedReading(0);assert.equal(host.route,'reading');host.presentPreparedReading(19);assert.equal(host.route,'reading');
  host.directoryCurrentChapterIndex=19;host.openReaderControlDirectory();assert.equal(host.directoryReturnTarget,'readerControl');assert.equal(host.route,'directory');
  host.onDirectoryChapterSelected(19);assert.equal(host.route,'reading','reader current chapter is revealed without a new session');
  host.openReaderControlDirectory();host.closeDirectory();assert.equal(host.route,'reading');assert.equal(host.readingSessionActive,true);
@@ -31,12 +31,12 @@ const proof={sourceId:'remote',bookId:'book',chapterIndex:19,bodyVersion:'body',
  const host=index('remote');host.openFullDirectory();host.onReaderBookmarkSelected('mark',19,37,proof);
  assert.equal(host.readingSessionActive,true);assert.equal(host.requestedBookmarkAnchor.chapterOffset,37);assert.equal(host.requestedBookmarkAnchor.positionScope,proof);
  host.onReaderBookmarkSelected('second',20,5,{...proof,chapterIndex:20});assert.equal(host.requestedChapterIndex,undefined);
- host.presentPreparedReading(19);assert.equal(host.route,'directory');host.presentPreparedReading(20);assert.equal(host.route,'reading');
+ host.presentPreparedReading(19);assert.equal(host.route,'reading');host.presentPreparedReading(20);assert.equal(host.route,'reading');
  host.readingSessionActive=false;host.route='detail';host.openReading(undefined);assert.equal(host.requestedBookmarkAnchor,undefined,'a new ordinary open cannot replay an old mark');
 }
 const Initial=productionMotionMethods(file('features/reading/LocalReadingExperience.ets'),['loadInitialChapter','normalizedRequestedChapter','positionContextForScope','onRequestedBookmarkAnchorChanged'],{LOCAL_READING_SOURCE_ID:'local'});
 function initial(sourceId='remote'){
- const host=Object.assign(new Initial(),{sourceId,bookId:'book',chapterSelectionToken:1,requestedChapterIndex:19,requestedBookmarkAnchor:new Anchor(1,19,37,proof),consumedBookmarkAnchorRequestId:-1,mounted:true,opens:[],failures:[],selections:[],isSelectionActive(_life,token){return this.chapterSelectionToken===token;},loadInitialToc:async()=>({entries:[{index:0},{index:19},{index:20}]}),activeGateway:()=>({loadProgress:async()=>({kind:'restored',progress:{chapterIndex:0,chapterOffset:888}})}),admitTocEntries(entries){this.tocEntries=entries;},readingTocEntries(){return this.tocEntries;},chapterWindow:{configure(){}},requireKnownChapter(index){assert.ok([0,19,20].includes(index));return index;},async openChapter(...args){this.opens.push(args);},fail(error){this.failures.push(error.message);},selectBookmarkAnchor(...args){this.selections.push(args);this.chapterSelectionToken++;}});
+ const host=Object.assign(new Initial(),{sourceId,bookId:'book',sessionGateway:{remoteSession:()=>undefined},chapterSelectionToken:1,requestedChapterIndex:19,requestedBookmarkAnchor:new Anchor(1,19,37,proof),consumedBookmarkAnchorRequestId:-1,mounted:true,opens:[],failures:[],selections:[],isSelectionActive(_life,token){return this.chapterSelectionToken===token;},loadInitialToc:async()=>({entries:[{index:0},{index:19},{index:20}]}),activeGateway:()=>({loadProgress:async()=>({kind:'restored',progress:{chapterIndex:0,chapterOffset:888}})}),onDirectoryProjectionChanged(){},admitTocEntries(entries){this.tocEntries=entries;},readingTocEntries(){return this.tocEntries;},chapterWindow:{configure(){}},requireKnownChapter(index){assert.ok([0,19,20].includes(index));return index;},async openChapter(...args){await args[8];if(this.isSelectionActive(args[2],args[3]))this.opens.push(args);},fail(error){this.failures.push(error.message);},selectBookmarkAnchor(...args){this.selections.push(args);this.chapterSelectionToken++;}});
  return host;
 }
 for(const sourceId of ['local','remote']){
@@ -68,17 +68,34 @@ for(const mutate of [h=>{h.requestedBookmarkAnchor.positionScope=undefined;},h=>
 // Actual SDK-generated external Builder: no reader child may be constructed.
 const require=createRequire(import.meta.url);const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
-syntax.componentCollection.customComponents.add('ReaderFullDirectory');syntax.propCollection.set('ReaderFullDirectory',new Set(['bookTitle','chapterTitle','entries','currentChapterIndex','sourceId','animateFromControl','reduceMotion','offlineBookOperationActive','chapterStartBookmarkCreationEnabled']));
+syntax.componentCollection.customComponents.add('BookDirectoryPage');syntax.propCollection.set('BookDirectoryPage',new Set(['sourceId','bookId','entries','catalogMessage','chapterStartBookmarkCreationEnabled']));
+syntax.componentCollection.customComponents.add('LocalBookDetail');syntax.propCollection.set('LocalBookDetail',new Set(['book','toc','sourceSwitchEnabled','readingEnabled','readingBlockedReason','inBookshelf','loadingMessage','removalEnabled','removing']));
 class DirectoryChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>`${name}.${String(key)}`})]));
 for(const sourceId of ['local','remote']){
- const {owner,output}=createReaderBuilderProbe(source,['externalDirectory'],{ReaderFullDirectory:DirectoryChild,...enums});
+ const {owner,output}=createReaderBuilderProbe(source,['externalDirectory'],{BookDirectoryPage:DirectoryChild,...enums});
  const host=index(sourceId);Object.assign(owner,host,{settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',detailBookmarkIdentity:()=>({sourceId,bookId:'book'}),appThemeScheme:'day'});
  owner.onDirectoryChapterSelected=host.onDirectoryChapterSelected.bind(host);owner.closeDirectory=host.closeDirectory.bind(host);
  owner.externalDirectory();assert.equal(owner.children.size,1);const props=[...owner.children.values()][0].params;
- props.onSelectChapter(19);assert.equal(host.requestedChapterIndex,19);props.onExit();assert.equal(host.route,'detail');
- assert.equal(props.animateFromControl,false);assert.equal(props.entries,host.detailToc);assert.equal(props.sourceId,sourceId);assert.doesNotMatch(output,/new ReaderShell|new ReadingExperience/);
- assert.match(source,/this\.route === 'directory' && this\.directoryReturnTarget === 'detail' &&\s*this\.detailBook !== undefined\) \{\s*this\.externalDirectory\(\)/,'actual Index route mounts this Builder');
+ props.onSelectChapter(19);assert.equal(host.requestedChapterIndex,19);host.route='directory';props.onBack();assert.equal(host.route,'detail');
+ assert.equal(props.bookId,'book');assert.equal(props.onSwitchSource,undefined);assert.equal(props.onDownloadBook,undefined);assert.equal(props.entries,host.detailToc);assert.equal(props.sourceId,sourceId);assert.doesNotMatch(output,/new ReaderShell|new ReadingExperience/);
+ assert.match(source,/this\.route === 'directory' && this\.directoryReturnTarget === 'detail'\) \{\s*this\.externalDirectory\(\)/,'detail content mounts the independent page');
  assert.match(source,/visible: this\.route === 'reading' \|\|\s*\(this\.route === 'directory' && this\.directoryReturnTarget === 'readerControl'\)/,'a preparing external selection cannot expose the reading control directory');
 }
-console.log('PH84 actual external directory routing, Builder and exact initial bookmark lifecycle: PASS');
+// The real retained detail observer keeps the same child ID through catalog/back.
+{
+ const {owner}=createReaderBuilderProbe(source,['detailContent','externalDirectory','detailBookKey'],{BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,LOCAL_SOURCE_ID:'local',...enums});
+ const host=index();host.openFullDirectory();Object.assign(owner,host,{offlineMutationActiveKey:'',remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
+ owner.detailContent();
+ const detail=[...owner.children.values()].find(child=>child.params.book);
+ const directory=[...owner.children.values()].find(child=>child.params.entries);
+ assert.ok(detail);assert.ok(directory);assert.notEqual(detail.id,directory.id);
+ const wrapper=[...owner.nodes.values()].find(node=>node.visibility==='Visibility.Hidden');
+ assert.equal(wrapper.hitTestBehavior,'HitTestMode.None');assert.equal(wrapper.enabled,false);assert.equal(wrapper.focusable,false);assert.equal(wrapper.accessibilityLevel,'no-hide-descendants');
+ const original=detail;owner.route='detail';owner.replayOnly([wrapper.id,detail.id]);
+ assert.equal(owner.children.get(detail.id),original,'return reveals the same native detail/scroll owner');
+ assert.equal(wrapper.visibility,'Visibility.Visible');assert.equal(wrapper.enabled,true);assert.equal(wrapper.focusable,true);
+ assert.equal(wrapper.hitTestBehavior,'HitTestMode.Default');
+ assert.match(source,/this\.detailContent\(\);/);
+}
+console.log('PH119 independent catalog routing, retained detail Builder and exact initial bookmark lifecycle: PASS');

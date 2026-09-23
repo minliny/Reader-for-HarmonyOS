@@ -28,8 +28,13 @@ assert.match(shell, /onClearBookOffline:[\s\S]*?this\.onClearBookOffline/,
 assert.match(shell, /onReadingFailure:[\s\S]*?this\.onReadingFailure/,
   'both device forms must forward the same source-switch rollback seam');
 
-assert.equal((experience.match(/new ReadingSessionFlowGateway\(/g) ?? []).length, 1,
-  'the mounted reader must own one local/remote gateway boundary');
+const visibleMount = experience.slice(experience.indexOf('  aboutToAppear()'), experience.indexOf('  aboutToDisappear()'));
+assert.match(visibleMount, /void this\.loadInitialReading\(lifecycleToken\)/,
+  'the same mounted reader starts asynchronous acquisition for either device form');
+assert.match(experience, /private async ensureReadingSession[\s\S]*if \(this\.sessionGateway !== undefined\) return/,
+  'the reader reuses its admitted gateway instead of constructing one per retry');
+assert.equal((experience.match(/ReadingSessionFlowGateway\.open\(/g) ?? []).length, 1,
+  'one lifecycle owns the shared local/remote gateway; there is no secondary preparation reader');
 assert.equal((experience.match(/new ReadingPaginationIndex\(\)/g) ?? []).length, 1,
   'the mounted reader must own one physical pagination index');
 assert.equal((experience.match(/new ReadingChapterWindow\(\)/g) ?? []).length, 1,

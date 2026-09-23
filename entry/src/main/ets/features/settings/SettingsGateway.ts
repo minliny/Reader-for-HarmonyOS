@@ -30,9 +30,32 @@ export class SettingsGateway {
   // persist a mixed snapshot. The tail is always resolved in `finally`: a
   // rejected write must not prevent a later, independent update from running.
   private static updateTails: Map<common.UIAbilityContext, Promise<void>> = new Map();
+  private static listeners: Map<common.UIAbilityContext, Set<(snapshot: SettingsSnapshot) => void>> = new Map();
 
   constructor(context: common.UIAbilityContext) {
     this.context = context;
+  }
+
+  /** Only coherent reads and confirmed writes reach application consumers. */
+  subscribe(listener: (snapshot: SettingsSnapshot) => void): () => void {
+    let listeners = SettingsGateway.listeners.get(this.context);
+    if (listeners === undefined) {
+      listeners = new Set<(snapshot: SettingsSnapshot) => void>();
+      SettingsGateway.listeners.set(this.context, listeners);
+    }
+    listeners.add(listener);
+    return (): void => {
+      const current = SettingsGateway.listeners.get(this.context);
+      current?.delete(listener);
+      if (current?.size === 0) SettingsGateway.listeners.delete(this.context);
+    };
+  }
+
+  private publish(snapshot: SettingsSnapshot): void {
+    for (const listener of SettingsGateway.listeners.get(this.context) ?? []) {
+      // A view callback cannot turn a confirmed preference write into failure.
+      try { listener(this.copySnapshot(snapshot)); } catch (_) {}
+    }
   }
 
   async load(): Promise<SettingsSnapshot> {
@@ -44,7 +67,11 @@ export class SettingsGateway {
     const tail = new Promise<void>((resolve: () => void): void => { release = resolve; });
     SettingsGateway.updateTails.set(this.context, tail);
     await previous;
-    try { return await this.readSnapshot(await this.ensureStore()); }
+    try {
+      const snapshot = await this.readSnapshot(await this.ensureStore());
+      this.publish(snapshot);
+      return snapshot;
+    }
     finally {
       release?.();
       if (SettingsGateway.updateTails.get(this.context) === tail) SettingsGateway.updateTails.delete(this.context);
@@ -87,6 +114,7 @@ export class SettingsGateway {
         await this.writeSnapshot(store, previous);
         throw error;
       }
+      this.publish(requestedSnapshot);
       return this.copySnapshot(requestedSnapshot);
     } finally {
       if (releaseUpdate !== undefined) {

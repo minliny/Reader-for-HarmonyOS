@@ -20,6 +20,7 @@ function owner(){
   pageTurnAnimationFinished:true,pageTurnCommitStarted:false,pageTurnCommitFinished:false,pageTurnCommitSucceeded:false,
   bookTurnSurfaceOpacity:1,pageTurnDirection:'next',autoPageState:{status:'stopped'},viewportWidth:390,viewportHeight:780,
   shouldMountBookTurnSurface:()=>true,usesBookTurnSimulation(){return !this.bookTurnRuntimeFailed;},
+  automaticReadingState(){return this.autoPageState;},
   bookTurnSession:{configure:noop,releaseTerminalFrame:noop,clearSurface:noop,retainedTerminalGeneration:()=>0,commitSlots(){stats.native++;return false;}},
   clearBookTurnCapturedIdentities:noop,clearPageTurnProjection:noop,cancelPageTurnSettlementDeadline:noop,
   finishPageTurnPerf:kind=>stats[kind]++,flushDeferredPageChromeState:noop,retryRapidPageTurnTransaction:noop,

@@ -1,6 +1,6 @@
 import { readerControlAppearanceThemeSwatch, readerControlAppearanceThemeLabel } from './ReaderControlAppearanceStyle';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { registerReaderFonts } from '../common/ReaderFonts';
+import { registerReaderFonts, readerRegisteredFontFamily } from '../common/ReaderFonts';
 import {
   TOK_BORDER_W,
   TOK_LINE,
@@ -203,7 +203,7 @@ export struct ReaderAppearanceModulePanel {
       .padding({ left: 4, right: 4 })
       .backgroundColor(this.isActiveFont(fontId) ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent)
       .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-      .fontFamily(readerAppearanceFontSlotFamily(this.snapshot, fontId))
+      .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceFontSlotFamily(this.snapshot, fontId)))
       .fontWeight(FontWeight.Regular)
       .fontSize(8)
       .lineHeight(10)

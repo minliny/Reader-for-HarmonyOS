@@ -37,7 +37,7 @@ function visit(node){if(node.expression?.getText?.(lreTree)==='ReaderControlPane
   argumentsFromLre=node.arguments[0].properties.filter(prop=>['searchPublication','searchRevision'].includes(prop.name?.getText(lreTree)))
     .map(prop=>prop.getText(lreTree)).join(',\n');ts.forEachChild(node,visit);}
 visit(lreTree);assert.ok(argumentsFromLre);
-const fields=['quickSearchState','quickSearchPublication','quickSearchRevision','publishQuickSearchState'];
+const fields=['quickSearchPublication','quickSearchRevision','publishQuickSearchState'];
 const parent=createReaderBuilderProbe(`@Component struct SearchOwner {
  ${fields.map(name=>member(lreSource,name)).join('\n')}
  build(){ ReaderControlPanel({${argumentsFromLre}}); }

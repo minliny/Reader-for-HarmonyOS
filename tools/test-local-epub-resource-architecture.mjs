@@ -52,10 +52,10 @@ assert.doesNotMatch(resourceHost, /@ohos\.zlib|decompressFile|getOriginalSize|ca
   'the Host must not expand a whole EPUB or retain an extracted copy');
 assert.match(resourceHost, /segment === '\.' \|\| segment === '\.\.'/,
   'Host resource reads must reject path traversal independently of Core');
-assert.match(resourceHost, /ReadingBodyImageHost\.instance\.loadBytes/,
-  'local and online images must converge on one byte/dimension adapter');
-assert.match(resourceHost, /loadBytes\(bytes, isCurrent\)/,
-  'local EPUB decoding must retain the active chapter cancellation boundary');
+assert.match(resourceHost, /ReadingBodyImageHost\.instance\.loadResource/,
+  'local image resources must share the existing live display-file owner');
+assert.match(resourceHost, /this\.readResource\(locator, current\), isCurrent/,
+  'local EPUB decoding must retain independent borrower cancellation');
 assert.match(imageHost, /async loadBytes\(/);
 assert.match(imageHost, /materializeDisplayFile\(/,
   'validated bytes must become an ArkUI-readable display file');
@@ -69,7 +69,7 @@ assert.doesNotMatch(chapterWindow, /dataUri/,
 assert.match(runtimeOwner, /sourceId === 'local' && \(imageUrl\.startsWith\('reader-local-epub:\/\/'\) \|\| imageUrl\.startsWith\('reader-local-mobi:\/\/'\)\)/);
 assert.match(runtimeOwner, /localEpubResourceHost\.load\(imageUrl, isCurrent\)/,
   'the runtime owner must propagate cancellation into local EPUB resource decoding');
-assert.match(documentProjection, /kind === 'image'[\s\S]*projectedText !== '\\uFFFC'/,
+assert.match(documentProjection, /block\['kind'\] === 'image'[\s\S]*projectedText !== '\\uFFFC'/,
   'Core image blocks must remain anchored to one canonical object scalar');
 assert.match(sessionFlow, /state: 'ready',[\s\S]*fileUri: payload\.fileUri/,
   'the resolved Host file must enter the shared reading-session image shape');

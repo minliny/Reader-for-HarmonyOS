@@ -13,7 +13,6 @@ const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const builderMethods = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const name of ['continueReadingCard', 'filterRow', 'projectionRow']) builderMethods.add(name);
-require(`${sdk}/lib/validate_ui_syntax.js`).componentCollection.customComponents.add('BookshelfGroupSelector');
 const specSource = readFileSync(file('features/common/MotionSpec.ets'), 'utf8');
 const declaration = specSource.slice(specSource.indexOf('const BOOKSHELF_VIEW_MOTION:'), specSource.indexOf('\nconst ENTRIES:'));
 const curve = { interpolate: value => value };
@@ -40,15 +39,18 @@ for (const theme of ['day', 'night']) {
     },
   });
   Object.assign(owner, { appThemeScheme: theme, viewMode: 'cover', viewSwitchHeaderOpacity: 1,
-    continueReading: undefined, filterRowVisible: false, groupSelectorVisible: false,
-    selectedGroup: '', viewModeError: '', visibleBookCount: 0, rowDataSource: {},
+    continueReading: undefined, filterRowVisible: false,
+    viewModeError: '', visibleBookCount: 0, rowDataSource: {},
     shelfContentWidth: () => 352, hasActiveFilters: () => false });
   owner.bookshelfList(false);
   const icons = [...owner.nodes.values()].filter(node => node.type === 'Image');
-  assert.equal(icons.length, 4);
+  assert.equal(icons.length, 3);
   const ids = icons.map(node => node.id);
   const header = [...owner.nodes.values()].find(node => node.type === 'Row' && node.height === 38);
   const title = [...owner.nodes.values()].find(node => node.type === 'Text' && node.create === '我的书架');
+  assert.equal(title.layoutWeight,1,'title expansion keeps the three surviving tools right-aligned');
+  assert.equal([...owner.nodes.values()].find(node=>node.type==='Row'&&node.height===34).width,undefined,
+    'toolbar width follows its three actions without retaining an empty gear slot');
   for (const [source, target] of [['cover', 'list'], ['list', 'cover']]) {
     Object.assign(sampler, { viewSwitchSourceMode: source, viewSwitchDestinationMode: target });
     for (const time of [0, 150, 210, 270, 350, 499, 500, 600, 700, 1000, 350, 150, 0]) {
@@ -70,10 +72,10 @@ for (const theme of ['day', 'night']) {
 }
 
 // Detail is a presentation component. Metadata/progress refreshes must keep
-// its two existing actors; real admission/removal changes still gate actions.
+// its two existing actors; only an active shelf mutation gates reading.
 const detailSource = readFileSync(file('features/bookshelf/LocalBookDetail.ets'), 'utf8');
-const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea', 'readingActionsReady',
-  'readingActionLabel', 'pendingReadingLabel', 'shelfActionLabel'], {
+const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea',
+  'readingActionLabel', 'shelfActionLabel'], {
   GradientDirection: { Bottom: 'bottom' },
 });
 Object.assign(detail, { appThemeScheme: 'day', toc: [{ index: 0, title: '第一章' }],
@@ -92,8 +94,15 @@ for (let progress = 1; progress <= 4; progress += 1) {
   assert.deepEqual(buttons.map(node => [node.opacity, node.enabled, node.width, node.height]),
     [[1, true, 171, 46], [1, true, 171, 46]]);
 }
-detail.readingEnabled = false; detail.readingBlockedReason = '内容不可读'; detail.replay();
-assert.equal(buttons[0].enabled, false);
-assert.ok([...detail.nodes.values()].some(node => node.type === 'Text' && node.create === '内容不可读'));
-detail.removing = true; detail.replay(); assert.equal(buttons[1].enabled, false);
+let continues=0;detail.onContinue=()=>{continues++;};
+for (const inBookshelf of [false,true]) for(const failure of ['目录读取失败','正文处理设置已改变']) {
+  Object.assign(detail,{toc:[],readingEnabled:false,readingBlockedReason:failure,
+    loadingMessage:'正在读取目录…',inBookshelf});detail.replay();
+  assert.equal(buttons[0].enabled,true,'acquisition failures must not lock the user out of reader recovery');
+  assert.ok([...detail.nodes.values()].some(node=>node.type==='Text'&&node.create===(inBookshelf?'继续阅读':'开始阅读')));
+  buttons[0].onClick();
+}
+assert.equal(continues,4);
+detail.removing = true; detail.replay(); assert.equal(buttons[1].enabled, false);assert.equal(buttons[0].enabled,false);
+buttons[0].onClick();assert.equal(continues,4,'active shelf mutation still owns the book');
 console.log(`PASS ${shelfSamples} production bookshelf timeline/Builder samples; retained detail action actors and real safety gates. Native pixels remain unverified.`);

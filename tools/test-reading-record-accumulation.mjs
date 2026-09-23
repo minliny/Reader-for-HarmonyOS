@@ -33,7 +33,7 @@ assert.ok(exitCaptureSteps.every((offset, index) => offset >= 0 &&
 assert.doesNotMatch(beginExit.slice(exitCaptureSteps[0], exitCaptureSteps[2]), /\b(?:await|return)\b|this\.finishExit\(/,
   'synchronous ownership updates may intervene; early return or asynchronous exit may not skip interval capture');
 assert.match(reader, /await this\.flushReadingRecordForExit\(\);[\s\S]*await this\.commitVisiblePage\(lifecycleToken\);/);
-assert.match(reader, /this\.exitDelivered = true;\s*this\.onExit\(\);/);
+assert.match(reader, /this\.exitDelivered = true;[\s\S]*?try \{[\s\S]*?this\.retainConfirmedEntryPresentation\(\);[\s\S]*?catch \(error\) \{[\s\S]*?\}\s*this\.onExit\(\);/);
 
 const disappear = reader.match(/aboutToDisappear\(\): void \{[\s\S]*?\n  \}/)?.[0] ?? '';
 assert.match(disappear, /this\.clearReadingRecordTimer\(\)/);

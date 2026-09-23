@@ -11,6 +11,7 @@ const remote = read('entry/src/main/ets/features/reading/RemoteReadingFlowGatewa
 const sourceSwitchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
 const sourceSwitchWindow = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
 const sourceSwitchRow = read('entry/src/main/ets/features/source/CandidateRow.ets');
+const reading = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 
 for (const declaration of [
   /const READING_CACHE_BEFORE = 2;/,
@@ -25,26 +26,25 @@ assert.match(index, /private openShelfBook\([\s\S]*openRemoteBookDetail\([\s\S]*
   'a shelf tap must resume instead of stopping at detail');
 assert.match(index, /owner\.bookAcquisitions\(\)[\s\S]*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
   'a shelf cold start must admit the durable TOC before online recovery');
-assert.match(index, /private addDetailBook\([\s\S]*\.upsertBook\([\s\S]*void this\.prefetchReadingWindow\(session\)/,
-  'an explicit shelf join must immediately start the rolling cache window');
+assert.match(read('entry/src/main/ets/app/ReaderCoreGateway.ts'), /\.addReadableBook\(params\)/,
+  'remote shelf success requires the selected-source durable readable admission');
 assert.match(index, /private applyReadingCommit\([\s\S]*this\.prefetchReadingWindow\(session, commit\.chapterIndex\)/,
   'each durable reading commit must maintain the rolling cache window');
 assert.match(index, /session\.entries\.length - commit\.chapterIndex - 1 <= CATALOG_REFRESH_NEAR_END/,
   'reading near the current end must trigger a throttled TOC refresh');
 assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
   'bookshelf updates must use a bounded two-book batch');
-// 2026-08-31 search handoff §2: automatic source recovery is retired. Reading
-// failures are classified first; book-source failures ask the user to confirm
-// retry-vs-switch, and nothing ever auto-picks a candidate from this path.
-const failureBlock = index.slice(index.indexOf('private onReadingFailure('), index.indexOf('private showReadingFailure('));
-assert.ok(failureBlock.length > 0, 'onReadingFailure must exist ahead of showReadingFailure');
-assert.match(failureBlock, /isRemoteSourceFailureKind\(kind\)/,
-  'read failure must classify book-source vs local failures before any UI');
-assert.match(failureBlock, /value: '重试当前源'/,
-  'book-source failures must offer a user-confirmed retry on the current source');
-assert.match(failureBlock,
-  /value: '选择其他书源'[\s\S]*this\.runReadingFailureActionAfterExit\('switch'\)/,
-  'book-source failures must defer manual source switch until the failed reader has exited');
+// PH116 explicitly keeps failures and recovery in the normal reading page.
+// Neither acquisition failure nor error presentation may auto-pick a source.
+const failureBlock = index.slice(index.indexOf('private onReadingFailure('), index.indexOf('private onRemoteSessionReady('));
+assert.ok(failureBlock.length > 0, 'onReadingFailure must retain the current reader');
+assert.match(reading, /const failureKind: RemoteReadingFailureKind = remoteReadingFailureKindOf\(error\)/,
+  'the original typed failure remains available for diagnosis');
+assert.doesNotMatch(failureBlock, /showAlertDialog|readingSessionActive = false|rollbackPendingSourceSwitch|returnToBookshelf/,
+  'body failure must not remove the reader or compensate a source switch automatically');
+assert.match(reading, /Button\('重试'\)/);
+assert.match(reading, /Button\('阅读设置'\)/);
+assert.match(reading, /Button\('切换书源'\)/);
 assert.doesNotMatch(failureBlock, /startSourceDiscovery/,
   'read failure must never auto-open or auto-pick source discovery');
 assert.doesNotMatch(failureBlock, /automaticSourceRecoveryKey/,
@@ -89,7 +89,7 @@ assert.match(search, /onStop/,
   'ACQ-02: the search page must expose a stop intent for the live sweep');
 assert.match(index, /stopSearch\(\)/,
   'ACQ-02: Index must wire the stop intent into the orchestrator');
-// SHF-02/03: the main shelf projects recent-reading order, group filtering,
+// SHF-02/03: the main shelf projects recent-reading order, state/type filtering,
 // and a foreground shelf-wide update queue; the previously dead filter control
 // now owns the tools row, so the deferral is superseded by wired intent.
 assert.match(shelfFlow, /sortBy: 'lastReadAt', sortDirection: 'descending'/,
@@ -101,9 +101,9 @@ assert.match(shelf, /LazyForEach\(this\.rowDataSource/,
 assert.doesNotMatch(shelf, /bookDataSource/,
   'SHF-02: cover/list switching must not duplicate the lazy data source');
 assert.match(shelf, /private rebuildShelfProjection\(\)/,
-  'SHF-02: group filtering and row projection must be rebuilt once per input change');
-assert.match(shelf, /ShelfBookPresentation\.visible\(this\.books, this\.selectedGroup, this\.readingFilter, this\.sourceFilter\)/,
-  'SHF-02 revised: default-group filtering shares the Core-ordered projection');
+  'SHF-02: filtering and row projection must be rebuilt once per input change');
+assert.match(shelf, /ShelfBookPresentation\.visible\(this\.books, '', this\.readingFilter, this\.sourceFilter\)/,
+  'SHF-02 revised: the removed group entry cannot leave an unreachable group condition');
 assert.match(shelfMoreMenu, /检查更新/,
   'SHF-03: More must present a manual shelf-wide update entry');
 assert.match(shelf, /onCheckUpdatesRequested/,

@@ -133,8 +133,6 @@ const localBuild = method(local, 'build() {');
 for (const field of [
   'pageTurnPresentationPhase',
   'bookTurnSurfaceGeneration',
-  'autoPageSessionRemainingSeconds',
-  'failureCode',
 ]) {
   assert.doesNotMatch(local,
     new RegExp(`@State(?:\\s+@Watch\\([^)]*\\))?\\s+private\\s+${field}\\b`),
@@ -144,6 +142,12 @@ for (const field of [
   assert.doesNotMatch(localBuild, new RegExp(`\\bthis\\.${field}\\b`),
     `${field} must not be read by the LocalReadingExperience build tree`);
 }
+const automaticOwner = read('entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts');
+assert.match(automaticOwner, /private remainingSessionSeconds: number/);
+assert.doesNotMatch(local, /(?:private|@State)\s+autoPageSessionRemainingSeconds\b/,
+  'the page must not retain a second automatic-reading duration owner');
+assert.match(local, /@State private failureCode: string/,
+  'PH116: the retained reading error message is visible state, not frame protocol bookkeeping');
 assert.match(local,
   /this\.bookTurnMotion !== undefined && this\.bookTurnMotion\.direction !== direction/,
   'a live same-direction drag must remain startable through MOVE and UP settlement');
@@ -221,7 +225,8 @@ assert.match(hostRun, /pendingAttachSerial_\s*>\s*serial/,
 assert.match(hostRun, /IsSurfaceLifecycleCurrent\(lifecycleSerial\)/,
   'unlocked EGL work must be rejected after a lifecycle change');
 assert.match(hostRun, /ProcessChaseFrame\(frameSeconds, timestamp, lifecycleSerial\)/);
-assert.match(hostRun, /ProcessSettlementFrame\(frameSeconds, lifecycleSerial\)/);
+assert.match(hostRun, /ProcessSettlementFrame\(frameSeconds, timestamp, lifecycleSerial\)/,
+  'automatic settlement must receive the admitted VSync timestamp as well as the surface lifecycle');
 assert.match(host, /NotifySurfaceEvent\(surfaceSerial, HostEvent::FRAME_PRESENTED/,
   'a stale draw must not publish FRAME_PRESENTED');
 assert.match(host, /NotifySurfaceEvent\(lifecycleSerial, HostEvent::SLOTS_COMMITTED/,
@@ -304,7 +309,7 @@ assert.match(local,
   /private effectivePageTurnStyle\(\): ReaderPageTurnStyle[\s\S]*this\.reduceMotion \|\| \(selected === 'simulation' && this\.bookTurnRuntimeFailed\)[\s\S]*return 'none';/);
 assert.match(local, /pageTurnStyle: this\.effectivePageTurnStyle\(\)/);
 assert.match(local,
-  /private animatePageTurnRollback\(\): void[\s\S]*this\.usesNoAnimationPageTurnRuntime\(\)[\s\S]*this\.finishPageTurnRollback\(generation\);/);
+  /private animatePageTurnRollback\(preserveGeneration: boolean = false\): void[\s\S]*this\.usesNoAnimationPageTurnRuntime\(\)[\s\S]*this\.finishPageTurnRollback\(generation\);/);
 assert.match(local,
   /const noAnimation = this\.usesNoAnimationPageTurnRuntime\(\);[\s\S]*else if \(noAnimation\) \{[\s\S]*beginPreparedPageTurnPersistence/);
 assert.match(local, /pageTurnSimulationAvailable: !this\.bookTurnRuntimeFailed/);
@@ -334,4 +339,9 @@ assert.match(local, /await this\.bookTurnSession\.uploadTexture\(slot, pixelMap,
 const snapshotSurface = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets', import.meta.url), 'utf8');
 assert.match(textureBuilder,/snapshotSynchronousImages: true/);
 assert.match(snapshotSurface,/@Prop snapshotSynchronousImages: boolean = false/);
-assert.equal((snapshotSurface.match(/\.syncLoad\(this\.snapshotSynchronousImages\)/g)??[]).length,4,'all offscreen file/resource images participate; regular reading remains asynchronous');
+const paperBackground = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPaperBackground.ets', import.meta.url), 'utf8');
+assert.equal((snapshotSurface.match(/\.syncLoad\(this\.snapshotSynchronousImages\)/g)??[]).length,2,
+  'offscreen body file/resource images still participate; regular reading remains asynchronous');
+assert.match(snapshotSurface, /ReaderPaperBackground\(\{[\s\S]*?synchronousImages: this\.snapshotSynchronousImages/);
+assert.equal((paperBackground.match(/\.syncLoad\(this\.synchronousImages\)/g)??[]).length,2,
+  'both shared paper lighting resources retain the same offscreen synchronous-image flag');
