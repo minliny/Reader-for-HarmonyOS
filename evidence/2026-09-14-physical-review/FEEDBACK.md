@@ -1,5 +1,125 @@
 # 2026-09-14 真机人工审视反馈
 
+## PH120：删除书架列表齿轮，其余按钮右移（2026-09-17）
+
+- 用户明确删除刚梳理出的列表齿轮／分组入口。普通与空书架均移除，剩余宫格、列表、筛选通过标题弹性空间保持右对齐。
+- 删除对应分组选栏和展开状态，清理旧瞬态分组过滤，避免入口消失后隐藏书籍；不更改Core书籍分组。顶More四项及平板侧栏设置保持既定职责。
+- 9项专项与296项全量Harmony检查、ArkTS/构建/debug签名及独立产物复验PASS。run `20260917T131505Z-5fb96de4-3d029ccb`，signed SHA `c419891971331e45d072d7f8ffe4073a682da7448b6b5f5a2cb95a45a5493e94`；沿用“完成后安装到VM”授权，北京时间21:16:30已保数据更新既有Mate80Pro VM并启动，签名身份前后相同。无页面操作/真机操作，视觉及用户验收OPEN。详见[PH120记录](bookshelf-gear-ph120/REPORT.md)。
+
+## PH119：按用户新决定拆出独立完整目录页（2026-09-17）
+
+- 用户确认“展示全部章节，保留搜索栏旁的工具按钮”，去掉章节/书签切换、当前章节等控制栏内容。此新决定覆盖PH118暂停修复后的样式未决点。
+- 已建立普通返回导航的BookDirectoryPage，详情“完整目录”接入；共享原控制栏工具条/章节行，保留全部TOC、搜索、首尾、排序及下载/书签业务回调。详情实例留存以保持返回滚动，原阅读控制窗列表和动效未改。
+- 本地复核修复跨Prop对象副本导致点击被拒、旧身份回调与列表首次布局/空结果恢复问题；3000章、真实index、卷头、详情返回和安全区专项通过。新[Figma样式预览](https://www.figma.com/design/klhs2jMM4MncaJFqZMfqEK?node-id=4889-201)已创建并查看截图；样例不等于真机验收。
+- 最终296项Harmony检查、ArkTS/隔离构建/debug签名、独立manifest及原生库溯源复验PASS。run `20260917T120215Z-5fb96de4-61c06cf2`，signed SHA `476410ea57d45a8020b27d246b3b4ca00f36554197d9abd4e783f5295ea55a91`；iteration无验收资格，本轮无设备操作，未安装真机，真机/用户验收OPEN。详见[PH119记录](book-directory-ph119/REPORT.md)。
+- **随后用户授权安装VM**：北京时间2026-09-17 20:29:13，同一run已保数据覆盖安装到现场确认的既有Mate 80 Pro VM并启动PASS；签名身份前后核对一致；原目标设备，回执仅本地保留。未操作真机，没有功能/视觉复测，目录交互与用户验收仍OPEN。
+
+## PH118：完整目录仍误用阅读控制窗，停止修改并复核页面身份（2026-09-17）
+
+- 用户明确反馈三次修改后页面仍错误，要求“先别改了，查清楚，到底对应什么页面”。本轮仅审计与记录，没有修改生产/测试/Figma，没有构建或设备操作。
+- 当前点击链仍为详情→externalDirectory→ReaderFullDirectory→FullDirectoryPanel。上轮仅放行空目录并传入提示，未更换目录主体。
+- 实时Figma证明此前采用的943:11617/1995:60567来自942:74，其内部名为“目录大半屏控制窗”。详情按钮与阅读目录展开按钮均连向它；存在连线不能证明产品选择正确。
+- 原始书架链路另有“书籍目录”；更关键的是清理旧设计包后的Reader-UI canonical demo（2235f963，2026-07-08）仍明确：详情“完整目录”→book-directory/LibraryShell；reader-full-directory/ReaderShell是另一页。PH116误把路由独立判为页面正确，现撤销该结论。源码/设计差异已定位，实际修复继续按用户要求暂停。见[PH118审计](detail-directory-ph118/REPORT.md)。
+
+## PH117：搜索页出现正文处理设置变更错误（2026-09-17）
+
+- 用户反馈“搜索页搜索，报错 text processing setting changed”。最近真机已装PH116 run `20260916T165029Z-5fb96de4-1d4e16c4`，signed SHA `4d730cb32fcce99f1ddc2d590b311007456fdf14c6fd928a0abefa7956b2b837`，08:34:15北京时间保数据安装/启动PASS；本次是新功能问题，不以安装通过关闭。
+- 初查对应Core `remote_content_positions::stale(PROCESSING_CONTEXT_STALE)`的原始英文。尚未确认用户指全局搜书、阅读正文搜索还是点击搜索结果，已询问；不预设是用户修改设置，不删除位置保护或清缓存。
+- 用户进一步确认发生在“阅读控制栏里，搜索正文时”。审计收敛到`search.content`的处理快照/投影，与实际阅读的`visible`及历史换源规范书名恢复是否一致；Host原始英文错误未适配也单独核对。
+- 先审计Core搜索/acquisition/封存正文调用与Host错误投影，新增最小生产路径回归定位；本轮尚未操作设备，原因和修复结论待记录。
+- Core已红复现“读取正文成功、搜索相同正文失败”的两条路径：历史换源alias恢复遗漏，以及未入架远程书的规范书名作用域缺失。共享既有正文投影并补快照事实，不删除封存校验或改写位置。Host缺少search.content错误适配，已接入中文分类/原cause/取消语义并专项通过；同次控制栏内配置变更后旧搜索结果未清理也已定位并纳入修复。详细证据与最终产物进度见 [PH117记录](content-search-ph117/REPORT.md)。
+- 最终本地回归：Core storage 315、runtime lib 441、runtime integration 640项PASS；1项既有性能探针ignored，3项沙箱不支持loopback的无关WebDAV smoke显式skip。SDK 51项/416断言及冻结源码后的294项Harmony检查PASS。官方HAP run `20260917T005752Z-5fb96de4-4643d531`，signed SHA `37abad8dfc2fd46afe71bce605e92678ba154352f83ce030ba2b051384905b91`，构建/签名/独立manifest及原生库溯源校验PASS。iteration产物不具备验收资格；本轮无设备操作、新包未安装，真机正文搜索和用户验收仍OPEN。
+
+## PH116：换源误跳详情、详情目录入口与正文错误阻断阅读（2026-09-17）
+
+- 用户反馈：换源跳详情重新拉目录；详情预览约定20章仍显示行数错误；完整目录接线错误；换源后书架入口被“正文处理设置已改变”阻断，无法进入设置。所有书架/搜索结果书籍必须能进入阅读页，解析失败在正文页展示。
+- 本轮基线 Harmony `5fb96de4` / Core `bf494953` 加既有未提交修复；最近真机仍是PH113 `20260916T144055Z-5fb96de4-2d6e0f65`。PH114中间产物与PH115源码未安装，不将构建视为真机通过。
+- 代码已确认：换源取得完整session后又经详情准入；目标元信息用搜索别名覆盖详情名称，使按书名匹配的正文规则上下文改变；入口与详情按钮双重依赖正文/目录就绪，失败还会自动退出。详情20条数据被4行固定高度内部滚动遮住。先按现有协调器与Core事务修复，不清数据、不增加续读缓存，不跳过正文位置完整性校验。
+- Figma实读确认完整目录目的地为独立Reader Full Directory，保留其来源返回栈；具体证据见 `detail-directory-ph116/REPORT.md`。Legado行为及换源证据见 `source-switch-ph116/SOURCE_SWITCH.md`。正文入口/恢复与Core历史数据修复已落地：立即挂载正式阅读页、错误留页、已获换源session直接交接、pending恢复与再次换源补偿；Canonical元信息与受sealed hash保护的历史只读恢复不清数据或放松字符偏移校验。Core最终313项storage、8项真实换源命令、Clippy及SDK51项通过，精确源码/native身份见 `source-switch-ph116/core/CORE_REPORT.md`。
+- PH114–116合并最终run `20260916T165029Z-5fb96de4-1d4e16c4`：293项Harmony合约、ArkTS、隔离无增量构建/debug签名、独立manifest复验及Core→Host→包内原生库血缘校验PASS；签名HAP SHA `4d730cb32fcce99f1ddc2d590b311007456fdf14c6fd928a0abefa7956b2b837`。本轮不操作设备、新包未安装；iteration/acceptanceEligible=false。失败原始记录和完整身份见 [PH114–116交付记录](source-switch-ph116/DELIVERY.md)，真机视觉/性能和用户验收OPEN。
+- **随后用户授权安装**：2026-09-17 08:34:15北京时间，同一最终run已保数据覆盖安装至重新确认的USB真机（原目标设备，回执仅本地保留）并成功启动，安装前/后签名身份一致，详见上述交付记录。没有功能操作或视觉取证，真机交互与用户验收仍OPEN。
+
+## PH115：字号变更先错排再闪烁恢复（2026-09-16）
+
+- 用户在PH114修复构建期间反馈：每次调整字号，正文都会先错误排版一次，再闪烁恢复。当前最近安装仍为PH113 run `20260916T144055Z-5fb96de4-2d6e0f65`，PH114尚未安装；不误称PH114包设备回归失败。
+- 代码已定位：`admitAppearanceSnapshot`先发布新字号，而可见Stage仍用旧`visibleFragments`；`beginMeasurement`保留旧页，`completeFirstPage`等待新页持久化后才替换片段，因此存在“旧分页+新字号”的中间画面。继续审查快速连续调整时旧测量/持久化完成的发布资格，以及连续阅读、主题变更、翻页延期路径。
+- 可见页已绑定自身实测外观，新字号完成测量及持久提交后再发布；过期测量不公开到当前页，连续阅读与实际页槽同步处理，主题颜色仍即时生效。16组实际生产方法/SDK Builder探针、44组reading-ready相邻回归及入口时序通过，旧Stage红证据保留于 `appearance-reflow-ph115/PROBE_REPORT.md`。没有新增书架续读页存储、加载窗口或临时空白页；合并产物见 [PH114–116交付记录](source-switch-ph116/DELIVERY.md)，本轮未操作真机，视觉验收OPEN。
+
+## PH114：拓展到刘海后顶部信息与正文几何不同步（2026-09-16）
+
+- 用户反馈三项：顶部信息栏文字高度、宽度与系统状态栏文字不一致；顶部文字左右间距错位；正文顶部没有随拓展设置移动。用户随后确认控制栏打开、关闭两种状态都不对；字体/方向尚未取证。
+- 最近已装run `20260916T144055Z-5fb96de4-2d6e0f65`，signed SHA `e2cc8c8f14e896d519255d86adc2df6c985839a13c85533f169a29764317521a`，2026-09-16 22:47:14 保数据安装/启动PASS；该结果不证明本次顶部几何通过。当前Harmony `5fb96de4` 加PH104–113工作树，Core `bf4949531`。
+- 先审计现行顶部文字排版、左右轨道与切口/圆角避让、系统安全区与信息栏矩形、正文顶部计算、设置变更的布局失效与重排链。优先用已有截图/布局和当前生产方法探针；本次尚未占用或操作真机。代码结论、本地回归、产物、设备/用户验收分开记录。
+- **代码定位与修复**：真实信息区域计算后被72/92.44vp固定正文下限钳住；顶部沿用Noto 12fp/14.4而非平台字号/AUTO；左右外沿错误依赖状态区域高度并被书签占位推移。另补设置失败回滚时重排、大字体实际信息高度对正文的避让。详见[PH114记录](cutout-top-ph114/REPORT.md)。公开窗口API不提供OEM字形基线/状态文字padding，OpenHarmony上游基线不等于华为真机像素一致；此层保持OPEN。
+
+## PH113：阅读退出被续读页面准备弹窗阻挡（2026-09-16）
+
+- **用户否定方案后的执行边界**：用户明确不认可新增续读页面机制，要求不依赖该机制实现点击进入。撤销Host按书持久化排版页、全书架隐藏测量/禁用准入、导入前后页面准备门禁以及退出缓存门禁；保留Core正文/位置事实、原始保存失败保护、既有控制栏/字体/胶囊/状态栏修复。回到原Core缓存与单阅读会话路径定位非必要串行等待，不以新机制、空白阅读页或加载弹窗代替。当前设备现场不继续操作；代码/本地/产物/设备验收分开，尚未完成。
+
+- **撤回实施进展**：新增存储/协调器、隐藏全书架排版、点击准入与退出准备门禁已撤销；移除在线书架外层重复进度/正文预检，复用原阅读器并行启动路径，修正普通预取误失效和目录多余状态查询。详情/搜索/退出保存等本地回归通过，正在完整整合。见 [PH113 撤回记录](shelf-chrome-ph112/PH113_REMOVAL.md)。真机仍为上一包，未据本地结果关闭设备耗时/色差反馈。
+
+- **撤回产物完成**：287 份完整合同、ArkTS 编译/签名及独立包复验 PASS；run `20260916T144055Z-5fb96de4-2d6e0f65`，signed SHA `e2cc8c8f14e896d519255d86adc2df6c985839a13c85533f169a29764317521a`。整套新增机制已删除，原进度/章节/换源保护保留；没有设备操作或安装。真实首帧耗时、状态栏像素、真机交互与用户验收仍 OPEN，完整记录包含失败轮次，未以本地通过关闭用户体验问题。
+
+- **用户随后授权安装**：北京时间2026-09-16 22:47:14，同一run已保数据覆盖安装、安装后身份核对及启动真机，全部PASS。无卸载/清数据或额外交互测试；[安装记录与回执](shelf-chrome-ph112/PH113_REMOVAL.md)。实际点击耗时、状态栏像素及用户验收仍OPEN。
+
+- 用户要求查看真机当前页面；只读当前截图/布局，未点击、翻页、关闭弹窗、重启或改设置。现场为《测试书乙》“序章”，0%，第1/55页，中央显示“续读页面尚未准备完成”，正文提示“阅读进度已保存。可重试准备后退出，或继续阅读。”两按钮为“重试准备并退出”和“继续阅读”。截图（原始证据仅本地保留）、布局（原始证据仅本地保留）。
+- 对应最新已装run `20260916T124744Z-5fb96de4-35300470`，signed SHA `f3fd89ff3192165ed36e6b8aff38b4418e7355b6fba7c6f2bd729152674dbe9b`，原目标设备，回执仅本地保留，本次重发现USB Connected且boot=true。用户触发操作未直接观测；不能凭静态截图推断等待时长或点击次数。
+- 代码确认：`LocalReadingExperience.finishExit` 在进度提交阶段成功后，等待 `prepareEntryPageForExit`；后者任何拒绝均进入该弹窗并跳过 `onExit`。因此这是新增入口页准备阻挡正常退出的真实设备缺陷，不是Core进度保存失败提示。外层catch丢弃具体异常，单凭截图/节点不能区分位置不匹配、窗口变化、缓存写入或准入失败；具体错误尚未定位，不把可能原因写成已确认根因。
+- PH112全量本地检查和安装启动PASS不能关闭此设备故障。此刻仅保留现场、记录与代码复核，未修改生产代码，也未额外触发复现。修复与设备/用户验收OPEN。
+
+## PH112 / PH108 再开：书架打开等待仍在、提示偏左上、状态栏仍偏色（2026-09-16）
+
+- 用户在 PH111 包写入真机后反馈：点击书架，左上角出现“正在打开”窗口，等待后才进入阅读，状态栏颜色仍不一致。PH111 的提示反馈与代码调用顺序优化不能视为真实等待已经解决，PH108 不关闭。
+- 最近写入 run `20260916T051233Z-5fb96de4-8e7c0eb0`，signed SHA-256 `a8e17167d2a160a5aad71f0987f54abf96cd3111b22ed5cbc4b50cf1878e863f`；上轮安装后自动启动曾被锁屏拒绝。用户此条反馈说明之后已进行实际操作，但不伪造此前缺失的成功部署回执。
+- 当前 Harmony `5fb96de4` + PH104–111 工作树，Core `bf4949531`。先复审首屏真实关键路径、生产探针与长章成本，以及全局系统栏原生写入、App/Reader所有权、底色坐标/合成、主题渐变取色、异步窗口/状态发布、隐形阅读器影响和提示布局。
+- 本次书名/本地或在线类型、秒数、状态栏具体持续场景待用户补充。先做代码侧审计；未以设备方便为由直接抓取或复测。阶段结果见 [PH112 报告](shelf-chrome-ph112/REPORT.md)。
+- **后续用户补充与范围**：在线《测试书甲》约2秒，进入阅读后状态栏持续偏色；不接受任何“正在打开”窗口，要求所有入架书（含未读）点击即正文。用户一次只读取证已完成。实际原生不透明状态栏覆盖了纸面纹理/光照，已统一纸面合成并限定阅读主题透明原生底。全部书入口准备/持久化、新书入架前后准入、旧书架补齐、字体/设置/方向变化、事务恢复已实现并做本地回归，正式整合构建进行中。真机未更新；存量首次补齐/失败源重试、设备耗时与颜色像素、用户验收不称通过。详细失败历史与证据均保留于PH112报告。
+- **最终本地/产物结果**：293组合约、完整ArkTS编译/签名/独立产物复验PASS；Core3895项、210 conformance、SDK51项PASS。最终run `20260916T124744Z-5fb96de4-35300470`，signed SHA `f3fd89ff3192165ed36e6b8aff38b4418e7355b6fba7c6f2bd729152674dbe9b`。本轮新包未安装，PH112/PH108设备与用户验收保持OPEN。
+- **用户随后授权安装**：北京时间2026-09-16 21:57:15，同一run已通过真机保数据覆盖安装、安装后签名身份核对及启动，全部PASS。没有额外交互测试；打开耗时、状态栏像素与用户验收保持OPEN。[安装证据](shelf-chrome-ph112/REPORT.md)。
+
+## PH111：点击书架书籍后等待片刻才有反应（2026-09-16）
+
+- 用户反馈书架点击书籍后存在无反应等待；书籍本地/远程属性、等待时长及冷/热读取差异尚未明确，不先归因为网络或设备性能。
+- 当前 Harmony `5fb96de4` + PH104–110 工作树，Core `bf4949531`；最近确认真机包 `20260916T045509Z-5fb96de4-a001d8e7`，signed SHA-256 `e1dd1b87673f45b97f2f336d54c9f348b9313dd87567dbac9c451c59cb652b71`，12:58:40 保数据更新/启动成功。该记录不代替本次耗时取证。
+- 先审计书架手势、点击状态反馈、Index 路由、目录/正文加载、首次排版、缓存复用与取消/过期回调；使用当前生产方法本地复现，不先操作设备。
+- 既定语义保留：书架点击直达阅读，不闪详情；首屏准备期间书架仍可见。需要定位无反馈窗口与非必要串行工作，设备真实首屏耗时仍 OPEN。
+- 本轮定位、修复与验证记录见 [PH111 报告](bookshelf-open-ph111/REPORT.md)。
+- **源码/产物完成**：新增即时打开状态与取消入口，防重复点击只作用于书架 UI；本地缓存/书签投影延后，正文与字体/布局准备并行但首屏发布仍等待完成。保护取消、同书重开、换源回滚和当前持久换源事务。283 组检查、ArkTS/签名/独立产物复验 PASS，run `20260916T051233Z-5fb96de4-8e7c0eb0`；安装预备时新发现同一真机为 Offline，未对离线设备发安装/启动或功能操作，也未改装 VM。本轮安装、实际设备耗时与用户验收保持 OPEN。
+- **用户再次要求安装后的结果**：真机重新连接且启动完成，源码/检查脚本指纹与 run 一致；保数据预检通过，覆盖安装及安装后签名身份核对成功。自动启动因锁屏被系统拒绝（10106102），已请用户解锁；完整安装/启动及成功部署回执仍 OPEN，不称真机交互验收通过。[本轮执行记录](bookshelf-open-ph111/REPORT.md)。
+
+## PH110：点击快捷控制栏“界面”闪退（2026-09-16）
+
+- 用户在本轮真机安装后报告点击快捷控制栏的“界面”入口闪退。最近已确认安装包为 `20260916T043101Z-5fb96de4-ae46eea4`，signed HAP SHA-256 `c9fa689e84128794431c3a407fd112d05572e3cdd32ca298f09c6aee4c559abf`，北京时间 12:37:26 保数据安装/启动成功；本次触发还没有崩溃栈，不假定异常类型。
+- 源码 Harmony `5fb96de4` 加 PH104–109 工作树修复，Core `bf4949531`。先检查入口路由、界面面板 Builder、字体数据/几何/缓存与近期改动，再用实际生产方法和 SDK 组件本地复现；不以之前279组检查/构建通过排除新问题，不重复操作真机代替代码定位。
+- 定位、修复与各层证据见 [PH110 报告](appearance-crash-ph110/REPORT.md)。
+- **代码已定位/修复**：PH106 新增 custom 字体槽使初次打开进入扩展滚动路径，在 Scroll 未绑定时解引用 void。完整SDK组件+真实Watch本地复现，现将初始同步移至原生Scroll.onAppear，并保护五个面板同类未绑定读取。完整生命周期、定向回归、280 组全量检查、ArkTS/签名/独立产物复验 PASS。新 run `20260916T045509Z-5fb96de4-a001d8e7`；现场崩溃栈未取，不据此声称设备交互验收通过。
+- **保数据更新完成**：沿用此前真机安装授权，北京时间 2026-09-16 12:58:40，新 run 已覆盖更新同一真机并启动 PASS；没有卸载、清数据或额外交互复测。部署回执和边界见 [PH110 报告](appearance-crash-ph110/REPORT.md)，设备交互与用户验收仍 OPEN。
+
+## PH109：暂停朗读胶囊在手动翻页时闪烁（2026-09-16）
+
+- 用户现象：朗读胶囊处于暂停态时，手动翻页会闪烁；自动翻页胶囊是否同样闪烁尚未确认，作为同路径审计项，不能写成已观察到的设备故障。
+- 本轮源码 Harmony `5fb96de4cf322c9b4f35c558051ba1fea5196ad5`，工作树保留 PH104–108 的未提交修复。上一轮最终产物 `20260916T010839Z-5fb96de4-506ded9e` 未安装；最后已记录真机包为 `20260916T003557Z-b37f745a-f7e147cb`，不假定本次反馈已核对包身份。
+- 先审计胶囊可见性与组件身份、启动动效持有、手势/点击/音量键翻页、跨章加载、冻结/恢复和异步会话回调；先用当前生产方法与 SDK 组件探针复现。本轮不操作设备。代码原因、本地回归、产物及设备视觉分别记账。
+- 当前定位与未决点见 [PH109 报告](capsule-page-turn-ph109/REPORT.md)。
+- **源码/本地完成**：确认静态胶囊将隐藏测量误当作页面消失，自动翻页暂停/运行共用该缺陷；另修冻结观察与两条漏解冻路径。13 组定向回归、279 组全量检查及 ArkTS/签名/独立复验 PASS。新 run `20260916T043101Z-5fb96de4-ae46eea4` 包含 PH104–109；尚未安装，设备视觉与用户验收 OPEN。
+- **后续用户授权安装**：北京时间 2026-09-16 12:37:26，同一 run 已保数据覆盖安装并启动真机 PASS；没有额外交互测试，设备视觉与用户验收仍 OPEN。[预检、安装及部署回执](capsule-page-turn-ph109/REPORT.md)。
+
+## PH104–PH108：快捷朗读、下载、字体、音量键及状态栏再次反馈（2026-09-16）
+
+本轮开始源码 `5fb96de4cf322c9b4f35c558051ba1fea5196ad5`，工作树 clean。最近已记录真机安装为 `20260916T003557Z-b37f745a-f7e147cb`；该记录不能替代本次现场版本核对。现象来自用户人工反馈，尚无本轮设备抓取。先做代码侧审计和本地生产方法回归，不占用设备。
+
+| ID | 现象及触发 | 当前结论 / 未决点 |
+|---|---|---|
+| PH104 | 从快捷控制栏启动朗读，动效少量卡顿 | 审计启动同步工作、状态发布、布局与胶囊交接；真实连续帧耗时未测。 |
+| PH105 | 点击下载全部章节后没有反馈或提示 | 审计菜单事件、下载协调器、任务状态及反馈通道。 |
+| PH106 | 导入字体修改旧导入按钮文字，未新增字体模块；字体未真实生效，点击仍导入 | 审计字体列表模型、导入/选择事件、注册、持久化和正文渲染。 |
+| PH107 | 启用音量键翻页后，唤起控制栏未恢复系统音量调节 | 已发现监听仅按设置注册，继续核对控制栏、遮挡及生命周期注销链。 |
+| PH108 | 状态栏颜色仍不一致，用户已反馈四次 | 重新打开整体颜色一致性审计，覆盖全主题、全写入入口、布局底色、显隐/页面/生命周期及异步竞态；不以 PH98 局部测试通过认定问题关闭。 |
+
+详细定位、变更与分层验证见 [本轮报告](reader-controls-ph104-108/REPORT.md)。
+
+- **本轮完成**：PH104–108 代码修复、278 组本地检查、ArkTS/签名/独立 manifest 校验 PASS。状态栏确认并处理 4 处不同缺口：可见性观察依赖、主题变更缓存失效、兄弟弹层覆盖、应用根固定日间底色。最终 run `20260916T010839Z-5fb96de4-506ded9e`；未安装，设备行为与用户验收 OPEN。
+
 ## PH103：自动翻页完整控制栏的跟随高亮关闭态在深色模式不可见（2026-09-16）
 
 - 用户现象：自动翻页完整控制栏中，“跟随高亮”按钮未开启时在深色模式下不可见。先区分开关关闭态与运行中不可操作态，不将其直接归因为设备渲染问题。
@@ -99,7 +219,7 @@ Core 生产提交 `5c79799d5`、补齐测试构造器及 Clippy 后最终 `c86b6
 
 ## PH93：刷新本章仍显示旧正文（2026-09-15）
 
-- 用户现象：点击顶部更多的“刷新本章”，正文不替换。对应已安装 run `20260915T081914Z-e5483b93-86eb9be1`，Harmony `e5483b93` / Core `cfb0208f4`，HAP SHA-256 `04ae9321ec60af7a970c6bfdf6177d77a23e4d9729769c88a0cd64ce1c239d35`；保数据安装回执 `deploy-physical-b1f20b88963d-20260915T102350Z.json`。
+- 用户现象：点击顶部更多的“刷新本章”，正文不替换。对应已安装 run `20260915T081914Z-e5483b93-86eb9be1`，Harmony `e5483b93` / Core `cfb0208f4`，HAP SHA-256 `04ae9321ec60af7a970c6bfdf6177d77a23e4d9729769c88a0cd64ce1c239d35`；保数据安装于原目标设备，回执仅本地保留。
 - 代码已定位：Host 跳过 chapterWindow，Core 跳过 chapter cache，HTTP `usingCache=false`。但 `remote_content_positions::publish` 要求本章进度、历史、书签、划线和临时锚点全部迁移；任一失败即成功返回旧正文 `via=cache / positionMigration.status=preserved`。已有真实 chapter.content→Host completion→SQLite 回归甚至断言收到 `NEW BODY` 后仍返回 `OLD BODY`。这是确定的实现缺陷，不需要再次真机抓取定位。
 - 连带缺陷：页角书签及下拉删除仅按旧 offset 判断；当前章摘录补全丢 scope；目录快照忽略 scope/bookText 的变化。替换正文前必须一并防止错误标记、误删和伪造摘录。
 - 修复边界：显式刷新取得有效新正文后更新本章；可可靠匹配的位置逐项迁移，不能恢复的阅读位置退章首，无法迁移的书签/划线原记录与旧版本证明保留且不套用到新正文。网络、解析、身份、并发和存储失败仍保留旧数据并明确报错。普通缓存读取不主动刷新、不删除本机数据。
@@ -132,7 +252,7 @@ PH76固定early/cancel两项已在6cf原生通过，c56真实搜索试读样本�
 
 ## 3843792a 历史安装与修复前 PH76 取消失败
 
-**`20260914T190706Z-3843792a-773d63a4`** 已在 **2026-09-14 19:09:12.959 UTC** 保数据安装到 VM `6460677a198b` 并启动。Harmony `3843792ab06ee1025d06d44d9666fbab2bd6f63f`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名、身份准入、install/launch PASS。签名HAP **167841833 bytes**，SHA-256 `badce494ce3429906ff25c066d97a5e7babb58f8ad260a70f90350923b211f07`。证据：[manifest](search-flow-implementation/vm-3843792a/manifest.json)、[部署回执](search-flow-implementation/vm-3843792a/deployment.json)、[构建](search-flow-implementation/vm-3843792a/build.log)、[身份检查](search-flow-implementation/vm-3843792a/inspect.log)、[安装](search-flow-implementation/vm-3843792a/install.log)、[校验索引](search-flow-implementation/vm-3843792a/receipt.json)。
+**`20260914T190706Z-3843792a-773d63a4`** 已在 **2026-09-14 19:09:12.959 UTC** 保数据安装到 VM（原目标设备，回执仅本地保留）并启动。Harmony `3843792ab06ee1025d06d44d9666fbab2bd6f63f`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名、身份准入、install/launch PASS。签名HAP **167841833 bytes**，SHA-256 `badce494ce3429906ff25c066d97a5e7babb58f8ad260a70f90350923b211f07`。证据：[manifest](search-flow-implementation/vm-3843792a/manifest.json)、[部署回执](search-flow-implementation/vm-3843792a/deployment.json)、[构建](search-flow-implementation/vm-3843792a/build.log)、[身份检查](search-flow-implementation/vm-3843792a/inspect.log)、[安装](search-flow-implementation/vm-3843792a/install.log)、[校验索引](search-flow-implementation/vm-3843792a/receipt.json)。
 
 **384包时点PH76整体OPEN，取消后跨作业误归属由真实VM回调确认；当时生产隔离尚在修复。** 后续源码已实施，最新验证见顶部。两项是384同包不同受控运行，不能只取early成功而报全部通过：
 
@@ -147,7 +267,7 @@ PH76固定early/cancel两项已在6cf原生通过，c56真实搜索试读样本�
 
 ## d5f13a96 阶段验证（历史包，日期实证保留）
 
-**`20260914T185653Z-d5f13a96-803a4b82`** 已在 **2026-09-14 18:58:57.400 UTC** 保数据安装到 VM `6460677a198b` 并启动，install/launch PASS。Harmony `d5f13a965adf07e6c36fd8ad7e7315cf2ae7d686`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名与安装身份准入通过。签名HAP **167841969 bytes**，SHA-256 `325cdd424b9dea2bb90ced607d87c5d3299f8248e8aa2376ac56ac76041d3004`。
+**`20260914T185653Z-d5f13a96-803a4b82`** 已在 **2026-09-14 18:58:57.400 UTC** 保数据安装到 VM（原目标设备，回执仅本地保留）并启动，install/launch PASS。Harmony `d5f13a965adf07e6c36fd8ad7e7315cf2ae7d686`、Core `0c5a3956274197578554f36b1a7fed9e1977ea78`，manifest两仓clean；261项Harmony检查、ArkTS、签名与安装身份准入通过。签名HAP **167841969 bytes**，SHA-256 `325cdd424b9dea2bb90ced607d87c5d3299f8248e8aa2376ac56ac76041d3004`。
 
 [Manifest](search-flow-implementation/vm-d5f13a96/manifest.json)、[部署回执](search-flow-implementation/vm-d5f13a96/deployment.json)、[构建](search-flow-implementation/vm-d5f13a96/build.log)、[身份检查](search-flow-implementation/vm-d5f13a96/inspect.log)、[安装](search-flow-implementation/vm-d5f13a96/install.log)及[副本校验索引](search-flow-implementation/vm-d5f13a96/receipt.json)已归档。新Core正式门禁3837/3837、0 skipped、无LEAK，210 conformance/0 failed、drift0和C/C++smoke通过；首次因localhost端口权限失败的运行仍保留在下方Core门禁证据，不能冒称该次也通过。
 
@@ -157,9 +277,9 @@ PH76固定early/cancel两项已在6cf原生通过，c56真实搜索试读样本�
 
 [后续Core门禁与Native证据](search-flow-implementation/ph86-time-final-gates/receipt.json)、[正式全量](search-flow-implementation/ph86-time-final-gates/ph86-time-core-final-unrestricted.log)、[环境失败原件](search-flow-implementation/ph86-time-final-gates/ph86-time-core-final.log)。
 
-追加输入见 [PH43–PH47](FOLLOWUP_43_47.md)：用户在643bcaf5上纠正主题修复方向，并补充朗读预备、终宋书源和详情几何。原PH01–41及PH42编号保留；PH31旧处理明确撤回，新的代码/验证结论不与旧报告混用。
+追加输入见 [PH43–PH47](FOLLOWUP_43_47.md)：用户在643bcaf5上纠正主题修复方向，并补充朗读预备、测试书甲书源和详情几何。原PH01–41及PH42编号保留；PH31旧处理明确撤回，新的代码/验证结论不与旧报告混用。
 
-本轮反馈对应已安装的 `9509d4feb410ce559d67b77785e2248e88485f4e`，不是当前工作树 `4802ef4b`。安装 run `20260913T160039Z-9509d4fe-25529e1f`，signed SHA256 `b9ef64ece51c02c865ca1740fee52ca7efebe162495fb784fa000fae1aacf2fd`；[保数据安装及启动回执](../../.reader-artifacts/hap/20260913T160039Z-9509d4fe-25529e1f/deploy-physical-b1f20b88963d-20260913T170111Z.json)。用户人工审视提出39号编号，17和19各出现两次，合计41项，全部分别保留。
+本轮反馈对应已安装的 `9509d4feb410ce559d67b77785e2248e88485f4e`，不是当前工作树 `4802ef4b`。安装 run `20260913T160039Z-9509d4fe-25529e1f`，signed SHA256 `b9ef64ece51c02c865ca1740fee52ca7efebe162495fb784fa000fae1aacf2fd`；原目标设备，回执仅本地保留。用户人工审视提出39号编号，17和19各出现两次，合计41项，全部分别保留。
 
 本文件是发现记录，不是修复或验收证明。优先审计现行代码、9509包对应代码、已有Figma/Make和历史约定；本轮不操作设备。代码修复、本地回归、新包、VM、真机、用户验收分开记账。旧未验证项继续保留在根 DEVELOPMENT_BACKLOG §11，本批不替代全量实施方案。
 
@@ -271,7 +391,7 @@ PH82 的初始代码审计无法区分 caret、选择手柄与圆角裁切，随
 
 Core 已提交 `28369db9405822f4b8277eb95ad94057f177b7bb`；[官方检查](search-flow-implementation/ph77-91-core-official-final2.log)3832项测试通过，其中1项标记 leaky，为退出后输出管道未及时关闭的警告，非应用堆泄漏证明；[独立复核及未决边界](search-flow-implementation/ph77-91-leak-summary.json)保留，未放宽超时。新 Native [构建](search-flow-implementation/ph77-91-native.log)完成，[身份](search-flow-implementation/ph77-91-core-build-identity.json)为 clean/release，buildId `5ffa51028024982bce9a607e5c3c88b69126d709e980a2823e1e7d2888f6c3fd`，已同步 Harmony 受版本管理的 `.so`。
 
-上一阶段取得正式 VM 部署回执的包是 **`20260914T182625Z-6863af5d-ded2e152`**（Harmony `6863af5d4e9c5dac34e3ca74b120a7d5daa2952e` / Core `28369db9405822f4b8277eb95ad94057f177b7bb`），261项Harmony门禁、ArkTS、签名及VM保数据安装/启动通过；18:28:21.450 UTC完成，targetRef `6460677a198b`，HAP SHA `3df455f5b6f0d13bafd09f2d15c3e3c456efc1642eb54ba6b8ccc103db2e0b8f`。见[manifest](search-flow-implementation/vm-6863af5d/manifest.json)、[回执](search-flow-implementation/vm-6863af5d/deployment.json)及[分包VM记录](search-flow-implementation/VM_VALIDATION.md)。aa387的先前部分交互、646e8634发布顺序修复、acbea857仅构建未部署均保留为各自历史；不得把它们改成6863重复验收。Core未变，沿用同提交3832项官方通过（含1 leaky）的门禁；6863仍为iteration，不代表全部计划或用户验收通过。后续日期修复若产生更末版包，须另绑回执，不能倒写6863。
+上一阶段取得正式 VM 部署回执的包是 **`20260914T182625Z-6863af5d-ded2e152`**（Harmony `6863af5d4e9c5dac34e3ca74b120a7d5daa2952e` / Core `28369db9405822f4b8277eb95ad94057f177b7bb`），261项Harmony门禁、ArkTS、签名及VM保数据安装/启动通过；18:28:21.450 UTC完成，原目标设备，回执仅本地保留，HAP SHA `3df455f5b6f0d13bafd09f2d15c3e3c456efc1642eb54ba6b8ccc103db2e0b8f`。见[manifest](search-flow-implementation/vm-6863af5d/manifest.json)、[回执](search-flow-implementation/vm-6863af5d/deployment.json)及[分包VM记录](search-flow-implementation/VM_VALIDATION.md)。aa387的先前部分交互、646e8634发布顺序修复、acbea857仅构建未部署均保留为各自历史；不得把它们改成6863重复验收。Core未变，沿用同提交3832项官方通过（含1 leaky）的门禁；6863仍为iteration，不代表全部计划或用户验收通过。后续日期修复若产生更末版包，须另绑回执，不能倒写6863。
 
 原因与正式回归入口：PH77/79 的 `SearchPublication` 稳定 holder + revision 修复真实 ArkUI Prop 深复制，见[属性边界证据](search-flow-implementation/ph77-79-publication-boundary.json)及 `test-search-publication-boundary.mjs`；PH78 的源 worker 共享队列见[阻塞回归](search-flow-implementation/ph78-shared-source-queue.log)。R8 空队列有等待、连续即时轮有让出，未发现无等待 busy-loop；FIFO不保证来源完成顺序或网络耗时。PH80/81 见 `test-search-history-layout-lifecycle.mjs`；PH83/84 见 `LocalBookDetail`、Index外部目录分支及 `test-detail-external-directory.mjs`；PH85 见[规则与格式升级报告](PH85/REPORT.md)，普通旧缓存不自动升级、歧义保留旧文旧位置。PH86 的顶栏槽/手势/ACK见 `test-reader-bookmark-top-info.mjs`；PH87见 `test-reader-more-popup.mjs`；PH88见 `test-reader-brightness-perception.mjs`；PH89/91见 `test-reader-physical-control-details.mjs`。16×16圆覆盖旧 Figma 1164:10275 的18×16椭圆，增长亮度条也是用户明确要求，不重新列为产品待决。
 
