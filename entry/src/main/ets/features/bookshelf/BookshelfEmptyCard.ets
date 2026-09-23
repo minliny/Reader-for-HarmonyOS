@@ -1,5 +1,5 @@
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { registerReaderFonts } from '../common/ReaderFonts';
+import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import {
   TOK_BORDER,
   TOK_CARD_BG_HI,
@@ -27,7 +27,7 @@ export struct BookshelfEmptyCard {
   onSearchRequested: () => void = (): void => {};
 
   aboutToAppear(): void {
-    registerReaderFonts(this.getUIContext().getFont());
+    registerReaderShelfFonts(this.getUIContext().getFont());
   }
 
   build() {

@@ -1,5 +1,5 @@
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { registerReaderFonts } from '../common/ReaderFonts';
+import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerInteractiveSafeBottom,
@@ -57,7 +57,7 @@ export struct MainTabBar {
   onSelect: (key: string) => void = (_key: string): void => {};
 
   aboutToAppear(): void {
-    registerReaderFonts(this.getUIContext().getFont());
+    registerReaderShelfFonts(this.getUIContext().getFont());
   }
 
   build() {

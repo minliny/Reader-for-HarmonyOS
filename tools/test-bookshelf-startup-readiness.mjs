@@ -144,7 +144,7 @@ function storeFixture() {
   assert.equal(f.store.currentBookshelfViewMode(), 'list', 'serialized writes publish the last acknowledgement');
 }
 
-const Page = productionMotionMethods(file('features/bookshelf/BookshelfPage.ets'), ['aboutToAppear', 'loadViewMode', 'retryViewMode'], { registerReaderFonts() {} });
+const Page = productionMotionMethods(file('features/bookshelf/BookshelfPage.ets'), ['aboutToAppear', 'loadViewMode', 'retryViewMode'], { registerReaderShelfFonts() {} });
 function pageFixture(confirmed, pending) {
   let reads = 0, builds = 0;
   const owner = Object.assign(new Page(), { mounted: false, viewModeRevision: 0, storedViewMode: 'cover', viewSwitchRunning: false,

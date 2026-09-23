@@ -91,7 +91,7 @@ for (const raw of ['', '{invalid']) {
 // Only native platform work, configuration recovery I/O and font I/O are controlled.
 const abilityFile = new URL('entryability/EntryAbility.ets', base);
 for (const failRead of [false, true]) {
-  const f = fixture(), recovery = deferred(), read = deferred(), font = deferred();
+  const f = fixture(), recovery = deferred(), read = deferred(), font = deferred(), shelfFont = deferred();
   const trace = [], errors = [];
   f.store.get = () => { trace.push('settings-read'); return read.promise; };
   const Ability = productionMotionMethods(abilityFile, ['onCreate', 'onWindowStageCreate'], {
@@ -101,16 +101,16 @@ for (const failRead of [false, true]) {
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: { install: () => f.owner },
     ReaderSystemFileOpenHost: { install() {}, receive() {} },
     AppStorage: { setOrCreate() {} }, WebDavCredentialStore: { instance: { attachContext() {}, loadBookshelfViewMode: async () => null } },
-    prepareReaderFonts: async () => {}, ReaderSettingsGateway: Gateway,
+    prepareReaderShelfFonts: () => shelfFont.promise, ReaderSettingsGateway: Gateway,
     ReaderThemeHost: { install: async () => {}, setRecoveryBarrier() {} },
     ConfigurationConstant: { ColorMode: { COLOR_MODE_DARK: 1 } },
     SyncGateway: class { async recoverInterruptedRestore() { trace.push('recover'); await recovery.promise; } },
     LocalConfigurationReset: { recover: async () => { trace.push('reset-recovered'); } },
     ReaderWindowCoordinator: { install: async () => true }, hilog: { error: (...args) => errors.push(args) },
   });
-  let fontCalls = 0, mainLoads = 0;
+  let mainLoads = 0;
   const ability = Object.assign(new Ability(), { context: { config: { colorMode: 0 } }, windowStageGeneration: 0,
-    prepareSelectedReadingFont: async () => { if (++fontCalls === 2) { trace.push('selected-font'); await font.promise; } },
+    prepareSelectedReadingFont: async () => { trace.push('selected-font'); await font.promise; },
     loadMainContent() { mainLoads++; },
   });
   ability.onCreate({ parameters: {} }, {});
@@ -120,10 +120,13 @@ for (const failRead of [false, true]) {
   assert.ok(trace.indexOf('reset-recovered') < trace.indexOf('settings-read'));
   assert.ok(trace.includes('selected-font'), 'font preparation runs while the settings read is pending');
   assert.equal(mainLoads, 0); assert.equal(f.gateway.current(), undefined);
-  font.resolve(); await settle(); assert.equal(mainLoads, 0, 'Index cannot race the outstanding settings read');
+  assert.equal(mainLoads, 0, 'Index cannot race the outstanding settings read');
   if (failRead) read.reject(Error('startup settings read failed')); else read.resolve(JSON.stringify(saved));
   await ability.recoveryReady; await settle();
-  assert.equal(mainLoads, 1, 'the existing recoverable startup-error surface remains available');
+  assert.equal(mainLoads, 0, 'the bookshelf still waits for its own checked fonts');
+  shelfFont.resolve(); await settle();
+  assert.equal(mainLoads, 1, 'reader-only font receipt does not withhold the bookshelf');
+  font.resolve(); await settle();
   if (failRead) { assert.equal(f.gateway.current(), undefined); assert.equal(errors.length, 1); }
   else { assert.deepEqual(f.gateway.current(), saved); assert.equal(errors.length, 0); }
 }

@@ -26,7 +26,7 @@ import {
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
 
-import { registerReaderFonts } from '../common/ReaderFonts';
+import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfEmptyCard } from './BookshelfEmptyCard';
 import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 
@@ -53,7 +53,7 @@ export struct BookshelfEmptyPage {
   @State private overlayOriginY: number = 0;
 
   aboutToAppear(): void {
-    registerReaderFonts(this.getUIContext().getFont());
+    registerReaderShelfFonts(this.getUIContext().getFont());
   }
 
   build() {

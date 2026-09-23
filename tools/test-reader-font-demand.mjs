@@ -14,14 +14,21 @@ const loaderSource=readFileSync(new URL('../entry/src/main/ets/app/ReaderFontLoa
 const {loadReaderFontChecked,readerFontLoadReady}=new Function('text',stripTypeScriptTypes(loaderSource)+
  ';return {loadReaderFontChecked,readerFontLoadReady};')(text);
 const registrar=new Function(...Object.keys(families),'$rawfile','loadReaderFontChecked','readerFontLoadReady','hilog',stripTypeScriptTypes(source)+
- ';return {registerReaderFonts,readerRegisteredFontFamily,prepareReaderFonts,prepareReaderFontFamily,readerFontFamilyReady,loadReaderFontChecked};')
+ ';return {registerReaderFonts,registerReaderShelfFonts,readerRegisteredFontFamily,prepareReaderFonts,prepareReaderShelfFonts,prepareReaderFontFamily,readerFontFamilyReady,loadReaderFontChecked};')
  (...Object.values(families),value=>value,loadReaderFontChecked,readerFontLoadReady,{warn(){}});
 const platform={registerFont(){throw Error('unchecked registration must not run');}};
 assert.equal(registrar.readerFontFamilyReady('HarmonyOS Sans'),true);
 assert.equal(registrar.readerFontFamilyReady('unknown platform family'),false);
 assert.equal(registrar.readerFontFamilyReady('ReaderCustom_owned'),false);
+registrar.registerReaderShelfFonts(platform);registrar.registerReaderShelfFonts(platform);
+assert.deepEqual(calls.map(call=>call.family),[families.READER_FONT_INTER,
+ families.READER_FONT_NOTO_SERIF_SC_BOLD,families.READER_FONT_NOTO_SANS_SC],
+ 'the first bookshelf frame loads only faces it uses');
+let shelfReady=false;const shelf=registrar.prepareReaderShelfFonts().then(()=>{shelfReady=true;});
+await Promise.resolve();assert.equal(shelfReady,false,'shelf submission is not readiness');
+pending.splice(0).forEach(p=>p.resolve());await shelf;assert.equal(shelfReady,true);
 registrar.registerReaderFonts(platform);registrar.registerReaderFonts(platform);
-assert.equal(calls.length,6);
+assert.equal(calls.length,7);
 assert.ok(!calls.some(c=>/WenKai|Fangsong|Sarasa/.test(c.src)),'startup does not load unused optional faces');
 let ready=false;const base=registrar.prepareReaderFonts().then(()=>{ready=true;});
 await Promise.resolve();assert.equal(ready,false,'submission is not readiness');

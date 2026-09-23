@@ -112,13 +112,13 @@ async function fixture(snapshot, register = async () => true) {
 }
 
 // Exercise the actual onCreate wiring, not only the optional reuse parameter.
-// Both journals must report no applied recovery; the successful face proof is
-// still mandatory and may become stale between initial preparation and final.
+// Reader-only native registration starts after the recovery journals settle;
+// its receipt no longer withholds the bookshelf's first frame.
 for (const [syncRecovered, resetRecovered, scenario, expected] of [
-  [false, false, 'unchanged', 1], [true, false, 'unchanged', 2],
-  [false, true, 'unchanged', 2], [undefined, false, 'unchanged', 2],
-  [false, false, 'failed-initial', 2], [false, false, 'changed-choice', 2],
-  [false, false, 'released-owner', 1],
+  [false, false, 'unchanged', 1], [true, false, 'unchanged', 1],
+  [false, true, 'unchanged', 1], [undefined, false, 'unchanged', 1],
+  [false, false, 'failed-initial', 1], [false, false, 'changed-choice', 1],
+  [false, false, 'released-owner', 0],
 ]) {
   const store = new ReaderAppearanceStore({load: async () => custom(), save: async () => {}});
   await store.load();
@@ -133,7 +133,7 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: {install: () => owner},
     ReaderSystemFileOpenHost: {install() {}, receive() {}}, AppStorage: {setOrCreate() {}},
     WebDavCredentialStore: {instance: {attachContext() {}, loadBookshelfViewMode: async () => 'cover'}},
-    prepareReaderFonts: async () => {}, prepareReaderFontFamily: async () => {},
+    prepareReaderShelfFonts: async () => {}, prepareReaderFontFamily: async () => {},
     ReaderThemeHost: {install: async () => {}, setRecoveryBarrier() {}},
     ConfigurationConstant: {ColorMode: {COLOR_MODE_DARK: 1}},
     SyncGateway: class {async recoverInterruptedRestore() {
@@ -146,7 +146,7 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
     readerAppearanceSnapshotFontFamily, setReaderAppearanceFont,
     ReaderCustomFontHost: class {async registerPersisted() {
       registrations++;
-      if (scenario === 'failed-initial' && registrations === 1) throw Error('initial read failed');
+      if (scenario === 'failed-initial' && registrations === 1) throw Error('font read failed');
       return true;
     }}, hilog: {error() {}},
   });

@@ -1,4 +1,4 @@
-import { prepareReaderFonts, prepareReaderFontFamily } from '../features/common/ReaderFonts';
+import { prepareReaderShelfFonts, prepareReaderFontFamily } from '../features/common/ReaderFonts';
 import { readerAppearanceSnapshotFontFamily } from '../features/reading/ReaderAppearanceRenderStyle';
 import { setReaderAppearanceFont, type ReaderAppearanceSnapshot } from '../features/reading/ReaderAppearanceState';
 import { ReaderCustomFontHost } from '../app/ReaderCustomFontHost';
@@ -27,6 +27,7 @@ export default class EntryAbility extends UIAbility {
   private themeReady: Promise<void> = Promise.resolve();
   private recoveryReady: Promise<void> = Promise.resolve();
   private bookshelfModeReady: Promise<void> = Promise.resolve();
+  private shelfFontsReady: Promise<void> = Promise.resolve();
   private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;
   private preparedReadingFontOwner: ReaderRuntimeOwner | undefined = undefined;
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
@@ -59,18 +60,15 @@ export default class EntryAbility extends UIAbility {
           AppStorage.setOrCreate('readerBookshelfViewMode', mode);
         }
       }).catch((): void => {});
-    const fontsReady = trace.measure('startup.ui-fonts', (): Promise<void> => prepareReaderFonts());
-    void fontsReady.catch((): void => {});
+    this.shelfFontsReady = trace.measure('startup.shelf-fonts', (): Promise<void> => prepareReaderShelfFonts())
+      .catch((error: Error): void => {
+        hilog.error(DOMAIN, 'Reader', 'Shelf font preparation failed: %{private}s', error.message);
+      });
     const owner = ReaderRuntimeOwner.install(this.context,
       readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory));
     this.runtimeOwner = owner;
     this.themeReady = trace.measure('startup.theme', (): Promise<void> => ReaderThemeHost.install(owner,
       this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day'))
-      .then(async (): Promise<void> => {
-        if (this.runtimeOwner !== owner) return;
-        await Promise.all([fontsReady, trace.measure('startup.selected-font-initial',
-          (): Promise<void> => this.prepareSelectedReadingFont(owner))]);
-      })
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Theme restoration failed: %{private}s', error.message);
       });
@@ -85,20 +83,21 @@ export default class EntryAbility extends UIAbility {
     this.recoveryReady = Promise.all([this.themeReady, this.bookshelfModeReady, coreReady])
       .then(async (): Promise<void> => {
         if (this.runtimeOwner === owner) {
-          const syncRecovered = await trace.measure('startup.sync-recovery', (): Promise<boolean> => sync.recoverInterruptedRestore());
-          const configurationRecovered = await trace.measure('startup.configuration-recovery', (): Promise<boolean> => LocalConfigurationReset.recover(owner));
+          await trace.measure('startup.sync-recovery', (): Promise<boolean> => sync.recoverInterruptedRestore());
+          await trace.measure('startup.configuration-recovery', (): Promise<boolean> => LocalConfigurationReset.recover(owner));
           if (this.runtimeOwner !== owner) return;
-          // Recovery can select a different face from the ordinary startup
-          // snapshot. Admit that face and the small reading-settings snapshot
-          // before Index, without re-entering the recovery barrier.
-          await Promise.all([
-            trace.measure('startup.selected-font-final', (): Promise<void> => this.prepareSelectedReadingFont(owner,
-              syncRecovered === false && configurationRecovered === false)),
-            trace.measure('startup.reading-settings', async (): Promise<void> => {
-              await new ReaderSettingsGateway(owner).loadAfterConfigurationRecovery(
-                (): boolean => this.runtimeOwner === owner);
-            }),
-          ]);
+          // Reader-only fonts can prepare after confirmed recovery without
+          // withholding the bookshelf. The reader still checks the native
+          // receipt before it admits text layout.
+          void trace.measure('startup.selected-font-final',
+            (): Promise<void> => this.prepareSelectedReadingFont(owner))
+            .catch((error: Error): void => {
+              hilog.error(DOMAIN, 'Reader', 'Selected reading font preparation failed: %{private}s', error.message);
+            });
+          await trace.measure('startup.reading-settings', async (): Promise<void> => {
+            await new ReaderSettingsGateway(owner).loadAfterConfigurationRecovery(
+              (): boolean => this.runtimeOwner === owner);
+          });
         }
       }).catch((error: Error): void => {
         // The persistent receipt/journal remains pending; opening the UI permits retry.
@@ -164,7 +163,7 @@ export default class EntryAbility extends UIAbility {
     void ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win))
       .then((installed: boolean): void => {
       if (installed && generation === this.windowStageGeneration) {
-        void Promise.all([this.bookshelfModeReady, this.themeReady, this.recoveryReady]).then((): void => {
+        void Promise.all([this.recoveryReady, this.shelfFontsReady]).then((): void => {
           if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);
         });
       }
@@ -173,7 +172,7 @@ export default class EntryAbility extends UIAbility {
       // Window setup failure must not strand the application before its first
       // page. The default zero-inset snapshot keeps the UI recoverable.
       if (generation === this.windowStageGeneration) {
-        void Promise.all([this.bookshelfModeReady, this.themeReady, this.recoveryReady]).then((): void => {
+        void Promise.all([this.recoveryReady, this.shelfFontsReady]).then((): void => {
           if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);
         });
       }

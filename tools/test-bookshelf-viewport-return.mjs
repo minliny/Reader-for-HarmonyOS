@@ -5,7 +5,7 @@ import {BookshelfViewState} from '../entry/src/main/ets/features/bookshelf/Books
 const source=new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url);
 class Frame { constructor(callback){this.callback=callback;} }
 const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear'],{
- BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, registerReaderFonts(){}
+ BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, registerReaderShelfFonts(){}
 });
 const state=new BookshelfViewState(); const frames=[]; const calls=[]; const prepared=[];
 const books=[{sourceId:'source',bookId:'first',group:'历史分组'},{sourceId:'another',bookId:'same',group:'默认'}].map(Object.freeze);

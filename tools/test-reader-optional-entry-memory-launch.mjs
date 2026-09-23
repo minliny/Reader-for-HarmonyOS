@@ -55,7 +55,7 @@ for(const [debug,mode,value,disabled] of [[true,'debug',true,true],[true,'releas
     readerEventLoopProbeEnabled:()=>false,ReaderRuntimeOwner:Runtime,
     ReaderSystemFileOpenHost:{install(){},receive(){}},
     AppStorage:{setOrCreate:(...args)=>writes.push(args)},WebDavCredentialStore:{instance:{attachContext(){},loadBookshelfViewMode:async()=>null}},
-    prepareReaderFonts:async()=>{},prepareReaderFontFamily:async()=>{},readerAppearanceSnapshotFontFamily:()=> 'serif',
+    prepareReaderShelfFonts:async()=>{},prepareReaderFontFamily:async()=>{},readerAppearanceSnapshotFontFamily:()=> 'serif',
     ReaderThemeHost:{install:async()=>{},setRecoveryBarrier(){}},ConfigurationConstant:{ColorMode:{COLOR_MODE_DARK:1}},
     SyncGateway:class{async recoverInterruptedRestore(){}},LocalConfigurationReset:{recover:async()=>{}},
     DOMAIN:0x5244,hilog:{error(){}}});

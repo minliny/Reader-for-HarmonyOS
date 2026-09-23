@@ -41,11 +41,23 @@ export function readerFontFamilyReady(family: string): boolean {
   return family === READER_FONT_HARMONYOS_SANS || readerFontLoadReady(family);
 }
 
-export function prepareReaderFonts(): Promise<void> {
+/** Only faces used by the initial bookshelf shell need a checked receipt
+ * before its first build. Reader body and control faces retain their own
+ * on-demand admission after the shelf has been mounted. */
+export function prepareReaderShelfFonts(): Promise<void> {
   return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
-    READER_FONT_NOTO_SERIF_SC_REGULAR, 'ReaderNotoSansSCUIRegular',
-    'ReaderNotoSansSCUIMedium', 'ReaderNotoSansSCUIBold']
+    READER_FONT_NOTO_SANS_SC]
     .map((family: string): Promise<void> => prepareReaderFontFamily(family))).then((): void => {});
+}
+
+export function prepareReaderFonts(): Promise<void> {
+  return Promise.all([
+    prepareReaderShelfFonts(),
+    prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_REGULAR),
+    prepareReaderFontFamily('ReaderNotoSansSCUIRegular'),
+    prepareReaderFontFamily('ReaderNotoSansSCUIMedium'),
+    prepareReaderFontFamily('ReaderNotoSansSCUIBold'),
+  ]).then((): void => {});
 }
 
 function reportFontFailure(error: Error): void {
@@ -56,6 +68,12 @@ function reportFontFailure(error: Error): void {
  * remounts merely reuse the same completed receipt, never register again. */
 export function registerReaderFonts(_font: Font): void {
   void prepareReaderFonts().catch(reportFontFailure);
+}
+
+/** Initial shelf components must not start reader-only font loads while ArkUI
+ * is building the first shelf frame. */
+export function registerReaderShelfFonts(_font: Font): void {
+  void prepareReaderShelfFonts().catch(reportFontFailure);
 }
 
 export function readerRegisteredFontFamily(_font: Font, family: string): string {

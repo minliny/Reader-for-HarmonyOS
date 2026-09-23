@@ -33,7 +33,7 @@ import { NoCoverCover } from './NoCoverCover';
 import { MainTabShell } from '../shell/MainTabShell';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { AppTopBar } from '../common/AppTopBar';
-import { registerReaderFonts } from '../common/ReaderFonts';
+import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
 import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -218,7 +218,7 @@ export struct BookshelfPage {
 
   aboutToAppear(): void {
     this.mounted = true;
-    registerReaderFonts(this.getUIContext().getFont());
+    registerReaderShelfFonts(this.getUIContext().getFont());
     const confirmedMode = this.webDavCredentials.currentBookshelfViewMode();
     const restoredMode: BookshelfViewMode = confirmedMode ?? (this.storedViewMode === 'list' ? 'list' : 'cover');
     this.viewMode = restoredMode;
