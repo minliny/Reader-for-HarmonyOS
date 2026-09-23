@@ -90,6 +90,12 @@ export type SearchOutcome =
 
 type SearchRequestGuard = () => boolean;
 
+type LocalSearchMatchedPage = {
+  offset: number;
+  length: number;
+  bookIds: string[];
+};
+
 /**
  * Feature-local gateway for the Search page. It owns the Core protocol
  * boundary for `search.history.*`, `source.list`, and `book.search`, and
@@ -98,6 +104,7 @@ type SearchRequestGuard = () => boolean;
  */
 export class SearchGateway {
   private static readonly LOCAL_SEARCH_PAGE_SIZE: number = 128;
+  private static readonly LOCAL_SEARCH_FULL_PAGE_THRESHOLD: number = 32;
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private searchRequestCounter: number = 0;
   private cachedSources: SearchSource[] | undefined = undefined;
@@ -238,7 +245,8 @@ export class SearchGateway {
     }
   }
 
-  async searchLocalBooks(keyword: string, searchRequestId: string): Promise<SearchBook[]> {
+  async searchLocalBooks(keyword: string, searchRequestId: string,
+    isCurrent?: SearchRequestGuard): Promise<SearchBook[]> {
     // Local imports are materialized into the shelf transactionally; removing
     // a local member deletes its parsed catalog too. Remote shelf members are
     // deliberately excluded from the local-import result category.
@@ -255,50 +263,146 @@ export class SearchGateway {
     if (this.runtimeOwner.supportsCoreCapability?.('bookshelf.pageProjection.v1') !== true) {
       // An older Core may not understand sourceKind/keyword. Retain the
       // original unfiltered request and Host-side local/title/author filter.
-      const result = await this.runtimeOwner.request('bookshelf.list', {});
+      this.assertCurrentLocalSearch(isCurrent);
+      const result = await this.runtimeOwner.request('bookshelf.list', {}, this.requestOptions(isCurrent));
+      this.assertCurrentLocalSearch(isCurrent);
       const books: SearchBook[] = [];
       this.appendLocalMatches(result.data['books'], query, searchRequestId, books);
       return books;
     }
     // A page projection omits intro, which the search card and detail consume.
-    // Read bounded Full DTO pages and bracket the scan with cheap membership
-    // projections. The revision changes on a concurrent import/removal, so no
-    // mixed-version result is published.
+    // For a safe Han candidate, bounded Full DTO pages avoid one exact lookup
+    // per match. Otherwise Core's ASCII-only lower() cannot narrow the query:
+    // scan lightweight membership pages and hydrate only exact Host matches.
+    // Both paths are revision-bound so a concurrent shelf write cannot publish
+    // a mixed-version result.
+    const lightweight = safeKeyword === undefined;
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const initialRevision = await this.localShelfRevision(baseParams);
+      this.assertCurrentLocalSearch(isCurrent);
+      const initialRevision = await this.localShelfRevision(baseParams, isCurrent);
       if (initialRevision === undefined) continue;
       const books: SearchBook[] = [];
+      const matchedPages: LocalSearchMatchedPage[] = [];
       let offset = 0;
       let total: number | undefined;
+      let changed = false;
       while (true) {
+        this.assertCurrentLocalSearch(isCurrent);
         const params: JsonObject = { ...baseParams,
           limit: SearchGateway.LOCAL_SEARCH_PAGE_SIZE, offset };
-        const page = (await this.runtimeOwner.request('bookshelf.list', params)).data;
+        if (lightweight) {
+          params['pageProjection'] = true;
+          params['membershipOnly'] = true;
+          params['projectionRevision'] = initialRevision;
+        }
+        const page = (await this.runtimeOwner.request('bookshelf.list', params,
+          this.requestOptions(isCurrent))).data;
+        this.assertCurrentLocalSearch(isCurrent);
         const pageBooks = page['books'];
         const pageTotal = page['total'];
         if (!Array.isArray(pageBooks) || pageBooks.length > SearchGateway.LOCAL_SEARCH_PAGE_SIZE ||
           typeof pageTotal !== 'number' || !Number.isSafeInteger(pageTotal) || pageTotal < 0) {
           throw new Error('local search returned invalid page');
         }
+        if (lightweight) {
+          if (typeof page['changed'] !== 'boolean' ||
+            typeof page['projectionRevision'] !== 'string' || page['projectionRevision'].length === 0 ||
+            typeof page['offset'] !== 'number' || page['offset'] !== offset ||
+            (page['changed'] && pageBooks.length !== 0)) {
+            throw new Error('local search returned invalid page projection');
+          }
+          if (page['changed'] || page['projectionRevision'] !== initialRevision) {
+            changed = true;
+            break;
+          }
+        }
         if (total === undefined) total = pageTotal;
         if (pageTotal !== total || offset + pageBooks.length > total ||
-          (pageBooks.length === 0 && offset < total)) break;
-        this.appendLocalMatches(pageBooks, query, searchRequestId, books);
-        offset += pageBooks.length;
-        if (offset >= total) {
-          const finalRevision = await this.localShelfRevision(baseParams);
-          if (finalRevision === initialRevision) return books;
+          (pageBooks.length === 0 && offset < total)) {
+          changed = true;
           break;
         }
+        if (lightweight) {
+          const pageMatches: string[] = [];
+          for (const raw of pageBooks) {
+            const book = this.localShelfBookObject(raw);
+            if (book['sourceId'] === 'local' && this.localBookMatches(book, query)) {
+              pageMatches.push(requiredNonBlankString(book, 'bookId'));
+            }
+          }
+          if (pageMatches.length > 0) matchedPages.push({ offset, length: pageBooks.length,
+            bookIds: pageMatches });
+        } else {
+          this.appendLocalMatches(pageBooks, query, searchRequestId, books);
+        }
+        offset += pageBooks.length;
+        if (offset >= total) break;
         await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
       }
+      if (changed) continue;
+      if (lightweight) {
+        for (const matchedPage of matchedPages) {
+          if (matchedPage.bookIds.length >= SearchGateway.LOCAL_SEARCH_FULL_PAGE_THRESHOLD) {
+            this.assertCurrentLocalSearch(isCurrent);
+            const fullPage = (await this.runtimeOwner.request('bookshelf.list', { ...baseParams,
+              limit: SearchGateway.LOCAL_SEARCH_PAGE_SIZE, offset: matchedPage.offset },
+            this.requestOptions(isCurrent))).data;
+            this.assertCurrentLocalSearch(isCurrent);
+            const rows = fullPage['books'];
+            if (!Array.isArray(rows) || rows.length > SearchGateway.LOCAL_SEARCH_PAGE_SIZE ||
+              typeof fullPage['total'] !== 'number' || !Number.isSafeInteger(fullPage['total'])) {
+              throw new Error('local search returned invalid full page');
+            }
+            if (fullPage['total'] !== total || rows.length !== matchedPage.length) {
+              changed = true;
+              break;
+            }
+            const start = books.length;
+            this.appendLocalMatches(rows, query, searchRequestId, books);
+            const hydratedIds = books.slice(start).map((book: SearchBook): string => book.bookId);
+            if (hydratedIds.length !== matchedPage.bookIds.length ||
+              hydratedIds.some((id: string, index: number): boolean => id !== matchedPage.bookIds[index])) {
+              changed = true;
+              break;
+            }
+          } else {
+            for (const bookId of matchedPage.bookIds) {
+              this.assertCurrentLocalSearch(isCurrent);
+              const detail = (await this.runtimeOwner.request('bookshelf.get',
+                { sourceId: 'local', bookId }, this.requestOptions(isCurrent))).data['book'];
+              this.assertCurrentLocalSearch(isCurrent);
+              if (detail === null) {
+                changed = true;
+                break;
+              }
+              const fullBook = this.localShelfBookObject(detail);
+              if (fullBook['sourceId'] !== 'local' || fullBook['bookId'] !== bookId) {
+                throw new Error('local search returned mismatched exact book');
+              }
+              if (!this.localBookMatches(fullBook, query)) {
+                changed = true;
+                break;
+              }
+              this.appendLocalMatches([fullBook], query, searchRequestId, books);
+            }
+            if (changed) break;
+          }
+        }
+      }
+      if (changed) continue;
+      this.assertCurrentLocalSearch(isCurrent);
+      const finalRevision = await this.localShelfRevision(baseParams, isCurrent);
+      if (finalRevision === initialRevision) return books;
     }
     throw new Error('local search shelf changed while reading');
   }
 
-  private async localShelfRevision(baseParams: JsonObject): Promise<string | undefined> {
+  private async localShelfRevision(baseParams: JsonObject,
+    isCurrent?: SearchRequestGuard): Promise<string | undefined> {
     const page = (await this.runtimeOwner.request('bookshelf.list', { ...baseParams,
-      pageProjection: true, membershipOnly: true, limit: 1, offset: 0 })).data;
+      pageProjection: true, membershipOnly: true, limit: 1, offset: 0 },
+    this.requestOptions(isCurrent))).data;
+    this.assertCurrentLocalSearch(isCurrent);
     const revision = page['projectionRevision'];
     if (!Array.isArray(page['books']) || typeof revision !== 'string' || revision.length === 0 ||
       typeof page['changed'] !== 'boolean') {
@@ -310,20 +414,34 @@ export class SearchGateway {
   private appendLocalMatches(rows: unknown, query: string, searchRequestId: string, books: SearchBook[]): void {
     if (!Array.isArray(rows)) throw new Error('local search returned invalid books');
     for (const raw of rows) {
-      if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-        throw new Error('local search returned invalid book');
-      }
-      const book = raw as JsonObject;
+      const book = this.localShelfBookObject(raw);
       if (book['sourceId'] !== 'local') continue;
       const title = requiredNonBlankString(book, 'title');
       const author = requiredString(book, 'author');
-      if (!title.toLocaleLowerCase().includes(query) && !author.toLocaleLowerCase().includes(query)) continue;
+      if (!this.localBookMatches(book, query)) continue;
       books.push({ sourceId: 'local', sourceName: '本地导入', bookSourceUrl: '',
         bookId: requiredNonBlankString(book, 'bookId'), detailUrl: '', searchRequestId,
         sourceRuleVersion: 'local', category: 'novel', title, author,
         coverUrl: optionalString(book, 'coverUrl'), intro: optionalString(book, 'intro'),
         kind: optionalString(book, 'kind'), variables: [] });
     }
+  }
+
+  private localShelfBookObject(value: unknown): JsonObject {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('local search returned invalid book');
+    }
+    return value as JsonObject;
+  }
+
+  private localBookMatches(book: JsonObject, query: string): boolean {
+    const title = requiredNonBlankString(book, 'title');
+    const author = requiredString(book, 'author');
+    return title.toLocaleLowerCase().includes(query) || author.toLocaleLowerCase().includes(query);
+  }
+
+  private assertCurrentLocalSearch(isCurrent?: SearchRequestGuard): void {
+    if (isCurrent?.() === false) throw new Error('local search superseded');
   }
 
   async loadSources(): Promise<SearchSource[]> {

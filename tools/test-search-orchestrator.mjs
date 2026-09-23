@@ -465,6 +465,56 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 2, 'refreshed sources are projected');
 }
 
+// Source Management can also remove the last usable source. A plain return
+// must expose the management entry while preserving the search history.
+{
+  const sources = makeSources(2);
+  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  owner.state.historyKeywords = ['本地书'];
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await waitUntil(owner.state, () => last(presentations).kind === 'initial' &&
+    last(presentations).history.length === 1);
+
+  sources.forEach((source) => { source.enabled = false; });
+  search.refreshSources();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+  assert.equal(last(presentations).reason, 'allDisabled');
+  assert.deepEqual(last(presentations).history, ['本地书']);
+
+  sources.length = 0;
+  search.refreshSources();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired' &&
+    last(presentations).reason === 'noSources');
+  assert.deepEqual(last(presentations).history, ['本地书']);
+  search.close();
+}
+
+// A source load started before Source Management must not overwrite a newer
+// refresh in the same search session when its failure arrives late.
+{
+  const owner = fakeOwner({ sources: makeSources(1), resultsFor: () => [] });
+  const originalRequest = owner.request;
+  let rejectOldLoad;
+  const oldLoad = new Promise((_resolve, reject) => { rejectOldLoad = reject; });
+  let sourceCalls = 0;
+  owner.request = async (command, ...args) => {
+    if (command === 'source.list' && ++sourceCalls === 1) return await oldLoad;
+    return originalRequest(command, ...args);
+  };
+  const { orchestrator, presentations, sourcesSnapshots } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  search.refreshSources();
+  await waitUntil(owner.state, () => sourcesSnapshots.at(-1)?.length === 1);
+  rejectOldLoad(new Error('source registry changed while loading'));
+  await sleep(20);
+  assert.equal(last(presentations).kind, 'initial', 'stale source failure cannot replace newer entry');
+  assert.equal(sourcesSnapshots.at(-1).length, 1, 'stale source failure cannot clear current chips');
+  search.close();
+}
+
 // A failed refresh must replace a stale no-source verdict; after recovery,
 // refresh returns to the confirmed no-source state until a source is added.
 {
@@ -1328,8 +1378,18 @@ function localShelfOwner(initialRows, mutate) {
     calls,
     supportsCoreCapability: (name) => name === 'bookshelf.pageProjection.v1',
     request: async (method, params) => {
+      calls.push({ method, ...params });
+      if (method === 'bookshelf.get') {
+        assert.equal(params.sourceId, 'local');
+        const book = rows.find(row => row.sourceId === params.sourceId && row.bookId === params.bookId) ?? null;
+        const data = { book };
+        if (mutate !== undefined) {
+          const next = mutate({ method, params, revision, rows });
+          if (next !== undefined) { rows = next; revision += 1; }
+        }
+        return { data };
+      }
       assert.equal(method, 'bookshelf.list');
-      calls.push({ ...params });
       assert.equal(params.sourceKind, 'local');
       let selected = rows.filter(row => row.sourceId === 'local');
       if (params.keyword !== undefined) {
@@ -1340,15 +1400,24 @@ function localShelfOwner(initialRows, mutate) {
       }
       if (params.pageProjection) {
         assert.equal(params.membershipOnly, true);
-        assert.equal(params.limit, 1);
-        return { data: { books: selected.slice(0, 1).map(({sourceId,bookId,title,author}) =>
+        assert.ok(params.limit > 0 && params.limit <= 128);
+        if (params.projectionRevision !== undefined && params.projectionRevision !== `local/${revision}`) {
+          return { data: { books: [], total: 0, offset: params.offset,
+            projectionRevision: `local/${revision}`, changed: true } };
+        }
+        const data = { books: selected.slice(params.offset, params.offset + params.limit).map(({sourceId,bookId,title,author}) =>
           ({sourceId,bookId,title,author})), total: selected.length,
-          projectionRevision: `local/${revision}`, changed: false } };
+          offset: params.offset, projectionRevision: `local/${revision}`, changed: false };
+        if (mutate !== undefined) {
+          const next = mutate({ method, params, revision, rows });
+          if (next !== undefined) { rows = next; revision += 1; }
+        }
+        return { data };
       }
       assert.ok(params.limit > 0 && params.limit <= 128);
       const data = { books: selected.slice(params.offset, params.offset + params.limit), total: selected.length };
       if (mutate !== undefined) {
-        const next = mutate({ params, revision, rows });
+        const next = mutate({ method, params, revision, rows });
         if (next !== undefined) { rows = next; revision += 1; }
       }
       return { data };
@@ -1383,6 +1452,68 @@ function localShelfOwner(initialRows, mutate) {
   assert.deepEqual(mixed.map(book=>book.bookId),['kelvin']);
   assert.ok(owner.calls.every(call=>call.keyword==='汉'),
     'a case-invariant Han substring is safe to push down');
+}
+{
+  const rows=Array.from({length:513},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
+    title:`unrelated ${i}`,author:'作者',intro:`简介${i}`}));
+  rows[4]={...rows[4],author:'KELVIN 作者'};
+  rows[500]={sourceId:'local',bookId:'unicode-match',title:'Kelvin 手册',author:'作者',intro:'精确简介'};
+  rows[501]={...rows[501],bookId:'kelvin-id-only'};
+  rows.push({sourceId:'online',bookId:'remote',title:'Kelvin',author:'作者',intro:'远端'});
+  const owner=localShelfOwner(rows);
+  const found=await new SearchGateway(owner).searchLocalBooks('kelvin','sparse');
+  assert.deepEqual(found.map(book=>book.bookId),['id-4','unicode-match'],
+    'Host title/author semantics and shelf order exclude a bookId-only hit');
+  assert.equal(found[1].intro,'精确简介');
+  assert.deepEqual(owner.calls.filter(call=>call.pageProjection&&call.limit===128).map(call=>call.offset),
+    [0,128,256,384,512], 'large sparse search scans bounded lightweight local pages');
+  assert.deepEqual(owner.calls.filter(call=>call.method==='bookshelf.get').map(call=>call.bookId),
+    ['id-4','unicode-match'], 'only exact title/author matches receive Full DTOs');
+  assert.equal(owner.calls.filter(call=>call.method==='bookshelf.list'&&!call.pageProjection).length,0,
+    'nonmatches and remote rows never receive Full DTOs');
+}
+{
+  const rows=Array.from({length:260},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
+    title:i<40||i===259?`needle ${i}`:`unrelated ${i}`,author:'作者',intro:`简介${i}`}));
+  const owner=localShelfOwner(rows);
+  const found=await new SearchGateway(owner).searchLocalBooks('needle','dense');
+  assert.deepEqual(found.map(book=>book.bookId),[...Array.from({length:40},(_,i)=>`id-${i}`),'id-259']);
+  assert.equal(found[0].intro,'简介0');assert.equal(found.at(-1).intro,'简介259');
+  assert.deepEqual(owner.calls.filter(call=>call.method==='bookshelf.list'&&!call.pageProjection)
+    .map(call=>call.offset),[0], 'a high-hit page uses one bounded Full DTO page');
+  assert.deepEqual(owner.calls.filter(call=>call.method==='bookshelf.get').map(call=>call.bookId),
+    ['id-259'], 'a sparse page still hydrates only its match');
+}
+{
+  const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
+    title:i===0?'Kelvin':'unrelated',author:'作者',intro:'旧简介'}));
+  let mutated=false;
+  const owner=localShelfOwner(rows,({method,params,rows:current})=>{
+    if (!mutated&&method==='bookshelf.get'&&params.bookId==='id-0') {
+      mutated=true;return current.map((book,i)=>i===0?{...book,intro:'新简介'}:book);
+    }
+  });
+  const found=await new SearchGateway(owner).searchLocalBooks('kelvin','exact-revision');
+  assert.deepEqual(found.map(book=>book.bookId),['id-0']);
+  assert.equal(found[0].intro,'新简介', 'mutation during exact hydration restarts the whole scan');
+  assert.equal(owner.calls.filter(call=>call.method==='bookshelf.get').length,2);
+}
+{
+  const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
+    title:i===129?'Kelvin':'unrelated',author:'作者',intro:'旧简介'}));
+  let mutated=false;
+  const owner=localShelfOwner(rows,({method,params,rows:current})=>{
+    if (!mutated&&method==='bookshelf.list'&&params.pageProjection&&params.limit===128&&params.offset===0) {
+      mutated=true;return current.map((book,i)=>i===129?{...book,intro:'新简介'}:book);
+    }
+  });
+  const found=await new SearchGateway(owner).searchLocalBooks('kelvin','page-revision');
+  assert.deepEqual(found.map(book=>book.bookId),['id-129']);
+  assert.equal(found[0].intro,'新简介');
+  assert.equal(owner.calls.filter(call=>call.pageProjection&&call.limit===128&&call.offset===0).length,2,
+    'a changed lightweight page restarts the whole revision-bound scan');
+  assert.equal(owner.calls.filter(call=>call.method==='bookshelf.get').length,1,
+    'stale page candidates are never hydrated');
 }
 {
   const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
@@ -1421,4 +1552,43 @@ function localShelfOwner(initialRows, mutate) {
   assert.deepEqual(found.map(book=>book.bookId),['local']);
   assert.equal(found[0].intro,'旧版简介');
 }
-console.log('PASS local search confines Full DTOs to bounded local pages, keeps intros, safely narrows Han queries, and rejects mixed revisions');
+{
+  const rows=Array.from({length:300},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
+    title:i===0?'新书':'unrelated',author:'作者',intro:`简介${i}`}));
+  const shelf=localShelfOwner(rows);
+  let releasePage;
+  const pageGate=new Promise(resolve=>{releasePage=resolve;});
+  let entered=false;
+  let firstPage=true;
+  let cancelledAtBoundary=false;
+  const owner={
+    supportsCoreCapability:shelf.supportsCoreCapability,
+    request:async(method,params,options)=>{
+      if (method==='source.list') return {data:{sources:[]}};
+      if (method==='search.history.list') return {data:{keywords:[],count:0}};
+      if (method==='search.history.add') return {data:{}};
+      if (method==='bookshelf.list'&&params.pageProjection&&params.limit===128&&firstPage) {
+        firstPage=false;entered=true;
+        await pageGate;
+        cancelledAtBoundary=options?.shouldCancel?.()===true;
+      }
+      return shelf.request(method,params,options);
+    },
+  };
+  const {orchestrator,presentations}=capture();
+  const search=orchestrator(owner);
+  search.open();search.search('kelvin');
+  await waitUntil(null,()=>entered);
+  search.stop();releasePage();
+  await sleep(20);
+  assert.equal(cancelledAtBoundary,true,'stop marks the in-flight local Core request as cancelled');
+  assert.equal(shelf.calls.filter(call=>call.pageProjection&&call.limit===128).length,1,
+    'stopped search does not fetch a second page or hydrate stale candidates');
+  search.search('新');
+  await waitUntil(null,()=>last(presentations).kind==='results'&&!last(presentations).searching);
+  assert.deepEqual(last(presentations).results.map(book=>book.bookId),['id-0']);
+  assert.equal(shelf.calls.filter(call=>call.pageProjection&&call.limit===128).length,1,
+    'new Han query leaves the cancelled ASCII page scan stopped');
+  search.close();
+}
+console.log('PASS local search uses sparse exact DTOs, dense bounded pages, revision retries, and stops stale pagination');
