@@ -230,9 +230,13 @@ assert.match(readFileSync(file('features/shell/ReaderShell.ets'),'utf8'),/ForEac
   const host=fixture();host.route='search';host.shelfBooks=[];
   const localResult={sourceId:'local',sourceName:'本地',bookId:'import-real-id',title:'真实搜索书名',author:'作者',kind:'epub'};
   host.searchPublication={shelfAt:()=>[{...localResult,addedAt:10}]};
+  canonicalShelf={...localResult,addedAt:10,intro:'完整本地简介'};
   host.onSearchResultSelected(localResult);
+  assert.equal(host.route,'search','offscreen sparse membership waits for the full Core shelf record');
+  await settle();
   assert.equal(host.route,'detail');assert.equal(host.detailBook.bookId,localResult.bookId);
   assert.equal(host.detailBook.title,localResult.title);assert.equal(host.detailInBookshelf,true);
+  assert.equal(host.detailBook.intro,'完整本地简介');
   assert.equal(host.detailReturnRoute,'search');assert.equal(host.remoteReadingSeed,undefined);
   await settle();assert.equal(host.detailToc[0].title,'本地第一章');
   host.openReading(undefined);assert.equal(host.route,'reading');assert.equal(host.readingSessionActive,true);

@@ -2594,15 +2594,13 @@ struct Index {
       (book.groupKey !== undefined && candidate.groupKey === book.groupKey ||
         candidate.title === book.title && candidate.author === book.author))];
     if (book.sourceId === LOCAL_SOURCE_ID) {
-      const localBook = this.shelfBooks.find((item: ShelfBook): boolean =>
-        item.sourceId === LOCAL_SOURCE_ID && item.bookId === book.bookId) ??
-        this.searchPublication.shelfAt(this.searchPublicationRevision).find((item: ShelfBook): boolean =>
-          item.sourceId === LOCAL_SOURCE_ID && item.bookId === book.bookId);
-      if (localBook !== undefined) {
-        this.openLocalBookDetail(localBook);
+      const visibleBook = this.shelfBooks.find((item: ShelfBook): boolean =>
+        item.sourceId === LOCAL_SOURCE_ID && item.bookId === book.bookId);
+      if (visibleBook !== undefined) {
+        this.openLocalBookDetail(visibleBook);
       } else {
-        // The visible shelf is a bounded window. Resolve an offscreen result by
-        // its exact Core identity before admitting a local detail and catalog.
+        // Search membership may be a sparse Core projection. Resolve the
+        // result's exact identity to a full offscreen DTO before opening it.
         const owner = ReaderRuntimeOwner.current();
         const generation = this.nextNavigationGeneration();
         const candidates = this.searchDetailCandidates;

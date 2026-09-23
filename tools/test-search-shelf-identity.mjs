@@ -66,12 +66,27 @@ const Add=productionMotionMethods(index,['addDetailBook','isSameDetailBook'],{
 });
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 const localSaved={...saved,sourceId:'local',bookId:'import-one',sourceName:'本地导入'};
+const localFull={...localSaved,kind:'EPUB',coverUrl:'file://local-cover',intro:'完整简介',
+  chapterCount:12,readProgress:3500,readingPosition:{chapterIndex:3,chapterOffset:42,updatedAt:20}};
+const localMembership={sourceId:'local',bookId:'import-one',title:localSaved.title,
+  author:localSaved.author,addedAt:localSaved.addedAt};
 const localResult={...result,sourceId:'local',bookId:'import-one',sourceName:'本地导入'};
 {
-  const {host,localCalls}=searchFixture([localSaved]);
+  const {host,localCalls}=searchFixture([localMembership]);host.shelfBooks=[localFull];
   host.onSearchResultSelected(localResult);
-  assert.equal(localCalls[0][0],localSaved,'offscreen local membership opens the real detail immediately');
-  assert.equal(lookupCalls.length,0,'published local membership needs no extra Core round trip');
+  assert.equal(localCalls[0][0],localFull,'a visible full shelf row opens its detail immediately');
+  assert.equal(lookupCalls.length,0,'visible full shelf rows need no extra Core round trip');
+}
+{
+  let release;coreLookup=()=>new Promise(resolve=>{release=resolve;});
+  const {host,localCalls}=searchFixture([localMembership]);
+  host.onSearchResultSelected(localResult);
+  assert.deepEqual(lookupCalls.at(-1),['local','import-one']);
+  assert.equal(localCalls.length,0,'sparse offscreen membership cannot open a detail before its full DTO arrives');
+  release(localFull);await settle();
+  assert.equal(localCalls[0][0],localFull,'offscreen membership resolves to the complete Core shelf record');
+  assert.equal(localCalls[0][0].chapterCount,12);
+  assert.deepEqual(localCalls[0][0].readingPosition,localFull.readingPosition);
 }
 {
   let release;coreLookup=()=>new Promise(resolve=>{release=resolve;});
@@ -137,4 +152,4 @@ function addFixture(){const notices=[];const host=Object.assign(new Add(),{
   assert.match(host.bookshelfAdditionError,/已加入书架/);
   assert.equal(host.bookshelfRemovalActiveKey,'');writeError=undefined;
 }
-console.log('PASS: search selection preserves saved identity; offscreen local details resolve from membership/Core with stale guards; ambiguous and duplicate ownership remains safe');
+console.log('PASS: search selection preserves saved identity; sparse offscreen membership loads full local detail with stale guards; ambiguous and duplicate ownership remains safe');
