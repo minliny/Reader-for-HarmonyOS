@@ -16,7 +16,7 @@ const seed = bookId => ({ sourceId, bookId, detailUrl: bookId, title: '目录示
 const book = (bookId, extra={}) => ({ ...seed(bookId), addedAt: 1, readProgress: 3210, ...extra });
 function fixture(books=[book('/one')]) {
   const calls=[], records=new Map(), catalogs=new Map(), modes=new Map(), prefetched=[], log=[];
-  let remoteCount=1, cacheGate, active=0, peak=0, projections=0, enabled=true;
+  let remoteCount=1, cacheGate, active=0, peak=0, projections=0, fullScans=0, enabled=true;
   const runtime = new BookAcquisitionCoordinator(async (method, params, options) => {
     calls.push({method,params});
     const id=params.bookId ?? params.book?.bookId ?? params.bookUrl;
@@ -50,7 +50,7 @@ function fixture(books=[book('/one')]) {
   const owner={bookAcquisitions:()=>runtime,request:(...args)=>runtime.request(...args)};
   const Index=productionMotionMethods(indexFile,['canRunBookshelfBackgroundRefresh','scheduleBookshelfBackgroundRefresh','refreshBookshelfCatalogBatch','startManualBookshelfUpdate','refreshOneShelfBook'],{
     ReaderRuntimeOwner:{current:()=>owner},RemoteReadingFlowGateway,
-    BookshelfFlowGateway:class { async load(){projections++;return {books,continueReading:undefined};} async loadAll(current){await pause();return current()?{books,total:books.length}:undefined;} },
+    BookshelfFlowGateway:class { async load(){projections++;return {books,continueReading:undefined};} async loadAll(current){fullScans++;await pause();return current()?{books,total:books.length,projectionRevision:'r'}:undefined;} },
     LOCAL_SOURCE_ID:'local',CATALOG_REFRESH_INTERVAL_MS:600000,DOMAIN:0,
     hilog:{info:(...args)=>log.push(args),warn:(...args)=>log.push(args)}
   });
@@ -59,7 +59,7 @@ function fixture(books=[book('/one')]) {
     bookshelfUpdateRunning:false,bookshelfBackgroundRefreshRunning:false,bookshelfUpdateDone:0,bookshelfUpdateTotal:0,
     bookshelfLoadGeneration:0,prefetchReadingWindow:async session=>prefetched.push(session),applyBookshelfState(){}});
   return {runtime,owner,page,calls,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;},
-    cacheGate:g=>{cacheGate=g;},peak:()=>peak,projections:()=>projections};
+    cacheGate:g=>{cacheGate=g;},peak:()=>peak,projections:()=>projections,fullScans:()=>fullScans};
 }
 const results=[];
 async function check(name, run) { try {await run();results.push({name,status:'PASS'});} catch(error){results.push({name,status:'FAIL',message:error.stack});} }
@@ -154,6 +154,18 @@ await check('paged filtered shelf automatic sweep covers offscreen targets and c
     f.page.route='reading';f.page.readingSessionActive=true;
     await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
     assert.equal(f.calls.length,0,'cancelled target read cannot start network acquisition');
+  }finally{f.runtime.close();}
+});
+await check('automatic catalog projection does not rescan its own new revision',async()=>{
+  const f=fixture([book('/due')]);try {
+    f.page.shelfProjectionRevision='r';
+    f.page.applyBookshelfState=()=>{ f.page.shelfProjectionRevision='r2'; };
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1,'the due catalog is checked once');
+    assert.equal(f.projections(),1,'the refreshed shelf projection is applied once');
+    assert.equal(f.page.shelfProjectionRevision,'r2');
+    assert.equal(f.fullScans(),1,'own projection publication must not trigger another full scan');
   }finally{f.runtime.close();}
 });
 await check('multiple force waiters share one refresh after the nonforce admission settles',async()=>{

@@ -228,6 +228,12 @@ type RulesManagementReturnTarget = 'settings' | 'reader';
 type DetailReturnRoute = 'bookshelf' | 'search';
 type SourceManagementReturnTarget = 'settings' | 'search';
 
+interface BookshelfBackgroundSeeds {
+  owner: ReaderRuntimeOwner;
+  revision: string;
+  seeds: Promise<ReadingEntrySeed[] | undefined>;
+}
+
 class SourceSwitchAnchor {
   chapterIndex: number;
   chapterTitle: string;
@@ -472,6 +478,8 @@ struct Index {
    */
   @State private bookshelfLoadFailed: boolean = false;
   private bookshelfBackgroundRefreshRunning: boolean = false;
+  /** The automatic catalog scan can also supply the idle preparation's identities for this shelf revision. */
+  private bookshelfBackgroundSeeds: BookshelfBackgroundSeeds | undefined;
   private remoteCatalogRefreshAt: Map<string, number> = new Map();
   private sourceSwitchUnsubscribe: (() => void) | undefined = undefined;
   private bookProjectionUnsubscribe: (() => void) | undefined = undefined;
@@ -2695,11 +2703,20 @@ struct Index {
     if (this.shelfProjectionRevision === undefined || this.shelfProjectionRevision.length === 0) return;
     if (this.route !== 'bookshelf' || this.readingSessionActive || !this.searchAppForeground) return;
     const owner = ReaderRuntimeOwner.current();
+    const revision = this.shelfProjectionRevision;
     const allowed = (): boolean => owner === ReaderRuntimeOwner.current() && this.route === 'bookshelf' &&
-      !this.readingSessionActive && this.searchAppForeground && this.applicationSettingsSnapshot !== undefined;
-    void owner.readingEntryPreparations().preparePersistedShelf(this.shelfProjectionRevision,
+      !this.readingSessionActive && this.searchAppForeground && this.applicationSettingsSnapshot !== undefined &&
+      revision === this.shelfProjectionRevision;
+    void owner.readingEntryPreparations().preparePersistedShelf(revision,
       async (current: () => boolean): Promise<ReadingEntrySeed[] | undefined> => {
+        const shared = this.bookshelfBackgroundSeeds;
+        if (shared !== undefined && shared.owner === owner && shared.revision === revision) {
+          const seeds = await shared.seeds;
+          if (!current()) return undefined;
+          if (seeds !== undefined) return seeds;
+        }
         const shelf = await new BookshelfFlowGateway(owner, { readingState: 'all', sourceKind: 'all' }, true).loadAll(current, true);
+        if (shelf !== undefined && shelf.projectionRevision !== revision) return undefined;
         return shelf?.books.map((book: ShelfBook): ReadingEntrySeed => ({ sourceId: book.sourceId, bookId: book.bookId }));
       }, allowed).catch((error: Error): void => {
         if (allowed()) hilog.warn(DOMAIN, 'Reader', 'Persistent shelf preparation: %{private}s', error.message);
@@ -6176,53 +6193,78 @@ struct Index {
     return copy;
   }
 
-  private scheduleBookshelfBackgroundRefresh(books: ShelfBook[]): void {
+  private scheduleBookshelfBackgroundRefresh(books: ShelfBook[], revisionRetry: boolean = false): void {
     if (this.bookshelfBackgroundRefreshRunning || this.bookshelfUpdateRunning ||
       !this.canRunBookshelfBackgroundRefresh()) {
       return;
     }
     const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => owner === ReaderRuntimeOwner.current() && this.canRunBookshelfBackgroundRefresh();
+    const revision = this.shelfProjectionRevision;
+    let ownPublishedRevision: string | undefined;
+    const current = (): boolean => owner === ReaderRuntimeOwner.current() &&
+      revision === this.shelfProjectionRevision && this.canRunBookshelfBackgroundRefresh();
     this.bookshelfBackgroundRefreshRunning = true;
     // Visible rows may be filtered or only the first page. Establish the
     // complete revision before writes invalidate its cursor. This background
     // read never gates admission and stops between pages when reading starts.
-    const targets = this.shelfProjectionRevision !== undefined && this.shelfProjectionRevision.length > 0 ?
+    const targets = revision !== undefined && revision.length > 0 ?
       new BookshelfFlowGateway(owner, { readingState: 'all', sourceKind: 'all' }, true).loadAll(current) : Promise.resolve({ books, total: books.length } as BookshelfState);
+    if (revision !== undefined && revision.length > 0) {
+      // A full automatic scan already includes the identities requested by
+      // persistent preparation. Keep only identities, and share only an exact
+      // Core revision; a failed or superseded scan leaves the normal fallback.
+      this.bookshelfBackgroundSeeds = { owner, revision, seeds: targets.then((shelf: BookshelfState | undefined): ReadingEntrySeed[] | undefined =>
+        shelf !== undefined && shelf.projectionRevision === revision ? shelf.books.map((book: ShelfBook): ReadingEntrySeed =>
+          ({ sourceId: book.sourceId, bookId: book.bookId })) : undefined).catch((): undefined => undefined) };
+    }
     void targets.then(async (shelf: BookshelfState | undefined): Promise<void> => {
-      if (!current() || shelf === undefined) return;
+      if (!current() || shelf === undefined ||
+        (revision !== undefined && revision.length > 0 && shelf.projectionRevision !== revision)) return;
       const now = Date.now();
       const candidates = shelf.books.filter((book: ShelfBook): boolean => book.sourceId !== LOCAL_SOURCE_ID &&
         (book.lastCheckAt === undefined || now - book.lastCheckAt * 1000 >= CATALOG_REFRESH_INTERVAL_MS));
-      if (candidates.length > 0) await this.refreshBookshelfCatalogBatch(candidates, undefined, true);
+      if (candidates.length > 0) await this.refreshBookshelfCatalogBatch(candidates, undefined, true, current,
+        (publishedRevision: string): void => { ownPublishedRevision = publishedRevision; });
     }).catch((error: Error): void => {
       if (current()) hilog.warn(DOMAIN, 'Reader', 'Background bookshelf targets: %{private}s', error.message);
     })
       .finally((): void => {
         this.bookshelfBackgroundRefreshRunning = false;
+        // applyBookshelfState can publish a newer revision while this scan is
+        // running. It cannot start another scan until the flag is released.
+        // Retry the latest revision once; a continuously changing shelf must
+        // not create an unbounded chain of background reads.
+        if (!revisionRetry && owner === ReaderRuntimeOwner.current() &&
+          revision !== this.shelfProjectionRevision && ownPublishedRevision !== this.shelfProjectionRevision &&
+          this.canRunBookshelfBackgroundRefresh()) {
+          this.scheduleBookshelfBackgroundRefresh(this.shelfBooks, true);
+        }
       });
   }
 
   private async refreshBookshelfCatalogBatch(books: ShelfBook[],
-    onProgress?: (done: number, total: number) => void, automatic: boolean = false): Promise<void> {
+    onProgress?: (done: number, total: number) => void, automatic: boolean = false,
+    automaticCurrent?: () => boolean, onAutomaticProjectionApplied?: (revision: string) => void): Promise<void> {
     // Keep source I/O bounded like Legado's bookshelf updater. Two concurrent
     // books avoid serial stalls without flooding all enabled sources.
     let completed = 0;
     for (let start = 0; start < books.length; start += 2) {
-      if (automatic && !this.canRunBookshelfBackgroundRefresh()) return;
+      if (automatic && !(automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh())) return;
       const batch = books.slice(start, Math.min(books.length, start + 2));
-      await Promise.all(batch.map((book: ShelfBook): Promise<void> => this.refreshOneShelfBook(book, automatic)));
+      await Promise.all(batch.map((book: ShelfBook): Promise<void> => this.refreshOneShelfBook(book, automatic, automaticCurrent)));
       completed += batch.length;
       if (onProgress !== undefined) {
         onProgress(completed, books.length);
       }
     }
-    if (automatic && !this.canRunBookshelfBackgroundRefresh()) return;
+    if (automatic && !(automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh())) return;
     try {
       const state = await new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter()).load();
-      if (this.route === 'bookshelf') {
+      if (this.route === 'bookshelf' && (!automatic || (automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh()))) {
         this.bookshelfLoadGeneration += 1;
         this.applyBookshelfState(state, true);
+        const appliedRevision = this.shelfProjectionRevision;
+        if (automatic && appliedRevision !== undefined) onAutomaticProjectionApplied?.(appliedRevision);
       }
     } catch (error) {
       hilog.warn(DOMAIN, 'Reader', 'Bookshelf update projection failed: %{private}s',
@@ -6281,7 +6323,8 @@ struct Index {
       this.route === 'bookshelf' && !this.readingSessionActive && this.searchAppForeground;
   }
 
-  private async refreshOneShelfBook(book: ShelfBook, automatic: boolean = false): Promise<void> {
+  private async refreshOneShelfBook(book: ShelfBook, automatic: boolean = false,
+    automaticCurrent?: () => boolean): Promise<void> {
     const seed: RemoteReadingBookSeed = {
       sourceId: book.sourceId,
       bookId: book.bookId,
@@ -6296,7 +6339,7 @@ struct Index {
       // Both the explicit action and already-throttled automatic candidates
       // require a fresh catalog, never a prepared/offline admission shortcut.
       const owner = ReaderRuntimeOwner.current();
-      const isCurrent = (): boolean => !automatic || this.canRunBookshelfBackgroundRefresh();
+      const isCurrent = (): boolean => !automatic || (automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh());
       const session = await owner.bookAcquisitions().acquireBook(seed,
         { forceRefresh: true, isCurrent, canDispatch: isCurrent }, automatic ? 'background' : 'foreground');
       // Automatic update checks catalogs only. Reader/add/search preparation
