@@ -97,6 +97,7 @@ type SearchRequestGuard = () => boolean;
  * joins only books already admitted to this query and dispatches no source HTTP.
  */
 export class SearchGateway {
+  private static readonly LOCAL_SEARCH_PAGE_SIZE: number = 128;
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private searchRequestCounter: number = 0;
   private cachedSources: SearchSource[] | undefined = undefined;
@@ -241,11 +242,73 @@ export class SearchGateway {
     // Local imports are materialized into the shelf transactionally; removing
     // a local member deletes its parsed catalog too. Remote shelf members are
     // deliberately excluded from the local-import result category.
-    const result = await this.runtimeOwner.request('bookshelf.list', {});
-    const rows = result.data['books'];
-    if (!Array.isArray(rows)) throw new Error('local search returned invalid books');
     const query = keyword.trim().toLocaleLowerCase();
-    const books: SearchBook[] = [];
+    // SQLite lower() is ASCII-only whereas toLocaleLowerCase() also folds
+    // characters such as K into ASCII. A full SQL keyword filter would drop
+    // valid existing results. Han characters cannot be created by case folding,
+    // so a contiguous Han run is a safe candidate prefilter; the Host still
+    // applies the exact title/author match below (Core also matches bookId).
+    const safeRun = /[\u3400-\u9fff]+/.exec(query);
+    const safeKeyword = safeRun === null ? undefined : safeRun[0];
+    const baseParams: JsonObject = { sourceKind: 'local' };
+    if (safeKeyword !== undefined) baseParams['keyword'] = safeKeyword;
+    if (this.runtimeOwner.supportsCoreCapability?.('bookshelf.pageProjection.v1') !== true) {
+      // An older Core may not understand sourceKind/keyword. Retain the
+      // original unfiltered request and Host-side local/title/author filter.
+      const result = await this.runtimeOwner.request('bookshelf.list', {});
+      const books: SearchBook[] = [];
+      this.appendLocalMatches(result.data['books'], query, searchRequestId, books);
+      return books;
+    }
+    // A page projection omits intro, which the search card and detail consume.
+    // Read bounded Full DTO pages and bracket the scan with cheap membership
+    // projections. The revision changes on a concurrent import/removal, so no
+    // mixed-version result is published.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const initialRevision = await this.localShelfRevision(baseParams);
+      if (initialRevision === undefined) continue;
+      const books: SearchBook[] = [];
+      let offset = 0;
+      let total: number | undefined;
+      while (true) {
+        const params: JsonObject = { ...baseParams,
+          limit: SearchGateway.LOCAL_SEARCH_PAGE_SIZE, offset };
+        const page = (await this.runtimeOwner.request('bookshelf.list', params)).data;
+        const pageBooks = page['books'];
+        const pageTotal = page['total'];
+        if (!Array.isArray(pageBooks) || pageBooks.length > SearchGateway.LOCAL_SEARCH_PAGE_SIZE ||
+          typeof pageTotal !== 'number' || !Number.isSafeInteger(pageTotal) || pageTotal < 0) {
+          throw new Error('local search returned invalid page');
+        }
+        if (total === undefined) total = pageTotal;
+        if (pageTotal !== total || offset + pageBooks.length > total ||
+          (pageBooks.length === 0 && offset < total)) break;
+        this.appendLocalMatches(pageBooks, query, searchRequestId, books);
+        offset += pageBooks.length;
+        if (offset >= total) {
+          const finalRevision = await this.localShelfRevision(baseParams);
+          if (finalRevision === initialRevision) return books;
+          break;
+        }
+        await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
+      }
+    }
+    throw new Error('local search shelf changed while reading');
+  }
+
+  private async localShelfRevision(baseParams: JsonObject): Promise<string | undefined> {
+    const page = (await this.runtimeOwner.request('bookshelf.list', { ...baseParams,
+      pageProjection: true, membershipOnly: true, limit: 1, offset: 0 })).data;
+    const revision = page['projectionRevision'];
+    if (!Array.isArray(page['books']) || typeof revision !== 'string' || revision.length === 0 ||
+      typeof page['changed'] !== 'boolean') {
+      throw new Error('local search returned invalid revision projection');
+    }
+    return page['changed'] ? undefined : revision;
+  }
+
+  private appendLocalMatches(rows: unknown, query: string, searchRequestId: string, books: SearchBook[]): void {
+    if (!Array.isArray(rows)) throw new Error('local search returned invalid books');
     for (const raw of rows) {
       if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
         throw new Error('local search returned invalid book');
@@ -261,7 +324,6 @@ export class SearchGateway {
         coverUrl: optionalString(book, 'coverUrl'), intro: optionalString(book, 'intro'),
         kind: optionalString(book, 'kind'), variables: [] });
     }
-    return books;
   }
 
   async loadSources(): Promise<SearchSource[]> {

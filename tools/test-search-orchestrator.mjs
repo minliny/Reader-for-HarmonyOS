@@ -50,7 +50,7 @@ globalThis.hilog = {
   warn() {}, error() {}, info() {}, debug() {}, fatal() {},
 };
 
-const { SearchOrchestrator } = await import(moduleUrl);
+const { SearchGateway, SearchOrchestrator } = await import(moduleUrl);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -69,7 +69,8 @@ function makeSources(count) {
  * can assert the orchestrator's bound.
  */
 function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
-  const state = { inFlight: 0, maxInFlight: 0, calls: [], historyWrites: 0, sourceLoads: 0, failList: false, localBooks: [] };
+  const state = { inFlight: 0, maxInFlight: 0, calls: [], historyWrites: 0, sourceLoads: 0,
+    failList: false, localBooks: [], historyKeywords: [] };
   return {
     state,
     request: async (command, params, options) => {
@@ -82,7 +83,11 @@ function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
         return { data: { sources } };
       }
       if (command === 'search.history.list') {
-        return { data: { keywords: [], count: 0 } };
+        return { data: { keywords: state.historyKeywords.slice(), count: state.historyKeywords.length } };
+      }
+      if (command === 'search.history.clear') {
+        state.historyKeywords = [];
+        return { data: {} };
       }
       if (command === 'search.history.add') {
         state.historyWrites += 1;
@@ -325,6 +330,82 @@ for (const failList of [false, true]) {
   assert.equal(last(presentations).sourceListFailed, failList);
   assert.equal(owner.state.calls.length, 0);
 }
+
+// The entry state must explain why online search is unavailable before a
+// keyword is submitted. Its search field remains live for imported books.
+for (const [sources, reason] of [
+  [[], 'noSources'],
+  [makeSources(2).map((source) => ({ ...source, enabled: false })), 'allDisabled'],
+  [[{ sourceId: 'music', name: '音乐', enabled: true, bookSource: { bookSourceType: 1 } }], 'allDisabled'],
+]) {
+  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  owner.state.localBooks = [{ sourceId: 'local', bookId: 'import-one', title: '关键字', author: '作者' }];
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+  assert.equal(last(presentations).reason, reason);
+  search.search('关键字');
+  await waitUntil(owner.state, () => last(presentations).kind === 'results' && !last(presentations).searching);
+  assert.deepEqual(last(presentations).results.map((book) => book.bookId), ['import-one']);
+  assert.equal(owner.state.calls.length, 0, 'no ineligible online source receives book.search');
+  search.close();
+}
+
+// Source availability and search history are independent reads. Both arrival
+// orders retain the same tappable history on the no-source entry, and clearing
+// history does not turn a confirmed gap back into an ordinary Initial state.
+for (const delayed of ['history', 'sources']) {
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  owner.state.historyKeywords = ['本地书', '旧关键词'];
+  const request = owner.request;
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  owner.request = async (command, ...args) => {
+    if ((delayed === 'history' && command === 'search.history.list') ||
+      (delayed === 'sources' && command === 'source.list')) await gate;
+    return request(command, ...args);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  if (delayed === 'history') {
+    await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+    assert.deepEqual(last(presentations).history, []);
+  } else {
+    await waitUntil(owner.state, () => last(presentations).kind === 'initial' &&
+      last(presentations).history.length === 2);
+  }
+  release();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired' &&
+    last(presentations).history.length === 2);
+  assert.deepEqual(last(presentations).history, ['本地书', '旧关键词']);
+  search.clearHistory();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired' &&
+    last(presentations).history.length === 0);
+  assert.equal(last(presentations).reason, 'noSources');
+  search.close();
+}
+
+// A failed source-list read is distinct from a confirmed empty list. Local
+// search remains available, and an explicit retry can recover the entry.
+{
+  const sources = makeSources(1);
+  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  owner.state.failList = true;
+  owner.state.historyKeywords = ['本地书'];
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceLoadError' &&
+    last(presentations).history.length === 1);
+  assert.deepEqual(last(presentations).history, ['本地书']);
+  owner.state.failList = false;
+  search.retry();
+  await waitUntil(owner.state, () => last(presentations).kind === 'initial' && owner.state.sourceLoads >= 2);
+  assert.equal(last(presentations).kind, 'initial');
+  search.close();
+}
 {
   const owner = fakeOwner({ sources: makeSources(2).map(source => ({...source, enabled:false})), resultsFor: () => [] });
   const { orchestrator, presentations } = capture();
@@ -371,16 +452,35 @@ for (const failList of [false, true]) {
   const { orchestrator, presentations, sourcesSnapshots } = capture();
   const search = orchestrator(owner);
   search.open();
-  await sleep(10);
-  assert.equal(last(presentations).kind, 'initial');
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+  assert.equal(last(presentations).reason, 'allDisabled');
 
   sources.length = 0;
   sources.push(...makeSources(2));
   search.refreshSources();
-  await waitUntil(owner.state, () => last(presentations).kind === 'initial');
+  await waitUntil(owner.state, () => last(presentations).kind === 'initial' &&
+    sourcesSnapshots[sourcesSnapshots.length - 1]?.length === 2);
 
   assert.equal(last(presentations).kind, 'initial', 'usable list after allDisabled re-enters Initial');
   assert.equal(sourcesSnapshots[sourcesSnapshots.length - 1].length, 2, 'refreshed sources are projected');
+}
+
+// A failed refresh must replace a stale no-source verdict; after recovery,
+// refresh returns to the confirmed no-source state until a source is added.
+{
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+  owner.state.failList = true;
+  search.refreshSources();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceLoadError');
+  owner.state.failList = false;
+  search.retry();
+  await waitUntil(owner.state, () => last(presentations).kind === 'sourceRequired');
+  assert.equal(last(presentations).reason, 'noSources');
+  search.close();
 }
 
 // 11. Streaming results: the first successful source publishes partial
@@ -1216,3 +1316,109 @@ console.log('R3 branch causes survive stop/retry, safe classified UI, successful
  } finally {hilog.warn=priorWarn;search.close();}
 }
 console.log('PASS actual search failure state and log retain safe request/operation/code summary while healthy sources and visible copy remain unchanged');
+
+// A local search keeps Full DTO metadata while paging only local rows. The
+// projection probes bracket the scan, so a concurrent import cannot combine
+// two shelf revisions into one published result.
+function localShelfOwner(initialRows, mutate) {
+  let rows = initialRows;
+  let revision = 1;
+  const calls = [];
+  const owner = {
+    calls,
+    supportsCoreCapability: (name) => name === 'bookshelf.pageProjection.v1',
+    request: async (method, params) => {
+      assert.equal(method, 'bookshelf.list');
+      calls.push({ ...params });
+      assert.equal(params.sourceKind, 'local');
+      let selected = rows.filter(row => row.sourceId === 'local');
+      if (params.keyword !== undefined) {
+        // SQLite lower() folds only ASCII; its keyword also matches bookId.
+        const needle = params.keyword.toLowerCase();
+        selected = selected.filter(row => [row.title, row.author, row.bookId]
+          .some(value => value.replace(/[A-Z]/g, c => c.toLowerCase()).includes(needle)));
+      }
+      if (params.pageProjection) {
+        assert.equal(params.membershipOnly, true);
+        assert.equal(params.limit, 1);
+        return { data: { books: selected.slice(0, 1).map(({sourceId,bookId,title,author}) =>
+          ({sourceId,bookId,title,author})), total: selected.length,
+          projectionRevision: `local/${revision}`, changed: false } };
+      }
+      assert.ok(params.limit > 0 && params.limit <= 128);
+      const data = { books: selected.slice(params.offset, params.offset + params.limit), total: selected.length };
+      if (mutate !== undefined) {
+        const next = mutate({ params, revision, rows });
+        if (next !== undefined) { rows = next; revision += 1; }
+      }
+      return { data };
+    },
+  };
+  return owner;
+}
+{
+  const rows = Array.from({length: 260}, (_, i) => ({sourceId:'local',bookId:`id-${i}`,
+    title:`目标书${i}`,author:'作者',intro:`简介${i}`}));
+  rows.push({sourceId:'local',bookId:'目标书-id',title:'其他作品',author:'另一作者',intro:'不可展示'});
+  rows.push({sourceId:'online',bookId:'remote',title:'目标书',author:'作者',intro:'远端'});
+  const owner=localShelfOwner(rows);
+  const found=await new SearchGateway(owner).searchLocalBooks('目标书','query-1');
+  assert.equal(found.length,260);assert.equal(found[259].intro,'简介259');
+  assert.deepEqual(owner.calls.filter(call=>!call.pageProjection).map(call=>call.offset),[0,128,256]);
+  assert.equal(owner.calls.filter(call=>call.pageProjection).length,2);
+  assert.ok(owner.calls.every(call=>call.keyword==='目标书'));
+  assert.ok(found.every(book=>book.sourceId==='local'&&book.searchRequestId==='query-1'));
+}
+{
+  const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
+    title:`other ${i}`,author:'作者',intro:`简介${i}`}));
+  rows[129]={sourceId:'local',bookId:'kelvin',title:'汉Kelvin',author:'作者',intro:'Unicode 简介'};
+  const owner=localShelfOwner(rows);
+  const plain=await new SearchGateway(owner).searchLocalBooks('kelvin','unicode-1');
+  assert.deepEqual(plain.map(book=>book.bookId),['kelvin']);
+  assert.ok(owner.calls.every(call=>call.keyword===undefined),
+    'SQLite ASCII lower() must not reject a Unicode-to-ASCII lowercase match');
+  owner.calls.length=0;
+  const mixed=await new SearchGateway(owner).searchLocalBooks('汉kelvin','unicode-2');
+  assert.deepEqual(mixed.map(book=>book.bookId),['kelvin']);
+  assert.ok(owner.calls.every(call=>call.keyword==='汉'),
+    'a case-invariant Han substring is safe to push down');
+}
+{
+  const rows=Array.from({length:130},(_,i)=>({sourceId:'local',bookId:`id-${i}`,
+    title:`目标书${i}`,author:'作者',intro:`旧简介${i}`}));
+  let mutated=false;
+  const owner=localShelfOwner(rows,({params,revision,rows:current})=>{
+    if (!mutated&&revision===1&&params.offset===128) {
+      mutated=true;return current.map((book,i)=>i===0?{...book,intro:'新简介'}:book);
+    }
+  });
+  const found=await new SearchGateway(owner).searchLocalBooks('目标书','revision');
+  assert.equal(found.length,130);assert.equal(found[0].intro,'新简介');
+  assert.equal(owner.calls.filter(call=>!call.pageProjection&&call.offset===0).length,2,
+    'a changed revision must restart at the first page');
+}
+{
+  const rows=[{sourceId:'local',bookId:'one',title:'目标书',author:'作者',intro:'简介'}];
+  const owner=localShelfOwner(rows,({rows:current})=>current.slice());
+  await assert.rejects(new SearchGateway(owner).searchLocalBooks('目标书','unstable'),
+    /shelf changed while reading/);
+  assert.equal(owner.calls.filter(call=>!call.pageProjection).length,2,
+    'an unstable shelf gets a bounded retry, not partial publication or an endless loop');
+}
+{
+  const calls=[];
+  const owner={request:async(method,params)=>{
+    calls.push({method,params});
+    return {data:{books:[
+      {sourceId:'local',bookId:'local',title:'Kelvin',author:'作者',intro:'旧版简介'},
+      {sourceId:'online',bookId:'remote',title:'Kelvin',author:'作者',intro:'远端'},
+    ],total:2}};
+  }};
+  const found=await new SearchGateway(owner).searchLocalBooks('kelvin','legacy');
+  assert.deepEqual(calls,[{method:'bookshelf.list',params:{}}],
+    'legacy Core receives the original request without unsupported filters');
+  assert.deepEqual(found.map(book=>book.bookId),['local']);
+  assert.equal(found[0].intro,'旧版简介');
+}
+console.log('PASS local search confines Full DTOs to bounded local pages, keeps intros, safely narrows Han queries, and rejects mixed revisions');

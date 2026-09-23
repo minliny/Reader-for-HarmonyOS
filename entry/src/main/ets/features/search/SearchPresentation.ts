@@ -1,9 +1,9 @@
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
 
 /**
- * The search page's full presentation. `initial` is the pre-search surface
- * (recent history); the remaining states are reached by a real search
- * attempt. `keyword` is the Figma Input text; results are real Core
+ * The search page's full presentation. The three pre-search surfaces retain
+ * recent history even when online sources are unavailable. `keyword` is the
+ * Figma Input text; results are real Core
  * `search-book` entries decoded by SearchGateway.
  */
 export interface SearchInitialPresentation {
@@ -80,11 +80,13 @@ export interface SearchErrorPresentation {
 export interface SearchSourceRequiredPresentation {
   kind: 'sourceRequired';
   reason: 'noSources' | 'allDisabled';
+  history: string[];
 }
 
 /** `source.list` itself failed; the search chain never started. */
 export interface SearchSourceLoadErrorPresentation {
   kind: 'sourceLoadError';
+  history: string[];
 }
 
 export type SearchPresentation =
