@@ -77,6 +77,15 @@ for (const theme of READER_THEME_DEFINITIONS) for (const expanded of [false, tru
   const images = [...page.nodes.values()].filter(n => n.type === 'Image');
   assert.equal(images.length, theme.sourcePaperLighting ? 2 : 0);
   for (const image of images) assert.equal(image.syncLoad, true, 'synchronous page raster still forwards image admission');
+  const paintNodes = [...page.nodes.values()];
+  const baseIndex = paintNodes.findIndex(node => node.linearGradient);
+  const textureIndex = paintNodes.findIndex(node => node.backgroundImage);
+  assert.ok(baseIndex >= 0, 'every paper theme retains an opaque color base');
+  for (const image of images) {
+    assert.ok(baseIndex < paintNodes.indexOf(image), 'translucent lighting must be above the opaque paper base');
+    if (textureIndex >= 0) assert.ok(paintNodes.indexOf(image) < textureIndex,
+      'paper grain remains above lighting');
+  }
   cases++;
 }
 

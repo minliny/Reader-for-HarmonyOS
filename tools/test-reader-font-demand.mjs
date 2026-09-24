@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import * as families from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 const source=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderFonts.ets',import.meta.url),'utf8')
  .replace(/import[\s\S]*?from\s+['"][^'"]+['"];\s*/g,'').replace(/^export /gm,'');
 const calls=[], pending=[]; let synchronousFailure=false;
@@ -58,4 +59,25 @@ assert.equal(registrar.readerFontFamilyReady('ReaderCustom_hash'),true);
 assert.equal(registrar.loadReaderFontChecked('ReaderCustom_hash','file:///owned/hash.ttf'),retry);
 synchronousFailure=true;await assert.rejects(registrar.loadReaderFontChecked('new-face','file:///new.ttf'),/sync font error/);synchronousFailure=false;
 assert.equal(registrar.readerFontFamilyReady('new-face'),false);
-console.log('font demand: synchronous checked readiness, unknown/custom failure closed, shared loads, lazy optional faces and retry PASS');
+
+const previewLoads=[];const previewPending=[];const previewReady=new Set(['HarmonyOS Sans']);
+const Preview=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets',import.meta.url),
+ ['previewFamily','fontPreviewReady','visiblePreviewFamily','requestVisibleFontPreview','loadNextFontPreview'],{
+  readerAppearanceFontSlotFamily:(_snapshot,font)=>({kai:'HeavyKai',mono:'HeavyMono',import:'ReaderNotoSansSC',custom:'ReaderCustom_hash'}[font]??font),
+  readerFontFamilyReady:family=>previewReady.has(family),
+  prepareReaderFontFamily:family=>{previewLoads.push(family);return new Promise(resolve=>previewPending.push(()=>{previewReady.add(family);resolve();}));},
+  hilog:{warn(){}},
+ });
+const preview=Object.assign(new Preview(),{snapshot:{},readyPreviewFamilies:[],previewQueue:[],
+ requestedPreviewFamilies:new Set(),previewLoadActive:false,previewLifecycle:0});
+assert.equal(preview.visiblePreviewFamily('kai'),'HarmonyOS Sans','unready preview does not render a substituted face as ready');
+preview.requestVisibleFontPreview('kai');preview.requestVisibleFontPreview('mono');
+preview.requestVisibleFontPreview('kai');preview.requestVisibleFontPreview('custom');
+assert.deepEqual(previewLoads,['HeavyKai'],'visible optional font loading is serialized and deduplicated');
+previewPending.shift()();await new Promise(resolve=>setImmediate(resolve));
+assert.deepEqual(previewLoads,['HeavyKai','HeavyMono']);
+assert.equal(preview.visiblePreviewFamily('kai'),'HeavyKai','first preview repaints only after checked load');
+assert.equal(preview.visiblePreviewFamily('mono'),'HarmonyOS Sans');
+previewPending.shift()();await new Promise(resolve=>setImmediate(resolve));
+assert.equal(preview.visiblePreviewFamily('mono'),'HeavyMono');
+console.log('font demand: checked readiness, lazy serial visible previews, shared loads and retry PASS');

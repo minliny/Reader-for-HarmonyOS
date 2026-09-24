@@ -265,7 +265,7 @@ assert.match(fullDirectoryPanel, /this\.listScroller\.scrollEdge\(Edge\.Bottom\)
 assert.match(fullDirectoryPanel, /this\.activeTab === 'bookmarks'/);
 assert.match(fullDirectoryPanel, /ReaderSearchField\(\{[\s\S]*variant: 'readerDirectory'/);
 assert.match(fullDirectoryPanel, /private controlButtonLabel\(kind: string\): string/);
-assert.match(fullDirectoryPanel, /\.accessibilityText\(repeatItem\.item\.navigable === false \? `卷标题：\$\{repeatItem\.item\.title\}` : `打开章节：\$\{repeatItem\.item\.title\}`\)/);
+assert.match(fullDirectoryPanel, /\.accessibilityText\(readerDirectoryAccessibilityText\(repeatItem\.item\)\)/);
 assert.match(fullDirectoryPanel, /this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/);
 
 const entryAbility = read('entry/src/main/ets/entryability/EntryAbility.ets');

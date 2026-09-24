@@ -1,4 +1,5 @@
 import { Font } from '@ohos.arkui.UIContext';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderCustomFontHost } from '../../app/ReaderCustomFontHost';
 import {
@@ -56,7 +57,29 @@ export class ReaderAppearanceGateway {
 
   async update(change: ReaderAppearanceChange, guard?: ReaderAppearanceChangeGuard):
     Promise<ReaderAppearanceCommit | undefined> {
-    return this.store.change(change, guard);
+    let retired: ReaderCustomFontDescriptor | undefined;
+    const commit = await this.store.change((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot => {
+      const next = change(current);
+      if (current.customFont !== undefined && current.customFont.filePath !== next.customFont?.filePath) {
+        retired = current.customFont;
+      }
+      return next;
+    }, guard);
+    if (commit !== undefined && retired !== undefined) {
+      const oldFont = retired;
+      // Never delete a previously saved face before its replacement is durable.
+      // A later change can select it again while the write is queued, so read
+      // the shared store once all pending appearance writes have settled.
+      void commit.saved.then(async (): Promise<void> => {
+        try {
+          await this.store.flush();
+          await this.customFontHost.retireUnusedFont(oldFont, this.store.current().customFont);
+        } catch (error) {
+          hilog.warn(0x5244, 'Reader', 'Unused font cleanup deferred: %{private}s', `${error}`);
+        }
+      }, (): void => {});
+    }
+    return commit;
   }
 
   async flush(): Promise<void> {

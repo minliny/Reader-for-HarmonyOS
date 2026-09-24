@@ -10,7 +10,14 @@ export struct ReaderPaperBackground {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // Preserve the Figma back-to-front order: shade, highlight, paper, texture.
+      // The paper color is the opaque base. Its translucent lighting must be
+      // painted above it, while the repeating grain remains the top layer.
+      Stack()
+        .width('100%').height('100%')
+        .linearGradient({
+          direction: GradientDirection.Bottom,
+          colors: [[this.themeStyle().paperStart, 0], [this.themeStyle().paperEnd, 1]],
+        });
       if (this.themeStyle().sourcePaperLighting) {
         Image(this.paperShade())
           .syncLoad(this.synchronousImages)
@@ -21,12 +28,6 @@ export struct ReaderPaperBackground {
           .width('100%').height('100%')
           .objectFit(ImageFit.Fill).interpolation(ImageInterpolation.High);
       }
-      Stack()
-        .width('100%').height('100%')
-        .linearGradient({
-          direction: GradientDirection.Bottom,
-          colors: [[this.themeStyle().paperStart, 0], [this.themeStyle().paperEnd, 1]],
-        });
       if (this.themeStyle().paperTexture) {
         Stack()
           .width('100%').height('100%')

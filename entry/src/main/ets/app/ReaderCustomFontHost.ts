@@ -32,11 +32,17 @@ export class ReaderCustomFontHost {
     const selectedUri = uris[0];
     const selectedName = new fileUri.FileUri(selectedUri).name;
     const extension = this.requireFontExtension(selectedName);
+    // Provider files can be much larger than the selected extension suggests.
+    // Check before creating private storage, then enforce the same limit while
+    // reading so a changing or inaccurate provider cannot bypass admission.
+    const selectedSize = (await fileIo.stat(selectedUri)).size;
+    this.requireFontSize(selectedSize);
     await this.ensureDirectory(this.fontDirectory());
     this.importSequence += 1;
     const temporaryPath = `${this.fontDirectory()}/.${Date.now()}-${this.importSequence}.font`;
+    let newlyCreatedFinalPath: string | undefined;
     try {
-      await fileIo.copy(selectedUri, fileUri.getUriFromPath(temporaryPath));
+      await this.stageBoundedFont(selectedUri, temporaryPath, selectedSize);
       await this.validateFontFile(temporaryPath);
       const fingerprint = await this.sha256File(temporaryPath);
       const finalPath = `${this.fontDirectory()}/${fingerprint}.${extension}`;
@@ -44,6 +50,7 @@ export class ReaderCustomFontHost {
         await this.unlinkIfPresent(temporaryPath);
       } else {
         await fileIo.rename(temporaryPath, finalPath);
+        newlyCreatedFinalPath = finalPath;
       }
       const descriptor = new ReaderCustomFontDescriptor(
         this.displayName(selectedName),
@@ -55,8 +62,21 @@ export class ReaderCustomFontHost {
       return descriptor;
     } catch (error) {
       await this.unlinkIfPresent(temporaryPath);
+      // A pre-existing hash may be the user's active font. Only this attempt's
+      // newly created file can be removed after checked native loading fails.
+      if (newlyCreatedFinalPath !== undefined) await this.unlinkIfPresent(newlyCreatedFinalPath);
       throw error;
     }
+  }
+
+  /** Called only after the replacement descriptor has been durably saved. */
+  async retireUnusedFont(
+    retired: ReaderCustomFontDescriptor | undefined,
+    active: ReaderCustomFontDescriptor | undefined,
+  ): Promise<void> {
+    const old = normalizeReaderCustomFontDescriptor(retired);
+    if (old === undefined || !this.isOwnedFontPath(old.filePath) || old.filePath === active?.filePath) return;
+    await this.unlinkIfPresent(old.filePath);
   }
 
   async registerPersisted(_font: Font | undefined, descriptor: ReaderCustomFontDescriptor | undefined): Promise<boolean> {
@@ -75,9 +95,7 @@ export class ReaderCustomFontHost {
 
   private async validateFontFile(path: string): Promise<void> {
     const stat = await fileIo.stat(path);
-    if (!Number.isSafeInteger(stat.size) || stat.size < 12 || stat.size > ReaderCustomFontHost.MaximumFontBytes) {
-      throw new Error('Selected font must be between 12 bytes and 32 MiB');
-    }
+    this.requireFontSize(stat.size);
     const header = new ArrayBuffer(4);
     const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
     let bytesRead = 0;
@@ -88,6 +106,48 @@ export class ReaderCustomFontHost {
     }
     if (bytesRead !== 4 || !this.isSupportedSfntHeader(new Uint8Array(header))) {
       throw new Error('Selected document is not a supported TTF/OTF font');
+    }
+  }
+
+  private requireFontSize(size: number): void {
+    if (!Number.isSafeInteger(size) || size < 12 || size > ReaderCustomFontHost.MaximumFontBytes) {
+      throw new Error('Selected font must be between 12 bytes and 32 MiB');
+    }
+  }
+
+  private async stageBoundedFont(uri: string, path: string, expectedBytes: number): Promise<void> {
+    const buffer = new ArrayBuffer(ReaderCustomFontHost.HashChunkBytes);
+    const source = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+    try {
+      const destination = await fileIo.open(path,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
+      try {
+        let totalBytes = 0;
+        while (true) {
+          const bytesRead = await fileIo.read(source.fd, buffer);
+          if (bytesRead === 0) break;
+          totalBytes += bytesRead;
+          if (totalBytes > expectedBytes || totalBytes > ReaderCustomFontHost.MaximumFontBytes) {
+            throw new Error('Selected font changed or exceeded its import limit');
+          }
+          const chunk = new Uint8Array(buffer, 0, bytesRead);
+          let writtenBytes = 0;
+          while (writtenBytes < bytesRead) {
+            const writable = chunk.slice(writtenBytes);
+            const written = await fileIo.write(destination.fd, writable.buffer);
+            if (!Number.isSafeInteger(written) || written <= 0 || written > writable.byteLength) {
+              throw new Error('Selected font staging destination stopped accepting bytes');
+            }
+            writtenBytes += written;
+          }
+        }
+        if (totalBytes !== expectedBytes) throw new Error('Selected font changed while being staged');
+        await fileIo.fsync(destination.fd);
+      } finally {
+        await fileIo.close(destination);
+      }
+    } finally {
+      await fileIo.close(source);
     }
   }
 
