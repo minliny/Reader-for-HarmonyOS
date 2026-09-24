@@ -3848,7 +3848,8 @@ export struct ReadingExperience {
           this.getUIContext().getPromptAction().showToast({ message: '目录加载失败，自动翻页已停止，请重试' });
         } catch (_) { /* The reading session may already be leaving. */ }
       }
-      throw error;
+      if (error instanceof Error) throw error;
+      throw new Error(errorMessageOf(error));
     }
     finally { if (this.entryCatalogHydration === operation) this.entryCatalogHydration = undefined; }
     if (isCurrent()) {
@@ -8973,7 +8974,10 @@ export struct ReadingExperience {
         this.showAppearanceFailure('外观设置读取失败，请重新打开阅读页', error);
         // Initial pagination must never measure with a font that failed to
         // register. A later shared-preference reload keeps its admitted font.
-        if (!this.appearanceLoaded) throw error;
+        if (!this.appearanceLoaded) {
+          if (error instanceof Error) throw error;
+          throw new Error(errorMessageOf(error));
+        }
       }
     }
   }
