@@ -130,8 +130,10 @@ assert.match(content, /\.opacity\(this\.projectedEntries\.length > 0 \? 1 : 0\)/
   'persistent chapter actors stay painted while positioning is pending');
 assert.match(content, /\.opacity\(this\.projectedBookmarks\.length > 0 \? 1 : 0\)/,
   'persistent bookmark actors stay painted while positioning is pending');
-assert.match(content, /private onEntriesChanged\(\): void \{[\s\S]*?this\.pendingEntries = snapshotReaderDirectoryData\(this\.entries\);\s*this\.scheduleDeferredMutationFlush\(\);/,
-  'entries changes are queued outside the ArkUI render callback');
+assert.match(content, /private onEntriesChanged\(\): void \{[\s\S]*?this\.pendingEntries = this\.entries;\s*this\.scheduleDeferredMutationFlush\(\);/,
+  'entries changes are queued without copying a large TOC during the render callback');
+assert.match(content, /private flushDeferredMutations\(\): void \{[\s\S]*?this\.admittedEntries = snapshotReaderDirectoryData\(queuedEntries as LocalReadingTocEntry\[\]\);/,
+  'an independent business snapshot is admitted only after the motion endpoint');
 assert.match(content, /const sourceEntries = this\.admittedEntries;/,
   'projection must consume the admitted snapshot, not the transient hidden empty sentinel');
 assert.doesNotMatch(content, /projectionMountPrimary|this\.projectionMountPrimary/,

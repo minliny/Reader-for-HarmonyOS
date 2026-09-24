@@ -1,6 +1,7 @@
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { readerDirectoryBookmarkMarkerState, type ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
+import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from './ReaderDirectoryHierarchy';
 
 /** Shared chapter presentation; all storage operations remain with the owner. */
 @Component
@@ -31,10 +32,10 @@ export struct ReaderDirectoryChapterRow {
         if (this.entry.index === this.currentChapterIndex) {
           Row().width(3).height(this.rowHeight).borderRadius(999).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
-        Text(this.entry.title).layoutWeight(1).padding({ left: 9, right: 9 })
+        Text(this.entry.title).layoutWeight(1).padding({ left: 9 + readerDirectoryIndentVp(this.entry), right: 9 })
           .fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.layoutWeight(1).height(this.rowHeight).accessibilityText(this.entry.navigable === false ? `卷标题：${this.entry.title}` : `打开章节：${this.entry.title}`)
+      }.layoutWeight(1).height(this.rowHeight).accessibilityText(readerDirectoryAccessibilityText(this.entry))
         .enabled(this.entry.navigable !== false)
         .onClick((): void => { if (this.entry.navigable !== false) this.onSelectChapter(this.entry.index); });
       if (this.entry.navigable !== false && this.chapterDownloadEnabled && this.entry.downloadState !== 'unknown') {

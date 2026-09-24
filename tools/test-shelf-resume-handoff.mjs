@@ -47,7 +47,9 @@ function fixture({changedOffset=false,missingProgress=false,legacyProgress=false
  const coordinator={readingProjectionRevision:()=>revision,currentSourceVersion:async()=> 'v1',beginAttempt:()=>1,
   reportVerdict:async()=>{},setPreparationVisible(){},acquireBookWithBackgroundRefresh:async()=>{
    if(holdCatalog)await catalogGate.promise;return {session};}};
- const owner={readingEntryPreparations:()=>preparation,bookAcquisitions:()=>coordinator,request:async(method,params,options)=>{
+ const owner={readingEntryPreparations:()=>preparation,bookAcquisitions:()=>coordinator,
+  captureReadingContentValidity:()=>()=>true,waitForReadingContentIdle:async()=>{},
+  request:async(method,params,options)=>{
   calls.push({method,params});
   if(method==='reading.progress.get'){
    if(holdProgress)await progressGate.promise;

@@ -58,7 +58,7 @@ function fixture() {
   const snapshot = { sourceId: 'local', bookId: 'book', isCurrent: () => true,
     gateway: { hasPendingSourceSwitch: () => false, remoteSession: () => undefined },
     context: { chapter, contentVersion: 'body', paginationDraft: new ReadingPaginationPrefix(key,
-      { requestScalar: 124, startScalar: 123, endScalarExclusive: 150 }) }, page, toc: [{ index: 4, title: chapter.chapterTitle }],
+    { requestScalar: 124, startScalar: 123, endScalarExclusive: 150 }) }, page, toc: [{ index: 4, title: chapter.chapterTitle, level: 2 }],
     progress: { chapterIndex: 4, chapterOffset: 123, chapterProgress: 0.4 },
     appearanceKey: JSON.stringify(appearance), settingsKey: JSON.stringify(settings),
     layoutKey: 'real-window-font-layout', densityPixels: 3 };
@@ -86,6 +86,7 @@ function fixture() {
   assert.equal(f.owner.visiblePage, f.page);
   assert.equal(f.owner.desiredChapterOffset, 123);
   assert.equal(f.owner.phase, 'ready');
+  assert.equal(f.owner.tocEntries[0].level, 2, 'same-book fast reopen keeps EPUB hierarchy');
   assert.deepEqual(f.events, ['body', 'ready'], 'synchronous body exists before ready without any I/O');
   assert.equal(paused, true);
 }
@@ -161,7 +162,7 @@ function retentionFixture() {
     visiblePage: page, lastCommittedProgress: { sourceId: 'remote', bookId: 'book', chapterIndex: 4, chapterOffset: 4, chapterProgress: .2 },
     sessionGateway: gateway, hasMeasuredViewport: () => true, readerSettingsSnapshot: { navigationMode: 'paged' },
     appearanceSnapshot: appearance, paragraphRanges: context.paragraphRanges, captureMaterializedChapterContext: () => context,
-    tocEntries: [{ index: 4, title: 'Current chapter', bookmarks: [{ note: 'old annotation' }] }],
+    tocEntries: [{ index: 4, title: 'Current chapter', level: 2, bookmarks: [{ note: 'old annotation' }] }],
     paginationLayoutSignature: () => 'layout', currentPaginationKey: () => key });
   return { owner, remote, retained, gateway, chapter, page };
 }
@@ -174,6 +175,7 @@ function retentionFixture() {
   assert.equal(snapshot.gateway.remoteSession().preparedChapter, undefined, 'handoff cannot retain an old prepared image chapter');
   assert.equal(f.remote.preparedChapter, previous, 'original session is not mutated');
   assert.equal(snapshot.toc[0].bookmarks, undefined, 'independently mutable bookmark projections are not retained');
+  assert.equal(snapshot.toc[0].level, 2, 'retained catalog keeps hierarchy without mutable bookmarks');
 }
 {
   const f = retentionFixture();

@@ -19,6 +19,7 @@ const settle = async () => { for (let i=0;i<8;i++) await new Promise(resolve => 
 let acquire, gatewayOptions;
 const requests = [], gateways = [], timers = new Map(); let nextTimer = 0;
 const runtime = { readingEntryPreparations: () => ({ take: () => gatewayOptions.prepared, setPaused() {} }),
+ captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {},
  bookAcquisitions: () => ({ acquireBookWithBackgroundRefresh(seed, options) {
   requests.push({seed, options}); return acquire(seed, options);
 } }) };

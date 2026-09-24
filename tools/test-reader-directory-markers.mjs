@@ -44,7 +44,7 @@ assert.match(modulePanel, /chapterStartBookmarkCreationEnabled: boolean = false/
 assert.match(modulePanel, /markerState\.kind === 'bookmarked'[\s\S]*this\.onDeleteBookmarks\(markerState\.bookmarkTimes\)/);
 assert.match(modulePanel, /markerState\.kind === 'empty' && this\.chapterStartBookmarkCreationEnabled[\s\S]*this\.onCreateChapterStartBookmark\(markerState\.createRequest\)/);
 assert.doesNotMatch(modulePanel, /添加书签尚未接线/);
-assert.match(modulePanel, /\.accessibilityText\(repeatItem\.item\.navigable === false \? `卷标题：[\s\S]*?\.enabled\(repeatItem\.item\.navigable !== false\)\s*\.onClick\(\(\): void => \{ if \(repeatItem\.item\.navigable !== false\) this\.onSelectChapter\(repeatItem\.item\.index\); \}\)/);
+assert.match(modulePanel, /\.accessibilityText\(readerDirectoryAccessibilityText\(repeatItem\.item\)\)[\s\S]*?\.enabled\(repeatItem\.item\.navigable !== false\)\s*\.onClick\(\(\): void => \{ if \(repeatItem\.item\.navigable !== false\) this\.onSelectChapter\(repeatItem\.item\.index\); \}\)/);
 
 const fullPanel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
 const bookmarkList = read('entry/src/main/ets/features/reading/ReaderBookmarkList.ets');
@@ -90,7 +90,7 @@ assert.doesNotMatch(directoryList, /reader-directory-row-\$\{entry\.index\}-\$\{
 assert.match(fullPanel, /if \(repeatItem\.item\.navigable !== false && this\.chapterDownloadEnabled && repeatItem\.item\.downloadState !== 'unknown'\)/,
   'the full local directory must not render download markers');
 assert.match(fullPanel, /\.onClick\(\(\): void => \{ if \(entry\.navigable !== false\) this\.onDownloadChapter\(entry\.index\); \}\)/);
-assert.match(fullPanel, /\.accessibilityText\(repeatItem\.item\.navigable === false \? `卷标题：[\s\S]*?\.enabled\(repeatItem\.item\.navigable !== false\)\s*\.onClick\(\(\): void => \{ if \(repeatItem\.item\.navigable !== false\) this\.onSelectChapter\(repeatItem\.item\.index\); \}\)/);
+assert.match(fullPanel, /\.accessibilityText\(readerDirectoryAccessibilityText\(repeatItem\.item\)\)[\s\S]*?\.enabled\(repeatItem\.item\.navigable !== false\)\s*\.onClick\(\(\): void => \{ if \(repeatItem\.item\.navigable !== false\) this\.onSelectChapter\(repeatItem\.item\.index\); \}\)/);
 assert.match(fullPanel,
   /if \(this\.ascending\) \{\s*Image\([\s\S]*?reader_directory_sort_ascending[\s\S]*?\} else \{\s*Image\([\s\S]*?reader_directory_sort_descending/,
   'ascending and descending must render two explicit icon resources');

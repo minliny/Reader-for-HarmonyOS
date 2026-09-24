@@ -2,6 +2,7 @@ import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigratio
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { sameReaderDirectoryData, snapshotReaderDirectoryData } from './ReaderDirectoryDataSnapshot';
+import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from './ReaderDirectoryHierarchy';
 import {
   readerDirectoryBookmarkMarkerState,
   type ReaderDirectoryBookmarkMarkerState,
@@ -627,6 +628,7 @@ export struct FullDirectoryPanel {
       Column() {
         ReaderDirectoryList({
         entries: this.projectedEntries,
+        deferEntriesDuringMotion: this.embeddedInControl && this.controlProgress() > 0 && this.controlProgress() < 1,
         rowHeight: this.directoryListRowHeight(),
         listPaddingX: this.directoryListPaddingX(),
         listPaddingY: this.embeddedInControl ? 0 : 5,
@@ -672,7 +674,7 @@ export struct FullDirectoryPanel {
         Stack({ alignContent: Alignment.Center }) {
           Text(repeatItem.item.title)
             .width('100%')
-            .padding({ left: 9, right: 9 })
+            .padding({ left: 9 + readerDirectoryIndentVp(repeatItem.item), right: 9 })
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(11)
@@ -685,7 +687,7 @@ export struct FullDirectoryPanel {
       }
       .layoutWeight(1)
       .height(this.directoryListRowHeight())
-      .accessibilityText(repeatItem.item.navigable === false ? `卷标题：${repeatItem.item.title}` : `打开章节：${repeatItem.item.title}`)
+      .accessibilityText(readerDirectoryAccessibilityText(repeatItem.item))
       .enabled(repeatItem.item.navigable !== false)
       .onClick((): void => { if (repeatItem.item.navigable !== false) this.onSelectChapter(repeatItem.item.index); });
       if (repeatItem.item.navigable !== false && this.chapterDownloadEnabled && repeatItem.item.downloadState !== 'unknown') {
@@ -904,14 +906,11 @@ export struct FullDirectoryPanel {
     // genuinely empty catalog is still admitted on its fresh mount.
     if (!this.positioningMounted) return;
     if (this.embeddedInControl && this.entries.length === 0 && this.admittedEntries.length > 0) return;
-    if (sameReaderDirectoryData(this.admittedEntries, this.entries)) {
-      // The producer may have emitted a transient replacement and then
-      // restored the admitted snapshot before the morph settled. Do not let
-      // that obsolete pending copy win at the endpoint.
-      this.pendingEntries = undefined;
-      return;
-    }
-    this.pendingEntries = snapshotReaderDirectoryData(this.entries);
+    // Retain the latest source until the endpoint. Comparing and copying a
+    // large TOC here repeats O(chapters) work on every motion prop delivery.
+    // The admitted snapshot stays independent, so same-reference edits are
+    // still detected when the deferred transaction is finally safe to apply.
+    this.pendingEntries = this.entries;
     this.scheduleDeferredMutationFlush();
   }
 
@@ -993,7 +992,7 @@ export struct FullDirectoryPanel {
     let previousOffset: number | undefined = undefined;
     if (hasEntriesUpdate) {
       previousOffset = this.projectionRestoreOffset ?? this.readListOffset();
-      this.admittedEntries = queuedEntries as LocalReadingTocEntry[];
+      this.admittedEntries = snapshotReaderDirectoryData(queuedEntries as LocalReadingTocEntry[]);
       this.projectionScrollGeneration += 1;
     }
     if (tabChanged || hasEntriesUpdate) {

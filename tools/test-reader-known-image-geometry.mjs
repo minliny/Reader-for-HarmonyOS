@@ -222,7 +222,9 @@ for (const delivery of ['one-frozen-batch', 'two-promises-before-observer']) {
   const stage = Object.assign(new Stage(), { mounted: true, imageAnchorGeneration: 0,
     fragmentsProvider: () => f.owner.continuousFragments, changedFragmentIndex: -1, fragmentDataSource: ds,
     visibleFragmentStart: 0, visibleFragmentEnd: 1, titleItemCount: 1, initialScrollPending: false,
-    chapterTitle: '章', contentRevision: 0, layout: { contentTop: 0 }, hasTitleItem: () => true,
+    chapterTitle: '章', contentRevision: 0, lastAppliedContentRevision: 0,
+    fragmentIndexById: new Map(f.owner.continuousFragments.map((fragment,index)=>[fragment.id,index])),
+    layout: { contentTop: 0 }, hasTitleItem: () => true,
     listScroller: { getItemRect: () => ({ y: -3, height: 30 * 359 / 357 }),
       scrollBy: () => assert.fail('fixed geometry pixel publication cannot displace the visible anchor') },
     getUIContext: () => ({ postFrameCallback: frame => frames.push(frame) }), reportCurrentVisibleRange() {},
@@ -237,5 +239,39 @@ for (const delivery of ['one-frozen-batch', 'two-promises-before-observer']) {
   assert.equal(ds.getData(2).fileUri, 'file:///shared', `${delivery}: coalesced observer includes second image`);
   for (const frame of frames) frame.action();
   f.owner.releaseAllReadingImages();
+}
+{
+  // One watcher callback can observe two completed image promises. The
+  // ordinary one-image path must remain constant work for a long chapter.
+  const fragments = Array.from({ length: 1000 }, (_, index) => ({ id: `fragment-${index}` }));
+  const ds = new DataSource();
+  ds.replace([{ id: 'title', text: '章' }, ...fragments]);
+  const changed = [];
+  ds.registerDataChangeListener({ onDataChange: index => changed.push(index),
+    onDataReloaded: () => assert.fail('image pixels must not remount the List') });
+  let reads = 0;
+  const getData = ds.getData.bind(ds);
+  ds.getData = index => { reads++; return getData(index); };
+  const stage = Object.assign(new Stage(), { mounted: true, chapterTitle: '章',
+    contentRevision: 10, lastAppliedContentRevision: 10, changedFragmentIndex: 500,
+    titleItemCount: 1, initialScrollPending: true, visibleFragmentStart: 0,
+    fragmentsProvider: () => fragments, fragmentDataSource: ds,
+    fragmentIndexById: new Map(fragments.map((fragment,index) => [fragment.id,index])),
+    continuousListItems: () => assert.fail('single-image refresh must not copy the chapter') });
+  fragments[500] = { id: 'fragment-500', fileUri: 'file:///first' };
+  stage.contentRevision = 11;
+  stage.onContentRevisionChanged();
+  assert.deepEqual(changed, [501]);
+  assert.ok(reads < 8, 'one image uses bounded data-source lookups');
+
+  changed.length = 0;
+  fragments[200] = { id: 'fragment-200', fileUri: 'file:///second' };
+  fragments[800] = { id: 'fragment-800', fileUri: 'file:///third' };
+  stage.changedFragmentIndex = 800;
+  stage.contentRevision = 13;
+  stage.onContentRevisionChanged();
+  assert.deepEqual(changed, [201, 801], 'coalesced image revisions notify both lazy rows');
+  assert.equal(ds.getData(201), fragments[200]);
+  assert.equal(ds.getData(801), fragments[800]);
 }
 console.log('PASS known image geometry: prepared admission, invalid/remote fallback, original versus decoded sizes, mismatch rejection, forward-independent reverse/continuous geometry, deduplicated late leases, frozen pages, texture invalidation, stale/exit protection and invariant page/progress/scroll anchors. No device pixel claim.');

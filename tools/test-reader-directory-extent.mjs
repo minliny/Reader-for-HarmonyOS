@@ -4,6 +4,10 @@ import { stripTypeScriptTypes } from 'node:module';
 
 const source = readFileSync(new URL(
   '../entry/src/main/ets/features/reading/ReaderDirectoryList.ets', import.meta.url), 'utf8');
+const snapshotSource = readFileSync(new URL(
+  '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts', import.meta.url), 'utf8');
+const { sameReaderDirectoryData, snapshotReaderDirectoryData } = await import(
+  `data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(snapshotSource)).toString('base64')}`);
 
 // Run the real lifecycle/watch methods with only the platform size container
 // mocked. This checks propagation, not native virtual List measurement/reflow.
@@ -19,8 +23,9 @@ function loadList(text = source) {
   }
   const pending = [];
   const List = new Function('ChildrenMainSize', 'EdgeEffect', 'setTimeout',
+    'sameReaderDirectoryData', 'snapshotReaderDirectoryData',
     `${stripTypeScriptTypes(methods)}\nreturn ReaderDirectoryList;`)(ChildrenMainSize, { None: 0 },
-    callback => pending.push(callback));
+    callback => pending.push(callback), sameReaderDirectoryData, snapshotReaderDirectoryData);
   List.pending = pending;
   return List;
 }
@@ -83,6 +88,13 @@ checkLifecycle(loadList());
   list.entries[0].title = '新章节标题';
   list.onEntriesChanged();
   assert.equal(reloads, 2, 'same-reference business edits notify native data source');
+  list.deferEntriesDuringMotion = true;
+  list.entries[0].title = '稳定端点才发布';
+  list.onEntriesChanged();
+  assert.equal(reloads, 2, 'motion frames do not compare or reload directory data');
+  list.deferEntriesDuringMotion = false;
+  list.onEntriesChanged();
+  assert.equal(reloads, 3, 'the endpoint admits the same-reference edit');
   list.entries = [];
   list.onEntriesChanged();
   assert.equal(list.dataSource.totalCount(), 0, 'intentional empty filter is retained');

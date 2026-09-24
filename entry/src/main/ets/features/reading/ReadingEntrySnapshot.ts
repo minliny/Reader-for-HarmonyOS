@@ -177,9 +177,11 @@ function decodeEntrySnapshot(data: JsonObject, sourceId: string, bookId: string,
 function navigationItem(value: unknown): ReadingEntryNavigationItem {
   const raw = object(value);
   if (typeof raw['navigable'] !== 'boolean') throw new Error('invalid reading navigation availability');
+  const level = raw['level'] === null || raw['level'] === undefined ? undefined : integer(raw, 'level');
+  if (level !== undefined && level < 1) throw new Error('invalid reading navigation level');
   return { index: integer(raw, 'index'), position: integer(raw, 'position'),
     ...(raw['readablePosition'] === null || raw['readablePosition'] === undefined ? {} : { readablePosition: integer(raw, 'readablePosition') }), title: string(raw, 'title'),
-    navigable: raw['navigable'] as boolean, downloadState: 'unknown' };
+    ...(level === undefined ? {} : { level }), navigable: raw['navigable'] as boolean, downloadState: 'unknown' };
 }
 function object(value: unknown): JsonObject {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid reading entry object');

@@ -27,6 +27,7 @@ function fixture({fragments=[textFragment()],title=false,grantPointer=true,apply
  initialFragmentIndex:0,initialFragmentProgress:.5,initialScrollGeneration:0,initialScrollPending:false,
  initialScrollRequested:false,initialScrollCancelledByInput:false,initialSemanticAnchorProtected:false,
  visibleFragmentStart:0,visibleFragmentEnd:0,paragraphPositions:new Map(),paragraphPositionOwners:new Map(),
+ fragmentIndexById:new Map(fragments.map((fragment,index)=>[fragment.id,index])),
  appearance:{paragraphSpacing:12,activeTheme:'paper'},layout:{contentTop:72,viewportWidth:390,viewportHeight:820,contentBottom:30},
  touchActive:false,touchPointerId:-1,touchMoved:false,manualInteractionReported:false,fragmentsProvider:()=>fragments,
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),prepare(recipe){assert.equal(recipe,fragments[0].nativeParagraph);events.push('prepare');calls.prepares++;return preparation;}}),

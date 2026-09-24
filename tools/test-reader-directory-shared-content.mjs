@@ -4,6 +4,8 @@ import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerDirectoryBookmarkMarkerState } from '../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from
+  '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
 
 const read = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
 const toolbarSource = read('ReaderDirectoryToolbar');
@@ -59,7 +61,8 @@ for (const scheme of ['day', 'night']) for (const showChapterTools of [true, fal
 
 function row(overrides = {}, scheme = 'day') {
   const calls = [];
-  const owner = createReaderBuilderProbe(rowSource, ['build', 'marker'], { readerDirectoryBookmarkMarkerState }).owner;
+  const owner = createReaderBuilderProbe(rowSource, ['build', 'marker'],
+    { readerDirectoryBookmarkMarkerState, readerDirectoryAccessibilityText, readerDirectoryIndentVp }).owner;
   Object.assign(owner, { appThemeScheme: scheme, entry: { ...entry }, rowHeight: 40, currentChapterIndex: -1,
     chapterDownloadEnabled: true, chapterStartBookmarkCreationEnabled: true,
     onSelectChapter: index => calls.push(['select', index]), onDownloadChapter: index => calls.push(['download', index]),
@@ -81,6 +84,15 @@ for (const scheme of ['day', 'night']) {
   action(owner, '打开章节：另一个章节').onClick();
   assert.deepEqual(calls.at(-1), ['select', 33], 'retained row callback uses the current chapter');
   assert.ok(nodes(owner).filter(node => node.height !== undefined).every(node => [32, 15].includes(node.height)));
+}
+{
+  const nested = row({ entry: { ...entry, level: 3 } });
+  assert.ok(action(nested.owner, '第3级，打开章节：第二十二章'));
+  assert.equal(nodes(nested.owner).find(node => node.type === 'Text').padding.left, 33);
+  const deep = row({ entry: { ...entry, level: 9, navigable: false } });
+  assert.ok(action(deep.owner, '第9级，卷标题：第二十二章'));
+  assert.equal(nodes(deep.owner).find(node => node.type === 'Text').padding.left, 45,
+    'visual indentation is capped in the compact reader control');
 }
 for (const state of ['missing', 'cached', 'failed', 'cancelled', 'queued', 'downloading', 'completed', 'unknown']) {
   const { owner } = row({ entry: { ...entry, downloadState: state } });

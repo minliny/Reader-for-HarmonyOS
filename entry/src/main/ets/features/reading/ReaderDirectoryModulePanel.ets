@@ -21,6 +21,7 @@ import {
   type ReaderBookmarkRowModel,
 } from './ReaderBookmarkProjection';
 import { ReaderDirectoryList } from './ReaderDirectoryList';
+import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from './ReaderDirectoryHierarchy';
 import { ReaderBookmarkList } from './ReaderBookmarkList';
 import { ReaderBookmarkEmptyState } from './ReaderBookmarkEmptyState';
 import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
@@ -244,7 +245,7 @@ export struct ReaderDirectoryModulePanel {
         Stack({ alignContent: Alignment.Center }) {
           Text(repeatItem.item.title)
             .width('100%')
-            .padding({ left: this.isCurrent(repeatItem.item) ? 5 : 8, right: 8 })
+            .padding({ left: (this.isCurrent(repeatItem.item) ? 5 : 8) + readerDirectoryIndentVp(repeatItem.item), right: 8 })
             .fontFamily('ReaderInter')
             .fontWeight(500)
             .fontSize(11)
@@ -258,7 +259,7 @@ export struct ReaderDirectoryModulePanel {
       }
       .layoutWeight(1)
       .height(READER_DIRECTORY_ROW_HEIGHT)
-      .accessibilityText(repeatItem.item.navigable === false ? `卷标题：${repeatItem.item.title}` : `打开章节：${repeatItem.item.title}`)
+      .accessibilityText(readerDirectoryAccessibilityText(repeatItem.item))
       .enabled(repeatItem.item.navigable !== false)
       .onClick((): void => { if (repeatItem.item.navigable !== false) this.onSelectChapter(repeatItem.item.index); });
       if (repeatItem.item.navigable !== false) {
