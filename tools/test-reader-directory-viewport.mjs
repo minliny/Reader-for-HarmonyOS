@@ -89,6 +89,7 @@ readerDirectoryClearViewportAnchors();
 }
 {
   const loads = [];
+  const notificationTimers = [];
   class FakePlatformLRUCache {
     constructor(capacity) { this.capacity = capacity; this.entries = new Map(); }
     get(key) {
@@ -107,7 +108,8 @@ readerDirectoryClearViewportAnchors();
   }
   const DataSource = productionMotionMethods(path,
     ['totalCount', 'getData', 'replace', 'admit', 'loadedNode', 'currentView'],
-    { DIRECTORY_PAGE_SIZE: 256, util: { LRUCache: FakePlatformLRUCache } });
+    { DIRECTORY_PAGE_SIZE: 256, util: { LRUCache: FakePlatformLRUCache },
+      setTimeout: action => notificationTimers.push(action) });
   const data = Object.assign(new DataSource(), { view: undefined, pages: new FakePlatformLRUCache(12),
     pending: new Set(), listeners: [], load: offset => loads.push(offset) });
   const first = Array.from({ length: 256 }, (_, index) => node(`first-${index}`));
@@ -143,6 +145,30 @@ readerDirectoryClearViewportAnchors();
     ] });
   assert.deepEqual(reloadKeys, [['stable-visible', 'physical-112']],
     '10k-node fold presents stable node keys at the new rank and resolved old physical viewport before reload');
+
+  const changed = [];
+  const changing = Object.assign(new DataSource(), { view: undefined, pages: new FakePlatformLRUCache(12),
+    pending: new Set(), listeners: [{ onDataReloaded: () => changed.push('reload'),
+      onDataChanged: index => changed.push(index) }], load: () => {} });
+  const parent = node('parent'), unrelated = node('unrelated'), current = node('current');
+  changing.replace({ viewId: 'expanded', navigationRevision: 'rev', visibleTotal: 3,
+    currentVisibleIndex: 2, nodes: [parent, unrelated, current] });
+  changed.length = 0;
+  changing.replace({ viewId: 'collapsed', navigationRevision: 'rev', visibleTotal: 3,
+    currentVisibleIndex: 2, nodes: [{ ...parent, expanded: false }, unrelated, current] });
+  assert.deepEqual(changed, ['reload'], 'data reload publishes before any same-key field refresh');
+  while (notificationTimers.length > 0) notificationTimers.shift()();
+  assert.deepEqual(changed, ['reload', 0, 2],
+    'only the loaded changed-arrow and current row receive explicit same-key refresh');
+}
+{
+  const CurrentRow = productionMotionMethods(path, ['isCurrentNode']);
+  const row = Object.assign(new CurrentRow(), { view: { currentVisibleIndex: 5000 },
+    dataSource: { loadedNode: index => index === 5000 ? node('stable-current') : undefined } });
+  assert.equal(row.isCurrentNode({ index: 6000, node: node('stable-current') }), true,
+    'a moved current node stays highlighted by nodeId even if its reused row captured an old rank');
+  assert.equal(row.isCurrentNode({ index: 5000, node: node('other') }), false,
+    'the former current rank cannot highlight an unrelated row');
 }
 assert.match(source, /\.onScrollIndex\(\(start: number,[\s\S]*?this\.captureViewportAnchor\(\)/,
   'native visible index records stable node identity');

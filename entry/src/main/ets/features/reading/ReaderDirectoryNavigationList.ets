@@ -63,6 +63,17 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
   }
   replace(view: ReaderDirectoryNavigationReady): void {
     if (this.view?.viewId === view.viewId) return;
+    const previousById: Map<string, ReaderDirectoryNavigationNode> = new Map<string, ReaderDirectoryNavigationNode>();
+    for (const offset of this.pages.keys()) {
+      this.pages.get(offset)?.forEach((node: ReaderDirectoryNavigationNode): void => {
+        previousById.set(node.nodeId, node);
+      });
+    }
+    const highlighted: Set<string> = new Set<string>();
+    if (this.view?.currentAncestorNodeId !== undefined) highlighted.add(this.view.currentAncestorNodeId);
+    const oldCurrent = this.view?.currentVisibleIndex === undefined ? undefined :
+      this.loadedNode(this.view.currentVisibleIndex);
+    if (oldCurrent !== undefined) highlighted.add(oldCurrent.nodeId);
     this.view = view;
     this.pages.clear(); this.pending.clear();
     if (view.nodes.length > 0) this.pages.put(0, view.nodes);
@@ -71,7 +82,26 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
         prepared.page.visibleTotal !== view.visibleTotal) continue;
       this.pages.put(prepared.offset, prepared.page.nodes);
     }
+    if (view.currentAncestorNodeId !== undefined) highlighted.add(view.currentAncestorNodeId);
+    const newCurrent = view.currentVisibleIndex === undefined ? undefined : this.loadedNode(view.currentVisibleIndex);
+    if (newCurrent !== undefined) highlighted.add(newCurrent.nodeId);
+    const changed: Set<number> = new Set<number>();
+    // A reload reuses equal nodeId children. Refresh only loaded rows whose
+    // captured expanded bit or current-row styling may have changed.
+    for (const offset of this.pages.keys()) {
+      this.pages.get(offset)?.forEach((node: ReaderDirectoryNavigationNode, index: number): void => {
+        const old = previousById.get(node.nodeId);
+        if (old !== undefined && (old.expanded !== node.expanded || highlighted.has(node.nodeId)))
+          changed.add(offset + index);
+      });
+    }
     for (const listener of this.listeners) listener.onDataReloaded();
+    if (changed.size > 0) setTimeout((): void => {
+      if (this.view?.viewId !== view.viewId) return;
+      for (const position of changed) {
+        for (const listener of this.listeners) listener.onDataChanged(position);
+      }
+    }, 0);
   }
   admit(offset: number, page: ReaderDirectoryNavigationPage): void {
     if (this.view === undefined || page.viewId !== this.view.viewId || page.visibleTotal !== this.view.visibleTotal) return;
@@ -338,13 +368,21 @@ export struct ReaderDirectoryNavigationList {
     }, 0);
   }
 
+  private isCurrentNode(item: ReaderDirectoryNavigationItem): boolean {
+    const nodeId = item.node?.nodeId;
+    if (nodeId === undefined) return false;
+    if (nodeId === this.view.currentAncestorNodeId) return true;
+    const current = this.view.currentVisibleIndex;
+    return current !== undefined && this.dataSource.loadedNode(current)?.nodeId === nodeId;
+  }
+
   @Builder
   private row(item: ReaderDirectoryNavigationItem) {
     Row() {
       if (item.node === undefined) {
         Text('…').fontSize(11).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       } else {
-        if (item.index === this.view.currentVisibleIndex || item.node.nodeId === this.view.currentAncestorNodeId) {
+        if (this.isCurrentNode(item)) {
           Row().width(3).height(this.rowHeight).borderRadius(999)
             .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
@@ -389,8 +427,7 @@ export struct ReaderDirectoryNavigationList {
       }
     }
     .width('100%').height(this.rowHeight).borderRadius(6)
-    .backgroundColor(item.index === this.view.currentVisibleIndex ||
-      item.node?.nodeId === this.view.currentAncestorNodeId ?
+    .backgroundColor(this.isCurrentNode(item) ?
       readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent);
   }
 
