@@ -69,7 +69,7 @@ const ImageStage=productionMotionMethods(new URL('ReaderContinuousReadingStage.e
 for(const currentImage of [false,true]){
  const frames=[],deltas=[];let y=-50,height=100;
  const data=[{id:'above'},{id:'anchor'}];const imageStage=Object.assign(new ImageStage(),{layout:{contentTop:0},mounted:true,initialScrollPending:false,changedFragmentIndex:currentImage?1:0,visibleFragmentStart:1,imageAnchorGeneration:2,
- titleItemCount:0,continuousListItems:()=>data,fragmentsProvider:()=>data,fragmentDataSource:{getData:i=>data[i],extend:()=>false,update(){},replace(){}},hasTitleItem:()=>false,listScroller:{getItemRect:()=>({y,height}),scrollBy:(_x,d)=>{deltas.push(d);y-=d;}},reportCurrentVisibleRange(){},getUIContext:()=>({postFrameCallback:f=>frames.push(f)})});
+ titleItemCount:0,chapterTitle:'',contentRevision:2,lastAppliedContentRevision:1,fragmentIndexById:new Map([['above',0],['anchor',1]]),continuousListItems:()=>data,fragmentsProvider:()=>data,fragmentDataSource:{getData:i=>data[i],totalCount:()=>data.length,extend:()=>false,update(){},replace(){}},hasTitleItem:()=>false,listScroller:{getItemRect:()=>({y,height}),scrollBy:(_x,d)=>{deltas.push(d);y-=d;}},reportCurrentVisibleRange(){},getUIContext:()=>({postFrameCallback:f=>frames.push(f)})});
  imageStage.onContentRevisionChanged();imageStage.onContentRevisionChanged();assert.equal(frames.length,1,'a batch retains one pre-layout semantic anchor');
  imageStage.onContentScrolled(20,1);y-=20;if(currentImage)height=200;else y+=100;
  frames[0].action();assert.deepEqual(deltas,[currentImage?50:100]);assert.equal(y,currentImage?-120:-70,'image correction preserves simultaneous manual displacement');

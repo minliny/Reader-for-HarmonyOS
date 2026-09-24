@@ -11,6 +11,17 @@ const { LocalReadingFlowGateway } = await import('../entry/src/main/ets/features
 const deferred = () => { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; };
 const settle = async () => { for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve)); };
 
+{
+  const raw = { index: 1, title: '小节', url: 'local://chapter/1', level: 2 };
+  const gateway = new LocalReadingFlowGateway({ request: async () => ({ data: {
+    sourceId: 'local', bookId: 'epub', toc: [raw],
+  } }) });
+  const toc = await gateway.loadToc('epub');
+  assert.equal(toc.entries[0].level, 2, 'Core EPUB depth reaches the reading directory');
+  raw.level = 0;
+  await assert.rejects(gateway.loadToc('epub'), /invalid navigation level/);
+}
+
 // Execute actual Index entry/publication methods and the actual local gateway.
 // Only Core RPC replies and unrelated native UI boundaries are controlled.
 function fixture() {

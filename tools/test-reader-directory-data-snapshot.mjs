@@ -32,8 +32,8 @@ assert.equal(same(saved, initial), false, 'same-reference nested edits cannot ev
 assert.equal(saved[0].bookmarks[0].content, 'bookmark');
 const panel = fs.readFileSync(new URL('FullDirectoryPanel.ets', base), 'utf8');
 const handler = panel.slice(panel.indexOf('private onEntriesChanged()'), panel.indexOf('private onReadingAnchorChanged()'));
-assert.ok(handler.indexOf('sameReaderDirectoryData') < handler.indexOf('scheduleDeferredMutationFlush'),
-  'equality guard precedes queueing a projection mutation');
+assert.doesNotMatch(handler, /sameReaderDirectoryData|snapshotReaderDirectoryData/,
+  'large catalogs are compared and copied at the endpoint, never on a motion prop callback');
 assert.doesNotMatch(handler, /this\.rebuildProjection|this\.beginListPositioning|this\.activeTab\s*=/,
   'entries watch callback cannot remount or mutate @State during render');
 assert.match(panel, /private flushDeferredMutations\(\): void \{[\s\S]*?sameReaderDirectoryData\(/,
@@ -48,6 +48,12 @@ assert.equal(headingsSnapshot[1].index, 1);
 assert.equal(same(headingsSnapshot, headings), true);
 headings[0].navigable = true;
 assert.equal(same(headingsSnapshot, headings), false, 'a heading becoming readable must refresh the row actions');
+const nested = [{ index: 0, title: 'Volume', level: 1, downloadState: 'unknown' },
+  { index: 1, title: 'Section', level: 3, downloadState: 'cached' }];
+const nestedSnapshot = copy(nested);
+assert.deepEqual(nestedSnapshot.map(entry => entry.level), [1, 3]);
+nested[1].level = 2;
+assert.equal(same(nestedSnapshot, nested), false, 'same-reference EPUB depth change refreshes visible hierarchy');
 
 const scoped = [{index:0,title:'章',bookmarks:[{time:3,chapterIndex:0,chapterOffset:12,chapterTitle:'章',content:'旧备注',bookText:'刷新前原文',
  positionScope:{sourceId:'s',bookId:'b',chapterIndex:0,bodyVersion:'body-old',processingVersion:'processing-old'}}]}];
@@ -86,7 +92,8 @@ p.flushDeferredMutations();assert.ok(p.projectedBookmarks[0].positionScope,'acti
 progress=1;p.flushDeferredMutations();assert.equal(p.projectedBookmarks[0].positionScope,undefined);
 assert.equal(p.projectedBookmarks[0].positionLabel,'位置待恢复');assert.equal(p.projectedBookmarks[0].excerpt,'刷新前原文');
 assert.equal(p.projectedBookmarks[0].chapterOffset,12);assert.equal(p.projectionScrollGeneration,1);assert.equal(restoredOffset,42);
-p.entries=copy(missingScope);p.onEntriesChanged();assert.equal(scheduled,1,'equal clone does not create another rebuild');
+p.entries=copy(missingScope);p.onEntriesChanged();assert.equal(scheduled,2,'an equal clone queues only an endpoint check');
+p.flushDeferredMutations();assert.equal(p.projectionScrollGeneration,1,'equal clone does not rebuild the projection');
 p.entries=excerptOnly;p.onEntriesChanged();p.flushDeferredMutations();
 assert.equal(p.projectedBookmarks[0].excerpt,'可靠映射后的原文');assert.deepEqual(p.projectedBookmarks[0].positionScope,excerptOnly[0].bookmarks[0].positionScope);
 console.log('PASS real FullDirectoryPanel deferred scope/quote-only update retains viewport, keeps morph tree stable, and updates exact click proof at the endpoint');

@@ -1565,6 +1565,10 @@ export struct ReadingExperience {
    */
   private controlDirectoryDataRetained: boolean = false;
   private lastCommittedProgress: ReadingCommit | undefined = undefined;
+  /** Exact durable TTS receipt; a later page or manual commit replaces ownership. */
+  private lastTtsCommittedProgress: ReadingCommit | undefined = undefined;
+  private lastTtsCommittedChapter: ReadingSessionChapter | undefined = undefined;
+  private lastTtsCommittedSelectionToken: number = -1;
   private ttsInitialization: Promise<boolean> | undefined = undefined;
   private ttsPresentationMetadata: Promise<void> | undefined = undefined;
   private ttsAvailabilityResolved: boolean = false;
@@ -1931,6 +1935,7 @@ export struct ReadingExperience {
     // the content/position lease used to keep this real page alive.
     const retainedToc = this.tocEntries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
       index: entry.index, title: entry.title, downloadState: entry.downloadState, navigable: entry.navigable,
+      level: entry.level,
     }));
     let retainedGateway = this.sessionGateway;
     if (remote !== undefined) {
@@ -3837,6 +3842,15 @@ export struct ReadingExperience {
     });
     this.entryCatalogHydration = operation;
     try { await operation; }
+    catch (error) {
+      if (isCurrent() && this.autoPageCoordinator.catalogLoadFailed()) {
+        try {
+          this.getUIContext().getPromptAction().showToast({ message: '目录加载失败，自动翻页已停止，请重试' });
+        } catch (_) { /* The reading session may already be leaving. */ }
+      }
+      if (error instanceof Error) throw error;
+      throw new Error(errorMessageOf(error));
+    }
     finally { if (this.entryCatalogHydration === operation) this.entryCatalogHydration = undefined; }
     if (isCurrent()) {
       this.schedulePageTurnPreparation();
@@ -4028,12 +4042,19 @@ export struct ReadingExperience {
     positionContext?: RemoteReadingPositionContext,
     layoutReady?: Promise<void[]>,
     unreadChapterCandidates: number[] = [],
+    contentRetryCount: number = 0,
   ): Promise<void> {
+    // A forced refresh is itself a content mutation and owns its Core
+    // transaction. Ordinary reads must fence unrelated cache/rule changes.
+    const contentOwner = ReaderRuntimeOwner.current();
+    const contentCurrent = refreshContent ? ((): boolean => true) :
+      contentOwner.captureReadingContentValidity(this.sourceId, this.bookId);
     try {
       if (!isInitial && this.tocEntries.length > 0) {
         this.requireKnownChapter(chapterIndex);
       }
       const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken);
+      if (!contentCurrent()) throw new Error('READING_CONTENT_EPOCH_CHANGED');
       if (isInitial && this.preparedReadingEntry !== undefined && !this.preparedReadingEntry.isCurrent()) {
         await this.restartPreparedReadingEntry(lifecycleToken, selectionToken, layoutReady ?? Promise.resolve([]));
         return;
@@ -4061,6 +4082,7 @@ export struct ReadingExperience {
       if (!isCurrent()) {
         return;
       }
+      if (!contentCurrent()) throw new Error('READING_CONTENT_EPOCH_CHANGED');
       if (prepared !== undefined && !prepared.isCurrent()) {
         await this.restartPreparedReadingEntry(lifecycleToken, selectionToken, layoutReady ?? Promise.resolve([]));
         return;
@@ -4094,6 +4116,7 @@ export struct ReadingExperience {
         return;
       }
       if (!isCurrent()) return;
+      if (!contentCurrent()) throw new Error('READING_CONTENT_EPOCH_CHANGED');
       if (prepared !== undefined && !prepared.isCurrent()) {
         await this.restartPreparedReadingEntry(lifecycleToken, selectionToken, layoutReady ?? Promise.resolve([]));
         return;
@@ -4120,6 +4143,22 @@ export struct ReadingExperience {
       // A stale selection (or unmounted session) must not fail the current
       // reading flow; only a current request's error is surfaced.
       if (!this.isSelectionActive(lifecycleToken, selectionToken)) {
+        return;
+      }
+      if (!refreshContent && !contentCurrent()) {
+        if (contentRetryCount >= 2) {
+          this.fail(new Error('阅读内容在加载期间连续变化，请重新打开本书'), lifecycleToken);
+          return;
+        }
+        await contentOwner.waitForReadingContentIdle(this.sourceId, this.bookId);
+        if (!this.isSelectionActive(lifecycleToken, selectionToken)) return;
+        // The page may still hold its previous visible frame; clear only its
+        // speculative chapter window before obtaining fresh Core evidence.
+        this.chapterWindow.clear();
+        this.preparedReadingEntry = undefined;
+        await this.openChapter(chapterIndex, isInitial, lifecycleToken, selectionToken,
+          requestedOffset, requestedProgress, false, positionContext, layoutReady,
+          unreadChapterCandidates, contentRetryCount + 1);
         return;
       }
       if (isInitial && !refreshContent && unreadChapterCandidates.length > 0 &&
@@ -6092,13 +6131,26 @@ export struct ReadingExperience {
       if (coordinator !== undefined) await coordinator.stop('lifecycle');
       await this.flushReadingRecordForExit();
       await this.awaitOrdinaryFirstPagePersistence();
-      // A loading/measuring failure has no materialized physical page, so this
-      // is deliberately a no-op commit that still completes before exit.
-      if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
-        this.continuousAnchorSampler?.();
-        await this.commitContinuousProgress(lifecycleToken);
-      } else {
-        await this.commitVisiblePage(lifecycleToken);
+      // stop() drains the ordered TTS progress tail. If its receipt is still
+      // the latest admitted position for this exact selection, saving the
+      // page start here would rewind the final spoken scalar. A newer page or
+      // manual commit supersedes that receipt and takes the normal exit path.
+      const ttsProgressOwnsExit = this.lastTtsCommittedProgress !== undefined &&
+        this.lastTtsCommittedProgress === this.lastCommittedProgress &&
+        this.lastTtsCommittedChapter === this.chapter &&
+        this.lastTtsCommittedSelectionToken === this.chapterSelectionToken &&
+        this.lastTtsCommittedProgress.sourceId === this.sourceId &&
+        this.lastTtsCommittedProgress.bookId === this.bookId &&
+        this.lastTtsCommittedProgress.chapterIndex === this.chapter?.chapterIndex;
+      if (!ttsProgressOwnsExit) {
+        // A loading/measuring failure has no materialized physical page, so
+        // this remains a no-op commit before exit in that case.
+        if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
+          this.continuousAnchorSampler?.();
+          await this.commitContinuousProgress(lifecycleToken);
+        } else {
+          await this.commitVisiblePage(lifecycleToken);
+        }
       }
     } catch (error) {
       if (!this.isMountedToken(lifecycleToken) || exitAttemptGeneration !== this.exitAttemptGeneration) return;
@@ -7461,7 +7513,7 @@ export struct ReadingExperience {
         chapterTitle: mark.chapterTitle, content: mark.content, bookText: excerpt, positionScope: mark.positionScope };
     });
     if (!changed) return entries;
-    const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title,
+    const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title, level: entry.level,
       downloadState: entry.downloadState, navigable: entry.navigable, bookmarks };
     this.bookmarkExcerptProjection = entries.map((candidate: LocalReadingTocEntry): LocalReadingTocEntry =>
       candidate === entry ? hydrated : candidate);
@@ -7513,6 +7565,7 @@ export struct ReadingExperience {
       return projected === undefined ? entry : {
         index: entry.index,
         title: projected.title,
+        level: projected.level ?? entry.level,
         downloadState: entry.downloadState,
         navigable: entry.navigable,
         bookmarks: entry.bookmarks,
@@ -8362,18 +8415,23 @@ export struct ReadingExperience {
 
   private async commitTtsProgress(progress: ReaderTtsProgressCommit, lifecycleToken: number): Promise<void> {
     const chapter = this.chapter;
-    if (!this.isSessionActive(lifecycleToken) || chapter === undefined ||
-      progress.chapter.sourceId !== this.sourceId || progress.chapter.bookId !== this.bookId ||
+    const selectionToken = this.chapterSelectionToken;
+    const isCurrent = (): boolean =>
+      (this.isSessionActive(lifecycleToken) ||
+        (this.exitRequested && this.isMountedToken(lifecycleToken) && this.isReaderIdentityCurrent?.() !== false)) &&
+      this.sourceId === progress.chapter.sourceId && this.bookId === progress.chapter.bookId &&
+      this.chapter === chapter && this.chapterSelectionToken === selectionToken;
+    if (chapter === undefined || !isCurrent() ||
       progress.chapter.chapterIndex !== chapter.chapterIndex || progress.chapter.bodyVersion !== chapter.bodyVersion ||
       progress.chapter.processingVersion !== chapter.processingVersion) return;
     try {
-      await this.activeGateway().runProgressCommitSerial(async (): Promise<void> => {
-        if (!this.isSessionActive(lifecycleToken) || this.chapter !== chapter) return;
+      const gateway = this.activeGateway();
+      await gateway.runProgressCommitSerial(async (): Promise<void> => {
+        if (!isCurrent()) return;
         const scalarCount = this.requireChapterLayoutMap().scalarCount();
         const offset = Math.max(0, Math.min(scalarCount, progress.charEnd));
         const chapterProgress = scalarCount === 0 ? 0 : offset / scalarCount;
-        const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) && this.chapter === chapter;
-        const stored = await this.activeGateway().resolveAndUpdateProgress(
+        const stored = await gateway.resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
           new CoreReadingAnchor(chapter.chapterIndex, offset, chapterProgress, chapter.bodyVersion, chapter.processingVersion),
@@ -8382,6 +8440,9 @@ export struct ReadingExperience {
         );
         if (!isCurrent()) return;
         this.admitCommittedProgress(stored);
+        this.lastTtsCommittedProgress = this.lastCommittedProgress;
+        this.lastTtsCommittedChapter = chapter;
+        this.lastTtsCommittedSelectionToken = selectionToken;
       });
     } catch (error) {
       this.logTtsFailure('progress', error as Error);
@@ -8573,14 +8634,24 @@ export struct ReadingExperience {
       void this.flushReadingRecord();
       this.pauseAutoPage('background');
       const coordinator = this.ttsCoordinator;
-      // Background playback is an explicit TTS preference. The platform
-      // background lease is best-effort and can report inactive during the
-      // screen-off transition while the audio session is still valid; using
-      // that transient report as a pause command races lease activation.
-      if (coordinator !== undefined && !this.ttsBackgroundPlayback &&
-        !ReaderRuntimeOwner.current().getTtsHost().isBackgroundPlaybackActive()) {
-        void coordinator.pauseForBackground()
-          .catch((error: Error): void => this.logTtsFailure('background pause', error));
+      if (coordinator !== undefined) {
+        const pause = (): void => {
+          if (!this.mounted || this.appForeground || this.ttsCoordinator !== coordinator) return;
+          void coordinator.pauseForBackground()
+            .catch((error: Error): void => this.logTtsFailure('background pause', error));
+        };
+        const host = ReaderRuntimeOwner.current().getTtsHost();
+        if (!this.ttsBackgroundPlayback) pause();
+        else if (!host.isBackgroundPlaybackActive()) {
+          // Optional platform admission is off the speech-critical path. A
+          // quick lock-screen transition must observe its bounded result.
+          void host.waitForBackgroundPlaybackAdmission().then((admitted: boolean): void => {
+            if (!this.ttsBackgroundPlayback || !admitted) pause();
+          }).catch((error: Error): void => {
+            this.logTtsFailure('background admission', error);
+            pause();
+          });
+        }
       }
       return;
     }
@@ -8865,7 +8936,6 @@ export struct ReadingExperience {
     const mutationGeneration = this.appearanceMutationGeneration;
     try {
       await this.appearanceGateway.load();
-      this.appearanceLoaded = true;
       while (this.isSessionActive(lifecycleToken) && mutationGeneration === this.appearanceMutationGeneration) {
         const snapshot = this.appearanceGateway.current();
         await prepareReaderFontFamily(readerAppearanceSnapshotFontFamily(snapshot));
@@ -8873,6 +8943,7 @@ export struct ReadingExperience {
         if (!this.sameAppearanceFont(snapshot, this.appearanceGateway.current())) continue;
         if (snapshot.font !== 'custom' || snapshot.customFont === undefined) {
           this.admitAppearanceSnapshot(snapshot);
+          this.appearanceLoaded = true;
           this.observeAppearanceSave(this.appearanceGateway.flush(), lifecycleToken);
           return;
         }
@@ -8894,12 +8965,19 @@ export struct ReadingExperience {
           continue;
         }
         this.admitAppearanceSnapshot(latest);
+        this.appearanceLoaded = true;
         this.observeAppearanceSave(this.appearanceGateway.flush(), lifecycleToken);
         return;
       }
     } catch (error) {
       if (this.isSessionActive(lifecycleToken) && mutationGeneration === this.appearanceMutationGeneration) {
         this.showAppearanceFailure('外观设置读取失败，请重新打开阅读页', error);
+        // Initial pagination must never measure with a font that failed to
+        // register. A later shared-preference reload keeps its admitted font.
+        if (!this.appearanceLoaded) {
+          if (error instanceof Error) throw error;
+          throw new Error(errorMessageOf(error));
+        }
       }
     }
   }

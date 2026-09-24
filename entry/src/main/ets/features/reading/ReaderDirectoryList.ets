@@ -1,8 +1,9 @@
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
+import { sameReaderDirectoryData, snapshotReaderDirectoryData } from './ReaderDirectoryDataSnapshot';
 
 class DirectoryListDataSource implements IDataSource {
   private entries: LocalReadingTocEntry[] = [];
-  private signature: string = '';
+  private admittedSnapshot: LocalReadingTocEntry[] = [];
   private listeners: DataChangeListener[] = [];
   totalCount(): number { return this.entries.length; }
   getData(index: number): LocalReadingTocEntry { return this.entries[index]; }
@@ -11,9 +12,8 @@ class DirectoryListDataSource implements IDataSource {
     this.listeners = this.listeners.filter((value: DataChangeListener): boolean => value !== listener);
   }
   replace(entries: LocalReadingTocEntry[]): void {
-    const signature = JSON.stringify(entries);
-    if (signature === this.signature) return;
-    this.signature = signature;
+    if (sameReaderDirectoryData(this.admittedSnapshot, entries)) return;
+    this.admittedSnapshot = snapshotReaderDirectoryData(entries);
     this.entries = entries.slice();
     for (const listener of this.listeners) listener.onDataReloaded();
   }
@@ -29,6 +29,9 @@ class DirectoryListDataSource implements IDataSource {
 @Component
 export struct ReaderDirectoryList {
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
+  // The expanded control keeps one native List while its viewport morphs.
+  // Compare chapter data at an endpoint, where the owning panel admits it.
+  @Prop @Watch('onEntriesChanged') deferEntriesDuringMotion: boolean = false;
   private readonly dataSource: DirectoryListDataSource = new DirectoryListDataSource();
   @Prop @Watch('onRowHeightChanged') rowHeight: number = 40;
   @State private itemSizes: ChildrenMainSize = new ChildrenMainSize(40);
@@ -59,7 +62,7 @@ export struct ReaderDirectoryList {
   private pendingRowHeight: number | undefined = undefined;
 
   aboutToAppear(): void {
-    this.onEntriesChanged();
+    this.dataSource.replace(this.entries);
     this.rowHeightLifecycleGeneration += 1;
     this.mounted = true;
     this.layoutReady = false;
@@ -76,6 +79,7 @@ export struct ReaderDirectoryList {
   }
 
   private onEntriesChanged(): void {
+    if (this.deferEntriesDuringMotion) return;
     this.dataSource.replace(this.entries);
   }
 

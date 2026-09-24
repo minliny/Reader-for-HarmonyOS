@@ -33,6 +33,12 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   private readonly mediaSession: ReaderTtsMediaSessionBridge;
   private readonly backgroundSession: ReaderTtsBackgroundSessionBridge | undefined;
   private backgroundPlaybackEnabled: boolean = true;
+  private foregroundSessionActive: boolean = false;
+  private foregroundActivation: Promise<void> | undefined = undefined;
+  private mediaActivationAttempted: boolean = false;
+  private backgroundActivationAttempted: boolean = false;
+  private mediaActivation: Promise<void> | undefined = undefined;
+  private backgroundActivation: Promise<void> | undefined = undefined;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
   private listenerOwner: string | undefined = undefined;
 
@@ -86,27 +92,30 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     // The selected speech transport is the only mandatory foreground lease.
     // Media controls and background admission are additive platform bridges;
     // a device without either capability must still be able to speak locally.
-    await this.active.activateAudioSession(allowMixing);
+    const activation = this.active.activateAudioSession(allowMixing);
+    this.foregroundActivation = activation;
     try {
-      await this.mediaSession.activate();
-    } catch (_error) {
-      // Best effort: foreground TTS remains available without AVSession.
-    }
-    if (this.backgroundPlaybackEnabled) {
-      try {
-        await this.backgroundSession?.activate();
-      } catch (_error) {
-        // Best effort: a denied background lease must not block foreground TTS.
-      }
+      await activation;
+      this.foregroundSessionActive = true;
+      this.activateOptionalSessions();
+    } finally {
+      if (this.foregroundActivation === activation) this.foregroundActivation = undefined;
     }
   }
 
   setBackgroundPlaybackEnabled(enabled: boolean): void {
     this.backgroundPlaybackEnabled = enabled;
-    if (!enabled) void this.backgroundSession?.deactivate();
+    if (enabled) {
+      this.activateOptionalSessions();
+    } else {
+      this.backgroundActivationAttempted = false;
+      void this.backgroundSession?.deactivate().catch((): void => {});
+    }
   }
 
   async deactivateAudioSession(): Promise<void> {
+    this.foregroundSessionActive = false;
+    this.backgroundActivationAttempted = false;
     await Promise.all([
       this.active.deactivateAudioSession(),
       this.backgroundSession?.deactivate() ?? Promise.resolve(),
@@ -117,8 +126,38 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     return this.backgroundSession?.isActive() ?? false;
   }
 
+  /** A quick background transition may arrive while the optional lease is
+   * still being admitted. Wait only at that transition, with a finite bound. */
+  async waitForBackgroundPlaybackAdmission(): Promise<boolean> {
+    if (!this.backgroundPlaybackEnabled || this.backgroundSession === undefined) return false;
+    if (this.backgroundSession.isActive()) return true;
+    let timeout = -1;
+    try {
+      const admission = async (): Promise<boolean> => {
+        if (!this.foregroundSessionActive) {
+          const foreground = this.foregroundActivation;
+          if (foreground === undefined) return false;
+          try { await foreground; } catch (_) { return false; }
+        }
+        if (!this.foregroundSessionActive || !this.backgroundPlaybackEnabled) return false;
+        const background = this.backgroundActivation;
+        if (background !== undefined) await background;
+        return this.backgroundPlaybackEnabled && this.backgroundSession?.isActive() === true;
+      };
+      return await Promise.race([admission(), new Promise<boolean>((resolve): void => {
+        timeout = setTimeout((): void => resolve(false), 1500);
+      })]);
+    } finally {
+      if (timeout >= 0) clearTimeout(timeout);
+    }
+  }
+
   speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     return this.active.speak(request);
+  }
+
+  prefetchNext(request: ReaderTtsHostSpeakRequest): void {
+    this.active.prefetchNext?.(request);
   }
 
   listSystemVoices(): Promise<ReaderTtsVoiceOption[]> {
@@ -136,6 +175,11 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   async close(): Promise<void> {
     this.listener = undefined;
     this.listenerOwner = undefined;
+    this.foregroundSessionActive = false;
+    await Promise.all([
+      this.mediaActivation ?? Promise.resolve(),
+      this.backgroundActivation ?? Promise.resolve(),
+    ]);
     await this.system.close();
     await this.http.close();
     await this.backgroundSession?.close();
@@ -144,5 +188,21 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
 
   private forward(source: ReaderTtsHost, event: ReaderTtsHostEvent): void {
     if (source === this.active) this.listener?.(event);
+  }
+
+  private activateOptionalSessions(): void {
+    if (!this.foregroundSessionActive) return;
+    // Neither optional platform bridge belongs on the per-slice speech path.
+    // A single attempt per foreground lease also avoids repeated native calls
+    // when the coordinator asks to keep the same audio focus for each slice.
+    if (!this.mediaActivationAttempted) {
+      this.mediaActivationAttempted = true;
+      this.mediaActivation = this.mediaSession.activate().catch((): void => {});
+    }
+    if (this.backgroundPlaybackEnabled && this.backgroundSession !== undefined &&
+      !this.backgroundActivationAttempted) {
+      this.backgroundActivationAttempted = true;
+      this.backgroundActivation = this.backgroundSession.activate().then((): void => {}, (): void => {});
+    }
   }
 }

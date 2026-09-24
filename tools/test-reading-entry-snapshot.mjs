@@ -9,7 +9,7 @@ function fixture(){
   positionScope:{sourceId:'s',bookId:'b',chapterIndex:40,bodyVersion:'body',processingVersion:'process'},
   progress:{sourceId:'s',bookId:'b',chapterIndex:40,chapterOffset:2,chapterProgress:.4,updatedAt:1,bodyVersion:'body',processingVersion:'process'},
   baseUrl:'https://example.org/40',contentRefreshRequired:false,
-  navigation:{revision:'toc',chapterCount:10,readableChapterCount:10,current:{index:40,position:4,readablePosition:4,title:'第四章',navigable:true},before:[],after:[{index:50,position:5,readablePosition:5,title:'第五章',navigable:true}]}};
+  navigation:{revision:'toc',chapterCount:10,readableChapterCount:10,current:{index:40,position:4,readablePosition:4,title:'第四章',level:2,navigable:true},before:[],after:[{index:50,position:5,readablePosition:5,title:'第五章',level:3,navigable:true}]}};
  answer=structuredClone(body);
  const runtime={supportsCoreCapability:c=>c==='reading.entry.snapshot.v1',captureReadingContentValidity:()=>()=>contentCurrent,
   request:async(method,params)=>{calls.push({method,params});assert.equal(method,'reading.entry.snapshot');return{data:structuredClone(answer)};},
@@ -22,6 +22,7 @@ function fixture(){
  const f=fixture();const gateway=await ReadingSessionFlowGateway.open(f.intent,f.runtime);
  assert.equal(f.calls.length,0);assert.equal(gateway.remoteSession(),undefined);
  const snapshot=await gateway.loadEntrySnapshot(undefined,f.intent.isCurrent);assert.equal(snapshot.chapter.content,'正文甲乙丙');
+ assert.equal(snapshot.navigation.current.level,2,'bounded entry navigation preserves EPUB nesting');
  const chapter=await gateway.loadChapter('b',40,f.intent.isCurrent,false,{bodyVersion:'body',processingVersion:'process',anchors:[{id:'resume',offset:2}]});
  assert.equal(chapter,snapshot.chapter);assert.equal(f.calls.length,1,'entry progress/body processing has one Core request');
  f.invalidate();assert.equal(snapshot.isCurrent(),false);
@@ -30,6 +31,7 @@ function fixture(){
  const f=fixture();f.set({...f.body,bookId:'other'});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/identity/);
  f.set({...f.body,progress:{...f.body.progress,bodyVersion:'stale'}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/scope/);
  f.set({...f.body,navigation:{...f.body.navigation,after:[{index:40,position:5,title:'duplicate',navigable:true}]}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/order/);
+ f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level:0}}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/level/);
 }
 {
  const f=fixture();f.set({kind:'missing',sourceId:'s',bookId:'b',reason:'contentMissing'});
@@ -70,10 +72,11 @@ console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisi
    assert.equal(method,'reading.catalog.page');calls.push(p);
    if(changed&&p.offset>0)return{data:{kind:'changed',sourceId:'s',bookId:'b',revision:'other'}};
    return{data:{kind:'ready',sourceId:'s',bookId:'b',revision:'r',chapterCount:300,readableChapterCount:300,offset:p.offset,
-    entries:Array.from({length:Math.min(256,300-p.offset)},(_,i)=>({index:(i+p.offset)*10,position:i+p.offset,readablePosition:i+p.offset,title:'章',navigable:true}))}};
+    entries:Array.from({length:Math.min(256,300-p.offset)},(_,i)=>({index:(i+p.offset)*10,position:i+p.offset,readablePosition:i+p.offset,title:'章',level:i%2+1,navigable:true}))}};
  }};
  const catalog=await readReadingCatalog(runtime,'s','b',()=>!cancel);
  assert.equal(catalog.entries.length,300);assert.equal(calls.length,2);assert.equal(calls[1].revision,'r');
+ assert.deepEqual(catalog.entries.slice(0,3).map(entry=>entry.level),[1,2,1]);
  changed=true;await assert.rejects(readReadingCatalog(runtime,'s','b',()=>true),/REVISION_CHANGED/);
  cancel=true;await assert.rejects(readReadingCatalog(runtime,'s','b',()=>!cancel),/cancelled/);
  console.log('bounded catalog: 256-row pages, pinned revision, reject changed and cancelled projections PASS');

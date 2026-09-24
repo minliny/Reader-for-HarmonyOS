@@ -121,6 +121,8 @@ export class SearchOrchestrator {
   private dispatchWaiters: Array<() => void> = [];
   /** Authoritative mirror; Index's @State is a projection of it. */
   private presentation: SearchPresentation = { kind: 'initial', history: [] };
+  /** Recent searches belong to the entry, independently of source-list state. */
+  private entryHistory: string[] = [];
   private sources: SearchSource[] = [];
   private unsubscribeBooks: (() => void) | undefined = undefined;
   private refreshPending: boolean = false;
@@ -180,6 +182,7 @@ export class SearchOrchestrator {
     const session = this.session;
     this.work = 0;
     this.sweepAlive = false;
+    this.entryHistory = [];
     // Source and history are independent Core facts. In particular, a
     // history failure must not make a valid source list disappear, and an
     // early submit must be able to await this very source-list transaction.
@@ -190,7 +193,7 @@ export class SearchOrchestrator {
     this.sourceLoadSession = session;
     sourceLoad
       .then((sources: SearchSource[]): void => {
-        if (!this.isCurrentSession(session)) {
+        if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
           return;
         }
         this.presentSources(sources);
@@ -204,23 +207,25 @@ export class SearchOrchestrator {
         }
       })
       .catch((error: Error): void => {
-        if (!this.isCurrentSession(session)) {
+        if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
           return;
         }
         hilog.error(DOMAIN, 'Reader', 'Search source list failed to load: %{private}s', error.message);
         if (this.presentation.kind === 'initial') {
-          this.presentInitial();
+          // Keep the local search field usable while making the failed online
+          // source projection explicit. An early real search owns its state.
+          this.present({ kind: 'sourceLoadError', history: this.entryHistory });
         }
         this.presentSources([]);
       });
     this.gateway.loadHistory()
       .then((history: SearchHistory): void => {
-        // A search that started while history was still loading keeps the
-        // Loading/Results state; only an untouched Initial surface adopts it.
-        if (!this.isCurrentSession(session) || this.presentation.kind !== 'initial') {
+        // A search that started while history was still loading keeps its
+        // Loading/Results state; every pre-search surface adopts the history.
+        if (!this.isCurrentSession(session)) {
           return;
         }
-        this.present({ kind: 'initial', history: history.keywords });
+        this.presentEntryHistory(history.keywords);
       })
       .catch((error: Error): void => {
         if (!this.isCurrentSession(session)) {
@@ -499,8 +504,8 @@ export class SearchOrchestrator {
   /**
    * Reload sources without discarding the current presentation. Used when the
    * user returns to Search from Source Management without an explicit
-   * re-search: chips refresh, and a resolved configuration gap re-enters the
-   * normal Initial surface.
+   * re-search: chips refresh, and the pre-search surface reflects the current
+   * source configuration in either direction.
    */
   refreshSources(): void {
     const session = this.session;
@@ -509,32 +514,37 @@ export class SearchOrchestrator {
     this.sourceLoadSession = session;
     sourceLoad
       .then((sources: SearchSource[]): void => {
-        if (!this.isCurrentSession(session)) {
+        if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
           return;
         }
         this.presentSources(sources);
         const kind = this.presentation.kind;
-        if (kind === 'sourceRequired' || kind === 'sourceLoadError') {
+        if (kind === 'initial' || kind === 'sourceRequired' || kind === 'sourceLoadError') {
           const entry = this.entryPresentationForSources(sources);
-          if (entry === undefined) {
+          if (entry === undefined && kind !== 'initial') {
             // The configuration gap is resolved; the normal entry reset keeps
             // Initial, history and sources coherent.
             this.open();
             return;
           }
-          this.present(entry);
+          if (entry !== undefined) this.present(entry);
         }
       })
       .catch((error: Error): void => {
-        if (!this.isCurrentSession(session)) {
+        if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
           return;
         }
         hilog.error(DOMAIN, 'Reader', 'Search source list failed to refresh: %{private}s', error.message);
-        // Keep the current presentation; the next explicit action retries.
+        // A failed refresh cannot continue to claim that the old source-list
+        // verdict is current. A real search retains its own branch outcome.
+        const kind = this.presentation.kind;
+        if (kind === 'initial' || kind === 'sourceRequired' || kind === 'sourceLoadError') {
+          this.present({ kind: 'sourceLoadError', history: this.entryHistory });
+        }
       });
   }
 
-  /** Clear recent history back to the Initial surface. */
+  /** Clear recent history without changing the current source-list verdict. */
   clearHistory(): void {
     this.cancelRunTimer();
     this.run = undefined;
@@ -553,7 +563,7 @@ export class SearchOrchestrator {
         if (!this.isCurrentWork(work, session)) {
           return;
         }
-        this.present({ kind: 'initial', history: history.keywords });
+        this.presentEntryHistory(history.keywords);
       })
       .catch((error: Error): void => {
         if (!this.isCurrentWork(work, session)) {
@@ -628,7 +638,8 @@ export class SearchOrchestrator {
     const local = async (): Promise<void> => {
       if (!searchLocal) return;
       try {
-        const books = await this.gateway.searchLocalBooks(run.keyword, run.requestId);
+        const books = await this.gateway.searchLocalBooks(run.keyword, run.requestId,
+          (): boolean => this.isCurrentWork(work, session));
         if (!this.isCurrentWork(work, session)) return;
         run.localResults = run.admit(books, run.localResults);
         run.localStatus = 'done';
@@ -795,12 +806,16 @@ export class SearchOrchestrator {
   }
 
   /**
-   * Entry-surface decision for a freshly loaded source list: `undefined` means
-   * the list is usable and the caller keeps its current surface (Initial), any
-   * result is the configuration gap the entry must show instead.
+   * Entry-surface decision for a freshly loaded source list. This only changes
+   * the pre-search surface; the search field and local-book branch stay usable.
+   * Apply the same text-source admission as performSearch so an enabled audio
+   * source or an unnamed source does not masquerade as an online book source.
    */
   private entryPresentationForSources(sources: SearchSource[]): SearchPresentation | undefined {
-    return undefined;
+    if (sources.length === 0) return { kind: 'sourceRequired', reason: 'noSources', history: this.entryHistory };
+    if (sources.some((source: SearchSource): boolean => source.enabled &&
+      source.name.trim().length > 0 && readerSourceCategoryIsText(source.category))) return undefined;
+    return { kind: 'sourceRequired', reason: 'allDisabled', history: this.entryHistory };
   }
 
   /** Re-run the source-list load after a sourceLoadError, staying on the same session. */
@@ -811,7 +826,7 @@ export class SearchOrchestrator {
     this.sourceLoadSession = session;
     sourceLoad
       .then((sources: SearchSource[]): void => {
-        if (!this.isCurrentSession(session)) {
+        if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
           return;
         }
         this.presentSources(sources);
@@ -825,11 +840,11 @@ export class SearchOrchestrator {
         this.open();
       })
       .catch((error: Error): void => {
-        if (!this.isCurrentSession(session)) {
+        if (!this.isCurrentSession(session) || this.sourceLoad !== sourceLoad) {
           return;
         }
         hilog.error(DOMAIN, 'Reader', 'Search source list retry failed: %{private}s', error.message);
-        this.present({ kind: 'sourceLoadError' });
+        this.present({ kind: 'sourceLoadError', history: this.entryHistory });
       });
   }
 
@@ -847,8 +862,16 @@ export class SearchOrchestrator {
   }
 
   private presentInitial(): void {
-    this.presentation = { kind: 'initial', history: [] };
+    this.presentation = { kind: 'initial', history: this.entryHistory };
     this.emitPresentation(this.presentation);
+  }
+
+  private presentEntryHistory(history: string[]): void {
+    this.entryHistory = history;
+    const current = this.presentation;
+    if (current.kind === 'initial') this.present({ kind: 'initial', history });
+    else if (current.kind === 'sourceRequired') this.present({ kind: 'sourceRequired', reason: current.reason, history });
+    else if (current.kind === 'sourceLoadError') this.present({ kind: 'sourceLoadError', history });
   }
 
   private present(presentation: SearchPresentation, retainShared: boolean = true): void {

@@ -113,6 +113,85 @@ assert.equal((await resilientRouter.probe()).available, true,
   'router probe must delegate to the active transport');
 await resilientRouter.close();
 
+// Optional AV/background setup may be slow or unavailable. It must not delay
+// the selected speech transport, and the coordinator's per-slice activation
+// calls must not repeatedly allocate the same optional platform leases.
+{
+  let releaseMedia, releaseBackground;
+  const mediaGate = new Promise(resolve => { releaseMedia = resolve; });
+  const backgroundGate = new Promise(resolve => { releaseBackground = resolve; });
+  const slowMedia = {
+    calls: 0,
+    setEventListener() {},
+    async activate() { this.calls += 1; await mediaGate; },
+    publish() {},
+    async close() {},
+  };
+  const slowBackground = {
+    calls: 0,
+    async activate() { this.calls += 1; await backgroundGate; return true; },
+    async deactivate() {},
+    isActive() { return false; },
+    async close() {},
+  };
+  const speech = new FakeHost('system');
+  const slowRouter = new HarmonyTtsHostRouter(speech, new FakeHost('http'), slowMedia, slowBackground);
+  const activation = slowRouter.activateAudioSession(false);
+  const winner = await Promise.race([
+    activation.then(() => 'foreground-ready'),
+    new Promise(resolve => setTimeout(() => resolve('optional-bridge-blocked'), 30)),
+  ]);
+  assert.equal(winner, 'foreground-ready', 'optional bridges cannot hold up foreground speech');
+  await slowRouter.activateAudioSession(false);
+  assert.equal(slowMedia.calls, 1);
+  assert.equal(slowBackground.calls, 1);
+  const pendingAdmission = slowRouter.waitForBackgroundPlaybackAdmission();
+  releaseMedia(); releaseBackground();
+  await pendingAdmission;
+  await slowRouter.close();
+}
+
+{
+  let admit;
+  const pending = new Promise(resolve => { admit = resolve; });
+  const lease = { active: false, setEventListener() {}, async activate() { await pending; this.active = true; return true; },
+    async deactivate() { this.active = false; }, isActive() { return this.active; }, async close() {} };
+  const waitingRouter = new HarmonyTtsHostRouter(new FakeHost('system'), new FakeHost('http'), {
+    setEventListener() {}, async activate() {}, publish() {}, async close() {},
+  }, lease);
+  await waitingRouter.activateAudioSession(false);
+  let settled = false;
+  const observation = waitingRouter.waitForBackgroundPlaybackAdmission().then(value => { settled = true; return value; });
+  await Promise.resolve();
+  assert.equal(settled, false, 'quick background transition observes pending lease admission');
+  admit();
+  assert.equal(await observation, true);
+  await waitingRouter.deactivateAudioSession();
+  assert.equal(await waitingRouter.waitForBackgroundPlaybackAdmission(), false);
+  await waitingRouter.close();
+}
+
+{
+  let focusReady;
+  const focus = new Promise(resolve => { focusReady = resolve; });
+  const speech = new FakeHost('system');
+  speech.activateAudioSession = async () => { await focus; };
+  const lease = { active: false, async activate() { this.active = true; return true; },
+    async deactivate() { this.active = false; }, isActive() { return this.active; }, async close() {} };
+  const waitingRouter = new HarmonyTtsHostRouter(speech, new FakeHost('http'), {
+    setEventListener() {}, async activate() {}, publish() {}, async close() {},
+  }, lease);
+  const activation = waitingRouter.activateAudioSession(false);
+  let decided = false;
+  const admission = waitingRouter.waitForBackgroundPlaybackAdmission().then(value => { decided = true; return value; });
+  await Promise.resolve();
+  assert.equal(decided, false, 'background event waits for an in-flight mandatory audio focus');
+  focusReady();
+  await activation;
+  assert.equal(await admission, true);
+  await waitingRouter.close();
+}
+
 // Owner-scoped listener teardown: a torn-down page must not drop a newer
 // page's listener on the shared router.
 const sharedRouter = new HarmonyTtsHostRouter(new FakeHost('system'), new FakeHost('http'), {
@@ -206,7 +285,9 @@ const executableHost = httpHostSource
   .replace(/^import[\s\S]*?;\n/gm, '')
   .replace('export class HarmonyHttpTtsHost', 'class HarmonyHttpTtsHost');
 const hostPrelude = `
-const audio = {}; const media = {}; const hilog = {warn(){}, error(){}, info(){}};
+const audio = {StreamUsage: {STREAM_USAGE_AUDIOBOOK: 1}};
+const media = {createAVPlayer: async () => globalThis.auditPlayerFactory()};
+const hilog = {warn(){}, error(){}, info(){}};
 const errorMessageOf = error => error instanceof Error ? error.message : String(error);
 const ReaderHttpTtsGateway = class {};
 const isReaderTtsCredentialAliasForConfig = (alias, id) => alias === 'reader.tts.' + id + '.fixture-token';
@@ -261,5 +342,58 @@ const oversizedHeader = {
 };
 await assert.rejects(() => hostProbe.resolveRequest(oversizedHeader, 42), /credential header exceeds/);
 console.log('Harmony HttpTTS credential URL encoding and expansion bounds: PASS');
+
+// The one-ahead cache must reuse only the same Core descriptor. A profile
+// mutation between prefetch and speak must discard the speculative audio.
+{
+  let descriptorVersion = 1;
+  let fetchCount = 0;
+  const playbackHost = Object.create(hostModule.HarmonyHttpTtsHost.prototype);
+  playbackHost.closed = false;
+  playbackHost.configId = 42;
+  playbackHost.networkGeneration = 0;
+  playbackHost.speakGeneration = 0;
+  playbackHost.gateway = {
+    async buildRequest(_id, text) {
+      return { url: `https://tts.example.test/${descriptorVersion}/${text}`, method: 'GET', headers: {} };
+    },
+  };
+  playbackHost.fetchAudio = async () => { fetchCount += 1; return new Uint8Array([1, 2, 3]); };
+  playbackHost.releasePlayer = async () => {};
+  playbackHost.createDataSource = bytes => ({ fileSize: bytes.length, callback: () => -1 });
+  globalThis.auditPlayerFactory = () => ({
+    state: 'idle', on() {}, async prepare() {}, async play() {}, async release() {},
+  });
+  const nextRequest = {requestId: 'lookahead', text: '下一句。', rate: 1, pitch: 1,
+    language: 'zh-CN', person: 0, engine: 'http-tts:42'};
+  playbackHost.prefetchNext(nextRequest);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(fetchCount, 1);
+  await playbackHost.speak({...nextRequest, requestId: 'real-next'});
+  assert.equal(fetchCount, 1, 'same descriptor must reuse one bounded response');
+  playbackHost.prefetchNext({...nextRequest, requestId: 'another-lookahead'});
+  await new Promise(resolve => setImmediate(resolve));
+  descriptorVersion = 2;
+  await playbackHost.speak({...nextRequest, requestId: 'changed-profile'});
+  assert.equal(fetchCount, 3, 'changed Core descriptor must use a fresh audio response');
+  playbackHost.prefetchNext(nextRequest);
+  await new Promise(resolve => setImmediate(resolve));
+  let entered, release;
+  const descriptorEntered = new Promise(resolve => { entered = resolve; });
+  const descriptorBlocked = new Promise(resolve => { release = resolve; });
+  playbackHost.gateway.buildRequest = async (_id, text) => {
+    entered();
+    await descriptorBlocked;
+    return { url: `https://tts.example.test/${descriptorVersion}/${text}`, method: 'GET', headers: {} };
+  };
+  const staleSpeak = playbackHost.speak({...nextRequest, requestId: 'stopped-during-descriptor'});
+  await descriptorEntered;
+  const beforeStop = fetchCount;
+  await playbackHost.stop();
+  release();
+  await staleSpeak;
+  assert.equal(fetchCount, beforeStop, 'a stopped lookahead must not start a late fallback request');
+  assert.equal(playbackHost.prefetchedAudio, undefined, 'stop must drop the speculative buffer');
+}
 
 console.log('Harmony TTS Host router and HttpTTS transport contract: PASS');

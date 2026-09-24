@@ -1,5 +1,6 @@
-import { readerRegisteredFontFamily } from '../common/ReaderFonts';
+import { prepareReaderFontFamily, readerFontFamilyReady, registerReaderFonts } from '../common/ReaderFonts';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback } from '@kit.ArkUI';
 import curves from '@ohos.curves';
@@ -12,7 +13,6 @@ import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observ
   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
   readerControlMorphScrollPath, sampleReaderControlMorphScrollPath,
   type ReaderControlMorphScrollPath, type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
-import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import { ReaderSelect } from '../common/ReaderSelect';
 import { APPEARANCE_SELECT_MENU_WIDTH,
@@ -111,6 +111,11 @@ export struct ReaderControlAppearanceContent {
   @State private draggedFontOffsetX: number = 0;
   @State private draggedFontOffsetY: number = 0;
   @State private previewFontOrder: ReaderAppearanceFontSlot[] = [];
+  @State private readyPreviewFamilies: string[] = [];
+  private readonly previewQueue: string[] = [];
+  private readonly requestedPreviewFamilies: Set<string> = new Set();
+  private previewLoadActive: boolean = false;
+  private previewLifecycle: number = 0;
   private readonly scroller: Scroller = new Scroller();
   private fontPointerId: number = -1;
   private fontDownX: number = 0;
@@ -150,7 +155,13 @@ export struct ReaderControlAppearanceContent {
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
   }
-  aboutToDisappear(): void { this.dismissTemporaryLayer(); this.cancelFontDrag(); }
+  aboutToDisappear(): void {
+    this.previewLifecycle += 1;
+    this.previewQueue.length = 0;
+    this.requestedPreviewFamilies.clear();
+    this.dismissTemporaryLayer();
+    this.cancelFontDrag();
+  }
 
   private frame(): ReaderControlAppearanceFrame {
     // Many declarative attributes read the frame. Share that one sampled value
@@ -521,6 +532,49 @@ export struct ReaderControlAppearanceContent {
     return font !== 'import' && this.snapshot.font === font;
   }
 
+  private previewFamily(font: ReaderAppearanceFontSlot): string {
+    const family = readerAppearanceFontSlotFamily(this.snapshot, font);
+    return family === 'ReaderNotoSansSC' ? 'ReaderNotoSansSCUIRegular' : family;
+  }
+
+  private fontPreviewReady(font: ReaderAppearanceFontSlot): boolean {
+    const family = this.previewFamily(font);
+    return this.readyPreviewFamilies.includes(family) || readerFontFamilyReady(family);
+  }
+
+  private visiblePreviewFamily(font: ReaderAppearanceFontSlot): string {
+    return this.fontPreviewReady(font) ? this.previewFamily(font) : 'HarmonyOS Sans';
+  }
+
+  private requestVisibleFontPreview(font: ReaderAppearanceFontSlot): void {
+    // A custom face belongs to the Host's persisted-font admission. Built-in
+    // previews begin only after a cell actually enters the clipped viewport.
+    if (font === 'custom' || font === 'import') return;
+    const family = this.previewFamily(font);
+    if (readerFontFamilyReady(family) || this.requestedPreviewFamilies.has(family)) return;
+    this.requestedPreviewFamilies.add(family);
+    this.previewQueue.push(family);
+    this.loadNextFontPreview();
+  }
+
+  private loadNextFontPreview(): void {
+    if (this.previewLoadActive || this.previewQueue.length === 0) return;
+    const family = this.previewQueue.shift()!;
+    const lifecycle = this.previewLifecycle;
+    this.previewLoadActive = true;
+    void prepareReaderFontFamily(family).then((): void => {
+      if (lifecycle === this.previewLifecycle && !this.readyPreviewFamilies.includes(family)) {
+        this.readyPreviewFamilies = [...this.readyPreviewFamilies, family];
+      }
+    }).catch((error: Error): void => {
+      hilog.warn(0x5244, 'Reader', 'Font preview preparation failed: %{private}s', error.message);
+    }).finally((): void => {
+      this.previewLoadActive = false;
+      this.requestedPreviewFamilies.delete(family);
+      this.loadNextFontPreview();
+    });
+  }
+
   @Builder
   private fontCell(font: ReaderAppearanceFontSlot) {
     Stack({ alignContent: Alignment.Center }) {
@@ -534,12 +588,12 @@ export struct ReaderControlAppearanceContent {
         .borderRadius(12).clip(true).hitTestBehavior(HitTestMode.None);
       Text(readerAppearanceFontSlotLabel(this.snapshot, font))
         .width(this.fontActor(font).width).height(this.fontActor(font).height)
-        .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceFontSlotFamily(this.snapshot, font) === 'ReaderNotoSansSC' ?
-          'ReaderNotoSansSCUIRegular' : readerAppearanceFontSlotFamily(this.snapshot, font))).fontSize(12)
+        .fontFamily(this.visiblePreviewFamily(font)).fontSize(12)
         .fontWeight(FontWeight.Regular, { enableVariableFontWeight: true })
         .fontColor(this.activeFont(font) ? readerAppColor('app.ReaderControlAppearanceContent.fontCell.fontColor.FFFFFAF4', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-        .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
+        .opacity(this.presentation().contentOpacity * (this.fontPreviewReady(font) ? 1 : 0.65))
+        .blur(this.presentation().contentBlur);
     }.width(this.fontActor(font).width).height(this.fontActor(font).height)
       .clipShape(this.sharedClip('font', 0, font))
       .position(this.fontCellPosition(font)).opacity(this.fontActor(font).opacity)
@@ -548,7 +602,10 @@ export struct ReaderControlAppearanceContent {
       .hitTestBehavior(this.fontInput(font) ? HitTestMode.Default : HitTestMode.None)
       .accessibilityText(font === 'import' && this.importLayout === 'source-overlap-pending' ?
         '原始设计重叠位置，仅供对照' : font === 'import' ? '导入自定义字体' :
-        `切换到${readerAppearanceFontSlotLabel(this.snapshot, font)}`)
+        `切换到${readerAppearanceFontSlotLabel(this.snapshot, font)}${this.fontPreviewReady(font) ? '' : '，预览准备中'}`)
+      .onVisibleAreaChange([0, 0.25], (visible: boolean, ratio: number): void => {
+        if (visible && ratio >= 0.25) this.requestVisibleFontPreview(font);
+      })
       .onClick((): void => {
         if (!this.fontInput(font) || this.draggedFontId !== '' || this.suppressFontClick) return;
         if (font === 'import') this.onCustomFontImport();

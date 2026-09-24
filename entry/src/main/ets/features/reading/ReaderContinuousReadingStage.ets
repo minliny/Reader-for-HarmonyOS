@@ -179,6 +179,8 @@ export struct ReaderContinuousReadingStage {
   private initialScrollGeneration: number = 0;
   private readonly paragraphPositions: Map<string, ReaderNativeParagraphPosition> = new Map();
   private readonly paragraphPositionOwners: Map<string, string> = new Map();
+  private readonly fragmentIndexById: Map<string, number> = new Map();
+  private lastAppliedContentRevision: number = -1;
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -511,7 +513,8 @@ export struct ReaderContinuousReadingStage {
     } else {
       // Lazy rows can report after a geometry replacement. Only the current
       // original paragraph recipe may supply this row's line coordinates.
-      const current = this.fragmentsProvider().find((fragment: ReadingSurfacePageFragment): boolean => fragment.id === id);
+      const index = this.fragmentIndexById.get(id);
+      const current = index === undefined ? undefined : this.fragmentsProvider()[index];
       if (current?.nativeParagraph?.key !== owner) return;
       this.paragraphPositionOwners.set(id, owner); this.paragraphPositions.set(id, position);
     }
@@ -557,10 +560,17 @@ export struct ReaderContinuousReadingStage {
     const fragments = this.fragmentsProvider();
     const changed = this.changedFragmentIndex;
     const previous = this.fragmentDataSource.getData(this.visibleFragmentStart + this.titleItemCount);
-    const items = this.continuousListItems();
-    if (changed < 0 && !this.initialScrollPending && this.fragmentDataSource.extend(items)) {
+    const titleCount = this.chapterTitle.length > 0 ? 1 : 0;
+    const singleRowUpdate = changed >= 0 && changed < fragments.length &&
+      this.titleItemCount === titleCount &&
+      this.fragmentDataSource.totalCount() === fragments.length + titleCount &&
+      this.fragmentDataSource.getData(changed + titleCount)?.id === fragments[changed].id;
+    if (changed < 0 && !this.initialScrollPending &&
+      this.fragmentDataSource.extend(this.continuousListItems())) {
       this.titleItemCount = this.chapterTitle.length > 0 ? 1 : 0;
-      const visible = previous === undefined ? -1 : fragments.findIndex((fragment: ReadingSurfacePageFragment): boolean => fragment.id === previous.id);
+      this.rebuildFragmentIndex(fragments);
+      this.lastAppliedContentRevision = this.contentRevision;
+      const visible = previous === undefined ? -1 : (this.fragmentIndexById.get(previous.id) ?? -1);
       if (visible >= 0) {
         const span = this.visibleFragmentEnd - this.visibleFragmentStart;
         this.visibleFragmentStart = visible;
@@ -568,8 +578,9 @@ export struct ReaderContinuousReadingStage {
       }
       return;
     }
+    const coalescedRows = singleRowUpdate && this.contentRevision - this.lastAppliedContentRevision !== 1;
     if (this.pendingImageAnchor === undefined && !this.initialScrollPending &&
-      (changed < 0 || changed <= this.visibleFragmentStart)) {
+      (changed < 0 || coalescedRows || changed <= this.visibleFragmentStart)) {
       const fragment = this.fragmentDataSource.getData(this.visibleFragmentStart + this.titleItemCount);
       if (fragment !== undefined) {
         try {
@@ -584,15 +595,33 @@ export struct ReaderContinuousReadingStage {
         } catch (_error) { /* A recycled row will report its next actual anchor. */ }
       }
     }
-    if (changed >= 0 && changed < fragments.length) this.fragmentDataSource.update(changed + this.titleItemCount, fragments[changed]);
-    else this.reloadFragments();
+    if (singleRowUpdate) {
+      if (coalescedRows) {
+        // ArkUI may deliver one @Watch callback for several completed image
+        // promises. Reconcile their changed objects without remounting the List.
+        for (let index = 0; index < fragments.length; index += 1) {
+          if (this.fragmentDataSource.getData(index + titleCount)?.id !== fragments[index].id) {
+            this.reloadFragments();
+            return;
+          }
+          if (this.fragmentDataSource.getData(index + titleCount) !== fragments[index]) {
+            this.fragmentDataSource.update(index + titleCount, fragments[index]);
+          }
+        }
+      } else {
+        this.fragmentDataSource.update(changed + titleCount, fragments[changed]);
+      }
+      this.lastAppliedContentRevision = this.contentRevision;
+      return;
+    }
+    this.reloadFragments();
   }
 
   private restoreImageAnchor(anchor: ContinuousImageAnchor): void {
     if (!this.mounted || anchor !== this.pendingImageAnchor || anchor.generation !== this.imageAnchorGeneration) return;
     this.pendingImageAnchor = undefined;
-    const index = this.fragmentsProvider().findIndex((fragment: ReadingSurfacePageFragment): boolean => fragment.id === anchor.id);
-    if (index < 0) return;
+    const index = this.fragmentIndexById.get(anchor.id);
+    if (index === undefined) return;
     try {
       const rect = this.listScroller.getItemRect(index + (this.hasTitleItem() ? 1 : 0));
       // Correct only layout displacement. Preserve scrolling performed while
@@ -613,9 +642,19 @@ export struct ReaderContinuousReadingStage {
   }
 
   private reloadFragments(): void {
+    const fragments = this.fragmentsProvider();
     const items = this.continuousListItems();
     this.titleItemCount = this.chapterTitle.length > 0 ? 1 : 0;
     this.fragmentDataSource.replace(items);
+    this.rebuildFragmentIndex(fragments);
+    this.lastAppliedContentRevision = this.contentRevision;
+  }
+
+  private rebuildFragmentIndex(fragments: ReadingSurfacePageFragment[]): void {
+    this.fragmentIndexById.clear();
+    for (let index = 0; index < fragments.length; index += 1) {
+      this.fragmentIndexById.set(fragments[index].id, index);
+    }
   }
 
   private initialListIndex(): number {

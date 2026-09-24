@@ -571,9 +571,19 @@ export struct SearchPage {
     } else if (this.presentation.kind === 'results') {
       this.resultsContent();
     } else if (this.presentation.kind === 'sourceRequired') {
-      this.sourceRequiredContent(this.presentation.reason);
+      Scroll() {
+        Column() {
+          this.sourceRequiredContent(this.sourceRequiredReason());
+          this.initialContent();
+        }.width('100%');
+      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'sourceLoadError') {
-      this.sourceLoadErrorContent();
+      Scroll() {
+        Column() {
+          this.sourceLoadErrorContent();
+          this.initialContent();
+        }.width('100%');
+      }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'empty') {
       this.emptyContent(this.presentation.keyword, this.presentation.searchedSourceCount);
     } else {
@@ -581,14 +591,18 @@ export struct SearchPage {
     }
   }
 
+  private sourceRequiredReason(): string {
+    return this.presentation.kind === 'sourceRequired' ? this.presentation.reason : 'noSources';
+  }
+
   // Reads presentation.history directly (never a @Builder value parameter):
-  // loadHistory resolves after presentInitial() with the same presentation
-  // kind, and untracked parameters would keep the stale empty-history
-  // snapshot — the same ACQ-02 @Builder-parameter trap.
+  // loadHistory can resolve after any entry state and must update the same
+  // history chips without relying on an untracked Builder parameter.
   @Builder
   private initialContent() {
     Column({ space: 0 }) {
-      if (this.presentation.kind === 'initial' && this.presentation.history.length > 0) {
+      if ((this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
+        this.presentation.kind === 'sourceLoadError') && this.presentation.history.length > 0) {
         Row() {
           Text('最近搜索')
             .fontFamily('ReaderInter')
@@ -1083,53 +1097,49 @@ export struct SearchPage {
   }
 
   /**
-   * P0 add-source flow extension state: the entry source list is empty or
-   * fully disabled, so search cannot run. Layout reuses the Empty surface
-   * (illustration, title/description, primary+secondary pill row).
+   * P0 add-source flow extension state: no source can search online books.
+   * The search bar still accepts local-book queries. Layout reuses the Empty
+   * surface (illustration, title/description, primary+secondary pill row).
    */
   @Builder
   private sourceRequiredContent(reason: string) {
-    Scroll() {
-      Column({ space: 0 }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
-          .width(128)
-          .height(120)
-          .alignSelf(ItemAlign.Center);
-
-        Text(reason === 'noSources' ? '还没有可用书源' : '没有启用的书源')
-          .margin({ top: 28 })
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(17)
-          .lineHeight(25.5)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .textAlign(TextAlign.Center);
-
-        Text(reason === 'noSources' ? '添加至少一个书源后才能搜索在线书籍' : '启用已有书源,或导入新的书源')
-          .margin({ top: TOK_SPACE_CONTROL_INLINE })
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(13)
-          .lineHeight(21.125)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .textAlign(TextAlign.Center)
-          .maxLines(3);
-
-        Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-          this.primaryPill(reason === 'noSources' ? '添加书源' : '管理书源',
-            (): void => this.onManageSources());
-          this.secondaryPill('返回书架', (): void => this.onBack());
-        }
-        .margin({ top: 20 })
+    Column({ space: 0 }) {
+      Image((this.appThemeScheme === 'night' ? $r('app.media.search_empty_theme_night') : $r('app.media.search_empty')))
+        .width(128)
+        .height(120)
         .alignSelf(ItemAlign.Center);
+
+      Text(reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源')
+        .margin({ top: 28 })
+        .fontFamily('ReaderNotoSerifSCBold')
+        .fontWeight(FontWeight.Bold)
+        .fontSize(17)
+        .lineHeight(25.5)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+        .textAlign(TextAlign.Center);
+
+      Text(reason === 'noSources' ? '添加书源后可搜索在线书籍；本地导入的书仍可在上方搜索' :
+        '启用可搜索书籍的书源；本地导入的书仍可在上方搜索')
+        .margin({ top: TOK_SPACE_CONTROL_INLINE })
+        .width('100%')
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Regular)
+        .fontSize(13)
+        .lineHeight(21.125)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .textAlign(TextAlign.Center)
+        .maxLines(3);
+
+      Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+        this.primaryPill(reason === 'noSources' ? '添加书源' : '管理书源',
+          (): void => this.onManageSources());
+        this.secondaryPill('返回书架', (): void => this.onBack());
       }
-      .width('100%')
-      .padding({ top: 50, bottom: 40 });
+      .margin({ top: 20 })
+      .alignSelf(ItemAlign.Center);
     }
     .width('100%')
-    .layoutWeight(1)
-    .scrollBar(BarState.Off);
+    .padding({ top: 50, bottom: 40 });
   }
 
   @Builder
@@ -1146,7 +1156,7 @@ export struct SearchPage {
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
-      Text('无法获取书源列表,请重试')
+      Text('在线书源暂不可用；本地导入的书仍可在上方搜索')
         .margin({ top: TOK_SPACE_XS })
         .fontFamily('ReaderInter')
         .fontWeight(FontWeight.Regular)
@@ -1163,7 +1173,6 @@ export struct SearchPage {
       .alignSelf(ItemAlign.Center);
     }
     .width('100%')
-    .layoutWeight(1)
     .alignItems(HorizontalAlign.Center)
     .padding({ top: 96, bottom: 40 });
   }

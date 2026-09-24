@@ -60,6 +60,19 @@ for (const mode of ['simulation', 'cover', 'slide', 'none', 'continuous']) {
 }
 
 {
+  const f = fixture(); f.owner.setSpeed(2); f.view.outcome = { kind: 'preparing' };
+  f.start(); f.advance(2000);
+  assert.equal(f.owner.catalogLoadFailed(), true, 'failed TOC settles the pending automatic turn');
+  assert.equal(f.owner.snapshot().status, 'stopped');
+  assert.equal(f.owner.snapshot().stopReason, 'catalogUnavailable');
+  assert.equal(f.owner.snapshot().awaitingPageCommit, false);
+  assert.equal(f.timers.size, 0);
+  assert.equal(f.owner.catalogLoadFailed(), false, 'a late duplicate failure cannot stop a new session');
+  f.owner.start(); f.owner.armPageTimer(true); f.view.outcome = { kind: 'started' };
+  f.advance(2000); assert.equal(f.view.turns, 2, 'the user can start again after the catalog recovers');
+}
+
+{
   const f = fixture(); f.owner.setSessionTimer(0, 3); f.start();
   f.jump(3000); f.owner.pause('background');
   assert.equal(f.owner.snapshot().status, 'stopped', 'deadline wins over a same-instant pause');

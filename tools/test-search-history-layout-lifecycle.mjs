@@ -19,9 +19,11 @@ function check(name, fn) {
   try { fn(); results.push({ name, status: 'PASS' }); }
   catch (error) { results.push({ name, status: 'FAIL', message: error.message }); }
 }
-function fixture(history, { width = 0, tablet = false, expanded = false, measureVp = text => text.length * 13 } = {}) {
+function fixture(history, { width = 0, tablet = false, kind = 'initial',
+  measureVp = text => text.length * 13 } = {}) {
   let owner;
   const measurements = [];
+  const actions = [];
   // Flex is only a native attribute recorder. The SDK transforms the actual
   // production Builder/ForEach/If; this is not a native layout simulation.
   const Flex = new Proxy({ name: 'Flex' }, { get(target, property) {
@@ -33,15 +35,22 @@ function fixture(history, { width = 0, tablet = false, expanded = false, measure
     };
   } });
   ({ owner } = createReaderBuilderProbe(source,
-    ['stateContent', 'initialContent', 'refreshVisibleResults', 'publishVisibleGroups'],
+    ['stateContent', 'sourceRequiredReason', 'initialContent', 'sourceRequiredContent', 'sourceLoadErrorContent',
+      'primaryPill', 'secondaryPill', 'refreshVisibleResults', 'publishVisibleGroups'],
     { Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'),
       FlexAlign: enumValues('FlexAlign'), TOK_BORDER_W: 1, TOK_SPACE_XS: 8,
       TOK_SPACE_CARD_PADDING: 12, TOK_SPACE_ROW_BLOCK: 4 }));
   Object.assign(owner, {
-    presentation: { kind: 'initial', history }, isTablet: tablet,
+    presentation: kind === 'sourceRequired' ? { kind, reason: 'noSources', history } : { kind, history },
+    isTablet: tablet,
     historyWidth: width,
     viewState: new SearchViewState(),
-    viewStateRevision: -1, appThemeScheme: 'day',
+    viewStateRevision: -1, appThemeScheme: 'day', keyword: '',
+    onManageSources: () => actions.push('manage'),
+    onRetry: () => actions.push('retry'),
+    onBack: () => actions.push('back'),
+    submitSearch: () => actions.push(`search:${owner.keyword}`),
+    onClearHistory: () => actions.push('clear'),
     visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) {
       assert.deepEqual(groups, [], 'history view cannot admit online candidate preparation');
     },
@@ -52,7 +61,7 @@ function fixture(history, { width = 0, tablet = false, expanded = false, measure
   });
   owner.refreshVisibleResults();
   owner.stateContent();
-  return { owner, measurements, nodes: () => [...owner.nodes.values()],
+  return { owner, measurements, actions, nodes: () => [...owner.nodes.values()],
     areas: () => [...owner.nodes.values()].filter(node => typeof node.onAreaChange === 'function') };
 }
 function dispatchArea(f, outerWidth) {
@@ -91,6 +100,24 @@ check('async history and narrow/tablet widths preserve every entry and existing 
     assert.equal(f.owner.historyWidth,260-(tablet?40:36));assert.equal(f.measurements.length,0);
     assert.ok(f.nodes().some(n=>n.type==='Text'&&n.create==='加载后历史'));
     assert.equal(f.nodes().find(n=>n.type==='Scroll').align,'Alignment.TopStart');
+  }
+});
+check('no-source and load-error entries retain history chips and their actions', () => {
+  for (const [kind, actionLabel, expectedAction] of [
+    ['sourceRequired', '添加书源', 'manage'],
+    ['sourceLoadError', '重试加载', 'retry'],
+  ]) {
+    const f = fixture(['本地书'], { kind });
+    assert.equal(f.nodes().filter(node => node.type === 'Scroll').length, 1,
+      'status and history share one scroll viewport');
+    const action = f.nodes().find(node => node.type === 'Text' && node.create === actionLabel);
+    const chip = f.nodes().find(node => node.type === 'Text' && node.create === '本地书');
+    assert.ok(action, `${kind} exposes its online-source recovery action`);
+    assert.ok(chip, `${kind} keeps the local search shortcut`);
+    action.onClick();
+    chip.onClick();
+    assert.deepEqual(f.actions, [expectedAction, 'search:本地书']);
+    dispatchArea(f, 260);
   }
 });
 check('fresh-entry focus is consumed once and reset/return cannot recreate it',()=>{

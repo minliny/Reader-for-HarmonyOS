@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { isReaderLocalBookFileName } from '../entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts';
+import { localImportFailure } from '../entry/src/main/ets/app/LocalImportFailure.ts';
 
 const source = readFileSync(
   'entry/src/main/ets/app/ReaderHostRegistry.ts',
@@ -28,7 +30,7 @@ const Picker = {
 const logs = [];
 const Harness = new Function(
   'picker', 'ReaderHostRegistry', 'hilog', 'errorMessageOf', 'localImportFailure',
-  'READER_LOCAL_BOOK_PICKER_FILTER', 'LOG_DOMAIN',
+  'READER_LOCAL_BOOK_PICKER_FILTER', 'isReaderLocalBookFileName', 'LOG_DOMAIN',
   `${stripTypeScriptTypes(`
     class Harness {
       ${method}
@@ -42,30 +44,37 @@ const Harness = new Function(
     error(...args) { logs.push(['error', ...args]); },
   },
   error => error instanceof Error ? error.message : String(error),
-  reason => ({ code: 'readFailed', message: String(reason) }),
+  localImportFailure,
   'TXT、EPUB、MOBI、AZW3|.txt,.epub,.mobi,.azw,.azw3,.kf8',
+  isReaderLocalBookFileName,
   0x5244,
 );
 
 const harness = new Harness();
+const stagedUris = [];
 Object.assign(harness, {
   context: {},
   async ensureStageRecovery() {},
   requireSelectedFileName(uri) {
     if (uri === 'bad://provider-result') throw new Error('Selected document has no file name');
-    return `${uri}.txt`;
+    return uri.includes('.') ? uri : `${uri}.txt`;
   },
   async stageLocalBook(uri, fileName) {
+    stagedUris.push(uri);
     return { fileName, bookId: `local:${uri}`, stagedPath: `/stage/${uri}`, assetKind: 'source' };
   },
 });
 
-Picker.uris = ['good-a', 'bad://provider-result', 'good-b'];
+Picker.uris = ['good-a', 'bad://provider-result', 'provider-returned.html', 'good-b'];
 const mixed = await harness.selectLocalBookInputs();
-assert.equal(mixed.length, 3);
-assert.deepEqual(mixed.map(item => item.state), ['ready', 'failed', 'ready']);
+assert.equal(mixed.length, 4);
+assert.deepEqual(mixed.map(item => item.state), ['ready', 'failed', 'failed', 'ready']);
 assert.equal(mixed[1].fileName, '未命名文件');
 assert.equal(mixed[1].failure.code, 'readFailed');
+assert.equal(mixed[2].fileName, 'provider-returned.html');
+assert.equal(mixed[2].failure.code, 'invalidBook');
+assert.deepEqual(stagedUris, ['good-a', 'good-b'],
+  'provider-supplied unsupported files must fail without staging or dropping admitted neighbors');
 
 Picker.uris = Array.from({ length: 55 }, (_value, index) => `book-${index}`);
 const oversized = await harness.selectLocalBookInputs();

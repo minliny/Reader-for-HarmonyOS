@@ -3,7 +3,8 @@ import type { LocalReadingTocEntry, LocalReadingBookmark } from './LocalReadingF
 /** Independent values, not retained aliases: detect same-reference in-place edits too. */
 export function snapshotReaderDirectoryData(entries: LocalReadingTocEntry[]): LocalReadingTocEntry[] {
   return entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
-    index: entry.index, title: entry.title, downloadState: entry.downloadState, navigable: entry.navigable,
+    index: entry.index, title: entry.title, level: entry.level,
+    downloadState: entry.downloadState, navigable: entry.navigable,
     bookmarks: entry.bookmarks === undefined ? undefined :
       entry.bookmarks.map((bookmark: LocalReadingBookmark): LocalReadingBookmark => ({
         time: bookmark.time, chapterIndex: bookmark.chapterIndex, chapterOffset: bookmark.chapterOffset,
@@ -23,7 +24,8 @@ export function sameReaderDirectoryData(previous: LocalReadingTocEntry[], next: 
   for (let i = 0; i < next.length; i += 1) {
     const a = previous[i];
     const b = next[i];
-    if (a.index !== b.index || a.title !== b.title || a.downloadState !== b.downloadState || a.navigable !== b.navigable) return false;
+    if (a.index !== b.index || a.title !== b.title || a.level !== b.level ||
+      a.downloadState !== b.downloadState || a.navigable !== b.navigable) return false;
     if (a.bookmarks === undefined || b.bookmarks === undefined) {
       if (a.bookmarks !== undefined || b.bookmarks !== undefined) return false;
       continue;

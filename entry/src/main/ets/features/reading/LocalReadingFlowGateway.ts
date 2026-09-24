@@ -11,6 +11,8 @@ import type { RemoteReadingIdentity } from './RemoteReadingContract';
 export type LocalReadingTocEntry = {
   index: number;
   title: string;
+  /** 1-based navigation depth when the local book has a structured TOC. */
+  level?: number;
   downloadState: LocalReadingDownloadState;
   /** Remote volume headings retain their index but cannot navigate/download/bookmark. */
   navigable?: boolean;
@@ -212,9 +214,13 @@ export class LocalReadingFlowGateway {
       // Although the URL is not page state, validate the complete required
       // Core entry shape before using its title and index.
       this.requireString(entry, 'url', 'local_book.toc entry');
+      const level = entry['level'] === undefined ? undefined :
+        this.requireNonNegativeInteger(entry, 'level', 'local_book.toc entry');
+      if (level === 0) throw new Error('local_book.toc returned invalid navigation level');
       entries.push({
         index,
         title: this.requireString(entry, 'title', 'local_book.toc entry'),
+        level,
         downloadState: 'unknown',
       });
     }
@@ -272,6 +278,7 @@ export class LocalReadingFlowGateway {
       projected.push({
         index: entry.index,
         title: entry.title,
+        level: entry.level,
         downloadState: stateByChapter.get(entry.index) ?? 'unknown',
         navigable: entry.navigable,
         bookmarks: entry.bookmarks,
@@ -342,6 +349,7 @@ export class LocalReadingFlowGateway {
       projected.push({
         index: entry.index,
         title: entry.title,
+        level: entry.level,
         downloadState: entry.downloadState,
         navigable: entry.navigable,
         bookmarks: bookmarksByChapter.get(entry.index) ?? [],

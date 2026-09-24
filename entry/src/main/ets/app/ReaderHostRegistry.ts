@@ -285,6 +285,9 @@ export class ReaderHostRegistry {
           let fileName = '未命名文件';
           try {
             fileName = this.requireSelectedFileName(uri);
+            // A document provider may ignore the picker suffix filter. Check
+            // each returned file before allocating space or reading its bytes.
+            if (!isReaderLocalBookFileName(fileName)) throw new Error('Unsupported local book format');
             prepared[index] = {
               state: 'ready',
               input: await this.stageLocalBook(uri, fileName),

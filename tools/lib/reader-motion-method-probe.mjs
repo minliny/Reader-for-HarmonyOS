@@ -13,7 +13,9 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * Native-node cleanup is instrumented; platform geometry has its separate SDK/VM suite.
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
-  dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, ...dependencies };
+  dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry,
+    ReaderRuntimeOwner: { current: () => ({ captureReadingContentValidity: () => () => true,
+      waitForReadingContentIdle: async () => {} }) }, ...dependencies };
   const source = readFileSync(file, 'utf8');
   const tree = ts.createSourceFile('/tmp/ReaderMotionProbe.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${file}: ETS parses`);
@@ -22,7 +24,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   // Keep newly factored business helpers real in existing method-level probes.
   // Fixtures can still supply their explicit I/O/lifecycle dependencies.
   names = [...names];
-  for (const helper of ['preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels']) {
+  for (const helper of ['preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`))) names.push(helper);
   }

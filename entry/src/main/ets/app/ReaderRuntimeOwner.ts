@@ -293,6 +293,10 @@ export class ReaderRuntimeOwner {
     return (): boolean => this.state !== 'closing' && this.state !== 'closed' && valid();
   }
 
+  waitForReadingContentIdle(sourceId: string, bookId: string): Promise<void> {
+    return this.readingEntryPreparations().waitForContentIdle(sourceId, bookId);
+  }
+
   private async requestDirect(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
     if (method === 'cache.clear' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
       method === 'source.delete' || method === 'source.switch.begin' || method === 'source.switch.commit' ||

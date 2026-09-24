@@ -209,8 +209,9 @@ assert.equal(custom.font, 'custom');
   const disk = persistence(), store = new ReaderAppearanceStore(disk), current = page(store), gate = deferred();
   prepareFont = () => gate.promise;
   const loading = current.loadAppearanceSnapshot(1); await tick();
-  assert.equal(current.appearanceLoaded, true);
+  assert.equal(current.appearanceLoaded, undefined, 'font load must keep the initial layout barrier closed');
   current.active = false; gate.resolve(); await loading;
+  assert.equal(current.appearanceLoaded, undefined);
   assert.deepEqual(current.appearanceSnapshot, initial);
   prepareFont = async () => {};
 }

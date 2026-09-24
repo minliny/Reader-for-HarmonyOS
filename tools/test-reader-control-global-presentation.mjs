@@ -61,13 +61,13 @@ const native = new Proxy({}, { get: () => () => {} });
 const { owner: font } = createReaderBuilderProbe(source('Appearance'),
   ['frame', 'endpointFrame', 'fullInput', 'sharedInput', 'presentation', 'sharedClip', 'actorPosition',
     'sharedScrollTranslation', 'fullOnlyScrollTranslation', 'extendedThemes', 'themeIds', 'fontIds', 'fontActor', 'fontActorAt',
-    'fontInput', 'activeFont', 'fontCellPosition', 'fontCell'],
+    'fontInput', 'activeFont', 'fontCellPosition', 'previewFamily', 'fontPreviewReady', 'visiblePreviewFamily', 'fontCell'],
   { ...deps, ...appearance, ...appearanceState, ...render, READER_CONTROL_APPEARANCE_THEMES,
     BorderStyle: enums, GesturePriority: enums, Gesture: native, LongPressGesture: native,
     globalThis: { Gesture: native, LongPressGesture: native } });
 Object.assign(font, props(), { snapshot: appearanceState.setReaderAppearanceCustomFont(appearanceState.createDefaultReaderAppearanceSnapshot(),
     new appearanceState.ReaderCustomFontDescriptor('测试字体', 'ReaderCustom_aaaaaaaaaaaaaaaa', '/fonts/a.ttf', 'a'.repeat(64))),
-  draggedFontId: '', previewFontOrder: [], fontTracks: new Map(), importLayout: 'ordered-slot-approved',
+  draggedFontId: '', previewFontOrder: [], readyPreviewFamilies: [], fontTracks: new Map(), importLayout: 'ordered-slot-approved',
   cachedProgress: -1, cachedWidth: -1, cachedFullHeight: -1 });
 for (const slot of font.fontIds()) font.fontCell(slot);
 const actions = [];

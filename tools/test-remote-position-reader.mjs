@@ -13,8 +13,12 @@ const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/featu
 const file=fileURLToPath(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url));
 const anchorSource=readFileSync(file,'utf8').match(/class CoreReadingAnchor[\s\S]*?\n}/)[0];
 const CoreReadingAnchor=new Function(`${stripTypeScriptTypes(anchorSource)}; return CoreReadingAnchor;`)();
+let captureContentEpoch=()=>()=>true;
+let waitContentIdle=async()=>{};
 const Reader=productionMotionMethods(file,['openChapter','loadSessionChapter','configureRestoredAnchor','lastVisibleScalar',
-  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local'});
+  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
+  ReaderRuntimeOwner:{current:()=>({captureReadingContentValidity:(...args)=>captureContentEpoch(...args),
+    waitForReadingContentIdle:(...args)=>waitContentIdle(...args)})}});
 const old={sourceId:'s',bookId:'b',chapterIndex:0,chapterTitle:'章',chapterUrl:'/0',bodyVersion:'old',processingVersion:'old-p',
   contentVersion:'host-old',content:'开头\\r\\n目标文字与之后足够长的正文',images:[],extractionVia:'rule'};
 const upgraded={...old,content:'开头\n目标文字与之后足够长的正文',bodyVersion:'new',processingVersion:'new-p',contentVersion:'host-new'};
@@ -23,11 +27,31 @@ const receipt=(id)=>({status:'committed',previousBodyVersion:'old',bodyVersion:'
 function page(load){
   const calls=[];
   const gateway={loadChapter:async(...args)=>{calls.push(args);return load(...args);}};
-  const p=Object.assign(new Reader(),{sourceId:'s',bookId:'b',tocEntries:[],chapterWindow:{get:()=>undefined,setCurrent(){}},
+  const p=Object.assign(new Reader(),{sourceId:'s',bookId:'b',tocEntries:[],chapterWindow:{get:()=>undefined,setCurrent(){},clear(){}},
     controlBookmarkLoadGeneration:0,onLoadControlBookmarks:async()=>{},isSelectionActive:()=>true,activeGateway:()=>gateway,ensureCurrentContentMetrics:async()=>true,
     admitChapterContentVersion(){},retainCurrentChapterWindow(){},rebuildChapterImageIndexes(){},hasMeasuredViewport:()=>false,
     fail(error){this.failure=error;}});
   return {p,calls,gateway};
+}
+// A cache/rule mutation during an ordinary body read must retire the first
+// result and wait for the replacement before publishing the chapter.
+{
+ let revision=0, release, reads=0, idleCalls=0;
+ const gate=new Promise(resolve=>release=resolve);
+ captureContentEpoch=()=>{const captured=revision;return()=>captured===revision;};
+ waitContentIdle=async()=>{idleCalls++;};
+ const {p}=page(async()=>{reads++;return reads===1?gate:upgraded;});
+ const pending=p.openChapter(0,false,1,1);
+ await Promise.resolve();
+ revision++;
+ release(old);
+ await pending;
+ assert.equal(reads,2);
+ assert.equal(idleCalls,1);
+ assert.equal(p.chapter,upgraded,'a stale body may not reach the visible chapter');
+ assert.equal(p.failure,undefined);
+ captureContentEpoch=()=>()=>true;
+ waitContentIdle=async()=>{};
 }
 {
  const {p,calls}=page(async()=>({...upgraded,positionMigration:receipt('restored')}));

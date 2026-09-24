@@ -142,7 +142,8 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   }
   // Geometry/property probes do not register physical platform fonts. The
   // actual registrar has a separate demand/failure/retry test.
-  const globals = { readerRegisteredFontFamily: (_font, family) => family, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
+  const globals = { readerRegisteredFontFamily: (_font, family) => family,
+    readerFontFamilyReady: () => true, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',

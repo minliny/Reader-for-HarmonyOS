@@ -13,7 +13,7 @@ assert.match(prepare, /page === 'moduleDirectory'[\s\S]*loadControlBookmarks\(\)
 const { loadReaderControlBookmarkProjection, mergeReaderControlBookmarkProjection } =
   await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
 const row = (index, bookmarks, downloadState = 'unknown', title = `Chapter ${index}`) =>
-  ({ index, title, downloadState, bookmarks });
+  ({ index, title, level: index + 1, downloadState, bookmarks });
 const bookmark = (time) => ({ time, chapterIndex: 1, chapterOffset: 12,
   chapterTitle: 'Chapter 1', content: `saved ${time}` });
 const confirmed = [row(0, []), row(1, [bookmark(10)])];
@@ -30,6 +30,7 @@ const merged = mergeReaderControlBookmarkProjection(latest, confirmed);
 assert.equal(merged[0].downloadState, 'completed');
 assert.equal(merged[1].downloadState, 'queued');
 assert.equal(merged[0].title, 'Converted title');
+assert.equal(merged[1].level, 2, 'bookmark refresh preserves the current EPUB directory hierarchy');
 assert.equal(merged[1].bookmarks[0].time, 10);
 assert.equal(latest[0].bookmarks, undefined, 'no in-place mutation');
 
