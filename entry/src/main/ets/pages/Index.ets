@@ -1,4 +1,5 @@
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
+import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
 import { BookshelfSettingsPage } from '../features/bookshelf/BookshelfSettingsPage';
 import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSelector';
@@ -327,6 +328,13 @@ class LocalImportPresentation {
   }
 }
 
+class ReaderNavigationBackfillFrame extends FrameCallback {
+  private action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
+}
+
 @Entry
 @Component
 struct Index {
@@ -340,6 +348,9 @@ struct Index {
   private shelfEntryTraceGeneration: number = -1;
   private startupEntryId: number = 0;
   private readingReadyGeneration: number = 0;
+  private navigationBackfillAttempted: Set<string> = new Set<string>();
+  private navigationBackfillObservedKey: string = '';
+  private navigationBackfillObserverDisposer: (() => void) | undefined;
   @State private importFailureMessage: string = '';
   @State private editingShelfGroupBook: ShelfBook | undefined = undefined;
   @State private editingShelfGroupBusy: boolean = false;
@@ -571,6 +582,9 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.navigationBackfillObserverDisposer?.();
+    this.navigationBackfillObserverDisposer = undefined;
+    this.navigationBackfillObservedKey = '';
     this.systemFileOpenMounted = false;
     this.systemFileOpenChecking = '';
     this.systemFileOpenUnsubscribe?.();
@@ -1105,6 +1119,9 @@ struct Index {
             this.applyDirectoryChapter(chapterIndex, chapterTitle);
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
+            positionScope: RemoteReadingPositionScope): void =>
+            this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope),
           onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
             this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset, positionScope),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
@@ -1252,6 +1269,9 @@ struct Index {
         catalogMessage: this.detailLoadingMessage,
         chapterStartBookmarkCreationEnabled: true,
         onSelectChapter: (index: number): void => this.onDirectoryChapterSelected(index),
+        onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
+          positionScope: RemoteReadingPositionScope): void =>
+          this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope),
         onDownloadChapter: (index: number): void => this.downloadDirectoryChapter(index),
         onDeleteBookmarks: (times: number[]): void => this.deleteDirectoryBookmarks(times),
         onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
@@ -4010,6 +4030,9 @@ struct Index {
     if (!this.readingSessionActive) {
       this.openReading(chapterIndex);
       if (!this.readingSessionActive) return;
+      // The exact anchor below owns the initial chapter admission. Leaving
+      // the chapter-start prop set would race its @Watch against the anchor.
+      this.requestedChapterIndex = undefined;
     } else if (chapterIndex === this.directoryCurrentChapterIndex) {
       // 已提交章内的书签: 不重复准入, 只露出阅读区。精确偏移完全由下面的
       // requestedBookmarkAnchor 通道承载 (selectChapterAnchor 处理同章偏移跳转)。
@@ -4025,6 +4048,21 @@ struct Index {
     this.bookmarkAnchorRequestId += 1;
     this.requestedBookmarkAnchor =
       new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset, positionScope);
+  }
+
+  private onDirectoryNavigationTargetSelected(chapterIndex: number, chapterOffsetScalar: number,
+    positionScope: RemoteReadingPositionScope): void {
+    // Both chapter starts and in-chapter EPUB links carry Core's exact body
+    // and processing versions into the reader's existing scoped anchor path.
+    // Reimport or rule edits after target resolution must not reuse a stale
+    // chapter index or scalar offset.
+    const book = this.detailBook;
+    if (book?.sourceId !== LOCAL_SOURCE_ID ||
+      !Number.isSafeInteger(chapterOffsetScalar) || chapterOffsetScalar < 0 ||
+      positionScope === undefined ||
+      positionScope.sourceId !== LOCAL_SOURCE_ID || positionScope.bookId !== book.bookId ||
+      positionScope.chapterIndex !== chapterIndex) return;
+    this.onReaderBookmarkSelected('', chapterIndex, chapterOffsetScalar, positionScope);
   }
 
   private openFullDirectory(): void {
@@ -4060,7 +4098,47 @@ struct Index {
       if (!this.readingSessionActive || this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
         this.readingReadyGeneration !== generation) return;
       this.presentPreparedReading(chapterIndex);
+      this.scheduleNavigationBackfillAfterReady(sourceId, bookId, generation);
     };
+  }
+
+  private scheduleNavigationBackfillAfterReady(sourceId: string, bookId: string, generation: number): void {
+    // This callback is emitted only after ReadingExperience owns a stable,
+    // visible page. Never parse a retained EPUB on shelf click or while the
+    // readable first frame is being admitted.
+    if (!this.readingSessionActive || this.route !== 'reading' || sourceId !== LOCAL_SOURCE_ID ||
+      this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
+      this.detailBook.kind?.trim().toLowerCase() !== 'epub') return;
+    const key = `${sourceId}\u0000${bookId}\u0000${generation}`;
+    if (this.navigationBackfillObservedKey === key) return;
+    this.navigationBackfillObservedKey = key;
+    const owner = ReaderRuntimeOwner.current();
+    const navigationGeneration = this.navigationGeneration;
+    const isCurrent = (): boolean => this.systemFileOpenMounted && this.readingSessionActive &&
+      this.readingReadyGeneration === generation && this.navigationGeneration === navigationGeneration &&
+      this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
+      this.detailBook.kind?.trim().toLowerCase() === 'epub' && ReaderRuntimeOwner.current() === owner;
+    try {
+      this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame((): void => {
+        if (!isCurrent()) {
+          if (this.navigationBackfillObservedKey === key) this.navigationBackfillObservedKey = '';
+          return;
+        }
+        this.navigationBackfillObserverDisposer?.();
+        this.navigationBackfillObserverDisposer = readerDirectoryObserveMissingNavigation(bookId, (): void => {
+          if (!isCurrent() || this.navigationBackfillAttempted.has(key) ||
+            !readerDirectoryTakeMissingNavigation(bookId)) return;
+          this.navigationBackfillAttempted.add(key);
+          if (this.navigationBackfillAttempted.size > 16) {
+            this.navigationBackfillAttempted.delete(this.navigationBackfillAttempted.values().next().value as string);
+          }
+          void backfillRetainedReaderDirectoryNavigation(owner, bookId, isCurrent)
+            .catch((_error: Error): void => { /* Preserve the flat directory and every user record. */ });
+        });
+      }));
+    } catch (_error) {
+      this.navigationBackfillObservedKey = '';
+    }
   }
 
   private presentPreparedReading(chapterIndex: number): void {

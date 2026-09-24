@@ -9,7 +9,7 @@ const source=readFileSync(file('pages/Index.ets'),'utf8');
 const experience=readFileSync(file('features/reading/LocalReadingExperience.ets'),'utf8');
 const anchor=experience.slice(experience.indexOf('export class ReaderBookmarkAnchorRequest {'),experience.indexOf('\nclass ReaderDeferredChapterSelection'));
 const Anchor=new Function(`${stripTypeScriptTypes(anchor.replace('export class','class'))}; return ReaderBookmarkAnchorRequest;`)();
-const Index=productionMotionMethods(file('pages/Index.ets'),['onBackPress','openFullDirectory','closeDirectory','onDirectoryChapterSelected','onReaderBookmarkSelected','openReading','presentPreparedReading','openReaderControlDirectory','isKnownDetailChapter','readerOwnsWindowEdges'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:Anchor});
+const Index=productionMotionMethods(file('pages/Index.ets'),['onBackPress','openFullDirectory','closeDirectory','onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','onReaderBookmarkSelected','openReading','presentPreparedReading','openReaderControlDirectory','isKnownDetailChapter','readerOwnsWindowEdges'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:Anchor});
 function index(sourceId='local'){
  const entries=Array.from({length:25},(_,i)=>({index:i,title:`Chapter ${i+1}`,url:`/${i}`,navigable:true,downloadState:'unknown'}));
  const host=Object.assign(new Index(),{route:'detail',readingSessionActive:false,detailBook:{sourceId,bookId:'book',title:'Book',author:'Author'},detailToc:entries,remoteReadingSession:sourceId==='local'?undefined:{identity:{sourceId,bookId:'book'},entries},bookshelfRemovalActiveKey:'',navigationGeneration:1,requestedChapterIndex:undefined,requestedBookmarkAnchor:undefined,directoryCurrentChapterIndex:-1,bookmarkAnchorRequestId:0,preparedReaderRoute:'reading',directoryReturnTarget:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},returnToReadingOrigin(){this.readingSessionActive=false;this.route='detail';},readingExitRequest:undefined});
@@ -27,6 +27,22 @@ for(const sourceId of ['local','remote']){
  host.openReaderControlDirectory();host.closeDirectory();assert.equal(host.route,'reading');assert.equal(host.readingSessionActive,true);
 }
 const proof={sourceId:'remote',bookId:'book',chapterIndex:19,bodyVersion:'body',processingVersion:'processing'};
+const localProof={...proof,sourceId:'local'};
+{
+ const host=index('local');host.openFullDirectory();host.onDirectoryNavigationTargetSelected(19,37,localProof);
+ assert.equal(host.requestedBookmarkAnchor.chapterIndex,19);
+ assert.equal(host.requestedBookmarkAnchor.chapterOffset,37,'EPUB chapter-inside target retains its scalar offset');
+ assert.equal(host.requestedBookmarkAnchor.positionScope,localProof,'exact target retains Core body and processing versions');
+ assert.equal(host.requestedChapterIndex,undefined,'exact target must not race a chapter-start request');
+ const ordinary=index('local');ordinary.openFullDirectory();ordinary.onDirectoryNavigationTargetSelected(19,0,localProof);
+ assert.equal(ordinary.requestedChapterIndex,undefined,'chapter-start target also uses the scoped anchor route');
+ assert.equal(ordinary.requestedBookmarkAnchor.chapterOffset,0);
+ assert.equal(ordinary.requestedBookmarkAnchor.positionScope,localProof);
+ const stale=index('local');stale.openFullDirectory();stale.onDirectoryNavigationTargetSelected(19,37,{...localProof,bookId:'other'});
+ assert.equal(stale.requestedBookmarkAnchor,undefined,'mismatched book scope cannot jump');
+ const remote=index('remote');remote.openFullDirectory();remote.onDirectoryNavigationTargetSelected(19,37,localProof);
+ assert.equal(remote.requestedBookmarkAnchor,undefined,'EPUB navigation cannot be applied to a remote book');
+}
 {
  const host=index('remote');host.openFullDirectory();host.onReaderBookmarkSelected('mark',19,37,proof);
  assert.equal(host.readingSessionActive,true);assert.equal(host.requestedBookmarkAnchor.chapterOffset,37);assert.equal(host.requestedBookmarkAnchor.positionScope,proof);
@@ -45,6 +61,12 @@ for(const sourceId of ['local','remote']){
  if(sourceId==='remote')assert.deepEqual(host.opens[0][7],{bodyVersion:'body',processingVersion:'processing',anchors:[{id:'requested',offset:37}]});
  host.onRequestedBookmarkAnchorChanged();assert.equal(host.selections.length,0,'same initial request is not replayed by a late watch');
  host.requestedBookmarkAnchor=new Anchor(2,19,37,sourceId==='local'?undefined:proof);host.onRequestedBookmarkAnchorChanged();assert.equal(host.selections.length,1,'a real second click remains actionable');
+}
+{
+ const host=initial('local');host.requestedBookmarkAnchor=new Anchor(1,19,37,localProof);
+ await host.loadInitialChapter(1,Promise.resolve([]));
+ assert.deepEqual(host.opens[0][7],{bodyVersion:'body',processingVersion:'processing',anchors:[{id:'requested',offset:37}]},
+  'EPUB target carries its Core body and processing proof into first chapter admission');
 }
 for(const mutate of [h=>{h.requestedBookmarkAnchor.positionScope=undefined;},h=>{h.requestedBookmarkAnchor.positionScope={...proof,bookId:'another'};},h=>{h.requestedBookmarkAnchor.chapterIndex=20;}]){
  const host=initial();mutate(host);await host.loadInitialChapter(1,Promise.resolve([]));assert.equal(host.opens.length,0);assert.equal(host.failures.length,1);
@@ -75,9 +97,13 @@ const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge'].map(name=>[name,n
 for(const sourceId of ['local','remote']){
  const {owner,output}=createReaderBuilderProbe(source,['externalDirectory'],{BookDirectoryPage:DirectoryChild,...enums});
  const host=index(sourceId);Object.assign(owner,host,{settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',detailBookmarkIdentity:()=>({sourceId,bookId:'book'}),appThemeScheme:'day'});
- owner.onDirectoryChapterSelected=host.onDirectoryChapterSelected.bind(host);owner.closeDirectory=host.closeDirectory.bind(host);
+ owner.onDirectoryChapterSelected=host.onDirectoryChapterSelected.bind(host);owner.onDirectoryNavigationTargetSelected=host.onDirectoryNavigationTargetSelected.bind(host);owner.closeDirectory=host.closeDirectory.bind(host);
  owner.externalDirectory();assert.equal(owner.children.size,1);const props=[...owner.children.values()][0].params;
  props.onSelectChapter(19);assert.equal(host.requestedChapterIndex,19);host.route='directory';props.onBack();assert.equal(host.route,'detail');
+ if(sourceId==='local'){
+  host.openFullDirectory();props.onSelectNavigationTarget(20,7,{...localProof,chapterIndex:20});
+  assert.equal(host.requestedBookmarkAnchor.chapterOffset,7,'detail directory target uses exact-position admission');
+ }
  assert.equal(props.bookId,'book');assert.equal(props.onSwitchSource,undefined);assert.equal(props.onDownloadBook,undefined);assert.equal(props.entries,host.detailToc);assert.equal(props.sourceId,sourceId);assert.doesNotMatch(output,/new ReaderShell|new ReadingExperience/);
  assert.match(source,/this\.route === 'directory' && this\.directoryReturnTarget === 'detail'\) \{\s*this\.externalDirectory\(\)/,'detail content mounts the independent page');
  assert.match(source,/visible: this\.route === 'reading' \|\|\s*\(this\.route === 'directory' && this\.directoryReturnTarget === 'readerControl'\)/,'a preparing external selection cannot expose the reading control directory');

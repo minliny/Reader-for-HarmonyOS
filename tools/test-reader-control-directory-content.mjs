@@ -117,7 +117,8 @@ for (const [p, expectedY, expectedAlpha] of [[0, 124, 0], [0.25, 116.5, 0.0625],
 assert.match(content, /this\.rebuildProjection\(nextTab, this\.ascending, this\.searchQuery\);\s*this\.beginListPositioning\(nextTab\);\s*this\.onTabChange\(nextTab\);/);
 assert.match(content, /beginReaderControlListOpen\(this\.listPositioning, `\$\{sessionKey\}:\$\{tab\}`, ordinal\)/);
 assert.equal((content.match(/onViewportChanged:/g) ?? []).length, 2);
-assert.equal((content.match(/onUserScrollIntent:/g) ?? []).length, 2);
+assert.equal((content.match(/onUserScrollIntent:/g) ?? []).length, 3,
+  'the local EPUB navigation list shares the scroll-intent guard');
 assert.match(content, /prepareReaderControlListPosition\(this\.listPositioning, openRevision/);
 assert.match(content, /readerControlListPositionIsCurrent\(this\.listPositioning, command\)/);
 assert.match(content, /commitReaderControlListPosition\(this\.listPositioning, command\)/);
@@ -126,8 +127,8 @@ assert.match(content, /this\.listPositioning = commitReaderControlListPosition[\
   'initial positioning still commits a single safe scroll before enabling list input');
 assert.match(content, /onFirstLayout: \(\): void => this\.onListFirstLayout\(\)/,
   'first native layout must be able to kick positioning even when an ancestor is clipped');
-assert.match(content, /\.opacity\(this\.projectedEntries\.length > 0 \? 1 : 0\)/,
-  'persistent chapter actors stay painted while positioning is pending');
+assert.match(content, /\.opacity\(this\.projectedEntries\.length > 0 \|\| this\.navigationActive \? 1 : 0\)/,
+  'persistent chapter and EPUB navigation actors stay painted while positioning is pending');
 assert.match(content, /\.opacity\(this\.projectedBookmarks\.length > 0 \? 1 : 0\)/,
   'persistent bookmark actors stay painted while positioning is pending');
 assert.match(content, /private onEntriesChanged\(\): void \{[\s\S]*?this\.pendingEntries = this\.entries;\s*this\.scheduleDeferredMutationFlush\(\);/,

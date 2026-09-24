@@ -2307,6 +2307,9 @@ export struct ReadingExperience {
         onPageChange: (page: ReaderControlPage): void => this.setControlPage(page),
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),
+        onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
+          positionScope: RemoteReadingPositionScope): void =>
+          this.selectBookmarkAnchor(chapterIndex, chapterOffsetScalar, positionScope),
         onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
           this.selectBookmarkAnchor(chapterIndex, chapterOffset, positionScope),
         bookmarkIdentity: this.bookmarkIdentity,
