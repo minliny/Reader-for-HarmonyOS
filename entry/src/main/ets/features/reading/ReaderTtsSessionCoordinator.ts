@@ -75,6 +75,8 @@ export interface ReaderTtsHost {
   activateAudioSession(allowMixing: boolean): Promise<void>;
   deactivateAudioSession(): Promise<void>;
   speak(request: ReaderTtsHostSpeakRequest): Promise<void>;
+  /** Optional one-slice lookahead; implementations must bound and cancel it. */
+  prefetchNext?(request: ReaderTtsHostSpeakRequest): void;
   stop(): Promise<void>;
   publishPlaybackState(state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error'): void;
   /** Optional policy gate for the platform continuous-task lease. */
@@ -204,6 +206,8 @@ export class ReaderTtsSessionCoordinator {
   private readonly chapterAdvance:
     ((chapter: ReaderTtsChapterRef) => Promise<ReaderTtsChapterAdvanceInput | undefined>) | undefined;
   private operationTail: Promise<void> = Promise.resolve();
+  /** Persist completed slices in order without putting storage on the next-speech path. */
+  private progressCommitTail: Promise<void> = Promise.resolve();
   private state: ReaderTtsState = createReaderTtsState(false);
   private transport: HostTtsTransportState = createHostTtsTransportState();
   private coreSnapshot: ReaderTtsQueueSnapshot | undefined = undefined;
@@ -782,6 +786,7 @@ export class ReaderTtsSessionCoordinator {
     this.host.publishPlaybackState('stopped');
     return this.enqueue(async (): Promise<void> => {
       const hostStopError = await hostStopTask;
+      await this.progressCommitTail;
       if (active !== undefined && active.plan !== undefined) {
         try {
           await this.gateway.stop(active.input.chapter);
@@ -820,8 +825,9 @@ export class ReaderTtsSessionCoordinator {
     this.host.clearEventListener(this.ownerToken);
   }
 
-  whenSettled(): Promise<void> {
-    return this.operationTail;
+  async whenSettled(): Promise<void> {
+    await this.operationTail;
+    await this.progressCommitTail;
   }
 
   private async prepareNewSession(
@@ -830,6 +836,9 @@ export class ReaderTtsSessionCoordinator {
     hostStopTask: Promise<Error | undefined> | undefined,
   ): Promise<void> {
     try {
+      // A replacement session must not overtake an older completed slice's
+      // durable position, even when the next audio request is already ready.
+      await this.progressCommitTail;
       if (prior !== undefined) {
         if (hostStopTask === undefined) throw new Error('Reader TTS prior session has no Host stop task');
         const hostStopError = await hostStopTask;
@@ -1149,6 +1158,22 @@ export class ReaderTtsSessionCoordinator {
           this.startConfirmedRequestId = event.requestId;
           this.applyCoreSnapshot(result.snapshot);
           this.setState({ ...this.state, status: 'playing', consecutiveFailures: 0, audioStarted: true });
+          const nextSlice = active.plan?.slices[correlated.sliceIndex + 1];
+          if (nextSlice !== undefined) {
+            try {
+              this.host.prefetchNext?.({
+                requestId: `prefetch-after-${event.requestId}`,
+                text: nextSlice.text,
+                rate: active.input.rate ?? 1,
+                pitch: active.input.pitch ?? 1,
+                language: active.input.language ?? 'zh-CN',
+                person: active.input.person ?? 0,
+                engine: active.config?.engine,
+              });
+            } catch (error) {
+              this.logTtsEvent('prefetch', errorMessageOf(error));
+            }
+          }
           this.resolveStartWaiters(true);
         }
         return;
@@ -1162,8 +1187,13 @@ export class ReaderTtsSessionCoordinator {
         // still present while its progress/next-slice work runs, so a
         // duplicate event queued by the Host can reach Core exactly as before.
         this.retainUtteranceCorrelation(event.requestId);
-        this.applyCoreSnapshot(result.snapshot);
-        await this.progressCommit({ chapter: correlated.chapter, charEnd: correlated.charEnd });
+        if (result.snapshot.state === 'completed') this.prepareChapterAdvance(result.snapshot);
+        else this.applyCoreSnapshot(result.snapshot);
+        this.queueProgressCommit({ chapter: correlated.chapter, charEnd: correlated.charEnd });
+        // The old chapter must be durable before the next chapter becomes the
+        // visible progress owner. Ordinary adjacent slices can speak while the
+        // same ordered commit tail writes the preceding scalar position.
+        if (result.snapshot.state === 'completed') await this.progressCommitTail;
         if (!this.isCorrelatedSessionCurrent(correlated)) return;
         if (result.snapshot.state === 'completed') {
           await this.advanceOrComplete(active, result.snapshot);
@@ -1235,7 +1265,8 @@ export class ReaderTtsSessionCoordinator {
     const result = await this.reportCorrelatedCallback(correlated, token.requestId, 'error', 'failed');
     if (result.callbackDisposition === 'applied') this.removeUtteranceCorrelation(token.requestId);
     if (result.callbackDisposition !== 'applied' || !this.isCorrelatedSessionCurrent(correlated)) return;
-    this.applyCoreSnapshot(result.snapshot, message);
+    if (result.snapshot.state === 'completed') this.prepareChapterAdvance(result.snapshot);
+    else this.applyCoreSnapshot(result.snapshot, message);
     if (result.failureAction === 'stop' || result.snapshot.state === 'stopped') {
       await this.stopAfterCoreFailure(result.snapshot, message);
       return;
@@ -1371,7 +1402,8 @@ export class ReaderTtsSessionCoordinator {
         ? await this.gateway.skip(active.input.chapter)
         : await this.gateway.previous(active.input.chapter);
       if (!this.isSessionCurrent(identity) || this.state.positionGeneration !== positionGeneration) return;
-      this.applyCoreSnapshot(snapshot);
+      if (snapshot.state === 'completed') this.prepareChapterAdvance(snapshot);
+      else this.applyCoreSnapshot(snapshot);
       if (snapshot.state === 'completed') {
         await this.advanceOrComplete(active, snapshot);
         return;
@@ -1480,6 +1512,35 @@ export class ReaderTtsSessionCoordinator {
         snapshot.state === 'completed' ? 'completed' :
           snapshot.state === 'stopped' && errorMessage !== undefined ? 'error' : 'stopped';
     this.host.publishPlaybackState(published);
+  }
+
+  /** Core has drained this chapter, but the UI lease must remain active until
+   * its final progress is stored and the adjacent chapter is admitted. */
+  private prepareChapterAdvance(snapshot: ReaderTtsQueueSnapshot): void {
+    this.coreSnapshot = snapshot;
+    this.setState({
+      ...this.state,
+      status: 'preparing',
+      chapterKey: this.chapterKey(snapshot.chapter),
+      chapterIndex: snapshot.chapter.chapterIndex,
+      sliceIndex: undefined,
+      charStart: undefined,
+      charEnd: undefined,
+      requestId: undefined,
+      consecutiveFailures: snapshot.consecutiveFailures,
+      pauseReason: undefined,
+    });
+    this.host.publishPlaybackState('preparing');
+  }
+
+  private queueProgressCommit(progress: ReaderTtsProgressCommit): void {
+    const commit = this.progressCommitTail.then((): Promise<void> => this.progressCommit(progress));
+    // LRE logs its storage failure and leaves the prior durable position in
+    // place. Keep the queue usable for later slices even if another caller's
+    // progress callback rejects unexpectedly.
+    this.progressCommitTail = commit.catch((error: Error): void => {
+      this.logTtsEvent('progress.commit', errorMessageOf(error));
+    });
   }
 
   private firstSliceIndex(plan: ReaderTtsSlicePlan, scalarPosition: number): number {

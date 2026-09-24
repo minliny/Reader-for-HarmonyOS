@@ -357,4 +357,184 @@ assert.match(coordinatorSource, /this\.retainUtteranceCorrelation\(event\.reques
   await c.dispose();
 }
 
+// A slow progress write must not insert silence before the next slice in the
+// same chapter. It must still settle in the coordinator's ordered write tail.
+{
+  let entered;
+  let release;
+  const commitEntered = new Promise(resolve => { entered = resolve; });
+  const commitBlocked = new Promise(resolve => { release = resolve; });
+  const g = new FakeGateway(), h = new FakeHost();
+  const prefetches = [];
+  h.prefetchNext = request => { prefetches.push(request); };
+  const writes = [];
+  const c = new ReaderTtsSessionCoordinator(g, h, async update => {
+    writes.push(`begin:${update.charEnd}`);
+    entered();
+    await commitBlocked;
+    writes.push(`end:${update.charEnd}`);
+  });
+  await c.start({ chapter, content: canonicalRemoteContent, contentVersion: 110, scalarPosition: 0 });
+  const firstId = h.requests[0].requestId;
+  h.emit({ type: 'start', requestId: firstId });
+  await c.whenSettled();
+  assert.equal(prefetches[0].text, '第二句。', 'real onStart admits only the next bounded lookahead');
+  h.emit({ type: 'complete', requestId: firstId, completion: 'audio' });
+  await commitEntered;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.requests.length, 2, 'next sentence must speak while the prior scalar commit is slow');
+  release();
+  await c.whenSettled();
+  assert.deepEqual(writes, ['begin:4', 'end:4']);
+  await c.dispose();
+}
+
+class AdvancingChapterGateway extends FakeGateway {
+  currentChapter = chapter;
+  currentPlan;
+  async slice(chapterRef, content) {
+    this.currentChapter = chapterRef;
+    this.currentPlan = {
+      chapter: chapterRef, strategy: 'paragraph-then-sentence',
+      slices: [{ index: 0, text: content, charStart: 0, charEnd: content.length, paragraphIndex: 0 }],
+      sourceCharCount: content.length,
+    };
+    return this.currentPlan;
+  }
+  async play(plan, index) {
+    this.currentChapter = plan.chapter;
+    this.currentPlan = plan;
+    this.cursor = index;
+    this.queueState = 'playing';
+    return this.snapshot('playing');
+  }
+  async reportCallback(_chapter, _index, status) {
+    if (status === 'done') this.queueState = 'completed';
+    return { snapshot: this.snapshot(this.queueState), callbackDisposition: 'applied' };
+  }
+  async chapterPlan(current, next, drainBehavior) {
+    return { current, next, drainBehavior };
+  }
+  snapshot(state) {
+    return {
+      state, currentSliceIndex: 0, totalSlices: 1,
+      completedSlices: state === 'completed' ? 1 : 0,
+      chapter: this.currentChapter, sliceStatuses: [], failurePolicy: 'stop',
+      consecutiveFailures: 0, failureLimit: 3, drainBehavior: 'advance-to-next',
+      restartPolicy: 'reset-on-core-restart',
+    };
+  }
+}
+
+const secondChapter = { ...chapter, chapterIndex: 1, chapterTitle: '第二章' };
+
+// A Core completed snapshot is an internal boundary. The old page must remain
+// a valid TTS follow owner until its last scalar is durable and the next page
+// has accepted navigation; completed must only surface after the whole book.
+{
+  let entered;
+  let release;
+  const commitEntered = new Promise(resolve => { entered = resolve; });
+  const commitBlocked = new Promise(resolve => { release = resolve; });
+  const writes = [];
+  const states = [];
+  let admitted = 0;
+  const g = new AdvancingChapterGateway(), h = new FakeHost();
+  let c;
+  c = new ReaderTtsSessionCoordinator(g, h, async update => {
+    writes.push(`begin:${update.chapter.chapterIndex}`);
+    entered();
+    await commitBlocked;
+    writes.push(`end:${update.chapter.chapterIndex}`);
+  }, state => states.push(state.status), async current => {
+    if (current.chapterIndex !== 0) return undefined;
+    return {
+      chapter: secondChapter, content: '第二章首句。', contentVersion: 111,
+      onAdmitted: () => {
+        admitted += 1;
+        assert.equal(c.getState().status, 'preparing',
+          'page navigation must retain the active TTS follow lease');
+        assert.deepEqual(writes, ['begin:0', 'end:0'],
+          'old chapter progress must be durable before its page changes');
+      },
+    };
+  });
+  await c.start({ chapter, content: '第一章末句。', contentVersion: 110, scalarPosition: 0 });
+  const firstId = h.requests[0].requestId;
+  h.emit({ type: 'start', requestId: firstId });
+  await c.whenSettled();
+  h.emit({ type: 'complete', requestId: firstId, completion: 'audio' });
+  await commitEntered;
+  assert.equal(c.getState().status, 'preparing');
+  assert.equal(admitted, 0, 'navigation must wait for the final old-chapter commit');
+  assert.equal(states.includes('completed'), false, 'a chapter boundary is not a session completion');
+  release();
+  await c.whenSettled();
+  assert.equal(admitted, 1);
+  assert.equal(c.getState().chapterIndex, 1);
+  assert.equal(h.requests.length, 2);
+  await c.dispose();
+}
+
+// A user stop while the next chapter is loading invalidates its admission.
+{
+  let entered;
+  let release;
+  const loaderEntered = new Promise(resolve => { entered = resolve; });
+  const loaderBlocked = new Promise(resolve => { release = resolve; });
+  const g = new AdvancingChapterGateway(), h = new FakeHost();
+  let admitted = 0;
+  const c = new ReaderTtsSessionCoordinator(g, h, async () => {}, undefined, async () => {
+    entered();
+    await loaderBlocked;
+    return { chapter: secondChapter, content: '第二章。', contentVersion: 112,
+      onAdmitted: () => { admitted += 1; } };
+  });
+  await c.start({ chapter, content: '第一章。', contentVersion: 111, scalarPosition: 0 });
+  const firstId = h.requests[0].requestId;
+  h.emit({ type: 'start', requestId: firstId });
+  await c.whenSettled();
+  h.emit({ type: 'complete', requestId: firstId, completion: 'audio' });
+  await loaderEntered;
+  const stop = c.stop();
+  release();
+  await stop;
+  assert.equal(admitted, 0);
+  assert.equal(h.requests.length, 1);
+  assert.equal(c.getState().status, 'idle');
+  await c.dispose();
+}
+
+// A replacement content/source session also supersedes an in-flight chapter
+// loader before that loader can navigate the old page.
+{
+  let entered;
+  let release;
+  const loaderEntered = new Promise(resolve => { entered = resolve; });
+  const loaderBlocked = new Promise(resolve => { release = resolve; });
+  const g = new AdvancingChapterGateway(), h = new FakeHost();
+  let admitted = 0;
+  const c = new ReaderTtsSessionCoordinator(g, h, async () => {}, undefined, async () => {
+    entered();
+    await loaderBlocked;
+    return { chapter: secondChapter, content: '旧来源下一章。', contentVersion: 113,
+      onAdmitted: () => { admitted += 1; } };
+  });
+  await c.start({ chapter, content: '旧来源末句。', contentVersion: 112, scalarPosition: 0 });
+  const firstId = h.requests[0].requestId;
+  h.emit({ type: 'start', requestId: firstId });
+  await c.whenSettled();
+  h.emit({ type: 'complete', requestId: firstId, completion: 'audio' });
+  await loaderEntered;
+  const replacement = { ...chapter, sourceId: 'replacement-source' };
+  const replaceTask = c.start({ chapter: replacement, content: '新来源正文。',
+    contentVersion: 114, scalarPosition: 0 });
+  release();
+  await replaceTask;
+  assert.equal(admitted, 0);
+  assert.equal(c.getState().chapterIndex, replacement.chapterIndex);
+  assert.equal(h.requests.length, 2);
+  await c.dispose();
+}
+
 console.log('reader TTS fake-host coordinator: PASS');

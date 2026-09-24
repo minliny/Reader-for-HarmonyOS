@@ -26,6 +26,12 @@ const HTTP_TTS_MAX_URL_LENGTH = 2 * 1024 * 1024;
 const HTTP_TTS_MAX_HEADER_VALUE_LENGTH = 64 * 1024;
 const HTTP_TTS_PCM_SAMPLE_RATES: number[] = [8000, 16000, 22050, 24000, 32000, 44100, 48000];
 
+type PrefetchedTtsAudio = {
+  key: string;
+  descriptor: Promise<ReaderHttpTtsRequestDescriptor>;
+  audio: Promise<Uint8Array>;
+};
+
 /** Host-only network/audio transport for a Core-owned HttpTTS descriptor. */
 export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private readonly gateway: ReaderHttpTtsGateway;
@@ -40,6 +46,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private configId: number | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
   private audioBytes: Uint8Array | undefined = undefined;
+  private prefetchedAudio: PrefetchedTtsAudio | undefined = undefined;
   private speakGeneration: number = 0;
   private startReported: boolean = false;
   private audioListenersInstalled: boolean = false;
@@ -74,6 +81,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   }
 
   async selectEngine(engine?: string): Promise<boolean> {
+    this.cancelActiveRequest('Reader HttpTTS engine selection changed');
     if (engine === undefined || !engine.startsWith(HTTP_TTS_ENGINE_PREFIX)) return false;
     const idText = engine.slice(HTTP_TTS_ENGINE_PREFIX.length);
     const id = Number(idText);
@@ -137,16 +145,42 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   async speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     this.assertOpen();
     const generation = ++this.speakGeneration;
-    this.cancelActiveRequest('Reader HttpTTS audio request superseded');
     const configId = this.configId;
     if (configId === undefined) throw new Error('Reader HttpTTS has no selected Core config');
     if (request.requestId.trim().length === 0 || request.text.trim().length === 0) {
       throw new Error('Reader HttpTTS requires requestId and text');
     }
+    const candidate = this.prefetchedAudio;
+    this.prefetchedAudio = undefined;
+    const usePrefetch = candidate !== undefined && candidate.key === this.prefetchKey(request, configId);
+    if (!usePrefetch) this.cancelActiveRequest('Reader HttpTTS audio request superseded');
     const ratePercent = Math.max(50, Math.min(200, Math.round(request.rate * 20) * 5));
     const descriptor = await this.gateway.buildRequest(configId, request.text, ratePercent);
     if (this.closed || generation !== this.speakGeneration) return;
-    const bytes = await this.fetchAudio(descriptor, configId);
+    let bytes: Uint8Array;
+    if (usePrefetch && candidate !== undefined) {
+      let matches = false;
+      try {
+        matches = JSON.stringify(await candidate.descriptor) === JSON.stringify(descriptor);
+      } catch (_) {
+        // A failed lookahead is retried through the ordinary request path.
+      }
+      if (this.closed || generation !== this.speakGeneration) return;
+      if (matches) {
+        try {
+          bytes = await candidate.audio;
+        } catch (_) {
+          if (this.closed || generation !== this.speakGeneration) return;
+          this.cancelActiveRequest('Reader HttpTTS audio prefetch failed');
+          bytes = await this.fetchAudio(descriptor, configId);
+        }
+      } else {
+        this.cancelActiveRequest('Reader HttpTTS audio descriptor changed');
+        bytes = await this.fetchAudio(descriptor, configId);
+      }
+    } else {
+      bytes = await this.fetchAudio(descriptor, configId);
+    }
     if (this.closed || generation !== this.speakGeneration) return;
     await this.releasePlayer();
     if (this.closed || generation !== this.speakGeneration) return;
@@ -193,6 +227,30 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     this.currentRequestId = undefined;
     this.startReported = false;
     await this.releasePlayer();
+  }
+
+  /** At most one next sentence is retained (bounded by the normal 16 MiB
+   * audio response limit). The next speak rechecks Core's descriptor before
+   * consuming it so a changed profile cannot play a stale request. */
+  prefetchNext(request: ReaderTtsHostSpeakRequest): void {
+    const configId = this.configId;
+    if (this.closed || configId === undefined || request.text.trim().length === 0) return;
+    const key = this.prefetchKey(request, configId);
+    if (this.prefetchedAudio?.key === key) return;
+    this.cancelActiveRequest('Reader HttpTTS prefetch replaced');
+    const admittedGeneration = this.networkGeneration;
+    const ratePercent = Math.max(50, Math.min(200, Math.round(request.rate * 20) * 5));
+    const descriptor = this.gateway.buildRequest(configId, request.text, ratePercent);
+    const audio = descriptor.then((resolved: ReaderHttpTtsRequestDescriptor): Promise<Uint8Array> => {
+      if (this.closed || admittedGeneration !== this.networkGeneration) {
+        throw new Error('Reader HttpTTS prefetch cancelled');
+      }
+      return this.fetchAudio(resolved, configId);
+    });
+    // A speculative network failure must not become an unhandled rejection;
+    // speak() retries the request through the normal path if this promise fails.
+    void audio.catch((): void => {});
+    this.prefetchedAudio = { key, descriptor, audio };
   }
 
   publishPlaybackState(_state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error'): void {}
@@ -455,6 +513,14 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     // request. The shared transport owns DNS pinning, redirect-by-redirect
     // target validation and cross-origin sensitive-header removal.
     this.networkGeneration += 1;
+    this.prefetchedAudio = undefined;
+  }
+
+  private prefetchKey(request: ReaderTtsHostSpeakRequest, configId: number): string {
+    return JSON.stringify([
+      configId, request.text, request.rate, request.pitch,
+      request.language, request.person, request.engine,
+    ]);
   }
 
   private createDataSource(bytes: Uint8Array): media.AVDataSrcDescriptor {
