@@ -121,6 +121,28 @@ readerDirectoryClearViewportAnchors();
   assert.equal(data.loadedNode(0), undefined);
   assert.equal(data.getData(0).key, 'loading:0');
   assert.deepEqual(loads, [0], 'evicted page can be requested again');
+
+  const reloadKeys = [];
+  const oldPage = Array.from({ length: 256 }, (_, index) => node(`old-${index}`));
+  oldPage[6000 - 5888] = node('stable-visible');
+  const preparedTarget = Array.from({ length: 256 }, (_, index) => node(`target-${index}`));
+  preparedTarget[5000 - 4864] = node('stable-visible');
+  const preparedPhysical = Array.from({ length: 256 }, (_, index) => node(`physical-${index}`));
+  const deep = Object.assign(new DataSource(), { view: undefined, pages: new FakePlatformLRUCache(12),
+    pending: new Set(), listeners: [], load: offset => loads.push(offset) });
+  deep.replace({ viewId: 'old-deep', navigationRevision: 'rev', visibleTotal: 10001, nodes: first });
+  deep.admit(5888, { viewId: 'old-deep', visibleTotal: 10001, nodes: oldPage });
+  assert.equal(deep.getData(6000).key, 'stable-visible');
+  deep.listeners.push({ onDataChanged() {}, onDataReloaded() {
+    reloadKeys.push([deep.getData(5000).key, deep.getData(6000).key]);
+  } });
+  deep.replace({ viewId: 'folded-deep', navigationRevision: 'rev', visibleTotal: 10001, nodes: first,
+    preparedPages: [
+      { offset: 4864, page: { viewId: 'folded-deep', visibleTotal: 10001, nodes: preparedTarget } },
+      { offset: 5888, page: { viewId: 'folded-deep', visibleTotal: 10001, nodes: preparedPhysical } },
+    ] });
+  assert.deepEqual(reloadKeys, [['stable-visible', 'physical-112']],
+    '10k-node fold presents stable node keys at the new rank and resolved old physical viewport before reload');
 }
 assert.match(source, /\.onScrollIndex\(\(start: number,[\s\S]*?this\.captureViewportAnchor\(\)/,
   'native visible index records stable node identity');
