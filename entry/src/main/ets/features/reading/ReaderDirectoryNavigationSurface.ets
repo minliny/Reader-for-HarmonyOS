@@ -1,7 +1,8 @@
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryNavigationGateway, openReaderDirectoryNavigation,
   readerDirectoryNoteMissingNavigation, readerDirectoryToggleCollapsed,
-  type ReaderDirectoryNavigationNode, type ReaderDirectoryNavigationReady } from './ReaderDirectoryNavigation';
+  type ReaderDirectoryNavigationNode, type ReaderDirectoryNavigationReady,
+  type ReaderDirectoryNavigationPreparedPage } from './ReaderDirectoryNavigation';
 import { ReaderDirectoryNavigationList } from './ReaderDirectoryNavigationList';
 import { readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor } from './ReaderDirectoryViewport';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -189,6 +190,39 @@ export struct ReaderDirectoryNavigationSurface {
     this.openTree(this.view === undefined);
   }
 
+  private async prepareVisiblePages(gateway: ReaderDirectoryNavigationGateway, bookId: string,
+    ready: ReaderDirectoryNavigationReady, generation: number): Promise<ReaderDirectoryNavigationPreparedPage[]> {
+    const pageSize = 256;
+    if (ready.nodes.length !== Math.min(pageSize, ready.visibleTotal))
+      throw new Error('directory first page is incomplete');
+    if (ready.visibleTotal === 0) return [];
+    const anchor = readerDirectoryViewportAnchor(bookId);
+    const sameRevision = anchor?.navigationRevision === ready.navigationRevision;
+    const target = sameRevision && ready.anchorVisibleIndex !== undefined ? ready.anchorVisibleIndex :
+      (ready.currentVisibleIndex ?? 0);
+    const offsets: Set<number> = new Set<number>();
+    const includeWindow = (index: number): void => {
+      const center = Math.floor(index / pageSize) * pageSize;
+      for (const offset of [center - pageSize, center, center + pageSize]) {
+        if (offset > 0 && offset < ready.visibleTotal) offsets.add(offset);
+      }
+    };
+    includeWindow(target);
+    // onDataReloaded may ask the old physical viewport before the saved node
+    // is repositioned. Keep that window resolved as well, never as placeholders.
+    if (this.view?.viewId === anchor?.viewId &&
+      anchor !== undefined && anchor.visibleIndex < ready.visibleTotal)
+      includeWindow(anchor.visibleIndex);
+    const isCurrent = (): boolean => this.mounted && generation === this.generation && this.bookId === bookId;
+    return Promise.all(Array.from(offsets).map(async (offset: number): Promise<ReaderDirectoryNavigationPreparedPage> => {
+      const page = await gateway.page(bookId, ready.viewId, offset, isCurrent);
+      if (!isCurrent() || page.viewId !== ready.viewId || page.visibleTotal !== ready.visibleTotal ||
+        page.nodes.length !== Math.min(pageSize, ready.visibleTotal - offset))
+        throw new Error('directory prepared page is stale or incomplete');
+      return { offset, page };
+    }));
+  }
+
   private openTree(first: boolean): void {
     const gateway = this.gateway;
     const bookId = this.bookId;
@@ -201,10 +235,10 @@ export struct ReaderDirectoryNavigationSurface {
     void openReaderDirectoryNavigation(gateway, { bookId, query, descending, chapterIndex, anchorNodeId, limit: 256 },
       (): boolean => this.mounted && generation === this.generation && this.bookId === bookId,
       (reason: string): void => readerDirectoryNoteMissingNavigation(bookId, reason))
-      .then((ready: ReaderDirectoryNavigationReady | undefined): void => {
+      .then(async (ready: ReaderDirectoryNavigationReady | undefined): Promise<void> => {
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
-        this.openingGeneration = -1;
         if (ready === undefined) {
+          this.openingGeneration = -1;
           if (first) {
             this.settledFlat = true;
             // The reading owner may repair old EPUBs after a readable first
@@ -212,6 +246,14 @@ export struct ReaderDirectoryNavigationSurface {
           }
           return;
         }
+        if (this.settledFlat || (first && (this.interacted || !this.interactionEnabled))) {
+          this.openingGeneration = -1;
+          this.settledFlat = true;
+          return;
+        }
+        ready.preparedPages = await this.prepareVisiblePages(gateway, bookId, ready, generation);
+        if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
+        this.openingGeneration = -1;
         if (this.settledFlat || (first && (this.interacted || !this.interactionEnabled))) {
           this.settledFlat = true;
           return;

@@ -160,10 +160,11 @@ let timerId = 0;
 let visibleAnchorNodeId;
 const Surface = productionMotionMethods(surfacePath,
   ['openTree', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
-    'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled'], {
+    'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages'], {
   openReaderDirectoryNavigation: (_gateway, query) => new Promise(resolve => pending.push({ query, resolve })),
   readerDirectoryNoteMissingNavigation: () => {},
-  readerDirectoryViewportAnchor: () => visibleAnchorNodeId === undefined ? undefined : { nodeId: visibleAnchorNodeId },
+  readerDirectoryViewportAnchor: () => visibleAnchorNodeId === undefined ? undefined :
+    { nodeId: visibleAnchorNodeId, navigationRevision: 'r', viewId: 'old-visible', visibleIndex: 6000 },
   ReaderRuntimeOwner: { current: () => ({}) },
   setTimeout: (action, delay) => { assert.equal(delay, 150); const id = ++timerId; timers.set(id, action); return id; },
   clearTimeout: id => { timers.delete(id); },
@@ -186,7 +187,7 @@ const Surface = productionMotionMethods(surfacePath,
   const latest = [...timers.values()][0]; timers.clear(); latest();
   assert.equal(pending.length, 2);
   assert.equal(pending[1].query.query, 'new');
-  pending[1].resolve({ viewId: 'new', navigationRevision: 'r', visibleTotal: 1, nodes: [] });
+  pending[1].resolve({ viewId: 'new', navigationRevision: 'r', visibleTotal: 0, nodes: [] });
   await Promise.resolve(); await Promise.resolve();
   assert.equal(surface.view.viewId, 'new');
   assert.deepEqual(states, [true]);
@@ -244,6 +245,67 @@ const Surface = productionMotionMethods(surfacePath,
   assert.equal(surface.view.viewId, 'old-visible', 'toolbar Top cannot publish a pre-scroll tree rank');
   surface.onTreeScrollSettled();
   assert.equal(pending[start + 1].query.anchorNodeId, 'after-top');
+  visibleAnchorNodeId = undefined;
+}
+{
+  const start = pending.length;
+  visibleAnchorNodeId = 'same-visible-node';
+  const pageCalls = [], states = [];
+  const old = { viewId: 'old-visible', navigationRevision: 'r', visibleTotal: 10001, nodes: [] };
+  const surface = Object.assign(new Surface(), { mounted: true, bookId: 'deep-book', query: '',
+    ascending: true, currentChapterIndex: 0, generation: 0, settledFlat: false,
+    interactionEnabled: true, queryTimer: -1, openingGeneration: -1, pendingRefresh: false,
+    view: old, gateway: { page: (_bookId, viewId, offset) => new Promise(resolve =>
+      pageCalls.push({ viewId, offset, resolve })) }, onTreeStateChange: active => states.push(active),
+    onUserScrollIntent: () => {} });
+  surface.openTree(false);
+  pending[start].resolve({ viewId: 'deep-new', navigationRevision: 'r', visibleTotal: 10001,
+    anchorVisibleIndex: 5000,
+    nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `first-${index}` })) });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(surface.view, old, '10k-node view remains unchanged during target-window prefetch');
+  assert.deepEqual(pageCalls.map(call => call.offset).sort((a, b) => a - b),
+    [4608, 4864, 5120, 5632, 5888, 6144],
+    'new anchor and old physical viewport each prefetch their cross-page visible windows');
+  for (const call of pageCalls.slice(0, -1)) call.resolve({ viewId: call.viewId, visibleTotal: 10001,
+    nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `${call.offset}-${index}` })) });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(surface.view, old, 'partial page admission cannot flash a loading placeholder');
+  const last = pageCalls.at(-1);
+  last.resolve({ viewId: last.viewId, visibleTotal: 10001,
+    nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `${last.offset}-${index}` })) });
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  assert.equal(surface.view.viewId, 'deep-new', 'new view is published once all pages are ready');
+  assert.equal(surface.view.preparedPages.length, 6);
+  assert.deepEqual(states, [true]);
+
+  const readyAfterGood = surface.view;
+  const failedStart = pending.length, firstPageCall = pageCalls.length;
+  surface.openTree(false);
+  pending[failedStart].resolve({ viewId: 'bad-page-view', navigationRevision: 'r', visibleTotal: 10001,
+    anchorVisibleIndex: 5000, nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `bad-${index}` })) });
+  await Promise.resolve(); await Promise.resolve();
+  const failedPages = pageCalls.slice(firstPageCall);
+  assert.equal(failedPages.length, 3);
+  for (const [index, call] of failedPages.entries()) call.resolve({ viewId: call.viewId,
+    visibleTotal: index === 0 ? 10000 : 10001,
+    nodes: Array.from({ length: 256 }, (_, nodeIndex) => ({ nodeId: `bad-${call.offset}-${nodeIndex}` })) });
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  assert.equal(surface.view, readyAfterGood, 'mismatched page revision/total cannot partially replace the old view');
+
+  const cancelledStart = pending.length, firstCancelledPage = pageCalls.length;
+  surface.openTree(false);
+  pending[cancelledStart].resolve({ viewId: 'cancelled-view', navigationRevision: 'r', visibleTotal: 10001,
+    anchorVisibleIndex: 5000, nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `cancel-${index}` })) });
+  await Promise.resolve(); await Promise.resolve();
+  const cancelledPages = pageCalls.slice(firstCancelledPage);
+  assert.equal(cancelledPages.length, 3);
+  surface.onTreeUserScrollIntent();
+  for (const call of cancelledPages) call.resolve({ viewId: call.viewId, visibleTotal: 10001,
+    nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `cancel-${call.offset}-${index}` })) });
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  assert.equal(surface.view, readyAfterGood, 'user drag during prefetch keeps the current visible view');
+  assert.deepEqual(states, [true]);
   visibleAnchorNodeId = undefined;
 }
 console.log('PH42 tree bookmark, target validation, rank position and debounced query fencing: PASS');

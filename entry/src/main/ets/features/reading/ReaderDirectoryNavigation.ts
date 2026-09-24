@@ -25,6 +25,8 @@ export interface ReaderDirectoryNavigationReady {
   anchorVisibleIndex?: number;
   nodes: ReaderDirectoryNavigationNode[];
   nextOffset?: number;
+  /** Host-only pages prefetched before this immutable view is published. */
+  preparedPages?: ReaderDirectoryNavigationPreparedPage[];
 }
 
 export interface ReaderDirectoryNavigationUnavailable {
@@ -39,6 +41,11 @@ export interface ReaderDirectoryNavigationPage {
   visibleTotal: number;
   nodes: ReaderDirectoryNavigationNode[];
   nextOffset?: number;
+}
+
+export interface ReaderDirectoryNavigationPreparedPage {
+  offset: number;
+  page: ReaderDirectoryNavigationPage;
 }
 
 export interface ReaderDirectoryNavigationTarget {

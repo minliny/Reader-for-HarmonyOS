@@ -66,6 +66,11 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
     this.view = view;
     this.pages.clear(); this.pending.clear();
     if (view.nodes.length > 0) this.pages.put(0, view.nodes);
+    for (const prepared of view.preparedPages ?? []) {
+      if (prepared.offset <= 0 || prepared.page.viewId !== view.viewId ||
+        prepared.page.visibleTotal !== view.visibleTotal) continue;
+      this.pages.put(prepared.offset, prepared.page.nodes);
+    }
     for (const listener of this.listeners) listener.onDataReloaded();
   }
   admit(offset: number, page: ReaderDirectoryNavigationPage): void {
