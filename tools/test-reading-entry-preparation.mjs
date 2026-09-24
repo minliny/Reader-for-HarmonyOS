@@ -775,3 +775,33 @@ for (const [sourceId, bookKind, text, expected] of [
   preparations.close();
 }
 console.log('PASS bounded shelf preparation: TXT, EPUB explicit breaks, remote, absolute restore and handoff');
+
+// Foreground chapter reads must wait for a content mutation to settle and
+// reject a result captured before a cache or rule replacement. Ordinary
+// progress saves do not change the body's epoch.
+{
+  const prep = new ReadingEntryPreparation({ request: async () => { throw Error('unexpected request'); } });
+  const before = prep.captureContentValidity('s1', 'book');
+  assert.equal(before(), true);
+  const progress = { sourceId: 's1', bookId: 'book' };
+  assert.equal(prep.beginRequest('reading.progress.update', progress), true);
+  assert.equal(before(), true);
+  prep.finishRequest('reading.progress.update', progress);
+  assert.equal(before(), true);
+
+  const mutation = { sourceId: 's1', bookId: 'book', forceRefresh: true };
+  assert.equal(prep.beginRequest('chapter.content', mutation), true);
+  assert.equal(before(), false);
+  assert.equal(prep.captureContentValidity('s1', 'book')(), false);
+  let idle = false;
+  const waiting = prep.waitForContentIdle('s1', 'book').then(() => { idle = true; });
+  await tick();
+  assert.equal(idle, false);
+  prep.finishRequest('chapter.content', mutation);
+  await waiting;
+  assert.equal(idle, true);
+  assert.equal(before(), false);
+  assert.equal(prep.captureContentValidity('s1', 'book')(), true);
+  prep.close();
+}
+console.log('PASS content mutation epoch: stale chapter fenced, progress save retained, retry waits for idle');

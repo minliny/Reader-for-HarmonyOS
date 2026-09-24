@@ -9,7 +9,7 @@ export type ReaderAutoPageStatus = 'stopped' | 'running' | 'paused';
 
 export type ReaderAutoPagePauseReason = 'manual' | 'background' | 'touch';
 
-export type ReaderAutoPageStopReason = 'manual' | 'bookEnd' | 'lifecycle';
+export type ReaderAutoPageStopReason = 'manual' | 'bookEnd' | 'lifecycle' | 'catalogUnavailable';
 
 export type ReaderAutoPageState = {
   status: ReaderAutoPageStatus;

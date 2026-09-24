@@ -106,6 +106,7 @@ export class ReadingEntryPreparation {
   private readonly globalState: PreparationMutationState = new PreparationMutationState();
   private readonly sourceStates: Map<string, PreparationMutationState> = new Map();
   private readonly bookStates: Map<string, PreparationMutationState> = new Map();
+  private readonly contentIdleWaiters: Set<() => void> = new Set();
   private pauseRevision: number = 0;
   private paused: boolean = false;
   private active: number = 0;
@@ -333,6 +334,29 @@ export class ReadingEntryPreparation {
       state.contentRevision === revisions[index] && state.contentMutations === 0 && state.catalogMutations === 0);
   }
 
+  /** Await an in-flight mutation before retrying a foreground chapter read. */
+  waitForContentIdle(sourceId: string, bookId: string): Promise<void> {
+    if (this.contentIdle(sourceId, bookId)) return Promise.resolve();
+    return new Promise<void>((resolve): void => {
+      const settled = (): void => {
+        if (!this.closed && !this.contentIdle(sourceId, bookId)) return;
+        this.contentIdleWaiters.delete(settled);
+        resolve();
+      };
+      this.contentIdleWaiters.add(settled);
+      settled();
+    });
+  }
+
+  private contentIdle(sourceId: string, bookId: string): boolean {
+    return this.closed || this.statesFor(sourceId, bookId).every((state: PreparationMutationState): boolean =>
+      state.contentMutations === 0 && state.catalogMutations === 0);
+  }
+
+  private settleContentIdleWaiters(): void {
+    for (const settled of this.contentIdleWaiters) settled();
+  }
+
   /** Both sides of a mutation fence uncertain failures as well as successful writes. */
   beginRequest(method: string, params: JsonObject = {}): boolean {
     if (method !== 'book.toc' && method !== 'book.detail' && !this.affectsSnapshot(method, params)) return false;
@@ -360,11 +384,13 @@ export class ReadingEntryPreparation {
       if (content) state.contentMutations = Math.max(0, state.contentMutations - 1);
     }
     this.discardRetiredStates(method, scopes, content);
+    this.settleContentIdleWaiters();
     this.drain();
   }
 
   close(): void {
     this.closed = true;
+    this.settleContentIdleWaiters();
     this.persistedPending = undefined;
     this.globalState.revision += 1;
     this.globalState.workRevision += 1;

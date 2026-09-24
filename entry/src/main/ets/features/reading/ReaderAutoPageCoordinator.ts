@@ -107,6 +107,12 @@ export class ReaderAutoPageCoordinator {
     this.host.changed();
   }
   cancelPendingTurn(): void { this.turnPending = false; }
+  /** A failed catalog cannot satisfy the pending chapter-boundary turn. */
+  catalogLoadFailed(): boolean {
+    if (!this.turnPending || !isReaderAutoPageTurnDue(this.state)) return false;
+    this.stop('catalogUnavailable');
+    return true;
+  }
   retryTurn(generation: number): void { this.publish(retryReaderAutoPageTurn(this.state, generation)); }
   pageCommitted(): void {
     if (this.state.awaitingPageCommit) this.publish(commitReaderAutoPageTurn(this.state, this.state.generation));
