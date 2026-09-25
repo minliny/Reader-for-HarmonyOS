@@ -10968,7 +10968,8 @@ export struct ReadingExperience {
       context = this.positionContextForScope(positionScope, chapterIndex, chapterOffset);
       if (directoryTargetProof !== undefined) {
         if (directoryTargetProof['sourceId'] !== this.sourceId || directoryTargetProof['bookId'] !== this.bookId) throw new Error('DIRECTORY_SCOPE_CHANGED');
-        context = { ...context, anchors: context?.anchors ?? [], directoryTargetProof };
+        if (context === undefined) context = { anchors: [], directoryTargetProof };
+        else context.directoryTargetProof = directoryTargetProof;
       }
     } catch (_) {
       try {
@@ -11088,8 +11089,10 @@ export struct ReadingExperience {
     if (scope.sourceId !== this.sourceId || scope.bookId !== this.bookId || scope.chapterIndex !== chapterIndex) {
       throw new Error('READING_POSITION_SCOPE_MISMATCH');
     }
-    return { bodyVersion: scope.bodyVersion, processingVersion: scope.processingVersion, ...(directoryTargetProof === undefined ? {} : { directoryTargetProof }),
+    const context: RemoteReadingPositionContext = { bodyVersion: scope.bodyVersion, processingVersion: scope.processingVersion,
       anchors: [{ id: 'requested', offset }] };
+    if (directoryTargetProof !== undefined) context.directoryTargetProof = directoryTargetProof;
+    return context;
   }
 
   private selectChapterAnchor(

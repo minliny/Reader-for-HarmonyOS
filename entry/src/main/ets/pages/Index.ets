@@ -1,3 +1,4 @@
+import { readerDirectoryObserveMissingNavigation, readerDirectoryTakeMissingNavigation, backfillRetainedReaderDirectoryNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
@@ -2431,13 +2432,13 @@ struct Index {
       const owner = ReaderRuntimeOwner.current();
       const projectionRevision = owner.bookAcquisitions().readingProjectionRevision();
       const result = await owner.request('search-book.get', { origin: book.sourceId, bookUrl: book.bookId });
-      const row = result.data['book'] as JsonObject | undefined;
+      const row: JsonObject | undefined = result.data['book'] as JsonObject | undefined;
       if (!current() || row === undefined || row === null) return;
       if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
         this.bookProjectionAgain = true;
         return;
       }
-      const facts = row['acquisition'] as JsonObject | undefined;
+      const facts: JsonObject | undefined = row['acquisition'] as JsonObject | undefined;
       if (facts === undefined) return;
       if (facts['stale'] === true) {
         const admitted = this.remoteReadingSession;
@@ -5096,10 +5097,10 @@ struct Index {
         error.event.error.details?.['transactionId'] !== transaction.transactionId) throw error as Error;
       const records = await gateway.listPendingSwitches(ownsRollback);
       if (!ownsRollback() || records.some((record: PendingSourceSwitch): boolean =>
-        record.transactionId === transaction.transactionId)) throw error;
+        record.transactionId === transaction.transactionId)) throw error as Error;
       const canonical = await new ReaderCoreGateway(ReaderRuntimeOwner.current())
         .loadShelfBook(transaction.targetSourceId, transaction.targetBookId);
-      if (!ownsRollback() || canonical === undefined) throw error;
+      if (!ownsRollback() || canonical === undefined) throw error as Error;
       restored = canonical;
     }
     if (!ownsRollback()) throw new Error('source switch aborted');
@@ -5337,7 +5338,7 @@ struct Index {
     } else {
       this.remoteReadingSession = session;
     }
-    const facts = readableProjection?.['acquisition'] as JsonObject | undefined;
+    const facts: JsonObject | undefined = readableProjection?.['acquisition'] as JsonObject | undefined;
     // Only a stable Core projection for this exact canonical session can
     // preserve the gate. It supplies no reusable materialized chapter.
     const confirmed = readableProjectionRevision === revision && facts?.['schemaVersion'] === 2 &&

@@ -27,7 +27,7 @@ function directoryPagePrefix(view: ReaderDirectoryNavigationReady): string {
 export function cacheReaderDirectoryNavigationPage(view: ReaderDirectoryNavigationReady, offset: number,
   page: ReaderDirectoryNavigationPage): ReaderDirectoryNavigationPage {
   if (page.nodes.length > 0) directoryPages.put(`${directoryPagePrefix(view)}${offset}`, page.nodes);
-  return { ...page, nodes: [] };
+  return { viewId: page.viewId, visibleTotal: page.visibleTotal, nextOffset: page.nextOffset, nodes: [] };
 }
 
 class ReaderDirectoryPageWindow {
@@ -141,7 +141,7 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
     if (page.nodes.length === 0) {
       const cached = this.pages.get(offset);
       if (cached === undefined) { this.load(offset); return; }
-      page = { ...page, nodes: cached };
+      page = { viewId: page.viewId, visibleTotal: page.visibleTotal, nextOffset: page.nextOffset, nodes: cached };
     }
     const previousPage = this.pages.get(offset);
     if (page.nodes.length > 0 && previousPage === undefined) this.pages.put(offset, page.nodes);

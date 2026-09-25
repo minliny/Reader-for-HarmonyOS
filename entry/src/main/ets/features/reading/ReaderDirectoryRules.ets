@@ -1,4 +1,4 @@
-import type { JsonObject } from '@reader/core-harmony';
+import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 
@@ -34,21 +34,21 @@ export struct ReaderDirectoryRules {
     this.busy = true;
     void ReaderRuntimeOwner.current().request('reading.directory.rules.get.v2', { sourceId: 'local', bookId },
       { shouldCancel: (): boolean => !this.mounted || generation !== this.generation || bookId !== this.bookId })
-      .then((result): void => {
+      .then((result: ReaderCoreResultEvent): void => {
         if (!this.mounted || generation !== this.generation || bookId !== this.bookId) return;
         if (result.data['status'] === 'unavailable' && result.data['reason'] === 'unsupportedFormat') {
           this.message = '层级规则适用于 TXT；本书使用格式自带目录';
           return;
         }
-        const raw = result.data['rules'];
+        const raw: JsonObject[] = result.data['rules'] as JsonObject[];
         if (result.data['status'] !== 'ready' || !Array.isArray(raw)) throw new Error('rules unavailable');
-        this.rules = raw.map((value): DirectoryRuleDraft => {
-          const rule = value as JsonObject;
+        this.rules = raw.map((value: JsonObject): DirectoryRuleDraft => {
+          const rule: JsonObject = value;
           return new DirectoryRuleDraft(++this.nextRuleId, String(rule['pattern']), String(rule['level']), String(rule['boundary']));
         });
         this.loaded = true;
         this.message = this.rules.length === 0 ? '正在使用默认卷规则' : '已载入本书规则';
-      }).catch((_error): void => {
+      }).catch((_error: Error): void => {
         if (this.mounted && generation === this.generation) this.message = '当前规则读取失败，请关闭后重试';
       }).finally((): void => { if (this.mounted && generation === this.generation) this.busy = false; });
   }
@@ -72,17 +72,17 @@ export struct ReaderDirectoryRules {
       ({ pattern: rule.pattern, level: Number(rule.level), boundary: rule.boundary }));
     this.busy = true;
     try {
-      const result = await ReaderRuntimeOwner.current().request(
+      const result: ReaderCoreResultEvent = await ReaderRuntimeOwner.current().request(
         apply ? 'reading.directory.rules.apply.v2' : 'reading.directory.rules.preview.v2',
         { sourceId: 'local', bookId, rules }, { shouldCancel: (): boolean => !current() });
       if (!current()) return;
-      const data = result.data;
+      const data: JsonObject = result.data;
       this.previewReady = data['status'] === 'ready';
       if (!this.previewReady) { this.message = `无法应用：${String(data['reason'] ?? '没有可靠的层级边界')}`; return; }
       this.message = `${data['nodeCount']} 个目录节点 · ${data['readableChapterCount']} 个可读章节 · ${data['unmappedCount'] ?? 0} 个无法映射项`;
-      const raw = data['nodes'];
-      this.preview = Array.isArray(raw) ? raw.slice(0, 256).map((value): string => {
-        const node = value as JsonObject;
+      const raw: JsonObject[] = data['nodes'] as JsonObject[];
+      this.preview = Array.isArray(raw) ? raw.slice(0, 256).map((value: JsonObject): string => {
+        const node: JsonObject = value;
         return `${'  '.repeat(Math.max(0, Math.min(32, Number(node['depth'] ?? 0))))}${String(node['title'] ?? '')}`;
       }) : [];
       if (apply) { this.message = '目录层级规则已应用，正文和分章保持原样'; this.onApplied(); }
