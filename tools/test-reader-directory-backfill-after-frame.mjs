@@ -10,7 +10,7 @@ const repairs = [];
 const frames = [];
 const Index = productionMotionMethods(indexPath,
   ['readingReadyCallback', 'scheduleNavigationBackfillAfterReady'], {
-    LOCAL_SOURCE_ID: 'local',
+    LOCAL_SOURCE_ID: 'local', DOMAIN: 0x5244, hilog: { info() {}, warn() {} },
     ReaderRuntimeOwner: { current: () => owner },
     ReaderNavigationBackfillFrame: class { constructor(action) { this.action = action; } onFrame() { this.action(); } },
     backfillRetainedReaderDirectoryNavigation: async (_owner, bookId, isCurrent) => {

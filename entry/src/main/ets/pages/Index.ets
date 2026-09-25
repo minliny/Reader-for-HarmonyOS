@@ -4110,6 +4110,7 @@ struct Index {
     const key = `${sourceId}\u0000${bookId}\u0000${generation}`;
     if (this.navigationBackfillObservedKey === key) return;
     this.navigationBackfillObservedKey = key;
+    hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=queued generation=%{public}d', generation);
     const owner = ReaderRuntimeOwner.current();
     const navigationGeneration = this.navigationGeneration;
     const isCurrent = (): boolean => this.systemFileOpenMounted && this.readingSessionActive &&
@@ -4122,16 +4123,22 @@ struct Index {
           if (this.navigationBackfillObservedKey === key) this.navigationBackfillObservedKey = '';
           return;
         }
+        hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=frame generation=%{public}d', generation);
         this.navigationBackfillObserverDisposer?.();
         this.navigationBackfillObserverDisposer = readerDirectoryObserveMissingNavigation(bookId, (): void => {
           if (!isCurrent() || this.navigationBackfillAttempted.has(key) ||
             !readerDirectoryTakeMissingNavigation(bookId)) return;
+          hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=missing generation=%{public}d', generation);
           this.navigationBackfillAttempted.add(key);
           if (this.navigationBackfillAttempted.size > 16) {
             this.navigationBackfillAttempted.delete(this.navigationBackfillAttempted.values().next().value as string);
           }
           void backfillRetainedReaderDirectoryNavigation(owner, bookId, isCurrent, this.detailBook?.kind?.trim().toLowerCase() ?? '')
-            .catch((_error: Error): void => { /* Preserve the flat directory and every user record. */ });
+            .then((status: string): void => {
+              hilog.info(DOMAIN, 'Reader', 'Directory backfill result=%{public}s current=%{public}d', status, isCurrent() ? 1 : 0);
+            }).catch((_error: Error): void => {
+              hilog.warn(DOMAIN, 'Reader', 'Directory backfill result=error current=%{public}d', isCurrent() ? 1 : 0);
+            });
         });
       }));
     } catch (_error) {
