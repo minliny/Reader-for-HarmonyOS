@@ -1,5 +1,6 @@
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, openReaderDirectoryNavigation,
@@ -23,6 +24,7 @@ class ReaderDirectoryTraceFrame extends FrameCallback {
  * is not ready, the supplied chapter list stays visible for this opening. */
 @Component
 export struct ReaderDirectoryNavigationSurface {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
   @Prop @Watch('onIdentityChanged') sourceId: string = 'local';
   @Prop @Watch('onViewInputsChanged') query: string = '';
@@ -292,8 +294,9 @@ export struct ReaderDirectoryNavigationSurface {
           }));
         } catch (_error) { trace.step('frame-callback', 'unavailable'); }
       }).catch((_error: Error): void => {
-        trace.step('response', 'failed');
-        if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
+        const current = this.mounted && generation === this.generation && this.bookId === bookId;
+        trace.step('response', current ? 'failed' : 'cancelled');
+        if (!current) return;
         this.openingGeneration = -1;
         if (first) this.settledFlat = true;
       });
@@ -321,24 +324,32 @@ export struct ReaderDirectoryNavigationSurface {
     if (this.view === undefined) {
       this.fallbackBuilder();
     } else {
-      ReaderDirectoryNavigationList({
-        view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
-        listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
-        edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
-        chapterEntries: this.chapterEntries,
-        chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
-        scroller: this.scroller,
-        onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
-          this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
-        onToggleNode: (node: ReaderDirectoryNavigationNode): void => this.toggle(node),
-        onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
-        onScrollSettled: (): void => this.onTreeScrollSettled(),
-        onFirstLayout: (): void => this.onFirstLayout(),
-        onInvalidated: (): void => this.invalidate(),
-        onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
-        onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-          this.onCreateChapterStartBookmark(request),
-      });
+      Stack({ alignContent: Alignment.Center }) {
+        ReaderDirectoryNavigationList({
+          view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
+          listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
+          edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
+          chapterEntries: this.chapterEntries,
+          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          scroller: this.scroller,
+          onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
+          onToggleNode: (node: ReaderDirectoryNavigationNode): void => this.toggle(node),
+          onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
+          onScrollSettled: (): void => this.onTreeScrollSettled(),
+          onFirstLayout: (): void => this.onFirstLayout(),
+          onInvalidated: (): void => this.invalidate(),
+          onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+            this.onCreateChapterStartBookmark(request),
+        });
+        if (this.view.visibleTotal === 0) {
+          Text('没有匹配的目录项')
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+            .fontSize(12)
+            .hitTestBehavior(HitTestMode.None);
+        }
+      }.width('100%').height('100%');
     }
   }
 }

@@ -425,3 +425,50 @@ console.log('PASS directory disclosure actual SDK Builder: fold/unfold arrow, ac
   queryPublication(controlSource,true);
 }
 console.log('PASS directory search actual SDK State dispatch: submit/miss/clear update mounted tree parameters without sorting; plain-query negative control reproduces stale child');
+
+// Exercise the actual SDK build branch for a ready zero-result tree. Keep the
+// list mounted so its existing layout and viewport lifecycle is unchanged.
+{
+  const { createRequire } = await import('node:module');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const require = createRequire(import.meta.url);
+  const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
+  syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationList');
+  class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+  for (const total of [0, 1]) {
+    const { owner } = createReaderBuilderProbe(surfaceSource, ['fallbackBuilder', 'build'], { ReaderDirectoryNavigationList: Child });
+    Object.assign(owner, { appThemeScheme: 'day', view: { visibleTotal: total }, sourceId: 'local', bookId: 'fixture',
+      fallbackBuilder: () => assert.fail('a ready tree must not call the flat fallback') });
+    owner.initialRender();
+    assert.equal([...owner.children.values()].filter(child => child instanceof Child).length, 1,
+      'empty result retains list lifecycle');
+    const messages = [...owner.nodes.values()].filter(node => node.type === 'Text' && node.create === '没有匹配的目录项');
+    assert.equal(messages.length, total === 0 ? 1 : 0, 'ready empty navigation shows an explicit empty result');
+  }
+}
+console.log('PASS actual SDK directory empty-result presentation without replacing list lifecycle');
+
+// Rejections after disposal are cancellation evidence, not live query failures.
+{
+  const traces = [];
+  let rejectOpen;
+  class Trace { constructor() {} step(stage, status) { traces.push([stage, status]); } }
+  const Probe = productionMotionMethods(surfacePath, ['openTree'], {
+    ReaderDirectoryTrace: Trace,
+    readerDirectoryScopeKey: () => 'fixture', readerDirectoryViewportAnchor: () => undefined,
+    openReaderDirectoryNavigation: () => new Promise((_resolve, reject) => { rejectOpen = reject; }),
+  });
+  for (const current of [false, true]) {
+    traces.length = 0;
+    const owner = Object.assign(new Probe(), { mounted: true, gateway: {}, bookId: 'fixture', generation: 0,
+      query: '', currentChapterIndex: 0, onTreeStateChange() {} });
+    owner.openTree(true);
+    if (!current) { owner.mounted = false; owner.generation += 1; }
+    rejectOpen(new Error('cancelled-or-failed'));
+    for (let tick = 0; tick < 5; tick++) await Promise.resolve();
+    assert.deepEqual(traces, [['response', current ? 'failed' : 'cancelled']]);
+    assert.equal(owner.settledFlat === true, current, 'only current first-open failure settles the flat fallback');
+  }
+}
+console.log('PASS directory diagnostics separate disposed query cancellation from active failure');
