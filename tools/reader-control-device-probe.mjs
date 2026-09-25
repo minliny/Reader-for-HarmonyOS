@@ -166,6 +166,13 @@ function operationPlan(operation, outputDir) {
     return operation.sampleDelaysMs === undefined ? { kind: 'command', args } :
       { kind: 'sampledHeldTouch', args, sampleDelaysMs: sampleDelays(operation.sampleDelaysMs) };
   }
+  if (operation.op === 'inputDirectoryFixtureUrl') {
+    exactFields(operation, ['x', 'y']);
+    // Fixed self-authored loopback fixture only. No arbitrary URL/text reaches
+    // the HDC shell; the source import still runs through the normal app UI.
+    return shell('uitest', 'uiInput', 'inputText', integer(operation.x, 0, 16384, 'x'),
+      integer(operation.y, 0, 16384, 'y'), 'http://127.0.0.1:18084/reading-directory-sources.json');
+  }
   if (operation.op === 'inputText') {
     exactFields(operation, ['x', 'y', 'text']);
     // Verified from this target's uiInput help. A search-only word allowlist
@@ -577,6 +584,10 @@ function selfTest() {
   assert.throws(() => optionsFrom(validArgs.map(value => value === 'test-serial' ? 'x; reboot' : value)));
   assert.throws(() => operationPlan({ op: 'click', x: 1, y: 2 }, directory));
   assert.deepEqual(plan({ op: 'click', x: 1, y: 2 }).args, ['shell', 'uitest', 'uiInput', 'click', '1', '2']);
+  assert.deepEqual(plan({ op: 'inputDirectoryFixtureUrl', x: 1, y: 2 }).args,
+    ['shell', 'uitest', 'uiInput', 'inputText', '1', '2', 'http://127.0.0.1:18084/reading-directory-sources.json']);
+  assert.throws(() => plan({ op: 'inputDirectoryFixtureUrl', x: 1, y: 2, text: 'other' }));
+  assert.throws(() => plan({ op: 'inputDirectoryFixtureUrl', x: '1; reboot', y: 2 }));
   for (const op of ['click', 'longClick']) assert.throws(() => plan({ op, x: '1; reboot', y: 2 }));
   assert.deepEqual(plan({ op: 'inputText', x: 1, y: 2, text: '正文Reader123' }).args,
     ['shell', 'uitest', 'uiInput', 'inputText', '1', '2', '正文Reader123']);
