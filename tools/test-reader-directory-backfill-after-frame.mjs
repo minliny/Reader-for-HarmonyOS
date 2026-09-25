@@ -101,3 +101,22 @@ for (const kind of ['local', ' LOCAL ', ' TxT ']) {
   assert.equal(frames.length, 0, 'unsupported formats do not enter TXT preparation');
 }
 console.log('PASS production TXT local/TXT tags, case/whitespace normalization, visible-frame admission and stale-session rejection');
+
+{
+  const { page } = reader('chapter-navigation-generation', 'local');
+  page.readingReadyCallback('local', 'chapter-navigation-generation', 7)(0);
+  frames.shift().onFrame();
+  const before = repairs.length;
+  // A manual chapter selection advances navigationGeneration while retaining
+  // the same reading entry, book, and readingReadyGeneration.
+  page.navigationGeneration += 1;
+  page.readingReadyCallback('local', 'chapter-navigation-generation', 7)(1);
+  assert.equal(frames.length, 1, 'new committed chapter must rearm a stale observer');
+  frames.shift().onFrame();
+  readerDirectoryNoteMissingNavigation('chapter-navigation-generation', 'navigationMissingOrStale');
+  assert.deepEqual(repairs.slice(before), ['chapter-navigation-generation']);
+  page.readingReadyCallback('local', 'chapter-navigation-generation', 7)(1);
+  assert.equal(frames.length, 0, 'same committed generation does not repeat preparation');
+  page.navigationBackfillObserverDisposer?.();
+}
+console.log('PASS same-book manual chapter generation rearms navigation backfill');

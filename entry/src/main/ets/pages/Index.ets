@@ -4107,12 +4107,12 @@ struct Index {
     if (!this.readingSessionActive || this.route !== 'reading' || sourceId !== LOCAL_SOURCE_ID ||
       this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
       !['epub', 'txt', 'local', 'mobi', 'azw', 'azw3', 'kf8'].includes(this.detailBook.kind?.trim().toLowerCase() ?? '')) return;
-    const key = `${sourceId}\u0000${bookId}\u0000${generation}`;
+    const navigationGeneration = this.navigationGeneration;
+    const key = `${sourceId}\u0000${bookId}\u0000${generation}\u0000${navigationGeneration}`;
     if (this.navigationBackfillObservedKey === key) return;
     this.navigationBackfillObservedKey = key;
     hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=queued generation=%{public}d', generation);
     const owner = ReaderRuntimeOwner.current();
-    const navigationGeneration = this.navigationGeneration;
     const isCurrent = (): boolean => this.systemFileOpenMounted && this.readingSessionActive &&
       this.readingReadyGeneration === generation && this.navigationGeneration === navigationGeneration &&
       this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
