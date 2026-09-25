@@ -4106,7 +4106,7 @@ struct Index {
     // readable first frame is being admitted.
     if (!this.readingSessionActive || this.route !== 'reading' || sourceId !== LOCAL_SOURCE_ID ||
       this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
-      !['epub', 'txt', 'mobi', 'azw', 'azw3', 'kf8'].includes(this.detailBook.kind?.trim().toLowerCase() ?? '')) return;
+      !['epub', 'txt', 'local', 'mobi', 'azw', 'azw3', 'kf8'].includes(this.detailBook.kind?.trim().toLowerCase() ?? '')) return;
     const key = `${sourceId}\u0000${bookId}\u0000${generation}`;
     if (this.navigationBackfillObservedKey === key) return;
     this.navigationBackfillObservedKey = key;

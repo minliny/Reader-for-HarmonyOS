@@ -401,7 +401,9 @@ export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavi
  * Core validates it against the stored book before publishing navigation. */
 export async function backfillRetainedReaderDirectoryNavigation(runtime: ReadingGatewayRuntime,
   bookId: string, isCurrent: () => boolean, format: string = 'epub'): Promise<ReaderDirectoryNavigationOpen['status']> {
-  if (format.toLowerCase() === 'txt') {
+  // Production TXT imports persist kind=local; standalone imports may use TXT.
+  const normalizedFormat = format.trim().toLowerCase();
+  if (normalizedFormat === 'txt' || normalizedFormat === 'local') {
     if (!isCurrent() || runtime.supportsCoreCapability?.('reading.directory.view.v2') !== true) return 'unavailable';
     const response = await runtime.request('reading.directory.rules.prepare.v2', { sourceId: 'local', bookId },
       { shouldCancel: (): boolean => !isCurrent() });

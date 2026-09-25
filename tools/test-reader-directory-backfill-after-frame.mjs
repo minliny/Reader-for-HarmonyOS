@@ -75,3 +75,29 @@ function reader(bookId, kind = 'epub') {
 }
 
 console.log('PH42 retained EPUB backfill only after directory miss and readable frame: PASS');
+
+for (const kind of ['local', ' LOCAL ', ' TxT ']) {
+  const bookId = `production-txt-${kind}`;
+  const { page } = reader(bookId, kind);
+  const before = repairs.length;
+  readerDirectoryNoteMissingNavigation(bookId, 'navigationMissingOrStale');
+  page.readingReadyCallback('local', bookId, 7)(0);
+  assert.equal(repairs.length, before, 'production TXT aliases never prepare before visible frame');
+  assert.equal(frames.length, 1);
+  frames.shift().onFrame();
+  assert.deepEqual(repairs.slice(before), [bookId]);
+  page.navigationBackfillObserverDisposer?.();
+  const staleId = `${bookId}-stale`, stale = reader(staleId, kind).page;
+  readerDirectoryNoteMissingNavigation(staleId, 'navigationMissingOrStale');
+  stale.readingReadyCallback('local', staleId, 7)(0);
+  stale.navigationGeneration += 1;
+  frames.shift().onFrame();
+  assert.equal(repairs.length, before + 1, 'stale alias session cannot prepare');
+}
+{
+  const { page } = reader('unsupported-local-pdf', 'pdf');
+  readerDirectoryNoteMissingNavigation('unsupported-local-pdf', 'navigationMissingOrStale');
+  page.readingReadyCallback('local', 'unsupported-local-pdf', 7)(0);
+  assert.equal(frames.length, 0, 'unsupported formats do not enter TXT preparation');
+}
+console.log('PASS production TXT local/TXT tags, case/whitespace normalization, visible-frame admission and stale-session rejection');

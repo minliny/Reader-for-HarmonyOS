@@ -176,3 +176,36 @@ assert.deepEqual(readerDirectoryCollapsedIds('fold-owner'),[], 'folds and viewpo
 readerDirectoryAdmitRevision('viewport-7','new-r');
 readerDirectoryAdmitRevision('viewport-7','changed-r');
 assert.equal(readerDirectoryViewportAnchor('viewport-7'),undefined,'structure replacement also retires a stale viewport node');
+
+for (const format of ['local', ' LOCAL ', ' TxT ']) {
+  const requests = [];
+  let current = true;
+  const txtRuntime = {
+    supportsCoreCapability: capability => capability === 'reading.directory.view.v2',
+    retainedLocalBookSourcePath: async () => { throw new Error('TXT must not read retained archive'); },
+    request: async (method, params, options) => { requests.push({method,params,options}); return {data:{status:'ready'}}; },
+  };
+  assert.equal(await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format),'ready');
+  assert.equal(requests[0].method,'reading.directory.rules.prepare.v2');
+  assert.deepEqual(requests[0].params,{sourceId:'local',bookId:'production-txt'});
+  current=false;
+  assert.equal(requests[0].options.shouldCancel(),true);
+  assert.equal(await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format),'unavailable');
+  assert.equal(requests.length,1,'stale ownership does not dispatch');
+  current=true;
+  txtRuntime.request=async()=>{current=false;return {data:{status:'ready'}};};
+  assert.equal(await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format),'unavailable',
+    'late prepare success cannot escape its owner');
+  current=true;
+  txtRuntime.supportsCoreCapability=()=>false;
+  assert.equal(await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format),'unavailable');
+}
+for (const format of ['EPUB',' mobi ',' AZW3 ', 'kf8']) {
+  const methods=[];
+  assert.equal(await backfillRetainedReaderDirectoryNavigation({
+    retainedLocalBookSourcePath:async()=>'/retained/self-authored-book',
+    request:async method=>{methods.push(method);return {data:{status:'ready',navigationRevision:'revision'}};},
+  },'archive',()=>true,format),'ready');
+  assert.deepEqual(methods,['local_book.navigation.backfill.v1'],'archive formats never route to TXT rules');
+}
+console.log('PASS local/TXT alias dispatch and cancellation preserve TXT body/rules path; EPUB/MOBI-family retain archive path');
