@@ -40,8 +40,9 @@ try {
   json(join(root, 'run-6/retention-install-vm-incomplete.json'), {
     name: 'reader-hap-install-protection', runId: 'run-6',
   });
-  assert.ok(planHapRetention(root, 4).retained.includes('run-6'), 'install/launch failure keeps the attempted package protected');
-  assert.throws(() => planHapRetention(root, 4, 1), /protected runs/);
+  assert.ok(planHapRetention(root, 5).retained.includes('run-6'), 'install/launch failure keeps the attempted package protected');
+  assert.ok(planHapRetention(root, 5).retained.includes('run-12'), 'the latest successful candidate survives a later failed build');
+  assert.throws(() => planHapRetention(root, 5, 1), /protected runs/);
   rmSync(join(root, 'run-6/retention-install-vm-incomplete.json'));
   plan = planHapRetention(root, 10, 1);
   assert.equal(plan.retained.length, 9, 'reserve the next published run before building');

@@ -235,6 +235,8 @@ export function planHapRetention(root, keepRuns = DEFAULT_RETAIN_RUNS, reserve =
     if (!runs.some(run => run.runId === id && run.files.length > 0)) fail(`pinned recovery package is missing: ${id}`);
   }
   const available = runs.filter(run => run.files.length > 0);
+  const latestCandidate = [...available].sort((a, b) => b.time - a.time || b.runId.localeCompare(a.runId))[0];
+  if (latestCandidate) protectedRuns.add(latestCandidate.runId);
   const protectedAvailable = available.filter(run => protectedRuns.has(run.runId));
   if (protectedAvailable.length + reserve > keepRuns)
     fail(`HAP retention budget ${keepRuns} cannot fit ${protectedAvailable.length} protected runs plus ${reserve} new run; review pins/deployment recovery or raise --keep-runs`);
