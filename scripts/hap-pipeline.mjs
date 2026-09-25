@@ -31,6 +31,7 @@ const DEFAULT_RETAIN_RUNS = 10;
 const ARTIFACT_LOCK = '/private/tmp/reader-harmony-hap-build.lock';
 const DEFAULT_SIGNING_PROFILE = resolve(REPO_ROOT, '.reader-local/signing/build-profile.json5');
 const DEFAULT_HVIGORW = '/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw';
+const DEFAULT_OHPM = '/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm';
 const DEFAULT_HDC = '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc';
 const DEFAULT_SIGN_TOOL =
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar';
@@ -365,6 +366,7 @@ function copySourceSandbox(source, destination) {
     'entry/build',
     'entry/.cxx',
     'node_modules',
+    'oh_modules',
     'evidence',
   ];
   const args = ['-a', '--delete'];
@@ -777,6 +779,22 @@ function build(options) {
       token: pipelineToken, profileSha256: effectiveProfile.sha256,
     }), { mode: 0o600 });
     const sandboxBefore = sourceSnapshot(sandboxRepo);
+
+    // Fresh worktrees have no generated oh_modules. Resolve the declared local
+    // Core package inside this sandbox rather than inheriting a developer's
+    // links (which may point into another checkout or contain stale SDK bytes).
+    const ohpm = process.env.OHPM || DEFAULT_OHPM;
+    if (!existsSync(ohpm)) fail(`OHPM is missing: ${ohpm}`);
+    run(ohpm, ['install', '--no-link', '--cache', resolve(sandboxRoot, 'ohpm-cache')], {
+      cwd: resolve(sandboxRepo, 'entry'),
+      stdio: 'inherit',
+    });
+    assertSnapshotUnchanged(sandboxBefore, sourceSnapshot(sandboxRepo), 'dependency manifests and source inputs');
+    assertSnapshotUnchanged(
+      contentSnapshot(resolve(sandboxRepo, 'entry/vendor/core-harmony'), ['.']),
+      contentSnapshot(resolve(sandboxRepo, 'entry/oh_modules/@reader/core-harmony'), ['.']),
+      'resolved Core package',
+    );
 
     const hvigorw = process.env.HVIGORW || DEFAULT_HVIGORW;
     if (!existsSync(hvigorw)) fail(`Hvigor is missing: ${hvigorw}`);
