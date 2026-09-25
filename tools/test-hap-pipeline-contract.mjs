@@ -220,6 +220,12 @@ try {
   writeFileSync(join(store, 'Index.ts'), 'export const version = 2;\n');
   assert.throws(() => assertResolvedCorePackage(dependencies), /resolved Core package changed/);
   rmSync(alias);
+  const hoisted = join(dependencies, 'oh_modules/.ohpm/core');
+  mkdirSync(hoisted, { recursive: true });
+  writeFileSync(join(hoisted, 'Index.ts'), 'export const version = 1;\n');
+  symlinkSync(hoisted, alias);
+  assert.doesNotThrow(() => assertResolvedCorePackage(dependencies), 'full projects hoist packages to sandbox root');
+  rmSync(alias);
   symlinkSync(vendor, alias);
   assert.throws(() => assertResolvedCorePackage(dependencies), /escapes the isolated dependency directory/,
     'even matching bytes outside the dependency store must not be inherited');

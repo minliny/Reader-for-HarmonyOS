@@ -343,8 +343,17 @@ export function sourceSnapshot(repo = REPO_ROOT) {
 export function assertResolvedCorePackage(sandboxRepo) {
   const modules = realpathSync(resolve(sandboxRepo, 'entry/oh_modules'));
   const installed = realpathSync(resolve(modules, '@reader/core-harmony'));
-  const withinModules = relative(modules, installed);
-  if (withinModules === '..' || withinModules.startsWith(`..${sep}`) || isAbsolute(withinModules)) {
+  // In a full Hvigor project OHPM hoists local packages to root/oh_modules;
+  // standalone entry fixtures use entry/oh_modules. Both are freshly created
+  // in this build sandbox, and neither may resolve into another checkout.
+  const roots = [modules];
+  const hoisted = resolve(sandboxRepo, 'oh_modules');
+  if (existsSync(hoisted)) roots.push(realpathSync(hoisted));
+  const contained = roots.some(root => {
+    const within = relative(root, installed);
+    return within !== '..' && !within.startsWith(`..${sep}`) && !isAbsolute(within);
+  });
+  if (!contained) {
     fail('resolved Core package escapes the isolated dependency directory');
   }
   assertSnapshotUnchanged(
