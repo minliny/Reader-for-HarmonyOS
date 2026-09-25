@@ -348,7 +348,7 @@ struct Index {
   private shelfEntryTraceStartedAt: number = -1;
   private shelfEntryTraceGeneration: number = -1;
   private startupEntryId: number = 0;
-  private readingReadyGeneration: number = 0;
+  @State private readingReadyGeneration: number = 0;
   private navigationBackfillAttempted: Set<string> = new Set<string>();
   private navigationBackfillObservedKey: string = '';
   private navigationBackfillObserverDisposer: (() => void) | undefined;
@@ -1111,7 +1111,9 @@ struct Index {
           onExit: (): void => this.onReaderExited(),
           onExitCancelled: (): void => this.cancelReaderExitDestination(),
           onOpenBookInfo: (): void => this.requestReaderBookInfo(),
-          onReadingReady: this.readingReadyCallback(this.detailBook.sourceId, this.detailBook.bookId, this.readingReadyGeneration),
+          readingReadyGeneration: this.readingReadyGeneration,
+          onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number): void =>
+            this.readingReadyCallback(sourceId, bookId, generation)(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
           onReadingFailure: (sourceId: string, bookId: string, message: string,
             failureKind?: RemoteReadingFailureKind): void =>

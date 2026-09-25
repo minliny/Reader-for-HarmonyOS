@@ -325,5 +325,21 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
   assert.equal(current.isReaderIdentityCurrent(),true);current.onExitRequestHandler(()=>{});current.onReadingReady(2);
   current.onDirectoryProjectionChanged([{index:2,title:'新目录'}]);
   assert.deepEqual(calls,['onExitRequestHandler','onReadingReady','onDirectoryProjectionChanged']);
+  const deliveries=[];
+  // The parent callback remains the same function while a retained Shell
+  // moves across books and across entries of the same book.
+  owner.onReadingReady=(...args)=>deliveries.push(args);
+  owner.readingReadyGeneration=8;
+  current.onReadingReady(3);
+  assert.deepEqual(deliveries,[], 'old generation cannot report ready for a new entry');
+  owner.readingOwner();const reopened=[...owner.children.values()].at(-1).params;
+  reopened.onReadingReady(3);
+  assert.deepEqual(deliveries,[[3,'source-B','book',8]]);
+  owner.bookId='next-book';owner.readingReadyGeneration=9;
+  reopened.onReadingReady(0);
+  assert.equal(deliveries.length,1);
+  owner.readingOwner();[...owner.children.values()].at(-1).params.onReadingReady(0);
+  assert.deepEqual(deliveries.at(-1),[0,'source-B','next-book',9]);
+
 }
 console.log('PH116 actual reader admission, retained errors, retry generations, late-reply rejection, controls, SDK error actions and source/window ownership PASS');

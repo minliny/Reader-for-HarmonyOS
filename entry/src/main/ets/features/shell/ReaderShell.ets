@@ -44,6 +44,7 @@ export struct ReaderShell {
 
   // 阅读内容。
   @Prop bookId: string = '';
+  @Prop readingReadyGeneration: number = 0;
   @Prop bookTitle: string = '';
   @Prop sourceId: string = '';
   @Prop sourceName: string = '';
@@ -82,7 +83,8 @@ export struct ReaderShell {
   onExitRequestHandler: (requestExit: (intent?: 'navigation') => void) => void = (): void => {};
   onExit: () => void = (): void => {};
   onExitCancelled: () => void = (): void => {};
-  onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number) => void =
+    (_chapterIndex: number, _sourceId: string, _bookId: string, _generation: number): void => {};
   onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
   onRetryFailedSourceSwitch: () => void = (): void => {};
   onDismissSourceSwitchFailure: () => void = (): void => {};
@@ -183,7 +185,8 @@ export struct ReaderShell {
             if (_identity === this.readingIdentityKey()) this.onExitCancelled();
           },
           onReadingReady: (chapterIndex: number): void => {
-            if (_identity === this.readingIdentityKey()) this.onReadingReady(chapterIndex);
+            if (_identity === this.readingIdentityKey())
+              this.onReadingReady(chapterIndex, this.sourceId, this.bookId, this.readingReadyGeneration);
           },
           onReadingCommitted: (commit: ReadingCommit): void => {
             if (_identity === this.readingIdentityKey()) this.onReadingCommitted(commit);
@@ -305,7 +308,7 @@ export struct ReaderShell {
   }
 
   private readingIdentityKey(): string {
-    return JSON.stringify([this.sourceId, this.bookId]);
+    return JSON.stringify([this.sourceId, this.bookId, this.readingReadyGeneration]);
   }
 
   private chromeMetrics(_revision: number): ReaderWindowMetricsSnapshot {
