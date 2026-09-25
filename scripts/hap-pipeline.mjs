@@ -12,13 +12,14 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { basename, dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
@@ -337,6 +338,20 @@ function contentSnapshot(root, inputs) {
 
 export function sourceSnapshot(repo = REPO_ROOT) {
   return contentSnapshot(repo, BUILD_INPUTS);
+}
+
+export function assertResolvedCorePackage(sandboxRepo) {
+  const modules = realpathSync(resolve(sandboxRepo, 'entry/oh_modules'));
+  const installed = realpathSync(resolve(modules, '@reader/core-harmony'));
+  const withinModules = relative(modules, installed);
+  if (withinModules === '..' || withinModules.startsWith(`..${sep}`) || isAbsolute(withinModules)) {
+    fail('resolved Core package escapes the isolated dependency directory');
+  }
+  assertSnapshotUnchanged(
+    contentSnapshot(resolve(sandboxRepo, 'entry/vendor/core-harmony'), ['.']),
+    contentSnapshot(installed, ['.']),
+    'resolved Core package',
+  );
 }
 
 function assertSnapshotUnchanged(before, after, label) {
@@ -790,11 +805,7 @@ function build(options) {
       stdio: 'inherit',
     });
     assertSnapshotUnchanged(sandboxBefore, sourceSnapshot(sandboxRepo), 'dependency manifests and source inputs');
-    assertSnapshotUnchanged(
-      contentSnapshot(resolve(sandboxRepo, 'entry/vendor/core-harmony'), ['.']),
-      contentSnapshot(resolve(sandboxRepo, 'entry/oh_modules/@reader/core-harmony'), ['.']),
-      'resolved Core package',
-    );
+    assertResolvedCorePackage(sandboxRepo);
 
     const hvigorw = process.env.HVIGORW || DEFAULT_HVIGORW;
     if (!existsSync(hvigorw)) fail(`Hvigor is missing: ${hvigorw}`);

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -15,6 +15,7 @@ import {
   composeSigningProfile,
   resolveSigningMode,
   freezeSigningMaterial,
+  assertResolvedCorePackage,
 } from '../scripts/hap-pipeline.mjs';
 
 const { assertCanonicalHapInvocation, isPackageTask } = createRequire(import.meta.url)('../hvigor/reader-hap-guard.cjs');
@@ -205,5 +206,23 @@ assert.match(gitignore, /^\.reader-local\/$/m);
 const harmonyReadme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 assert.doesNotMatch(harmonyReadme, /\.\/scripts\/check-local\.sh --hap/,
   'the retired check-local HAP entry must not return');
+
+const dependencies = mkdtempSync(join(tmpdir(), 'reader-hap-dependency-test-'));
+try {
+  const vendor = join(dependencies, 'entry/vendor/core-harmony');
+  const store = join(dependencies, 'entry/oh_modules/.ohpm/core');
+  const alias = join(dependencies, 'entry/oh_modules/@reader/core-harmony');
+  for (const dir of [vendor, store, join(dependencies, 'entry/oh_modules/@reader')]) mkdirSync(dir, { recursive: true });
+  writeFileSync(join(vendor, 'Index.ts'), 'export const version = 1;\n');
+  writeFileSync(join(store, 'Index.ts'), 'export const version = 1;\n');
+  symlinkSync('../.ohpm/core', alias);
+  assert.doesNotThrow(() => assertResolvedCorePackage(dependencies), 'OHPM internal aliases must compare resolved content');
+  writeFileSync(join(store, 'Index.ts'), 'export const version = 2;\n');
+  assert.throws(() => assertResolvedCorePackage(dependencies), /resolved Core package changed/);
+  rmSync(alias);
+  symlinkSync(vendor, alias);
+  assert.throws(() => assertResolvedCorePackage(dependencies), /escapes the isolated dependency directory/,
+    'even matching bytes outside the dependency store must not be inherited');
+} finally { rmSync(dependencies, { recursive: true, force: true }); }
 
 console.log('HarmonyOS HAP pipeline contract: PASS');
