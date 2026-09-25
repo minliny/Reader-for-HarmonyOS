@@ -5189,7 +5189,12 @@ export struct ReadingExperience {
     let previousEnd = 0;
     for (let lineIndex = firstLine; lineIndex < lineCount; lineIndex += 1) {
       const metric = this.toLineMetric(manager.getLineMetrics(lineIndex));
-      if (metric.startIndex < previousEnd) throw new Error('PAGINATION_LINE_GEOMETRY_INVALID');
+      if (metric.startIndex < previousEnd) {
+        hilog.error(0x5244, 'Reader',
+          'Pagination overlap line=%{public}d start=%{public}d end=%{public}d previousEnd=%{public}d',
+          lineIndex, metric.startIndex, metric.endIndex, previousEnd);
+        throw new Error('PAGINATION_LINE_GEOMETRY_INVALID');
+      }
       previousEnd = metric.endIndex;
       const local = measurementMap.linesFromArkUI([metric])[0];
       if (local.endScalar <= local.startScalar || local.height <= 0) continue;
@@ -5204,6 +5209,10 @@ export struct ReadingExperience {
         this.getUIContext().px2vp(readerNativeParagraphHeight(manager, firstLine, lineIndex)) > this.pendingPageBodyCapacity()) break;
     }
     if (result.length === 0) {
+      const last = manager.getLineMetrics(lineCount - 1);
+      hilog.error(0x5244, 'Reader',
+        'Pagination empty lines=%{public}d first=%{public}d request=%{public}d length=%{public}d lastStart=%{public}d lastEnd=%{public}d lastHeight=%{public}f',
+        lineCount, firstLine, requestedUtf16, measurementText.length, last.startIndex, last.endIndex, last.height);
       throw new Error('PAGINATION_LINE_GEOMETRY_INVALID');
     }
     return result;

@@ -45,6 +45,12 @@ assert.deepEqual(completeReadingParagraphWindow('tail\r\n完整😀段\r\nnext\r
 assert.equal(completeReadingParagraphWindow('tail\n正文\nhead','lineSeparated',false,false,2),undefined);
 assert.equal(completeReadingParagraphWindow('A'.repeat(32000),'lineSeparated',false,false,16000),undefined,'giant partial paragraph is never reshaped as a complete paragraph');
 assert.deepEqual(completeReadingParagraphWindow('完整 é אבג 😀','lineSeparated',true,true,4),{startUtf16:0,endUtf16:12});
+// A terminal break is excluded from shaping, but a range ending mid-chapter
+// still cannot claim its last semantic paragraph is complete.
+assert.deepEqual(completeReadingParagraphWindow('正文😀\n','blankLineSeparated',true,true,5),
+ {startUtf16:0,endUtf16:4});
+assert.equal(completeReadingParagraphWindow('正文😀\n','blankLineSeparated',true,false,2),undefined);
+assert.equal(completeReadingParagraphWindow('tail\n\n正文😀\n','blankLineSeparated',false,false,7),undefined);
 const structured='tail\nline\n\n完整\nBR\n\nhead';
 const projected=completeReadingParagraphWindow(structured,'blankLineSeparated',false,false,13);
 assert.equal(structured.slice(projected.startUtf16,projected.endUtf16),'完整\nBR');

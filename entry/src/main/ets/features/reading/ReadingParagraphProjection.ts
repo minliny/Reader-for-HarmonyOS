@@ -77,7 +77,12 @@ class ReadingParagraphScanner {
         if (end !== this.next) {
           this.dividerEnd = end; this.next = end; this.breaks += 1; continue;
         }
-        if (this.breaks >= 2) {
+        // A final logical break terminates this paragraph. Passing it to
+        // ArkUI creates an empty terminal line whose range may overlap the
+        // preceding line. Keep it in canonical content, outside the shaped
+        // range, just like the existing between-paragraph separators. Single
+        // breaks followed by more text remain original paragraph content.
+        if (this.breaks >= 2 || this.next >= this.content.length) {
           appendReadingParagraphUtf16Range(this.ranges, this.content, this.start, this.dividerStart);
           this.start = this.dividerEnd;
         }
