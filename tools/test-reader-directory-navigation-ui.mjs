@@ -373,3 +373,54 @@ console.log('PH42 tree bookmark, target validation, rank position and debounced 
   assert.equal(baseGroup.nodeId,'group', 'Core and viewport node identity is untouched');
 }
 console.log('PASS directory disclosure actual SDK Builder: fold/unfold arrow, accessibility and callback capture refresh only the changed row');
+
+// Execute SDK-generated State dependencies and the real listBody child update.
+// The old plain query is a negative control: snapshot refresh cannot substitute
+// for the child observer's missing dependency on the submitted search value.
+{
+  const { createRequire } = await import('node:module');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+  const require = createRequire(import.meta.url);
+  const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
+  syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationSurface');
+  for (const name of ['ReaderBookmarkErrorState','ReaderBookmarkLoadingState','ReaderBookmarkEmptyState']) syntax.componentCollection.customComponents.add(name);
+  require(`${sdkRoot}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add('flatList');
+  syntax.propCollection.set('ReaderDirectoryNavigationSurface', new Set(
+    [...surfaceSource.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(match=>match[1])));
+  function queryPublication(source, reactive) {
+    const runtime = createArkUIPropertyRuntimeProbe();
+    class Surface {
+      constructor(owner, params, _storage, id) {Object.assign(this,{owner,params,id});}
+      updateStateVars(params) {Object.assign(this.params,params);}
+    }
+    const {owner} = createReaderBuilderProbe(source,['query','draft','ascending','listBody','search'],
+      {...runtime.sdk,ReaderDirectoryNavigationSurface:Surface,Edge:{Top:'top'}},runtime.hooks);
+    let refreshes=0;
+    Object.assign(owner,{tab:'directory',bookmarkLoadFailed:false,snapshot:{loading:false,rows:[{}]},
+      navigationActive:true,bookmarkIdentity:{sourceId:'local',bookId:'fixture'},
+      rowHeight:()=>40,rowPadding:()=>10,sessionKey:'same-session',
+      deferCatalogAction:()=>false,cancelPendingPlacement(){},
+      refreshData(){refreshes++;},scroller:{scrollEdge(){}},
+    });
+    owner.listBody();
+    const child=[...owner.children.values()][0];assert.ok(child);
+    assert.equal(child.params.query,'');
+    for(const query of ['精确','没有匹配','']) {
+      owner.draft=` ${query} `; runtime.flush();
+      const updatesBefore=runtime.updates.length;
+      owner.search(); runtime.flush();
+      assert.equal(child.params.query,reactive?query:'',
+        'search alone must deliver submitted query without a sort, view replacement or manual observer replay');
+      if(reactive) assert.ok(runtime.updates.length>updatesBefore,'query State invalidates the mounted tree observer');
+      else assert.equal(runtime.updates.length,updatesBefore,'plain query reproduces the missing update');
+      assert.equal(owner.ascending,true,'no sort action rescues the query');
+      assert.equal([...owner.children.values()][0],child,'mounted surface identity stays stable');
+    }
+    assert.equal(refreshes,3,'existing flat projection refresh remains unchanged');
+  }
+  queryPublication(controlSource.replace('@State private query:','private query:'),false);
+  queryPublication(controlSource,true);
+}
+console.log('PASS directory search actual SDK State dispatch: submit/miss/clear update mounted tree parameters without sorting; plain-query negative control reproduces stale child');

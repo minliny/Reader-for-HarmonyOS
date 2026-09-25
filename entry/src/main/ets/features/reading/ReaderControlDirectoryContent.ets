@@ -97,7 +97,7 @@ export struct ReaderControlDirectoryContent {
     readerControlDirectorySnapshot([], 'directory', '', true, -1);
   @State private navigationInteracted: boolean = false;
   @State private navigationActive: boolean = false;
-  private query: string = '';
+  @State private query: string = '';
   private pendingCatalogAction: string = '';
   private scroller: Scroller = new Scroller();
   private dataSource: ControlDirectoryDataSource = new ControlDirectoryDataSource();
