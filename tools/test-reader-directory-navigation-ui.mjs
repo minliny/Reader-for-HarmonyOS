@@ -12,7 +12,7 @@ const listPath = fileURLToPath(new URL('ReaderDirectoryNavigationList.ets', read
 const surfacePath = fileURLToPath(new URL('ReaderDirectoryNavigationSurface.ets', reading));
 const listSource = readFileSync(listPath, 'utf8');
 const surfaceSource = readFileSync(surfacePath, 'utf8');
-assert.match(listSource, /`reader-navigation:\$\{item\.key\}`/, 'tree rows use stable node ids');
+assert.match(listSource, /\(item: ReaderDirectoryNavigationItem\): string => this\.rowKey\(item\)/, 'LazyForEach uses the production row identity function');
 assert.match(listSource, /this\.gateway\.resolveTarget\(bookId, viewId, node\.nodeId/, 'tap revalidates live Core target');
 assert.match(listSource, /this\.scroller\.scrollToIndex\(plan\.index, false, ScrollAlign\.CENTER\)/,
   'tree centers by Core supplied current visible rank when no viewport anchor exists');
@@ -315,3 +315,61 @@ const Surface = productionMotionMethods(surfacePath,
   visibleAnchorNodeId = undefined;
 }
 console.log('PH42 tree bookmark, target validation, rank position and debounced query fencing: PASS');
+
+// Model LazyForEach's retained key -> Builder closure using the actual SDK
+// transformed row. A stable node-only key reproduces the stale arrow; changing
+// the expand presentation identity replaces only the affected mounted row.
+{
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const Keys = productionMotionMethods(listPath, ['rowKey']);
+  const keys = new Keys();
+  let mounted = new Map();
+  const toggles = [];
+  const baseGroup = { nodeId: 'group', kind: 'group', title: '卷一', depth: 1,
+    hasChildren: true, expanded: true };
+  const unrelated = { nodeId: 'other', kind: 'target', title: '序言', depth: 1,
+    chapterIndex: 0, hasChildren: false, expanded: false };
+  function publish(nodes, viewId) {
+    const next = new Map();
+    for (const [index, node] of nodes.entries()) {
+      const item = { key: node.nodeId, node, index };
+      const key = keys.rowKey(item);
+      let row = mounted.get(key);
+      if (row === undefined) {
+        row = createReaderBuilderProbe(listSource, ['row']).owner;
+        Object.assign(row, { rowHeight:40, appThemeScheme:'day', view:{viewId},
+          chapterByIndex:new Map(), isCurrentNode:()=>false,
+          toggleNode: value=>toggles.push(value), selectTarget() {} });
+        row.row(item);
+      }
+      next.set(key,row);
+    }
+    mounted=next;
+    return [...next.values()];
+  }
+  function state(row) {
+    const text=[...row.nodes.values()].filter(record=>record.type==='Text');
+    return { arrow:text.find(record=>record.create==='⌄'||record.create==='›'),
+      title:text.find(record=>record.create==='卷一') };
+  }
+  const expanded=publish([baseGroup,unrelated],'view-expanded');
+  assert.equal(state(expanded[0]).arrow.create,'⌄');
+  assert.match(state(expanded[0]).title.accessibilityText,/已展开/);
+  const folded=publish([{...baseGroup,expanded:false},unrelated],'view-folded');
+  assert.notEqual(folded[0],expanded[0], 'changed disclosure replaces its stale Builder capture');
+  assert.equal(folded[1],expanded[1], 'unrelated row survives a new viewId unchanged');
+  assert.equal(state(folded[0]).arrow.create,'›');
+  assert.match(state(folded[0]).arrow.accessibilityText,/展开卷一子目录/);
+  assert.match(state(folded[0]).title.accessibilityText,/已折叠/);
+  state(folded[0]).arrow.onClick();
+  assert.equal(toggles.at(-1).expanded,false, 'new arrow captures the current row; toggle business remains unchanged');
+  const unfolded=publish([baseGroup,unrelated],'view-unfolded');
+  assert.equal(state(unfolded[0]).arrow.create,'⌄');
+  assert.match(state(unfolded[0]).title.accessibilityText,/已展开/);
+  assert.equal(unfolded[1],expanded[1]);
+  const moved=publish([unrelated,baseGroup],'view-rank-moved');
+  assert.equal(moved[0],unfolded[1]);
+  assert.equal(moved[1],unfolded[0], 'rank changes do not recreate an unchanged row');
+  assert.equal(baseGroup.nodeId,'group', 'Core and viewport node identity is untouched');
+}
+console.log('PASS directory disclosure actual SDK Builder: fold/unfold arrow, accessibility and callback capture refresh only the changed row');

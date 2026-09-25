@@ -416,6 +416,13 @@ export struct ReaderDirectoryNavigationList {
     return current !== undefined && this.dataSource.loadedNode(current)?.nodeId === nodeId;
   }
 
+  /** LazyForEach retains a Builder closure for the same key. Recreate only
+   * the row whose expand affordance changed; viewport identity stays nodeId. */
+  private rowKey(item: ReaderDirectoryNavigationItem): string {
+    return `reader-navigation:${JSON.stringify([item.key,
+      item.node?.hasChildren === true ? item.node.expanded : null])}`;
+  }
+
   @Builder
   private row(item: ReaderDirectoryNavigationItem) {
     Row() {
@@ -475,7 +482,7 @@ export struct ReaderDirectoryNavigationList {
     List({ space: 0, scroller: this.scroller }) {
       LazyForEach(this.dataSource, (item: ReaderDirectoryNavigationItem) => {
         ListItem() { this.row(item); }.width('100%').height(this.rowHeight);
-      }, (item: ReaderDirectoryNavigationItem): string => `reader-navigation:${item.key}`);
+      }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
     }
     .width('100%').height('100%')
     .padding({ left: this.listPaddingX, right: this.listPaddingX,
