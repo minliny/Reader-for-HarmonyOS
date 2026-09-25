@@ -1,3 +1,4 @@
+import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -31,7 +32,7 @@ assert.match(controlSource, /if \(!this\.mounted \|\| this\.navigationActive\) r
 const QuickActions = productionMotionMethods(controlPath,
   ['cancelPendingPlacement', 'userScroll', 'search', 'sort', 'deferCatalogAction', 'scrollCatalogEdge'], {
     Edge: { Top: 'top', Bottom: 'bottom' },
-    readerDirectoryScopeKey: (_source, book) => book,
+    ReaderDirectoryTrace, readerDirectoryScopeKey: (_source, book) => book,
   readerDirectorySignalScrollIntent: bookId => scrolledBooks.push(bookId),
     readerDirectorySignalScrollCommand: bookId => completedScrollBooks.push(bookId),
   });
@@ -65,7 +66,7 @@ assert.match(fullSource, /if \(!this\.positioningMounted \|\| this\.navigationAc
 const fullScrollEvents = [];
 const FullControls = productionMotionMethods(fullPath, ['handleControl'], {
   Edge: { Top: 'top', Bottom: 'bottom' },
-  readerDirectoryScopeKey: (_source, book) => book,
+  ReaderDirectoryTrace, readerDirectoryScopeKey: (_source, book) => book,
   readerDirectorySignalScrollIntent: bookId => fullScrollEvents.push(['intent', bookId]),
   readerDirectorySignalScrollCommand: bookId => fullScrollEvents.push(['complete', bookId]),
 });
@@ -93,7 +94,7 @@ const Detail = productionMotionMethods(detailPath, ['flushPendingScroll'], {});
 
 const List = productionMotionMethods(listPath, ['marker', 'selectTarget', 'planPosition', 'positionInitialCurrent'], {
   readerDirectoryBookmarkMarkerState, ScrollAlign: { START: 'start', CENTER: 'center' },
-  readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
+  ReaderDirectoryTrace, readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
   readerDirectoryViewportAnchor: () => undefined, LengthMetrics: { vp: value => ({ value }) },
 });
 {
@@ -111,7 +112,7 @@ const List = productionMotionMethods(listPath, ['marker', 'selectTarget', 'planP
 
 const PagedList = productionMotionMethods(listPath, ['loadPage', 'onInteractionChanged'], {
   cacheReaderDirectoryNavigationPage: (_view, _offset, page) => page,
-  setTimeout: action => action(), readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`, readerDirectoryViewportAnchor: () => undefined,
+  setTimeout: action => action(), ReaderDirectoryTrace, readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`, readerDirectoryViewportAnchor: () => undefined,
 });
 {
   const admitted = [];
@@ -168,7 +169,7 @@ const Surface = productionMotionMethods(surfacePath,
   cacheReaderDirectoryNavigationPage: (_view, _offset, page) => page,
   openReaderDirectoryNavigation: (_gateway, query) => new Promise(resolve => pending.push({ query, resolve })),
   readerDirectoryNoteMissingNavigation: () => {},
-  readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
+  ReaderDirectoryTrace, readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
   readerDirectoryViewportAnchor: () => visibleAnchorNodeId === undefined ? undefined :
     { nodeId: visibleAnchorNodeId, navigationRevision: 'r', viewId: 'old-visible', visibleIndex: 6000 },
   ReaderRuntimeOwner: { current: () => ({}) },

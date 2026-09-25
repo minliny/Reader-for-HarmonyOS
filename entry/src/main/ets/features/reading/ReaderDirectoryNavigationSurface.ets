@@ -1,3 +1,5 @@
+import { FrameCallback } from '@kit.ArkUI';
+import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, openReaderDirectoryNavigation,
@@ -9,6 +11,13 @@ import { readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor } fro
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
+
+class ReaderDirectoryTraceFrame extends FrameCallback {
+  private action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
+}
 
 /** A directory opening is admitted once. If navigation is absent or an index
  * is not ready, the supplied chapter list stays visible for this opening. */
@@ -47,6 +56,7 @@ export struct ReaderDirectoryNavigationSurface {
   private pendingRefresh: boolean = false;
   private pendingQueryRefresh: boolean = false;
   private queryTimer: number = -1;
+  private queryTrace: ReaderDirectoryTrace | undefined = undefined;
   private lastQuery: string = '';
   private lastAscending: boolean = true;
   private lastChapterIndex: number = -1;
@@ -108,7 +118,7 @@ export struct ReaderDirectoryNavigationSurface {
       return;
     }
     if (queryChanged && !otherChanged) this.scheduleQueryOpen();
-    else this.openTree(this.view === undefined);
+    else this.openTree(this.view === undefined, 'sort-or-position');
   }
 
   private onInteractionChanged(): void {
@@ -139,20 +149,28 @@ export struct ReaderDirectoryNavigationSurface {
     if (this.queryTimer < 0) return;
     clearTimeout(this.queryTimer);
     this.queryTimer = -1;
+    this.queryTrace?.step('cancelled', 'cancelled');
+    this.queryTrace = undefined;
   }
 
   private scheduleQueryOpen(): void {
     const generation = this.generation;
     const bookId = this.bookId;
+    const trace = new ReaderDirectoryTrace('search');
+    this.queryTrace = trace;
     this.queryTimer = setTimeout((): void => {
       this.queryTimer = -1;
-      if (!this.mounted || this.settledFlat || this.generation !== generation || this.bookId !== bookId) return;
+      this.queryTrace = undefined;
+      if (!this.mounted || this.settledFlat || this.generation !== generation || this.bookId !== bookId) {
+        trace.step('discarded', 'stale');
+        return;
+      }
       if (!this.interactionEnabled) {
         this.pendingRefresh = true;
         this.pendingQueryRefresh = true;
         return;
       }
-      this.openTree(this.view === undefined);
+      this.openTree(this.view === undefined, 'search', trace);
     }, 150);
   }
 
@@ -227,11 +245,12 @@ export struct ReaderDirectoryNavigationSurface {
     }));
   }
 
-  private openTree(first: boolean): void {
+  private openTree(first: boolean, reason: string = 'open', pendingTrace?: ReaderDirectoryTrace): void {
     const gateway = this.gateway;
     const bookId = this.bookId;
     if (gateway === undefined || bookId.length === 0) return;
     const generation = ++this.generation;
+    const trace = pendingTrace ?? new ReaderDirectoryTrace(reason);
     this.openingGeneration = generation;
     const query = this.query, descending = !this.ascending;
     const anchorNodeId = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
@@ -240,6 +259,7 @@ export struct ReaderDirectoryNavigationSurface {
       (): boolean => this.mounted && generation === this.generation && this.bookId === bookId,
       (reason: string): void => { if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason); })
       .then(async (ready: ReaderDirectoryNavigationReady | undefined): Promise<void> => {
+        trace.step('response', ready === undefined ? 'unavailable' : 'ready');
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
         if (ready === undefined) {
           this.openingGeneration = -1;
@@ -264,7 +284,15 @@ export struct ReaderDirectoryNavigationSurface {
         }
         this.view = ready;
         this.onTreeStateChange(true);
+        trace.step('published');
+        if (trace.isEnabled()) try {
+          this.getUIContext().postFrameCallback(new ReaderDirectoryTraceFrame((): void => {
+            trace.step('frame-callback', this.mounted && generation === this.generation && this.view?.viewId === ready.viewId
+              ? 'ready' : 'stale');
+          }));
+        } catch (_error) { trace.step('frame-callback', 'unavailable'); }
       }).catch((_error: Error): void => {
+        trace.step('response', 'failed');
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
         this.openingGeneration = -1;
         if (first) this.settledFlat = true;
@@ -278,7 +306,7 @@ export struct ReaderDirectoryNavigationSurface {
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
     readerDirectoryToggleCollapsed(readerDirectoryScopeKey(this.sourceId, this.bookId), view.navigationRevision, node.nodeId);
-    this.openTree(false);
+    this.openTree(false, 'fold');
   }
 
   private invalidate(): void {
