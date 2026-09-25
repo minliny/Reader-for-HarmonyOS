@@ -21,6 +21,8 @@ const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameR
   SurfaceWidthSpec, resolveHorizontalFrame, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   readerInteractiveSafeBottom, ReaderWindowCoordinator: { metrics: () => metrics },
   TOK_CONTENT_MAX_W_TABLET: 720, registerReaderFonts() {}, Edge,
+  ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => false }) },
+  readerDirectoryScopeKey: (_source, book) => book,
   readerDirectorySignalScrollIntent: bookId => programmaticScrolls.push(bookId),
   readerDirectorySignalScrollCommand: bookId => completedScrolls.push(bookId),
   setTimeout: action => { pending.push(action); } };
@@ -105,9 +107,10 @@ function flush() { while (pending.length) pending.shift()(); }
     'search and sort before initial Core tree answer keep the current generation eligible for tree adoption');
   page.onListUserScroll();
   assert.equal(page.navigationInteracted, true, 'real user scrolling still prevents a late tree insertion');
+  const completedBeforeDeferred = completedScrolls.length;
   page.scrollToEdge(Edge.Top);
   assert.equal(programmaticScrolls.at(-1), 'book', 'detail toolbar Top fences an in-flight tree view');
-  assert.equal(completedScrolls.length, 0, 'a deferred edge command cannot claim that scrolling already ran');
+  assert.equal(completedScrolls.length, completedBeforeDeferred, 'a deferred edge command cannot claim that scrolling already ran');
   page.navigationActive = true;
   page.onListFirstLayout(page.identity());
   assert.equal(completedScrolls.at(-1), 'book', 'detail toolbar completes after the actual edge command');
@@ -118,9 +121,9 @@ function flush() { while (pending.length) pending.shift()(); }
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-for (const [name, props] of Object.entries({ PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
+for (const [name, props] of Object.entries({ ReaderDirectoryRules: ['bookId'], PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
   ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'edgeEffectMode'],
-  ReaderDirectoryNavigationSurface: ['bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
+  ReaderDirectoryNavigationSurface: ['sourceId', 'bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
     'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'edgeEffectMode', 'scroller'],
   ReaderDirectoryChapterRow: ['entry', 'rowHeight', 'currentChapterIndex', 'chapterDownloadEnabled', 'chapterStartBookmarkCreationEnabled'] })) {
   syntax.componentCollection.customComponents.add(name); syntax.propCollection.set(name, new Set(props));
@@ -129,7 +132,7 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
 {
   const result = fixture(); result.page.aboutToAppear(); flush(); result.page.onListFirstLayout(result.page.identity());
   const { owner, output } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
-    ...deps, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
+    ...deps, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
   for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
@@ -137,7 +140,10 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
   const children = [...owner.children.values()];
   const bar = children.find(child => child.params.title === '目录'); assert.ok(bar);
   const toolbar = children.find(child => child.params.showChapterTools); assert.ok(toolbar);
-  const list = children.find(child => child.params.entries); assert.equal(list.params.entries.length, 3000);
+  const tree = children.find(child => child.params.chapterEntries);
+  assert.equal(tree.params.sourceId, result.page.sourceId);
+  tree.params.fallbackBuilder();
+  const list = [...owner.children.values()].find(child => child.params.entries); assert.equal(list.params.entries.length, 3000);
   assert.equal(list.params.rowHeight, 40); assert.equal(list.params.listPaddingX, 10);
   const item = structuredClone(owner.projectedEntries[0]); list.params.rowBuilder({ item, index: 0 });
   const row = [...owner.children.values()].find(child => child.params.entry === item); assert.ok(row);

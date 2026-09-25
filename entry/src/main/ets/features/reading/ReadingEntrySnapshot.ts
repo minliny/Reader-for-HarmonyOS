@@ -5,7 +5,7 @@ import { readingChapterLayoutMap, sliceReadingChapterText, type ReadingDocumentR
 import type { ReadingSessionChapter } from './ReadingChapterWindow';
 import type { LocalReadingProgressState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { materializeReadingDocument, materializePreparedReadingDocument, type MaterializedReadingDocument } from './ReadingDocumentProjection';
-import { captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
+import { appendReadingSelectionContext, captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 
 export type ReadingEntryNavigationItem = LocalReadingTocEntry & { position: number; readablePosition?: number };
 export type ReadingEntryNavigation = {
@@ -33,7 +33,7 @@ export async function readReadingEntrySnapshot(runtime: ReadingGatewayRuntime, s
   if (windowRequested) params['windowScalarLimit'] = windowScalarLimit as number;
   if (chapterIndex !== undefined) params['chapterIndex'] = chapterIndex;
   const context = captureRemotePositionContext(positionContext);
-  if (context !== undefined) params['positionContext'] = encodeRemotePositionContext(context);
+  appendReadingSelectionContext(params, context);
   const result = await runtime.request('reading.entry.snapshot', params, { shouldCancel: (): boolean => !current() });
   if (!current()) throw new Error('reading entry snapshot was cancelled');
   const data = result.data;
@@ -75,7 +75,8 @@ export function readPreparedReadingEntrySnapshot(runtime: ReadingGatewayRuntime,
   const params: JsonObject = { sourceId, bookId, windowScalarLimit: limit };
   if (chapterIndex !== undefined) params['chapterIndex'] = chapterIndex;
   const context = captureRemotePositionContext(positionContext);
-  if (context !== undefined) params['positionContext'] = encodeRemotePositionContext(context);
+  if (context?.directoryTargetProof !== undefined) return undefined;
+  appendReadingSelectionContext(params, context);
   const data = runtime.readPreparedEntry(params);
   if (!current()) return undefined;
   if (data['sourceId'] !== sourceId || data['bookId'] !== bookId) throw new Error('prepared entry identity mismatch');
@@ -128,6 +129,7 @@ function decodeEntrySnapshot(data: JsonObject, sourceId: string, bookId: string,
   const document = materialized ?? materializePreparedReadingDocument(data, documentRange?.startScalar ?? 0, contentVersion, documentRange);
   if (!current()) throw new Error('reading entry snapshot was cancelled');
   const chapter: ReadingSessionChapter = { sourceId, bookId, chapterIndex: index,
+    ...(context?.directoryTargetProof === undefined ? {} : { directoryTargetProof: context.directoryTargetProof }),
     chapterTitle: string(data, 'chapterTitle'), chapterUrl: string(data, 'baseUrl') || undefined,
     content: document.content, documentRange: documentRange !== undefined &&
       (documentRange.startScalar !== 0 || documentRange.endScalar !== documentRange.totalScalars) ? documentRange : undefined,

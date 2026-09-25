@@ -21,7 +21,7 @@ assert.match(surfaceSource, /this\.scheduleQueryOpen\(\)/,
 const controlSource = readFileSync(controlPath, 'utf8');
 const fullSource = readFileSync(fullPath, 'utf8');
 assert.match(controlSource,
-  /else if \(this\.snapshot\.rows\.length === 0 && !this\.navigationActive &&\s*!\(this\.tab === 'directory' && this\.bookmarkIdentity\?\.sourceId === 'local'\)\)/,
+  /else if \(this\.snapshot\.rows\.length === 0 && !this\.navigationActive &&\s*!\(this\.tab === 'directory' && this\.bookmarkIdentity !== undefined\)\)/,
   'local group-only search mounts the Core tree even when flat chapter matches are empty');
 assert.match(controlSource,
   /fallbackBuilder: \(\): void => \{\s*if \(this\.snapshot\.rows\.length === 0\) \{\s*Text\('没有匹配的章节'\)[\s\S]*?\} else \{\s*this\.flatList\(\)/,
@@ -31,7 +31,8 @@ assert.match(controlSource, /if \(!this\.mounted \|\| this\.navigationActive\) r
 const QuickActions = productionMotionMethods(controlPath,
   ['cancelPendingPlacement', 'userScroll', 'search', 'sort', 'deferCatalogAction', 'scrollCatalogEdge'], {
     Edge: { Top: 'top', Bottom: 'bottom' },
-    readerDirectorySignalScrollIntent: bookId => scrolledBooks.push(bookId),
+    readerDirectoryScopeKey: (_source, book) => book,
+  readerDirectorySignalScrollIntent: bookId => scrolledBooks.push(bookId),
     readerDirectorySignalScrollCommand: bookId => completedScrollBooks.push(bookId),
   });
 const scrolledBooks = [];
@@ -64,6 +65,7 @@ assert.match(fullSource, /if \(!this\.positioningMounted \|\| this\.navigationAc
 const fullScrollEvents = [];
 const FullControls = productionMotionMethods(fullPath, ['handleControl'], {
   Edge: { Top: 'top', Bottom: 'bottom' },
+  readerDirectoryScopeKey: (_source, book) => book,
   readerDirectorySignalScrollIntent: bookId => fullScrollEvents.push(['intent', bookId]),
   readerDirectorySignalScrollCommand: bookId => fullScrollEvents.push(['complete', bookId]),
 });
@@ -91,6 +93,7 @@ const Detail = productionMotionMethods(detailPath, ['flushPendingScroll'], {});
 
 const List = productionMotionMethods(listPath, ['marker', 'selectTarget', 'planPosition', 'positionInitialCurrent'], {
   readerDirectoryBookmarkMarkerState, ScrollAlign: { START: 'start', CENTER: 'center' },
+  readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
   readerDirectoryViewportAnchor: () => undefined, LengthMetrics: { vp: value => ({ value }) },
 });
 {
@@ -107,7 +110,8 @@ const List = productionMotionMethods(listPath, ['marker', 'selectTarget', 'planP
 }
 
 const PagedList = productionMotionMethods(listPath, ['loadPage', 'onInteractionChanged'], {
-  setTimeout: action => action(), readerDirectoryViewportAnchor: () => undefined,
+  cacheReaderDirectoryNavigationPage: (_view, _offset, page) => page,
+  setTimeout: action => action(), readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`, readerDirectoryViewportAnchor: () => undefined,
 });
 {
   const admitted = [];
@@ -161,8 +165,10 @@ let visibleAnchorNodeId;
 const Surface = productionMotionMethods(surfacePath,
   ['openTree', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
     'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages'], {
+  cacheReaderDirectoryNavigationPage: (_view, _offset, page) => page,
   openReaderDirectoryNavigation: (_gateway, query) => new Promise(resolve => pending.push({ query, resolve })),
   readerDirectoryNoteMissingNavigation: () => {},
+  readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
   readerDirectoryViewportAnchor: () => visibleAnchorNodeId === undefined ? undefined :
     { nodeId: visibleAnchorNodeId, navigationRevision: 'r', viewId: 'old-visible', visibleIndex: 6000 },
   ReaderRuntimeOwner: { current: () => ({}) },

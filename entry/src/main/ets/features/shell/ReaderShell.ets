@@ -1,3 +1,4 @@
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -95,8 +96,8 @@ export struct ReaderShell {
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
-  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   // undefined = 未接线, 面板走自身的章首降级链 (selectBookmark 降级)。
   onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
     undefined;
@@ -253,8 +254,8 @@ export struct ReaderShell {
           reduceMotion: this.reduceMotion,
           offlineBookOperationActive: this.offlineBookOperationActive,
           onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
-          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void =>
-            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: this.onSelectBookmark,
           bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),

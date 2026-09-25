@@ -4,7 +4,7 @@ import { readingSessionDocuments } from './ReadingSessionDocuments';
 import { extendReadingParagraphWindow, readReadingDocumentWindow, type ReadingDocumentWindow, type ReadingParagraphWindowDirection } from './ReadingDocumentWindow';
 import type { BookRequestPriority } from '../../app/BookRequestScheduler';
 import { readReadingCatalog, readReadingEntrySnapshot, qualifyReadingEntryWindow, type ReadingEntrySnapshot } from './ReadingEntrySnapshot';
-import { captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
+import { appendReadingSelectionContext, captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import type { JsonObject, RequestOptions, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
@@ -236,8 +236,10 @@ export class ReadingSessionFlowGateway {
     const chapter = snapshot.chapter;
     if (chapter.bodyVersion === undefined || chapter.processingVersion === undefined)
       throw new Error('source correction requires the original content scope');
-    const captured = captureRemotePositionContext(positionContext) ?? {
-      bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion, anchors: [] };
+    const original = captureRemotePositionContext(positionContext);
+    const captured: RemoteReadingPositionContext = original?.bodyVersion !== undefined ? original : {
+      bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion, anchors: [],
+      ...(original?.directoryTargetProof === undefined ? {} : { directoryTargetProof: original.directoryTargetProof }) };
     let repaired: JsonObject | undefined;
     // A source correction has no HTTP input. Earlier progress writes finish
     // before Core captures all durable positions; later writes use the receipt.
@@ -246,6 +248,7 @@ export class ReadingSessionFlowGateway {
       const result = await this.runtimeOwner.request('chapter.content', {
         sourceId: this.sourceId, bookId: this.bookId, chapterIndex: chapter.chapterIndex,
         upgradeCachedContent: true, positionContext: encodeRemotePositionContext(captured),
+        ...(captured.directoryTargetProof === undefined ? {} : { directoryTargetProof: captured.directoryTargetProof }),
       }, { shouldCancel: (): boolean => !isCurrent() });
       repaired = result.data;
     });
@@ -258,7 +261,7 @@ export class ReadingSessionFlowGateway {
     const migration = decodeRemotePositionMigration(data['positionMigration'], this.sourceId, this.bookId,
       bodyVersion, processingVersion, captured);
     const nextContext: RemoteReadingPositionContext | undefined = positionContext === undefined ? undefined : {
-      bodyVersion, processingVersion, anchors: migration?.anchors.map((anchor) => ({ id: anchor.id, offset: anchor.offset })) ?? captured.anchors };
+      bodyVersion, processingVersion, ...(captured.directoryTargetProof === undefined ? {} : { directoryTargetProof: captured.directoryTargetProof }), anchors: migration?.anchors.map((anchor) => ({ id: anchor.id, offset: anchor.offset })) ?? captured.anchors };
     const fresh = await readReadingEntrySnapshot(this.runtimeOwner, this.sourceId, this.bookId,
       chapter.chapterIndex, isCurrent, nextContext, windowScalarLimit);
     if (fresh === undefined || fresh.chapter.sourceCorrectionRequired === true ||
@@ -452,6 +455,8 @@ export class ReadingSessionFlowGateway {
       entries: entries.map((entry) => ({
         index: entry.index,
         title: entry.title,
+        ...(entry.level === undefined ? {} : { level: entry.level }),
+        ...(entry.navigable === undefined && entry.url.trim().length > 0 ? {} : { navigable: entry.navigable !== false && entry.url.trim().length > 0 }),
         downloadState: 'unknown',
       })),
     };
@@ -556,14 +561,14 @@ export class ReadingSessionFlowGateway {
     const documents = readingSessionDocuments(this.runtimeOwner);
     // A fresh narrow snapshot owns the current request's position proof. The
     // process window only supplies subsequent/remounted body reads.
-    if (!forceRefresh && !this.hasPendingSourceSwitch() && this.retainedEntrySnapshot === undefined) {
+    if (context?.directoryTargetProof === undefined && !forceRefresh && !this.hasPendingSourceSwitch() && this.retainedEntrySnapshot === undefined) {
       const retained = documents.read(this.sourceId, bookId, chapterIndex, context);
       if (retained !== undefined && retained.sourceCorrectionRequired !== true) { documents.admit(retained, true); return retained; }
     }
     const chapter = await this.loadChapterFresh(bookId, chapterIndex, isCurrent, forceRefresh, context);
     if (isCurrent?.() === false) throw new Error('reading chapter request was cancelled');
     if (!this.hasPendingSourceSwitch()) documents.admit(chapter, true);
-    return chapter;
+    return context?.directoryTargetProof === undefined ? chapter : { ...chapter, directoryTargetProof: context.directoryTargetProof };
   }
 
   private async loadChapterFresh(
@@ -574,7 +579,7 @@ export class ReadingSessionFlowGateway {
     positionContext?: RemoteReadingPositionContext,
   ): Promise<ReadingSessionChapter> {
     this.assertBook(bookId);
-    if (this.source.kind === 'local' && !forceRefresh) {
+    if (positionContext?.directoryTargetProof === undefined && this.source.kind === 'local' && !forceRefresh) {
       const retained = this.retainedEntrySnapshot;
       if (retained !== undefined && retained.chapter.chapterIndex === chapterIndex && retained.isCurrent() &&
         this.entryPositionMatches(retained.chapter, positionContext)) {
@@ -586,7 +591,7 @@ export class ReadingSessionFlowGateway {
       positionContext = captureRemotePositionContext(positionContext);
       if (!forceRefresh && !this.hasPendingSourceSwitch()) {
         const retained = this.retainedEntrySnapshot;
-        if (retained !== undefined && retained.chapter.chapterIndex === chapterIndex && retained.isCurrent() &&
+        if (positionContext?.directoryTargetProof === undefined && retained !== undefined && retained.chapter.chapterIndex === chapterIndex && retained.isCurrent() &&
           this.entryPositionMatches(retained.chapter, positionContext)) {
           this.retainedEntrySnapshot = undefined;
           return retained.chapter;
@@ -599,7 +604,7 @@ export class ReadingSessionFlowGateway {
       const session = await this.ensureRemoteSession(isCurrent);
       const prepared = session.preparedChapter;
       const coordinator = this.runtimeOwner.bookAcquisitions?.();
-      if (!forceRefresh && !this.preparedChapterConsumed && prepared !== undefined && prepared.chapter.sourceCorrectionRequired !== true &&
+      if (positionContext?.directoryTargetProof === undefined && !forceRefresh && !this.preparedChapterConsumed && prepared !== undefined && prepared.chapter.sourceCorrectionRequired !== true &&
         preparedRemoteChapterPositionMatches(prepared, positionContext) &&
         preparedRemoteChapterMatches(prepared, session, chapterIndex, coordinator?.readingProjectionRevision() ?? 0)) {
         const version = coordinator === undefined ? session.sourceVersion : await coordinator.currentSourceVersion(this.sourceId);
@@ -631,7 +636,7 @@ export class ReadingSessionFlowGateway {
       if (prepared?.chapter.chapterIndex === chapterIndex) this.preparedChapterConsumed = true;
       return chapter;
     }
-    const chapter = await this.local.loadChapter(bookId, chapterIndex, isCurrent);
+    const chapter = await this.local.loadChapter(bookId, chapterIndex, isCurrent, positionContext?.directoryTargetProof);
     // Local rule mutations migrate durable anchors atomically in Core. An old
     // bookmark/selection must not be relabelled with the newly processed body.
     decodeRemotePositionMigration(undefined, this.sourceId, bookId,
@@ -806,7 +811,7 @@ export class ReadingSessionFlowGateway {
       chapterIndex: anchor.chapterIndex,
       chapterOffset: anchor.chapterOffset,
       chapterProgress: anchor.chapterProgress,
-      expectedBodyVersion: anchor.bodyVersion, expectedProcessingVersion: anchor.processingVersion,
+      directoryTargetProof: anchor.directoryTargetProof, expectedBodyVersion: anchor.bodyVersion, expectedProcessingVersion: anchor.processingVersion,
     };
     const resolution = { chapterTitle, anchor, layout };
     if (this.source.kind === 'local') {
@@ -961,7 +966,7 @@ export class ReadingSessionFlowGateway {
         const update: LocalReadingProgressUpdate = { chapterIndex: anchor.chapterIndex,
           chapterOffset: anchor.chapterOffset, chapterProgress: anchor.chapterProgress,
           expectedProgressRevision,
-          expectedBodyVersion: anchor.bodyVersion, expectedProcessingVersion: anchor.processingVersion };
+          directoryTargetProof: anchor.directoryTargetProof, expectedBodyVersion: anchor.bodyVersion, expectedProcessingVersion: anchor.processingVersion };
         const resolution = { chapterTitle: title, anchor, layout };
         return identity === undefined ? local.updateProgress(bookId, update, isCurrent, resolution) :
           remote.updateProgress(identity, update, isCurrent, undefined, resolution);

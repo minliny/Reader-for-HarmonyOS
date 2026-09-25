@@ -1,9 +1,10 @@
+import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import { ReaderDirectoryNavigationGateway, openReaderDirectoryNavigation,
+import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, openReaderDirectoryNavigation,
   readerDirectoryNoteMissingNavigation, readerDirectoryToggleCollapsed,
   type ReaderDirectoryNavigationNode, type ReaderDirectoryNavigationReady,
   type ReaderDirectoryNavigationPreparedPage } from './ReaderDirectoryNavigation';
-import { ReaderDirectoryNavigationList } from './ReaderDirectoryNavigationList';
+import { ReaderDirectoryNavigationList, cacheReaderDirectoryNavigationPage } from './ReaderDirectoryNavigationList';
 import { readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor } from './ReaderDirectoryViewport';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
@@ -14,6 +15,7 @@ import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigratio
 @Component
 export struct ReaderDirectoryNavigationSurface {
   @Prop @Watch('onIdentityChanged') bookId: string = '';
+  @Prop @Watch('onIdentityChanged') sourceId: string = 'local';
   @Prop @Watch('onViewInputsChanged') query: string = '';
   @Prop @Watch('onViewInputsChanged') ascending: boolean = true;
   @Prop @Watch('onViewInputsChanged') currentChapterIndex: number = -1;
@@ -27,8 +29,8 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop chapterEntries: LocalReadingTocEntry[] = [];
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   scroller: Scroller | undefined = undefined;
-  onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onUserScrollIntent: () => void = (): void => {};
   onFirstLayout: () => void = (): void => {};
   onTreeStateChange: (active: boolean) => void = (_active: boolean): void => {};
@@ -52,7 +54,7 @@ export struct ReaderDirectoryNavigationSurface {
 
   aboutToAppear(): void {
     this.mounted = true;
-    this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(this.bookId,
+    this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId),
       (): void => this.onProgrammaticScrollIntent());
     this.lastQuery = this.query;
     this.lastAscending = this.ascending;
@@ -81,7 +83,7 @@ export struct ReaderDirectoryNavigationSurface {
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
     this.scrollIntentUnsubscribe?.();
-    this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(this.bookId,
+    this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId),
       (): void => this.onProgrammaticScrollIntent());
     this.lastQuery = this.query;
     this.lastAscending = this.ascending;
@@ -196,7 +198,9 @@ export struct ReaderDirectoryNavigationSurface {
     if (ready.nodes.length !== Math.min(pageSize, ready.visibleTotal))
       throw new Error('directory first page is incomplete');
     if (ready.visibleTotal === 0) return [];
-    const anchor = readerDirectoryViewportAnchor(bookId);
+    cacheReaderDirectoryNavigationPage(ready, 0, { viewId: ready.viewId, visibleTotal: ready.visibleTotal, nodes: ready.nodes, nextOffset: ready.nextOffset });
+    ready.nodes = [];
+    const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId));
     const sameRevision = anchor?.navigationRevision === ready.navigationRevision;
     const target = sameRevision && ready.anchorVisibleIndex !== undefined ? ready.anchorVisibleIndex :
       (ready.currentVisibleIndex ?? 0);
@@ -219,7 +223,7 @@ export struct ReaderDirectoryNavigationSurface {
       if (!isCurrent() || page.viewId !== ready.viewId || page.visibleTotal !== ready.visibleTotal ||
         page.nodes.length !== Math.min(pageSize, ready.visibleTotal - offset))
         throw new Error('directory prepared page is stale or incomplete');
-      return { offset, page };
+      return { offset, page: cacheReaderDirectoryNavigationPage(ready, offset, page) };
     }));
   }
 
@@ -230,11 +234,11 @@ export struct ReaderDirectoryNavigationSurface {
     const generation = ++this.generation;
     this.openingGeneration = generation;
     const query = this.query, descending = !this.ascending;
-    const anchorNodeId = readerDirectoryViewportAnchor(bookId)?.nodeId;
+    const anchorNodeId = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
     const chapterIndex = this.currentChapterIndex >= 0 ? this.currentChapterIndex : undefined;
-    void openReaderDirectoryNavigation(gateway, { bookId, query, descending, chapterIndex, anchorNodeId, limit: 256 },
+    void openReaderDirectoryNavigation(gateway, { sourceId: this.sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256 },
       (): boolean => this.mounted && generation === this.generation && this.bookId === bookId,
-      (reason: string): void => readerDirectoryNoteMissingNavigation(bookId, reason))
+      (reason: string): void => { if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason); })
       .then(async (ready: ReaderDirectoryNavigationReady | undefined): Promise<void> => {
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
         if (ready === undefined) {
@@ -273,7 +277,7 @@ export struct ReaderDirectoryNavigationSurface {
     this.cancelQueryTimer();
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
-    readerDirectoryToggleCollapsed(this.bookId, view.navigationRevision, node.nodeId);
+    readerDirectoryToggleCollapsed(readerDirectoryScopeKey(this.sourceId, this.bookId), view.navigationRevision, node.nodeId);
     this.openTree(false);
   }
 
@@ -290,14 +294,14 @@ export struct ReaderDirectoryNavigationSurface {
       this.fallbackBuilder();
     } else {
       ReaderDirectoryNavigationList({
-        view: this.view, bookId: this.bookId, rowHeight: this.rowHeight,
+        view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
         listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
         edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
         chapterEntries: this.chapterEntries,
         chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
         scroller: this.scroller,
-        onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void =>
-          this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope),
+        onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+          this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
         onToggleNode: (node: ReaderDirectoryNavigationNode): void => this.toggle(node),
         onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
         onScrollSettled: (): void => this.onTreeScrollSettled(),

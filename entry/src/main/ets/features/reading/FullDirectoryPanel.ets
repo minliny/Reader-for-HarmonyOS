@@ -1,3 +1,5 @@
+import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -192,8 +194,8 @@ export struct FullDirectoryPanel {
   // R-LOCAL-TOC-01: allow the owning flow to react to a chapter tap so the
   // full-directory can be wired back into the actual reading flow.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
-  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   // The marker is chapter-level while Core identities are bookmark-level.
   // Forward every existing identity represented by the marker so the owner
@@ -634,9 +636,9 @@ export struct FullDirectoryPanel {
     // Quick viewport moves every row below the Stage's Quick clip.
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        if (this.bookmarkIdentity?.sourceId === 'local') {
+        if (this.bookmarkIdentity !== undefined) {
           ReaderDirectoryNavigationSurface({
-            bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
+            sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
             currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey,
             interacted: this.navigationInteracted, rowHeight: this.directoryListRowHeight(),
             interactionEnabled: !this.motionActive,
@@ -645,8 +647,8 @@ export struct FullDirectoryPanel {
             chapterEntries: this.admittedEntries,
             chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
             fallbackBuilder: (): void => { this.flatChapterList(); },
-            onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void => {
-              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope);
+            onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
+              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
             },
             onFirstLayout: (): void => this.onListFirstLayout(),
             onUserScrollIntent: (): void => this.onListUserScroll(),
@@ -899,8 +901,8 @@ export struct FullDirectoryPanel {
       return;
     }
     if (kind === 'top') {
-      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity?.sourceId === 'local' ?
-        this.bookmarkIdentity.bookId : undefined;
+      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity !== undefined ?
+        readerDirectoryScopeKey(this.bookmarkIdentity.sourceId, this.bookmarkIdentity.bookId) : undefined;
       if (localBookId !== undefined) readerDirectorySignalScrollIntent(localBookId);
       this.cancelProjectionTopScroll();
       this.listScroller.scrollEdge(Edge.Top);
@@ -908,8 +910,8 @@ export struct FullDirectoryPanel {
       return;
     }
     if (kind === 'bottom') {
-      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity?.sourceId === 'local' ?
-        this.bookmarkIdentity.bookId : undefined;
+      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity !== undefined ?
+        readerDirectoryScopeKey(this.bookmarkIdentity.sourceId, this.bookmarkIdentity.bookId) : undefined;
       if (localBookId !== undefined) readerDirectorySignalScrollIntent(localBookId);
       this.cancelProjectionTopScroll();
       this.listScroller.scrollEdge(Edge.Bottom);

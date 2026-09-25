@@ -1120,8 +1120,8 @@ struct Index {
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
           onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
-            positionScope: RemoteReadingPositionScope): void =>
-            this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope),
+            positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
             this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset, positionScope),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
@@ -1270,8 +1270,8 @@ struct Index {
         chapterStartBookmarkCreationEnabled: true,
         onSelectChapter: (index: number): void => this.onDirectoryChapterSelected(index),
         onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
-          positionScope: RemoteReadingPositionScope): void =>
-          this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope),
+          positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+          this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
         onDownloadChapter: (index: number): void => this.downloadDirectoryChapter(index),
         onDeleteBookmarks: (times: number[]): void => this.deleteDirectoryBookmarks(times),
         onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
@@ -2943,7 +2943,7 @@ struct Index {
         validatedSession.identity.bookId === seed.bookId) {
         this.installRemoteReadingSession(validatedSession);
         this.detailToc = validatedSession.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-          title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
+          title: entry.title, level: entry.level, navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown' }));
       }
       this.openReading(undefined);
       return;
@@ -2999,7 +2999,7 @@ struct Index {
         lastChapter: session.book.lastChapter,
       };
       this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-        title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
+        title: entry.title, level: entry.level, navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown' }));
       this.detailLoadingMessage = '';
       this.remoteContentVerdict = 'verifying';
     };
@@ -3068,7 +3068,7 @@ struct Index {
         this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({
           index: entry.index,
           title: entry.title,
-          navigable: entry.url.trim().length > 0,
+          navigable: entry.navigable !== false && entry.url.trim().length > 0,
           downloadState: 'unknown',
         }));
         this.detailLoadingMessage = '';
@@ -3214,7 +3214,7 @@ struct Index {
         this.detailToc = refreshed.entries.map((entry): LocalReadingTocEntry => ({
           index: entry.index,
           title: entry.title,
-          navigable: entry.url.trim().length > 0,
+          navigable: entry.navigable !== false && entry.url.trim().length > 0,
           downloadState: 'unknown',
         }));
         void this.loadRemoteDirectoryProjection(
@@ -3329,11 +3329,11 @@ struct Index {
       this.showOfflineDownloadFeedback('章节下载正在进行，请在目录查看进度');
       return;
     }
-    if (session === undefined || !session.entries.some(entry => entry.url.trim().length > 0)) {
+    if (session === undefined || !session.entries.some(entry => entry.navigable !== false && entry.url.trim().length > 0)) {
       this.showOfflineDownloadFeedback('当前书籍没有可下载的在线章节');
       return;
     }
-    const total = session.entries.filter(entry => entry.url.trim().length > 0).length;
+    const total = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
     const generation = ++this.offlineMutationGeneration;
     const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000all`;
     this.offlineMutationActiveKey = key;
@@ -4008,7 +4008,7 @@ struct Index {
     // until `onChapterCommitted` reports the new chapter.
   }
 
-  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
+  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void {
     // 书签 tab 的精确锚点回流, 镜像 onDirectoryChapterSelected 的准入与路由语义。
     if (!this.isKnownDetailChapter(chapterIndex)) {
       return;
@@ -4047,22 +4047,19 @@ struct Index {
     }
     this.bookmarkAnchorRequestId += 1;
     this.requestedBookmarkAnchor =
-      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset, positionScope);
+      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset, positionScope, directoryTargetProof);
   }
 
   private onDirectoryNavigationTargetSelected(chapterIndex: number, chapterOffsetScalar: number,
-    positionScope: RemoteReadingPositionScope): void {
-    // Both chapter starts and in-chapter EPUB links carry Core's exact body
-    // and processing versions into the reader's existing scoped anchor path.
-    // Reimport or rule edits after target resolution must not reuse a stale
-    // chapter index or scalar offset.
+    positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void {
     const book = this.detailBook;
-    if (book?.sourceId !== LOCAL_SOURCE_ID ||
-      !Number.isSafeInteger(chapterOffsetScalar) || chapterOffsetScalar < 0 ||
-      positionScope === undefined ||
-      positionScope.sourceId !== LOCAL_SOURCE_ID || positionScope.bookId !== book.bookId ||
-      positionScope.chapterIndex !== chapterIndex) return;
-    this.onReaderBookmarkSelected('', chapterIndex, chapterOffsetScalar, positionScope);
+    if (book === undefined || !Number.isSafeInteger(chapterOffsetScalar) || chapterOffsetScalar < 0) return;
+    if (positionScope !== undefined && (positionScope.sourceId !== book.sourceId ||
+      positionScope.bookId !== book.bookId || positionScope.chapterIndex !== chapterIndex)) return;
+    if (directoryTargetProof !== undefined && (directoryTargetProof['sourceId'] !== book.sourceId ||
+      directoryTargetProof['bookId'] !== book.bookId)) return;
+    if (positionScope === undefined && directoryTargetProof === undefined) return;
+    this.onReaderBookmarkSelected('', chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
   }
 
   private openFullDirectory(): void {
@@ -4108,7 +4105,7 @@ struct Index {
     // readable first frame is being admitted.
     if (!this.readingSessionActive || this.route !== 'reading' || sourceId !== LOCAL_SOURCE_ID ||
       this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
-      this.detailBook.kind?.trim().toLowerCase() !== 'epub') return;
+      !['epub', 'txt', 'mobi', 'azw', 'azw3', 'kf8'].includes(this.detailBook.kind?.trim().toLowerCase() ?? '')) return;
     const key = `${sourceId}\u0000${bookId}\u0000${generation}`;
     if (this.navigationBackfillObservedKey === key) return;
     this.navigationBackfillObservedKey = key;
@@ -4117,7 +4114,7 @@ struct Index {
     const isCurrent = (): boolean => this.systemFileOpenMounted && this.readingSessionActive &&
       this.readingReadyGeneration === generation && this.navigationGeneration === navigationGeneration &&
       this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
-      this.detailBook.kind?.trim().toLowerCase() === 'epub' && ReaderRuntimeOwner.current() === owner;
+      ReaderRuntimeOwner.current() === owner;
     try {
       this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame((): void => {
         if (!isCurrent()) {
@@ -4132,7 +4129,7 @@ struct Index {
           if (this.navigationBackfillAttempted.size > 16) {
             this.navigationBackfillAttempted.delete(this.navigationBackfillAttempted.values().next().value as string);
           }
-          void backfillRetainedReaderDirectoryNavigation(owner, bookId, isCurrent)
+          void backfillRetainedReaderDirectoryNavigation(owner, bookId, isCurrent, this.detailBook?.kind?.trim().toLowerCase() ?? '')
             .catch((_error: Error): void => { /* Preserve the flat directory and every user record. */ });
         });
       }));
@@ -4408,7 +4405,7 @@ struct Index {
       '部分书签已更新，剩余结果未确认，请重新载入核对，不要重复操作' :
       '书签操作结果未确认，请重新载入核对，不要重复操作';
     this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
-      index: entry.index, title: entry.title, navigable: entry.navigable, downloadState: entry.downloadState,
+      index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable, downloadState: entry.downloadState,
       bookmarks: undefined,
     }));
   }
@@ -4615,7 +4612,7 @@ struct Index {
     let entries: LocalReadingTocEntry[] = session.entries.map((entry): LocalReadingTocEntry => ({
       index: entry.index,
       title: entry.title,
-      navigable: entry.url.trim().length > 0,
+      navigable: entry.navigable !== false && entry.url.trim().length > 0,
       downloadState: 'unknown',
     }));
     try {
@@ -5294,7 +5291,7 @@ struct Index {
       kind: session.book.kind, coverUrl: session.book.coverUrl, intro: session.book.intro,
       lastChapter: session.book.lastChapter };
     this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-      title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
+      title: entry.title, level: entry.level, navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown' }));
     this.detailLoadingMessage = '';
     const generation = this.navigationGeneration;
     const owner = ReaderRuntimeOwner.current();
@@ -5389,7 +5386,7 @@ struct Index {
       return prepared?.chapter.chapterIndex;
     }
     this.remoteContentVerdict = 'verifying';
-    const readableEntries = session.entries.filter((entry): boolean => entry.url.trim().length > 0);
+    const readableEntries = session.entries.filter((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0);
     let start = 0;
     let limit = Math.min(3, readableEntries.length);
     if (preferredChapterIndex !== undefined) {
@@ -5908,7 +5905,7 @@ struct Index {
         this.detailToc = refreshed.entries.map((entry): LocalReadingTocEntry => ({
           index: entry.index,
           title: entry.title,
-          navigable: entry.url.trim().length > 0,
+          navigable: entry.navigable !== false && entry.url.trim().length > 0,
           downloadState: 'unknown',
         }));
         this.detailBook = {
@@ -6095,7 +6092,7 @@ struct Index {
 
   private isKnownDetailChapter(chapterIndex: number | undefined): boolean {
     if (this.detailBook?.sourceId !== LOCAL_SOURCE_ID && this.remoteReadingSession !== undefined) {
-      return this.remoteReadingSession.entries.some((entry): boolean => entry.url.trim().length > 0 &&
+      return this.remoteReadingSession.entries.some((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0 &&
         (chapterIndex === undefined || entry.index === chapterIndex));
     }
     return this.detailToc.some((entry: LocalReadingTocEntry): boolean =>

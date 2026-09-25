@@ -1,3 +1,4 @@
+import type { JsonObject } from '@reader/core-harmony';
 import { ReaderNativeTextWindow, readerNativeParagraphHeight } from './ReaderNativeTextWindow';
 import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe, readerNativeParagraphKey } from './ReaderNativeParagraph';
 import { ReaderNativeTextMeasurement, type ReaderNativeTextStyle } from './ReaderNativeTextMeasurement';
@@ -736,8 +737,10 @@ export class ReaderBookmarkAnchorRequest {
   chapterOffset: number;
 
   positionScope?: RemoteReadingPositionScope;
+  directoryTargetProof?: JsonObject;
 
-  constructor(requestId: number, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) {
+  constructor(requestId: number, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) {
+    this.directoryTargetProof = directoryTargetProof;
     this.positionScope = positionScope;
     this.requestId = requestId;
     this.chapterIndex = chapterIndex;
@@ -836,6 +839,7 @@ class PreviousChapterMeasurement {
 }
 
 class CoreReadingAnchor implements LocalReadingAnchor {
+  directoryTargetProof?: JsonObject;
   chapterIndex: number;
   chapterOffset: number;
   chapterProgress: number;
@@ -843,7 +847,8 @@ class CoreReadingAnchor implements LocalReadingAnchor {
   bodyVersion?: string;
   processingVersion?: string;
 
-  constructor(chapterIndex: number, chapterOffset: number, chapterProgress: number, bodyVersion?: string, processingVersion?: string) {
+  constructor(chapterIndex: number, chapterOffset: number, chapterProgress: number, bodyVersion?: string, processingVersion?: string, directoryTargetProof?: JsonObject) {
+    this.directoryTargetProof = directoryTargetProof;
     this.chapterIndex = chapterIndex;
     this.chapterOffset = chapterOffset;
     this.chapterProgress = chapterProgress;
@@ -1731,7 +1736,7 @@ export struct ReadingExperience {
           (requested !== undefined && requested !== bookmark.chapterIndex)) return 'unavailable';
         if (bookmark.chapterOffset > 0 && bookmark.positionScope === undefined)
           return 'unavailable';
-        context = this.positionContextForScope(bookmark.positionScope, bookmark.chapterIndex, bookmark.chapterOffset);
+        context = this.positionContextForScope(bookmark.positionScope, bookmark.chapterIndex, bookmark.chapterOffset, bookmark.directoryTargetProof);
       } else if (requested === undefined && position?.bodyVersion !== undefined && position.processingVersion !== undefined) {
         context = { bodyVersion: position.bodyVersion, processingVersion: position.processingVersion,
           anchors: [{ id: 'presented', offset: position.chapterOffset }] };
@@ -2308,8 +2313,8 @@ export struct ReadingExperience {
         onModuleSelect: (_module: string): void => {},
         onSelectChapter: (chapterIndex: number): void => this.selectControlChapter(chapterIndex),
         onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
-          positionScope: RemoteReadingPositionScope): void =>
-          this.selectBookmarkAnchor(chapterIndex, chapterOffsetScalar, positionScope),
+          positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+          this.selectBookmarkAnchor(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
         onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
           this.selectBookmarkAnchor(chapterIndex, chapterOffset, positionScope),
         bookmarkIdentity: this.bookmarkIdentity,
@@ -3644,7 +3649,7 @@ export struct ReadingExperience {
           throw new Error('READING_POSITION_SCOPE_UNAVAILABLE');
         }
         bookmarkContext = this.positionContextForScope(bookmark.positionScope,
-          bookmark.chapterIndex, bookmark.chapterOffset);
+          bookmark.chapterIndex, bookmark.chapterOffset, bookmark.directoryTargetProof);
       }
       const restored = progress.kind === 'restored' ? progress.progress : undefined;
       const target = bookmark?.chapterIndex ?? (requested === undefined ? restored?.chapterIndex : requested);
@@ -3694,7 +3699,7 @@ export struct ReadingExperience {
         (requested !== undefined && requested !== bookmark.chapterIndex)) throw new Error('READING_POSITION_SCOPE_MISMATCH');
       if (this.sourceId !== LOCAL_READING_SOURCE_ID && bookmark.chapterOffset > 0 && bookmark.positionScope === undefined)
         throw new Error('READING_POSITION_SCOPE_UNAVAILABLE');
-      context = this.positionContextForScope(bookmark.positionScope, bookmark.chapterIndex, bookmark.chapterOffset);
+      context = this.positionContextForScope(bookmark.positionScope, bookmark.chapterIndex, bookmark.chapterOffset, bookmark.directoryTargetProof);
     } else if (requested === undefined && pendingPosition?.bodyVersion !== undefined && pendingPosition.processingVersion !== undefined) {
       context = { bodyVersion: pendingPosition.bodyVersion, processingVersion: pendingPosition.processingVersion,
         anchors: [{ id: 'presented', offset: pendingPosition.chapterOffset }] };
@@ -3935,7 +3940,7 @@ export struct ReadingExperience {
       return;
     }
     this.consumedBookmarkAnchorRequestId = anchor.requestId;
-    this.selectBookmarkAnchor(anchor.chapterIndex, anchor.chapterOffset, anchor.positionScope);
+    this.selectBookmarkAnchor(anchor.chapterIndex, anchor.chapterOffset, anchor.positionScope, anchor.directoryTargetProof);
   }
 
   private onDeviceFormChanged(): void {
@@ -4091,11 +4096,11 @@ export struct ReadingExperience {
         return;
       }
       const migration = chapter.positionMigration;
-      if (migration === undefined && context !== undefined &&
+      if (migration === undefined && context?.bodyVersion !== undefined &&
         (chapter.bodyVersion !== context.bodyVersion || chapter.processingVersion !== context.processingVersion)) {
         throw new Error('READING_POSITION_CONTEXT_STALE');
       }
-      if (migration?.status === 'committed' && context !== undefined) {
+      if (migration?.status === 'committed' && context?.bodyVersion !== undefined) {
         if (migration.previousBodyVersion !== context.bodyVersion || migration.previousProcessingVersion !== context.processingVersion ||
           migration.bodyVersion !== chapter.bodyVersion || migration.processingVersion !== chapter.processingVersion) {
           throw new Error('READING_POSITION_MIGRATION_IDENTITY_MISMATCH');
@@ -4248,7 +4253,7 @@ export struct ReadingExperience {
     positionContext?: RemoteReadingPositionContext,
   ): Promise<ReadingSessionChapter> {
     const cached = this.chapterWindow.get(chapterIndex);
-    if (cached !== undefined && cached.sourceCorrectionRequired !== true && cached.documentRange === undefined && !forceRefresh && (positionContext === undefined ||
+    if (positionContext?.directoryTargetProof === undefined && cached !== undefined && cached.sourceCorrectionRequired !== true && cached.documentRange === undefined && !forceRefresh && (positionContext === undefined ||
       (cached.bodyVersion === positionContext.bodyVersion && cached.processingVersion === positionContext.processingVersion))) {
       return cached;
     }
@@ -5241,7 +5246,7 @@ export struct ReadingExperience {
     const cropped: ReadingSessionChapter = {
       sourceId: chapter.sourceId, bookId: chapter.bookId, chapterIndex: chapter.chapterIndex,
       chapterTitle: chapter.chapterTitle, chapterUrl: chapter.chapterUrl,
-      contentVersion: chapter.contentVersion, bodyVersion: chapter.bodyVersion,
+      contentVersion: chapter.contentVersion, directoryTargetProof: chapter.directoryTargetProof, bodyVersion: chapter.bodyVersion,
       processingVersion: chapter.processingVersion, positionMigration: chapter.positionMigration,
       cacheRefreshRequired: chapter.cacheRefreshRequired, extractionVia: chapter.extractionVia,
       content: chapter.content.substring(startUtf16, endUtf16), textLayoutIdentity: undefined,
@@ -5885,7 +5890,7 @@ export struct ReadingExperience {
           this.bookId,
           chapter.chapterTitle,
           new CoreReadingAnchor(chapter.chapterIndex, visiblePage.startScalar, visibleProgress,
-            chapter.bodyVersion, chapter.processingVersion),
+            chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
           measuredCoreLayout,
           (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken),
         );
@@ -5957,7 +5962,7 @@ export struct ReadingExperience {
     // delivery below depends on this presentation's mount and selection.
     const operation = gateway.persistPresentedProgress(this.bookId, chapter.chapterTitle,
         new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress,
-          chapter.bodyVersion, chapter.processingVersion), layout).then((stored: LocalReadingProgress): void => {
+          chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), layout).then((stored: LocalReadingProgress): void => {
       if (!this.isMountedToken(lifecycleToken) || this.isReaderIdentityCurrent?.() === false) return;
       if (stored.chapterIndex !== chapter.chapterIndex || stored.chapterOffset !== page.startScalar) {
         throw new Error('READING_INITIAL_PROGRESS_ANCHOR_MISMATCH');
@@ -6221,7 +6226,7 @@ export struct ReadingExperience {
         const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress, chapter.bodyVersion, chapter.processingVersion),
+          new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress, chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
           this.coreLayout(),
           (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken),
         );
@@ -6317,7 +6322,7 @@ export struct ReadingExperience {
         const stored = await this.activeGateway().resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, scalar, chapterProgress, chapter.bodyVersion, chapter.processingVersion),
+          new CoreReadingAnchor(chapter.chapterIndex, scalar, chapterProgress, chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
           this.coreLayout(),
           isCurrent,
         );
@@ -8437,7 +8442,7 @@ export struct ReadingExperience {
         const stored = await gateway.resolveAndUpdateProgress(
           this.bookId,
           chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, offset, chapterProgress, chapter.bodyVersion, chapter.processingVersion),
+          new CoreReadingAnchor(chapter.chapterIndex, offset, chapterProgress, chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
           this.coreLayout(),
           isCurrent,
         );
@@ -10951,7 +10956,7 @@ export struct ReadingExperience {
     this.selectBookmarkAnchor(result.chapterIndex, result.chapterOffset, result.positionScope);
   }
 
-  private selectBookmarkAnchor(chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
+  private selectBookmarkAnchor(chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void {
     // A persisted nonzero offset cannot borrow the currently displayed body's
     // proof. Core supplies a scope only when its original owner is provable.
     // Chapter start remains invariant; local positions keep their own contract.
@@ -10961,6 +10966,10 @@ export struct ReadingExperience {
         throw new Error('READING_POSITION_SCOPE_UNAVAILABLE');
       }
       context = this.positionContextForScope(positionScope, chapterIndex, chapterOffset);
+      if (directoryTargetProof !== undefined) {
+        if (directoryTargetProof['sourceId'] !== this.sourceId || directoryTargetProof['bookId'] !== this.bookId) throw new Error('DIRECTORY_SCOPE_CHANGED');
+        context = { ...context, anchors: context?.anchors ?? [], directoryTargetProof };
+      }
     } catch (_) {
       try {
         this.getUIContext().getPromptAction().showToast({
@@ -11073,12 +11082,13 @@ export struct ReadingExperience {
   }
 
   private positionContextForScope(scope: RemoteReadingPositionScope | undefined,
-    chapterIndex: number, offset: number): RemoteReadingPositionContext | undefined {
-    if (scope === undefined) return undefined;
+    chapterIndex: number, offset: number, directoryTargetProof?: JsonObject): RemoteReadingPositionContext | undefined {
+    if (directoryTargetProof !== undefined && (directoryTargetProof['sourceId'] !== this.sourceId || directoryTargetProof['bookId'] !== this.bookId)) throw new Error('DIRECTORY_SCOPE_CHANGED');
+    if (scope === undefined) return directoryTargetProof === undefined ? undefined : { anchors: [], directoryTargetProof };
     if (scope.sourceId !== this.sourceId || scope.bookId !== this.bookId || scope.chapterIndex !== chapterIndex) {
       throw new Error('READING_POSITION_SCOPE_MISMATCH');
     }
-    return { bodyVersion: scope.bodyVersion, processingVersion: scope.processingVersion,
+    return { bodyVersion: scope.bodyVersion, processingVersion: scope.processingVersion, ...(directoryTargetProof === undefined ? {} : { directoryTargetProof }),
       anchors: [{ id: 'requested', offset }] };
   }
 
@@ -12686,7 +12696,7 @@ export struct ReadingExperience {
     try {
       const stored = await this.activeGateway().persistPresentedProgress(this.bookId, chapter.chapterTitle,
         new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, scalarCount === 0 ? 0 : page.startScalar / scalarCount,
-          chapter.bodyVersion, chapter.processingVersion), this.coreLayout());
+          chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout());
       if (stored.chapterIndex !== chapter.chapterIndex || stored.chapterOffset !== page.startScalar)
         throw new Error('READING_PAGE_TURN_PROGRESS_ANCHOR_MISMATCH');
       if (this.isOrdinaryFirstPagePresentationCurrent(page, chapter, selectionToken, lifecycleToken))
@@ -12805,7 +12815,7 @@ export struct ReadingExperience {
           this.bookId,
           prepared.context.chapter.chapterTitle,
           new CoreReadingAnchor(prepared.context.chapter.chapterIndex, prepared.page.startScalar, chapterProgress,
-            prepared.context.chapter.bodyVersion, prepared.context.chapter.processingVersion),
+            prepared.context.chapter.bodyVersion, prepared.context.chapter.processingVersion, prepared.context.chapter.directoryTargetProof),
           this.coreLayout(),
           (): boolean => this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration),
         );

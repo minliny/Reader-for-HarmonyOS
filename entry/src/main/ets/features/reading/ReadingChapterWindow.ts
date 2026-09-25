@@ -1,3 +1,4 @@
+import type { JsonObject } from '@reader/core-harmony';
 import { readingChapterTextIdentity, type ReadingDocumentRange } from './ReadingSurfaceLayoutMap.ts';
 import type { RemoteReadingPositionMigration } from './RemoteReadingPositionMigration';
 
@@ -22,6 +23,7 @@ export type ReadingSessionChapter = {
   readonly images: ReadingSessionImage[];
   readonly contentVersion: string;
   /** Core canonical/processing evidence, distinct from the Host document hash. */
+  readonly directoryTargetProof?: JsonObject;
   readonly bodyVersion?: string;
   readonly processingVersion?: string;
   readonly positionMigration?: RemoteReadingPositionMigration;
@@ -287,7 +289,7 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
     textLayoutIdentity: readingChapterTextIdentity(chapter),
     images: chapter.images.map(copyImage),
     contentVersion: chapter.contentVersion,
-    bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
+    directoryTargetProof: chapter.directoryTargetProof, bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
     positionMigration: chapter.positionMigration === undefined ? undefined : { ...chapter.positionMigration,
       anchors: chapter.positionMigration.anchors.map((anchor) => ({ ...anchor })),
       progress: chapter.positionMigration.progress === undefined ? undefined : { ...chapter.positionMigration.progress } },

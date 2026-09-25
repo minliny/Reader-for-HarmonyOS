@@ -67,8 +67,11 @@ function reader(bookId, kind = 'epub') {
   const { page } = reader('local-txt', 'txt');
   readerDirectoryNoteMissingNavigation('local-txt', 'navigationMissingOrStale');
   page.readingReadyCallback('local', 'local-txt', 7)(0);
-  assert.equal(frames.length, 0, 'known non-EPUB never schedules archive backfill');
+  assert.equal(frames.length, 1, 'TXT preparation is deferred until a readable frame');
   assert.deepEqual(repairs, ['old-epub', 'late-epub']);
+  frames.shift().onFrame();
+  assert.deepEqual(repairs, ['old-epub', 'late-epub', 'local-txt']);
+  page.navigationBackfillObserverDisposer?.();
 }
 
 console.log('PH42 retained EPUB backfill only after directory miss and readable frame: PASS');

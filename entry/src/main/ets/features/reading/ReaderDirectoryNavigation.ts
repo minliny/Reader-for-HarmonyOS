@@ -1,22 +1,28 @@
+import { readerDirectoryBookState, clearReaderDirectoryBookStates } from './ReaderDirectorySessionState.ts';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 
-/** Display-only EPUB navigation. A group has no chapter identity. */
+/** Core-projected navigation; Host never infers a tree from titles or URLs. */
 export interface ReaderDirectoryNavigationNode {
   nodeId: string;
   parentId?: string;
   depth: number;
   title: string;
-  kind: 'group' | 'target';
+  kind: 'group' | 'target' | 'disabled';
   chapterIndex?: number;
   chapterOffsetScalar?: number;
   hasChildren: boolean;
   expanded: boolean;
 }
 
+export interface ReaderDirectoryIdentity {
+  sourceId: string; bookId: string; catalogRevision: string; structureRevision: string;
+}
+
 export interface ReaderDirectoryNavigationReady {
   status: 'ready';
+  identity?: ReaderDirectoryIdentity;
   viewId: string;
   navigationRevision: string;
   visibleTotal: number;
@@ -51,11 +57,14 @@ export interface ReaderDirectoryNavigationPreparedPage {
 export interface ReaderDirectoryNavigationTarget {
   chapterIndex: number;
   chapterOffsetScalar: number;
-  positionScope: RemoteReadingPositionScope;
+  positionScope?: RemoteReadingPositionScope;
+  kind?: 'chapterStart' | 'exact';
+  directoryTargetProof?: JsonObject;
 }
 
 export interface ReaderDirectoryNavigationQuery {
   bookId: string;
+  sourceId?: string;
   collapsedNodeIds?: string[];
   query?: string;
   descending?: boolean;
@@ -67,6 +76,10 @@ export interface ReaderDirectoryNavigationQuery {
 
 const DIRECTORY_PAGE_LIMIT: number = 256;
 const MAX_VISIBLE_NODES: number = 1000000;
+
+export function readerDirectoryScopeKey(sourceId: string, bookId: string): string {
+  return `${sourceId.length}:${sourceId}${bookId.length}:${bookId}`;
+}
 
 function object(value: unknown, label: string): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} is invalid`);
@@ -92,13 +105,13 @@ function node(value: unknown): ReaderDirectoryNavigationNode {
   const raw = object(value, 'directory node');
   const kind = raw['kind'];
   const title = raw['title'];
-  if (kind !== 'group' && kind !== 'target') throw new Error('directory node kind is invalid');
+  if (kind !== 'group' && kind !== 'target' && kind !== 'disabled') throw new Error('directory node kind is invalid');
   if (typeof title !== 'string') throw new Error('directory title is invalid');
   if (typeof raw['hasChildren'] !== 'boolean' || typeof raw['expanded'] !== 'boolean')
     throw new Error('directory node tree state is invalid');
   const chapterIndex = optionalInteger(raw['chapterIndex'], 'directory chapter index', MAX_VISIBLE_NODES);
   const chapterOffsetScalar = optionalInteger(raw['chapterOffsetScalar'], 'directory chapter offset', Number.MAX_SAFE_INTEGER);
-  if ((kind === 'group' && (chapterIndex !== undefined || chapterOffsetScalar !== undefined)) ||
+  if ((kind !== 'target' && (chapterIndex !== undefined || chapterOffsetScalar !== undefined)) ||
     (kind === 'target' && chapterIndex === undefined) ||
     (chapterOffsetScalar !== undefined && chapterIndex === undefined))
     throw new Error('directory node target is invalid');
@@ -179,9 +192,66 @@ export function decodeReaderDirectoryTarget(value: unknown, expectedBookId?: str
   };
 }
 
+
+export function decodeDirectoryIdentity(value: unknown, sourceId: string, bookId: string,
+  expected?: ReaderDirectoryIdentity): ReaderDirectoryIdentity {
+  const raw = object(value, 'directory identity');
+  const identity: ReaderDirectoryIdentity = { sourceId: stringField(raw['sourceId'], 'directory source'),
+    bookId: stringField(raw['bookId'], 'directory book'),
+    catalogRevision: stringField(raw['catalogRevision'], 'directory catalog revision'),
+    structureRevision: stringField(raw['structureRevision'], 'directory structure revision') };
+  if (identity.sourceId !== sourceId || identity.bookId !== bookId ||
+    (expected !== undefined && (identity.catalogRevision !== expected.catalogRevision ||
+      identity.structureRevision !== expected.structureRevision))) throw new Error('directory identity changed');
+  return identity;
+}
+
+export function decodeReaderDirectoryTargetV2(value: unknown, identity: ReaderDirectoryIdentity): ReaderDirectoryNavigationTarget {
+  const raw = object(value, 'directory target');
+  decodeDirectoryIdentity(raw, identity.sourceId, identity.bookId, identity);
+  const chapterIndex = integerField(raw['chapterIndex'], 'directory target chapter', MAX_VISIBLE_NODES);
+  const kind = raw['kind'];
+  if (kind !== 'chapterStart' && kind !== 'exact') throw new Error('directory target kind is invalid');
+  const proof = object(raw['directoryTargetProof'], 'directory target proof');
+  decodeDirectoryIdentity(proof, identity.sourceId, identity.bookId, identity);
+  stringField(proof['nodeId'], 'directory target proof node');
+  stringField(proof['url'], 'directory target proof URL');
+  if (integerField(proof['chapterIndex'], 'directory target proof chapter', MAX_VISIBLE_NODES) !== chapterIndex)
+    throw new Error('directory target proof chapter changed');
+  let positionScope: RemoteReadingPositionScope | undefined;
+  let chapterOffsetScalar = 0;
+  if (kind === 'exact') {
+    const scope = object(raw['positionScope'], 'directory target position scope');
+    positionScope = { sourceId: stringField(scope['sourceId'], 'directory target source'),
+      bookId: stringField(scope['bookId'], 'directory target book'),
+      chapterIndex: integerField(scope['chapterIndex'], 'directory target scope chapter', MAX_VISIBLE_NODES),
+      bodyVersion: stringField(scope['bodyVersion'], 'directory target body version'),
+      processingVersion: stringField(scope['processingVersion'], 'directory target processing version') };
+    if (positionScope.sourceId !== identity.sourceId || positionScope.bookId !== identity.bookId ||
+      positionScope.chapterIndex !== chapterIndex) throw new Error('directory target scope changed');
+    chapterOffsetScalar = integerField(raw['chapterOffsetScalar'], 'directory target scalar', Number.MAX_SAFE_INTEGER);
+  }
+  return { kind, chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof: proof as JsonObject };
+}
+
+function normalizeV2DirectoryNodes(rows: ReaderDirectoryNavigationNode[]): ReaderDirectoryNavigationNode[] {
+  if (rows.some((item): boolean => item.depth > 32 || item.title.trim().length === 0 || Array.from(item.title).length > 1024))
+    throw new Error('directory resource limit exceeded');
+  return rows.map((item): ReaderDirectoryNavigationNode => ({ ...item, depth: item.depth + 1 }));
+}
+
 export class ReaderDirectoryNavigationGateway {
   private readonly runtime: ReadingGatewayRuntime;
+  private static views: Map<string, ReaderDirectoryIdentity> = new Map<string, ReaderDirectoryIdentity>();
   constructor(runtime: ReadingGatewayRuntime) { this.runtime = runtime; }
+
+  private viewIdentity(bookId: string, viewId: string): ReaderDirectoryIdentity | undefined {
+    const identity = ReaderDirectoryNavigationGateway.views.get(viewId);
+    if (identity !== undefined && identity.bookId !== bookId) throw new Error('directory scope changed');
+    if (identity === undefined && this.runtime.supportsCoreCapability?.('reading.directory.view.v2') === true)
+      throw new Error('directory view was evicted');
+    return identity;
+  }
 
   async open(query: ReaderDirectoryNavigationQuery, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationOpen> {
     const limit = Math.min(DIRECTORY_PAGE_LIMIT, Math.max(1, query.limit ?? DIRECTORY_PAGE_LIMIT));
@@ -191,60 +261,89 @@ export class ReaderDirectoryNavigationGateway {
     if (query.chapterOffsetScalar !== undefined) params['chapterOffsetScalar'] = query.chapterOffsetScalar;
     if (query.anchorNodeId !== undefined) params['anchorNodeId'] = query.anchorNodeId;
     const options: RequestOptions = isCurrent === undefined ? {} : { shouldCancel: (): boolean => !isCurrent() };
-    const response = await this.runtime.request('reading.directory.view.open.v1', params, options);
+    const v2 = this.runtime.supportsCoreCapability?.('reading.directory.view.v2') === true;
+    if (!v2 && (query.sourceId ?? 'local') !== 'local') return { status: 'unavailable', reason: 'unsupported' };
+    if (v2) params['sourceId'] = query.sourceId ?? 'local';
+    const response = await this.runtime.request(v2 ? 'reading.directory.view.open.v2' : 'reading.directory.view.open.v1', params, options);
     if (isCurrent !== undefined && !isCurrent()) throw new Error('directory request was superseded');
-    return decodeReaderDirectoryOpen(response.data);
+    const opened = decodeReaderDirectoryOpen(response.data);
+    if (v2 && opened.status === 'ready') {
+      if (opened.visibleTotal > 50000) throw new Error('directory resource limit exceeded');
+      opened.nodes = normalizeV2DirectoryNodes(opened.nodes);
+      const identity = decodeDirectoryIdentity(response.data, query.sourceId ?? 'local', query.bookId);
+      if (opened.navigationRevision !== identity.structureRevision) throw new Error('directory structure changed');
+      opened.identity = identity;
+      ReaderDirectoryNavigationGateway.views.set(opened.viewId, identity);
+      if (ReaderDirectoryNavigationGateway.views.size > 4)
+        ReaderDirectoryNavigationGateway.views.delete(ReaderDirectoryNavigationGateway.views.keys().next().value as string);
+    }
+    return opened;
   }
 
   async page(bookId: string, viewId: string, offset: number, isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationPage> {
     const options: RequestOptions = isCurrent === undefined ? {} : { shouldCancel: (): boolean => !isCurrent() };
-    const response = await this.runtime.request('reading.directory.view.page.v1',
-      { bookId, viewId, offset, limit: DIRECTORY_PAGE_LIMIT }, options);
+    const identity = this.viewIdentity(bookId, viewId);
+    const params: JsonObject = { bookId, viewId, offset, limit: DIRECTORY_PAGE_LIMIT };
+    if (identity !== undefined) Object.assign(params, identity);
+    const response = await this.runtime.request(identity === undefined ? 'reading.directory.view.page.v1' : 'reading.directory.view.page.v2', params, options);
+    if (identity !== undefined) decodeDirectoryIdentity(response.data, identity.sourceId, bookId, identity);
     if (isCurrent !== undefined && !isCurrent()) throw new Error('directory request was superseded');
-    return decodeReaderDirectoryPage(response.data, viewId, offset);
+    const page = decodeReaderDirectoryPage(response.data, viewId, offset);
+    if (identity !== undefined) {
+      if (page.visibleTotal > 50000) throw new Error('directory resource limit exceeded');
+      page.nodes = normalizeV2DirectoryNodes(page.nodes);
+    }
+    return page;
   }
 
   /** Revalidate a row against the live book before any reading-position jump. */
   async resolveTarget(bookId: string, viewId: string, nodeId: string,
     isCurrent?: () => boolean): Promise<ReaderDirectoryNavigationTarget> {
     const options: RequestOptions = isCurrent === undefined ? {} : { shouldCancel: (): boolean => !isCurrent() };
-    const response = await this.runtime.request('reading.directory.view.target.resolve.v1',
-      { bookId, viewId, nodeId }, options);
+    const identity = this.viewIdentity(bookId, viewId);
+    const params: JsonObject = { bookId, viewId, nodeId };
+    if (identity !== undefined) Object.assign(params, identity);
+    const response = await this.runtime.request(identity === undefined ? 'reading.directory.view.target.resolve.v1' : 'reading.directory.target.resolve.v2', params, options);
+    if (isCurrent !== undefined && !isCurrent()) throw new Error('directory target was superseded');
+    if (identity !== undefined) {
+      decodeDirectoryIdentity(response.data, identity.sourceId, bookId, identity);
+      if (response.data['viewId'] !== viewId) throw new Error('directory target view changed');
+      const target = decodeReaderDirectoryTargetV2(response.data, identity);
+      if (target.directoryTargetProof?.['nodeId'] !== nodeId) throw new Error('directory target node changed');
+      return target;
+    }
     if (isCurrent !== undefined && !isCurrent()) throw new Error('directory target was superseded');
     return decodeReaderDirectoryTarget(response.data, bookId);
   }
 }
 
-interface ReaderDirectoryCollapseState { revision: string; ids: Set<string>; }
-const collapseByBook: Map<string, ReaderDirectoryCollapseState> = new Map<string, ReaderDirectoryCollapseState>();
+
 
 /** Session-only fold state shared by Quick, Full and detail; never persisted as reading progress. */
 export function readerDirectoryCollapsedIds(bookId: string): string[] {
-  return Array.from(collapseByBook.get(bookId)?.ids ?? []);
+  return Array.from(readerDirectoryBookState(bookId)?.ids ?? []);
 }
 
 export function readerDirectoryAdmitRevision(bookId: string, revision: string): boolean {
-  const existing = collapseByBook.get(bookId);
-  if (existing !== undefined && existing.revision !== revision) {
-    collapseByBook.set(bookId, { revision, ids: new Set<string>() });
-    return false;
-  }
-  if (existing === undefined) collapseByBook.set(bookId, { revision, ids: new Set<string>() });
-  // Bound retained state; older books reset to the documented default expanded state.
-  if (collapseByBook.size > 8) collapseByBook.delete(collapseByBook.keys().next().value as string);
-  return true;
+  const existing = readerDirectoryBookState(bookId, true);
+  if (existing === undefined) return false;
+  const accepted = existing.revision === undefined || existing.revision === revision;
+  if (!accepted) { existing.ids.clear(); existing.anchor = undefined; }
+  existing.revision = revision;
+  return accepted;
 }
 
 export function readerDirectoryToggleCollapsed(bookId: string, revision: string, nodeId: string): string[] {
   readerDirectoryAdmitRevision(bookId, revision);
-  const state = collapseByBook.get(bookId) as ReaderDirectoryCollapseState;
+  const state = readerDirectoryBookState(bookId, true);
+  if (state === undefined) return [];
   // Use current session state, not a rendered row's possibly stale expanded
   // bit. A second tap before Core answers must undo the first tap.
   if (state.ids.has(nodeId)) state.ids.delete(nodeId); else state.ids.add(nodeId);
   return Array.from(state.ids);
 }
 
-export function readerDirectoryClearSessionState(): void { collapseByBook.clear(); }
+export function readerDirectoryClearSessionState(): void { clearReaderDirectoryBookStates(); }
 
 const pendingNavigationBackfill: Set<string> = new Set<string>();
 interface NavigationBackfillObserver { bookId: string; onMissing: () => void; }
@@ -278,13 +377,14 @@ export function readerDirectoryTakeMissingNavigation(bookId: string): boolean {
 export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavigationGateway,
   query: ReaderDirectoryNavigationQuery, isCurrent: () => boolean,
   onUnavailable?: (reason: string) => void): Promise<ReaderDirectoryNavigationReady | undefined> {
-  const collapsedNodeIds = readerDirectoryCollapsedIds(query.bookId);
+  const stateKey = readerDirectoryScopeKey(query.sourceId ?? 'local', query.bookId);
+  const collapsedNodeIds = readerDirectoryCollapsedIds(stateKey);
   let opened = await gateway.open({ ...query, collapsedNodeIds }, isCurrent);
   if (opened.status !== 'ready' || !isCurrent()) {
     if (isCurrent() && opened.status === 'unavailable') onUnavailable?.(opened.reason);
     return undefined;
   }
-  if (!readerDirectoryAdmitRevision(query.bookId, opened.navigationRevision)) {
+  if (!readerDirectoryAdmitRevision(stateKey, opened.navigationRevision)) {
     // A new source revision invalidates stored node ids. Reopen with the
     // documented default-expanded state before publishing a visible view.
     opened = await gateway.open({ ...query, collapsedNodeIds: [] }, isCurrent);
@@ -292,7 +392,7 @@ export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavi
       if (isCurrent() && opened.status === 'unavailable') onUnavailable?.(opened.reason);
       return undefined;
     }
-    readerDirectoryAdmitRevision(query.bookId, opened.navigationRevision);
+    readerDirectoryAdmitRevision(stateKey, opened.navigationRevision);
   }
   return opened;
 }
@@ -300,7 +400,13 @@ export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavi
 /** Call only after the readable first frame. The retained archive is read-only;
  * Core validates it against the stored book before publishing navigation. */
 export async function backfillRetainedReaderDirectoryNavigation(runtime: ReadingGatewayRuntime,
-  bookId: string, isCurrent: () => boolean): Promise<ReaderDirectoryNavigationOpen['status']> {
+  bookId: string, isCurrent: () => boolean, format: string = 'epub'): Promise<ReaderDirectoryNavigationOpen['status']> {
+  if (format.toLowerCase() === 'txt') {
+    if (!isCurrent() || runtime.supportsCoreCapability?.('reading.directory.view.v2') !== true) return 'unavailable';
+    const response = await runtime.request('reading.directory.rules.prepare.v2', { sourceId: 'local', bookId },
+      { shouldCancel: (): boolean => !isCurrent() });
+    return isCurrent() && response.data['status'] === 'ready' ? 'ready' : 'unavailable';
+  }
   if (runtime.retainedLocalBookSourcePath === undefined || !isCurrent()) return 'unavailable';
   const filePath = await runtime.retainedLocalBookSourcePath(bookId, isCurrent);
   if (filePath === undefined || !isCurrent()) return 'unavailable';

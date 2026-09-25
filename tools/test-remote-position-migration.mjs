@@ -170,3 +170,22 @@ console.log('PH75 directory chapter-start proof: exact cache read, source/index 
  }
  console.log('PH75 recoverable position conflicts are localized and never treated as source/network failures PASS');
 }
+// Directory chapter starts carry catalog authority independently from body anchors.
+{
+  const proof={sourceId:'source',bookId:'book',catalogRevision:'c',structureRevision:'s',nodeId:'n',url:'/0'};
+  const calls=[];const runtime={request:async(method,params)=>{calls.push({method,params});
+    return method==='chapter.content'?response(undefined):{data:{stored:true,...progress()}};}};
+  const gateway=new ReadingSessionFlowGateway('source','book',{kind:'remote',session},runtime);
+  const chapter=await gateway.loadChapter('book',0,()=>true,false,{anchors:[],directoryTargetProof:proof});
+  assert.deepEqual(calls[0].params.directoryTargetProof,proof);
+  assert.equal(calls[0].params.positionContext,undefined);
+  assert.deepEqual(chapter.directoryTargetProof,proof);
+  await gateway.resolveAndUpdateProgress('book','第一章',{chapterIndex:0,chapterOffset:15,chapterProgress:0.2,
+    bodyVersion:'new-body',processingVersion:'new-processing',directoryTargetProof:chapter.directoryTargetProof},
+    {viewportWidth:300,viewportHeight:600,fontScale:1});
+  assert.deepEqual(calls.at(-1).params.directoryTargetProof,proof,'the actual progress adapter retains directory authority');
+  const before=calls.length;
+  await gateway.loadChapter('book',0,()=>true,false,{anchors:[],directoryTargetProof:proof});
+  assert.equal(calls.length,before+1,'a cached chapter cannot bypass directory revalidation');
+}
+console.log('directory proof actual session→chapter.content→progress and cache-bypass rejection PASS');

@@ -1,3 +1,7 @@
+import { ReaderDirectoryRules } from '../reading/ReaderDirectoryRules';
+import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { readerDirectoryScopeKey } from '../reading/ReaderDirectoryNavigation';
+import type { JsonObject } from '@reader/core-harmony';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -28,12 +32,14 @@ export struct BookDirectoryPage {
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   onBack: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
-  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
+  @State private rulesExpanded: boolean = false;
+  @State private rulesRevision: number = 0;
   @State private searchDraft: string = '';
   @State private searchQuery: string = '';
   @State private ascending: boolean = true;
@@ -70,6 +76,10 @@ export struct BookDirectoryPage {
   build() {
     Column() {
       PageBackBar({ title: '目录', onBack: (): void => this.onBack() });
+      if (this.sourceId === 'local' && ReaderRuntimeOwner.current().supportsCoreCapability('reading.directory.view.v2')) {
+        Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => { this.rulesExpanded = !this.rulesExpanded; });
+        if (this.rulesExpanded) { ReaderDirectoryRules({ bookId: this.bookId, onApplied: (): void => { this.rulesRevision += 1; } }); }
+      }
       Column() {
         ReaderDirectoryToolbar({
           text: this.searchDraft,
@@ -88,19 +98,19 @@ export struct BookDirectoryPage {
           // Only a different book replaces the List. Filtering, sorting and
           // projection refreshes keep its native owner and use original indexes.
           ForEach([this.admittedIdentity], (identity: string) => {
-            if (this.sourceId === 'local') {
+            if (this.sourceId.length > 0) {
               ReaderDirectoryNavigationSurface({
-                bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
-                currentChapterIndex: -1, openRevision: identity,
+                sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
+                currentChapterIndex: -1, openRevision: `${identity}:${this.rulesRevision}`,
                 interacted: this.navigationInteracted,
                 rowHeight: 40, listPaddingX: 10, listPaddingY: 5,
                 edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
                 chapterEntries: this.admittedEntries,
                 chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
                 fallbackBuilder: (): void => { this.flatList(identity); },
-                onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void => {
+                onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
                   if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
-                    this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope);
+                    this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
                 },
                 onFirstLayout: (): void => this.onListFirstLayout(identity),
                 onUserScrollIntent: (): void => this.onListUserScroll(),
@@ -245,10 +255,10 @@ export struct BookDirectoryPage {
   }
 
   private scrollToEdge(edge: Edge): void {
-    if (this.sourceId === 'local') readerDirectorySignalScrollIntent(this.bookId);
+    if (this.sourceId.length > 0) readerDirectorySignalScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId));
     this.scrollGeneration += 1;
     this.pendingScrollEdge = edge;
-    this.pendingScrollUserIntent = this.sourceId === 'local';
+    this.pendingScrollUserIntent = this.sourceId.length > 0;
     this.flushPendingScroll();
   }
 
@@ -279,7 +289,7 @@ export struct BookDirectoryPage {
     const userIntent = this.pendingScrollUserIntent;
     this.pendingScrollUserIntent = false;
     this.listScroller.scrollEdge(edge);
-    if (userIntent) readerDirectorySignalScrollCommand(this.bookId);
+    if (userIntent) readerDirectorySignalScrollCommand(readerDirectoryScopeKey(this.sourceId, this.bookId));
   }
 
   private emptyMessage(): string {

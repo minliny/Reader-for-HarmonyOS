@@ -1,6 +1,7 @@
+import type { JsonObject } from '@reader/core-harmony';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import { ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationNode,
+import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, type ReaderDirectoryNavigationNode,
   type ReaderDirectoryNavigationReady, type ReaderDirectoryNavigationPage } from './ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -12,6 +13,35 @@ import { readerDirectoryObserveScrollCommand, readerDirectorySaveViewportAnchor,
 
 const DIRECTORY_PAGE_SIZE: number = 256;
 const DIRECTORY_RETAINED_PAGES: number = 12;
+
+// One platform LRU across Quick, Full, detail and their prepared windows.
+const directoryPages: util.LRUCache<string, ReaderDirectoryNavigationNode[]> =
+  new util.LRUCache<string, ReaderDirectoryNavigationNode[]>(DIRECTORY_RETAINED_PAGES);
+
+function directoryPagePrefix(view: ReaderDirectoryNavigationReady): string {
+  const identity = view.identity;
+  return `${JSON.stringify([readerDirectoryScopeKey(identity?.sourceId ?? 'local', identity?.bookId ?? ''), view.navigationRevision, view.viewId])}:`;
+}
+
+/** Prepared and motion-deferred pages consume the same global 12-page budget. */
+export function cacheReaderDirectoryNavigationPage(view: ReaderDirectoryNavigationReady, offset: number,
+  page: ReaderDirectoryNavigationPage): ReaderDirectoryNavigationPage {
+  if (page.nodes.length > 0) directoryPages.put(`${directoryPagePrefix(view)}${offset}`, page.nodes);
+  return { ...page, nodes: [] };
+}
+
+class ReaderDirectoryPageWindow {
+  private prefix: string = '';
+  bind(view: ReaderDirectoryNavigationReady): void {
+    this.prefix = directoryPagePrefix(view);
+  }
+  get(offset: number): ReaderDirectoryNavigationNode[] | undefined { return directoryPages.get(`${this.prefix}${offset}`); }
+  put(offset: number, nodes: ReaderDirectoryNavigationNode[]): void { directoryPages.put(`${this.prefix}${offset}`, nodes); }
+  keys(): number[] {
+    return directoryPages.keys().filter((key: string): boolean => key.startsWith(this.prefix))
+      .map((key: string): number => Number(key.substring(this.prefix.length)));
+  }
+}
 
 interface ReaderDirectoryNavigationItem {
   key: string;
@@ -33,8 +63,7 @@ interface ReaderDirectoryPositionPlan {
 
 class ReaderDirectoryNavigationDataSource implements IDataSource {
   private view: ReaderDirectoryNavigationReady | undefined = undefined;
-  private pages: util.LRUCache<number, ReaderDirectoryNavigationNode[]> =
-    new util.LRUCache<number, ReaderDirectoryNavigationNode[]>(DIRECTORY_RETAINED_PAGES);
+  private pages: ReaderDirectoryPageWindow = new ReaderDirectoryPageWindow();
   private pending: Set<number> = new Set<number>();
   private listeners: DataChangeListener[] = [];
   private load: (offset: number) => void;
@@ -75,13 +104,16 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
       this.loadedNode(this.view.currentVisibleIndex);
     if (oldCurrent !== undefined) highlighted.add(oldCurrent.nodeId);
     this.view = view;
-    this.pages.clear(); this.pending.clear();
+    this.pages.bind(view); this.pending.clear();
     if (view.nodes.length > 0) this.pages.put(0, view.nodes);
     for (const prepared of view.preparedPages ?? []) {
       if (prepared.offset <= 0 || prepared.page.viewId !== view.viewId ||
         prepared.page.visibleTotal !== view.visibleTotal) continue;
-      this.pages.put(prepared.offset, prepared.page.nodes);
+      if (prepared.page.nodes.length > 0) this.pages.put(prepared.offset, prepared.page.nodes);
     }
+    // Pages are now owned solely by the bounded process cache.
+    view.nodes = [];
+    view.preparedPages = undefined;
     if (view.currentAncestorNodeId !== undefined) highlighted.add(view.currentAncestorNodeId);
     const newCurrent = view.currentVisibleIndex === undefined ? undefined : this.loadedNode(view.currentVisibleIndex);
     if (newCurrent !== undefined) highlighted.add(newCurrent.nodeId);
@@ -106,6 +138,11 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
   admit(offset: number, page: ReaderDirectoryNavigationPage): void {
     if (this.view === undefined || page.viewId !== this.view.viewId || page.visibleTotal !== this.view.visibleTotal) return;
     this.pending.delete(offset);
+    if (page.nodes.length === 0) {
+      const cached = this.pages.get(offset);
+      if (cached === undefined) { this.load(offset); return; }
+      page = { ...page, nodes: cached };
+    }
     const previousPage = this.pages.get(offset);
     if (page.nodes.length > 0 && previousPage === undefined) this.pages.put(offset, page.nodes);
     page.nodes.forEach((node: ReaderDirectoryNavigationNode, index: number): void => {
@@ -134,6 +171,7 @@ export struct ReaderDirectoryNavigationList {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onViewChanged') view: ReaderDirectoryNavigationReady;
   @Prop bookId: string = '';
+  @Prop sourceId: string = 'local';
   @Prop rowHeight: number = 40;
   @Prop listPaddingX: number = 10;
   @Prop listPaddingY: number = 5;
@@ -142,8 +180,8 @@ export struct ReaderDirectoryNavigationList {
   @Prop @Watch('onChapterEntriesChanged') chapterEntries: LocalReadingTocEntry[] = [];
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   scroller: Scroller | undefined = undefined;
-  onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onToggleNode: (node: ReaderDirectoryNavigationNode) => void = (_node: ReaderDirectoryNavigationNode): void => {};
   onUserScrollIntent: () => void = (): void => {};
   onScrollSettled: () => void = (): void => {};
@@ -175,7 +213,7 @@ export struct ReaderDirectoryNavigationList {
     this.initialPositionPending = true;
     this.pendingPages = [];
     this.gateway = new ReaderDirectoryNavigationGateway(ReaderRuntimeOwner.current());
-    this.scrollCommandUnsubscribe = readerDirectoryObserveScrollCommand(this.bookId,
+    this.scrollCommandUnsubscribe = readerDirectoryObserveScrollCommand(readerDirectoryScopeKey(this.sourceId, this.bookId),
       (): void => this.onScrollCommand());
     this.dataSource.replace(this.view);
     this.positionPlan = this.planPosition();
@@ -227,7 +265,7 @@ export struct ReaderDirectoryNavigationList {
       const pages = this.pendingPages;
       this.pendingPages = [];
       for (const item of pages) this.dataSource.admit(item.offset, item.page);
-      const anchor = readerDirectoryViewportAnchor(this.bookId);
+      const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, this.bookId));
       if (anchor !== undefined && anchor.viewId === this.view.viewId &&
         anchor.navigationRevision === this.view.navigationRevision) {
         this.positionPlan = { viewId: this.view.viewId, index: anchor.visibleIndex,
@@ -246,7 +284,7 @@ export struct ReaderDirectoryNavigationList {
     try {
       const rect = this.scroller.getItemRect(index);
       if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) return;
-      const anchor: ReaderDirectoryViewportAnchor = { bookId: this.bookId,
+      const anchor: ReaderDirectoryViewportAnchor = { bookId: readerDirectoryScopeKey(this.sourceId, this.bookId),
         navigationRevision: view.navigationRevision, viewId: view.viewId,
         nodeId: node.nodeId, visibleIndex: index, rowFraction: -rect.y / rect.height };
       readerDirectorySaveViewportAnchor(anchor);
@@ -254,7 +292,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private planPosition(): ReaderDirectoryPositionPlan | undefined {
-    const anchor = readerDirectoryViewportAnchor(this.bookId);
+    const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, this.bookId));
     if (anchor !== undefined && anchor.navigationRevision === this.view.navigationRevision) {
       const index = this.view.anchorVisibleIndex ??
         (anchor.viewId === this.view.viewId ? anchor.visibleIndex : undefined);
@@ -297,6 +335,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private marker(chapter: LocalReadingTocEntry): void {
+    if (this.interactionEnabled === false) return;
     const state = readerDirectoryBookmarkMarkerState(chapter);
     if (state.kind === 'bookmarked') this.onDeleteBookmarks(state.bookmarkTimes);
     else if (state.kind === 'empty' && this.chapterStartBookmarkCreationEnabled)
@@ -304,6 +343,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private toggleNode(node: ReaderDirectoryNavigationNode): void {
+    if (this.interactionEnabled === false) return;
     this.captureViewportAnchor();
     this.onToggleNode(node);
   }
@@ -325,7 +365,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private selectTarget(node: ReaderDirectoryNavigationNode): void {
-    if (node.kind !== 'target' || node.chapterIndex === undefined || this.gateway === undefined) return;
+    if (this.interactionEnabled === false || node.kind !== 'target' || node.chapterIndex === undefined || this.gateway === undefined) return;
     const generation = this.generation;
     const selection = ++this.selectionGeneration;
     const viewId = this.view.viewId, bookId = this.bookId;
@@ -335,7 +375,7 @@ export struct ReaderDirectoryNavigationList {
       .then((target): void => {
         if (!this.mounted || generation !== this.generation || selection !== this.selectionGeneration ||
           viewId !== this.view.viewId || bookId !== this.bookId) return;
-        this.onSelectTarget(target.chapterIndex, target.chapterOffsetScalar, target.positionScope);
+        this.onSelectTarget(target.chapterIndex, target.chapterOffsetScalar, target.positionScope, target.directoryTargetProof);
       }).catch((_error: Error): void => {
         if (this.mounted && generation === this.generation && selection === this.selectionGeneration)
           this.onInvalidated();
@@ -358,7 +398,7 @@ export struct ReaderDirectoryNavigationList {
           if (!this.mounted || generation !== this.generation || viewId !== this.view.viewId) return;
           if (this.interactionEnabled) this.dataSource.admit(offset, page);
           else {
-            const pending: ReaderDirectoryNavigationPendingPage = { offset, page };
+            const pending: ReaderDirectoryNavigationPendingPage = { offset, page: cacheReaderDirectoryNavigationPage(this.view, offset, page) };
             this.pendingPages.push(pending);
           }
         }).catch((_error: Error): void => {
@@ -390,9 +430,9 @@ export struct ReaderDirectoryNavigationList {
           .layoutWeight(1)
           .padding({ left: 9 + Math.min(3, Math.max(0, item.node.depth - 1)) * 12, right: 9 })
           .fontFamily('ReaderNotoSansSC').fontSize(11).fontWeight(500)
-          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
+          .fontColor(readerAppColor(item.node.kind === 'disabled' ? 'TOK_READ_MUTED' : 'TOK_READ_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .accessibilityText(item.node.kind === 'group' ?
+          .accessibilityText(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?
             `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${item.node.depth}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
             `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${item.node.depth}级，打开${item.node.title}`)
           .onClick((): void => {
