@@ -30,8 +30,9 @@ assert.match(read('entry/src/main/ets/app/ReaderCoreGateway.ts'), /\.addReadable
   'remote shelf success requires the selected-source durable readable admission');
 assert.match(index, /private applyReadingCommit\([\s\S]*this\.prefetchReadingWindow\(session, commit\.chapterIndex\)/,
   'each durable reading commit must maintain the rolling cache window');
-assert.match(index, /session\.entries\.length - commit\.chapterIndex - 1 <= CATALOG_REFRESH_NEAR_END/,
-  'reading near the current end must trigger a throttled TOC refresh');
+// Groups consume canonical indexes but never the readable-neighbour budget.
+// Execute the real refresh/prefetch and independent shelf-owner regressions.
+await import('./test-reader-directory-business-boundaries.mjs');
 assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
   'bookshelf updates must use a bounded two-book batch');
 // PH116 explicitly keeps failures and recovery in the normal reading page.
