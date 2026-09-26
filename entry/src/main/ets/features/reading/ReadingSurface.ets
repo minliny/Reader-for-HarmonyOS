@@ -354,8 +354,8 @@ export struct ReadingSurface {
 
       Column({ space: this.layout.titleToBodySpacingVp }) {
         if (this.showChapterTitle) {
-          if (this.pageFragments[0]?.nativeTitle !== undefined) {
-            ReaderNativeParagraphView({ recipe: this.pageFragments[0].nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+          if (this.renderFragments()[0]?.nativeTitle !== undefined) {
+            ReaderNativeParagraphView({ recipe: this.renderFragments()[0].nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
           } else {
           Text(this.chapterTitle)
             .width('100%')
