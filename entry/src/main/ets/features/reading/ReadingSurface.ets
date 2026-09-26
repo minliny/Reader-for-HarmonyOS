@@ -608,8 +608,11 @@ export struct ReadingSurface {
   private renderFragments(): ReadingSurfacePageFragment[] {
     // Primitive revision invalidates the slot; the provider reads its current
     // owner rather than a complex array copied when the slot first mounted.
+    // Offscreen captures reuse a revision across pages: also observe their
+    // supplied array, while keeping the provider authoritative for content.
+    const publishedFragments = this.pageFragments;
     return this.contentRevision >= 0 && this.fragmentsProvider !== undefined ?
-      this.fragmentsProvider() : this.pageFragments;
+      this.fragmentsProvider() : publishedFragments;
   }
 
   private contentInsets(): Padding {
