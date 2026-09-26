@@ -1,5 +1,6 @@
 import { readerDayResourceBranches } from './lib/reader-resource-branch-probe.mjs';
 import assert from 'node:assert/strict';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readFile } from 'node:fs/promises';
 
 import {
@@ -153,8 +154,19 @@ assert.match(autoBinding, /form: this\.contentLocation\(\)\.form/);
 assert.match(autoBinding, /availableWidth: this\.contentMotionWidth,/);
 assert.match(autoBinding, /availableHeight: this\.contentMotionHeight,/);
 assert.match(autoBinding, /interactionEnabled: this\.secondaryModuleInputEnabled\('autoPage'\)/);
-assert.match(autoBinding, /canPreviousChapter: this\.currentChapterIndex > 0/);
-assert.match(autoBinding, /canNextChapter: this\.currentChapterIndex >= 0 && this\.currentChapterIndex < this\.totalChapters - 1/);
+assert.match(autoBinding, /canPreviousChapter: this\.canStepChapter\(-1\)/);
+assert.match(autoBinding, /canNextChapter: this\.canStepChapter\(1\)/);
+const StepOwner = productionMotionMethods(new URL('ets/features/reading/ReaderControlPanel.ets', root), ['canStepChapter']);
+const stepOwner = Object.assign(new StepOwner(), { currentChapterIndex: 1, readableChapterPosition: 0,
+  totalChapters: 53, tocEntries: [{index:0,navigable:false},{index:1,navigable:true}] });
+assert.equal(stepOwner.canStepChapter(-1), false, 'first real chapter after a volume cannot step into the group');
+assert.equal(stepOwner.canStepChapter(1), true, 'bounded window uses global readable rank for the next chapter');
+stepOwner.currentChapterIndex = 107; stepOwner.readableChapterPosition = 52;
+assert.equal(stepOwner.canStepChapter(1), false, 'last readable chapter stops despite sparse canonical IDs');
+assert.equal(stepOwner.canStepChapter(-1), true);
+stepOwner.readableChapterPosition = -1;
+stepOwner.tocEntries = [{index:0,navigable:false},{index:1,navigable:true},{index:107,navigable:true},{index:108,navigable:false}];
+assert.equal(stepOwner.canStepChapter(1), false, 'disabled tail does not enable chapter advance');
 assert.match(autoBinding, /onBack: \(\): void => this\.requestPage\('home'\)/);
 assert.match(autoBinding, /this\.reportSessionMorphSource\(kind, left, top, width, height\)/,
   'the source identity reported by the actual form must not be hard-coded to Full');
