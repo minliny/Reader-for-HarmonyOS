@@ -17,7 +17,7 @@ import {
   type PendingLocalImportFinalize,
   ReaderHostRegistry,
 } from './ReaderHostRegistry';
-import { errorMessageOf, httpResponseFailureSummary } from './ErrorMessage';
+import { errorMessageOf, httpResponseFailureSummary, coreAdmissionFailureSummary } from './ErrorMessage';
 import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
 import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
@@ -320,6 +320,9 @@ export class ReaderRuntimeOwner {
         shouldCancel: options.shouldCancel,
       });
     } catch (error) {
+      const admissionFailure = coreAdmissionFailureSummary(error, method);
+      if (admissionFailure !== undefined)
+        hilog.warn(LOG_DOMAIN, 'Reader', 'Core command not admitted: %{public}s', admissionFailure);
       const responseFailure = httpResponseFailureSummary(error);
       if (responseFailure !== undefined)
         // This helper admits only stage, hostname and status; URL paths,

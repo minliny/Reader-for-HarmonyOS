@@ -35,6 +35,17 @@ export function errorMessageOf(error: unknown): string {
   return `${error}`;
 }
 
+/** Only the NAPI send rejection carries these codes with this exact message. */
+export function coreAdmissionFailureSummary(error: unknown, method: string): string | undefined {
+  const failure = errorObject(error);
+  if (failure?.['message'] !== 'Reader-Core command was not admitted') return undefined;
+  const code = failure['code'];
+  if (code !== 'BUSY' && code !== 'RESOURCE_EXHAUSTED') return undefined;
+  // Never include params, error details, or an untrusted method in public logs.
+  const safeMethod = /^[a-z][a-zA-Z0-9.-]{0,95}$/.test(method) ? method : 'unknown';
+  return `method=${safeMethod} code=${code}`;
+}
+
 /** Safe association for an observed native HTTP rejection, never response data. */
 export type HttpTransportFailureSummary = {
   category: 'SOURCE_HTTP_FAILED';
