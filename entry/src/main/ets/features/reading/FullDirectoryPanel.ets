@@ -1643,12 +1643,12 @@ export struct FullDirectoryPanel {
       return '';
     }
     let ordinal = 0;
-    for (let index = 0; index < this.admittedEntries.length; index += 1) {
-      if (this.admittedEntries[index].index === entry.index) {
-        ordinal = index + 1;
-        break;
-      }
+    let count = 0;
+    for (const chapter of this.admittedEntries) {
+      if (chapter.navigable === false) continue;
+      count += 1;
+      if (chapter.index === entry.index) ordinal = count;
     }
-    return ordinal === 0 ? '' : `${ordinal} / ${this.admittedEntries.length}`;
+    return ordinal === 0 ? '' : `${ordinal} / ${count}`;
   }
 }

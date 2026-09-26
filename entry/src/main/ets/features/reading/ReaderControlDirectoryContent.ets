@@ -68,6 +68,8 @@ export struct ReaderControlDirectoryContent {
   @Prop @Watch('refreshData') catalogComplete: boolean = true;
   @Prop @Watch('refreshData') catalogChapterCount: number = 0;
   @Prop @Watch('refreshData') catalogCurrentPosition: number = -1;
+  @Prop @Watch('refreshData') catalogReadableChapterCount: number = 0;
+  @Prop @Watch('refreshData') catalogReadablePosition: number = -1;
   onRequireCompleteCatalog: () => void = (): void => {};
   @Prop @Watch('refreshData') currentChapterIndex: number = -1;
   @Prop @Watch('openList') tab: string = 'directory';
@@ -136,7 +138,8 @@ export struct ReaderControlDirectoryContent {
     const next = readerControlDirectorySnapshot(this.entries, this.tab, this.query,
       this.ascending, this.currentChapterIndex, this.bookmarkIdentity, {
         complete: this.catalogComplete, chapterCount: this.catalogChapterCount,
-        currentPosition: this.catalogCurrentPosition });
+        currentPosition: this.catalogCurrentPosition, readableChapterCount: this.catalogReadableChapterCount,
+        readablePosition: this.catalogReadablePosition });
     if (this.leadingKey !== undefined) {
       const index = next.rows.findIndex((row: ReaderControlDirectoryRow): boolean => row.key === this.leadingKey);
       this.leadingRow = index < 0 ? undefined : index + this.leadingFraction;

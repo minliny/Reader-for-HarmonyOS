@@ -1482,6 +1482,7 @@ export struct ReadingExperience {
   private entryCatalogSeekRevision: number = 0;
   private readingTocSource: LocalReadingTocEntry[] | undefined = undefined;
   private readingTocProjection: LocalReadingTocEntry[] = [];
+  private readingTocRanks: Map<number, number> = new Map<number, number>();
   @State private contentMetrics: LocalReadingContentMetrics | undefined = undefined;
   /** Normalize a continuous viewport to a chapter-head page before publishing paged mode. */
   private canonicalModeAnchor: number = -1;
@@ -2223,7 +2224,8 @@ export struct ReadingExperience {
         sourceId: this.sourceId,
         sourceName: this.sourceName,
         progressPercent: this.controlProgress(),
-        totalChapters: this.totalChapters,
+        totalChapters: this.entryCatalogNavigation?.readableChapterCount ?? this.readingTocEntries().length,
+        readableChapterPosition: this.readableChapterPosition(this.currentChapterIndex()),
         layout: this.controlLayout(this.readerWindowMetricsRevision),
         controlSession: $controlSession,
         inputEnabled: this.isControlInputEnabled() && (this.sessionLaunch === undefined || this.sessionLaunch.ownership === 'released'),
@@ -7404,8 +7406,7 @@ export struct ReadingExperience {
     if (count === 0) {
       return 0;
     }
-    const position = this.entryCatalogNavigation === undefined ? this.chapterWindow.position(this.currentChapterIndex()) :
-      (this.entryChapterPosition(this.currentChapterIndex()) ?? -1);
+    const position = this.readableChapterPosition(this.currentChapterIndex());
     if (position >= 0) {
       return Math.max(READER_CONTROL_PROGRESS_MIN, Math.min(READER_CONTROL_PROGRESS_MAX,
         ((position + this.normalizedProgress(this.desiredChapterProgress)) / count) *
@@ -7492,16 +7493,7 @@ export struct ReadingExperience {
     if (count === 0) {
       return 0;
     }
-    let position = this.entryCatalogNavigation === undefined ? this.chapterWindow.position(chapterIndex) :
-      (this.entryChapterPosition(chapterIndex) ?? -1);
-    if (position < 0) {
-      for (let index = 0; index < this.readingTocEntries().length; index += 1) {
-        if (this.readingTocEntries()[index].index === chapterIndex) {
-          position = index;
-          break;
-        }
-      }
-    }
+    const position = this.readableChapterPosition(chapterIndex);
     if (position < 0) {
       return 0;
     }
@@ -13691,8 +13683,18 @@ export struct ReadingExperience {
     if (this.readingTocSource !== this.tocEntries) {
       this.readingTocSource = this.tocEntries;
       this.readingTocProjection = this.tocEntries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false);
+      this.readingTocRanks = new Map<number, number>();
+      this.readingTocProjection.forEach((entry: LocalReadingTocEntry, position: number): void => { this.readingTocRanks.set(entry.index, position); });
     }
     return this.readingTocProjection;
+  }
+
+  private readableChapterPosition(chapterIndex: number): number {
+    const admitted = this.entryChapterPosition(chapterIndex);
+    if (admitted !== undefined) return admitted;
+    if (this.entryCatalogPending) return -1;
+    this.readingTocEntries();
+    return this.readingTocRanks.get(chapterIndex) ?? -1;
   }
 
   private adjacentChapterIndex(chapterIndex: number, delta: number): number | undefined {
