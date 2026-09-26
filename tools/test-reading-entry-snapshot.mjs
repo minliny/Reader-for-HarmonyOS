@@ -31,6 +31,12 @@ function fixture(){
  const f=fixture();f.set({...f.body,bookId:'other'});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/identity/);
  f.set({...f.body,progress:{...f.body.progress,bodyVersion:'stale'}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/scope/);
  f.set({...f.body,navigation:{...f.body.navigation,after:[{index:40,position:5,title:'duplicate',navigable:true}]}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/order/);
+ // Legacy snapshot level is positive, with no existing upper bound; Core
+ // omits unrepresentable fact depths rather than changing this Host contract.
+ for (const level of [1,32,33,undefined]) {
+  f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level}}});
+  assert.equal((await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true)).navigation.current.level,level);
+ }
  f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level:0}}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/level/);
 }
 {
