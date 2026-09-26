@@ -24,3 +24,7 @@ Local commands passed:
 - `git diff --check`.
 
 The new `tools/test-*.mjs` test is included by the existing full local test glob. No HAP, Native build, VM rerun or physical-device verification was performed for this Host patch. Final package and real online-route acceptance remain separate open gates.
+
+## Unified gate follow-up
+
+The first unified gate after this change failed in `tools/test-source-content-correction.mjs:147`: its extracted production `requestDirect` lacked the new `coreAdmissionFailureSummary` binding, masking the intended `receipt lost` rejection with a ReferenceError. Original failure retained in `/private/tmp/ph42-search-admission-workspace-acceptance.log` (around line 5890). This is a test harness dependency omission, not evidence of a product recovery failure. All requestDirect extraction sites were searched; the preparation and source-content probes now inject the real helper. Existing rejection assertions are unchanged.

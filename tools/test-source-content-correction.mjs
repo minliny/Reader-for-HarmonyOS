@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { coreAdmissionFailureSummary, httpResponseFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 import { registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
@@ -11,7 +12,7 @@ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.m
 const Owner=productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url)),
  ['request','requestDirect','bookAcquisitions','readingEntryPreparations','captureReadingContentValidity'],
  {BookAcquisitionCoordinator,ReadingEntryPreparation,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,
-  httpResponseFailureSummary:()=>undefined,hilog:{warn(){}},LOG_DOMAIN:0});
+  httpResponseFailureSummary,coreAdmissionFailureSummary,hilog:{warn(){}},LOG_DOMAIN:0});
 const sourceId='https://m.popofree.com#🎃',bookId='b';
 function fixture({damaged=true,preserved=false,resumeOnly=false}={}) {
  const calls=[];let corrected=!damaged,live=true;
