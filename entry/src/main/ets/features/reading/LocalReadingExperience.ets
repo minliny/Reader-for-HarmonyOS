@@ -3714,7 +3714,7 @@ export struct ReadingExperience {
     if (!isCurrent()) return true;
     if (snapshot === undefined && requested === undefined && bookmark === undefined &&
       this.sourceSwitchTransactionId === undefined && !gateway.hasPendingSourceSwitch() &&
-      pending?.presentationPending === true && pendingPosition?.bodyVersion !== undefined &&
+      pending?.kind === 'restored' && pending.presentationPending === true && pendingPosition?.bodyVersion !== undefined &&
       pendingPosition.processingVersion !== undefined && gateway.awaitPresentedProgressPersistence !== undefined) {
       // A short reopen can still own a dispatched same-chapter position. That
       // intent is not permission to select a group: settle its existing lane,
