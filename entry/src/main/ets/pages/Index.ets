@@ -81,6 +81,7 @@ import {
   type RemoteReadingBookSeed,
   type RemoteReadingProgressState,
   type RemoteReadingSession,
+  type RemoteReadingTocEntry,
 } from '../features/reading/RemoteReadingFlowGateway';
 import { sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches, withPreparedRemoteChapter, copyRemoteReadingSession } from '../features/reading/RemoteReadingEvidence';
 import { captureRemotePositionContext, type RemoteReadingPositionContext } from '../features/reading/RemoteReadingPositionMigration';
@@ -399,6 +400,9 @@ struct Index {
   private remoteCacheNoticeGeneration: number = -1;
   private remoteContentProbeGeneration: number = 0;
   private remoteSessionGeneration: number = 0;
+  private remoteReadableToc: RemoteReadingTocEntry[] | undefined = undefined;
+  private remoteReadableChapterIndexes: number[] = [];
+  private remoteReadableChapterPositions: Map<number, number> = new Map();
   private remoteReadabilityProjectionRevision: number = -1;
   private pendingRemoteDirectoryProjection: (() => void) | undefined = undefined;
   private pendingLocalDirectoryProjection: (() => void) | undefined = undefined;
@@ -5334,6 +5338,7 @@ struct Index {
     }
     if (session === undefined) {
       this.remoteReadingSession = undefined;
+      this.updateRemoteReadableChapterOrder(undefined);
       this.remoteReadabilityProjectionRevision = -1;
       return;
     }
@@ -5347,6 +5352,7 @@ struct Index {
     } else {
       this.remoteReadingSession = session;
     }
+    this.updateRemoteReadableChapterOrder(this.remoteReadingSession);
     const facts: JsonObject | undefined = readableProjection?.['acquisition'] as JsonObject | undefined;
     // Only a stable Core projection for this exact canonical session can
     // preserve the gate. It supplies no reusable materialized chapter.
@@ -5707,7 +5713,8 @@ struct Index {
         .catch((error: Error): void => {
           hilog.warn(DOMAIN, 'Reader', 'Rolling chapter cache incomplete: %{private}s', error.message);
         });
-      if (session.entries.length - commit.chapterIndex - 1 <= CATALOG_REFRESH_NEAR_END) {
+      const position = this.remoteReadableChapterPosition(session, commit.chapterIndex);
+      if (position !== undefined && this.remoteReadableChapterIndexes.length - position - 1 <= CATALOG_REFRESH_NEAR_END) {
         this.refreshRemoteCatalogNearEnd(session);
       }
     }
@@ -5861,21 +5868,54 @@ struct Index {
   private async prefetchReadingWindow(
     session: RemoteReadingSession,
     preferredChapterIndex: number | undefined = undefined,
+    shelfCurrent?: () => boolean,
   ): Promise<void> {
+    const generation = this.remoteSessionGeneration;
+    const current = shelfCurrent ?? ((): boolean => generation === this.remoteSessionGeneration &&
+      sameRemoteSessionEvidence(this.remoteReadingSession, session));
+    if (!current()) return;
+    // Explicit shelf refresh owns its acquired session without replacing the
+    // visible reader. Its one-off scan never runs on reading progress commits.
+    const indexes = shelfCurrent === undefined ? this.remoteReadableChapterIndexes :
+      session.entries.filter((entry: RemoteReadingTocEntry): boolean => entry.navigable !== false && entry.url.trim().length > 0)
+        .map((entry: RemoteReadingTocEntry): number => entry.index);
     let chapterIndex = preferredChapterIndex;
     if (chapterIndex === undefined) {
       const progress = await new RemoteReadingFlowGateway(ReaderRuntimeOwner.current())
-        .loadProgress(session.identity);
-      chapterIndex = progress.kind === 'restored' ? progress.progress.chapterIndex : 0;
+        .loadProgress(session.identity, current);
+      chapterIndex = progress.kind === 'restored' ? progress.progress.chapterIndex : indexes[0];
     }
-    const boundedIndex = Math.min(Math.max(chapterIndex, 0), session.entries.length - 1);
-    const startInclusive = Math.max(0, boundedIndex - READING_CACHE_BEFORE);
-    const endExclusive = Math.min(session.entries.length, boundedIndex + READING_CACHE_AFTER + 1);
+    if (!current() || chapterIndex === undefined) return;
+    const position = shelfCurrent === undefined ? this.remoteReadableChapterPosition(session, chapterIndex) : indexes.indexOf(chapterIndex);
+    if (position === undefined || position < 0) return;
+    const startInclusive = indexes[Math.max(0, position - READING_CACHE_BEFORE)];
+    const endExclusive = indexes[Math.min(indexes.length - 1,
+      position + READING_CACHE_AFTER)] + 1;
     const entries = await new ReadingOfflineGateway(ReaderRuntimeOwner.current())
-      .prefetchRange(session, startInclusive, endExclusive);
-    if (sameRemoteSessionEvidence(this.remoteReadingSession, session)) {
+      .prefetchRange(session, startInclusive, endExclusive, current);
+    if (current() && generation === this.remoteSessionGeneration && sameRemoteSessionEvidence(this.remoteReadingSession, session)) {
       this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
     }
+  }
+
+  /** Rebuilt only when an admitted session supplies a different TOC array. */
+  private updateRemoteReadableChapterOrder(session: RemoteReadingSession | undefined): void {
+    if (this.remoteReadableToc === session?.entries) return;
+    this.remoteReadableToc = session?.entries;
+    this.remoteReadableChapterIndexes = [];
+    this.remoteReadableChapterPositions = new Map();
+    if (session === undefined) return;
+    for (const entry of session.entries) {
+      if (entry.navigable === false || entry.url.trim().length === 0) continue;
+      this.remoteReadableChapterPositions.set(entry.index, this.remoteReadableChapterIndexes.length);
+      this.remoteReadableChapterIndexes.push(entry.index);
+    }
+  }
+
+  private remoteReadableChapterPosition(session: RemoteReadingSession, chapterIndex: number): number | undefined {
+    // Narrow/unknown catalog positions cannot be clamped to an unrelated row.
+    if (this.remoteReadableToc !== session.entries) return undefined;
+    return this.remoteReadableChapterPositions.get(chapterIndex);
   }
 
   private refreshRemoteCatalogNearEnd(session: RemoteReadingSession): void {
@@ -6427,7 +6467,7 @@ struct Index {
         { forceRefresh: true, isCurrent, canDispatch: isCurrent }, automatic ? 'background' : 'foreground');
       // Automatic update checks catalogs only. Reader/add/search preparation
       // owns body acquisition; a shelf sweep must not compete for all bodies.
-      if (!automatic) await this.prefetchReadingWindow(session);
+      if (!automatic) await this.prefetchReadingWindow(session, undefined, isCurrent);
     } catch (error) {
       // Per-book failures do not abort remaining bookshelf updates. Existing
       // local TOC/bodies stay authoritative and the next interval retries.
