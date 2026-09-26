@@ -405,6 +405,7 @@ export struct ReaderControlDirectoryContent {
           listPaddingX: this.rowPadding(), listPaddingY: 0,
           edgeEffectMode: EdgeEffect.Spring, interactionEnabled: this.interactionEnabled,
           chapterEntries: this.entries,
+          chapterDownloadEnabled: this.chapterDownloadEnabled,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           scroller: this.scroller, fallbackBuilder: (): void => {
             if (this.snapshot.rows.length === 0) {
@@ -420,6 +421,7 @@ export struct ReaderControlDirectoryContent {
           onFirstLayout: (): void => this.queuePosition(),
           onTreeStateChange: (active: boolean): void => { this.navigationActive = active; },
           onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
         });

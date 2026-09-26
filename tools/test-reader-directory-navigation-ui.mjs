@@ -219,6 +219,79 @@ const Surface = productionMotionMethods(surfacePath,
   assert.equal(pending.length, start + 2, 'motion endpoint retries the superseded first open');
 }
 {
+  const start = pending.length, states = [];
+  const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'mounted-during-motion', query: '',
+    ascending: true, currentChapterIndex: 0, generation: 0, settledFlat: false, interacted: false,
+    interactionEnabled: false, queryTimer: -1, openingGeneration: -1, pendingRefresh: false,
+    view: undefined, onTreeStateChange: active => states.push(active) });
+  surface.openTree(true);
+  assert.equal(pending.length, start, 'mounting during Quick/Full motion must defer the expensive Core view open');
+  assert.equal(surface.pendingRefresh, true, 'initial motion still owns a pending directory admission');
+  assert.equal(surface.settledFlat, false, 'motion is not a permanent flat-directory decision');
+  surface.interactionEnabled = true; surface.onInteractionChanged();
+  assert.equal(pending.length, start + 1, 'motion endpoint performs the deferred initial admission exactly once');
+  pending[start].resolve({ viewId: 'after-initial-motion', navigationRevision: 'r', visibleTotal: 1,
+    nodes: [{ nodeId: 'only-chapter', chapterIndex: 0, kind: 'target', hasChildren: false }] });
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  assert.equal(surface.view.viewId, 'after-initial-motion', 'the real tree replaces the ready flat fallback after motion');
+  assert.deepEqual(states, [true]);
+}
+{
+  const start = pending.length;
+  const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'motion-response-race', query: '',
+    ascending: true, currentChapterIndex: 0, generation: 0, settledFlat: false, interacted: false,
+    interactionEnabled: true, queryTimer: -1, openingGeneration: -1, pendingRefresh: false,
+    view: undefined, onTreeStateChange() {} });
+  surface.openTree(true);
+  // A prop can already carry the new value when the old async callback runs,
+  // before its Watch callback has cancelled the in-flight generation.
+  surface.interactionEnabled = false;
+  pending[start].resolve({ viewId: 'response-at-motion-start', navigationRevision: 'r', visibleTotal: 1,
+    nodes: [{ nodeId: 'only-chapter', chapterIndex: 0, kind: 'target', hasChildren: false }] });
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  assert.equal(surface.view, undefined);
+  assert.equal(surface.settledFlat, false, 'a response arriving during motion cannot permanently discard the real tree');
+  assert.equal(surface.pendingRefresh, true);
+  surface.interactionEnabled = true; surface.onInteractionChanged();
+  assert.equal(pending.length, start + 2, 'response blocked by motion is retried at its endpoint');
+}
+{
+  const start = pending.length;
+  let finishPage;
+  const surface = Object.assign(new Surface(), { mounted: true,
+    gateway: { page: (_book, viewId, _offset) => new Promise(resolve => { finishPage = resolve; }) },
+    bookId: 'motion-page-race', query: '', ascending: true, currentChapterIndex: 0,
+    generation: 0, settledFlat: false, interacted: false, interactionEnabled: true,
+    queryTimer: -1, openingGeneration: -1, pendingRefresh: false, view: undefined, onTreeStateChange() {} });
+  surface.openTree(true);
+  pending[start].resolve({ viewId: 'pages-at-motion-start', navigationRevision: 'r', visibleTotal: 512,
+    nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `first-${index}` })) });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(typeof finishPage, 'function');
+  surface.interactionEnabled = false;
+  finishPage({ viewId: 'pages-at-motion-start', visibleTotal: 512,
+    nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `second-${index}` })) });
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  assert.equal(surface.view, undefined);
+  assert.equal(surface.settledFlat, false, 'motion during page preparation cannot permanently discard the real tree');
+  assert.equal(surface.pendingRefresh, true);
+  surface.interactionEnabled = true; surface.onInteractionChanged();
+  assert.equal(pending.length, start + 2);
+}
+{
+  const start = pending.length;
+  const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'user-positioned-flat', query: '',
+    ascending: true, currentChapterIndex: 0, generation: 0, settledFlat: false, interacted: true,
+    interactionEnabled: true, queryTimer: -1, openingGeneration: -1, pendingRefresh: false,
+    view: undefined, onTreeStateChange: () => assert.fail('user-positioned flat rows cannot be replaced') });
+  surface.openTree(true);
+  pending[start].resolve({ viewId: 'late-first-tree', navigationRevision: 'r', visibleTotal: 1,
+    nodes: [{ nodeId: 'only-chapter', chapterIndex: 0, kind: 'target', hasChildren: false }] });
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  assert.equal(surface.view, undefined);
+  assert.equal(surface.settledFlat, true, 'real user interaction keeps the existing flat viewport authoritative');
+}
+{
   const start = pending.length;
   visibleAnchorNodeId = 'before-drag';
   const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'drag-book', query: 'group',
@@ -462,7 +535,7 @@ console.log('PASS actual SDK directory empty-result presentation without replaci
   for (const current of [false, true]) {
     traces.length = 0;
     const owner = Object.assign(new Probe(), { mounted: true, gateway: {}, bookId: 'fixture', generation: 0,
-      query: '', currentChapterIndex: 0, onTreeStateChange() {} });
+      query: '', currentChapterIndex: 0, interactionEnabled: true, onTreeStateChange() {} });
     owner.openTree(true);
     if (!current) { owner.mounted = false; owner.generation += 1; }
     rejectOpen(new Error('cancelled-or-failed'));
@@ -472,3 +545,99 @@ console.log('PASS actual SDK directory empty-result presentation without replaci
   }
 }
 console.log('PASS directory diagnostics separate disposed query cancellation from active failure');
+
+// Tree presentation preserves the ordinary chapter download affordance and
+// revalidates the canonical target before dispatch. Group rows never acquire a
+// chapter identity or download authority from their displayed rank.
+{
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const Download = productionMotionMethods(listPath, ['canDownloadTarget', 'downloadTarget', 'onChapterEntriesChanged']);
+  const target = { nodeId: 'target', kind: 'target', title: 'Chapter', depth: 1,
+    chapterIndex: 7, hasChildren: false, expanded: false };
+  const markerStart = listSource.indexOf("        if (item.node.kind === 'target' && item.node.chapterIndex !== undefined && this.chapterDownloadEnabled");
+  const markerEnd = listSource.indexOf("        if (item.node.kind === 'target'", markerStart + 1);
+  assert.ok(markerStart > 0 && markerEnd > markerStart);
+  const baseline = listSource.slice(0, markerStart) + listSource.slice(markerEnd);
+  function render(source, node, state, enabled, scheme = 'day', navigable = true) {
+    const calls = [];
+    const owner = createReaderBuilderProbe(source, ['row']).owner;
+    Object.assign(owner, { appThemeScheme: scheme, view: {viewId:'view'}, rowHeight:40,
+      interactionEnabled: true, chapterDownloadEnabled: enabled, chapterByIndex: new Map([[7,
+        {index:7,title:'Chapter',downloadState:state,navigable}]]), isCurrentNode:()=>false,
+      toggleNode(){},selectTarget(){},downloadTarget:node=>calls.push(node.nodeId),
+      canDownloadTarget:Download.prototype.canDownloadTarget.bind(owner) });
+    owner.row({key:node.nodeId,node,index:41});
+    const button = [...owner.nodes.values()].find(node=>node.accessibilityText === '下载章节' || node.accessibilityText === '已下载');
+    return {owner, button, calls};
+  }
+  assert.equal(render(baseline,target,'missing',true).button,undefined,
+    'removing the download block reproduces the former Builder missing target download affordance');
+  for (const scheme of ['day','night']) for (const state of ['missing','cached','failed','cancelled','queued','inProgress','completed','unknown']) {
+    const {owner,button,calls}=render(listSource,target,state,true,scheme);
+    if (state==='unknown') {assert.equal(button,undefined);continue;}
+    assert.ok(button,`target ${state} retains a download status marker`);
+    assert.equal(button.enabled,['missing','cached','failed','cancelled'].includes(state));
+    const image=[...owner.nodes.values()].find(node=>node.type==='Image');
+    assert.equal(image.create,`app.media.reader_directory_marker_${state==='completed'?'check':'download'}${scheme==='night'?'_theme_night':''}`);
+    button.onClick();assert.deepEqual(calls,['target'],'row forwards the node identity, never visible ordinal 41');
+  }
+  for (const kind of ['group','disabled'])
+    assert.equal(render(listSource,{...target,kind,chapterIndex:undefined},'missing',true).button,undefined);
+  assert.equal(render(listSource,target,'missing',false).button,undefined);
+  assert.equal(render(listSource,target,'missing',true,'day',false).button,undefined);
+  const requests=[],downloads=[],invalidations=[];
+  const owner=Object.assign(new Download(),{mounted:true,generation:1,view:{viewId:'view'},bookId:'book',sourceId:'source',
+    interactionEnabled:true,chapterDownloadEnabled:true,chapterByIndex:new Map([[7,{index:7,downloadState:'missing',navigable:true}]]),
+    gateway:{resolveTarget:(...args)=>new Promise((resolve,reject)=>requests.push({args,resolve,reject}))},
+    onDownloadChapter:index=>downloads.push(index),onInvalidated:()=>invalidations.push(true)});
+  owner.downloadTarget({...target,kind:'group',chapterIndex:undefined});
+  owner.downloadTarget({...target,kind:'disabled',chapterIndex:undefined});
+  assert.equal(requests.length,0,'group/disabled never request a target or queue a body');
+  owner.downloadTarget(target);assert.equal(downloads.length,0,'rendered chapter identity cannot bypass Core proof');
+  assert.deepEqual(requests[0].args.slice(0,3),['book','view','target']);
+  requests[0].resolve({chapterIndex:7});await Promise.resolve();assert.deepEqual(downloads,[7]);
+  owner.downloadTarget(target);owner.sourceId='other-source';
+  requests[1].resolve({chapterIndex:7});await Promise.resolve();assert.deepEqual(downloads,[7],'late other-source result never downloads');
+  owner.sourceId='source';owner.downloadTarget(target);
+  requests[2].resolve({chapterIndex:8});await Promise.resolve();assert.deepEqual(downloads,[7],'canonical chapter mismatch never dispatches');
+  owner.downloadTarget(target);owner.chapterByIndex.get(7).downloadState='queued';
+  requests[3].resolve({chapterIndex:7});await Promise.resolve();assert.deepEqual(downloads,[7],'already queued chapter is not requested twice');
+  owner.chapterByIndex.get(7).downloadState='missing';owner.downloadTarget(target);
+  requests[4].reject(new Error('directory proof stale'));await Promise.resolve();await Promise.resolve();
+  assert.deepEqual(invalidations,[true]);assert.deepEqual(downloads,[7]);
+  owner.chapterSignatures=new Map();owner.chapterEntries=[{index:7,title:'Chapter',downloadState:'missing',navigable:true}];
+  const changes=[];owner.dataSource={changedChapters:ids=>changes.push([...ids])};owner.onChapterEntriesChanged();
+  owner.chapterEntries=[{...owner.chapterEntries[0],downloadState:'completed'}];owner.onChapterEntriesChanged();
+  assert.deepEqual(changes,[[7],[7]],'offline state changes refresh the retained canonical row');
+}
+console.log('PASS tree download actual SDK Builder and Core target fencing: day/night states, group exclusion, queued/stale/source guards and download-state refresh');
+
+{
+  const { createRequire } = await import('node:module');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const require=createRequire(import.meta.url);
+  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
+  syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationSurface');
+  syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationList');
+  class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
+  const calls=[];
+  const shared={chapterDownloadEnabled:true,onDownloadChapter:index=>calls.push(index),
+    bookmarkIdentity:{sourceId:'remote',bookId:'book'},currentChapterIndex:7,chapterStartBookmarkCreationEnabled:false};
+  const quick=createReaderBuilderProbe(controlSource,['listBody'],{ReaderDirectoryNavigationSurface:Child}).owner;
+  Object.assign(quick,shared,{tab:'directory',snapshot:{loading:false,rows:[{}]},navigationActive:true,rowHeight:()=>40,rowPadding:()=>10});
+  quick.listBody();const quickTree=[...quick.children.values()][0];
+  assert.equal(quickTree.params.chapterDownloadEnabled,true);quickTree.params.onDownloadChapter(7);
+  require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add('flatChapterList');
+  const full=createReaderBuilderProbe(fullSource,['chapterList'],{ReaderDirectoryNavigationSurface:Child}).owner;
+  Object.assign(full,shared,{projectedEntries:[{}],admittedEntries:[{}],initialListPositionReady:true,
+    directoryListRowHeight:()=>40,directoryListPaddingX:()=>10,directoryListWidth:()=>300,directoryListViewportHeight:()=>300,chapterListHeight:()=>300});
+  full.chapterList();const fullTree=[...full.children.values()][0];
+  assert.equal(fullTree.params.chapterDownloadEnabled,true);fullTree.params.onDownloadChapter(8);
+  const surface=createReaderBuilderProbe(surfaceSource,['build','fallbackBuilder'],{ReaderDirectoryNavigationList:Child}).owner;
+  Object.assign(surface,shared,{view:{visibleTotal:1},sourceId:'remote',bookId:'book'});
+  surface.initialRender();const list=[...surface.children.values()][0];
+  assert.equal(list.params.chapterDownloadEnabled,true);list.params.onDownloadChapter(9);
+  assert.deepEqual(calls,[7,8,9],'Quick, Full and Surface preserve the existing owner callback');
+}
+console.log('PASS actual SDK Quick/Full/Surface download prop and callback propagation');

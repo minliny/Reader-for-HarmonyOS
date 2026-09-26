@@ -106,6 +106,7 @@ export struct BookDirectoryPage {
                 rowHeight: 40, listPaddingX: 10, listPaddingY: 5,
                 edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
                 chapterEntries: this.admittedEntries,
+                chapterDownloadEnabled: this.sourceId !== 'local',
                 chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
                 fallbackBuilder: (): void => { this.flatList(identity); },
                 onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
@@ -119,6 +120,10 @@ export struct BookDirectoryPage {
                   this.listReady = false;
                 },
                 onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+                onDownloadChapter: (chapterIndex: number): void => {
+                  if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
+                    this.onDownloadChapter(chapterIndex);
+                },
                 onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
                   this.onCreateChapterStartBookmark(request),
               }).width('100%').height('100%');

@@ -178,6 +178,7 @@ export struct ReaderDirectoryNavigationList {
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop @Watch('onChapterEntriesChanged') chapterEntries: LocalReadingTocEntry[] = [];
+  @Prop chapterDownloadEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
@@ -188,6 +189,7 @@ export struct ReaderDirectoryNavigationList {
   onFirstLayout: () => void = (): void => {};
   onInvalidated: () => void = (): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   private dataSource: ReaderDirectoryNavigationDataSource =
@@ -324,7 +326,7 @@ export struct ReaderDirectoryNavigationList {
     this.chapterByIndex.clear();
     for (const chapter of this.chapterEntries) {
       this.chapterByIndex.set(chapter.index, chapter);
-      const signature = `${chapter.title}:${chapter.bookmarks === undefined ? '?' :
+      const signature = `${chapter.title}:${chapter.navigable}:${chapter.downloadState}:${chapter.bookmarks === undefined ? '?' :
         chapter.bookmarks.map((bookmark): number => bookmark.time).join(',')}`;
       next.set(chapter.index, signature);
       if (previous.get(chapter.index) !== signature) changed.add(chapter.index);
@@ -346,6 +348,28 @@ export struct ReaderDirectoryNavigationList {
     if (this.interactionEnabled === false) return;
     this.captureViewportAnchor();
     this.onToggleNode(node);
+  }
+
+  private canDownloadTarget(node: ReaderDirectoryNavigationNode): boolean {
+    if (!this.interactionEnabled || !this.chapterDownloadEnabled || node.kind !== 'target' || node.chapterIndex === undefined) return false;
+    const chapter = this.chapterByIndex.get(node.chapterIndex);
+    return chapter !== undefined && chapter.navigable !== false &&
+      (chapter.downloadState === 'missing' || chapter.downloadState === 'cached' ||
+        chapter.downloadState === 'failed' || chapter.downloadState === 'cancelled');
+  }
+
+  private downloadTarget(node: ReaderDirectoryNavigationNode): void {
+    if (!this.canDownloadTarget(node) || this.gateway === undefined) return;
+    const generation = this.generation, viewId = this.view.viewId, bookId = this.bookId, sourceId = this.sourceId;
+    const current = (): boolean => this.mounted && generation === this.generation && viewId === this.view.viewId &&
+      bookId === this.bookId && sourceId === this.sourceId;
+    // Download the canonical chapter only after the same Core revision/target
+    // proof used by reading selection succeeds. This never changes progress.
+    void this.gateway.resolveTarget(bookId, viewId, node.nodeId, current)
+      .then((target): void => {
+        if (!current() || target.chapterIndex !== node.chapterIndex || !this.canDownloadTarget(node)) return;
+        this.onDownloadChapter(target.chapterIndex);
+      }).catch((_error: Error): void => { if (current()) this.onInvalidated(); });
   }
 
   private positionInitialCurrent(): void {
@@ -455,6 +479,20 @@ export struct ReaderDirectoryNavigationList {
             .textAlign(TextAlign.Center)
             .accessibilityText(`${item.node.expanded ? '折叠' : '展开'}${item.node.title}子目录`)
             .onClick((): void => { if (item.node !== undefined) this.toggleNode(item.node); });
+        }
+        if (item.node.kind === 'target' && item.node.chapterIndex !== undefined && this.chapterDownloadEnabled &&
+          this.chapterByIndex.get(item.node.chapterIndex) !== undefined &&
+          this.chapterByIndex.get(item.node.chapterIndex)?.navigable !== false &&
+          this.chapterByIndex.get(item.node.chapterIndex)?.downloadState !== 'unknown') {
+          Stack() {
+            Image(this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ?
+              (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
+              (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
+              .width(15).height(15);
+          }.width(26).height(this.rowHeight)
+            .accessibilityText(this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ? '已下载' : '下载章节')
+            .enabled(this.canDownloadTarget(item.node))
+            .onClick((): void => { if (item.node !== undefined) this.downloadTarget(item.node); });
         }
         if (item.node.kind === 'target' && item.node.chapterIndex !== undefined &&
           this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks !== undefined) {

@@ -38,6 +38,7 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop chapterEntries: LocalReadingTocEntry[] = [];
+  @Prop chapterDownloadEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
@@ -46,6 +47,7 @@ export struct ReaderDirectoryNavigationSurface {
   onFirstLayout: () => void = (): void => {};
   onTreeStateChange: (active: boolean) => void = (_active: boolean): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   @BuilderParam fallbackBuilder: () => void;
@@ -252,6 +254,16 @@ export struct ReaderDirectoryNavigationSurface {
     const bookId = this.bookId;
     if (gateway === undefined || bookId.length === 0) return;
     const generation = ++this.generation;
+    if (!this.interactionEnabled) {
+      // A Surface may mount inside the initial Quick/Full transition. Keep
+      // its ready flat rows visible and admit the tree at the motion endpoint.
+      // This is not a missing-navigation or user-interaction flat decision.
+      this.openingGeneration = -1;
+      this.pendingRefresh = true;
+      this.pendingQueryRefresh = false;
+      pendingTrace?.step('deferred', 'motion');
+      return;
+    }
     const trace = pendingTrace ?? new ReaderDirectoryTrace(reason);
     this.openingGeneration = generation;
     const query = this.query, descending = !this.ascending;
@@ -272,16 +284,27 @@ export struct ReaderDirectoryNavigationSurface {
           }
           return;
         }
-        if (this.settledFlat || (first && (this.interacted || !this.interactionEnabled))) {
+        if (this.settledFlat || (first && this.interacted)) {
           this.openingGeneration = -1;
           this.settledFlat = true;
+          return;
+        }
+        if (!this.interactionEnabled) {
+          this.openingGeneration = -1;
+          this.pendingRefresh = true;
+          this.pendingQueryRefresh = false;
           return;
         }
         ready.preparedPages = await this.prepareVisiblePages(gateway, bookId, ready, generation);
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
         this.openingGeneration = -1;
-        if (this.settledFlat || (first && (this.interacted || !this.interactionEnabled))) {
+        if (this.settledFlat || (first && this.interacted)) {
           this.settledFlat = true;
+          return;
+        }
+        if (!this.interactionEnabled) {
+          this.pendingRefresh = true;
+          this.pendingQueryRefresh = false;
           return;
         }
         this.view = ready;
@@ -330,6 +353,7 @@ export struct ReaderDirectoryNavigationSurface {
           listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
           edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
           chapterEntries: this.chapterEntries,
+          chapterDownloadEnabled: this.chapterDownloadEnabled,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           scroller: this.scroller,
           onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
@@ -340,6 +364,7 @@ export struct ReaderDirectoryNavigationSurface {
           onFirstLayout: (): void => this.onFirstLayout(),
           onInvalidated: (): void => this.invalidate(),
           onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
         });

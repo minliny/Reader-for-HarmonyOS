@@ -645,6 +645,7 @@ export struct FullDirectoryPanel {
             listPaddingX: this.directoryListPaddingX(), listPaddingY: this.embeddedInControl ? 0 : 5,
             edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
             chapterEntries: this.admittedEntries,
+            chapterDownloadEnabled: this.chapterDownloadEnabled,
             chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
             fallbackBuilder: (): void => { this.flatChapterList(); },
             onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
@@ -657,6 +658,7 @@ export struct FullDirectoryPanel {
               if (active) this.initialListPositionReady = true;
             },
             onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+            onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
             onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
               this.onCreateChapterStartBookmark(request),
           });

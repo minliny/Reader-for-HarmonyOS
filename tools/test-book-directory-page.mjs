@@ -142,6 +142,13 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
   const toolbar = children.find(child => child.params.showChapterTools); assert.ok(toolbar);
   const tree = children.find(child => child.params.chapterEntries);
   assert.equal(tree.params.sourceId, result.page.sourceId);
+  assert.equal(tree.params.chapterDownloadEnabled, true, 'remote tree retains the existing single chapter download action');
+  const previousDownload = owner.onDownloadChapter;
+  let treeDownload;
+  owner.onDownloadChapter = index => { treeDownload = index; };
+  tree.params.onDownloadChapter(7);
+  assert.equal(treeDownload, 7, 'detail tree callback preserves the canonical chapter index');
+  owner.onDownloadChapter = previousDownload;
   tree.params.fallbackBuilder();
   const list = [...owner.children.values()].find(child => child.params.entries); assert.equal(list.params.entries.length, 3000);
   assert.equal(list.params.rowHeight, 40); assert.equal(list.params.listPaddingX, 10);
@@ -165,6 +172,8 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
   assert.deepEqual(result.selected, [1, 1], 'a retained cloned row works again after clearing the filter');
   owner.sourceId = 'source-b'; owner.onIdentityChanged(); flush();
   row.params.onSelectChapter(1); assert.deepEqual(result.selected, [1, 1], 'retained old book closure cannot target equal index/content in another source');
+  tree.params.onDownloadChapter(7);
+  assert.deepEqual(result.downloaded, [1], 'retained old directory callback cannot download the same index in another source');
   toolbar.params.onToggleSort(); assert.equal(owner.ascending, false);
   owner.onListFirstLayout(owner.identity()); toolbar.params.onTop(); toolbar.params.onBottom(); assert.equal(result.edges.at(-1), Edge.Bottom);
   owner.aboutToDisappear(); toolbar.params.onTop(); row.params.onDownloadChapter(1);
