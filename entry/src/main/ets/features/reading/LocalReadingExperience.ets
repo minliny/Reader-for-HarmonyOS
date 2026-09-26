@@ -3388,7 +3388,8 @@ export struct ReadingExperience {
       return undefined;
     }
     const ranges = prepared.context.paragraphRanges;
-    const showTitle = ranges.length > 0 && prepared.page.startScalar === ranges[0].startScalar;
+    const showTitle = (prepared.context.chapter.documentRange?.startScalar ?? 0) === 0 &&
+      ranges.length > 0 && prepared.page.startScalar === ranges[0].startScalar;
     const bottomJustifyGap = this.pageBottomJustifyGap(prepared.page);
     const chrome = this.pageChromeSnapshot(
       prepared.key.chapterIndex,
