@@ -447,6 +447,11 @@ export struct ReaderDirectoryNavigationList {
       item.node?.hasChildren === true ? item.node.expanded : null])}`;
   }
 
+  private displayLevel(node: ReaderDirectoryNavigationNode): number {
+    // v2 facts use zero-based depth; the legacy v1 view is already one-based.
+    return this.view.identity === undefined ? Math.max(1, node.depth) : node.depth + 1;
+  }
+
   @Builder
   private row(item: ReaderDirectoryNavigationItem) {
     Row() {
@@ -459,13 +464,13 @@ export struct ReaderDirectoryNavigationList {
         }
         Text(item.node.title)
           .layoutWeight(1)
-          .padding({ left: 9 + Math.min(3, Math.max(0, item.node.depth - 1)) * 12, right: 9 })
+          .padding({ left: 9 + Math.min(3, this.displayLevel(item.node) - 1) * 12, right: 9 })
           .fontFamily('ReaderNotoSansSC').fontSize(11).fontWeight(500)
           .fontColor(readerAppColor(item.node.kind === 'disabled' ? 'TOK_READ_MUTED' : 'TOK_READ_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .accessibilityText(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?
-            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${item.node.depth}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
-            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${item.node.depth}级，打开${item.node.title}`)
+            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${this.displayLevel(item.node)}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
+            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(item.node)}级，打开${item.node.title}`)
           .onClick((): void => {
             const node = item.node;
             if (node === undefined) return;

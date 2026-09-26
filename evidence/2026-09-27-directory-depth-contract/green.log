@@ -1,0 +1,3 @@
+PASS actual SDK tree rows: v2 zero-based depth, v1 compatibility, bounded indent and full accessibility actions
+(node:92763) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -410,7 +410,7 @@ console.log('PH42 tree bookmark, target validation, rank position and debounced 
       const key = keys.rowKey(item);
       let row = mounted.get(key);
       if (row === undefined) {
-        row = createReaderBuilderProbe(listSource, ['row']).owner;
+        row = createReaderBuilderProbe(listSource, ['row', 'displayLevel']).owner;
         Object.assign(row, { rowHeight:40, appThemeScheme:'day', view:{viewId},
           chapterByIndex:new Map(), isCurrentNode:()=>false,
           toggleNode: value=>toggles.push(value), selectTarget() {} });
@@ -560,7 +560,7 @@ console.log('PASS directory diagnostics separate disposed query cancellation fro
   const baseline = listSource.slice(0, markerStart) + listSource.slice(markerEnd);
   function render(source, node, state, enabled, scheme = 'day', navigable = true) {
     const calls = [];
-    const owner = createReaderBuilderProbe(source, ['row']).owner;
+    const owner = createReaderBuilderProbe(source, ['row', 'displayLevel']).owner;
     Object.assign(owner, { appThemeScheme: scheme, view: {viewId:'view'}, rowHeight:40,
       interactionEnabled: true, chapterDownloadEnabled: enabled, chapterByIndex: new Map([[7,
         {index:7,title:'Chapter',downloadState:state,navigable}]]), isCurrentNode:()=>false,

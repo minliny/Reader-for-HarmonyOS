@@ -1,0 +1,3 @@
+PH42 tree viewport continuity, ancestor accessibility and bounded page cache: PASS
+(node:93148) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
