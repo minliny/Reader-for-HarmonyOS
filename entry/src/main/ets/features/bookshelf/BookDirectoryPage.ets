@@ -27,6 +27,7 @@ export struct BookDirectoryPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onIdentityChanged') sourceId: string = '';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
+  @Prop @Watch('onRulesKindChanged') bookKind: string = '';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
@@ -76,7 +77,7 @@ export struct BookDirectoryPage {
   build() {
     Column() {
       PageBackBar({ title: '目录', onBack: (): void => this.onBack() });
-      if (this.sourceId === 'local' && ReaderRuntimeOwner.current().supportsCoreCapability('reading.directory.view.v2')) {
+      if (this.supportsDirectoryRules() && ReaderRuntimeOwner.current().supportsCoreCapability('reading.directory.view.v2')) {
         Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => { this.rulesExpanded = !this.rulesExpanded; });
         if (this.rulesExpanded) { ReaderDirectoryRules({ bookId: this.bookId, onApplied: (): void => { this.rulesRevision += 1; } }); }
       }
@@ -195,6 +196,15 @@ export struct BookDirectoryPage {
 
   private identity(): string { return `${this.sourceId}\u0000${this.bookId}`; }
 
+  private supportsDirectoryRules(): boolean {
+    // Both values are emitted by Core's TXT parsers. Never infer format from
+    // the filename, title or merely being a local book; Core rechecks integrity.
+    const kind = this.bookKind.trim().toLowerCase();
+    return this.sourceId === 'local' && (kind === 'txt' || kind === 'local');
+  }
+
+  private onRulesKindChanged(): void { this.rulesExpanded = false; }
+
   private rowIsCurrent(entry: LocalReadingTocEntry, identity: string): boolean {
     if (!this.mounted || identity !== this.identity() || identity !== this.admittedIdentity ||
       entry.navigable === false || !sameReaderDirectoryData(this.admittedEntries, this.entries)) return false;
@@ -205,6 +215,8 @@ export struct BookDirectoryPage {
   }
 
   private onIdentityChanged(): void {
+    this.rulesExpanded = false;
+    this.rulesRevision = 0;
     // The identity comparison blocks old-row callbacks immediately; publish
     // the next keyed List and projection together after reconciliation.
     this.onEntriesChanged();

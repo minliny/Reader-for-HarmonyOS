@@ -90,7 +90,7 @@ for(const mutate of [h=>{h.requestedBookmarkAnchor.positionScope=undefined;},h=>
 // Actual SDK-generated external Builder: no reader child may be constructed.
 const require=createRequire(import.meta.url);const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
-syntax.componentCollection.customComponents.add('BookDirectoryPage');syntax.propCollection.set('BookDirectoryPage',new Set(['sourceId','bookId','entries','catalogMessage','chapterStartBookmarkCreationEnabled']));
+syntax.componentCollection.customComponents.add('BookDirectoryPage');syntax.propCollection.set('BookDirectoryPage',new Set(['sourceId','bookId','bookKind','entries','catalogMessage','chapterStartBookmarkCreationEnabled']));
 syntax.componentCollection.customComponents.add('LocalBookDetail');syntax.propCollection.set('LocalBookDetail',new Set(['book','toc','sourceSwitchEnabled','readingEnabled','readingBlockedReason','inBookshelf','loadingMessage','removalEnabled','removing']));
 class DirectoryChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>`${name}.${String(key)}`})]));
@@ -125,3 +125,16 @@ for(const sourceId of ['local','remote']){
  assert.match(source,/this\.detailContent\(\);/);
 }
 console.log('PH119 independent catalog routing, retained detail Builder and exact initial bookmark lifecycle: PASS');
+
+{
+ const {owner}=createReaderBuilderProbe(source,['externalDirectory'],{BookDirectoryPage:DirectoryChild,...enums});
+ const host=index('local');host.detailBook.kind='EPUB';Object.assign(owner,host);
+ owner.externalDirectory();const child=[...owner.children.values()][0];
+ assert.equal(child.params.bookKind,'EPUB','detail passes the existing Core format without a new fetch');
+ owner.detailBook={...host.detailBook,bookId:'plain-text.epub',kind:'local'};
+ owner.replayOnly([child.id]);
+ assert.equal(child.params.bookKind,'local','retained child receives TXT metadata when book identity changes');
+ assert.equal(child.params.bookId,'plain-text.epub');
+ owner.detailBook={...owner.detailBook,kind:undefined};owner.replayOnly([child.id]);
+ assert.equal(child.params.bookKind,'','unknown metadata revokes rules eligibility instead of retaining the previous format');
+}

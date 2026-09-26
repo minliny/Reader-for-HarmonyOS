@@ -27,6 +27,7 @@ const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameR
   readerDirectorySignalScrollCommand: bookId => completedScrolls.push(bookId),
   setTimeout: action => { pending.push(action); } };
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
+  'supportsDirectoryRules', 'onRulesKindChanged',
   'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
   'emptyMessage', 'contentFrame', 'bottomInset', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
 const Page = productionMotionMethods(path, methods, deps);
@@ -34,7 +35,7 @@ const entries = Array.from({ length: 3000 }, (_, i) => ({ index: i * 2 + 1, titl
   navigable: i !== 2, downloadState: 'missing', bookmarks: [] }));
 function fixture() {
   const edges = [], selected = [], downloaded = [], deleted = [], created = [];
-  const page = Object.assign(new Page(), { sourceId: 'source-a', bookId: 'book', entries,
+  const page = Object.assign(new Page(), { sourceId: 'source-a', bookId: 'book', bookKind: '', entries,
     catalogMessage: '', searchDraft: '', searchQuery: '', ascending: true, projectedEntries: [],
     admittedEntries: [], admittedIdentity: '', mounted: false, projectionGeneration: 0,
     scrollGeneration: 0, listReady: false, pendingScrollEdge: undefined, viewportWidth: 390, readerWindowMetricsRevision: 1, appThemeScheme: 'day',
@@ -182,3 +183,45 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
   assert.doesNotMatch(source, /Text\('(?:书签|当前章节|收起)'\)/);
 }
 console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: PASS');
+
+// Render the actual page branch with persisted Core format metadata. Filename
+// and title are deliberately misleading: they are not format evidence.
+for (const [sourceId, bookKind, capability, expected] of [
+  ['local', 'EPUB', true, false], ['local', 'MOBI', true, false], ['local', 'KF8', true, false],
+  ['local', 'AZW3', true, false], ['local', 'PDF', true, false], ['local', '', true, false],
+  ['local', 'novel.txt', true, false], ['remote', 'TXT', true, false], ['local', 'TXT', false, false],
+  ['local', 'TXT', true, true], ['local', 'txt', true, true], ['local', 'local', true, true],
+]) {
+  const result = fixture();
+  Object.assign(result.page, { sourceId, bookKind, bookId: 'misleading.txt', rulesExpanded: true, rulesRevision: 0 });
+  result.page.aboutToAppear(); flush();
+  const { owner } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
+    ...deps, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => capability }) },
+    ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
+    ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
+  Object.assign(owner, result.page);
+  for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
+  owner.initialRender();
+  assert.equal([...owner.nodes.values()].some(node => node.createWithLabel === '收起层级规则'), expected,
+    `directory rule control eligibility: ${sourceId}/${bookKind}/${capability}`);
+  assert.equal([...owner.children.values()].some(child => typeof child.params.onApplied === 'function'), expected,
+    'unsupported metadata must not mount a rules editor or issue its initial request');
+}
+
+{
+  const { page } = fixture(); Object.assign(page, { sourceId: 'local', bookKind: 'TXT', rulesExpanded: true, rulesRevision: 3 });
+  page.aboutToAppear(); flush();
+  assert.equal(page.supportsDirectoryRules(), true);
+  page.bookId = 'another-txt'; page.onIdentityChanged();
+  assert.equal(page.rulesExpanded, false, 'switching TXT identities closes the previous book editor immediately');
+  assert.equal(page.rulesRevision, 0, 'the new book does not inherit an applied-rule revision');
+  page.rulesExpanded = true; page.bookKind = 'EPUB'; page.onRulesKindChanged();
+  assert.equal(page.rulesExpanded, false); assert.equal(page.supportsDirectoryRules(), false);
+  page.bookKind = 'local'; page.onRulesKindChanged();
+  assert.equal(page.rulesExpanded, false, 'returning to a TXT format cannot reopen an old draft');
+  assert.equal(page.supportsDirectoryRules(), true);
+  page.rulesExpanded = true; page.sourceId = 'remote'; page.onIdentityChanged();
+  assert.equal(page.rulesExpanded, false); assert.equal(page.supportsDirectoryRules(), false);
+  page.aboutToDisappear(); flush();
+}
+console.log('PASS actual directory rules entry: Core TXT metadata, parent updates and identity/format revocation');

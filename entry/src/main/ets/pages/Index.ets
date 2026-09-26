@@ -1272,6 +1272,7 @@ struct Index {
       BookDirectoryPage({
         sourceId: this.detailBook.sourceId,
         bookId: this.detailBook.bookId,
+        bookKind: this.detailBook.kind ?? '',
         entries: this.detailToc,
         catalogMessage: this.detailLoadingMessage,
         chapterStartBookmarkCreationEnabled: true,
