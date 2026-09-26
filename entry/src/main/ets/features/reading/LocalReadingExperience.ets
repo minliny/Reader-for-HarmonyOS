@@ -2,7 +2,7 @@ import type { JsonObject } from '@reader/core-harmony';
 import { ReaderNativeTextWindow, readerNativeParagraphHeight } from './ReaderNativeTextWindow';
 import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe, readerNativeParagraphKey } from './ReaderNativeParagraph';
 import { ReaderNativeTextMeasurement, type ReaderNativeTextStyle } from './ReaderNativeTextMeasurement';
-import { readPreparedReadingEntrySnapshot, type ReadingEntryNavigation, type ReadingEntryNavigationItem } from './ReadingEntrySnapshot';
+import { readPreparedReadingEntrySnapshot, type ReadingEntryNavigation, type ReadingEntryNavigationItem, type ReadingEntrySnapshot as CoreReadingEntrySnapshot } from './ReadingEntrySnapshot';
 import { ReaderTtsPageFollow, readerTtsFollowActive, type ReaderTtsFollowScope,
   type ReaderTtsFollowLease, type ReaderTtsFollowTarget, type ReaderPageTurnOrigin } from './ReaderTtsPageFollow';
 import type { RemoteReadingPositionContext, RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -1470,6 +1470,7 @@ export struct ReadingExperience {
   @State private tocEntries: LocalReadingTocEntry[] = [];
   private remoteSessionObserverDispose: (() => void) | undefined = undefined;
   private entryCatalogNavigation: ReadingEntryNavigation | undefined = undefined;
+  private resumeOnlyChapterIndex: number | undefined = undefined;
   private entryCatalogPending: boolean = false;
   private readingReadyPage: PhysicalReadingPage | undefined = undefined;
   private readingReadySelection: number = -1;
@@ -1646,6 +1647,7 @@ export struct ReadingExperience {
     // The reader owns acquisition as well as the visible failure boundary.
     // A shelf/search identity can mount before its catalog is available.
     this.sessionGateway = undefined;
+    this.resumeOnlyChapterIndex = undefined;
     this.entryCatalogNavigation = undefined;
     this.entryCatalogPending = false;
     this.readingReadyPage = undefined;
@@ -1751,7 +1753,7 @@ export struct ReadingExperience {
         bookmark?.chapterIndex ?? requested ?? position?.chapterIndex, isCurrent,
         readingParagraphBoundaryMode(this.sourceId, this.bookKind), context);
       if (snapshot === undefined || !snapshot.isCurrent() || !isCurrent() ||
-        snapshot.navigation?.current.navigable === false || ReaderWindowCoordinator.metrics().revision !== metrics.revision)
+        ReaderWindowCoordinator.metrics().revision !== metrics.revision)
         return 'unavailable';
       const chapter = snapshot.chapter;
       const chapterMap = readingChapterLayoutMap(chapter);
@@ -1760,9 +1762,10 @@ export struct ReadingExperience {
       // text. Continuous layout still needs its complete window geometry.
       if (chapterMap.scalarCount() === 0 || (this.readerSettingsSnapshot.navigationMode === 'continuous' &&
         chapter.images.some((image: ReadingSessionImage): boolean => !hasKnownReadingImageGeometry(image)))) return 'unavailable';
+      if (!this.admitEntryResume(snapshot)) return 'unavailable';
       const navigation = snapshot.navigation;
       const entries: LocalReadingTocEntry[] = navigation === undefined ?
-        [{ index: chapter.chapterIndex, title: chapter.chapterTitle, downloadState: 'unknown', navigable: true }] :
+        [{ index: chapter.chapterIndex, title: chapter.chapterTitle, downloadState: 'unknown', navigable: snapshot.resumeOnly !== true }] :
         [...navigation.before, navigation.current, ...navigation.after];
       gateway.admitPreparedEntry(snapshot);
       this.sessionGateway = gateway;
@@ -1775,11 +1778,11 @@ export struct ReadingExperience {
       this.entryCatalogNavigation = navigation;
       this.entryCatalogPending = true;
       this.admitTocEntries(entries);
-      this.chapterWindow.configure(this.sourceId, this.bookId, entries.map((entry: LocalReadingTocEntry): number => entry.index));
+      this.configureReadingChapterWindow(entries);
       this.restoredProgress = bookmark !== undefined || requested !== undefined ? undefined : pending ?? snapshot.progress;
       if (bookmark !== undefined) this.consumedBookmarkAnchorRequestId = bookmark.requestId;
       this.admitChapterContentVersion(chapter.chapterIndex, chapter.contentVersion);
-      this.chapterWindow.setCurrent(chapter);
+      this.setCurrentReadingChapter(chapter);
       this.retainCurrentChapterWindow();
       this.chapter = chapter;
       this.rebuildChapterImageIndexes(chapter);
@@ -1848,15 +1851,14 @@ export struct ReadingExperience {
     this.entryCatalogNavigation = snapshot.navigation;
     this.entryCatalogPending = snapshot.catalogPending;
     this.admitTocEntries(snapshot.toc);
-    this.chapterWindow.configure(this.sourceId, this.bookId,
-      this.readingTocEntries().map((entry: LocalReadingTocEntry): number => entry.index));
+    this.configureReadingChapterWindow();
     this.restoreMaterializedChapterContext(snapshot.context, true);
     // The handoff stays constant-size. Neighbour preparation expands a new
     // run, never the retained snapshot, and always starts with the real page.
     this.paginationDraft = new ReadingPaginationPrefix(retainedKey, observation);
     this.measurementRequestedAnchorScalar = observation.requestScalar;
     this.materializedChapterSelectionToken = selectionToken;
-    this.chapterWindow.setCurrent(snapshot.context.chapter);
+    this.setCurrentReadingChapter(snapshot.context.chapter);
     this.rebuildChapterImageIndexes(snapshot.context.chapter);
     this.publishMeasuredFirstPage(snapshot.page, snapshot.context.chapter, selectionToken);
     this.desiredChapterOffset = snapshot.page.startScalar;
@@ -1886,7 +1888,7 @@ export struct ReadingExperience {
     const owner = ReaderRuntimeOwner.current();
     const handoff = readingEntryHandoff(owner);
     handoff.clear();
-    if (!owner.optionalReadingEntryMemoryEnabled()) return;
+    if (!owner.optionalReadingEntryMemoryEnabled() || this.resumeOnlyChapterIndex !== undefined) return;
     const page = this.visiblePage;
     const chapter = this.chapter;
     const progress = this.lastCommittedProgress;
@@ -3631,11 +3633,7 @@ export struct ReadingExperience {
       this.admitTocEntries(toc.entries);
       this.onDirectoryProjectionChanged(toc.entries);
       if (!isCurrent()) return;
-      this.chapterWindow.configure(
-        this.sourceId,
-        this.bookId,
-        this.readingTocEntries().map((entry: LocalReadingTocEntry): number => entry.index),
-      );
+      this.configureReadingChapterWindow();
       const requested = this.normalizedRequestedChapter();
       const bookmark = this.requestedBookmarkAnchor;
       let bookmarkContext: RemoteReadingPositionContext | undefined = undefined;
@@ -3691,7 +3689,7 @@ export struct ReadingExperience {
     const isCurrent = (): boolean => this.isSelectionActive(lifecycleToken, selectionToken);
     const requested = this.normalizedRequestedChapter();
     const bookmark = this.requestedBookmarkAnchor;
-    const pending = gateway.pendingPresentedProgress?.();
+    let pending = gateway.pendingPresentedProgress?.();
     const pendingPosition = pending?.kind === 'restored' ? pending.progress : undefined;
     let context: RemoteReadingPositionContext | undefined;
     if (bookmark !== undefined) {
@@ -3711,25 +3709,54 @@ export struct ReadingExperience {
       bookmark === undefined && requested === undefined && pending === undefined;
     this.traceInitialReadingPhase?.(usePrepared ? 'entry-prepared' : 'entry-core-read', lifecycleToken);
     if (!usePrepared) this.preparedReadingEntry = undefined;
-    const snapshot = usePrepared ? prepared : await gateway.loadEntrySnapshot(target, isCurrent, context,
+    let snapshot = usePrepared ? prepared : await gateway.loadEntrySnapshot(target, isCurrent, context,
       readingParagraphBoundaryMode(this.sourceId, this.bookKind));
     if (!isCurrent()) return true;
-    if (snapshot === undefined || !snapshot.isCurrent() || snapshot.navigation?.current.navigable === false) return false;
+    if (snapshot === undefined && requested === undefined && bookmark === undefined &&
+      this.sourceSwitchTransactionId === undefined && !gateway.hasPendingSourceSwitch() &&
+      pending?.presentationPending === true && pendingPosition?.bodyVersion !== undefined &&
+      pendingPosition.processingVersion !== undefined && gateway.awaitPresentedProgressPersistence !== undefined) {
+      // A short reopen can still own a dispatched same-chapter position. That
+      // intent is not permission to select a group: settle its existing lane,
+      // then ask Core to prove the durable current body without a new target.
+      if (JSON.stringify(gateway.pendingPresentedProgress?.()) !== JSON.stringify(pending)) return false;
+      const confirmed = await gateway.awaitPresentedProgressPersistence() ?? pendingPosition;
+      if (!isCurrent()) return true;
+      if (gateway.pendingPresentedProgress?.() !== undefined || confirmed.chapterIndex !== pendingPosition.chapterIndex ||
+        confirmed.chapterOffset !== pendingPosition.chapterOffset || confirmed.bodyVersion !== pendingPosition.bodyVersion ||
+        confirmed.processingVersion !== pendingPosition.processingVersion) return false;
+      snapshot = await gateway.loadEntrySnapshot(undefined, isCurrent, undefined,
+        readingParagraphBoundaryMode(this.sourceId, this.bookKind));
+      if (!isCurrent()) return true;
+      if (snapshot?.resumeOnly !== true || snapshot.progress.kind !== 'restored' ||
+        snapshot.chapter.chapterIndex !== confirmed.chapterIndex) return false;
+      const restored = snapshot.progress.progress, migration = snapshot.chapter.positionMigration;
+      const samePosition = restored.bodyVersion === confirmed.bodyVersion && restored.processingVersion === confirmed.processingVersion &&
+        restored.chapterOffset === confirmed.chapterOffset;
+      const correctedPosition = migration?.status === 'committed' && migration.previousBodyVersion === confirmed.bodyVersion &&
+        migration.previousProcessingVersion === confirmed.processingVersion && migration.progress?.chapterIndex === confirmed.chapterIndex &&
+        migration.progress.bodyVersion === restored.bodyVersion && migration.progress.processingVersion === restored.processingVersion &&
+        migration.progress.chapterOffset === restored.chapterOffset;
+      if (!samePosition && !correctedPosition) return false;
+      pending = undefined;
+      context = undefined;
+    }
+    if (snapshot === undefined || !snapshot.isCurrent()) return false;
     // A newer unsaved visible position arriving during the read still wins.
     const latest = gateway.pendingPresentedProgress?.();
     if (JSON.stringify(latest) !== JSON.stringify(pending)) return false;
+    if (!this.admitEntryResume(snapshot)) return false;
     this.entryCatalogNavigation = snapshot.navigation;
     this.entryCatalogPending = true;
     const navigation = snapshot.navigation;
     // Core already validated this document and its position. Catalog absence
     // is not evidence that the independently available body is unreadable.
     const entries: LocalReadingTocEntry[] = navigation === undefined ?
-      [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle, downloadState: 'unknown', navigable: true }] :
+      [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle, downloadState: 'unknown', navigable: snapshot.resumeOnly !== true }] :
       [...navigation.before, navigation.current, ...navigation.after];
     this.admitTocEntries(entries);
     // This is explicitly a window; never publish it as the parent's full TOC.
-    this.chapterWindow.configure(this.sourceId, this.bookId,
-      this.readingTocEntries().map((entry: LocalReadingTocEntry): number => entry.index));
+    this.configureReadingChapterWindow();
     this.restoredProgress = bookmark !== undefined || requested !== undefined ? undefined : pending ?? snapshot.progress;
     if (bookmark !== undefined) this.consumedBookmarkAnchorRequestId = bookmark.requestId;
     this.traceInitialReadingPhase?.('entry-snapshot', lifecycleToken);
@@ -3793,7 +3820,7 @@ export struct ReadingExperience {
       this.chapter = expanded;
       this.chapterLayoutMap = readingChapterLayoutMap(expanded);
       this.materializedContentVersion = expanded.contentVersion;
-      this.chapterWindow.setCurrent(expanded);
+      this.setCurrentReadingChapter(expanded);
       this.rebuildChapterImageIndexes(expanded);
       this.paragraphRanges = preparedRanges;
       this.retainCurrentChapterWindow();
@@ -3834,14 +3861,15 @@ export struct ReadingExperience {
     const operation = this.activeGateway().loadToc(bookId, isCurrent).then((toc: LocalReadingToc): void => {
       if (!isCurrent()) return;
       const current = this.pageTurnPreparation?.origin.chapter ?? this.chapter;
-      if (current === undefined || !toc.entries.some((entry: LocalReadingTocEntry): boolean => entry.index === current.chapterIndex && entry.navigable !== false))
+      if (current === undefined || !toc.entries.some((entry: LocalReadingTocEntry): boolean => entry.index === current.chapterIndex &&
+        (entry.navigable !== false || entry.index === this.resumeOnlyChapterIndex)))
         throw new Error('READING_CATALOG_CURRENT_CHAPTER_MISSING');
       const retained = this.chapterWindow.retainedChapterIndexes().map((index: number): ReadingSessionChapter | undefined => this.chapterWindow.get(index));
       this.entryCatalogNavigation = undefined;
       this.entryCatalogPending = false;
       this.admitTocEntries(toc.entries);
-      this.chapterWindow.configure(sourceId, bookId, this.readingTocEntries().map((entry: LocalReadingTocEntry): number => entry.index));
-      this.chapterWindow.setCurrent(current);
+      this.configureReadingChapterWindow();
+      this.setCurrentReadingChapter(current);
       for (const chapter of retained) {
         if (chapter !== undefined && chapter.chapterIndex !== current.chapterIndex) this.chapterWindow.admitNeighbour(chapter);
       }
@@ -4131,7 +4159,7 @@ export struct ReadingExperience {
       }
       this.preparedReadingEntry = undefined;
       this.admitChapterContentVersion(chapter.chapterIndex, chapter.contentVersion);
-      this.chapterWindow.setCurrent(chapter);
+      this.setCurrentReadingChapter(chapter);
       this.retainCurrentChapterWindow();
       this.chapter = chapter;
       this.rebuildChapterImageIndexes(chapter);
@@ -5269,7 +5297,7 @@ export struct ReadingExperience {
     const lane = this.adjacentMeasurementContext;
     if (lane === undefined) {
       this.chapter = cropped; this.chapterLayoutMap = map; this.paragraphRanges = retained;
-      this.chapterWindow.setCurrent(cropped); this.rebuildChapterImageIndexes(cropped);
+      this.setCurrentReadingChapter(cropped); this.rebuildChapterImageIndexes(cropped);
     } else {
       lane.chapter = cropped; lane.layoutMap = map; lane.paragraphRanges = retained;
     }
@@ -5304,7 +5332,7 @@ export struct ReadingExperience {
         map.scalarForUtf16(item.startUtf16), map.scalarForUtf16(item.endUtf16)));
       if (lane === undefined) {
         this.chapter = expanded; this.chapterLayoutMap = map; this.paragraphRanges = paragraphs;
-        this.chapterWindow.setCurrent(expanded); this.rebuildChapterImageIndexes(expanded);
+        this.setCurrentReadingChapter(expanded); this.rebuildChapterImageIndexes(expanded);
       } else {
         lane.chapter = expanded; lane.layoutMap = map; lane.paragraphRanges = paragraphs;
       }
@@ -5450,7 +5478,7 @@ export struct ReadingExperience {
     const current = this.matchingImageChapter(this.chapter, pending.chapter);
     if (current && this.chapter !== undefined) {
       this.rebuildChapterImageIndexes(this.chapter);
-      this.chapterWindow.setCurrent(this.chapter);
+      this.setCurrentReadingChapter(this.chapter);
     } else if (owners.length > 0) this.chapterWindow.admitNeighbour(owners[0]);
     let changed = false;
     if (current) {
@@ -5519,7 +5547,7 @@ export struct ReadingExperience {
       this.chapterImageByStartScalar.set(resolved.startScalar, resolved);
       this.chapterImagePositionByKey.delete(key);
       this.chapterImagePositionByKey.set(this.readingImageKey(resolved), index);
-      this.chapterWindow.setCurrent(chapter);
+      this.setCurrentReadingChapter(chapter);
     } else {
       this.chapterWindow.admitNeighbour(chapter);
     }
@@ -11558,7 +11586,7 @@ export struct ReadingExperience {
     this.measurementRequestedAnchorScalar = context.measurementRequestedAnchorScalar;
     this.materializedChapterSelectionToken = this.chapterSelectionToken;
     if (admitWindowCurrent) {
-      this.chapterWindow.setCurrent(context.chapter);
+      this.setCurrentReadingChapter(context.chapter);
     } else {
       this.chapterWindow.admitNeighbour(context.chapter);
     }
@@ -13626,6 +13654,37 @@ export struct ReadingExperience {
     this.armFirstPageReadyDeadline(lifecycleToken, selectionToken);
     void this.openChapter(chapterIndex, false, lifecycleToken, selectionToken, chapterOffset);
     return true;
+  }
+
+  private admitEntryResume(snapshot: CoreReadingEntrySnapshot | ReadingEntrySnapshot): boolean {
+    if (snapshot.resumeOnly === true) {
+      if (this.normalizedRequestedChapter() !== undefined || this.requestedBookmarkAnchor !== undefined ||
+        this.sourceSwitchTransactionId !== undefined || !snapshot.isCurrent() ||
+        snapshot.chapter.sourceId !== this.sourceId || snapshot.chapter.bookId !== this.bookId ||
+        snapshot.progress.kind !== 'restored' || snapshot.progress.progress.chapterIndex !== snapshot.chapter.chapterIndex)
+        return false;
+      this.resumeOnlyChapterIndex = snapshot.chapter.chapterIndex;
+    } else {
+      if (snapshot.navigation?.current.navigable === false) return false;
+      this.resumeOnlyChapterIndex = undefined;
+    }
+    return true;
+  }
+
+  private configureReadingChapterWindow(entries: LocalReadingTocEntry[] = this.tocEntries): void {
+    // The current historical body may be retained without becoming a directory,
+    // automatic continuation, or progress-denominator target.
+    const order = entries.filter((entry: LocalReadingTocEntry): boolean =>
+      entry.navigable !== false || entry.index === this.resumeOnlyChapterIndex).map((entry: LocalReadingTocEntry): number => entry.index);
+    this.chapterWindow.configure(this.sourceId, this.bookId, order, this.resumeOnlyChapterIndex);
+  }
+
+  private setCurrentReadingChapter(chapter: ReadingSessionChapter): void {
+    this.chapterWindow.setCurrent(chapter);
+    if (this.resumeOnlyChapterIndex !== undefined && chapter.chapterIndex !== this.resumeOnlyChapterIndex) {
+      this.resumeOnlyChapterIndex = undefined;
+      this.activeGateway().clearEntryResume();
+    }
   }
 
   private readingTocEntries(): LocalReadingTocEntry[] {

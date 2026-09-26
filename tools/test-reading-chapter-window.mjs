@@ -70,3 +70,23 @@ assert.equal(bounded.admitNeighbour({...chapter(10),content:'x'.repeat(1000)}), 
 assert.ok(bounded.get(30), 'optional budget never evicts the actual page');
 
 console.log('reading chapter window: PASS');
+{
+ const restored=new ReadingChapterWindow();
+ restored.configure('local','book-1',[10,20,40,70],20);
+ restored.setCurrent(chapter(20));
+ assert.equal(restored.contains(20),false,'historical current is never a selectable chapter');
+ assert.equal(restored.position(20),-1,'historical group does not contribute to readable progress');
+ assert.equal(restored.position(40),1);
+ assert.equal(restored.adjacentChapterIndex(20,1),40);
+ assert.equal(restored.adjacentChapterIndex(20,-1),10);
+ assert.equal(restored.adjacentChapterIndex(10,1),40,'ordinary continuation skips the historical-only row');
+ assert.equal(restored.adjacentChapterIndex(70,-2),10);
+ assert.equal(restored.admitNeighbour(chapter(20)),false);
+ restored.setCurrent(chapter(40));
+ assert.equal(restored.get(20),undefined,'leaving revokes and releases historical-only body');
+ assert.throws(()=>restored.setCurrent(chapter(20)),/TOC order/);
+ assert.equal(restored.adjacentChapterIndex(40,-1),10);
+ const only=new ReadingChapterWindow();only.configure('local','book-1',[20],20);only.setCurrent(chapter(20));
+ assert.equal(only.adjacentChapterIndex(20,1),undefined);
+ console.log('PASS current-only history retained, excluded from selectable order and revoked after leaving');
+}

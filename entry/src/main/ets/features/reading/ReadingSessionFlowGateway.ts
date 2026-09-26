@@ -150,6 +150,7 @@ export class ReadingSessionFlowGateway {
   private preparedChapterConsumed: boolean = false;
   private progressOwner: ReadingSessionProgressOwner;
   private retainedEntrySnapshot: ReadingEntrySnapshot | undefined;
+  private resumeOnlyEntryScope: RemoteReadingPositionScope | undefined;
 
   constructor(
     sourceId: string,
@@ -222,9 +223,12 @@ export class ReadingSessionFlowGateway {
       // preceding whole pending-list RPC is needed for this ordinary entry.
       this.pendingSourceSwitchResolver = undefined;
       this.retainedEntrySnapshot = snapshot;
+      if (snapshot.resumeOnly === true) this.resumeOnlyEntryScope = {
+        sourceId: this.sourceId, bookId: this.bookId, chapterIndex: snapshot.chapter.chapterIndex,
+        bodyVersion: snapshot.chapter.bodyVersion as string, processingVersion: snapshot.chapter.processingVersion as string };
       const navigation = snapshot.navigation;
       this.configureDocuments(navigation === undefined ?
-        [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle, downloadState: 'unknown', navigable: true }] :
+        [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle, downloadState: 'unknown', navigable: snapshot.resumeOnly !== true }] :
         [...navigation.before, navigation.current, ...navigation.after]);
       readingSessionDocuments(this.runtimeOwner).admit(snapshot.chapter, true);
     }
@@ -263,8 +267,10 @@ export class ReadingSessionFlowGateway {
     const nextContext: RemoteReadingPositionContext | undefined = positionContext === undefined ? undefined : {
       bodyVersion, processingVersion, ...(captured.directoryTargetProof === undefined ? {} : { directoryTargetProof: captured.directoryTargetProof }), anchors: migration?.anchors.map((anchor) => ({ id: anchor.id, offset: anchor.offset })) ?? captured.anchors };
     const fresh = await readReadingEntrySnapshot(this.runtimeOwner, this.sourceId, this.bookId,
-      chapter.chapterIndex, isCurrent, nextContext, windowScalarLimit);
+      snapshot.resumeOnly === true ? undefined : chapter.chapterIndex, isCurrent,
+      snapshot.resumeOnly === true ? undefined : nextContext, windowScalarLimit);
     if (fresh === undefined || fresh.chapter.sourceCorrectionRequired === true ||
+      fresh.chapter.chapterIndex !== chapter.chapterIndex || (snapshot.resumeOnly === true && fresh.resumeOnly !== true) ||
       fresh.chapter.bodyVersion !== bodyVersion || fresh.chapter.processingVersion !== processingVersion)
       throw new Error('source correction publication changed before display');
     return { ...fresh, chapter: { ...fresh.chapter, positionMigration: migration } };
@@ -302,15 +308,23 @@ export class ReadingSessionFlowGateway {
     return this.runtimeOwner.captureReadingContentValidity?.(this.sourceId, this.bookId) ?? ((): boolean => true);
   }
 
+  /** Leaving the historical current body revokes its non-selectable receipt. */
+  clearEntryResume(): void {
+    this.resumeOnlyEntryScope = undefined;
+  }
+
   /** The caller has synchronously validated the dedicated Core read receipt.
    * No catalog, source-switch query or acquisition is dispatched here. */
   admitPreparedEntry(snapshot: ReadingEntrySnapshot): void {
     if (!snapshot.isCurrent() || snapshot.chapter.sourceId !== this.sourceId || snapshot.chapter.bookId !== this.bookId ||
       this.hasPendingSourceSwitch()) throw new Error('READING_PREPARED_ENTRY_IDENTITY_MISMATCH');
     this.retainedEntrySnapshot = snapshot;
+    if (snapshot.resumeOnly === true) this.resumeOnlyEntryScope = {
+      sourceId: this.sourceId, bookId: this.bookId, chapterIndex: snapshot.chapter.chapterIndex,
+      bodyVersion: snapshot.chapter.bodyVersion as string, processingVersion: snapshot.chapter.processingVersion as string };
     const navigation = snapshot.navigation;
     this.configureDocuments(navigation === undefined ?
-      [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle, downloadState: 'unknown', navigable: true }] :
+      [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle, downloadState: 'unknown', navigable: snapshot.resumeOnly !== true }] :
       [...navigation.before, navigation.current, ...navigation.after]);
     readingSessionDocuments(this.runtimeOwner).admit(snapshot.chapter, true);
   }
@@ -326,6 +340,11 @@ export class ReadingSessionFlowGateway {
     if (chapter.documentRange === undefined) return chapter;
     if (chapter.bodyVersion === undefined || chapter.processingVersion === undefined)
       throw new Error('reading entry expansion scope is missing');
+    const resumeScope = this.resumeOnlyEntryScope;
+    const resume = resumeScope?.chapterIndex === chapter.chapterIndex &&
+      resumeScope.bodyVersion === chapter.bodyVersion && resumeScope.processingVersion === chapter.processingVersion;
+    const current = (): boolean => isCurrent() && !this.hasPendingSourceSwitch() &&
+      (!resume || this.resumeOnlyEntryScope === resumeScope);
     const runtime = this.runtimeOwner, coordinator = runtime.bookAcquisitions?.();
     const projection: ReadingGatewayRuntime = {
       supportsCoreCapability: (capability: string): boolean => runtime.supportsCoreCapability?.(capability) === true,
@@ -333,16 +352,18 @@ export class ReadingSessionFlowGateway {
         runtime.captureReadingContentValidity?.(source, book) ?? ((): boolean => true),
       request: (method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> =>
         coordinator === undefined ? runtime.request(method, params, options) :
-          coordinator.request(method, params, { ...options, canContinue: isCurrent }, priority),
+          coordinator.request(method, params, { ...options, canContinue: current }, priority),
     };
     const snapshot = await readReadingEntrySnapshot(projection, this.sourceId, this.bookId,
-      chapter.chapterIndex, isCurrent, { bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
+      resume ? undefined : chapter.chapterIndex, current, resume ? undefined : {
+        bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
         anchors: [{ id: 'entry', offset: chapter.documentRange.startScalar }] });
-    if (snapshot === undefined || !snapshot.isCurrent() || !isCurrent()) throw new Error('reading entry expansion unavailable');
-    if (snapshot.chapter.bodyVersion !== chapter.bodyVersion || snapshot.chapter.processingVersion !== chapter.processingVersion)
+    if (snapshot === undefined || !snapshot.isCurrent() || !current()) throw new Error('reading entry expansion unavailable');
+    if ((resume && snapshot.resumeOnly !== true) || snapshot.chapter.chapterIndex !== chapter.chapterIndex ||
+      snapshot.chapter.bodyVersion !== chapter.bodyVersion || snapshot.chapter.processingVersion !== chapter.processingVersion)
       throw new Error('reading entry expansion scope changed');
     const full = snapshot.chapter;
-    const map = await prepareReadingChapterLayoutMap(full, (): boolean => snapshot.isCurrent() && isCurrent());
+    const map = await prepareReadingChapterLayoutMap(full, (): boolean => snapshot.isCurrent() && current());
     const range = chapter.documentRange;
     if (map.scalarCount() !== range.totalScalars ||
       map.sliceByScalar(range.startScalar, range.endScalar) !== chapter.content)
@@ -420,6 +441,10 @@ export class ReadingSessionFlowGateway {
   }
 
   private configureDocuments(entries: LocalReadingTocEntry[]): void {
+    if (!entries.some((entry): boolean => entry.navigable !== false)) {
+      readingSessionDocuments(this.runtimeOwner).clear();
+      return;
+    }
     const valid = this.runtimeOwner.captureReadingContentValidity?.(this.sourceId, this.bookId);
     if (valid === undefined || this.hasPendingSourceSwitch()) return;
     readingSessionDocuments(this.runtimeOwner).configure(this.sourceId, this.bookId,

@@ -13,7 +13,7 @@ const Owner=productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets
  {BookAcquisitionCoordinator,ReadingEntryPreparation,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,
   httpResponseFailureSummary:()=>undefined,hilog:{warn(){}},LOG_DOMAIN:0});
 const sourceId='https://m.popofree.com#🎃',bookId='b';
-function fixture({damaged=true,preserved=false}={}) {
+function fixture({damaged=true,preserved=false,resumeOnly=false}={}) {
  const calls=[];let corrected=!damaged,live=true;
  const body=()=>{
   const content=corrected?'甲😀"乙"末尾':'甲😀quot;乙quot;末尾';const length=[...content].length;
@@ -23,15 +23,18 @@ function fixture({damaged=true,preserved=false}={}) {
    positionScope:{sourceId,bookId,chapterIndex:833,bodyVersion,processingVersion},
    progress:{sourceId,bookId,chapterIndex:833,chapterOffset:corrected?3:7,chapterProgress:0.4,updatedAt:20,bodyVersion,processingVersion},
    progressRevision:'p',baseUrl:'https://m.popofree.com/novel/100749/34583368.html',sourceCorrectionRequired:!corrected,
-   contentRefreshRequired:false,navigation:{revision:'r',chapterCount:1,readableChapterCount:1,
-    current:{index:833,position:0,readablePosition:0,title:'章',navigable:true},before:[],after:[]}};
+   contentRefreshRequired:false,...(resumeOnly?{resumeOnly:true}:{}),navigation:{revision:'r',chapterCount:1,readableChapterCount:resumeOnly?0:1,
+    current:{index:833,position:0,...(resumeOnly?{}:{readablePosition:0}),title:'章',navigable:!resumeOnly},before:[],after:[]}};
  };
  const owner=new Owner();
  Object.assign(owner,{state:'ready',optionalEntryMemoryEnabled:true,start:async()=>{},wakeReadingPreparations(){},
   supportsCoreCapability:capability=>['reading.entry.snapshot.v1','reading.entry.firstFrame.v1'].includes(capability),
   readPreparedEntry:()=>body(),runtime:{request:async(method,params,options)=>{
    calls.push({method,params});assert.equal(options.shouldCancel?.(),false,'mutation must not cancel its own foreground intent');
-   if(method==='reading.entry.snapshot')return{data:body()};
+   if(method==='reading.entry.snapshot'){
+    if(resumeOnly)assert.equal(params.chapterIndex,undefined,'historical restore and corrected publication require implicit saved-current proof');
+    return{data:body()};
+   }
    assert.equal(method,'chapter.content');assert.equal(params.upgradeCachedContent,true);
    assert.equal(params.chapterUrl,undefined);assert.equal(params.chapterRequest,undefined);assert.equal(params.forceRefresh,undefined);
    const captured=params.positionContext;assert.equal(captured.bodyVersion,'old-body');
@@ -151,3 +154,30 @@ for(const lostReceipt of [false,true]) {
  assert.equal(saved.chapterOffset,3);assert.equal(writes,2);f.close();
 }
 console.log('PASS foreground correction: real Owner/Coordinator/Preparation fencing, no self-cancel, old captures retired, bookmark handoff, normal cache, background and neighbour refusal, preserved-result failure, dispatched/unknown progress serialization and new-scope persistence');
+
+for(const change of ['none','proof','scope','current']){
+ const f=fixture({resumeOnly:true});
+ const original=f.owner.runtime.request;
+ let snapshots=0;
+ f.owner.runtime.request=async(...args)=>{
+  const result=await original(...args);
+  if(args[0]==='reading.entry.snapshot'&&++snapshots===2){
+   if(change==='proof'){delete result.data.resumeOnly;delete result.data.navigation;}
+   if(change==='scope'){result.data.positionScope.bodyVersion='other';result.data.progress.bodyVersion='other';}
+   if(change==='current'){result.data.chapterIndex=834;result.data.positionScope.chapterIndex=834;
+    result.data.progress.chapterIndex=834;result.data.navigation.current.index=834;}
+  }
+  return result;
+ };
+ const gateway=await ReadingSessionFlowGateway.open(f.intent,f.owner);
+ if(change==='none'){
+  const result=await gateway.loadEntrySnapshot(undefined,()=>true);
+  assert.equal(result.resumeOnly,true);assert.equal(result.chapter.chapterIndex,833);
+  assert.equal(result.chapter.bodyVersion,'new-body');assert.equal(result.chapter.processingVersion,'new-processing');
+  assert.equal(result.progress.progress.chapterOffset,3);
+  assert.equal(result.chapter.sourceCorrectionRequired,false);assert.equal(result.navigation.current.navigable,false);
+  assert.equal(f.calls.filter(c=>c.method==='chapter.content').length,1);
+ }else await assert.rejects(gateway.loadEntrySnapshot(undefined,()=>true),/source correction publication/);
+ f.close();
+}
+console.log('PASS historical group cached correction keeps explicit upgrade scope and revalidates implicit saved-current proof/new body versions');

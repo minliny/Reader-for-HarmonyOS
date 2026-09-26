@@ -46,6 +46,23 @@ function fixture(){
 console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisite, one request + retained body, strict identity/scope/navigation, old offline body and cancellation PASS');
 {
  const f=fixture();
+ const resumed={...f.body,resumeOnly:true,navigation:{...f.body.navigation,
+  current:{...f.body.navigation.current,navigable:false,readablePosition:null}}};
+ f.set(resumed);
+ const snapshot=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
+ assert.equal(snapshot.resumeOnly,true,'Core-proved historical current chapter keeps its limited restore permission');
+ assert.equal(snapshot.navigation.current.navigable,false,'resume permission never makes a group selectable');
+ for(const changed of [{progress:null},{progress:{...f.body.progress,chapterIndex:50}},
+  {navigation:f.body.navigation},{resumeOnly:'true'}]){
+  f.set({...resumed,...changed});
+  await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/resume/);
+ }
+ f.set({kind:'missing',sourceId:'s',bookId:'b',reason:'directoryNodeNotReadable'});
+ assert.equal(await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),undefined);
+ console.log('PASS explicit historical-only entry proof, durable matching progress, group isolation and non-readable miss');
+}
+{
+ const f=fixture();
  const old=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
  f.set({...f.body,imagePresentationVersion:'chapter-layout-1'});
  const upgraded=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
