@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "book": {
+    "name": "青春",
+    "author": "韩寒",
+    "url": "https://m.qidian.com/book/1001458054",
+    "tocUrl": "https://m.qidian.com/book/1001458054/catalog/"
+  },
+  "recordedAt": "2026-09-26T08:08:03Z",
+  "originalFailure": {
+    "rows": 53,
+    "readable": 0,
+    "volumeSelectorLiteralMatches": 0,
+    "rootCauses": [
+      "outdated CSS module suffix in bundled chapterList",
+      "bare textNodes/ownText parsed as selectors instead of extraction",
+      "empty scalar JS result became a truthy Elements object",
+      "CSS textNodes incorrectly included descendant text"
+    ]
+  },
+  "rawTocEvidence": {
+    "status": 200,
+    "bytes": 63311,
+    "sha256": "7bba3b453e610b3a12196a73ad52ad2160e82fa031702ab9f06d657e56f03faa",
+    "retainedInTemporaryRecording": "/private/tmp/ph42-qingchun-record/unknown.json"
+  },
+  "fixedProductionResult": {
+    "rows": 54,
+    "groups": 1,
+    "readableTargets": 53,
+    "groupTitle": "正文卷",
+    "groupIndex": 0,
+    "groupUrl": "",
+    "firstLeafTitle": "第1章 青春",
+    "firstLeafUrl": "https://m.qidian.com/chapter/1001458054/234651659/",
+    "allOriginalChapterTitlesAndUrlsPreserved": true,
+    "depths": [
+      0,
+      1
+    ]
+  },
+  "correctedLiveLevels": {
+    "L1-import": {
+      "status": "pass"
+    },
+    "L2-search": {
+      "status": "pass"
+    },
+    "L3-detail": {
+      "status": "pass"
+    },
+    "L4-toc": {
+      "status": "pass"
+    },
+    "L5-content": {
+      "status": "pass"
+    }
+  },
+  "upstream": {
+    "repo": "LegadoTeam/legado",
+    "commit": "1385a2c002566516d37d0472d0f009882de96697",
+    "path": "app/src/main/java/io/legado/app/model/analyzeRule/AnalyzeByJSoup.kt",
+    "lines": "218-229",
+    "downloadSha256": "9889421f76a8fda62b0b874e70d0535f2b781b59a9c84fa797af695a9f8cccfa"
+  },
+  "validation": {
+    "ruleContentTestsPassed": 850,
+    "existingIgnored": 1,
+    "newIgnores": 0,
+    "vm": "not performed",
+    "hap": "not built",
+    "limits": "Live L1-L5 and CLI directory mapping do not establish VM interaction acceptance."
+  }
+}
