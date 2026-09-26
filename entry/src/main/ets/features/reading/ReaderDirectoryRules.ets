@@ -4,7 +4,7 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 
 class DirectoryRuleDraft {
   id: number; pattern: string; level: string; boundary: string;
-  constructor(id: number, pattern: string = '', level: string = '1', boundary: string = 'title') {
+  constructor(id: number, pattern: string = '', level: string = '0', boundary: string = 'title') {
     this.id = id; this.pattern = pattern; this.level = level; this.boundary = boundary;
   }
 }
@@ -62,9 +62,10 @@ export struct ReaderDirectoryRules {
   private changed(): void { this.generation += 1; this.previewReady = false; this.busy = false; this.preview = []; }
   private async run(apply: boolean): Promise<void> {
     if (!this.loaded || this.busy || (apply && !this.previewReady)) return;
-    if (this.rules.some((rule: DirectoryRuleDraft): boolean => !Number.isInteger(Number(rule.level)) ||
-      Number(rule.level) < 1 || Number(rule.level) > 32 || rule.pattern.trim().length === 0)) {
-      this.message = '请填写匹配规则及 1–32 的层级；删除所有规则可恢复默认'; return;
+    if (this.rules.some((rule: DirectoryRuleDraft): boolean => rule.level.trim().length === 0 ||
+      !Number.isInteger(Number(rule.level)) || Number(rule.level) < 0 || Number(rule.level) > 31 ||
+      rule.pattern.trim().length === 0)) {
+      this.message = '请填写匹配规则及 0–31 的层级；删除所有规则可恢复默认'; return;
     }
     const generation = ++this.generation, bookId = this.bookId;
     const current = (): boolean => this.mounted && generation === this.generation && this.bookId === bookId;
@@ -92,12 +93,13 @@ export struct ReaderDirectoryRules {
   build() {
     Column({ space: 8 }) {
       Text('本书目录层级规则').fontSize(14).fontWeight(FontWeight.Bold);
-      Text('只调整导航层级；留空使用默认卷规则。请先预览。').fontSize(11);
+      Text('只调整导航层级；0 为最外层，范围 0–31。删除所有规则可恢复默认，请先预览。').fontSize(11);
+      Text('正则匹配完整标题或独立行，例如“第一卷.*”可匹配“第一卷 童子行”。').fontSize(11);
       if (this.rules.length > 0) {
         Scroll() { Column({ space: 8 }) {
       ForEach(this.rules, (rule: DirectoryRuleDraft) => {
         Column({ space: 6 }) {
-          TextInput({ text: rule.pattern, placeholder: '匹配已有标题或独立正文行的正则表达式' })
+          TextInput({ text: rule.pattern, placeholder: '匹配完整标题或独立正文行的正则表达式' })
             .height(40).fontSize(12).fontColor(readerAppColor('TOK_INK', this.scheme))
             .backgroundColor(readerAppColor('TOK_PAPER', this.scheme)).onChange((value: string): void => this.edit(rule.id, 'pattern', value));
           Row({ space: 8 }) {

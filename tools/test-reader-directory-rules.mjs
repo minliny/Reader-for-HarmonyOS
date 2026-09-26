@@ -1,14 +1,51 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+const rulesPath = fileURLToPath(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRules.ets', import.meta.url));
+const rulesSource = readFileSync(rulesPath, 'utf8');
+const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts = createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);
+const rulesAst = ts.createSourceFile(rulesPath, rulesSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,
+  createRequire(import.meta.url)(`${sdk}/lib/ets_checker.js`).compilerOptions);
+const draftClass = rulesAst.statements.find(node => node.name?.getText(rulesAst) === 'DirectoryRuleDraft');
+const Draft = new Function(`${stripTypeScriptTypes(draftClass.getText(rulesAst))}; return DirectoryRuleDraft;`)();
 const calls = [];
 let reply = { status:'ready', rules:[{pattern:'^第一部$',level:1,boundary:'title'},{pattern:'^第一卷$',level:2,boundary:'head'}] };
 let wait;
-const Editor = productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRules.ets', import.meta.url)),
+const Editor = productionMotionMethods(rulesPath,
   ['loadRules','changed','edit','run'], {
-    DirectoryRuleDraft: class {constructor(id,pattern='',level='1',boundary='title') {Object.assign(this,{id,pattern,level,boundary});}},
+    DirectoryRuleDraft: Draft,
     ReaderRuntimeOwner:{current:()=>({request:async(method,params,options)=>{calls.push({method,params,options}); if(wait) return await wait; return {data:reply};}})},
   });
+
+// Exercise the production admission, serialization and load path at Core's
+// inclusive limits. The fake transport returns saved payloads without coercion.
+{
+  const originalReply = reply;
+  for (const [level, accepted] of [['0', true], ['31', true], ['32', false], ['-1', false], ['', false], [' ', false], ['1.5', false]]) {
+    const isolated = Object.assign(new Editor(), { bookId:'level-boundary', mounted:true, generation:0, nextRuleId:1,
+      loaded:true, busy:false, previewReady:false, rules:[new Draft(1, '第一卷.*', level, 'title')], preview:[], onApplied(){} });
+    reply = {status:'ready', nodeCount:2, readableChapterCount:2, nodes:[]};
+    const before = calls.length;
+    await isolated.run(false);
+    assert.equal(calls.length - before, accepted ? 1 : 0, `Core level ${JSON.stringify(level)} admission`);
+    assert.equal(isolated.previewReady, accepted);
+    if (!accepted) continue;
+    assert.equal(calls.at(-1).params.rules[0].level, Number(level), 'preview retains the persisted zero-based value');
+    await isolated.run(true);
+    const saved = structuredClone(calls.at(-1).params.rules);
+    assert.equal(saved[0].level, Number(level), 'apply performs no implicit level shift');
+    reply = {status:'ready', rules:saved};
+    isolated.loadRules(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(isolated.rules[0].level, level, 'reloading a saved rule retains its exact level');
+    reply = {status:'ready', nodeCount:2, readableChapterCount:2, nodes:[]};
+    await isolated.run(false);
+    assert.deepEqual(calls.at(-1).params.rules, saved, 'reloaded rules preview without migration');
+  }
+  reply = originalReply;
+}
 const editor = Object.assign(new Editor(), {bookId:'local:book',mounted:true,generation:0,nextRuleId:0,rules:[],preview:[],previewReady:false,busy:false,loaded:false,onApplied(){}});
 editor.loadRules(); await new Promise(resolve=>setImmediate(resolve));
 assert.equal(editor.loaded,true);
@@ -36,12 +73,10 @@ editor.loadRules(); await new Promise(resolve=>setImmediate(resolve));
 assert.equal(editor.loaded,false, 'non-TXT rules cannot be edited or overwritten');
 assert.match(editor.message,/TXT/);
 console.log('directory rules editor: full persisted list, preview fencing, default rules and failed-read preservation PASS');
-const { readFileSync } = await import('node:fs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const rulesSource = readFileSync(fileURLToPath(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRules.ets', import.meta.url)), 'utf8');
 const rendered = createReaderBuilderProbe(rulesSource, ['build'], {
   readerAppColor: token => token,
-  DirectoryRuleDraft: class {constructor(id){Object.assign(this,{id,pattern:'',level:'1',boundary:'title'});}},
+  DirectoryRuleDraft: Draft,
 });
 Object.assign(rendered.owner, { rules:[], preview:[], loaded:true, busy:false, previewReady:false,
   scheme:'day',message:'默认卷规则',nextRuleId:0,changed(){},run(){} });
@@ -51,7 +86,6 @@ console.log('directory hierarchy editor actual SDK Builder syntax PASS');
 // Compile the non-empty editor branch and invoke the actual native-control
 // callbacks. This covers the controls omitted by the empty-list syntax probe.
 {
-  class Draft {constructor(id,pattern='',level='1',boundary='title'){Object.assign(this,{id,pattern,level,boundary});}}
   const selects=[];
   const Select={name:'Select',create(options){selects.push({options});},selected(value){selects.at(-1).selected=value;},
     onSelect(callback){selects.at(-1).onSelect=callback;},pop(){}};
@@ -76,6 +110,9 @@ console.log('directory hierarchy editor actual SDK Builder syntax PASS');
   assert.deepEqual(owner.rules.map(rule=>rule.id),[2]);assert.equal(owner.previewReady,false);
   buttons.find(node=>node.createWithLabel==='添加规则').onClick();
   assert.deepEqual(owner.rules.map(rule=>rule.id),[2,3]);assert.equal(owner.rules[1].boundary,'title');
+  assert.equal(owner.rules[1].level,'0','the actual add-rule callback starts at Core default outer level');
+  assert.ok(nodes.some(node=>typeof node.create==='string' && node.create.includes('完整标题') && node.create.includes('第一卷.*')),
+    'the actual UI explains full-line matching with an executable prefix example');
 }
 console.log('PASS directory TXT non-empty actual SDK Builder: pattern/level/boundary editing, preview/apply callbacks, delete and add');
 
