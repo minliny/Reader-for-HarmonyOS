@@ -36,6 +36,7 @@ export class MangaSessionController {
   private readonly pageLoads: Map<number, Promise<void>> = new Map<number, Promise<void>>();
   private readonly geometry: Map<number, MangaPageGeometry> = new Map<number, MangaPageGeometry>();
   private readonly tiles: Map<string, MangaTile> = new Map<string, MangaTile>();
+  private readonly tileLoads: Map<string, Promise<void>> = new Map<string, Promise<void>>();
   private wantedTiles: Set<string> = new Set<string>();
   private sliced: boolean = false;
   private wanted: Set<number> = new Set<number>();
@@ -143,7 +144,7 @@ export class MangaSessionController {
     this.generation++;
     for (const page of this.pages.values()) if (page.image !== undefined) this.resources.release(page.image);
     for (const tile of this.tiles.values()) if (tile.image !== undefined) this.resources.release(tile.image);
-    this.pages.clear(); this.pageLoads.clear(); this.tiles.clear(); this.wantedTiles.clear(); this.geometry.clear(); this.wanted.clear(); this.sliced = false;
+    this.pages.clear(); this.pageLoads.clear(); this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear(); this.geometry.clear(); this.wanted.clear(); this.sliced = false;
     if (this.chapterData !== undefined) await this.setVisible(ordinal);
   }
 
@@ -370,7 +371,7 @@ export class MangaSessionController {
     this.generation++;
     for (const page of this.pages.values()) if (page.image !== undefined) this.resources.release(page.image);
     for (const tile of this.tiles.values()) if (tile.image !== undefined) this.resources.release(tile.image);
-    this.tiles.clear(); this.wantedTiles.clear(); this.sliced = false; this.geometry.clear();
+    this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear(); this.sliced = false; this.geometry.clear();
     this.pages.clear(); this.pageLoads.clear(); this.wanted.clear(); this.chapterData = undefined; this.progressData = undefined; this.progressCursor = undefined;
     this.requiresRecovery = false; this.mappedLocation = undefined; this.signatureRecoveryUsed = false; this.facts.clear(); this.requests.clear(); this.totalPageCount = 0; this.displayOrdinal = 0;
     this.onChange?.();
@@ -388,6 +389,7 @@ export class MangaSessionController {
       if (!wanted.has(key)) {
         if (tile.image !== undefined) this.resources.release(tile.image);
         this.tiles.delete(key);
+        this.tileLoads.delete(key);
       }
     }
     // Promote the already decoded first region without a second decode or a
@@ -412,30 +414,47 @@ export class MangaSessionController {
       if (geometry === undefined || fact === undefined || !Number.isSafeInteger(item.tileIndex) || item.tileIndex < 0 || item.tileIndex * geometry.tileHeight >= geometry.height) continue;
       const key = `${item.ordinal}:${item.tileIndex}`;
       if (generation !== this.generation || !this.wantedTiles.has(key)) continue;
-      if (this.tiles.has(key)) continue;
+      if (this.tiles.has(key)) {
+        const pending = this.tileLoads.get(key);
+        if (pending !== undefined) await pending;
+        continue;
+      }
       const tile: MangaTile = { ordinal: item.ordinal, tileIndex: item.tileIndex };
       this.tiles.set(key, tile);
-      const current = (): boolean => generation === this.generation && this.wantedTiles.has(key) && this.tiles.get(key) === tile;
-      const request = this.requests.get(fact.resourceRef)?.request;
-      this.foregroundImageWork++;
-      try {
-        const image = await this.resources.loadPage({ sourceRuleVersion: chapter.manifest.sourceRuleVersion, decodeRevision: chapter.manifest.decodeRevision, sourceId: chapter.manifest.chapter.sourceId,
-          bookId: chapter.manifest.chapter.bookId, chapterIndex: chapter.chapterIndex,
-          contentVersion: chapter.manifest.manifestVersion, chapterUrl: chapter.manifest.chapter.chapterId },
-          { ...(request ?? { url: fact.resourceRef }), resourceRef: fact.resourceRef },
-          this.allowNetwork && request !== undefined, current, (item.tileIndex * geometry.tileHeight) / geometry.height, this.previewMode);
-        if (!current()) { this.resources.release(image); continue; }
-        tile.image = image;
-      } catch (error) { if (current()) tile.error = error instanceof Error ? error.message : 'MANGA_TILE_FAILED'; }
-      finally { this.foregroundImageWork--; this.scheduleAdjacentPreparation(); }
-      if (current()) this.onChange?.();
+      const task = this.loadTileOwned(tile, chapter, geometry, fact, generation);
+      this.tileLoads.set(key, task);
+      const finish = (): void => {
+        if (this.tileLoads.get(key) === task) this.tileLoads.delete(key);
+      };
+      void task.then(finish, finish);
+      await task;
     }
+  }
+
+  private async loadTileOwned(tile: MangaTile, chapter: MangaChapterResult, geometry: MangaPageGeometry,
+    fact: MangaManifestPage, generation: number): Promise<void> {
+    const key = `${tile.ordinal}:${tile.tileIndex}`;
+    const current = (): boolean => generation === this.generation && this.wantedTiles.has(key) && this.tiles.get(key) === tile;
+    const request = this.requests.get(fact.resourceRef)?.request;
+    this.foregroundImageWork++;
+    try {
+      const image = await this.resources.loadPage({ sourceRuleVersion: chapter.manifest.sourceRuleVersion, decodeRevision: chapter.manifest.decodeRevision, sourceId: chapter.manifest.chapter.sourceId,
+        bookId: chapter.manifest.chapter.bookId, chapterIndex: chapter.chapterIndex,
+        contentVersion: chapter.manifest.manifestVersion, chapterUrl: chapter.manifest.chapter.chapterId },
+        { ...(request ?? { url: fact.resourceRef }), resourceRef: fact.resourceRef },
+        this.allowNetwork && request !== undefined, current, (tile.tileIndex * geometry.tileHeight) / geometry.height, this.previewMode);
+      if (!current()) { this.resources.release(image); return; }
+      tile.image = image;
+    } catch (error) { if (current()) tile.error = error instanceof Error ? error.message : 'MANGA_TILE_FAILED'; }
+    finally { this.foregroundImageWork--; this.scheduleAdjacentPreparation(); }
+    if (current()) this.onChange?.();
   }
 
   async retryTile(ordinal: number, tileIndex: number): Promise<void> {
     const key = `${ordinal}:${tileIndex}`;
     if (!this.wantedTiles.has(key) || this.tiles.get(key)?.error === undefined) return;
     this.tiles.delete(key);
+    this.tileLoads.delete(key);
     await this.setTileWindow(Array.from(this.wantedTiles).map(value => {
       const parts = value.split(':');
       return { ordinal: Number(parts[0]), tileIndex: Number(parts[1]) };
