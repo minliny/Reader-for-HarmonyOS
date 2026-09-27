@@ -11,7 +11,7 @@ const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
 const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
 const Projection = load('MangaStripProjection');
-const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast']);
+const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast','onRowAppear']);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 const pageId = `mp1:${'a'.repeat(64)}`;
@@ -46,6 +46,25 @@ function fixture() {
   assert.equal(surface.error, ''); f.controller.close();
 }
 console.log('PASS actual double Surface viewport joins one tile decode and latest generation commits once');
+// A restored native list can mount a third row while its range callback still
+// reports only the first row. Its appearance must start that tile's decode.
+{
+  const f = fixture(); await f.controller.openPrepared(structuredClone(entry), true);
+  const projection = new Projection(); projection.publish(f.controller.chapter.manifest, i => f.controller.pageGeometry(i), undefined, 1, i => f.controller.pageAt(i));
+  const surface = Object.assign(new Surface(), { controller: f.controller,
+    data: { totalCount: () => projection.totalCount(), getData: i => projection.row(i) },
+    mounted: true, first: 0, last: 0, viewportGeneration: 0, chapterCommitted: true, error: '' });
+  const initial = surface.updateViewport(); await tick();
+  assert.equal(f.pending.length, 1);
+  f.pending[0].gate.resolve(); await initial;
+  assert.equal(f.controller.tile(0, 2), undefined, 'range callback alone omitted the mounted third row');
+  surface.onRowAppear(2); await tick();
+  assert.equal(f.pending.length, 2, 'mounted third row starts its real region decode');
+  f.pending[1].gate.resolve(); await tick();
+  assert.ok(f.controller.tile(0, 2)?.image, 'third row becomes renderable');
+  assert.equal(surface.error, ''); f.controller.close();
+}
+console.log('PASS mounted third slice is admitted even before native range catches up');
 // Eviction followed by the same key creates a different attempt. Finishing the
 // old task must neither admit its image nor remove the new task's join handle.
 {

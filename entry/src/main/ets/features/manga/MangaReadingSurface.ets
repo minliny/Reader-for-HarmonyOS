@@ -338,6 +338,17 @@ export struct MangaReadingSurface {
   private requestedLast(): number {
     return Math.min(this.data.totalCount() - 1, this.last + 1, this.first + 7);
   }
+  private onRowAppear(index: number): void {
+    if (!this.mounted || index < 0 || index >= this.data.totalCount()) return;
+    const row = this.data.getData(index);
+    if (!row.known || this.controller?.tile(row.ordinal, row.tileIndex) !== undefined) return;
+    // A native List item can mount before its range callback reports the new
+    // layout (especially while restoring an anchor). Demand the mounted tile
+    // directly so it cannot remain a spinner with no pending decode.
+    if (index < this.first || index > this.first + 7) { this.first = index; this.last = index; }
+    else this.last = Math.max(this.last, index);
+    void this.updateViewport();
+  }
   private measureVisibleWindow(): boolean {
     if (this.viewportHeight <= 1 || this.data.totalCount() === 0) return false;
     try {
@@ -598,7 +609,7 @@ export struct MangaReadingSurface {
       Button(this.fitPreference === 'source' ? '尺寸：跟随书源' : this.fitPreference === 'width' ? '尺寸：适合宽度' : '尺寸：完整图片').onClick((): void => { void this.changeFit(); })
       Scroll(this.horizontalScroller) {
       List({ scroller: this.scroller, space: 0 }) {
-        LazyForEach(this.data, (row: MangaStripRow) => {
+        LazyForEach(this.data, (row: MangaStripRow, index: number) => {
           ListItem() {
             if (this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined) {
               Image(this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri)
@@ -613,6 +624,7 @@ export struct MangaReadingSurface {
               }.width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).justifyContent(FlexAlign.Center)
             }
           }.width('100%').height(this.rowDisplayHeight(row)).align(Alignment.Center)
+            .onAppear((): void => this.onRowAppear(index))
         }, (row: MangaStripRow): string => this.rowRenderKey(row))
       }.height('100%').width(this.viewportWidth * this.zoom).cachedCount(0)
         .onScroll((): void => { this.onViewportScroll(); })
