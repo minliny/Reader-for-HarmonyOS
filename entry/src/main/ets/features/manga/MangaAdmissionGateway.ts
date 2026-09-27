@@ -63,7 +63,7 @@ export class MangaAdmissionGateway {
     const binding = chapter.resources.find(row => row.resourceRef === first.resourceRef)?.request;
     const resources = new MangaResourceGateway(this.runtime);
     return resources.loadPage({ sourceId: session.identity.sourceId, bookId: session.identity.bookId,
-      sourceRuleVersion: chapter.manifest.sourceRuleVersion, chapterIndex: chapter.chapterIndex,
+      sourceRuleVersion: chapter.manifest.sourceRuleVersion, decodeRevision: chapter.manifest.decodeRevision, chapterIndex: chapter.chapterIndex,
       chapterUrl: chapter.manifest.chapter.chapterId, contentVersion: chapter.manifest.manifestVersion },
       { ...(binding ?? { url: first.resourceRef }), resourceRef: first.resourceRef }, binding !== undefined, current, 0);
   }

@@ -6,6 +6,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { stripTypeScriptTypes } from 'node:module';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 // Execute the whole production class. Only Harmony's platform APIs are adapted
 // to a real temporary filesystem; this is not device or platform durability proof.
@@ -93,6 +94,77 @@ async function seedLegacy(identity, override = {}) {
   return directory;
 }
 try {
+  // Historical v2 contains prepared JPEG bytes, without a processing profile.
+  // This fixture deliberately interprets the independent regional BGRA golden
+  // as RGBA via Pillow JPEG; it models the old channel mistake, not native codec proof.
+  const scripted = { ...image, bookId: 'profile-upgrade', contentVersion: 'stable-manga',
+    resourceRef: `manga:mp1:${'c'.repeat(64)}`, mangaDecodeRevision: 'bytes-v1' };
+  const profileDir = await cache.chapterDirectory(scripted);
+  const legacyHash = hash(JSON.stringify(['manga-resource-v1', scripted.contentVersion, scripted.resourceRef]));
+  const oldPath = join(profileDir, `${legacyHash}.bin`), oldManifestPath = join(profileDir, 'manifest.json');
+  const oldBytes = new Uint8Array(readFileSync(join(repo, 'tools/fixtures/manga-graphics/legacy-rgba-misread.jpg')));
+  const corrected = new Uint8Array(readFileSync(join(repo, 'tools/fixtures/manga-graphics/expected.jpg')));
+  assert.notDeepEqual(oldBytes, corrected);
+  const oldManifest = JSON.stringify({ formatVersion: 2, ...scripted, manga: true,
+    resourceHashes: [legacyHash], resourceDigests: { [legacyHash]: hash(oldBytes) }, completedAt: 1 });
+  await fs.mkdir(profileDir, { recursive: true });
+  await fs.writeFile(oldPath, oldBytes);await fs.writeFile(oldManifestPath, oldManifest);
+  await assert.rejects(cache.loadResource(scripted), /READING_IMAGE_REPROCESS_REQUIRED/,
+    'a valid old wrong-channel JPEG must not bypass the fixed graphics path');
+  assert.equal(await cache.isChapterComplete(scripted), false, 'old matching digest is not the current Host processing receipt');
+  const rawManga = { ...scripted, mangaDecodeRevision: 'identity-v1' };
+  assert.deepEqual(await cache.loadResource(rawManga), oldBytes, 'identity-v1 retains its existing exact cache key');
+  assert.equal(await cache.isChapterComplete(rawManga), true);
+  assert.equal(await cache.isChapterComplete({ ...scripted, mangaDecodeRevision: undefined }), false, 'Disk API cannot certify an unknown manga profile as raw identity');
+  for (const revision of [undefined, '', 'bytes-v99']) {
+    await assert.rejects(cache.loadResource({ ...scripted, mangaDecodeRevision: revision }), /MANGA_CACHE_PROFILE_REQUIRED/);
+  }
+  let prepareCalls = 0, current = true, prepareFailure = false;
+  const Owner = productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url),
+    ['loadReadingImageOwned', 'prefetchReadingImageOwned', 'prepareReadingImageBytes'], {
+      MangaImageDecodeHost: { instance: { async prepare(params, request, valid) {
+        prepareCalls++;if (prepareFailure) throw Error('injected prepare failure');
+        assert.equal(valid(), true);await request(params);return corrected;
+      } } },
+      ReadingBodyImageHost: { instance: { async loadBytes(value) { assert.deepEqual(value, corrected);return { fileUri: 'file://prepared', width: 8, height: 103 }; },
+        async validateBytes(value) { assert.deepEqual(value, corrected); } } },
+      hilog: { error() {} }, LOG_DOMAIN: 0,
+    });
+  const owner = Object.assign(new Owner(), { readingImageDiskCache: cache,
+    async request(method) { assert.equal(method, 'manga.resource.prepare');return { data: {} }; },
+    admitReadingImage(value) { return value; }, assertReadingImageCurrent(valid) { if (valid?.() === false) throw Error('cancelled'); } });
+  await assert.rejects(owner.loadReadingImageOwned(scripted, false, () => current, 0, 'source-rules'), /REPROCESS_REQUIRED/);
+  await assert.rejects(owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', false), /REPROCESS_REQUIRED/);
+  assert.equal(prepareCalls, 0, 'offline cold entry with opaque resourceRef does not fetch or replay a script');
+  prepareFailure = true;
+  await assert.rejects(owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', true), /prepare failure/);
+  prepareFailure = false;
+  beforeSync = async () => { current = false; };
+  await assert.rejects(owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', true), /superseded/);
+  beforeSync = async () => {};current = true;
+  assert.equal(await cache.isChapterComplete(scripted), false);
+  assert.deepEqual(new Uint8Array(await fs.readFile(oldPath)), oldBytes);assert.equal(await fs.readFile(oldManifestPath, 'utf8'), oldManifest);
+  const work = {};
+  await owner.loadReadingImageOwned(scripted, true, () => current, 0, 'source-rules', false, work);await work.drain;
+  assert.deepEqual(await cache.loadResource(scripted), corrected);
+  assert.notEqual(await cache.resourcePath(scripted), oldPath);
+  await cache.markChapterComplete(scripted, [scripted]);
+  assert.equal(await cache.isChapterComplete(scripted), true);
+  const profileManifestPath = join(profileDir, 'manifest-script-bgra-v2.json');
+  const profileManifest = JSON.parse(await fs.readFile(profileManifestPath, 'utf8'));assert.equal(profileManifest.mangaCacheProfile, 'script-bgra-v2');
+  assert.deepEqual(profileManifest.resourceHashes, [hash(JSON.stringify(['manga-resource-v2', 'script-bgra-v2', scripted.contentVersion, scripted.resourceRef]))]);
+  await fs.writeFile(profileManifestPath, JSON.stringify({ ...profileManifest, mangaCacheProfile: 'unknown-profile' }));
+  assert.equal(await cache.isChapterComplete(scripted), false, 'a filename alone is not a current processing receipt');
+  await fs.writeFile(profileManifestPath, JSON.stringify(profileManifest));
+  await assert.rejects(cache.markChapterComplete(scripted, [rawManga]), /MANGA_CACHE_PROFILE_REQUIRED/, 'raw and transformed receipts cannot be mixed');
+  const cold = new Cache({ filesDir: root });assert.equal(await cold.isChapterComplete(scripted), true);
+  assert.deepEqual(await cold.loadResource({ ...scripted, imageUrl: scripted.resourceRef }), corrected, 'cold entry needs no transport URL');
+  const callsAfterRepair = prepareCalls;owner.readingImageDiskCache = cold;
+  await owner.loadReadingImageOwned({ ...scripted, imageUrl: scripted.resourceRef }, false, () => current, 0, 'source-rules');
+  assert.equal(prepareCalls, callsAfterRepair, 'actual Runtime cold path reads only the new profile without any URL');
+  await owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', false);assert.equal(prepareCalls, callsAfterRepair);
+  assert.deepEqual(new Uint8Array(await fs.readFile(oldPath)), oldBytes);assert.equal(await fs.readFile(oldManifestPath, 'utf8'), oldManifest);
+  pass('scripted profile isolates legacy wrong-channel JPEG and completion; cold opaque refs, online repair, failed/cancelled repair preserve old bytes; identity-v1 retains the original path');
   // >2MiB and a nonzero view prevent an accidental whole-backing-buffer write.
   // Partial writes must preserve all bytes while each platform call is <=1MiB.
   const chunked={...image,bookId:'bounded-write'};
@@ -114,7 +186,7 @@ try {
   assert.deepEqual(new Uint8Array(await fs.readFile(stablePath)),expected);
   assert.equal(handles.size,0);assert.equal((await fs.readdir(dirname(stablePath))).some(name=>name.includes('.tmp-')),false);
   pass('1MiB partial-write windows preserve nonzero-view snapshots; cancellation and ENOSPC keep old bytes and close/delete partial output');
-  const manga = { ...image, contentVersion: 'manga-v1', resourceRef: `manga:mp1:${'a'.repeat(64)}` };
+  const manga = { ...image, contentVersion: 'manga-v1', mangaDecodeRevision: 'identity-v1', resourceRef: `manga:mp1:${'a'.repeat(64)}` };
   await cache.storeResource(manga, bytes);
   const renewed = { ...manga, imageUrl: 'https://new-cdn/image?signature=renewed', baseUrl: 'https://new-cdn/' };
   assert.deepEqual(await cache.loadResource(renewed), bytes, 'signed transport changes do not change page identity');

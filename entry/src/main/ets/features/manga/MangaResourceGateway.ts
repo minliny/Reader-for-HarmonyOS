@@ -12,6 +12,7 @@ export interface MangaResourcePage {
 /** Supplied by the versioned Core chapter owner, never derived from a URL. */
 export interface MangaResourceScope {
   sourceRuleVersion: string;
+  decodeRevision: string;
   sourceId: string;
   bookId: string;
   chapterIndex: number;
@@ -43,13 +44,14 @@ export class MangaResourceGateway {
     if (page.resourceRef === undefined || page.resourceRef.length === 0) throw new Error('MANGA_RESOURCE_IDENTITY_INVALID');
     await this.runtime.prefetchReadingImage({ sourceId: scope.sourceId, bookId: scope.bookId,
       chapterIndex: scope.chapterIndex, contentVersion: scope.contentVersion, imageUrl: page.requestRule ?? page.url,
-      resourceRef: page.resourceRef, baseUrl: scope.chapterUrl }, isCurrent, scope.sourceRuleVersion, true);
+      resourceRef: page.resourceRef, baseUrl: scope.chapterUrl, mangaDecodeRevision: scope.decodeRevision }, isCurrent, scope.sourceRuleVersion, true);
     this.assertCurrent(isCurrent);
   }
 
   private async loadOwnedPage(scope: MangaResourceScope, page: MangaResourcePage,
     allowNetwork: boolean, isCurrent: () => boolean, mangaPosition?: number, mangaPreview: boolean = false): Promise<ReadingGatewayImage> {
     this.assertCurrent(isCurrent);
+    if (!['identity-v1', 'bytes-v1'].includes(scope.decodeRevision)) throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
     if (typeof scope.sourceRuleVersion !== 'string' || scope.sourceRuleVersion.trim().length === 0 ||
       scope.sourceId.trim().length === 0 || scope.bookId.trim().length === 0 ||
       scope.contentVersion.trim().length === 0 || scope.chapterUrl.trim().length === 0 ||
@@ -69,7 +71,7 @@ export class MangaResourceGateway {
     }
     const image = await this.runtime.loadReadingImage(scope.sourceId, scope.bookId, scope.chapterIndex,
       scope.contentVersion, requestRule ?? page.url, scope.chapterUrl, allowNetwork, isCurrent, page.resourceRef, mangaPosition,
-      scope.sourceRuleVersion, mangaPreview);
+      scope.sourceRuleVersion, mangaPreview, scope.decodeRevision);
     if (!isCurrent()) {
       this.release(image);
       throw new Error('MANGA_RESOURCE_CANCELLED');

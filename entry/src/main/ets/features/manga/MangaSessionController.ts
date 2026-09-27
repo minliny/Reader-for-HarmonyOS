@@ -109,7 +109,7 @@ export class MangaSessionController {
           // Canonical manifest remains in Core. Retain only the first resource.
           this.nextImage = { scope: { sourceId: prepared.manifest.chapter.sourceId, bookId: prepared.manifest.chapter.bookId,
             chapterIndex: prepared.chapterIndex, chapterUrl: prepared.manifest.chapter.chapterId,
-            contentVersion: prepared.manifest.manifestVersion, sourceRuleVersion: prepared.manifest.sourceRuleVersion },
+            contentVersion: prepared.manifest.manifestVersion, sourceRuleVersion: prepared.manifest.sourceRuleVersion, decodeRevision: prepared.manifest.decodeRevision },
             page: { ...request, resourceRef: first.resourceRef } };
           this.scheduleAdjacentPreparation();
         }).catch((): void => { /* Optional neighbor errors never replace visible chapter state. */ });
@@ -419,7 +419,7 @@ export class MangaSessionController {
       const request = this.requests.get(fact.resourceRef)?.request;
       this.foregroundImageWork++;
       try {
-        const image = await this.resources.loadPage({ sourceRuleVersion: chapter.manifest.sourceRuleVersion, sourceId: chapter.manifest.chapter.sourceId,
+        const image = await this.resources.loadPage({ sourceRuleVersion: chapter.manifest.sourceRuleVersion, decodeRevision: chapter.manifest.decodeRevision, sourceId: chapter.manifest.chapter.sourceId,
           bookId: chapter.manifest.chapter.bookId, chapterIndex: chapter.chapterIndex,
           contentVersion: chapter.manifest.manifestVersion, chapterUrl: chapter.manifest.chapter.chapterId },
           { ...(request ?? { url: fact.resourceRef }), resourceRef: fact.resourceRef },
@@ -470,7 +470,7 @@ export class MangaSessionController {
     this.onChange?.();
     this.foregroundImageWork++;
     try {
-      const image = await this.resources.loadPage({ sourceRuleVersion: chapter.manifest.sourceRuleVersion, sourceId: chapter.manifest.chapter.sourceId,
+      const image = await this.resources.loadPage({ sourceRuleVersion: chapter.manifest.sourceRuleVersion, decodeRevision: chapter.manifest.decodeRevision, sourceId: chapter.manifest.chapter.sourceId,
         bookId: chapter.manifest.chapter.bookId, chapterIndex: chapter.chapterIndex,
         contentVersion: chapter.manifest.manifestVersion, chapterUrl: chapter.manifest.chapter.chapterId },
         { ...(request ?? { url: fact.resourceRef }), resourceRef: fact.resourceRef },

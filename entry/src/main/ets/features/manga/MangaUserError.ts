@@ -17,6 +17,8 @@ export function mangaUserError(code: string): string {
     case 'MANGA_REGION_MEMORY_BUDGET':
     case 'MANGA_GRAPHICS_MEMORY_BUDGET': return '这张图片解码需要的内存超出当前支持范围，暂时无法显示。可尝试其他章节或书源。';
     case 'MANGA_REGION_DECODE_MISMATCH': return '设备未能正确解码这张长图。请重试，或尝试其他书源。';
+    case 'READING_IMAGE_REPROCESS_REQUIRED': return '图片处理规则已更新，需联网重新下载';
+    case 'MANGA_CACHE_PROFILE_REQUIRED': return '无法确认图片处理版本，请重新打开本章。';
     case 'REMOTE_READING_IMAGE_NOT_DOWNLOADED': return '这张图片尚未下载。请联网后重新获取本章图片。';
     case 'MANGA_POSITION_RECOVERY_REQUIRED': return '章节内容已更新，请先确认阅读位置，再继续保存进度。';
     case 'MANGA_REFRESH_REQUIRES_NETWORK': return '重新获取图片需要联网，请连接网络后重试。';

@@ -419,6 +419,7 @@ export class ReaderRuntimeOwner {
     mangaPosition?: number,
     expectedSourceVersion?: string,
     mangaPreview?: boolean,
+    mangaDecodeRevision?: string,
   ): Promise<ReadingBodyImagePayload> {
     this.assertReadingImageCurrent(isCurrent);
     if (resourceRef === undefined && imageUrl.trim().toLowerCase().startsWith('data:image/')) {
@@ -438,7 +439,9 @@ export class ReaderRuntimeOwner {
       baseUrl,
     );
     if (resourceRef !== undefined) {
+      if (mangaDecodeRevision !== 'identity-v1' && mangaDecodeRevision !== 'bytes-v1') throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
       identity.resourceRef = resourceRef;
+      identity.mangaDecodeRevision = mangaDecodeRevision;
       // Manga chapter identity is a Core business key, including any fragment.
       identity.baseUrl = baseUrl;
     }
@@ -454,7 +457,13 @@ export class ReaderRuntimeOwner {
   private async loadReadingImageOwned(identity: ReadingImageCacheIdentity, allowNetwork: boolean,
     cacheCurrent: () => boolean, mangaPosition?: number, expectedSourceVersion?: string, mangaPreview?: boolean,
     work?: MangaImageWork): Promise<ReadingBodyImagePayload> {
-    const cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent);
+    let cachedBytes: Uint8Array | undefined;
+    try { cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent); }
+    catch (error) {
+      // A previous Host's transformed payload is retained for recovery. Only
+      // online preparation may replace its usability, in a new profile path.
+      if (!allowNetwork || !(error instanceof Error) || error.message !== 'READING_IMAGE_REPROCESS_REQUIRED') throw error;
+    }
     if (cachedBytes !== undefined) {
       try {
         const cached = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, cacheCurrent, mangaPosition, mangaPreview);
@@ -507,7 +516,13 @@ export class ReaderRuntimeOwner {
 
   private async prefetchReadingImageOwned(identity: ReadingImageCacheIdentity, cacheCurrent: () => boolean,
     expectedSourceVersion?: string, allowNetwork: boolean = true): Promise<void> {
-    const cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent);
+    let cachedBytes: Uint8Array | undefined;
+    try { cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent); }
+    catch (error) {
+      // A previous Host's transformed payload is retained for recovery. Only
+      // online preparation may replace its usability, in a new profile path.
+      if (!allowNetwork || !(error instanceof Error) || error.message !== 'READING_IMAGE_REPROCESS_REQUIRED') throw error;
+    }
     if (cachedBytes !== undefined) {
       try {
         await ReadingBodyImageHost.instance.validateBytes(cachedBytes, cacheCurrent, identity.resourceRef === undefined ? undefined : 0);
@@ -588,6 +603,7 @@ export class ReaderRuntimeOwner {
   async isOfflineImageChapterComplete(chapter: ReadingImageChapterIdentity, manga: boolean = false,
     isCurrent?: () => boolean): Promise<boolean> {
     if (manga) {
+      if (chapter.mangaDecodeRevision !== 'identity-v1' && chapter.mangaDecodeRevision !== 'bytes-v1') throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
       const ownedChapter: ReadingImageChapterIdentity = { ...chapter };
       const current = this.readingImageDiskCache.captureValidity(chapter.sourceId, chapter.bookId, isCurrent);
       return this.runMangaImageWork(current, async (): Promise<boolean> => {

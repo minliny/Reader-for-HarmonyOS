@@ -9,7 +9,14 @@
     "input.png": "2b4c65c7c152560c6f51c56d263c314f46140addd63b0d74f24ebe4eb343035d",
     "expected-rgba.bin": "a4629c4785ddd6b58bbfbf879eb2a17d76517b49b9acd217e63461552bde5fcc",
     "input-bgra.bin": "99c35d7fb71260bcff7124a5a5308e5e2ef24fe2c096ba9ed42bdcbd229cc623",
-    "expected-bgra.bin": "d0583d69986f82b11b09b7b0e1b2db0c3f6340417ec6f928f306dfa8bc61d0cf"
+    "expected-bgra.bin": "d0583d69986f82b11b09b7b0e1b2db0c3f6340417ec6f928f306dfa8bc61d0cf",
+    "legacy-rgba-misread.jpg": "f5e2afedb5e4e2ab400cc8555a77c98fe0047e4edc9c95d5a0045e2c316f2428"
   },
-  "regionalReadbackFormat": "BGRA_8888 + UNPREMUL; independent Pillow raw packing"
+  "regionalReadbackFormat": "BGRA_8888 + UNPREMUL; independent Pillow raw packing",
+  "legacyCacheFixture": {
+    "file": "legacy-rgba-misread.jpg",
+    "generator": "Pillow Image.frombytes('RGBA',(8,103),expected-bgra.bin).convert('RGB').save(format='JPEG',quality=90)",
+    "purpose": "Valid prepared JPEG with swapped red/blue channels for historical cache reuse regression; independent fixture, not exact native RGB565/JPEG bytes",
+    "pillowVersion": "11.3.0"
+  }
 }

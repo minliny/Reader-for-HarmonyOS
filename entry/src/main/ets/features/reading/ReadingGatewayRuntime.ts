@@ -23,6 +23,7 @@ export type ReadingGatewayImageCacheIdentity = {
   bookId: string;
   chapterIndex: number;
   contentVersion: string;
+  mangaDecodeRevision?: string;
   imageUrl: string;
   resourceRef?: string;
   baseUrl?: string;
@@ -33,6 +34,7 @@ export type ReadingGatewayImageChapterIdentity = {
   bookId: string;
   chapterIndex: number;
   contentVersion: string;
+  mangaDecodeRevision?: string;
 };
 
 /** The only Core request surface feature gateways may consume. */
@@ -75,6 +77,7 @@ export interface ReadingGatewayRuntime {
     mangaPosition?: number,
     expectedSourceVersion?: string,
     mangaPreview?: boolean,
+    mangaDecodeRevision?: string,
   ): Promise<ReadingGatewayImage>;
 
   prefetchReadingImage?(

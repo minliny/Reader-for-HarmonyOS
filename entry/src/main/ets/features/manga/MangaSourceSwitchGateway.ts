@@ -43,7 +43,7 @@ export class MangaSourceSwitchGateway {
     for (const page of ordinal === 0 ? [first] : [first, chapter.manifest.pages[ordinal]]) {
       const binding = chapter.resources.find(row => row.resourceRef === page.resourceRef)?.request;
       const image = await resources.loadPage({ sourceId: target.identity.sourceId, bookId: target.identity.bookId,
-        sourceRuleVersion: chapter.manifest.sourceRuleVersion, chapterIndex: entry.index,
+        sourceRuleVersion: chapter.manifest.sourceRuleVersion, decodeRevision: chapter.manifest.decodeRevision, chapterIndex: entry.index,
         chapterUrl: chapter.manifest.chapter.chapterId, contentVersion: chapter.manifest.manifestVersion },
         { ...(binding ?? { url: page.resourceRef }), resourceRef: page.resourceRef }, binding !== undefined, current, 0);
       try { if (page.ordinal === 0) { imageRevision = image.revision; width = image.width; height = image.height; } }
