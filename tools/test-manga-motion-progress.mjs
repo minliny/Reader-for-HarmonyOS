@@ -36,7 +36,7 @@ assert.equal(stopCallbacks.length, 2);
 function stop(owner, index) {
   new Function(`${stripTypeScriptTypes(`const callback = ${stopCallbacks[index]};`)}\nreturn callback;`).call(owner)();
 }
-const methods = ['saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'onViewportTouch', 'measureVisibleWindow', 'changeFit', 'toggleDirection', 'turnPage', 'refreshImages', 'aboutToDisappear'];
+const methods = ['publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'onViewportTouch', 'measureVisibleWindow', 'changeFit', 'toggleDirection', 'turnPage', 'refreshImages', 'aboutToDisappear'];
 const timers = [];
 // Optional baseline path executes the pre-fix methods against the same assertions.
 const Surface = productionMotionMethods(surfaceURL, methods.filter(name => memberNames.has(name)), {
@@ -46,7 +46,7 @@ const pages = [0, 1, 2].map(ordinal => ({ordinal, pageId: `mp1:${String(ordinal)
 const entry = {chapter: {manifest: {chapter: {sourceId: 's', bookId: 'b', chapterId: '/c'}, sourceRuleVersion: 'r', manifestVersion: 'v', decodeRevision: 'identity-v1', pages}, chapterIndex: 0, chapterTitle: 'c', totalPages: 3, pageStart: 0, cached: true, resources: []}, targetOrdinal: 1, recoveryRequired: false, progress: {token: {epoch: 1, revision: 0}, location: null}};
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return {promise, resolve}; }
-async function fixture(horizontal = false) {
+async function fixture(horizontal = false, offline = true) {
   const writes = [], frames = [], failures = [];
   let saveHold, imageHold, revision = 0;
   const runtime = {supportsCoreCapability: () => true,
@@ -65,7 +65,7 @@ async function fixture(horizontal = false) {
     }, releaseReadingImage() {}
   };
   const controller = new Controller(runtime);
-  await controller.openPrepared(structuredClone(entry), true); await tick();
+  await controller.openPrepared(structuredClone(entry), offline); await tick();
   await controller.setTileWindow([{ordinal: 1, tileIndex: 5}, {ordinal: 2, tileIndex: 0}]);
   const projection = new Projection();
   projection.publish(controller.chapter.manifest, ordinal => controller.pageGeometry(ordinal), horizontal ? 1 : undefined, 3, ordinal => controller.pageAt(ordinal));
@@ -81,7 +81,7 @@ async function fixture(horizontal = false) {
     getUIContext: () => ({postFrameCallback: callback => frames.push(callback)}),
     updateViewport() {}, onSaveFailure: message => failures.push(message)
   });
-  return {surface, controller, projection, native, writes, failures,
+  return {surface, runtime, controller, projection, native, writes, failures,
     holdSave(promise) { saveHold = promise; }, holdImage(promise) { imageHold = promise; },
     timer() { const callback = timers.shift(); assert.ok(callback); callback(); },
     frame() { const callback = frames.shift(); assert.ok(callback instanceof MangaLayoutFrame); callback.onFrame(0); },
@@ -184,3 +184,59 @@ assert.deepEqual(fit.failures, [], 'accepted old-position CAS survives close wit
 assert.equal(timers.length, 0, 'late fit completion cannot restore a disposed surface');
 fit.close();
 console.log('PASS actual preview cleanup + exit: old position is accepted before lease release and survives close through existing CAS lane');
+
+for (const scenario of ['same-manifest', 'changed-exact', 'changed-unresolved', 'failure', 'exit']) {
+  const f = await fixture(false, false);
+  f.surface.publishedManifestVersion = 'v'; f.surface.rememberVisible();
+  f.controller.onChange = () => f.surface.publish();
+  const hold = deferred(); const originalRequest = f.runtime.request.bind(f.runtime);
+  f.runtime.request = async (method, params) => {
+    if (method === 'manga.chapter.get') {
+      await hold.promise;
+      if (scenario === 'failure') throw new Error('MANGA_REFRESH_FIXTURE_FAILED');
+      const chapter = structuredClone(entry.chapter);
+      if (scenario.startsWith('changed')) chapter.manifest.manifestVersion = 'v2';
+      chapter.progressMapping = scenario === 'changed-unresolved' ?
+        {status: 'unresolved', reason: 'no exact identity', fromManifestVersion: 'v', fromPageId: pages[1].pageId, progressRevision: 1} :
+        {status: 'exact', reason: 'exact fixture', fromManifestVersion: 'v', fromPageId: pages[1].pageId, progressRevision: 1, targetOrdinal: 1, targetPageId: pages[1].pageId};
+      return {data: chapter};
+    }
+    if (method === 'reading.progress.get') return {data: {token: {epoch: 1, revision: 1}, location: structuredClone(f.writes[0].location)}};
+    return originalRequest(method, params);
+  };
+  const refreshing = f.surface.refreshImages(); await tick();
+  assert.ok(f.controller.tile(1, 5)?.image, 'the admitted old tile remains visible while the chapter request waits');
+  const originalChapter = f.controller.chapter;
+  f.surface.onViewportTouch(); f.native.y = -200; f.native.xOffset = 200; f.surface.onViewportScroll();
+  const latest = structuredClone(f.surface.visibleAnchor);
+  assert.deepEqual(latest, {ordinal: 1, y: 0.52, x: 0.2});
+  if (scenario === 'exit') f.surface.aboutToDisappear();
+  hold.resolve();
+  if (scenario === 'failure') {
+    await assert.rejects(refreshing, /MANGA_REFRESH_FIXTURE_FAILED/);
+    assert.equal(f.controller.chapter, originalChapter); assert.ok(f.controller.tile(1, 5)?.image);
+    assert.deepEqual(f.surface.visibleAnchor, latest); assert.equal(timers.length, 0);
+  } else if (scenario === 'exit') {
+    await assert.rejects(refreshing, /MANGA_SESSION_CANCELLED/);
+    assert.equal(f.controller.chapter, undefined); assert.equal(timers.length, 0);
+  } else {
+    await refreshing;
+    assert.notEqual(f.controller.chapter, originalChapter, 'the real refresh replaces the chapter object');
+    if (scenario === 'same-manifest') {
+      assert.deepEqual(f.surface.visibleAnchor, latest, 'same manifest must preserve the newer confirmed touch position');
+      const scrolls = []; f.surface.scroller.scrollBy = (_x, y) => scrolls.push(y);
+      timers.splice(0).forEach(callback => callback());
+      assert.ok(scrolls.length > 0);
+      assert.ok(scrolls.every(y => y === 200), 'an uncanceled restore must not reissue the old 100vp offset');
+    } else if (scenario === 'changed-exact') {
+      assert.deepEqual(f.surface.visibleAnchor, {ordinal: 1, y: 0.51, x: 0.1}, 'a new manifest uses exact Core mapping, never old unpersisted coordinates');
+      assert.equal(f.surface.recovering, false);
+    } else {
+      assert.deepEqual(f.surface.visibleAnchor, {ordinal: 0, y: 0, x: 0}); assert.equal(f.surface.recovering, true);
+      const count = f.writes.length; await f.surface.saveVisible();
+      assert.equal(f.writes.length, count, 'unresolved mapping still forbids replacement progress');
+    }
+  }
+  f.close();
+  console.log(`PASS actual refresh lifecycle: ${scenario}`);
+}
