@@ -292,6 +292,16 @@ export class MangaSessionController {
           this.pages.delete(index);
         }
       }
+      // A far selection can leave the old viewport without another tile
+      // callback (for example if the new image fails). Retire its leases now;
+      // adjacent tiles remain available for normal continuous scrolling.
+      for (const [key, tile] of this.tiles) {
+        if (wanted.has(tile.ordinal)) continue;
+        if (tile.image !== undefined) this.resources.release(tile.image);
+        this.tiles.delete(key);
+        this.tileLoads.delete(key);
+        this.wantedTiles.delete(key);
+      }
       // Current page is admitted first; neighbors share the existing Host owner.
       await this.loadPage(ordinal, chapter, generation);
       if (!current()) {
