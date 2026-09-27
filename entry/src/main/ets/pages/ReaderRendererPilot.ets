@@ -7,6 +7,7 @@ import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
 import { ArkWebResourceDiagnostic } from '../app/ArkWebResourceDiagnostic';
 import { ReaderParagraphDiagnostic } from './ReaderParagraphDiagnostic';
 import { ReaderTextNodeDiagnostic } from './ReaderTextNodeDiagnostic';
+import { ReaderMangaPlatformDiagnostic } from './ReaderMangaPlatformDiagnostic';
 
 @Entry
 @Component
@@ -15,6 +16,7 @@ struct ReaderRendererPilot {
   @State private resourceMode: boolean = false;
   @State private paragraphMode: boolean = false;
   @State private textNodeMode: boolean = false;
+  @State private mangaMode: boolean = false;
   @State private resourceBusy: boolean = false;
   private resourceDiagnostic: ArkWebResourceDiagnostic = new ArkWebResourceDiagnostic();
   private readonly controller: webview.WebviewController = new webview.WebviewController('reader-oss-pilot');
@@ -42,7 +44,10 @@ struct ReaderRendererPilot {
         Button('返回书架').onClick((): void => { router.replaceUrl({ url: 'pages/Index' }); });
         Text(this.result).fontSize(12).layoutWeight(1).id('reader-oss-pilot-status');
       }.width('100%').padding(12)
-      if (this.textNodeMode) {
+      if (this.mangaMode) {
+        Button('返回正文试点').onClick((): void => { this.mangaMode = false; });
+        ReaderMangaPlatformDiagnostic();
+      } else if (this.textNodeMode) {
         Button('返回正文试点').onClick((): void => { this.textNodeMode = false; });
         ReaderTextNodeDiagnostic();
       } else if (this.paragraphMode) {
@@ -62,6 +67,7 @@ struct ReaderRendererPilot {
           ArkWebExecutionHost({ diagnosticResourceProvider: this.resourceDiagnostic.provide });
         }.width('100%').layoutWeight(1);
       } else {
+      Button('漫画平台图像诊断').id('reader-manga-probe-open').onClick((): void => { this.mangaMode = true; });
       Button('原生 Text 同节点诊断').id('reader-textnode-open').onClick((): void => {
         this.textNodeMode = true;
       });

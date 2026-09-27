@@ -16,7 +16,7 @@ import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf, type HttpTransportFailureSummary } from '../../app/ErrorMessage';
-import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
+import { readerSourceCategoryIsReadable } from '../source/ReaderSourceCategory';
 
 const DOMAIN = 0x5244;
 
@@ -662,7 +662,7 @@ export class SearchOrchestrator {
         this.presentSources(sources);
         const scope = run.scope === undefined ? undefined : new Set<string>(run.scope);
         const enabled = sources.filter((source: SearchSource): boolean => source.enabled &&
-          source.name.trim().length > 0 && readerSourceCategoryIsText(source.category) &&
+          source.name.trim().length > 0 && readerSourceCategoryIsReadable(source.category) &&
           (scope === undefined || scope.has(source.sourceId)));
         run.sources = enabled;
         run.sourceListFailed = false;
@@ -814,7 +814,7 @@ export class SearchOrchestrator {
   private entryPresentationForSources(sources: SearchSource[]): SearchPresentation | undefined {
     if (sources.length === 0) return { kind: 'sourceRequired', reason: 'noSources', history: this.entryHistory };
     if (sources.some((source: SearchSource): boolean => source.enabled &&
-      source.name.trim().length > 0 && readerSourceCategoryIsText(source.category))) return undefined;
+      source.name.trim().length > 0 && readerSourceCategoryIsReadable(source.category))) return undefined;
     return { kind: 'sourceRequired', reason: 'allDisabled', history: this.entryHistory };
   }
 

@@ -68,6 +68,10 @@ export class SearchBookProjection {
       throw new Error('cached book source version is stale');
     }
     const bookId = this.string(row, 'bookUrl');
+    if ((source.category === 'comic' && facts?.['contentKind'] !== 'manga') ||
+      (source.category === 'novel' && facts !== undefined && facts['contentKind'] !== undefined && facts['contentKind'] !== 'text')) {
+      throw new Error('book contentKind does not match its source projection');
+    }
     let variables: SearchBookVariable[] = previous?.variables ?? [];
     if (previous === undefined && typeof row['variable'] === 'string') {
       try {
@@ -103,7 +107,7 @@ export class SearchBookProjection {
     const epoch = this.epoch;
     const current = (): void => { if (epoch !== this.epoch || !registryCurrent()) throw new Error('search projection superseded'); };
     const sourceById = new Map<string, SearchSource>();
-    for (const source of sources) if (source.enabled && source.category === 'novel') sourceById.set(source.sourceId, source);
+    for (const source of sources) if (source.enabled && (source.category === 'novel' || source.category === 'comic')) sourceById.set(source.sourceId, source);
     const requested = new Map<string, RemoteReadingIdentity>();
     if (change.reset || !this.initialized) {
       for (const [key, book] of books) if (book.sourceId !== 'local') requested.set(key, { sourceId: book.sourceId, bookId: book.bookId });

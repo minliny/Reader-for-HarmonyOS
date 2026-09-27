@@ -1,0 +1,67 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: first emitted title must be the exact recipe that reserved body space
++ actual - expected
+... Skipped lines
+
+  {
+    firstLine: 0,
++   key: 'body',
++   lastLine: 0,
+-   key: 'chapter A',
+-   lastLine: 1,
+    startScalar: 0,
+    style: {
+      alignment: 'center',
+      breakAll: true,
+      fontFamily: 'ReaderNotoSansSC',
+...
+    },
++   text: '正文'
+-   text: 'chapter A'
+  }
+
+    at assertMeasuredTitle (file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/test-reader-chapter-first-title-publication.mjs:56:10)
+    at file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/test-reader-chapter-first-title-publication.mjs:72:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: {
+    key: 'body',
+    text: '正文',
+    startScalar: 0,
+    firstLine: 0,
+    lastLine: 0,
+    style: {
+      widthVp: 300,
+      fontFamily: 'ReaderNotoSansSC',
+      fontSize: 24,
+      lineHeight: 32,
+      alignment: 'center',
+      breakAll: true
+    }
+  },
+  expected: {
+    key: 'chapter A',
+    text: 'chapter A',
+    startScalar: 0,
+    firstLine: 0,
+    lastLine: 1,
+    style: {
+      widthVp: 300,
+      fontFamily: 'ReaderNotoSansSC',
+      fontSize: 24,
+      lineHeight: 32,
+      alignment: 'center',
+      breakAll: true
+    }
+  },
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

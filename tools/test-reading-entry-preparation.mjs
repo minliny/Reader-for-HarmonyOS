@@ -334,6 +334,7 @@ for (const [method, params, affected] of [
   ['cache.clear', { scope: 'book', sourceId: 's1', bookId: 'a' }, ['s1/a']],
   ['chapter.content', { sourceId: 's1', bookId: 'a', forceRefresh: true }, ['s1/a']],
   ['source.switch.commit', { from: { sourceId: 's1', bookId: 'a' }, target: { sourceId: 's2', bookId: 'a' } }, ['s1/a', 's2/a']],
+  ['manga.sourceSwitch.commit', { fromSourceId: 's1', fromBookId: 'a', firstImage: { chapter: { sourceId: 's2', bookId: 'a' } } }, ['s1/a', 's2/a']],
   ['source.switch.rollback', { transactionId: 'opaque' }, ['s1/a', 's1/b', 's2/a', 'local/a']],
   ['source.import', { sourceId: 's1', json: 'opaque imports may replace more than one identity' }, ['s1/a', 's1/b', 's2/a', 'local/a']],
   ['replace.persist', { operation: 'update', params: { id: 1, scopeContent: true } }, ['s1/a', 's1/b', 's2/a', 'local/a']],

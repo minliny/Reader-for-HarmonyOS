@@ -15,11 +15,18 @@ const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '
 const handles = new Map();
 let failRename = () => false;
 let failUnlink = () => false;
+let nanosecondStats = true;
+let resourceReads = 0;
 let beforeSync = async () => {};
 const io = {
   OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 },
   access: async path => fs.access(path).then(() => true, () => false),
-  stat: path => fs.stat(path),
+  stat: async path => {
+    const stat = await fs.stat(path); const ns = await fs.stat(path, { bigint: true });
+    return { size:stat.size,dev:stat.dev,ino:stat.ino,mtime:Math.floor(stat.mtimeMs/1000),ctime:Math.floor(stat.ctimeMs/1000),
+      mtimeNs:nanosecondStats ? ns.mtimeNs : undefined,ctimeNs:nanosecondStats ? ns.ctimeNs : undefined,
+      isFile:()=>stat.isFile(),isDirectory:()=>stat.isDirectory() };
+  },
   mkdir: (path, recursive) => fs.mkdir(path, { recursive }),
   listFile: path => fs.readdir(path),
   rmdir: path => fs.rmdir(path),
@@ -41,10 +48,13 @@ const io = {
   },
   AtomicFile: class {
     constructor(path) { this.path = path; }
-    readFully() { const bytes = readFileSync(this.path); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength); }
+    readFully() { if(this.path.endsWith('.bin')) resourceReads++; const bytes = readFileSync(this.path); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength); }
   },
 };
 const util = {
+  // Platform LRU substitute only for the native API boundary; cache validity
+  // policy remains the production class exercised below.
+  LRUCache: class { constructor(capacity){this.capacity=capacity;this.items=new Map();} get(key){return this.items.get(key);} put(key,value){this.items.delete(key);this.items.set(key,value);if(this.items.size>this.capacity)this.items.delete(this.items.keys().next().value);} remove(key){this.items.delete(key);} keys(){return [...this.items.keys()];} clear(){this.items.clear();} },
   TextEncoder: class { encodeInto(value) { return new TextEncoder().encode(value); } },
   TextDecoder: { create: (_, options) => ({ decodeToString: bytes => new TextDecoder('utf-8', options).decode(bytes) }) },
 };
@@ -77,6 +87,37 @@ async function seedLegacy(identity, override = {}) {
   return directory;
 }
 try {
+  const manga = { ...image, contentVersion: 'manga-v1', resourceRef: `manga:mp1:${'a'.repeat(64)}` };
+  await cache.storeResource(manga, bytes);
+  const renewed = { ...manga, imageUrl: 'https://new-cdn/image?signature=renewed', baseUrl: 'https://new-cdn/' };
+  assert.deepEqual(await cache.loadResource(renewed), bytes, 'signed transport changes do not change page identity');
+  const duplicate = { ...manga, resourceRef: `manga:mp1:${'b'.repeat(64)}` };
+  assert.equal(await cache.loadResource(duplicate), undefined, 'same URL is not a second logical page receipt');
+  await cache.storeResource(duplicate, new Uint8Array([8, 9]));
+  assert.deepEqual(await cache.loadResource(manga), bytes);
+  assert.deepEqual(await cache.loadResource(duplicate), new Uint8Array([8, 9]));
+  assert.notEqual(await cache.resourcePath(manga), await cache.resourcePath({ ...manga, contentVersion: 'manga-v2' }));
+  pass('manga stable resource refs survive signed URL changes; duplicate logical pages and manifest versions remain isolated');
+  await cache.markChapterComplete(manga, [manga, duplicate]);
+  assert.equal(await cache.isChapterComplete(manga), true);
+  resourceReads = 0;
+  for(let i=0;i<5;i++) assert.equal(await cache.isChapterComplete(manga), true);
+  assert.equal(resourceReads,0,'unchanged high-resolution file identities avoid repeated whole-image reads');
+  const mangaPath=await cache.resourcePath(manga);
+  await fs.writeFile(mangaPath,new Uint8Array([9,2,3])); // Same length, same second.
+  assert.equal(await cache.isChapterComplete(manga),false,'same-size corruption must invalidate verification proof');
+  await cache.storeResource(manga,bytes);assert.equal(await cache.isChapterComplete(manga),true);
+  nanosecondStats=false;resourceReads=0;
+  assert.equal(await cache.isChapterComplete(manga),true);assert.equal(await cache.isChapterComplete(manga),true);
+  assert.ok(resourceReads>=4,'coarse timestamp platforms retain complete digest verification');
+  nanosecondStats=true;
+  await cache.clearBook(manga.sourceId,manga.bookId);
+  assert.equal(await cache.isChapterComplete(manga),false,'clear cannot reuse an old digest proof');
+  await cache.storeResource(manga,bytes);await cache.storeResource(duplicate,new Uint8Array([8,9]));
+  await cache.markChapterComplete(manga,[manga,duplicate]);
+  const reopenedProofs=new Cache({filesDir:root});resourceReads=0;
+  assert.equal(await reopenedProofs.isChapterComplete(manga),true);assert.ok(resourceReads>=2,'cold cache must verify bytes again');
+  pass('bounded native LRU skips repeated hash I/O only with nanosecond identity; same-size damage, coarse clocks, clear and restart remain verified');
   await cache.storeResource(image, bytes);
   await cache.markChapterComplete(chapter, [image, image]);
   const second = { ...image, contentVersion: 'B' };

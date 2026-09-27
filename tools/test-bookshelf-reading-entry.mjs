@@ -24,7 +24,7 @@ function method(name) {
   return source.slice(start, end).replace(/\n  \/\*\*[\s\S]*$/, '');
 }
 const methods = [
-  'installRemoteReadingSession(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
+  'installRemoteReadingSession(', 'updateRemoteReadableChapterOrder(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
   'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
   'currentSourceSwitchTransactionId(',

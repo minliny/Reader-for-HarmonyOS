@@ -28,6 +28,8 @@ export type ReaderSettingsToggleKey =
 
 export type ReaderSettingsSnapshot = {
   version: 5;
+  mangaDirection?: 'vertical' | 'horizontal';
+  mangaFit?: 'source' | 'width' | 'contain';
   screenDirection: ReaderScreenDirection;
   navigationMode: ReaderNavigationMode;
   pageTransition: ReaderPageTransition;
@@ -160,7 +162,7 @@ export function normalizeReaderSettingsSnapshot(
       candidate.navigationMode === 'continuous' ? 'continuous' : 'paged',
       isReaderPageTransition(candidate.pageTransition) ? candidate.pageTransition : fallback.pageTransition,
     );
-  return {
+  const normalized: ReaderSettingsSnapshot = {
     version: 5,
     screenDirection: candidate.screenDirection === 'portrait' || candidate.screenDirection === 'landscape' ?
       candidate.screenDirection : 'system',
@@ -180,6 +182,9 @@ export function normalizeReaderSettingsSnapshot(
     stopTtsOnScreenOff: candidate.stopTtsOnScreenOff === true,
     longPressSelectText: candidate.version === 4 || candidate.version === 5 ? candidate.longPressSelectText === true : true,
   };
+  if (candidate.version === 5 && candidate.mangaDirection !== undefined) normalized.mangaDirection = candidate.mangaDirection === 'horizontal' ? 'horizontal' : 'vertical';
+  if (candidate.version === 5 && (candidate.mangaFit === 'width' || candidate.mangaFit === 'contain' || candidate.mangaFit === 'source')) normalized.mangaFit = candidate.mangaFit;
+  return normalized;
 }
 
 export function copyReaderSettingsSnapshot(snapshot: ReaderSettingsSnapshot): ReaderSettingsSnapshot {

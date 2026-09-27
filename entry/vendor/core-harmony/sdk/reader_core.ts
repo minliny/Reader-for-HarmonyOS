@@ -7,6 +7,7 @@ export type ReaderCoreAssetBridge = {
   begin(requestId: number, operationId: number, declaredBytes: number): number;
   write(requestId: number, operationId: number, assetId: number, chunk: Uint8Array): number;
   commit(requestId: number, operationId: number, assetId: number): number;
+  read?(requestId: number, operationId: number, assetId: number, offset: number, limit: number): Promise<Uint8Array>;
   release(requestId: number, operationId: number, assetId: number): void;
 };
 
@@ -29,6 +30,7 @@ export type NativeReaderCoreModule = {
   acknowledgeEvent?(runtime: NativeRuntimeHandle, deliveryId: number): void;
   beginAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, declaredBytes: number): number;
   writeAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number, chunk: Uint8Array): number;
+  readAssetAsync?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number, offset: number, limit: number): Promise<Uint8Array>;
   commitAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number): number;
   releaseAsset?(runtime: NativeRuntimeHandle, requestId: number, operationId: number, assetId: number): void;
   completeHostRequest(
@@ -318,6 +320,10 @@ export class ReaderCoreRuntime {
         native.writeAsset!(runtime, requestId, operationId, assetId, chunk),
       commit: (requestId, operationId, assetId): number =>
         native.commitAsset!(runtime, requestId, operationId, assetId),
+      read: native.readAssetAsync === undefined ? undefined : (requestId, operationId, assetId, offset, limit): Promise<Uint8Array> => {
+        if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit <= 0 || limit > 1048576) return Promise.reject(new Error('Invalid asset read range'));
+        return native.readAssetAsync!(runtime, requestId, operationId, assetId, offset, limit);
+      },
       release: (requestId, operationId, assetId): void =>
         native.releaseAsset!(runtime, requestId, operationId, assetId),
     };

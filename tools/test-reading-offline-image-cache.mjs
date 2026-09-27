@@ -45,13 +45,13 @@ assert.doesNotMatch(cache, /writeSync|openSync|renameSync/);
 assert.doesNotMatch(cache, /pruneUnreferencedResources/,
   'publishing a manifest does not own reclamation of active or old-version resources');
 assert.match(cache, /captureValidity[\s\S]*bookClearGenerations[\s\S]*finishPendingClear/);
-assert.match(owner, /this\.state = 'closing';\s*this\.readingImageDiskCache\.close\(\)/);
+assert.match(owner, /this\.state = 'closing';\s*ReadingBodyImageHost\.instance\.setMangaMetadataInspector\(undefined\);\s*this\.readingImageDiskCache\.close\(\)/);
 assert.doesNotMatch(cache, /bodyBase64|PixelMap/,
   'persistent offline image storage must contain bounded bytes, not protocol Base64 or native handles');
 
 const diskLookup = owner.indexOf('this.readingImageDiskCache.loadResource(identity, cacheCurrent)');
 const offlineFailure = owner.indexOf("if (!allowNetwork) {");
-const networkDescriptor = owner.indexOf('this.resolveReadingImageRequest(sourceId, imageUrl, identity.baseUrl');
+const networkDescriptor = owner.indexOf('this.prepareReadingImageBytes(identity, cacheCurrent, expectedSourceVersion)');
 assert.ok(diskLookup >= 0 && offlineFailure > diskLookup && networkDescriptor > offlineFailure,
   'offline image resolution must try exact disk bytes and reject before source/HTTP request construction');
 assert.match(owner,

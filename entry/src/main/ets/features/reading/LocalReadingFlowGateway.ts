@@ -111,6 +111,7 @@ export type LocalReadingProgressState =
       presentationPending?: boolean };
 
 export type LocalReadingProgressUpdate = {
+  directoryTargetProof?: JsonObject;
   expectedProgressRevision?: string;
   expectedBodyVersion?: string;
   expectedProcessingVersion?: string;
@@ -132,6 +133,7 @@ export type LocalReadingLayout = {
 
 /** One Unicode-scalar anchor emitted by the local pagination/measurement layer. */
 export type LocalReadingAnchor = {
+  directoryTargetProof?: JsonObject;
   bodyVersion?: string;
   processingVersion?: string;
   chapterIndex: number;
@@ -493,13 +495,13 @@ export class LocalReadingFlowGateway {
     bookId: string,
     chapterIndex: number,
     isCurrent?: LocalReadingRequestGuard,
+    directoryTargetProof?: JsonObject,
   ): Promise<LocalReadingChapter> {
     this.assertNonBlankString(bookId, 'bookId');
     this.assertNonNegativeInteger(chapterIndex, 'chapterIndex');
-    const result = await this.runtimeOwner.request('local_book.chapter.content', {
-      bookId,
-      chapterIndex,
-    }, this.requestOptions(isCurrent));
+    const params: JsonObject = { bookId, chapterIndex };
+    if (directoryTargetProof !== undefined) params['directoryTargetProof'] = directoryTargetProof;
+    const result = await this.runtimeOwner.request('local_book.chapter.content', params, this.requestOptions(isCurrent));
     this.assertLocalSource(result.data, 'local_book.chapter.content');
     this.assertMatchingBookId(result.data, bookId, 'local_book.chapter.content');
     const returnedIndex = this.requireNonNegativeInteger(
@@ -756,6 +758,7 @@ export class LocalReadingFlowGateway {
       chapterOffset: update.chapterOffset,
       chapterProgress: update.chapterProgress,
     };
+    if (update.directoryTargetProof !== undefined) params['directoryTargetProof'] = update.directoryTargetProof;
     appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
       update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);
     if (update.expectedProgressRevision !== undefined) {

@@ -26,7 +26,7 @@ const sourceCategoryModule = stripTypeScriptTypes(
 const sourceCategoryImport =
   /^import \{\n(?:  [^\n]+\n)+\} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
 const sourceCategorySingleImport =
-  /^import \{ readerSourceCategoryIsText \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
+  /^import \{ readerSourceCategoryIsReadable \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
 const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
   .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))

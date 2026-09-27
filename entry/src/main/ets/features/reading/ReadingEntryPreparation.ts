@@ -24,6 +24,7 @@ export interface ReadingEntrySnapshot {
   /** True means toc contains only the entry window, never a complete catalog. */
   catalogPending?: boolean;
   navigation?: ReadingEntryNavigation;
+  resumeOnly?: boolean;
   requestedScalar?: number;
   progress: LocalReadingProgressState;
   chapter: ReadingSessionChapter;
@@ -407,7 +408,7 @@ export class ReadingEntryPreparation {
       method === 'local_book.import' || method === 'local_book.reimport' || method === 'local_book.remove' ||
       method === 'local_book.delete' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
       method === 'bookshelf.add' || method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
-      (method.startsWith('source.switch.') && method !== 'source.switch.pending.list') ||
+      method === 'manga.sourceSwitch.commit' || (method.startsWith('source.switch.') && method !== 'source.switch.pending.list') ||
       method === 'cache.clear' || (method === 'chapter.content' && (params['forceRefresh'] === true || params['upgradeCachedContent'] === true)) ||
       method === 'reader.chinese-conversion.put' || method === 'replace.persist' || method === 'replace.undo' ||
       method === 'replace-rule.create' || method === 'replace-rule.update' || method === 'replace-rule.delete' ||
@@ -483,6 +484,13 @@ export class ReadingEntryPreparation {
         if (!keys.has(key)) { keys.add(key); scopes.push(scope); }
       }
       return scopes;
+    }
+    if (method === 'manga.sourceSwitch.commit') {
+      const from = this.bookScope({ sourceId: params['fromSourceId'], bookId: params['fromBookId'] });
+      const receipt = preparationObject(params['firstImage']);
+      const target = this.bookScope(preparationObject(receipt['chapter']));
+      if (from.kind !== 'book' || target.kind !== 'book') return [{ kind: 'global' }];
+      return from.sourceId === target.sourceId && from.bookId === target.bookId ? [from] : [from, target];
     }
     if (method === 'source.switch.commit') {
       const from = this.bookScope(preparationObject(params['from']));
@@ -613,7 +621,7 @@ export class ReadingEntryPreparation {
         coordinator?.hasCurrentCatalogProjection?.(session) === true,
       request: (method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> => {
         if (!isCurrent() || params['forceRefresh'] === true || params['upgradeCachedContent'] === true || method === 'reading.progress.update' ||
-          (method.startsWith('source.switch.') && method !== 'source.switch.pending.list')) {
+          method === 'manga.sourceSwitch.commit' || (method.startsWith('source.switch.') && method !== 'source.switch.pending.list')) {
           return Promise.reject(new Error('READING_ENTRY_PREPARATION_CANCELLED'));
         }
         const guarded: RequestOptions = { ...options,
@@ -646,12 +654,12 @@ export class ReadingEntryPreparation {
       const navigation = snapshot.navigation;
       const toc: LocalReadingToc = { bookId: seed.bookId, entries: navigation === undefined ?
         [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle,
-          downloadState: 'unknown', navigable: true }] :
+          downloadState: 'unknown', navigable: snapshot.resumeOnly !== true }] :
         [...navigation.before, navigation.current, ...navigation.after] };
       // The work cancellation closure ends on pause/take. Retained data uses
       // the mutation proof instead; it must survive a foreground handoff.
       return { sourceId: seed.sourceId, bookId: seed.bookId, gateway, toc,
-        progress: snapshot.progress, chapter: snapshot.chapter, navigation, requestedScalar: snapshot.requestedScalar,
+        progress: snapshot.progress, chapter: snapshot.chapter, navigation, resumeOnly: snapshot.resumeOnly, requestedScalar: snapshot.requestedScalar,
         catalogPending: true, isCurrent: valid };
     }
     if (seed.sourceId !== 'local') {

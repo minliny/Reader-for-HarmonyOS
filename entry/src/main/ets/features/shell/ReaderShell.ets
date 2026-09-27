@@ -1,3 +1,7 @@
+import { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
+import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { MangaReadingSurface } from '../manga/MangaReadingSurface';
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -35,6 +39,7 @@ type PreparedReaderRoute = 'reading' | 'directory';
 
 @Component
 export struct ReaderShell {
+  private readonly mangaSettingsGateway: ReaderSettingsGateway = new ReaderSettingsGateway(ReaderRuntimeOwner.current());
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
     readerAppColor('app.window.background', 'day');
@@ -43,10 +48,13 @@ export struct ReaderShell {
 
   // 阅读内容。
   @Prop bookId: string = '';
+  @Prop readingReadyGeneration: number = 0;
   @Prop bookTitle: string = '';
   @Prop sourceId: string = '';
   @Prop sourceName: string = '';
   @Prop bookKind: string | undefined = undefined;
+  // Explicit Core content fact; never infer this from the free-form genre.
+  @Prop contentKind: 'text' | 'manga' = 'text';
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
   @Prop remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
   entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
@@ -54,6 +62,8 @@ export struct ReaderShell {
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
   @Prop totalChapters: number = 0;
   @Prop requestedChapterIndex: number | undefined = undefined;
+  @Prop mangaChapterRequestGeneration: number = 0;
+  @Prop requestedMangaDirectoryTargetProof: JsonObject | undefined = undefined;
   @Prop isTablet: boolean = false;
   @Prop reduceMotion: boolean = false;
   // 阅读会话可见性: route 决定 ReadingExperience 是否露出版面。
@@ -81,7 +91,8 @@ export struct ReaderShell {
   onExitRequestHandler: (requestExit: (intent?: 'navigation') => void) => void = (): void => {};
   onExit: () => void = (): void => {};
   onExitCancelled: () => void = (): void => {};
-  onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number) => void =
+    (_chapterIndex: number, _sourceId: string, _bookId: string, _generation: number): void => {};
   onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
   onRetryFailedSourceSwitch: () => void = (): void => {};
   onDismissSourceSwitchFailure: () => void = (): void => {};
@@ -95,8 +106,8 @@ export struct ReaderShell {
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
-  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   // undefined = 未接线, 面板走自身的章首降级链 (selectBookmark 降级)。
   onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
     undefined;
@@ -117,6 +128,7 @@ export struct ReaderShell {
   onOpenDirectory: () => void = (): void => {};
   onOpenBookInfo: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
+  onMangaLogin: () => Promise<void> = (): Promise<void> => Promise.reject(new Error('MANGA_SOURCE_LOGIN_UNAVAILABLE'));
   onOpenRulesManagement: () => void = (): void => {};
   onCloseSourceSwitch: () => void = (): void => {};
   onRetrySourceSwitch: () => void = (): void => {};
@@ -133,6 +145,9 @@ export struct ReaderShell {
       Stack({ alignContent: Alignment.TopStart }) {
         // A new source/book needs fresh gateways and lifecycle tokens. Theme,
         // font, chapter and overlay changes retain this same reading owner.
+        if (this.contentKind === 'manga') {
+          this.mangaSurface()
+        } else {
         ForEach([this.readingIdentityKey()], (_identity: string) => {
         ReadingExperience({
           sourceId: this.sourceId,
@@ -182,7 +197,8 @@ export struct ReaderShell {
             if (_identity === this.readingIdentityKey()) this.onExitCancelled();
           },
           onReadingReady: (chapterIndex: number): void => {
-            if (_identity === this.readingIdentityKey()) this.onReadingReady(chapterIndex);
+            if (_identity === this.readingIdentityKey())
+              this.onReadingReady(chapterIndex, this.sourceId, this.bookId, this.readingReadyGeneration);
           },
           onReadingCommitted: (commit: ReadingCommit): void => {
             if (_identity === this.readingIdentityKey()) this.onReadingCommitted(commit);
@@ -222,7 +238,7 @@ export struct ReaderShell {
           onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean): Promise<void> =>
             _identity === this.readingIdentityKey() ? this.onLoadControlBookmarks(sourceId, bookId,
               (): boolean => _identity === this.readingIdentityKey() && isCurrent()) : Promise.resolve(),
-          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          chapterStartBookmarkCreationEnabled: this.contentKind !== 'manga' && this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => {
             if (_identity === this.readingIdentityKey()) this.onCreateChapterStartBookmark(request);
           },
@@ -234,6 +250,7 @@ export struct ReaderShell {
           .height('100%')
           .opacity(this.route === 'reading' || this.route === 'directory' ? 1 : 0);
         }, (identity: string): string => identity);
+        }
       }
       .width('100%')
       .height('100%')
@@ -253,15 +270,15 @@ export struct ReaderShell {
           reduceMotion: this.reduceMotion,
           offlineBookOperationActive: this.offlineBookOperationActive,
           onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
-          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void =>
-            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: this.onSelectBookmark,
           bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onDownloadBook: (): void => this.onDownloadBook(),
           onClearBookOffline: (): void => this.onClearBookOffline(),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
-          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          chapterStartBookmarkCreationEnabled: this.contentKind !== 'manga' && this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
           onSwitchSource: (): void => this.onSwitchSource(),
@@ -303,8 +320,58 @@ export struct ReaderShell {
     .hitTestBehavior(this.visible ? HitTestMode.Default : HitTestMode.Transparent);
   }
 
+  @Builder
+  private mangaSurface() {
+    ForEach([this.mangaIdentityKey()], (_identity: string) => {
+      MangaReadingSurface({
+        settingsGateway: this.mangaSettingsGateway,
+        mangaBackgroundColor: readerAppColor('app.window.background', this.appThemeScheme),
+        mangaForegroundColor: readerAppColor('app.window.foreground', this.appThemeScheme),
+        errorColor: readerAppColor('TOK_DANGER', this.appThemeScheme),
+        onDirectory: (): void => this.onOpenDirectory(),
+        onSwitchSource: (): void => this.onSwitchSource(),
+        onLoginSource: (): Promise<void> => this.onMangaLogin(),
+        onSaveFailure: (message: string): void => this.onReadingFailure(this.sourceId, this.bookId, message),
+        runtime: ReaderRuntimeOwner.current(), sourceId: this.sourceId, bookId: this.bookId,
+        chapterIndex: this.requestedChapterIndex,
+        directoryTargetProof: this.requestedMangaDirectoryTargetProof,
+        remoteSession: this.remoteSession, remoteBookSeed: this.remoteBookSeed,
+        onRemoteSessionReady: (session: RemoteReadingSession): void => this.onRemoteSessionReady(session),
+        onChapterCommitted: (index: number, title: string): void => this.onMangaChapterReady(_identity, index, title),
+        onBack: (): void => this.onExit(),
+        onExitRequestHandler: (exit: () => void): void => this.onExitRequestHandler(exit),
+        onChapter: (direction: number): void => {
+          if (this.contentKind === 'manga' && _identity === this.mangaIdentityKey()) this.selectAdjacentMangaChapter(direction);
+        },
+      })
+    }, (identity: string): string => identity)
+  }
+
+  private mangaIdentityKey(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.readingReadyGeneration,
+      this.requestedChapterIndex ?? null, this.mangaChapterRequestGeneration]);
+  }
+
+  private onMangaChapterReady(identity: string, chapterIndex: number, chapterTitle: string): void {
+    if (this.contentKind !== 'manga' || identity !== this.mangaIdentityKey() ||
+      !Number.isSafeInteger(chapterIndex) || chapterIndex < 0 ||
+      (this.requestedChapterIndex !== undefined && this.requestedChapterIndex !== chapterIndex)) return;
+    this.onChapterCommitted(chapterIndex, chapterTitle);
+    this.onReadingReady(chapterIndex, this.sourceId, this.bookId, this.readingReadyGeneration);
+  }
+
+  private selectAdjacentMangaChapter(direction: number): void {
+    if (direction !== -1 && direction !== 1) return;
+    const current = this.tocEntries.findIndex(entry => entry.index === (this.requestedChapterIndex ?? this.directoryCurrentChapterIndex));
+    if (current < 0) return;
+    // A historical cached group can be resumed without becoming selectable.
+    for (let next = current + direction; next >= 0 && next < this.tocEntries.length; next += direction) {
+      if (this.tocEntries[next].navigable !== false) { this.onSelectChapter(this.tocEntries[next].index); return; }
+    }
+  }
+
   private readingIdentityKey(): string {
-    return JSON.stringify([this.sourceId, this.bookId]);
+    return JSON.stringify([this.sourceId, this.bookId, this.readingReadyGeneration]);
   }
 
   private chromeMetrics(_revision: number): ReaderWindowMetricsSnapshot {

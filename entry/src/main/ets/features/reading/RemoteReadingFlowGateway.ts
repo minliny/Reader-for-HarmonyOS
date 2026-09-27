@@ -1,5 +1,5 @@
 import { readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
-import { appendExpectedPositionVersions, captureRemotePositionContext, decodeRemotePositionMigration, encodeRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
+import { appendReadingSelectionContext, appendExpectedPositionVersions, captureRemotePositionContext, decodeRemotePositionMigration, encodeRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import type {
   JsonObject,
   ReaderCoreResultEvent,
@@ -32,6 +32,7 @@ import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { RemoteReadingPreparedChapter } from './RemoteReadingEvidence';
 
 export type RemoteReadingBookSeed = {
+  contentKind?: 'text' | 'manga' | 'audio';
   sourceVersion?: string;
   sourceId: string;
   bookId: string;
@@ -59,6 +60,10 @@ export type RemoteReadingBookDetail = {
 };
 
 export type RemoteReadingTocEntry = {
+  navigable?: boolean;
+  proofState?: string;
+  resumeOnly?: boolean;
+  level?: number;
   index: number;
   title: string;
   url: string;
@@ -66,6 +71,7 @@ export type RemoteReadingTocEntry = {
 };
 
 export type RemoteReadingSession = {
+  contentKind?: 'text' | 'manga' | 'audio';
   sourceVersion?: string;
   /** Core-owned canonical catalog snapshot; absent on legacy caches. */
   catalogAt?: number;
@@ -122,6 +128,7 @@ export type RemoteReadingProgressState =
   | { kind: 'restored'; progress: RemoteReadingProgress; progressRevision?: string };
 
 export type RemoteReadingProgressUpdate = {
+  directoryTargetProof?: JsonObject;
   expectedProgressRevision?: string;
   expectedBodyVersion?: string;
   expectedProcessingVersion?: string;
@@ -132,6 +139,7 @@ export type RemoteReadingProgressUpdate = {
 };
 
 export type RemoteReadingAnchor = {
+  directoryTargetProof?: JsonObject;
   bodyVersion?: string;
   processingVersion?: string;
   chapterIndex: number;
@@ -228,6 +236,10 @@ export class RemoteReadingFlowGateway {
       );
     }
     const rawBook = this.requireObject(detailResult.data['book'], 'book.detail book');
+    const declaredKind = detailResult.data['contentKind'];
+    if (declaredKind !== undefined && declaredKind !== 'text' && declaredKind !== 'manga' && declaredKind !== 'audio') {
+      throw new RemoteReadingGatewayError('invalidInput', 'unsupported contentKind', 'book.detail');
+    }
     if (this.requireNonBlankString(rawBook, 'bookId', 'book.detail book') !== identity.bookId) {
       throw new RemoteReadingGatewayError(
         'identityMismatch',
@@ -267,7 +279,14 @@ export class RemoteReadingFlowGateway {
     }
     const snapshot = this.decodeCatalogSnapshot(tocResult.data, 'book.toc');
     const entries = this.decodeToc(tocResult.data['toc']);
-    const readableEntryCount = entries.filter((entry): boolean => entry.url.trim().length > 0).length;
+    const readableIndexes = tocResult.data['readableChapterIndexes'];
+    if (readableIndexes !== undefined) {
+      const indexes = new Set<number>(entries.map((entry): number => entry.index));
+      if (!Array.isArray(readableIndexes) || readableIndexes.some((value): boolean => typeof value !== 'number' || !Number.isSafeInteger(value) || !indexes.has(value as number))) throw new Error('invalid readable chapter indexes');
+      const readable = new Set<number>(readableIndexes as number[]);
+      for (const entry of entries) entry.navigable = readable.has(entry.index);
+    }
+    const readableEntryCount = entries.filter((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0).length;
     if (readableEntryCount === 0) {
       const diagnostic: RemoteReadingTocDiagnostic = {
         sourceId: identity.sourceId,
@@ -289,6 +308,8 @@ export class RemoteReadingFlowGateway {
     }
     return {
       acquisitionMode: 'online',
+      contentKind: detailResult.data['contentKind'] === 'manga' ? 'manga' :
+        detailResult.data['contentKind'] === 'audio' ? 'audio' : 'text',
       sourceVersion: tocVersion ?? detailVersion,
       ...snapshot,
       identity,
@@ -370,14 +391,19 @@ export class RemoteReadingFlowGateway {
           'cache.book.status',
         );
       }
+      const level = raw['level'] === null || raw['level'] === undefined ? undefined : this.requireChapterIndex(raw, 'level', 'book.toc entry');
+      if (level !== undefined && (level < 1 || level > 32)) throw new Error('invalid directory level');
       entries.push({
-        index,
+        ...(level === undefined ? {} : { level }), index,
         title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
         url: this.requireString(raw, 'url', 'cache.book.status chapter'),
+        ...(typeof raw['navigable'] === 'boolean' ? { navigable: raw['navigable'] as boolean } : {}),
+        ...(typeof raw['proofState'] === 'string' ? { proofState: raw['proofState'] as string } : {}),
+        ...(typeof raw['resumeOnly'] === 'boolean' ? { resumeOnly: raw['resumeOnly'] as boolean } : {}),
         variables: cachedVariables(raw['variables']),
       });
     }
-    if (!entries.some((entry): boolean => entry.url.trim().length > 0)) {
+    if (!entries.some((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0)) {
       throw new RemoteReadingGatewayError('cachedSessionUnavailable', 'REMOTE_TOC_NOT_DOWNLOADED', 'cache.book.status');
     }
     return {
@@ -472,6 +498,11 @@ export class RemoteReadingFlowGateway {
         title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
         url: this.requireString(raw, 'url', 'cache.book.status chapter'),
         variables: session.entries[position].variables,
+        ...(session.entries[position].level === undefined ? {} : { level: session.entries[position].level }),
+        ...(typeof raw['navigable'] === 'boolean' ? { navigable: raw['navigable'] as boolean } :
+          session.entries[position].navigable === undefined ? {} : { navigable: session.entries[position].navigable }),
+        ...(typeof raw['proofState'] === 'string' ? { proofState: raw['proofState'] as string } : {}),
+        ...(typeof raw['resumeOnly'] === 'boolean' ? { resumeOnly: raw['resumeOnly'] as boolean } : {}),
       };
     });
   }
@@ -490,7 +521,7 @@ export class RemoteReadingFlowGateway {
     this.assertChapterIndex(chapterIndex, 'chapterIndex');
     assertRemoteReadingHostRequirements(session.hostRequirements);
     const selected = this.chapterEntry(session, chapterIndex);
-    if (selected === undefined || selected.url.trim().length === 0) {
+    if (selected === undefined || selected.navigable === false || selected.url.trim().length === 0) {
       throw new RemoteReadingGatewayError(
         'chapterNotFound',
         `chapter ${chapterIndex} is not present in the remote session TOC`,
@@ -531,7 +562,7 @@ export class RemoteReadingFlowGateway {
       variables: encodeRemoteReadingVariables(variables),
     };
     if (forceRefresh) params['forceRefresh'] = true;
-    if (positionContext !== undefined) params['positionContext'] = encodeRemotePositionContext(positionContext);
+    appendReadingSelectionContext(params, positionContext);
     const offline = session.acquisitionMode === 'offline' && !forceRefresh;
     const cacheOnly = offline &&
       this.runtimeOwner.supportsCoreCapability?.('chapter.content.cacheOnly.v1') === true;
@@ -881,6 +912,7 @@ export class RemoteReadingFlowGateway {
       chapterOffset: update.chapterOffset,
       chapterProgress: update.chapterProgress,
     };
+    if (update.directoryTargetProof !== undefined) params['directoryTargetProof'] = update.directoryTargetProof;
     appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
       update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);
     if (update.expectedProgressRevision !== undefined) {
@@ -1029,8 +1061,10 @@ export class RemoteReadingFlowGateway {
           'book.toc',
         );
       }
+      const level = raw['level'] === null || raw['level'] === undefined ? undefined : this.requireChapterIndex(raw, 'level', 'book.toc entry');
+      if (level !== undefined && (level < 1 || level > 32)) throw new Error('invalid directory level');
       entries.push({
-        index,
+        ...(level === undefined ? {} : { level }), index,
         title: this.requireNonBlankString(raw, 'title', 'book.toc entry'),
         url: this.requireString(raw, 'url', 'book.toc entry'),
         variables: decodeRemoteReadingVariables(raw['variables'], 'book.toc entry', true),

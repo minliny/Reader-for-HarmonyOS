@@ -1,3 +1,4 @@
+import type { JsonObject } from '@reader/core-harmony';
 import { readingChapterTextIdentity, type ReadingDocumentRange } from './ReadingSurfaceLayoutMap.ts';
 import type { RemoteReadingPositionMigration } from './RemoteReadingPositionMigration';
 
@@ -22,6 +23,7 @@ export type ReadingSessionChapter = {
   readonly images: ReadingSessionImage[];
   readonly contentVersion: string;
   /** Core canonical/processing evidence, distinct from the Host document hash. */
+  readonly directoryTargetProof?: JsonObject;
   readonly bodyVersion?: string;
   readonly processingVersion?: string;
   readonly positionMigration?: RemoteReadingPositionMigration;
@@ -78,6 +80,7 @@ export class ReadingChapterWindow {
   private chapterPositions: Map<number, number> = new Map();
   private currentChapterIndex: number = -1;
   private chapters: ReadingSessionChapter[] = [];
+  private resumeOnlyChapterIndex: number | undefined;
 
   constructor(neighbourBytes: number = 4 * 1024 * 1024,
     estimateBytes: (chapter: ReadingSessionChapter) => number = readingChapterRetainedBytes) {
@@ -86,19 +89,22 @@ export class ReadingChapterWindow {
     this.estimateBytes = estimateBytes;
   }
 
-  configure(sourceId: string, bookId: string, chapterOrder: number[]): void {
+  configure(sourceId: string, bookId: string, chapterOrder: number[], resumeOnlyChapterIndex?: number): void {
     requireNonBlank(sourceId, 'sourceId');
     requireNonBlank(bookId, 'bookId');
     validateChapterOrder(chapterOrder);
     const sameIdentity = this.sourceId === sourceId && this.bookId === bookId;
     const sameOrder = sameChapterOrder(this.chapterOrder, chapterOrder);
-    if (sameIdentity && sameOrder) {
+    if (resumeOnlyChapterIndex !== undefined && !chapterOrder.includes(resumeOnlyChapterIndex))
+      throw new Error('resume chapter must belong to the retained current window');
+    if (sameIdentity && sameOrder && this.resumeOnlyChapterIndex === resumeOnlyChapterIndex) {
       return;
     }
     this.sourceId = sourceId;
     this.bookId = bookId;
     this.chapterOrder = chapterOrder.slice();
     this.chapterPositions = buildChapterPositions(this.chapterOrder);
+    this.resumeOnlyChapterIndex = resumeOnlyChapterIndex;
     this.currentChapterIndex = -1;
     this.chapters = [];
   }
@@ -107,12 +113,18 @@ export class ReadingChapterWindow {
     if (chapter.sourceCorrectionRequired === true) throw new Error('source content correction requires foreground reading');
     this.validateChapter(chapter);
     this.requireKnownChapter(chapter.chapterIndex);
+    if (this.resumeOnlyChapterIndex !== undefined && chapter.chapterIndex !== this.resumeOnlyChapterIndex) {
+      this.chapterOrder = this.chapterOrder.filter(index => index !== this.resumeOnlyChapterIndex);
+      this.chapterPositions = buildChapterPositions(this.chapterOrder);
+      this.resumeOnlyChapterIndex = undefined;
+    }
     this.upsert(chapter);
     this.currentChapterIndex = chapter.chapterIndex;
     this.pruneToCurrentWindow();
   }
 
   admitNeighbour(chapter: ReadingSessionChapter): boolean {
+    if (chapter.chapterIndex === this.resumeOnlyChapterIndex) return false;
     if (chapter.sourceCorrectionRequired === true) return false;
     this.validateChapter(chapter);
     if (this.currentChapterIndex < 0) {
@@ -150,16 +162,23 @@ export class ReadingChapterWindow {
   }
 
   contains(chapterIndex: number): boolean {
-    return this.chapterPositions.has(chapterIndex);
+    return chapterIndex !== this.resumeOnlyChapterIndex && this.chapterPositions.has(chapterIndex);
   }
 
   position(chapterIndex: number): number {
-    return this.positionOf(chapterIndex);
+    if (chapterIndex === this.resumeOnlyChapterIndex) return -1;
+    const position = this.positionOf(chapterIndex);
+    const resumePosition = this.resumeOnlyChapterIndex === undefined ? -1 : this.positionOf(this.resumeOnlyChapterIndex);
+    return position >= 0 && resumePosition >= 0 && position > resumePosition ? position - 1 : position;
   }
 
   adjacentChapterIndex(chapterIndex: number, delta: number): number | undefined {
     const position = this.positionOf(chapterIndex);
-    const target = position + delta;
+    let target = position + delta;
+    const resumePosition = this.resumeOnlyChapterIndex === undefined ? -1 : this.positionOf(this.resumeOnlyChapterIndex);
+    if (position >= 0 && chapterIndex !== this.resumeOnlyChapterIndex && resumePosition >= 0 &&
+      (delta > 0 && position < resumePosition && target >= resumePosition ||
+        delta < 0 && position > resumePosition && target <= resumePosition)) target += delta > 0 ? 1 : -1;
     return position >= 0 && target >= 0 && target < this.chapterOrder.length ?
       this.chapterOrder[target] : undefined;
   }
@@ -184,11 +203,8 @@ export class ReadingChapterWindow {
     if (this.currentChapterIndex < 0) {
       return undefined;
     }
-    const targetPosition = this.positionOf(this.currentChapterIndex) + delta;
-    if (targetPosition < 0 || targetPosition >= this.chapterOrder.length) {
-      return undefined;
-    }
-    return this.get(this.chapterOrder[targetPosition]);
+    const target = this.adjacentChapterIndex(this.currentChapterIndex, delta);
+    return target === undefined ? undefined : this.get(target);
   }
 
   private upsert(chapter: ReadingSessionChapter): void {
@@ -287,7 +303,7 @@ function copyChapter(chapter: ReadingSessionChapter): ReadingSessionChapter {
     textLayoutIdentity: readingChapterTextIdentity(chapter),
     images: chapter.images.map(copyImage),
     contentVersion: chapter.contentVersion,
-    bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
+    directoryTargetProof: chapter.directoryTargetProof, bodyVersion: chapter.bodyVersion, processingVersion: chapter.processingVersion,
     positionMigration: chapter.positionMigration === undefined ? undefined : { ...chapter.positionMigration,
       anchors: chapter.positionMigration.anchors.map((anchor) => ({ ...anchor })),
       progress: chapter.positionMigration.progress === undefined ? undefined : { ...chapter.positionMigration.progress } },

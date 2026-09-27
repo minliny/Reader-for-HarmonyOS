@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { httpResponseFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
+import { httpResponseFailureSummary, coreAdmissionFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 const tick = async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
 function fixture() {
   const timers = [], calls = [], rounds = [];
   const Owner = productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url),
     ['noteReadingPreparationIntent', 'wakeReadingPreparations', 'requestDirect'], {
       setTimeout: callback => { timers.push(callback); return timers.length; }, LOG_DOMAIN: 0,
-      DEFAULT_CORE_REQUEST_TIMEOUT_MS: 30000, httpResponseFailureSummary,
+      DEFAULT_CORE_REQUEST_TIMEOUT_MS: 30000, httpResponseFailureSummary, coreAdmissionFailureSummary,
       hilog: { warn() {} },
     });
   const owner = Object.assign(new Owner(), { state: 'ready', preparationIntentEpoch: 0,

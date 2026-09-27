@@ -11,13 +11,14 @@ registerHooks({ resolve(specifier, context, next) { try { return next(specifier,
 const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
 const { searchResultRelevance } = await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
 const authorMetadata = await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
+const mediaIdentity = await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFileSync(resolve(repo, path), 'utf8');
 const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthorMetadata.ts');
 const page = read('entry/src/main/ets/features/search/SearchPage.ets');
 const classes = page.slice(page.indexOf('@Observed\nclass SearchBookGroup'), page.indexOf('/**\n * Figma-backed Book Search'))
   .replace('@Observed\n', '');
-const source = stripTypeScriptTypes(`const DataOperationType = { ADD: "add", DELETE: "delete", CHANGE: "change", RELOAD: "reload", MOVE: "move" };\n${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
+const source = stripTypeScriptTypes(`const DataOperationType = { ADD: "add", DELETE: "delete", CHANGE: "change", RELOAD: "reload", MOVE: "move" };\n${authorMetadataModule}\n${read('entry/src/main/ets/features/source/ReaderSourceCategory.ts')}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
 const { SearchBookGroup, SearchResultDataSource, SearchViewState } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 // Keep the production module graph intact, including bookshelf identity and
 // candidate policy. Stripping every import hides new real dependencies.
@@ -114,7 +115,7 @@ console.log('search stable rows, enrichment and navigation state: PASS');
 // PH25: execute the real page grouping method over progressively arriving sources.
 const Page = productionMotionMethods(process.env.READER_SEARCH_RELEVANCE_SOURCE ?? new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url),
   ['groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
-  { ...authorMetadata, SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
+  { ...authorMetadata, ...mediaIdentity, SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
     SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } }, ScrollAlign: { START: 0 } });
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
@@ -363,3 +364,21 @@ console.log('R1 display rank: schema2 current verification only; stale/v1/target
   assert.match(page,/\.onDisAppear\(\(\): void => \{ this\.listMounted = false/,'use the declared ArkUI List lifecycle callback');
 }
 console.log('R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS');
+
+{
+ const projection=new SearchResultProjection(), navigation=new SearchViewState();
+ const text=book('novel','同名作品','同作者',{category:'novel'});
+ const manga=book('comic','同名作品','同作者',{category:'comic'});
+ const results=[text,manga];
+ const shelf=[{sourceId:'another-text-source',bookId:'saved',title:'同名作品',author:'同作者'}];
+ const before=projection.update(results,shelf,'同名作品',navigation);
+ assert.equal(before.rows.size,2,'same-name manga and novel remain separate without an explicit group key');
+ const rows=[...before.rows.values()];
+ assert.equal(rows.find(r=>r.book===text).inBookshelf,true);
+ assert.equal(rows.find(r=>r.book===manga).inBookshelf,false,'a novel shelf row must not label a comic already added');
+ const after=projection.update(results,[...shelf,{...shelf[0],sourceId:'another-comic-source',contentKind:'manga'}],'同名作品',navigation);
+ assert.equal([...after.rows.values()].find(r=>r.book===manga).inBookshelf,true);
+ const list=new SearchResultDataSource();list.replace(rows.map(r=>new SearchBookGroup(r.book,1,r.inBookshelf)));
+ assert.equal(list.totalCount(),2,'virtual row fallback identity also separates media');
+}
+console.log('PASS manga/novel grouping, shelf badges and virtual row identities remain separate');

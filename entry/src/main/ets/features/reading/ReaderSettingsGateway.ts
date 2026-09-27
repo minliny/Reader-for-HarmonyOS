@@ -70,6 +70,13 @@ export class ReaderSettingsGateway {
     return this.withSettingsAccess(async (): Promise<ReaderSettingsSnapshot> => {
       const store = await this.ensureStore();
       const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
+      // General novel controls may hold an older snapshot. Manga direction is
+      // only changed by its narrow operation; an explicit reset still clears it.
+      if (!resetOwned) {
+        const latest = this.current() ?? await this.readSnapshot(store);
+        if (latest.mangaDirection !== undefined) requestedSnapshot.mangaDirection = latest.mangaDirection;
+        if (latest.mangaFit !== undefined) requestedSnapshot.mangaFit = latest.mangaFit;
+      }
       try {
         await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(requestedSnapshot));
         await store.flush();
@@ -79,6 +86,43 @@ export class ReaderSettingsGateway {
       }
       ReaderSettingsGateway.snapshots.set(this.runtimeOwner, requestedSnapshot);
       return copyReaderSettingsSnapshot(requestedSnapshot);
+    });
+  }
+
+  /** Manga preference shares the existing settings owner and serialized snapshot. */
+  async updateMangaDirection(horizontal: boolean): Promise<void> {
+    await ReaderThemeHost.prepareUserChange();
+    return this.withSettingsAccess(async (): Promise<void> => {
+      const store = await this.ensureStore();
+      const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
+      const snapshot = await this.readSnapshot(store);
+      snapshot.mangaDirection = horizontal ? 'horizontal' : 'vertical';
+      try {
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(snapshot));
+        await store.flush();
+      } catch (error) {
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, previous);
+        throw error;
+      }
+      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, snapshot);
+    });
+  }
+
+  async updateMangaFit(fit: 'source' | 'width' | 'contain'): Promise<void> {
+    await ReaderThemeHost.prepareUserChange();
+    return this.withSettingsAccess(async (): Promise<void> => {
+      const store = await this.ensureStore();
+      const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
+      const snapshot = await this.readSnapshot(store);
+      snapshot.mangaFit = fit;
+      try {
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(snapshot));
+        await store.flush();
+      } catch (error) {
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, previous);
+        throw error;
+      }
+      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, snapshot);
     });
   }
 

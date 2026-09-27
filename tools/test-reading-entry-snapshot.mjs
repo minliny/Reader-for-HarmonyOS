@@ -31,6 +31,12 @@ function fixture(){
  const f=fixture();f.set({...f.body,bookId:'other'});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/identity/);
  f.set({...f.body,progress:{...f.body.progress,bodyVersion:'stale'}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/scope/);
  f.set({...f.body,navigation:{...f.body.navigation,after:[{index:40,position:5,title:'duplicate',navigable:true}]}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/order/);
+ // Legacy snapshot level is positive, with no existing upper bound; Core
+ // omits unrepresentable fact depths rather than changing this Host contract.
+ for (const level of [1,32,33,undefined]) {
+  f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level}}});
+  assert.equal((await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true)).navigation.current.level,level);
+ }
  f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level:0}}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/level/);
 }
 {
@@ -44,6 +50,23 @@ function fixture(){
  const read=readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);f.invalidate();release();await assert.rejects(read,/cancelled/);
 }
 console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisite, one request + retained body, strict identity/scope/navigation, old offline body and cancellation PASS');
+{
+ const f=fixture();
+ const resumed={...f.body,resumeOnly:true,navigation:{...f.body.navigation,
+  current:{...f.body.navigation.current,navigable:false,readablePosition:null}}};
+ f.set(resumed);
+ const snapshot=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
+ assert.equal(snapshot.resumeOnly,true,'Core-proved historical current chapter keeps its limited restore permission');
+ assert.equal(snapshot.navigation.current.navigable,false,'resume permission never makes a group selectable');
+ for(const changed of [{progress:null},{progress:{...f.body.progress,chapterIndex:50}},
+  {navigation:f.body.navigation},{resumeOnly:'true'}]){
+  f.set({...resumed,...changed});
+  await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/resume/);
+ }
+ f.set({kind:'missing',sourceId:'s',bookId:'b',reason:'directoryNodeNotReadable'});
+ assert.equal(await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),undefined);
+ console.log('PASS explicit historical-only entry proof, durable matching progress, group isolation and non-readable miss');
+}
 {
  const f=fixture();
  const old=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);

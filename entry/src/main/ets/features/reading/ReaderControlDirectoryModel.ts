@@ -22,6 +22,8 @@ export interface ReaderControlDirectoryCatalog {
   complete: boolean;
   chapterCount: number;
   currentPosition: number;
+  readableChapterCount?: number;
+  readablePosition?: number;
 }
 
 export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], tab: string,
@@ -47,10 +49,12 @@ export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], 
       rows.push({ key: `chapter:${entry.index}`, chapter: entry, bookmark: undefined });
     }
   }
-  const currentPosition = catalog?.complete === false ?
-    (catalog.currentPosition >= 0 && catalog.currentPosition < catalog.chapterCount ?
-      `${catalog.currentPosition + 1} / ${catalog.chapterCount}` : '') :
-    (currentOrdinal < 0 ? '' : `${currentOrdinal + 1} / ${entries.length}`);
+  const readable = entries.filter((entry): boolean => entry.navigable !== false);
+  const readableOrdinal = readable.findIndex((entry): boolean => entry.index === currentChapter);
+  const count = catalog?.complete === false ? catalog.readableChapterCount : readable.length;
+  const position = catalog?.complete === false ? catalog.readablePosition : readableOrdinal;
+  const currentPosition = count !== undefined && position !== undefined && position >= 0 && position < count ?
+    `${position + 1} / ${count}` : '';
   return { rows: rows, loading: entries.length === 0 ||
     (tab === 'bookmarks' && readerBookmarkLoadState(entries) === 'loading'), targetRow: targetRow,
     currentTitle: currentOrdinal < 0 ? '' : entries[currentOrdinal].title,
