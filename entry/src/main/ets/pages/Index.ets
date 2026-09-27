@@ -3463,7 +3463,7 @@ struct Index {
       });
   }
 
-  private showChapterDownloadFailure(error: unknown): void {
+  private showChapterDownloadFailure(error: Error): void {
     const text = errorMessageOf(error);
     const failure = normalizeReadingOfflineMaterializationError(error instanceof Error ? error : new Error(text));
     const category = diagnosticCodeOf(text);
