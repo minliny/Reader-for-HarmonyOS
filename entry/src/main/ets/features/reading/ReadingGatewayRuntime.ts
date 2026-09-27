@@ -37,6 +37,9 @@ export type ReadingGatewayImageChapterIdentity = {
 
 /** The only Core request surface feature gateways may consume. */
 export interface ReadingGatewayRuntime {
+  /** Ephemeral debug observation; never part of the persisted reading contract. */
+  subscribeMangaOfflineProbe?(listener: (state: string) => void): () => void;
+  finishMangaOfflineProbe?(sourceId: string, bookId: string): void;
   /** Optional preparation has read authority only; foreground gateways own repairs. */
   readonly allowSourceContentCorrection?: boolean;
   /** Runtime/content lifetime for already displayed position persistence. */

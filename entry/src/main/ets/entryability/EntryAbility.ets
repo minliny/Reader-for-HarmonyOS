@@ -12,7 +12,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../app/ReaderControlVerificationLaunch';
+import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope } from '../app/ReaderControlVerificationLaunch';
 import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
 import { ReaderStartupTrace, type ReaderStartupSample } from '../app/ReaderStartupTrace';
 import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
@@ -65,7 +65,10 @@ export default class EntryAbility extends UIAbility {
         hilog.error(DOMAIN, 'Reader', 'Shelf font preparation failed: %{private}s', error.message);
       });
     const owner = ReaderRuntimeOwner.install(this.context,
-      readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory));
+      readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory),
+      this.coldStartPage === 'pages/Index' ? readerMangaOfflineProbeScope(DEBUG, BUILD_MODE_NAME,
+        want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaOfflineSourceId,
+        want.parameters?.readerMangaOfflineBookId) : undefined);
     this.runtimeOwner = owner;
     this.themeReady = trace.measure('startup.theme', (): Promise<void> => ReaderThemeHost.install(owner,
       this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day'))
@@ -207,6 +210,7 @@ export default class EntryAbility extends UIAbility {
   onBackground(): void {
     AppStorage.setOrCreate('readerAppForeground', false);
     this.runtimeOwner?.setReadingPreparationContext(false, false);
+    this.runtimeOwner?.releaseMangaOfflineProbe();
     this.eventLoopProbe?.stop('background');
     this.runtimeOwner?.flush().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{private}s', error.message);
