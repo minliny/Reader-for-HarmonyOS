@@ -6658,6 +6658,8 @@ struct Index {
       // Both the explicit action and already-throttled automatic candidates
       // require a fresh catalog, never a prepared/offline admission shortcut.
       const owner = ReaderRuntimeOwner.current();
+      // The cold offline probe already owns its exact book before the shelf tap.
+      if (automatic && owner.mangaOfflineProbeProtectsAutomaticCatalog?.(book.sourceId, book.bookId) === true) return;
       const isCurrent = (): boolean => !automatic || (automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh());
       const session = await owner.bookAcquisitions().acquireBook(seed,
         { forceRefresh: true, isCurrent, canDispatch: isCurrent }, automatic ? 'background' : 'foreground');

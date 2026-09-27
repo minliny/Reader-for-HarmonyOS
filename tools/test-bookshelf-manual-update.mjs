@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context); throw error; }
@@ -123,6 +124,36 @@ await check('automatic checks retain 10-minute threshold and disabled/local/acti
     assert.equal(f.catalogs.get('/due').length,2,'automatic check still gets the new catalog');
     assert.equal(f.prefetched.length,0,'automatic catalogs cannot launch competing body sweeps');
   }finally{f.runtime.close();}
+});
+await check('cold scoped manga skips only automatic catalog refresh while other and manual checks continue',async()=>{
+  const protectedBook=book('/offline',{contentKind:'manga'}),other=book('/other');
+  const f=fixture([protectedBook,other]);
+  const probe=new MangaOfflineNetworkProbe({sourceId,bookId:'/offline'});
+  f.owner.mangaOfflineProbeProtectsAutomaticCatalog=(source,book)=>probe.protectsAutomaticCatalog(source,book);
+  try {
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.deepEqual(f.calls.filter(c=>c.method==='book.detail').map(c=>c.params.book.bookId),['/other'],
+      'armed exact target must never enter automatic detail acquisition');
+    assert.equal(f.calls.some(c=>c.method==='book.toc'&&c.params.bookId==='/offline'),false);
+    assert.equal(JSON.parse(probe.snapshot()).coreHttpAttempts,0,'the skip cannot redefine the HTTP attempt counter');
+    f.calls.length=0;
+    probe.select(sourceId,'/offline',true);
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.equal(f.calls.some(c=>c.method==='book.detail'&&c.params.book.bookId==='/offline'),false,
+      'active exact target remains protected before the next automatic dispatch');
+    f.calls.length=0;
+    f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
+    assert.equal(f.calls.some(c=>c.method==='book.detail'&&c.params.book.bookId==='/offline'),true,
+      'explicit user update retains the normal catalog path');
+    f.calls.length=0;
+    probe.release('reader-left');
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.equal(f.calls.some(c=>c.method==='book.detail'&&c.params.book.bookId==='/offline'),true,
+      'released debug scope restores ordinary automatic catalog checks');
+  } finally {f.runtime.close();}
 });
 await check('automatic work waits for settings and yields to reading; manual work stays explicit',async()=>{
   const f=fixture([book('/a'),book('/b'),book('/c')]);try {

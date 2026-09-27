@@ -22,6 +22,9 @@ for (const bad of [undefined,{},'', ' x','x\n','x'.repeat(8193)]) {
   assert.equal(readerMangaOfflineProbeScope(true,'debug',true,'source',bad),undefined);
 }
 const mutable={...scope}; const probe=new MangaOfflineNetworkProbe(mutable);mutable.bookId='other';
+assert.equal(probe.protectsAutomaticCatalog(scope.sourceId,scope.bookId),true,'cold arm protects exact catalog identity');
+assert.equal(probe.protectsAutomaticCatalog(scope.sourceId,'other'),false);
+assert.equal(probe.protectsAutomaticCatalog('other',scope.bookId),false);
 assert.equal(probe.ownsCommand('book.toc',scope),true,'exact Want scope is copied and active from cold arm');
 assert.equal(probe.ownsCommand('book.toc',{...scope,bookId:'other'}),false);
 assert.equal(probe.ownsCommand('source.imageRequest',{sourceId:scope.sourceId}),false,'source-only cannot claim another book request');
@@ -30,7 +33,9 @@ assert.equal(probe.ownsCommand('manga.resource.prepare',{chapter:scope}),true);
 assert.equal(probe.ownsCommand('reading.progress.update',{location:{chapter:scope}}),true);
 probe.track(1);assert.throws(()=>probe.beforeCoreHttp(1),/HTTP_BLOCKED/);assert.equal(snap(probe).beforeSelectionCoreHttpAttempts,1);
 probe.settle(1);probe.select(scope.sourceId,scope.bookId,true);assert.equal(probe.matches(scope.sourceId,scope.bookId),true);
+assert.equal(probe.protectsAutomaticCatalog(scope.sourceId,scope.bookId),true,'selection preserves exact protection');
 probe.release('reader-left');assert.equal(probe.ownsCommand('book.toc',scope),false);
+assert.equal(probe.protectsAutomaticCatalog(scope.sourceId,scope.bookId),false,'released scope does not suppress later automatic checks');
 assert.throws(()=>probe.beforeCoreHttp(1),/HTTP_BLOCKED/,'settled request tombstone still rejects late callbacks');
 probe.beforeCoreHttp(2);assert.equal(snap(probe).coreHttpAttempts,2);assert.equal(snap(probe).pendingRequests,0);
 for(const [source,book,manga] of [['other','book-A',true],['source-A','other',true],['source-A','book-A',false]]) {
@@ -88,7 +93,7 @@ console.log('PASS actual Registry Core HTTP variants and Body fetch boundaries: 
 }
 console.log('PASS actual DecodeHost suspended fetch after cancellation/timeout cannot allocate an input asset or dispatch HTTP');
 
-const Owner=productionMotionMethods(url('app/ReaderRuntimeOwner.ts'),['requestDirect'],{
+const Owner=productionMotionMethods(url('app/ReaderRuntimeOwner.ts'),['requestDirect','mangaOfflineProbeProtectsAutomaticCatalog'],{
   DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,
 });
 function ownerFixture(p) {
@@ -98,6 +103,15 @@ function ownerFixture(p) {
     async waitForResult(requestId,options){calls.push(['wait',requestId,options]);return {requestId,data:{}};},
     async request(method){calls.push(['ordinary',method]);return {requestId:++id,data:{}};}};
   return {owner,calls};
+}
+{
+  const q=new MangaOfflineNetworkProbe(scope),{owner}=ownerFixture(q);
+  assert.equal(owner.mangaOfflineProbeProtectsAutomaticCatalog(scope.sourceId,scope.bookId),true);
+  assert.equal(owner.mangaOfflineProbeProtectsAutomaticCatalog(scope.sourceId,'other'),false);
+  q.release('reader-left');
+  assert.equal(owner.mangaOfflineProbeProtectsAutomaticCatalog(scope.sourceId,scope.bookId),false);
+  owner.mangaOfflineProbe=undefined;
+  assert.equal(owner.mangaOfflineProbeProtectsAutomaticCatalog(scope.sourceId,scope.bookId),false);
 }
 {
   const q=new MangaOfflineNetworkProbe(scope),{owner,calls}=ownerFixture(q);
