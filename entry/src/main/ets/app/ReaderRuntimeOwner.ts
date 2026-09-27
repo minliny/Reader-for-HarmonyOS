@@ -166,6 +166,9 @@ export class ReaderRuntimeOwner {
     this.mangaOfflineProbe?.select(sourceId, bookId, manga);
   }
   mangaOfflineProbeFor(sourceId: string, bookId: string): boolean { return this.mangaOfflineProbe?.matches(sourceId, bookId) === true; }
+  mangaOfflineProbeProtectsAutomaticCatalog(sourceId: string, bookId: string): boolean {
+    return this.mangaOfflineProbe?.protectsAutomaticCatalog(sourceId, bookId) === true;
+  }
   subscribeMangaOfflineProbe(listener: (state: string) => void): () => void {
     return this.mangaOfflineProbe?.subscribe(listener) ?? ((): void => {});
   }

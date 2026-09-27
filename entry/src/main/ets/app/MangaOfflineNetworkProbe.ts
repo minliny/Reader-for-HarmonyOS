@@ -40,6 +40,11 @@ export class MangaOfflineNetworkProbe {
     return this.state === 'active' && sourceId === this.scope.sourceId && bookId === this.scope.bookId;
   }
 
+  /** Cold Want scope is protected before shelf selection as well as during reading. */
+  protectsAutomaticCatalog(sourceId: string, bookId: string): boolean {
+    return this.state !== 'released' && sourceId === this.scope.sourceId && bookId === this.scope.bookId;
+  }
+
   ownsCommand(method: string, params: JsonObject): boolean {
     if (this.state === 'released') return false;
     const chapter = this.object(params['chapter']);
