@@ -1,3 +1,4 @@
+import { MangaImageGraphicsHost } from './MangaImageGraphicsHost';
 import common from '@ohos.app.ability.common';
 import fileIo from '@ohos.file.fs';
 import statvfs from '@ohos.file.statvfs';
@@ -17,6 +18,9 @@ import {
 import { HttpExecuteHost, type SourceHttpDiagnosticRecord } from './HttpExecuteHost';
 import { CookieSessionStore } from './CookieSessionStore';
 import { ArkWebExecutor } from './ArkWebExecutor';
+import { MangaImageDecodeHost, type MangaImageDecodeTransport } from './MangaImageDecodeHost';
+import { MangaImageMetadataHost } from './MangaImageMetadataHost';
+import { ReadingBodyImageHost } from './ReadingBodyImageHost';
 import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from './ReaderLocalBookFormatAdmission';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
@@ -228,6 +232,22 @@ export class ReaderHostRegistry {
     }, (event: ReaderCoreHostRequestEvent): void => {
       HttpExecuteHost.instance.cancel(event.requestId);
     });
+    router.register('manga.resource.transfer', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      if (this.responseAssetBridge === undefined) return Promise.reject(new Error('MANGA_DECODE_ASSET_BRIDGE'));
+      if (event.params['stage'] === 'inspectInput') return MangaImageMetadataHost.instance.handle(event, this.responseAssetBridge);
+      const transport: MangaImageDecodeTransport = {
+        graphics: MangaImageGraphicsHost.instance,
+        fetch: (params: JsonObject, current: () => boolean): Promise<Uint8Array> => {
+          const dataUri = params['dataUri'];
+          if (typeof dataUri === 'string') return Promise.resolve(ReadingBodyImageHost.instance.readDataUriBytes(dataUri, current));
+          return ReadingBodyImageHost.instance.fetchRequestBytes(params, current);
+        },
+        validate: async (bytes: Uint8Array, current: () => boolean): Promise<void> => {
+          await ReadingBodyImageHost.instance.validateBytes(bytes, current, 0);
+        },
+      };
+      return MangaImageDecodeHost.instance.handle(event, this.responseAssetBridge, transport);
+    }, (event: ReaderCoreHostRequestEvent): void => { MangaImageDecodeHost.instance.cancel(event); MangaImageMetadataHost.instance.cancel(event); });
     router.register('cookie.get', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
       return CookieSessionStore.instance.getCapability(event.params);
     });

@@ -1,0 +1,12 @@
+{
+  "generator": "Pillow 11.3.0 crop/paste+JPEG90; no production decoder implementation",
+  "geometry": "Bundled manga source rule, md5(page) suffix13, 14 reversed full-width strips, nonuniform last strip",
+  "assertion": "Exact pre-encode RGBA fixture checks native regional-read coordinates; ImageKit native codec equivalence is a separate target gate",
+  "sha256": {
+    "expected.jpg": "808c5540ff936cf01268aae7f1eb419c15782671e84dc116f29ac4ac8ec09a4c",
+    "plan.json": "10cb6d7d467ce5b6ee3acad004e4991308b36778e7b4c3df46f728be36609c20",
+    "input-rgba.bin": "76ee5d948abdb0720c023577e395b7650805efcf8f0db7d7eeb7c040d41ecabf",
+    "input.png": "2b4c65c7c152560c6f51c56d263c314f46140addd63b0d74f24ebe4eb343035d",
+    "expected-rgba.bin": "a4629c4785ddd6b58bbfbf879eb2a17d76517b49b9acd217e63461552bde5fcc"
+  }
+}

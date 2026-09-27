@@ -1,4 +1,5 @@
 import { bookTitleAuthorKey, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
+import { readerMediaIdentity } from '../source/ReaderSourceCategory';
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { SearchViewState } from './SearchViewState';
@@ -79,8 +80,8 @@ export class SearchResultProjection {
         const previous = this.books.get(key);
         const previousFact = this.facts.get(key);
         const titleKey = previous !== undefined && previous.title === book.title && previous.author === book.author &&
-          previous.authorIdentity === book.authorIdentity && previous.sourceRuleVersion === book.sourceRuleVersion
-          ? (previousFact as SearchProjectionFact).titleKey : this.titleKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion);
+          previous.authorIdentity === book.authorIdentity && previous.sourceRuleVersion === book.sourceRuleVersion && previous.category === book.category
+          ? (previousFact as SearchProjectionFact).titleKey : readerMediaIdentity(book.category === 'comic', this.titleKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion));
         const groupKey = book.sourceId === 'local' ? `local:${book.bookId}` : `online:${book.groupKey ?? titleKey}`;
         const score = previous !== undefined && previous.title === book.title && previous.author === book.author &&
           previous.authorIdentity === book.authorIdentity && previous.sourceRuleVersion === book.sourceRuleVersion
@@ -106,7 +107,7 @@ export class SearchResultProjection {
       for (const book of shelf) {
         identities.add(`${book.sourceId}\u0000${book.bookId}`);
         const workKey = bookshelfWorkKey(book.title, book.author);
-        if (book.sourceId !== 'local' && workKey !== undefined) titles.add(workKey);
+        if (book.sourceId !== 'local' && workKey !== undefined) titles.add(readerMediaIdentity(book.contentKind === 'manga', workKey));
       }
       const identityChanges = new Set<string>(); const titleChanges = new Set<string>();
       for (const key of identities) if (!this.shelfIdentities.has(key)) identityChanges.add(key);

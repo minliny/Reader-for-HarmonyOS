@@ -117,6 +117,9 @@ assert.deepEqual(mixedRows.results.map(book => book.bookId), ['/good', '/good2']
 assert.equal(mixedRows.discardedCount, 2);
 assert.equal(mixedRows.discardedReasons.length, 2);
 for (const data of [
+  ...['manga', 'audio', null, 2].map(contentKind => ({
+    sourceId: source.sourceId, contentKind, books: [{ bookId: '/good', title: 'Book' }],
+  })),
   { sourceId: 'wrong', books: [{ bookId: '/good', title: '鸣龙' }] },
   { sourceId: source.sourceId, sourceVersion: 'wrong', books: [{ bookId: '/good', title: '鸣龙' }] },
   { sourceId: source.sourceId, sourceVersion: 42, books: [{ bookId: '/good', title: '鸣龙' }] },
@@ -182,7 +185,7 @@ const mixedCategoryGateway = new SearchGateway({
     throw new Error('非小说书源不应进入 Core 搜索');
   },
 });
-for (const category of ['music', 'comic', 'download', 'external', 'other']) {
+for (const category of ['music', 'download', 'external', 'other']) {
   const outcome = await mixedCategoryGateway.searchBySource({
     sourceId: `source-${category}`,
     name: `source-${category}`,
@@ -193,7 +196,7 @@ for (const category of ['music', 'comic', 'download', 'external', 'other']) {
   assert.match(outcome.error, /not supported by the novel reader/);
 }
 assert.equal(mixedCategoryRequestCount, 0,
-  '音乐、漫画、下载和外部媒体源不得进入小说搜索链路');
+  '音乐、下载和外部媒体源不得进入阅读搜索链路');
 
 // Identity: the rule version comes from Core and changes when rules change,
 // including when the same sourceId retains its baseUrl.
@@ -396,3 +399,15 @@ for(const platformCode of [2300023,2300060,undefined]) {
  assert.equal(independent.diagnostic,undefined,'later rule failures cannot inherit a prior nested HTTP cause');
 }
 console.log('PASS actual SearchGateway retains safe HTTP request/operation/code/timing summary and unchanged error copy; independent rule errors do not inherit stale evidence');
+
+// Manga is admitted only with the Core's matching media fact; name heuristics
+// and a legacy/missing envelope cannot authorize an image reader.
+for (const kind of ['manga','text','audio',null,undefined]) {
+ const comic={...source,category:'comic'};
+ const gateway=new SearchGateway({request:async()=>({data:{sourceId:source.sourceId,contentKind:kind,
+ books:[{bookId:'comic',title:'同名作品',author:'同作者',variables:{}}]}})});
+ const outcome=await gateway.searchBySource(comic,'同名作品');
+ assert.equal(outcome.ok,kind==='manga');
+ if(outcome.ok){assert.equal(outcome.results[0].category,'comic');assert.equal(outcome.results[0].groupKey,JSON.stringify(['manga','同名作品\u0000同作者']));}
+}
+console.log('PASS manga search requires authoritative Core kind and keeps media-scoped initial groups');

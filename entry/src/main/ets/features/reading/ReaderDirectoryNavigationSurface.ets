@@ -35,8 +35,6 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop rowHeight: number = 40;
   @Prop listPaddingX: number = 10;
   @Prop listPaddingY: number = 5;
-  @Prop contentStartInset: number = 0;
-  @Prop contentEndInset: number = 0;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop chapterEntries: LocalReadingTocEntry[] = [];
@@ -353,7 +351,6 @@ export struct ReaderDirectoryNavigationSurface {
         ReaderDirectoryNavigationList({
           view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
           listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
-          contentStartInset: this.contentStartInset, contentEndInset: this.contentEndInset,
           edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
           chapterEntries: this.chapterEntries,
           chapterDownloadEnabled: this.chapterDownloadEnabled,

@@ -1,5 +1,4 @@
 import { ReaderNativeParagraphRecipe } from './ReaderNativeParagraph';
-import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 import { ReaderNativeParagraphView } from './ReaderNativeParagraphView';
 import { readerThemeDefinition } from '../common/ReaderThemeRegistry';
 import { readerHighlightCanvasColor, readerDynamicHighlightRectsEqual, ReaderHighlightTextCache,
@@ -356,13 +355,7 @@ export struct ReadingSurface {
       Column({ space: this.layout.titleToBodySpacingVp }) {
         if (this.showChapterTitle) {
           if (this.renderFragments()[0]?.nativeTitle !== undefined) {
-            // An outgoing title may update before ArkUI removes its branch.
-            // Bind its recipe to its keyed fragment, just like body actors;
-            // the live provider may already point to a page without a title.
-            ForEach(this.renderFragments().slice(0, 1).filter((fragment: ReadingSurfacePageFragment): boolean =>
-              fragment.nativeTitle !== undefined), (fragment: ReadingSurfacePageFragment) => {
-              ReaderNativeParagraphView({ recipe: fragment.nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
-            }, (fragment: ReadingSurfacePageFragment): string => fragment.nativeTitle!.key);
+            ReaderNativeParagraphView({ recipe: this.renderFragments()[0].nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
           } else {
           Text(this.chapterTitle)
             .width('100%')
@@ -418,7 +411,6 @@ export struct ReadingSurface {
                   highlightColor: this.ttsHighlightStart !== undefined ? this.themeStyle().ink :
                     readerThemeDefinition(this.appearance.activeTheme).selection,
                   underline: this.ttsHighlightStart !== undefined,
-                  highlightLayoutKey: readerNativeTextGeometryKey(fragment.nativeParagraph.style),
                   queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
                   onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]): void => this.acceptHighlightGeometry(fragment.id, rects),
                 });
@@ -614,11 +606,13 @@ export struct ReadingSurface {
   }
 
   private renderFragments(): ReadingSurfacePageFragment[] {
-    // Retained offscreen pages can change fragments without changing revision.
-    // Read the reactive prop even when the provider owns the current content.
-    const fragments = this.pageFragments;
+    // Primitive revision invalidates the slot; the provider reads its current
+    // owner rather than a complex array copied when the slot first mounted.
+    // Offscreen captures reuse a revision across pages: also observe their
+    // supplied array, while keeping the provider authoritative for content.
+    const publishedFragments = this.pageFragments;
     return this.contentRevision >= 0 && this.fragmentsProvider !== undefined ?
-      this.fragmentsProvider() : fragments;
+      this.fragmentsProvider() : publishedFragments;
   }
 
   private contentInsets(): Padding {

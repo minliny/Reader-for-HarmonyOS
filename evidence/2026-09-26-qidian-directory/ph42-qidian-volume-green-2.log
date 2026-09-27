@@ -1,0 +1,14 @@
+   Compiling reader-rule v0.1.0 (/Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-Core-Native/crates/reader-rule)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized] target(s) in 2.48s
+     Running tests/toc_volume_evidence.rs (/Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/.build/core/debug/deps/toc_volume_evidence-d23c14494b01b560)
+
+running 5 tests
+test original_rule_context_distinguishes_false_strings_and_numeric_zero ... ok
+test selector_empty_match_is_a_leaf_and_volume_has_no_need_for_a_link ... ok
+test literal_missing_javascript_and_failure_have_separate_evidence ... ok
+test volume_javascript_executes_once_per_retained_row_even_when_it_throws ... ok
+test public_catalog_direct_text_volume_chain_preserves_nested_chapters ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+

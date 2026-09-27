@@ -87,6 +87,29 @@ for (const raw of ['', '{invalid']) {
   assert.deepEqual(await successor.gateway.loadAfterConfigurationRecovery(() => true), saved);
 }
 
+// Manga changes merge into the same serialized settings snapshot, and an old
+// novel-control snapshot cannot undo them. Failed flush retains the prior value.
+{
+  const f = fixture(); const old = await f.gateway.load();
+  await f.gateway.updateMangaDirection(true);
+  await f.gateway.updateMangaFit('contain');
+  assert.equal(f.gateway.current().mangaFit, 'contain');
+  assert.equal(f.gateway.current().mangaDirection, 'horizontal');
+  await f.gateway.update({ ...old, pageTransition: 'cover' });
+  assert.equal(f.gateway.current().mangaDirection, 'horizontal');
+  assert.equal(f.gateway.current().pageTransition, 'cover');
+  assert.equal(f.gateway.current().mangaFit, 'contain');
+  f.store.flush = async () => { throw Error('manga flush failed'); };
+  await assert.rejects(f.gateway.updateMangaDirection(false), /manga flush failed/);
+  await assert.rejects(f.gateway.updateMangaFit('width'), /manga flush failed/);
+  assert.equal(f.gateway.current().mangaFit, 'contain');
+  assert.equal(f.gateway.current().mangaDirection, 'horizontal');
+  f.store.flush = async () => {};
+  await f.gateway.update(defaults, true);
+  assert.equal(f.gateway.current().mangaDirection, undefined);
+  assert.equal(f.gateway.current().mangaFit, undefined);
+}
+
 // Execute actual Ability startup and window publication, with the real gateway.
 // Only native platform work, configuration recovery I/O and font I/O are controlled.
 const abilityFile = new URL('entryability/EntryAbility.ets', base);

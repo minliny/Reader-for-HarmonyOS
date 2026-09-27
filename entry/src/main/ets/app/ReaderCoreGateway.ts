@@ -2,6 +2,7 @@ import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 
 export type ShelfBook = {
+  contentKind?: 'text' | 'manga' | 'audio';
   sourceId: string;
   /** Core projects the existing durable source registry, independent of source.list. */
   sourceName?: string;
@@ -290,6 +291,11 @@ export class ReaderCoreGateway {
       chapterCount: this.optionalNonNegativeInteger(book, 'chapterCount', 'bookshelf.list') ?? 0,
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
+    const contentKind = this.optionalString(book, 'contentKind');
+    if (contentKind !== undefined) {
+      if (contentKind !== 'text' && contentKind !== 'manga' && contentKind !== 'audio') throw new Error('invalid shelf contentKind');
+      decoded.contentKind = contentKind;
+    }
     const intro = this.optionalString(book, 'intro');
     const sourceName = this.optionalString(book, 'sourceName');
     const kind = this.optionalString(book, 'kind');

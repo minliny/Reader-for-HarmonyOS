@@ -1,0 +1,37 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: retained concrete image and child Prop receive current theme resources
++ actual - expected
+
+  [
++   'app.media.settings_gen_theme',
++   'app.media.settings_gen_update',
++   'app.media.settings_gen_motion'
+-   'app.media.settings_gen_theme_theme_night',
+-   'app.media.settings_gen_update_theme_night',
+-   'app.media.settings_gen_motion_theme_night'
+  ]
+
+    at file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/test-settings-theme-icons.mjs:20:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'app.media.settings_gen_theme',
+    'app.media.settings_gen_update',
+    'app.media.settings_gen_motion'
+  ],
+  expected: [
+    'app.media.settings_gen_theme_theme_night',
+    'app.media.settings_gen_update_theme_night',
+    'app.media.settings_gen_motion_theme_night'
+  ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

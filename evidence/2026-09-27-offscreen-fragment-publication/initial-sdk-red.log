@@ -1,0 +1,5 @@
+before {"recipes":["old body"],"images":[],"updates":0}
+sameRevision {"recipes":["old body","new title"],"images":[],"updates":0}
+nextRevision {"recipes":["old body","new title","new body"],"images":["file://new-image"],"updates":1}
+(node:22628) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -12,7 +12,7 @@ import {
   type SearchSource,
 } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
-import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
+import { readerSourceCategoryIsText, readerMediaIdentity } from '../source/ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -146,7 +146,7 @@ class SearchResultDataSource implements IDataSource {
     if (book.sourceId === 'local') return `local:${book.bookId}`;
     if (book.groupKey !== undefined) return `online:${book.groupKey}`;
     const alias = bookTitleAuthorKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion);
-    return `online:${alias}`;
+    return `online:${readerMediaIdentity(book.category === 'comic', alias)}`;
   }
 
   private sameBook(left: SearchBook, right: SearchBook): boolean {
@@ -1038,7 +1038,7 @@ export struct SearchPage {
 
   private resultGroupKey(book: SearchBook): string {
     return book.sourceId === 'local' ? `local:${book.bookId}` :
-      `online:${book.groupKey ?? this.normalizedBookKey(book.title, book.author)}`;
+      `online:${book.groupKey ?? readerMediaIdentity(book.category === 'comic', this.normalizedBookKey(book.title, book.author))}`;
   }
 
   private normalizedBookKey(title: string, author: string): string {

@@ -1,0 +1,25 @@
+   Compiling reader-rule v0.1.0 (/Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-Core-Native/crates/reader-rule)
+   Compiling reader-content v0.1.0 (/Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-Core-Native/crates/reader-content)
+    Finished `test` profile [unoptimized] target(s) in 2.30s
+     Running tests/toc_volume_evidence.rs (/Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/.build/core/debug/deps/toc_volume_evidence-d23c14494b01b560)
+
+running 1 test
+
+thread 'public_catalog_direct_text_volume_chain_preserves_nested_chapters' (38293120) panicked at crates/reader-content/tests/toc_volume_evidence.rs:142:9:
+assertion `left == right` failed: textNodes
+@js:
+result=result?true:false;
+result;
+  left: [Leaf, Leaf, Leaf]
+ right: [Group, Leaf, Leaf]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test public_catalog_direct_text_volume_chain_preserves_nested_chapters ... FAILED
+
+failures:
+
+failures:
+    public_catalog_direct_text_volume_chain_preserves_nested_chapters
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.15s
+
+error: test failed, to rerun pass `-p reader-content --test toc_volume_evidence`

@@ -14,6 +14,7 @@ export type ReadingGatewayImage = {
   height: number;
   intrinsicWidth?: number;
   intrinsicHeight?: number;
+  regionY?: number;
   revision: string;
 };
 
@@ -23,6 +24,7 @@ export type ReadingGatewayImageCacheIdentity = {
   chapterIndex: number;
   contentVersion: string;
   imageUrl: string;
+  resourceRef?: string;
   baseUrl?: string;
 };
 
@@ -66,16 +68,23 @@ export interface ReadingGatewayRuntime {
     baseUrl: string | undefined,
     allowNetwork: boolean,
     isCurrent?: () => boolean,
+    resourceRef?: string,
+    mangaPosition?: number,
+    expectedSourceVersion?: string,
+    mangaPreview?: boolean,
   ): Promise<ReadingGatewayImage>;
 
   prefetchReadingImage?(
     identity: ReadingGatewayImageCacheIdentity,
     isCurrent?: () => boolean,
+    expectedSourceVersion?: string,
+    allowNetwork?: boolean,
   ): Promise<void>;
 
   markOfflineImageChapterComplete?(
     chapter: ReadingGatewayImageChapterIdentity,
     resources: ReadingGatewayImageCacheIdentity[],
+    isCurrent?: () => boolean,
   ): Promise<void>;
 
   isOfflineImageChapterComplete?(chapter: ReadingGatewayImageChapterIdentity): Promise<boolean>;
