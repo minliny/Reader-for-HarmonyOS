@@ -28,8 +28,8 @@ let owner,lazy;
 // scheduling, row removal, layout, ImageKit or rendered pixels are claimed.
 class RetainedItems {
   constructor(data,item,key){this.data=data;this.item=item;this.key=key;this.visible=[0];this.rows=new Map();this.mounts=0;}
-  reconcile(){
-    for(const index of this.visible){
+  reconcile(indices=this.visible){
+    for(const index of indices){
       const row=this.data.getData(index),key=this.key(row,index),old=this.rows.get(index);
       if(old?.key===key)continue;
       const before=owner.observers.length;
@@ -40,7 +40,7 @@ class RetainedItems {
     }
   }
   onDataReloaded(){this.reconcile();}
-  onDataChange(index){if(this.visible.includes(index))this.reconcile();}
+  onDataChange(index){if(this.visible.includes(index))this.reconcile([index]);}
 }
 const built=createReaderBuilderProbe(source,names,{
   ...properties.sdk,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
@@ -56,7 +56,9 @@ owner=built.owner;
 assert.match(built.output,/LazyForEach\.create/,'execute the compiler-emitted callback registration');
 const manifest={manifestVersion:'test-v1',pages:Array.from({length:3},(_,ordinal)=>({ordinal,pageId:`page-${ordinal}`,resourceRef:`manga:page-${ordinal}`}))};
 const geometry=new Map(),tiles=new Map(),pages=new Map([[0,{ordinal:0,status:'pending'}]]);
-owner.controller={tile:(ordinal,index)=>tiles.get(`${ordinal}:${index}`),visiblePages:()=>[...pages.values()]};
+owner.controller={tile:(ordinal,index)=>tiles.get(`${ordinal}:${index}`),visiblePages:()=>[...pages.values()],
+  chapter:{manifest,chapterTitle:'Fixture'},totalPages:3,displayedOrdinal:0,recoveryRequired:false,savedLocation:null,
+  pageGeometry:ordinal=>geometry.get(ordinal),pageAt:ordinal=>manifest.pages[ordinal]};
 owner.viewportWidth=300;owner.viewportHeight=600;
 const project=()=>owner.data.projection.publish(manifest,index=>geometry.get(index),undefined,3,index=>manifest.pages[index]);
 const notify=()=>owner.data.notify(project(),0,0);
@@ -95,4 +97,18 @@ pages.set(0,{ordinal:0,status:'ready'});tiles.set('0:0',{image:{fileUri:'file://
 assert.equal(frame().businessKey,originalBusinessKey);
 assert.equal(owner.data.projection.index(0,0.4),anchorBefore);
 assert.equal(owner.data.projection.position(anchorBefore,60,300),positionBefore,'image/error publication cannot change the normalized anchor mapping');
-console.log('PASS actual SDK LazyForEach item/key callbacks under explicit same-key retention: placeholder geometry, ready image, errors, retry, URI/revision changes, unchanged and nonvisible stability, logical identity and anchor preservation (native layout/pixels not tested)');
+// A restored anchor can temporarily report only row zero while row one is
+// already visible. Exercise the real Surface.publish, not a test notification.
+// onDataChange(0) must not silently reconcile row one in this boundary model.
+owner.mounted=true;owner.first=0;owner.last=0;owner.publishedManifestVersion=manifest.manifestVersion;
+lazy.visible=[0,1];lazy.reconcile();
+const secondPending=lazy.rows.get(1);
+assert.ok(secondPending.nodes.some(node=>node.type==='LoadingProgress'));
+tiles.set('0:1',{image:{fileUri:'file://second-visible-tile.png',revision:'tile-1-ready'}});
+owner.publish();
+const secondReady=lazy.rows.get(1);
+assert.notEqual(secondReady.key,secondPending.key,'actual publish must notify the requested next row even when restored last is zero');
+assert.equal(secondReady.nodes.find(node=>node.type==='Image')?.create,'file://second-visible-tile.png');
+assert.ok(!secondReady.nodes.some(node=>node.type==='LoadingProgress'));
+assert.equal(secondReady.businessKey,secondPending.businessKey);
+console.log('PASS actual SDK LazyForEach item/key callbacks with strict per-index retention: placeholder geometry, ready image, errors, retry, URI/revision changes, unchanged and nonvisible stability, logical identity and anchor preservation, actual publish to the next requested visible tile (native layout/pixels not tested)');

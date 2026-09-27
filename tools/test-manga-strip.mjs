@@ -17,12 +17,16 @@ assert.throws(()=>p.index(1,NaN),/ANCHOR_INVALID/);
 console.log('PASS manga strip: last crop, unknown geometry, original-image position, stable anchors after geometry expansion');
 // Execute the actual ArkUI owner's anchor methods against a changing viewport.
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const timers=[],scrolls=[];
+const timers=[],scrolls=[],frames=[];
 const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),
-  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','rememberVisible','resizeViewport','restore'],{setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'}});
+  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','rememberVisible','resizeViewport','restore'],{setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},
+    // This anchor probe only records native frame admission. The dedicated SDK
+    // viewport test executes the real MangaLayoutFrame and measured callbacks.
+    MangaLayoutFrame:class {constructor(action){this.action=action;}}});
 const surface=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),getData:i=>p.row(i),projection:p},
  first:2,last:2,viewportWidth:500,viewportHeight:900,zoom:1,horizontalScroller:{currentOffset:()=>({xOffset:0}),scrollTo:()=>{}},opened:true,mounted:true,layoutGeneration:0,
  scroller:{getItemRect:()=>({y:-237.5}),scrollToIndex:(...args)=>scrolls.push(['index',...args]),scrollBy:(...args)=>scrolls.push(['offset',...args])},
+ getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)}),
  updateViewport:()=>scrolls.push(['update'])});
 surface.rememberVisible();assert.deepEqual(surface.visibleAnchor,{ordinal:0,y:0.55,x:0});
 surface.scroller.getItemRect=()=>{throw Error('new rectangles unavailable during reflow');};
@@ -30,6 +34,7 @@ surface.rememberVisible();assert.equal(surface.visibleAnchor.y,0.55);
 surface.resizeViewport(350);surface.resizeViewport(700);
 assert.equal(surface.viewportWidth,700);timers.shift()();assert.equal(scrolls.length,0,'superseded resize must not restore');
 timers.shift()();assert.deepEqual(scrolls,[['index',2,false,'start'],['offset',0,332.5],['update']]);
+assert.equal(frames.length,1,'only the current anchor restore admits a follow-up native frame');
 surface.resizeViewport(NaN);surface.resizeViewport(0);assert.equal(surface.viewportWidth,700);
 assert.equal(surface.visibleAnchor.y,0.55);
 console.log('PASS actual manga surface preserves observed original-image anchor across width changes and missing geometry; obsolete resize discarded');
