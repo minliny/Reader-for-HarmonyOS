@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "generator": "Pillow 12.3.0 RGB fixed color bars + independent crop RGBA SHA256",
+  "file": "large-long-1024x32768.png",
+  "width": 1024,
+  "height": 32768,
+  "orientation": 1,
+  "interlaced": false,
+  "colorType": 2,
+  "encodedBytes": 144927,
+  "sha256": "a300ee139c0c060f99a1da756167577c0239790c6149bfc984525d6cde181cb7",
+  "fullRgbaBytes": 134217728,
+  "roiRgbaBytes": 4194304,
+  "rois": [
+    {
+      "id": "first",
+      "position": 0,
+      "regionY": 0,
+      "width": 1024,
+      "height": 1024,
+      "rgbaBytes": 4194304,
+      "sha256": "b6ac2ca3368d46908421d717b2f8129521152a26b92a442afcbcce83dad73b56",
+      "samples": [
+        {
+          "x": 128,
+          "y": 8,
+          "rgba": [
+            9,
+            31,
+            71,
+            255
+          ]
+        },
+        {
+          "x": 128,
+          "y": 128,
+          "rgba": [
+            241,
+            3,
+            20,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 128,
+          "rgba": [
+            232,
+            214,
+            15,
+            255
+          ]
+        },
+        {
+          "x": 896,
+          "y": 128,
+          "rgba": [
+            3,
+            242,
+            31,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 512,
+          "rgba": [
+            13,
+            224,
+            216,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 896,
+          "rgba": [
+            232,
+            214,
+            15,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "id": "middle",
+      "position": 0.5,
+      "regionY": 16384,
+      "width": 1024,
+      "height": 1024,
+      "rgbaBytes": 4194304,
+      "sha256": "32c92c3d345a3f7efb94c553a5f9ba28f6e98aaaab9c01a7a57ef060a6988e23",
+      "samples": [
+        {
+          "x": 128,
+          "y": 8,
+          "rgba": [
+            121,
+            111,
+            119,
+            255
+          ]
+        },
+        {
+          "x": 128,
+          "y": 128,
+          "rgba": [
+            4,
+            18,
+            240,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 128,
+          "rgba": [
+            13,
+            224,
+            216,
+            255
+          ]
+        },
+        {
+          "x": 896,
+          "y": 128,
+          "rgba": [
+            241,
+            3,
+            20,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 512,
+          "rgba": [
+            214,
+            9,
+            201,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 896,
+          "rgba": [
+            13,
+            224,
+            216,
+            255
+          ]
+        }
+      ]
+    },
+    {
+      "id": "last",
+      "position": 1,
+      "regionY": 31744,
+      "width": 1024,
+      "height": 1024,
+      "rgbaBytes": 4194304,
+      "sha256": "8a245cb8967746d7e4bf670633aa0e466d4eb6cf7b833f73d3bbee85eda84c6f",
+      "samples": [
+        {
+          "x": 128,
+          "y": 8,
+          "rgba": [
+            226,
+            186,
+            164,
+            255
+          ]
+        },
+        {
+          "x": 128,
+          "y": 128,
+          "rgba": [
+            214,
+            9,
+            201,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 128,
+          "rgba": [
+            241,
+            3,
+            20,
+            255
+          ]
+        },
+        {
+          "x": 896,
+          "y": 128,
+          "rgba": [
+            13,
+            224,
+            216,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 512,
+          "rgba": [
+            4,
+            18,
+            240,
+            255
+          ]
+        },
+        {
+          "x": 512,
+          "y": 896,
+          "rgba": [
+            241,
+            3,
+            20,
+            255
+          ]
+        }
+      ]
+    }
+  ],
+  "control": {
+    "file": "control-long-1024x2048.png",
+    "width": 1024,
+    "height": 2048,
+    "encodedBytes": 9153,
+    "sha256": "0586eda7f2e4a87861128904e4ed32765ec657b3ad6b016bb430f98cb4fce5a9",
+    "firstRoiSha256": "b6ac2ca3368d46908421d717b2f8129521152a26b92a442afcbcce83dad73b56"
+  },
+  "evidence": "Fixture geometry/oracles only; no platform decoder, peak memory, or display evidence"
+}

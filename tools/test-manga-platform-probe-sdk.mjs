@@ -16,8 +16,8 @@ type JsonObject = Record<string, Object>;
 declare const DEBUG:boolean, BUILD_MODE_NAME:string;
 declare const ReaderRuntimeOwner:{current():{start():Promise<void>}};
 interface ReadingBodyImagePayload {fileUri:string;pixelMap:image.PixelMap|undefined;width:number;height:number;intrinsicWidth:number;intrinsicHeight:number;regionY?:number;revision:string}
-declare class ReadingBodyImageHost {static instance:ReadingBodyImageHost;diagnosticState():MangaBodyDiagnosticState;attachDiagnosticObserver(observer:(value:MangaPlatformObservation)=>void):()=>void;loadBytes(bytes:Uint8Array,current:()=>boolean,position:number,preview?:boolean):Promise<ReadingBodyImagePayload>;release(uri:string,map?:image.PixelMap):void}
-declare class MangaImageGraphicsHost {static instance:MangaImageGraphicsHost;attachDiagnosticObserver(observer:(value:MangaPlatformObservation)=>void):()=>void;transform(bytes:Uint8Array,plan:JsonObject,current:()=>boolean):Promise<Uint8Array>;diagnosticPending():number}
+declare class ReadingBodyImageHost {static instance:ReadingBodyImageHost;diagnosticState(debug?:boolean,buildMode?:string):MangaBodyDiagnosticState;attachDiagnosticObserver(observer:(value:MangaPlatformObservation)=>void,debug?:boolean,buildMode?:string):()=>void;loadBytes(bytes:Uint8Array,current:()=>boolean,position:number,preview?:boolean):Promise<ReadingBodyImagePayload>;validateBytes(bytes:Uint8Array,current:()=>boolean,position:number):Promise<void>;release(uri:string,map?:image.PixelMap):void}
+declare class MangaImageGraphicsHost {static instance:MangaImageGraphicsHost;attachDiagnosticObserver(observer:(value:MangaPlatformObservation)=>void,debug?:boolean,buildMode?:string):()=>void;transform(bytes:Uint8Array,plan:JsonObject,current:()=>boolean):Promise<Uint8Array>;diagnosticPending(debug?:boolean,buildMode?:string):number}
 `;
 const stripped=runner.replace(/^import .*?(?:@reader\/core-harmony|BuildProfile|ReaderRuntimeOwner|ReadingBodyImageHost|MangaImageGraphicsHost).*?;\n/gm,'');
 const page=readFileSync(pagePath,'utf8');
@@ -35,7 +35,7 @@ const tree=ts.createSourceFile(pagePath,page,ts.ScriptTarget.Latest,true,ts.Scri
 const component=tree.statements.find(n=>n.name?.getText(tree)==='ReaderMangaPlatformDiagnostic');
 const names=component.members.map(n=>n.name?.getText(tree)).filter(Boolean);
 const runtime=createArkUIPropertyRuntimeProbe();
-const {owner,output}=createReaderBuilderProbe(page,names,{...runtime.sdk,MangaPlatformProbeRunner:class{},hilog:{info(){}},ImageFit:{Contain:0}});
+const {owner,output}=createReaderBuilderProbe(page,names,{...runtime.sdk,MangaPlatformProbeRunner:class{},hilog:{info(){}},ImageFit:{Contain:0},DEBUG:true,BUILD_MODE_NAME:'debug'});
 assert.match(output,/onComplete/);assert.match(output,/loadingStatus === 1/);assert.match(output,/reader-manga-probe-run/);
 owner.mounted=true;owner.generation=2;
 let settled=false;const first=owner.present({id:'frame',fileUri:'file:///fixture',width:2,height:3}).then(value=>{settled=true;return value});
@@ -44,3 +44,25 @@ owner.acknowledge('2:frame',true);assert.equal(await first,true);
 owner.generation=3;const pending=owner.present({id:'frame',fileUri:'file:///fixture',width:2,height:3});
 let disposed=false;owner.runner={cancel(){},async dispose(){disposed=true}};await owner.release();assert.equal(await pending,false);assert.equal(disposed,true);assert.equal(owner.frames.length,0);
 console.log('PASS real installed SDK ImageKit readback/native hash/file APIs and counterfactual invalid buffer, actual ArkUI lowering, unique frame acknowledgement and dispose cancellation. No native pixel result asserted by this host test.');
+
+owner.passed=0;owner.failed=0;owner.receipt({caseId:'stage',phase:'large-region-start',pass:true,checkResult:false,presentationEvidence:false});assert.equal(owner.passed,0,'measurement stage marker never counts as a semantic PASS');owner.receipt({caseId:'large',phase:'large-region-end',pass:true,presentationEvidence:false});assert.equal(owner.passed,1);
+
+const bodyFile=readFileSync(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts',import.meta.url),'utf8');
+const bodyTree=ts.createSourceFile('ReadingBodyImageHost.ts',bodyFile,ts.ScriptTarget.Latest,true);
+const bodyClass=bodyTree.statements.find(n=>n.name?.getText(bodyTree)==='ReadingBodyImageHost');
+const bodyMethods=['withDecodedPixelMap','assertMangaPixelBudget'].map(name=>bodyClass.members.find(n=>n.name?.getText(bodyTree)===name).getText(bodyTree)).join('\n');
+const metadataTypes=['MangaImageDecodeProfile','MangaImageMetadataProof'].map(name=>bodyTree.statements.find(n=>n.name?.getText(bodyTree)===name).getText(bodyTree)).join('\n');
+const bodyBudgetCheck=`${metadataTypes}
+const MAX_READING_IMAGE_DIMENSION=4096,MAX_READING_IMAGE_PIXELS=4194304,MAX_MANGA_DECODE_WORKING_BYTES=4194304,MAX_MANGA_OUTPUT_BYTES=4194304;
+class NativeBudgetSdk {
+ private diagnosticObserver:((event:MangaPlatformObservation)=>void)|undefined;
+ private async assertMangaImageMetadata(source:image.ImageSource,mime:string,bytes:Uint8Array,sha:string,current?:()=>boolean):Promise<MangaImageMetadataProof>{throw Error();}
+ private async sha256(bytes:Uint8Array):Promise<string>{throw Error();}
+ private boundedDecodeSize(width:number,height:number,pixels?:number,dimension?:number):image.Size{return {width,height};}
+ private assertCurrent(current?:()=>boolean):void{}
+ private observeDiagnostic(event:MangaPlatformObservation):void{}
+ ${bodyMethods}
+}`;
+assert.deepEqual(semantic(semanticSource+'\n'+bodyBudgetCheck),[],'actual production crop, SDR, RGBA, metadata and row-byte API must match installed SDK');
+assert.ok(semantic(semanticSource+'\n'+bodyBudgetCheck.replace('image.CropAndScaleStrategy.CROP_FIRST',"'cropFirst'" )).length>0,'invalid crop strategy is not silently accepted by SDK');
+console.log('PASS actual BodyHost production region/preview allocation and PixelMap stride methods against installed SDK (including invalid enum counterfactual).');

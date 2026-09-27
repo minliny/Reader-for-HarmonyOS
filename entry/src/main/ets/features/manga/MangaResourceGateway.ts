@@ -22,7 +22,6 @@ export interface MangaResourceScope {
 /** Manga's resource adapter over the shared transport, disk cache and pixels.
  * Loading one page does not certify a complete or offline chapter. */
 export class MangaResourceGateway {
-  private static regionTail: Promise<void> = Promise.resolve();
   private readonly runtime: ReadingGatewayRuntime;
 
   constructor(runtime: ReadingGatewayRuntime) {
@@ -31,33 +30,21 @@ export class MangaResourceGateway {
 
   async loadPage(scope: MangaResourceScope, page: MangaResourcePage,
     allowNetwork: boolean, isCurrent: () => boolean, mangaPosition?: number, mangaPreview: boolean = false): Promise<ReadingGatewayImage> {
-    if (mangaPosition !== undefined) {
-      const previous = MangaResourceGateway.regionTail;
-      let release: () => void = (): void => {};
-      MangaResourceGateway.regionTail = new Promise<void>((resolve): void => { release = resolve; });
-      await previous;
-      try { return await this.loadOwnedPage(scope, page, allowNetwork, isCurrent, mangaPosition, mangaPreview); }
-      finally { release(); }
-    }
-    return this.loadOwnedPage(scope, page, allowNetwork, isCurrent);
+    // Runtime owns the shared manga allocation lane, including explicit offline
+    // work and the operation's pending cache write. Do not lock it again here.
+    return this.loadOwnedPage(scope, page, allowNetwork, isCurrent, mangaPosition, mangaPreview);
   }
 
-  /** Optional next-chapter work joins the existing region lane and persists
-   * validated bytes only; it never owns a display lease or offline receipt. */
+  /** Optional next-chapter work uses the same Runtime owner as foreground and
+   * explicit downloads, without a display lease or offline completion receipt. */
   async prefetchPage(scope: MangaResourceScope, page: MangaResourcePage, isCurrent: () => boolean): Promise<void> {
     if (this.runtime.prefetchReadingImage === undefined) return;
-    const previous = MangaResourceGateway.regionTail;
-    let release: () => void = (): void => {};
-    MangaResourceGateway.regionTail = new Promise<void>((resolve): void => { release = resolve; });
-    await previous;
-    try {
-      this.assertCurrent(isCurrent);
-      if (page.resourceRef === undefined || page.resourceRef.length === 0) throw new Error('MANGA_RESOURCE_IDENTITY_INVALID');
-      await this.runtime.prefetchReadingImage({ sourceId: scope.sourceId, bookId: scope.bookId,
-        chapterIndex: scope.chapterIndex, contentVersion: scope.contentVersion, imageUrl: page.requestRule ?? page.url,
-        resourceRef: page.resourceRef, baseUrl: scope.chapterUrl }, isCurrent, scope.sourceRuleVersion, true);
-      this.assertCurrent(isCurrent);
-    } finally { release(); }
+    this.assertCurrent(isCurrent);
+    if (page.resourceRef === undefined || page.resourceRef.length === 0) throw new Error('MANGA_RESOURCE_IDENTITY_INVALID');
+    await this.runtime.prefetchReadingImage({ sourceId: scope.sourceId, bookId: scope.bookId,
+      chapterIndex: scope.chapterIndex, contentVersion: scope.contentVersion, imageUrl: page.requestRule ?? page.url,
+      resourceRef: page.resourceRef, baseUrl: scope.chapterUrl }, isCurrent, scope.sourceRuleVersion, true);
+    this.assertCurrent(isCurrent);
   }
 
   private async loadOwnedPage(scope: MangaResourceScope, page: MangaResourcePage,

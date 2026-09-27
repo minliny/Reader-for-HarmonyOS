@@ -1,4 +1,3 @@
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import type { MangaPlatformObservation, MangaPlatformObserver } from './MangaPlatformObservation';
 import { image } from '@kit.ImageKit';
 import type { JsonObject } from '@reader/core-harmony';
@@ -6,17 +5,18 @@ import { validateMangaGraphicsDimensions, validateMangaGraphicsPlan } from './Ma
 import type { MangaImageGraphicsAdapter, MangaGraphicsDimensions } from './MangaImageGraphicsPlan';
 
 const MAX_BYTES: number = 16 * 1024 * 1024;
+const MAX_GRAPHICS_WORKING_BYTES: number = 32 * 1024 * 1024;
 /** Narrow Reader API mapping; platform ImageKit owns pixels and JPEG encoding. */
 export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
   static readonly instance: MangaImageGraphicsHost = new MangaImageGraphicsHost();
   private diagnosticObserver: MangaPlatformObserver | undefined;
-  attachDiagnosticObserver(observer: MangaPlatformObserver): () => void {
-    if (DEBUG !== true || BUILD_MODE_NAME !== 'debug' || this.diagnosticObserver !== undefined) throw new Error('MANGA_DIAGNOSTIC_UNAVAILABLE');
+  attachDiagnosticObserver(observer: MangaPlatformObserver, debug: boolean = false, buildMode: string = ''): () => void {
+    if (debug !== true || buildMode !== 'debug' || this.diagnosticObserver !== undefined) throw new Error('MANGA_DIAGNOSTIC_UNAVAILABLE');
     this.diagnosticObserver = observer;
     return (): void => { if (this.diagnosticObserver === observer) this.diagnosticObserver = undefined; };
   }
-  diagnosticPending(): number {
-    if (DEBUG !== true || BUILD_MODE_NAME !== 'debug') throw new Error('MANGA_DIAGNOSTIC_UNAVAILABLE');
+  diagnosticPending(debug: boolean = false, buildMode: string = ''): number {
+    if (debug !== true || buildMode !== 'debug') throw new Error('MANGA_DIAGNOSTIC_UNAVAILABLE');
     return this.pending;
   }
   private observeDiagnostic(event: MangaPlatformObservation): void {
@@ -31,6 +31,19 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
   private encoded(bytes: Uint8Array): ArrayBuffer {
     if (bytes.length < 1 || bytes.length > MAX_BYTES) throw new Error('MANGA_GRAPHICS_BYTES');
     return bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength ? bytes.buffer as ArrayBuffer : bytes.slice().buffer as ArrayBuffer;
+  }
+  private workingSet(width: number, height: number, encodedBytes: number, inputBytes: number = width * height * 4, outputBytes: number = width * height * 2): void {
+    const pixels = width * height;
+    // Whole-frame decode plus readback used to permit two 64MiB RGBA surfaces.
+    // Reserve known simultaneous surfaces and conservative codec/encoded copies.
+    // This local gate is not a claim about the application's total memory peak.
+    const encodedReserve = encodedBytes * 3;
+    // Up to four sampling factors per 8-pixel DCT block require 32-pixel padding.
+    const codecSurface = Math.ceil(width / 32) * 32 * Math.ceil(height / 32) * 32 * 8;
+    const decodeStage = encodedReserve + codecSurface + inputBytes + pixels * 4;
+    const packStage = encodedReserve + pixels * 4 + outputBytes + MAX_BYTES;
+    if (!Number.isSafeInteger(decodeStage) || !Number.isSafeInteger(packStage) ||
+      Math.max(decodeStage, packStage) > MAX_GRAPHICS_WORKING_BYTES) throw new Error('MANGA_GRAPHICS_MEMORY_BUDGET');
   }
   private async dimensions(source: image.ImageSource, current: () => boolean): Promise<MangaGraphicsDimensions> {
     const info = await source.getImageInfo(0);
@@ -71,16 +84,46 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
     let input: image.PixelMap | undefined = undefined;
     let output: image.PixelMap | undefined = undefined;
     let packer: image.ImagePacker | undefined = undefined;
+    let sourceOwned = true;
+    const releaseSource = async (): Promise<void> => {
+      if (!sourceOwned) return;
+      sourceOwned = false;
+      try {
+        await source.release();
+        if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'source' });
+      } catch (error) {
+        if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release-error', resource: 'source' });
+        throw error;
+      }
+    };
+    const releaseInput = async (): Promise<void> => {
+      const owned = input;
+      if (owned === undefined) return;
+      input = undefined;
+      try {
+        await owned.release();
+        if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'pixel' });
+      } catch (error) {
+        if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release-error', resource: 'pixel' });
+        throw error;
+      }
+    };
     try {
       const size = await this.dimensions(source, current);
       if (size.width !== plan.width || size.height !== plan.height) throw new Error('MANGA_GRAPHICS_SIZE_CHANGED');
-      input = await source.createPixelMap({ desiredPixelFormat: image.PixelMapFormat.RGBA_8888, editable: false });
+      this.workingSet(size.width, size.height, bytes.length);
+      input = await source.createPixelMap({ desiredPixelFormat: image.PixelMapFormat.RGBA_8888, desiredDynamicRange: image.DecodingDynamicRange.SDR, editable: false });
       if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'open', resource: 'pixel' });
       this.current(current);
       const decoded = await input.getImageInfo();
       if (decoded.size.width !== plan.width || decoded.size.height !== plan.height || decoded.pixelFormat !== image.PixelMapFormat.RGBA_8888) {
         throw new Error('MANGA_GRAPHICS_DECODE_SIZE');
       }
+      const rowBytes = input.getBytesNumberPerRow();
+      const nativeBytes = input.getPixelBytesNumber();
+      if (!Number.isSafeInteger(rowBytes) || rowBytes < plan.width * 4 || !Number.isSafeInteger(nativeBytes) ||
+        nativeBytes < plan.width * plan.height * 4) throw new Error('MANGA_GRAPHICS_MEMORY_BUDGET');
+      this.workingSet(plan.width, plan.height, bytes.length, Math.max(nativeBytes, rowBytes * plan.height));
       // ImageKit performs regional reads directly into the destination layout.
       // Reader supplies coordinates only; no codec or pixel conversion loop.
       const pixels = new ArrayBuffer(plan.width * plan.height * 4);
@@ -92,11 +135,21 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
         this.current(current);
       }
       if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'pre-encode', width: plan.width, height: plan.height, pixels: new Uint8Array(pixels) });
-      await input.release(); input = undefined;
-      if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'pixel' });
+      await releaseInput();
+      // Decoder coefficient/interlace surfaces belong to ImageSource and can
+      // outlive its input PixelMap. End that ownership before the pack stage.
+      await releaseSource();
+      this.current(current);
       output = await image.createPixelMap(pixels, { size, srcPixelFormat: image.PixelMapFormat.RGBA_8888,
         pixelFormat: image.PixelMapFormat.RGB_565, editable: false });
       if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'open', resource: 'pixel' });
+      this.current(current);
+      const packedInfo = await output.getImageInfo();
+      const packedRow = output.getBytesNumberPerRow();
+      const packedBytes = output.getPixelBytesNumber();
+      if (packedInfo.size.width !== plan.width || packedInfo.size.height !== plan.height || packedInfo.pixelFormat !== image.PixelMapFormat.RGB_565 ||
+        !Number.isSafeInteger(packedRow) || packedRow < plan.width * 2 || !Number.isSafeInteger(packedBytes) || packedBytes < plan.width * plan.height * 2) throw new Error('MANGA_GRAPHICS_MEMORY_BUDGET');
+      this.workingSet(plan.width, plan.height, bytes.length, plan.width * plan.height * 4, Math.max(packedBytes, packedRow * plan.height));
       this.current(current);
       packer = image.createImagePacker();
       if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'open', resource: 'packer' });
@@ -110,8 +163,8 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
       finally {
         try { if (output !== undefined) { await output.release(); if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'pixel' }); } }
         finally {
-          try { if (input !== undefined) { await input.release(); if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'pixel' }); } }
-          finally { await source.release(); if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'source' }); }
+          try { await releaseInput(); }
+          finally { await releaseSource(); }
         }
       }
     }

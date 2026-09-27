@@ -1,10 +1,11 @@
 // Existing DEBUG pilot child. Fixed rawfile inputs; no reader session or user data writes.
+import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MangaPlatformProbeRunner, type MangaProbeFrame, type MangaProbeReceipt } from '../app/MangaPlatformProbeRunner';
 
 @Component
 export struct ReaderMangaPlatformDiagnostic {
-  @State private status: string = '固定32个方向/长图样本与14条带重排；使用本机ImageKit和Native元数据';
+  @State private status: string = '固定32方向/长图、14条带、对照与3个大图区域；使用本机ImageKit和Native元数据';
   @State private busy: boolean = false;
   @State private passed: number = 0;
   @State private failed: number = 0;
@@ -15,6 +16,8 @@ export struct ReaderMangaPlatformDiagnostic {
   private pendingResolve: ((loaded: boolean) => void) | undefined;
   private displayTimer: number = 0;
   private generation: number = 0;
+  private receiptRunId: string = '';
+  private receiptSequence: number = 0;
 
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void { this.mounted = false; void this.release(); }
@@ -37,23 +40,26 @@ export struct ReaderMangaPlatformDiagnostic {
     });
   }
   private receipt(value: MangaProbeReceipt): void {
+    value.runId = this.receiptRunId; value.seq = ++this.receiptSequence; value.fixtureRevision = 'manga-platform-probe-v2-large';
     hilog.info(0x5244, 'ReaderMangaProbe', 'READER_MANGA_PLATFORM %{public}s', JSON.stringify(value));
     if (!this.mounted) return;
-    if (value.pass) this.passed++; else this.failed++;
+    if (value.checkResult !== false) { if (value.pass) this.passed++; else this.failed++; }
     this.status = `${value.caseId} · ${value.phase} · ${value.pass ? 'PASS' : 'FAIL'}${value.message === undefined ? '' : ` · ${value.message}`}`;
   }
   private async run(): Promise<void> {
+    if (DEBUG !== true || BUILD_MODE_NAME !== 'debug') { this.status = '当前构建不提供图像诊断'; return; }
     if (this.busy) return;
     await this.release();
     if (!this.mounted) return;
     const context = this.getUIContext().getHostContext();
     if (context === undefined) { this.status = '无法读取固定rawfile资源'; return; }
     const generation = ++this.generation;
+    this.receiptRunId = `${Date.now()}-${generation}`; this.receiptSequence = 0;
     this.busy = true; this.passed = 0; this.failed = 0;
     const runner = new MangaPlatformProbeRunner(
       (file: string): Promise<Uint8Array> => context.resourceManager.getRawFileContent(file),
       (value: MangaProbeReceipt): void => this.receipt(value),
-      (frame: MangaProbeFrame): Promise<boolean> => this.present(frame));
+      (frame: MangaProbeFrame): Promise<boolean> => this.present(frame), DEBUG, BUILD_MODE_NAME);
     this.runner = runner;
     try { await runner.run(); }
     catch (error) { this.receipt({ caseId: 'initialization', phase: 'native-owner', pass: false, message: (error as Error).message.slice(0, 240), presentationEvidence: false }); }
