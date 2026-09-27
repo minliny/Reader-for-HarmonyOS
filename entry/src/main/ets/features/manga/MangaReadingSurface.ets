@@ -79,6 +79,7 @@ export struct MangaReadingSurface {
   @State private zoom: number = 1;
   @State private horizontal: boolean = false;
   @State private horizontalPage: number = 0;
+  @State private horizontalPageCount: number = 0;
   private pinchStartScale: number = 1;
   private pinchAnchor: MangaViewportAnchor | undefined;
   private first: number = 0;
@@ -246,6 +247,9 @@ export struct MangaReadingSurface {
     const anchor = this.visibleAnchor;
     try {
       const changed = this.data.projection.publish(chapter.manifest, (index: number) => this.controller?.pageGeometry(index), this.horizontal ? this.horizontalPage : undefined, this.controller?.totalPages ?? chapter.manifest.pages.length, (ordinal: number) => this.controller?.pageAt(ordinal));
+      // Controller facts are plain fields. Publish the admitted chapter count
+      // as ArkUI state even when a new chapter starts at the same ordinal 0.
+      this.horizontalPageCount = this.controller?.totalPages ?? 0;
       this.title = chapter.chapterTitle;
       this.data.notify(changed, this.first, this.requestedLast());
       if (changed && this.opened && anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
@@ -635,9 +639,9 @@ export struct MangaReadingSurface {
           })))
       if (this.horizontal) {
         Row() {
-          Button('上一图').enabled(this.horizontalPage > 0).onClick((): void => { this.turnPage(-1); })
-          Text(`${this.horizontalPage + 1} / ${this.controller?.totalPages ?? 0}`).fontColor(this.mangaForegroundColor)
-          Button('下一图').enabled(this.horizontalPage + 1 < (this.controller?.totalPages ?? 0)).onClick((): void => { this.turnPage(1); })
+          Button('上一图').enabled(this.horizontalPage > 0 && this.horizontalPageCount > 0).onClick((): void => { this.turnPage(-1); })
+          Text(`${this.horizontalPage + 1} / ${this.horizontalPageCount}`).fontColor(this.mangaForegroundColor)
+          Button('下一图').enabled(this.horizontalPage + 1 < this.horizontalPageCount).onClick((): void => { this.turnPage(1); })
         }.width('100%').justifyContent(FlexAlign.SpaceBetween)
       }
       Row() {
