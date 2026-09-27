@@ -381,6 +381,15 @@ export struct MangaReadingSurface {
     return this.controller?.tile(row.ordinal, row.tileIndex)?.error ??
       this.controller?.visiblePages().find(page => page.ordinal === row.ordinal)?.error ?? 'MANGA_IMAGE_FAILED';
   }
+  private rowRenderKey(row: MangaStripRow): string {
+    const tile = this.controller?.tile(row.ordinal, row.tileIndex);
+    const pageError = this.controller?.visiblePages().find(page => page.ordinal === row.ordinal)?.error;
+    // LazyForEach retains the old branch for an unchanged key, even after a
+    // data notification. Keep logical page identity separate from presentation,
+    // as ReaderContinuousReadingStage does for decoded inline images.
+    return JSON.stringify([row.key, row.known, row.width, row.height, row.sourceY, row.sourceHeight,
+      tile?.image?.fileUri ?? '', tile?.image?.revision ?? '', tile?.error ?? pageError ?? '']);
+  }
   private handleBack(): void {
     if (this.zoom > 1) { this.changeZoom(1); return; }
     void this.saveVisible();
@@ -487,7 +496,7 @@ export struct MangaReadingSurface {
               }.width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).justifyContent(FlexAlign.Center)
             }
           }.width('100%').height(this.rowDisplayHeight(row)).align(Alignment.Center)
-        }, (row: MangaStripRow): string => row.key)
+        }, (row: MangaStripRow): string => this.rowRenderKey(row))
       }.height('100%').width(this.viewportWidth * this.zoom).cachedCount(0)
         .onScroll((): void => { this.rememberVisible(); })
         .onScrollIndex((first: number, last: number): void => {
