@@ -21,6 +21,8 @@ const Host=productionMotionMethods(file('pages/Index.ets'),['applyBookshelfState
   ReaderRuntimeOwner:{current:()=>owner},LOCAL_SOURCE_ID:'local',SourceGateway:class{async loadSourcesForIds(){sourceLoads++;if(sources===undefined)throw Error('source.list failed');return sources;}}
 });
 const host=Object.assign(new Host(),{searchPublication:new SearchPublication(),searchPublicationRevision:0,shelfBooks:[],bookshelfLoadGeneration:1,bookshelfSourceNameRequest:0,sourceDisplayName:()=> '旧内存名称',scheduleBookshelfBackgroundRefresh(){}});
+assert.equal(host.copyShelfBookWithSourceName({...shelf.books[0],contentKind:'manga'},'持久名称').contentKind,'manga',
+  'source-name hydration must keep Core manga identity for offline cold selection');
 const populated={kind:'populated',shelf,continueReading:undefined};
 host.applyBookshelfState(populated);await new Promise(resolve=>setImmediate(resolve));
 assert.equal(sourceLoads,0,'complete Core shelf projection does not load the full source registry');

@@ -6494,6 +6494,7 @@ struct Index {
       author: book.author,
       addedAt: book.addedAt,
     };
+    if (book.contentKind !== undefined) copy.contentKind = book.contentKind;
     if (book.kind !== undefined) copy.kind = book.kind;
     if (book.coverUrl !== undefined) copy.coverUrl = book.coverUrl;
     if (book.intro !== undefined) copy.intro = book.intro;
