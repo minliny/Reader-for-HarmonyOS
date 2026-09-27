@@ -8,11 +8,13 @@ import type { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
 import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 import { MangaSessionGateway } from './MangaSessionGateway';
+import type { MangaManifest } from './MangaContract';
 import { MangaSessionController, MangaTileRequest } from './MangaSessionController';
 import { PhotoViewScaleModel } from './vendor/photoview/PhotoViewScaleModel';
 import { MangaStripProjection, MangaStripRow } from './MangaStripProjection';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
+interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
 
 class MangaLayoutFrame extends FrameCallback {
   private readonly action: () => void;
@@ -91,7 +93,10 @@ export struct MangaReadingSurface {
   private loginGeneration: number = 0;
   private layoutGeneration: number = 0;
   private viewportGeneration: number = 0;
+  private presentationGeneration: number = 0;
   private visibleAnchor: MangaViewportAnchor | undefined;
+  private confirmedPosition: MangaConfirmedPosition | undefined;
+  private appliedLayoutGeneration: number = -1;
   private publishedManifestVersion: string = '';
   private restoringAnchor: boolean = false;
 
@@ -109,7 +114,8 @@ export struct MangaReadingSurface {
     this.open(controller);
   }
   aboutToDisappear(): void {
-    this.mounted = false; this.layoutGeneration++; this.viewportGeneration++; this.loginGeneration++;
+    this.mounted = false; this.layoutGeneration++; this.viewportGeneration++; this.loginGeneration++; this.presentationGeneration++;
+    this.confirmedPosition = undefined;
     if (this.controller !== undefined) { this.controller.onChange = undefined; this.controller.close(); }
     this.runtime?.finishMangaOfflineProbe?.(this.sourceId, this.bookId);
     this.detachOfflineProbe?.(); this.detachOfflineProbe = undefined;
@@ -226,7 +232,8 @@ export struct MangaReadingSurface {
     const manifestChanged = this.publishedManifestVersion !== chapter.manifest.manifestVersion;
     if (manifestChanged && this.controller !== undefined) {
       this.publishedManifestVersion = chapter.manifest.manifestVersion;
-      this.layoutGeneration++; this.viewportGeneration++;
+      this.layoutGeneration++; this.viewportGeneration++; this.presentationGeneration++;
+      this.confirmedPosition = undefined;
       this.recovering = this.controller.recoveryRequired;
       const ordinal = this.controller.displayedOrdinal;
       const saved = this.recovering ? null : this.controller.savedLocation;
@@ -243,16 +250,35 @@ export struct MangaReadingSurface {
       if (changed && this.opened && anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
     } catch (error) { this.error = error instanceof Error ? error.message : '漫画布局失败'; }
   }
-  private rememberVisible(): void {
-    if (this.restoringAnchor) return;
-    if (this.data.totalCount() <= this.first) return;
+  private positionIdentity(ordinal: number): string {
+    const manifest = this.controller?.chapter?.manifest;
+    const page = this.controller?.pageAt(ordinal);
+    if (manifest === undefined || page === undefined) return '';
+    return JSON.stringify([manifest.chapter.sourceId, manifest.chapter.bookId, manifest.chapter.chapterId,
+      manifest.manifestVersion, page.pageId]);
+  }
+  private rememberVisible(allowRestore: boolean = false): boolean {
+    if (this.restoringAnchor && (!allowRestore || this.appliedLayoutGeneration !== this.layoutGeneration)) return false;
+    if (this.data.totalCount() <= this.first) return false;
     const row = this.data.getData(this.first);
     try {
-      const y = this.data.projection.position(this.first, -this.scroller.getItemRect(this.first).y - this.rowDisplayTop(row), this.rowDisplayWidth(row));
+      const rect = this.scroller.getItemRect(this.first);
+      // A frame callback can precede the new layout. Never combine a new scale
+      // or fit with the previous native rectangle (allow only vp rounding).
+      if (!Number.isFinite(rect.width) || !Number.isFinite(rect.height) ||
+        Math.abs(rect.width - this.viewportWidth * this.zoom) > 1 ||
+        Math.abs(rect.height - this.rowDisplayHeight(row)) > 1) return false;
+      const y = this.data.projection.position(this.first, -rect.y - this.rowDisplayTop(row), this.rowDisplayWidth(row));
       this.visibleAnchor = { ordinal: row.ordinal, y, x: this.visibleX(row) };
+      const identity = this.positionIdentity(row.ordinal);
+      const manifest = this.controller?.chapter?.manifest;
+      if (identity.length === 0 || this.controller === undefined || manifest === undefined) return false;
+      this.confirmedPosition = { controller: this.controller, manifest, identity, anchor: this.visibleAnchor };
+      return true;
     } catch (_error) {
       // Unknown geometry must not erase an already measured intra-image anchor.
       if (this.visibleAnchor?.ordinal !== row.ordinal) this.visibleAnchor = { ordinal: row.ordinal, y: 0 };
+      return false;
     }
   }
   private resizeViewport(width: number, height: number = this.viewportHeight): void {
@@ -266,6 +292,7 @@ export struct MangaReadingSurface {
   private restore(ordinal: number, y: number, x: number = 0): void {
     this.visibleAnchor = { ordinal, y, x };
     this.restoringAnchor = true;
+    this.appliedLayoutGeneration = -1;
     const generation = ++this.layoutGeneration;
     setTimeout((): void => {
       if (!this.mounted || generation !== this.layoutGeneration) return;
@@ -278,22 +305,39 @@ export struct MangaReadingSurface {
       const row = this.data.getData(index);
       if (row.known) this.scroller.scrollBy(0, Math.max(0, y * row.sourceHeight - row.sourceY) * this.rowDisplayWidth(row) / row.width + (y > 0 ? this.rowDisplayTop(row) : 0));
       this.horizontalScroller.scrollTo({ xOffset: x * this.rowDisplayWidth(row) + this.rowDisplayLeft(row), yOffset: 0, animation: false });
-      this.restoringAnchor = false; this.updateViewport();
-      const layout = this.layoutGeneration;
-      this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
-        if (!this.mounted || layout !== this.layoutGeneration) return;
-        this.measureVisibleWindow();
-      }));
+      this.appliedLayoutGeneration = generation;
+      this.updateViewport();
+      this.finishLayout(generation);
     }, 0);
+  }
+  private finishLayout(generation: number): void {
+    this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
+      if (!this.mounted || generation !== this.layoutGeneration) return;
+      this.onViewportScroll();
+    }));
+  }
+  private onViewportScroll(): void {
+    if (!this.restoringAnchor) { this.rememberVisible(); return; }
+    if (this.appliedLayoutGeneration !== this.layoutGeneration || !this.measureVisibleWindow()) return;
+    if (this.rememberVisible(true)) this.restoringAnchor = false;
+  }
+  private onViewportTouch(): void {
+    this.presentationGeneration++;
+    const generation = ++this.layoutGeneration;
+    if (this.restoringAnchor) {
+      // Cancel the queued scroll, but do not declare the new geometry stable.
+      this.appliedLayoutGeneration = generation;
+      this.finishLayout(generation);
+    }
   }
   private requestedLast(): number {
     return Math.min(this.data.totalCount() - 1, this.last + 1, this.first + 7);
   }
-  private measureVisibleWindow(): void {
-    if (this.viewportHeight <= 1 || this.data.totalCount() === 0) return;
+  private measureVisibleWindow(): boolean {
+    if (this.viewportHeight <= 1 || this.data.totalCount() === 0) return false;
     try {
       const first = this.scroller.getItemIndex(0.5, 0.5);
-      if (!Number.isSafeInteger(first) || first < 0 || first >= this.data.totalCount()) return;
+      if (!Number.isSafeInteger(first) || first < 0 || first >= this.data.totalCount()) return false;
       let last = this.scroller.getItemIndex(0.5, this.viewportHeight - 0.5);
       if (!Number.isSafeInteger(last) || last < first || last >= this.data.totalCount()) {
         // A short chapter can end above the bottom probe. Only inspect the
@@ -306,9 +350,10 @@ export struct MangaReadingSurface {
           last = index;
         }
       }
-      if (this.first === first && this.last === last) return;
+      if (this.first === first && this.last === last) return true;
       this.first = first; this.last = last; this.updateViewport();
-    } catch (_error) { /* Unmounted geometry leaves the last observed range intact. */ }
+      return true;
+    } catch (_error) { return false; /* Unmounted geometry leaves the last observed range intact. */ }
   }
   private async updateViewport(): Promise<void> {
     const controller = this.controller;
@@ -334,9 +379,13 @@ export struct MangaReadingSurface {
   private async saveVisible(): Promise<void> {
     if (!this.opened || this.recovering || this.controller === undefined || this.data.totalCount() <= this.first) return;
     try {
-      const row = this.data.getData(this.first);
-      const y = this.data.projection.position(this.first, -this.scroller.getItemRect(this.first).y - this.rowDisplayTop(row), this.rowDisplayWidth(row));
-      await this.controller.savePosition(row.ordinal, this.visibleX(row), y).catch((error: Error): void => {
+      if (!this.restoringAnchor && !this.rememberVisible()) return;
+      const confirmed = this.confirmedPosition;
+      if (confirmed === undefined || confirmed.controller !== this.controller ||
+        confirmed.manifest !== this.controller.chapter?.manifest ||
+        confirmed.identity !== this.positionIdentity(confirmed.anchor.ordinal)) return;
+      const anchor = confirmed.anchor;
+      await this.controller.savePosition(anchor.ordinal, anchor.x ?? 0, anchor.y).catch((error: Error): void => {
         if (error.message !== 'MANGA_POSITION_NOT_VISIBLE') {
           if (this.mounted) this.error = error.message;
           this.onSaveFailure(error.message);
@@ -364,12 +413,18 @@ export struct MangaReadingSurface {
   private async changeFit(): Promise<void> {
     this.rememberVisible();
     const anchor = this.visibleAnchor;
+    // Freeze the accepted old tile before preview mode releases its lease.
+    // The existing controller lane owns this write even if the view exits.
+    void this.saveVisible();
+    const generation = ++this.presentationGeneration;
+    this.layoutGeneration++; this.appliedLayoutGeneration = -1; this.restoringAnchor = true;
+    const chapter = this.controller?.chapter;
     this.fitPreference = this.fitPreference === 'source' ? 'width' : this.fitPreference === 'width' ? 'contain' : 'source';
     this.settingsGateway?.updateMangaFit(this.fitPreference).catch((error: Error): void => { if (this.mounted) this.error = error.message; });
     const controller = this.controller;
     try { await controller?.setPreviewMode(this.effectiveFit() === 'contain', anchor?.ordinal ?? this.horizontalPage); }
     catch (error) { if (this.mounted) this.error = error instanceof Error ? error.message : '漫画布局失败'; }
-    if (!this.mounted || this.controller !== controller) return;
+    if (!this.mounted || this.controller !== controller || controller?.chapter !== chapter || generation !== this.presentationGeneration) return;
     if (anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
   }
   private loginRequired(): boolean {
@@ -397,7 +452,10 @@ export struct MangaReadingSurface {
   private async refreshImages(): Promise<void> {
     const controller = this.controller;
     if (controller === undefined) return;
+    const generation = ++this.presentationGeneration;
+    const chapter = controller.chapter;
     await this.saveVisible();
+    if (!this.mounted || this.controller !== controller || controller.chapter !== chapter || generation !== this.presentationGeneration) return;
     await controller.refreshChapter();
     if (!this.mounted || this.controller !== controller) return;
     await controller.setPreviewMode(this.effectiveFit() === 'contain', controller.displayedOrdinal);
@@ -438,6 +496,7 @@ export struct MangaReadingSurface {
   }
   private changeZoom(scale: number): void {
     if (!Number.isFinite(scale) || scale <= 0) return;
+    this.presentationGeneration++;
     if (this.pinchAnchor === undefined) this.rememberVisible();
     const anchor = this.pinchAnchor ?? this.visibleAnchor;
     this.scalePolicy.setScale(scale, false);
@@ -445,6 +504,7 @@ export struct MangaReadingSurface {
     if (anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
   }
   private toggleDirection(): void {
+    this.presentationGeneration++;
     this.rememberVisible();
     const anchor = this.visibleAnchor;
     this.horizontalPage = anchor?.ordinal ?? 0;
@@ -463,8 +523,11 @@ export struct MangaReadingSurface {
     if (controller === undefined || chapter === undefined || !this.horizontal) return;
     const next = this.horizontalPage + direction;
     if (next < 0 || next >= controller.totalPages) return;
+    const generation = ++this.presentationGeneration;
+    const previous = this.horizontalPage;
     await this.saveVisible();
-    if (!this.mounted || this.controller !== controller) return;
+    if (!this.mounted || this.controller !== controller || controller.chapter !== chapter ||
+      generation !== this.presentationGeneration || !this.horizontal || this.horizontalPage !== previous) return;
     this.horizontalPage = next;
     this.visibleAnchor = undefined;
     this.first = 0; this.last = 0;
@@ -539,19 +602,20 @@ export struct MangaReadingSurface {
           }.width('100%').height(this.rowDisplayHeight(row)).align(Alignment.Center)
         }, (row: MangaStripRow): string => this.rowRenderKey(row))
       }.height('100%').width(this.viewportWidth * this.zoom).cachedCount(0)
-        .onScroll((): void => { this.rememberVisible(); })
+        .onScroll((): void => { this.onViewportScroll(); })
         .onScrollIndex((first: number, last: number): void => {
           this.first = first; this.last = last;
           if (!this.restoringAnchor) { this.layoutGeneration++; this.updateViewport(); }
+          else this.onViewportScroll();
         })
         .onTouch((event: TouchEvent): void => {
-          if (event.type === TouchType.Down) { this.layoutGeneration++; this.restoringAnchor = false; }
+          if (event.type === TouchType.Down) this.onViewportTouch();
         })
-        .onScrollStop((): void => { this.saveVisible(); })
+        .onScrollStop((): void => { this.onViewportScroll(); this.saveVisible(); })
       }.layoutWeight(1).width('100%').scrollable(ScrollDirection.Horizontal)
         .onAreaChange((_old: Area, area: Area): void => { this.resizeViewport(Number(area.width), Number(area.height)); })
-        .onScroll((): void => { this.rememberVisible(); })
-        .onScrollStop((): void => { this.saveVisible(); })
+        .onScroll((): void => { this.onViewportScroll(); })
+        .onScrollStop((): void => { this.onViewportScroll(); this.saveVisible(); })
         .parallelGesture(GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })
           .onActionStart((): void => { this.rememberVisible(); this.pinchAnchor = this.visibleAnchor; this.pinchStartScale = this.zoom; })
           .onActionUpdate((event: GestureEvent): void => { this.changeZoom(this.pinchStartScale * event.scale); })
