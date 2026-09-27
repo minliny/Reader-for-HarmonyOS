@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { createRequire, registerHooks } from 'node:module';
 import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
 import { readerMangaOfflineProbeScope } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
@@ -141,6 +141,29 @@ s.aboutToDisappear();assert.equal(s.mounted,false);assert.deepEqual(events.slice
 catalogFails=true;const f=makeSurface();await assert.rejects(f.s.acquireCatalog(()=>true),/no cached catalog/);assert.equal(onlineAcquires,0);
 await f.s.open(f.s.controller);await tick();assert.equal(f.s.opened,true,'missing optional catalog does not hide downloaded pixels');assert.equal(onlineAcquires,0);
 console.log('PASS production offline Surface uses only cached catalog, preserves downloaded entry on absent optional TOC, and fences controller before releasing probe');
+// The real cached gateway creates a new mutable session for every read. The
+// Surface may tag its owned result without mutating Core data or another owner.
+registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+ if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;}}});
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+{
+ const cachedRow=Object.freeze({chapterIndex:0,title:'Chapter',url:'/chapter'});
+ const cachedData=Object.freeze({...scope,tocAvailable:true,chapters:Object.freeze([cachedRow])});
+ const seed=Object.freeze({...scope,detailUrl:'/book',title:'Book',author:'Author'});
+ const requests=[];const runtime={async request(method){requests.push(method);assert.equal(method,'cache.book.status');return {data:cachedData};},
+  bookAcquisitions(){throw Error('offline cannot acquire online catalog');}};
+ const real=new RemoteReadingFlowGateway(runtime),other=await real.openCachedSession(seed,()=>true);
+ const Owned=productionMotionMethods(url('features/manga/MangaReadingSurface.ets'),['acquireCatalog'],{RemoteReadingFlowGateway});
+ const owned=Object.assign(new Owned(),{runtime,remoteBookSeed:seed,offline:true});
+ const tagged=await owned.acquireCatalog(()=>true),next=await real.openCachedSession(seed,()=>true);
+ assert.equal(tagged.contentKind,'manga');assert.equal(tagged.acquisitionMode,'offline');
+ assert.notEqual(tagged,other);assert.notEqual(tagged,next);assert.notEqual(tagged.entries,other.entries);
+ assert.equal(other.contentKind,undefined);assert.equal(next.contentKind,undefined);
+ assert.equal(cachedData.contentKind,undefined);assert.equal(seed.contentKind,undefined);
+ assert.deepEqual(requests,['cache.book.status','cache.book.status','cache.book.status']);
+}
+console.log('PASS actual cached gateway returns fresh owned sessions; offline Surface manga tagging preserves frozen Core input, seed and other session owners');
+
 
 // Ordinary shelf code must claim the exact clicked manga before selecting the
 // usual reader route. No separate probe book or replacement reader is involved.

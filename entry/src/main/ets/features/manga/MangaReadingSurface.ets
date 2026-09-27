@@ -188,7 +188,8 @@ export struct MangaReadingSurface {
       // Already admitted manga identity; only read Core's durable catalog. A
       // missing/invalid cached catalog must never fall through to online acquire.
       const cached = await new RemoteReadingFlowGateway(this.runtime).openCachedSession(this.remoteBookSeed, current);
-      return { ...cached, contentKind: 'manga' };
+      cached.contentKind = 'manga';
+      return cached;
     }
     return this.runtime.bookAcquisitions?.().acquireBook(this.remoteBookSeed, { isCurrent: current });
   }
