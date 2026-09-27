@@ -46,7 +46,7 @@ const built=createReaderBuilderProbe(source,names,{
   ...properties.sdk,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
   ReaderWindowCoordinator:{metrics:()=>createDefaultReaderWindowMetrics()},readerInteractiveSafeInsets,mangaUserError,
   hilog:{warn(){},error(){}},
-  ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},
+  ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},TouchType:{Down:0,Up:1},
   LazyForEach:{create(_id,generatedOwner,data,item,key){assert.equal(generatedOwner,owner);assert.equal(typeof item,'function');assert.equal(typeof key,'function');
     if(lazy===undefined){lazy=new RetainedItems(data,item,key);data.registerDataChangeListener(lazy);}lazy.reconcile();},pop(){}},
   Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,
@@ -78,6 +78,21 @@ tiles.set('0:0',{image:{fileUri:'file://lease-a.png',revision:'image-r1'}});noti
 assert.notEqual(frame().key,geometryKey,'ready pixels must replace the former spinner branch');
 assert.ok(has('Image'));assert.ok(!has('LoadingProgress'));
 assert.equal(frame().nodes.find(node=>node.type==='Image').create,'file://lease-a.png');
+assert.equal(frame().nodes.find(node=>node.type==='Image').draggable,false,
+  'the actual SDK Image must explicitly disable system drag-and-drop');
+const listNode=[...owner.nodes.values()].find(node=>node.type==='List');
+const scrollNode=[...owner.nodes.values()].find(node=>node.type==='Scroll');
+for(const node of [listNode,scrollNode]){
+  assert.ok(node);assert.notEqual(node.enabled,false,'image drag suppression must not disable its scrolling parent');
+  assert.notEqual(node.hitTestBehavior,'HitTestMode.None','parent hit testing must remain available');
+  assert.equal(typeof node.onScroll,'function','the existing native scroll callback stays registered');
+}
+assert.equal(typeof listNode.onTouch,'function');
+const touchGeneration=owner.layoutGeneration;
+listNode.onTouch({type:0});
+assert.equal(owner.layoutGeneration,touchGeneration+1,'the actual SDK touch callback still reaches the production Down handler');
+listNode.onTouch({type:1});
+assert.equal(owner.layoutGeneration,touchGeneration+1,'non-Down touch behavior remains unchanged');
 assert.equal(frame().businessKey,originalBusinessKey,'render transitions do not replace logical page/tile identity');
 const readyKey=frame().key,readyMounts=lazy.mounts;
 notify();assert.equal(frame().key,readyKey);assert.equal(lazy.mounts,readyMounts,'unchanged notifications preserve mounted content');
@@ -111,4 +126,6 @@ assert.notEqual(secondReady.key,secondPending.key,'actual publish must notify th
 assert.equal(secondReady.nodes.find(node=>node.type==='Image')?.create,'file://second-visible-tile.png');
 assert.ok(!secondReady.nodes.some(node=>node.type==='LoadingProgress'));
 assert.equal(secondReady.businessKey,secondPending.businessKey);
+assert.equal(secondReady.nodes.find(node=>node.type==='Image').draggable,false,'newly published tiles keep the explicit drag policy');
+console.log('PASS actual SDK Image draggable=false on first/replacement tile; scrolling parents retain hit testing, enabled state and real touch/scroll callbacks (native gesture outcome not tested)');
 console.log('PASS actual SDK LazyForEach item/key callbacks with strict per-index retention: placeholder geometry, ready image, errors, retry, URI/revision changes, unchanged and nonvisible stability, logical identity and anchor preservation, actual publish to the next requested visible tile (native layout/pixels not tested)');

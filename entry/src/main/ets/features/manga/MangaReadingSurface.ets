@@ -598,7 +598,7 @@ export struct MangaReadingSurface {
           ListItem() {
             if (this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined) {
               Image(this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri)
-                .width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).objectFit(ImageFit.Fill)
+                .width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).objectFit(ImageFit.Fill).draggable(false)
             } else {
               Column() {
                 if (this.controller?.tile(row.ordinal, row.tileIndex)?.error !== undefined ||
