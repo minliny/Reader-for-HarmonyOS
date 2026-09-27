@@ -421,7 +421,7 @@ export const MANGA_PLATFORM_FIXTURES: MangaPlatformFixture[] = [
     "previewHeight": 2048
   }
 ];
-export interface MangaPlatformGraphicsFixture { file:string; sha256:string; planFile:string; planSha256:string; expectedFile:string; expectedSha256:string; width:number; height:number; }
+export interface MangaPlatformGraphicsFixture { file:string; sha256:string; planFile:string; planSha256:string; expectedFile:string; expectedSha256:string; preEncodedFile:string; preEncodedSha256:string; preEncodedPixelFormat:string; width:number; height:number; }
 export const MANGA_PLATFORM_GRAPHICS: MangaPlatformGraphicsFixture = {
   "file": "graphics-input.png",
   "sha256": "2b4c65c7c152560c6f51c56d263c314f46140addd63b0d74f24ebe4eb343035d",
@@ -429,6 +429,9 @@ export const MANGA_PLATFORM_GRAPHICS: MangaPlatformGraphicsFixture = {
   "planSha256": "10cb6d7d467ce5b6ee3acad004e4991308b36778e7b4c3df46f728be36609c20",
   "expectedFile": "graphics-expected-rgba.bin",
   "expectedSha256": "a4629c4785ddd6b58bbfbf879eb2a17d76517b49b9acd217e63461552bde5fcc",
+  "preEncodedFile": "graphics-expected-bgra.bin",
+  "preEncodedSha256": "d0583d69986f82b11b09b7b0e1b2db0c3f6340417ec6f928f306dfa8bc61d0cf",
+  "preEncodedPixelFormat": "bgra8888",
   "width": 8,
   "height": 103
 };

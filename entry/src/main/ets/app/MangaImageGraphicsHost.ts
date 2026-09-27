@@ -124,8 +124,9 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
       if (!Number.isSafeInteger(rowBytes) || rowBytes < plan.width * 4 || !Number.isSafeInteger(nativeBytes) ||
         nativeBytes < plan.width * plan.height * 4) throw new Error('MANGA_GRAPHICS_MEMORY_BUDGET');
       this.workingSet(plan.width, plan.height, bytes.length, Math.max(nativeBytes, rowBytes * plan.height));
-      // ImageKit performs regional reads directly into the destination layout.
-      // Reader supplies coordinates only; no codec or pixel conversion loop.
+      // ImageKit regional ReadPixels converts to BGRA_8888 + UNPREMUL,
+      // independently of the input PixelMap format (unlike readPixelsToBuffer).
+      // Reader supplies coordinates only; ImageKit owns channel conversion.
       const pixels = new ArrayBuffer(plan.width * plan.height * 4);
       for (let i = 0; i < plan.strips.length; i++) {
         this.current(current);
@@ -134,13 +135,13 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
           region: { x: 0, y: strip.sourceY, size: { width: plan.width, height: strip.height } } });
         this.current(current);
       }
-      if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'pre-encode', width: plan.width, height: plan.height, pixels: new Uint8Array(pixels) });
+      if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'pre-encode', width: plan.width, height: plan.height, pixelFormat: 'bgra8888', pixels: new Uint8Array(pixels) });
       await releaseInput();
       // Decoder coefficient/interlace surfaces belong to ImageSource and can
       // outlive its input PixelMap. End that ownership before the pack stage.
       await releaseSource();
       this.current(current);
-      output = await image.createPixelMap(pixels, { size, srcPixelFormat: image.PixelMapFormat.RGBA_8888,
+      output = await image.createPixelMap(pixels, { size, srcPixelFormat: image.PixelMapFormat.BGRA_8888,
         pixelFormat: image.PixelMapFormat.RGB_565, editable: false });
       if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'open', resource: 'pixel' });
       this.current(current);

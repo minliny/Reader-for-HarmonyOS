@@ -66,3 +66,13 @@ class NativeBudgetSdk {
 assert.deepEqual(semantic(semanticSource+'\n'+bodyBudgetCheck),[],'actual production crop, SDR, RGBA, metadata and row-byte API must match installed SDK');
 assert.ok(semantic(semanticSource+'\n'+bodyBudgetCheck.replace('image.CropAndScaleStrategy.CROP_FIRST',"'cropFirst'" )).length>0,'invalid crop strategy is not silently accepted by SDK');
 console.log('PASS actual BodyHost production region/preview allocation and PixelMap stride methods against installed SDK (including invalid enum counterfactual).');
+const graphicsFile=readFileSync(new URL('../entry/src/main/ets/app/MangaImageGraphicsHost.ts',import.meta.url),'utf8')
+ .replace(/^import .*?;\n/gm,'').replaceAll('MangaImageGraphicsHost','NativeGraphicsSdk');
+const graphicsBridge=`type MangaPlatformObserver = (event:MangaPlatformObservation)=>void;
+interface MangaGraphicsDimensions {width:number;height:number}
+interface MangaImageGraphicsAdapter {inspect(bytes:Uint8Array,current:()=>boolean):Promise<MangaGraphicsDimensions>;transform(bytes:Uint8Array,value:JsonObject,current:()=>boolean):Promise<Uint8Array>}
+declare function validateMangaGraphicsDimensions(width:number,height:number):MangaGraphicsDimensions;
+declare function validateMangaGraphicsPlan(value:JsonObject):MangaGraphicsDimensions & {strips:{sourceY:number;targetY:number;height:number}[]};`;
+assert.deepEqual(semantic(semanticSource+'\n'+graphicsBridge+'\n'+graphicsFile),[], 'actual graphics BGRA regional-read/output conversion and Native lifecycle match installed SDK');
+assert.ok(semantic(semanticSource+'\n'+graphicsBridge+'\n'+graphicsFile.replace('srcPixelFormat: image.PixelMapFormat.BGRA_8888', "srcPixelFormat: 'bgra8888'")).length>0, 'SDK rejects invented source format strings');
+console.log('PASS actual GraphicsHost BGRA source format and regional read API against installed SDK; Native pixels remain a separate target gate.');

@@ -426,6 +426,9 @@
     "planSha256": "10cb6d7d467ce5b6ee3acad004e4991308b36778e7b4c3df46f728be36609c20",
     "expectedFile": "graphics-expected-rgba.bin",
     "expectedSha256": "a4629c4785ddd6b58bbfbf879eb2a17d76517b49b9acd217e63461552bde5fcc",
+    "preEncodedFile": "graphics-expected-bgra.bin",
+    "preEncodedSha256": "d0583d69986f82b11b09b7b0e1b2db0c3f6340417ec6f928f306dfa8bc61d0cf",
+    "preEncodedPixelFormat": "bgra8888",
     "width": 8,
     "height": 103
   }

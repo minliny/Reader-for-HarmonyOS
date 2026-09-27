@@ -10,9 +10,9 @@ const read=name=>new Uint8Array(readFileSync(new URL(name,assets)));
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const manifest=JSON.parse(Buffer.from(read('manifest.json')).toString());
 const original=JSON.parse(readFileSync(new URL('fixtures/manga-orientation/goldens.json',import.meta.url),'utf8'));
-assert.equal(manifest.cases.length,32);assert.equal(readdirSync(assets).length,71);
+assert.equal(manifest.graphics.preEncodedPixelFormat,'bgra8888');assert.equal(manifest.cases.length,32);assert.equal(readdirSync(assets).length,72);
 for(const f of manifest.cases){assert.equal(hash(read(f.file)),f.sha256);assert.equal(hash(read(f.expectedFile)),f.expectedSha256);assert.equal(f.expectedSha256,original.cases.find(x=>x.file===f.id).outputSha256);}
-for(const [file,digest] of [['file','sha256'],['planFile','planSha256'],['expectedFile','expectedSha256']])assert.equal(hash(read(manifest.graphics[file])),manifest.graphics[digest]);
+for(const [file,digest] of [['file','sha256'],['planFile','planSha256'],['expectedFile','expectedSha256'],['preEncodedFile','preEncodedSha256']])assert.equal(hash(read(manifest.graphics[file])),manifest.graphics[digest]);
 const largeManifest=JSON.parse(Buffer.from(read('large-manifest.json')).toString());
 const large={...largeManifest,id:'large-long'},control={...largeManifest.control,id:'large-control',orientation:1,rois:[largeManifest.rois[0]]};
 const largePixels=new Map(large.rois.map(r=>[r.regionY,new Uint8Array(inflateSync(readFileSync(new URL(`fixtures/manga-platform-large/${r.id}.rgba.deflate`,import.meta.url))))]));
@@ -22,7 +22,7 @@ const runnerCode=readFileSync(new URL('ets/app/MangaPlatformProbeRunner.ts',root
 const require=createRequire(import.meta.url);
 const ts=require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
 const compile=ts.transpileModule(runnerCode,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
-function fixture({pixelCorruption=false,preencodeMissing=false,display=true,debug=true,buildMode='debug',largeCorruption=false,largeWrongRegion=false,profileMissing=false}={}){
+function fixture({pixelCorruption=false,preencodeMissing=false,preencodeWrongFormat=false,display=true,debug=true,buildMode='debug',largeCorruption=false,largeWrongRegion=false,profileMissing=false}={}){
  let bodyObserver,graphicsObserver,started=0,allocations=0,nativeReadbacks=0,readbackReleases=0;
  const frames=new Map(),reports=[],names=[];let sequence=0;
  const emitBody=(event,resource)=>bodyObserver?.({stage:'body',event,resource});
@@ -41,10 +41,10 @@ function fixture({pixelCorruption=false,preencodeMissing=false,display=true,debu
     return {fileUri:uri,width,height,intrinsicWidth:f.width,intrinsicHeight:f.height,regionY:preview?undefined:(largeWrongRegion&&f.id==='large-long'?y+1:y)};
    }finally{emitBody('release','pixel');emitBody('release','source');}
   },async validateBytes(bytes,current){assert.equal(hash(bytes),manifest.graphics.sha256);assert.ok(current());emitBody('open','source');bodyObserver?.({stage:'body',event:'metadata',orientation:1,format:'png',allocationClass:profileMissing?undefined:'scanline',encodedWidth:8,encodedHeight:103});emitBody('open','pixel');try{assert.ok(current(),'metadata preparation must finish before cancellation flag is enabled');}finally{emitBody('release','pixel');emitBody('release','source');}},release(uri){assert.equal(frames.delete(uri),true);}};
- const graphEvent=(event,resource,pixels)=>graphicsObserver?.({stage:'graphics',event,resource,pixels});
+ const graphEvent=(event,resource,pixels)=>graphicsObserver?.({stage:'graphics',event,resource,pixels,pixelFormat:preencodeWrongFormat?'rgba8888':'bgra8888'});
  const graphics={diagnosticPending:()=>0,attachDiagnosticObserver(fn){graphicsObserver=fn;return()=>graphicsObserver=undefined;},async transform(bytes,plan,current){
   assert.equal(plan.strips.length,14);assert.equal(hash(bytes),manifest.graphics.sha256);graphEvent('open','source');graphEvent('open','pixel');
-  try{if(!current())throw Error('MANGA_DECODE_CANCELLED');const pixels=read(manifest.graphics.expectedFile);if(!preencodeMissing)graphEvent('pre-encode',undefined,pixels);return new Uint8Array([1,2,3]);}
+  try{if(!current())throw Error('MANGA_DECODE_CANCELLED');const pixels=read(manifest.graphics.preEncodedFile);if(!preencodeMissing)graphEvent('pre-encode',undefined,pixels);return new Uint8Array([1,2,3]);}
   finally{graphEvent('release','pixel');graphEvent('release','source');}
  }};
  const image={PixelMapFormat:{RGBA_8888:3},createImageSource(input){const pixels=typeof input==='string'?frames.get('file://'+input):{width:8,height:103,rgba:read(manifest.graphics.expectedFile)};assert.ok(pixels);nativeReadbacks++;
@@ -66,7 +66,7 @@ function fixture({pixelCorruption=false,preencodeMissing=false,display=true,debu
  await f.runner.dispose();assert.equal(f.frames.size,0);assert.equal(f.reports.at(-1).phase,'dispose');assert.equal(f.reports.at(-1).pass,true);
  assert.throws(()=>f.mangaProbeDifference(new Uint8Array(0),new Uint8Array(0)),/LENGTH/);
 }
-for(const options of [{pixelCorruption:true},{preencodeMissing:true},{display:false},{largeCorruption:true},{largeWrongRegion:true},{profileMissing:true}]){
+for(const options of [{pixelCorruption:true},{preencodeMissing:true},{preencodeWrongFormat:true},{display:false},{largeCorruption:true},{largeWrongRegion:true},{profileMissing:true}]){
  const f=fixture(options);await f.runner.run();assert.ok(f.reports.some(x=>!x.pass),JSON.stringify(options)+' cannot claim platform pass');await f.runner.dispose();assert.equal(f.frames.size,0);
 }
 for(const build of [{debug:false},{buildMode:'release'}]){const f=fixture(build);await assert.rejects(f.runner.run(),/UNAVAILABLE/);assert.equal(f.started,0);assert.equal(f.names.length,0);}
@@ -82,7 +82,7 @@ for(const file of ['ReadingBodyImageHost.ts','MangaImageGraphicsHost.ts']){
  }
 }
 const page=readFileSync(new URL('ets/pages/ReaderMangaPlatformDiagnostic.ets',root),'utf8');
-assert.match(page,/loadingStatus === 1/);assert.match(page,/event.width === frame.width/);
+assert.match(page,/manga-platform-probe-v3-bgra/);assert.match(page,/loadingStatus === 1/);assert.match(page,/event.width === frame.width/);
 assert.match(page,/this.generation.*frame.id/);assert.match(page,/10000/);
 assert.equal(/https?:|bookshelf\.|reading\.progress\.|source\.import/.test(runnerCode),false);
 console.log('PASS fixed SHA/golden assets, actual runner negative pixel/preencode/display cases, native-boundary ownership accounting, cancellation, release gate, stale detach, bounded readback, no user-data/network route. Native calls are mocked here; target evidence remains OPEN.');
@@ -101,12 +101,12 @@ for(const cancel of [false,true]){
 }
 {
  const {validateMangaGraphicsPlan,validateMangaGraphicsDimensions}=await import('../entry/src/main/ets/app/MangaImageGraphicsPlan.ts');
- const actual=read('graphics-input.png'),expected=read('graphics-expected-rgba.bin');
- const original=readFileSync(new URL('fixtures/manga-graphics/input-rgba.bin',import.meta.url));
+ const actual=read('graphics-input.png'),expected=read('graphics-expected-bgra.bin');
+ const original=readFileSync(new URL('fixtures/manga-graphics/input-bgra.bin',import.meta.url));
  const plan=JSON.parse(Buffer.from(read('graphics-plan.json')).toString());
  for(const cancel of [false,true]){
   let current=true;const events=[];const info={mimeType:'image/png',size:{width:8,height:103},pixelFormat:3};
-  const image={PixelMapFormat:{RGBA_8888:3,RGB_565:2},DecodingDynamicRange:{SDR:1},createImageSource(){return {async getImageInfo(){return info},async getFrameCount(){return 1},async createPixelMap(){return {async getImageInfo(){return info},getBytesNumberPerRow(){return info.size.width*4},getPixelBytesNumber(){return info.size.width*info.size.height*4},async readPixels(area){for(let y=0;y<area.region.size.height;y++)new Uint8Array(area.pixels).set(original.subarray((area.region.y+y)*32,(area.region.y+y+1)*32),area.offset+y*area.stride)},async release(){}}},async release(){}}},async createPixelMap(){return {async getImageInfo(){return {size:info.size,pixelFormat:2}},getBytesNumberPerRow(){return info.size.width*2},getPixelBytesNumber(){return info.size.width*info.size.height*2},async release(){}}},createImagePacker(){return {async packing(){return new Uint8Array([1,2,3]).buffer},async release(){}}}};
+  const image={PixelMapFormat:{RGBA_8888:3,BGRA_8888:4,RGB_565:2},DecodingDynamicRange:{SDR:1},createImageSource(){return {async getImageInfo(){return info},async getFrameCount(){return 1},async createPixelMap(){return {async getImageInfo(){return info},getBytesNumberPerRow(){return info.size.width*4},getPixelBytesNumber(){return info.size.width*info.size.height*4},async readPixels(area){for(let y=0;y<area.region.size.height;y++)new Uint8Array(area.pixels).set(original.subarray((area.region.y+y)*32,(area.region.y+y+1)*32),area.offset+y*area.stride)},async release(){}}},async release(){}}},async createPixelMap(){return {async getImageInfo(){return {size:info.size,pixelFormat:2}},getBytesNumberPerRow(){return info.size.width*2},getPixelBytesNumber(){return info.size.width*info.size.height*2},async release(){}}},createImagePacker(){return {async packing(){return new Uint8Array([1,2,3]).buffer},async release(){}}}};
   const Host=productionMotionMethods(new URL('ets/app/MangaImageGraphicsHost.ts',root),['attachDiagnosticObserver','observeDiagnostic','transform','performTransform','current','encoded','workingSet','dimensions','diagnosticPending'],{image,DEBUG:true,BUILD_MODE_NAME:'debug',MAX_BYTES:16777216,MAX_GRAPHICS_WORKING_BYTES:33554432,validateMangaGraphicsPlan,validateMangaGraphicsDimensions});
   const owner=new Host();owner.pending=0;owner.tail=Promise.resolve();let pixels;
   const detach=owner.attachDiagnosticObserver(event=>{events.push(event);if(event.event==='pre-encode')pixels=event.pixels.slice();if(cancel&&event.resource==='pixel'&&event.event==='open')current=false;},true,'debug');
