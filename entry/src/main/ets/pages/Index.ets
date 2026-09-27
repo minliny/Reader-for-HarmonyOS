@@ -14,7 +14,8 @@ import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderStartupTrace } from '../app/ReaderStartupTrace';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
-import { errorMessageOf } from '../app/ErrorMessage';
+import { errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure } from '../app/ErrorMessage';
+import { diagnosticCodeOf } from '../app/LogPrivacy';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
 import {
@@ -91,6 +92,7 @@ import { captureRemotePositionContext, type RemoteReadingPositionContext } from 
 import type { ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import type { ReadingEntrySeed } from '../features/reading/ReadingEntryPreparation';
 import { ReadingOfflineGateway } from '../features/reading/ReadingOfflineGateway';
+import { normalizeReadingOfflineMaterializationError } from '../features/reading/ReadingOfflineContract';
 import {
   isRemoteSourceFailureKind,
   remoteReadingFailureKindOf,
@@ -3378,6 +3380,7 @@ struct Index {
         if (isCurrent()) {
           this.updateDirectoryChapterDownloadState(chapterIndex, 'failed');
           hilog.error(DOMAIN, 'Reader', 'Chapter offline download failed: %{private}s', error.message);
+          this.showChapterDownloadFailure(error);
         }
       })
       .finally((): void => {
@@ -3458,6 +3461,27 @@ struct Index {
           this.offlineMutationActiveKey = '';
         }
       });
+  }
+
+  private showChapterDownloadFailure(error: unknown): void {
+    const text = errorMessageOf(error);
+    const failure = normalizeReadingOfflineMaterializationError(error instanceof Error ? error : new Error(text));
+    const category = diagnosticCodeOf(text);
+    if (failure.code === 'cancelled' ||
+      (failure.code === 'host_materialization_failed' && category === 'CANCELLED')) return;
+    // Present only fixed product copy; raw Host/source messages can contain
+    // signed URLs, headers or credentials and remain in private diagnostics.
+    let message = '请稍后重试。';
+    if (failure.code === 'storage_full' || category === 'NO_SPACE') {
+      message = '存储空间不足，请释放空间后重试。';
+    } else if (isDomainResolutionFailure(error)) {
+      message = '当前网络无法解析书源域名，请检查代理或网络连接后重试。';
+    } else if (isNetworkEnvironmentFailure(error) || category === 'NETWORK') {
+      message = '当前网络无法完成下载，请检查代理或网络连接后重试。';
+    } else if (category === 'TIMEOUT') {
+      message = '下载请求超时，请稍后重试。';
+    }
+    this.showOfflineDownloadFeedback(`本章下载失败：${message}`);
   }
 
   private showOfflineDownloadFeedback(message: string): void {
