@@ -87,7 +87,8 @@ export interface ReadingGatewayRuntime {
     isCurrent?: () => boolean,
   ): Promise<void>;
 
-  isOfflineImageChapterComplete?(chapter: ReadingGatewayImageChapterIdentity): Promise<boolean>;
+  isOfflineImageChapterComplete?(chapter: ReadingGatewayImageChapterIdentity, manga?: boolean,
+    isCurrent?: () => boolean): Promise<boolean>;
 
   isOfflineImageChapterMaterialized?(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean>;
 

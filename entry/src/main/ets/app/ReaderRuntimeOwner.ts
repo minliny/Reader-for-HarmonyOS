@@ -544,10 +544,28 @@ export class ReaderRuntimeOwner {
     isCurrent?: () => boolean,
   ): Promise<void> {
     const current = this.readingImageDiskCache.captureValidity(chapter.sourceId, chapter.bookId, isCurrent);
+    if (resources.some(resource => resource.resourceRef !== undefined)) {
+      const ownedChapter: ReadingImageChapterIdentity = { ...chapter };
+      const ownedResources: ReadingImageCacheIdentity[] = resources.map(resource => ({ ...resource }));
+      // Acquire the image lane before the existing per-book mutation lock.
+      // Digest reads own encoded bytes too; DiskCache never reenters this lane.
+      return this.runMangaImageWork(current, (): Promise<void> =>
+        this.readingImageDiskCache.markChapterComplete(ownedChapter, ownedResources, current));
+    }
     await this.readingImageDiskCache.markChapterComplete(chapter, resources, current);
   }
 
-  async isOfflineImageChapterComplete(chapter: ReadingImageChapterIdentity): Promise<boolean> {
+  async isOfflineImageChapterComplete(chapter: ReadingImageChapterIdentity, manga: boolean = false,
+    isCurrent?: () => boolean): Promise<boolean> {
+    if (manga) {
+      const ownedChapter: ReadingImageChapterIdentity = { ...chapter };
+      const current = this.readingImageDiskCache.captureValidity(chapter.sourceId, chapter.bookId, isCurrent);
+      return this.runMangaImageWork(current, async (): Promise<boolean> => {
+        const complete = await this.readingImageDiskCache.isChapterComplete(ownedChapter);
+        this.assertReadingImageCurrent(current);
+        return complete;
+      });
+    }
     return this.readingImageDiskCache.isChapterComplete(chapter);
   }
 

@@ -104,7 +104,7 @@ export class ReadingOfflineGateway {
         const version = statuses.find(status => status.chapterIndex === entry.index)?.mangaManifestVersion;
         const materialized = session.contentKind === 'manga' ? (version !== undefined && await this.runtime.isOfflineImageChapterComplete!({
           sourceId: session.identity.sourceId, bookId: session.identity.bookId, chapterIndex: entry.index, contentVersion: version,
-        })) : await this.runtime.isOfflineImageChapterMaterialized!(
+        }, true, isCurrent)) : await this.runtime.isOfflineImageChapterMaterialized!(
           session.identity.sourceId,
           session.identity.bookId,
           entry.index,
@@ -261,7 +261,7 @@ export class ReadingOfflineGateway {
       const chapter: ReadingGatewayImageChapterIdentity = { sourceId: manifest.chapter.sourceId, bookId: manifest.chapter.bookId,
         chapterIndex: data.chapterIndex, contentVersion: manifest.manifestVersion };
       await this.runtime.markOfflineImageChapterComplete(chapter, identities, isCurrent);
-      if (!(await this.runtime.isOfflineImageChapterComplete(chapter))) throw new Error('MANGA_OFFLINE_MANIFEST_MISSING');
+      if (!(await this.runtime.isOfflineImageChapterComplete(chapter, true, isCurrent))) throw new Error('MANGA_OFFLINE_MANIFEST_MISSING');
       this.assertCurrent(isCurrent);
     } catch (error) {
       const failure = normalizeReadingOfflineMaterializationError(error);
