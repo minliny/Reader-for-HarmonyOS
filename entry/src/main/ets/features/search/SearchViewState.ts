@@ -1,7 +1,10 @@
+export type SearchContentType = '全部类型' | '小说' | '漫画';
+
 /** Navigation-owned presentation state. No network work or Core facts live here. */
 export class SearchViewState {
   revision: number = 0;
   category: string = '全部';
+  contentType: SearchContentType = '全部类型';
   keywordDraft: string = '';
   private inputFocusRequested: boolean = false;
   anchorKey: string = '';
@@ -17,6 +20,7 @@ export class SearchViewState {
   reset(keyword: string = ''): void {
     this.revision += 1;
     this.category = '全部';
+    this.contentType = '全部类型';
     this.keywordDraft = keyword;
     this.inputFocusRequested = false;
     this.anchorKey = '';
