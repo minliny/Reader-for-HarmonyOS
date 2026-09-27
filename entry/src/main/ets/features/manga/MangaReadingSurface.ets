@@ -232,7 +232,8 @@ export struct MangaReadingSurface {
     const manifestChanged = this.publishedManifestVersion !== chapter.manifest.manifestVersion;
     if (manifestChanged && this.controller !== undefined) {
       this.publishedManifestVersion = chapter.manifest.manifestVersion;
-      this.layoutGeneration++; this.viewportGeneration++; this.presentationGeneration++;
+      this.layoutGeneration++; this.viewportGeneration++;
+      // Manifest layout is separate from newer user presentation intent.
       this.confirmedPosition = undefined;
       this.recovering = this.controller.recoveryRequired;
       const ordinal = this.controller.displayedOrdinal;
@@ -454,12 +455,20 @@ export struct MangaReadingSurface {
     if (controller === undefined) return;
     const generation = ++this.presentationGeneration;
     const chapter = controller.chapter;
+    const preserveNewerPosition = (): boolean => {
+      const manifest = controller.chapter?.manifest;
+      return generation !== this.presentationGeneration && manifest !== undefined && chapter !== undefined &&
+        manifest.manifestVersion === chapter.manifest.manifestVersion &&
+        manifest.chapter.sourceId === chapter.manifest.chapter.sourceId &&
+        manifest.chapter.bookId === chapter.manifest.chapter.bookId &&
+        manifest.chapter.chapterId === chapter.manifest.chapter.chapterId;
+    };
     await this.saveVisible();
     if (!this.mounted || this.controller !== controller || controller.chapter !== chapter || generation !== this.presentationGeneration) return;
     await controller.refreshChapter();
-    if (!this.mounted || this.controller !== controller) return;
+    if (!this.mounted || this.controller !== controller || preserveNewerPosition()) return;
     await controller.setPreviewMode(this.effectiveFit() === 'contain', controller.displayedOrdinal);
-    if (!this.mounted || this.controller !== controller) return;
+    if (!this.mounted || this.controller !== controller || preserveNewerPosition()) return;
     this.error = ''; this.recovering = controller.recoveryRequired;
     const saved = !this.recovering ? controller.savedLocation : null;
     const ordinal = controller.displayedOrdinal;
