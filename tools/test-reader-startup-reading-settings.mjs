@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { readerMangaOfflineProbeScope } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import * as settings from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
@@ -120,7 +121,7 @@ for (const failRead of [false, true]) {
   const Ability = productionMotionMethods(abilityFile, ['onCreate', 'onWindowStageCreate'], {
     ReaderStartupTrace, readerMotionNowMs: () => performance.now(),
     DEBUG: true, BUILD_MODE_NAME: 'debug', DOMAIN: 0x5244,
-    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false,
+    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope,
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: { install: () => f.owner },
     ReaderSystemFileOpenHost: { install() {}, receive() {} },
     AppStorage: { setOrCreate() {} }, WebDavCredentialStore: { instance: { attachContext() {}, loadBookshelfViewMode: async () => null } },
