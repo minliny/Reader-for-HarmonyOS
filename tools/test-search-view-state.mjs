@@ -1,3 +1,4 @@
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 import assert from 'node:assert/strict';
@@ -114,7 +115,7 @@ console.log('search stable rows, enrichment and navigation state: PASS');
 
 // PH25: execute the real page grouping method over progressively arriving sources.
 const Page = productionMotionMethods(process.env.READER_SEARCH_RELEVANCE_SOURCE ?? new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url),
-  ['groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
+  ['selectGroup', 'selectContentType', 'filteredEmptyMessage', 'submitSearch', 'scopeSourceIds', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
   { ...authorMetadata, ...mediaIdentity, SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
     SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } }, ScrollAlign: { START: 0 } });
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
@@ -382,3 +383,96 @@ console.log('R3 partial/stopped-empty/error safe classified messages and SDK dis
  assert.equal(list.totalCount(),2,'virtual row fallback identity also separates media');
 }
 console.log('PASS manga/novel grouping, shelf badges and virtual row identities remain separate');
+
+// H1: same-session content filtering consumes already admitted category facts.
+const filterState = new SearchViewState();
+filterState.reset('一人之下');
+const remoteNovel = book('novel-a', '一人之下', '作者', { category: 'novel' });
+const remoteManga = book('manga-a', '一人之下', '作者', { category: 'comic' });
+const remoteMangaVariant = book('manga-b', '一人之下', '作者', { category: 'comic' });
+const localNovel = book('local', '一人之下', '作者'); // Legacy local defaults to text.
+const unsupported = book('other-a', '漫画一人之下', '作者', { category: 'other', kind: '漫画' });
+const allBooks = [remoteNovel, remoteManga, remoteMangaVariant, localNovel, unsupported];
+const queryPresentation = { kind: 'results', keyword: '一人之下', results: allBooks,
+  searching: true, completedSourceCount: 4, totalSourceCount: 6 };
+let searches = 0, retries = 0, warmups = 0, scrollResets = 0;
+const filtered = Object.assign(new Page(), {
+  presentation: queryPresentation, viewState: filterState, shelfBooks: [], selectedGroupName: '全部',
+  selectedContentType: '全部类型', keyword: '一人之下',
+  visibleStart: 0, visibleEnd: 5, warmupGroups: [], resultDataSource: new SearchResultDataSource(),
+  resultScroller: { scrollTo() { scrollResets++; } },
+  onVisibleGroups() { warmups++; }, onSearch() { searches++; }, onRetry() { retries++; },
+});
+filtered.refreshVisibleResults();
+const originalOrder = filtered.visibleGroups.map(group => filtered.resultGroupKey(group.book));
+assert.equal(originalOrder.length, 4, 'same-title novel and manga retain separate existing groups');
+const mangaGroup = filtered.visibleGroups.find(group => group.book.category === 'comic');
+assert.deepEqual(mangaGroup.variants, [remoteManga, remoteMangaVariant]);
+const projection = filtered.resultProjection;
+const queryRevision = filterState.revision;
+const { owner: chips } = createReaderBuilderProbe(page, ['contentTypeRow', 'contentTypeChip'],
+  { TOK_SPACE_XS: 8, TOK_BORDER_W: 1, ScrollDirection: { Horizontal: 'horizontal' } });
+Object.assign(chips, { appThemeScheme: 'day', selectedContentType: filtered.selectedContentType,
+  selectContentType(label) { filtered.selectContentType(label); this.selectedContentType = filtered.selectedContentType; } });
+chips.contentTypeRow();
+const chip = label => [...chips.nodes.values()].find(node => node.type === 'Text' && node.create === label);
+assert.deepEqual(['全部类型', '小说', '漫画'].map(label => chip(label).create), ['全部类型', '小说', '漫画']);
+chip('漫画').onClick(); chips.replay();
+assert.deepEqual(filtered.visibleGroups, [mangaGroup], 'actual SDK chip dispatch filters real projection without regrouping');
+assert.equal(chip('漫画').accessibilityText, '当前内容类型:漫画');
+assert.equal(filterState.contentType, '漫画');
+assert.equal(filtered.resultProjection, projection);
+assert.equal(filtered.presentation, queryPresentation);
+assert.equal(filtered.presentation.results, allBooks);
+assert.equal(filterState.revision, queryRevision);
+assert.deepEqual(filtered.visibleGroups[0].variants, [remoteManga, remoteMangaVariant], 'filter keeps all same-type source candidates');
+filtered.selectGroup('本地');
+assert.equal(filtered.visibleGroups.length, 0);
+assert.match(filtered.filteredEmptyMessage(), /本地 · 漫画.*搜索仍在继续/);
+filtered.presentation = { ...queryPresentation, searching: false, stopped: true };
+assert.match(filtered.filteredEmptyMessage(), /搜索已停止.*已返回的结果/);
+filtered.presentation = { ...queryPresentation, searching: false, stopped: false };
+assert.match(filtered.filteredEmptyMessage(), /已返回的结果.*可切换范围或内容类型/);
+chip('小说').onClick(); chips.replay();
+assert.deepEqual(filtered.visibleGroups.map(group => group.book), [localNovel]);
+filtered.selectGroup('在线');
+assert.deepEqual(filtered.visibleGroups.map(group => group.book), [remoteNovel]);
+chip('全部类型').onClick(); chips.replay();
+assert.ok(filtered.visibleGroups.some(group => group.book === unsupported), 'All retains existing unknown-type admission without relabeling');
+filtered.selectGroup('全部');
+assert.deepEqual(filtered.visibleGroups.map(group => filtered.resultGroupKey(group.book)), originalOrder, 'existing ordering is restored exactly');
+assert.equal(searches, 0); assert.equal(retries, 0); assert.equal(filterState.revision, queryRevision);
+assert.ok(warmups > 0, 'existing visible-item warmup lifecycle remains active; zero total HTTP is not asserted');
+assert.ok(scrollResets > 0);
+chip('漫画').onClick();
+const lateManga = book('manga-c', '一人之下番外', '作者', { category: 'comic' });
+filtered.presentation = { ...queryPresentation, results: [...allBooks, lateManga] };
+filtered.refreshVisibleResults();
+assert.deepEqual(filtered.visibleGroups.map(group => group.book), [remoteManga, lateManga], 'streamed arrivals honor the selected type');
+const cachedFiltered = filtered.visibleGroups;
+filtered.presentation = { ...filtered.presentation, completedSourceCount: 5 };
+filtered.refreshVisibleResults();
+assert.equal(filtered.visibleGroups, cachedFiltered, 'progress-only publications preserve filtered array identity');
+// A remounted search reads the navigation-owned preference, not a new run.
+filtered.viewStateRevision = -1;
+filtered.selectedContentType = '全部类型';
+filtered.refreshVisibleResults();
+assert.equal(filtered.selectedContentType, '漫画');
+assert.deepEqual(filtered.visibleGroups.map(group => group.book), [remoteManga, lateManga]);
+filtered.presentation = { ...filtered.presentation, searching: false };
+filtered.submitSearch();
+assert.equal(searches, 1, 'only explicit submit starts another query');
+assert.equal(filterState.contentType, '全部类型');
+assert.equal(filtered.selectedContentType, '全部类型');
+assert.equal(filterState.category, '全部');
+// A fixed canonical group whose admitted metadata changes must enter/leave
+// the derived view even when its order and key remain unchanged.
+const changing = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '' },
+  viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部', selectedContentType: '小说' });
+const unknownFact = book('metadata', '漫画不是类型证据', '作者', { groupKey: 'unchanged-key', category: 'other' });
+assert.equal(changing.groupResults([unknownFact]).length, 0);
+const textFact = { ...unknownFact, category: 'novel' };
+assert.equal(changing.groupResults([textFact])[0].book, textFact);
+assert.equal(changing.groupResults([unknownFact]).length, 0);
+assert.equal(searches, 1); assert.equal(retries, 0);
+console.log('H1 actual SDK type chips + production projection: combined scope, same-type variants, unknown/local facts, stream, resume/reset and zero filter search/retry PASS; existing warmups preserved');

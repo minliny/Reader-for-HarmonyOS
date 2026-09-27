@@ -23,6 +23,7 @@ const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 // negative-control declaration keeps the actual SDK-resolved .ets extension.
 const checker = require(`${sdkRoot}/lib/ets_checker.js`);
 const publicationPath = fileURLToPath(new URL('features/search/SearchPublication.ts', prefix));
+const viewStatePath = fileURLToPath(new URL('features/search/SearchViewState.ts', prefix));
 const presentationPath = fileURLToPath(new URL('features/search/SearchPresentation.ts', prefix));
 const pagePath = fileURLToPath(new URL('features/search/SearchPage.ets', prefix));
 const boundaryDiagnostics = previousImport => {
@@ -33,6 +34,7 @@ const boundaryDiagnostics = previousImport => {
     [publicationPath, previousImport ? read('features/search/SearchPublication.ts')
       .replace("from './SearchPresentation'", "from './SearchPage'") : read('features/search/SearchPublication.ts')],
     [presentationPath, read('features/search/SearchPresentation.ts')],
+    [viewStatePath, read('features/search/SearchViewState.ts')],
     [fileURLToPath(new URL('features/search/SearchGateway.ts', prefix)),
       'export interface SearchBook {} export interface SearchResultDelta {} export interface SearchSource {}'],
     [fileURLToPath(new URL('app/ReaderCoreGateway.ts', prefix)), 'export interface ShelfBook {}'],
@@ -48,7 +50,7 @@ const boundaryDiagnostics = previousImport => {
   try {
     compilerOptions.moduleResolution = ts.ModuleResolutionKind.NodeJs;
     host.resolveModuleNames = (names, from) => checker.resolveModuleNames(names, from);
-    const program = ts.createProgram([publicationPath, presentationPath], options, host);
+    const program = ts.createProgram([publicationPath, presentationPath, viewStatePath], options, host);
     return program.getSyntacticDiagnostics().concat(program.getSemanticDiagnostics());
   } finally { compilerOptions.moduleResolution = originalResolution; }
 };
@@ -96,7 +98,7 @@ class CountedGroup extends SearchBookGroup {
 const nativeStub = name => new Proxy({ name }, { get: (_, key) => key === 'name' ? name : () => {} });
 syntax.componentCollection.customComponents.add('SearchResultCard');
 const childMembers = ['publicationRevision', 'publication', 'presentation', 'shelfBooks', 'viewState',
-  'selectedGroupName', 'visibleGroups', 'acceptedVisibleGroups', 'resultDataSource', 'groupedCategory', 'groupedResultsCache',
+  'selectedGroupName', 'selectedContentType', 'groupedContentType', 'filteredEmptyMessage', 'visibleGroups', 'acceptedVisibleGroups', 'resultDataSource', 'groupedCategory', 'groupedResultsCache',
   'resultProjection', 'projectedGroups', 'projectedGroupKeys', 'projectedGroupIndexes', 'changedGroupKeys',
   'warmupGroups', 'visibleStart', 'visibleEnd', 'viewStateRevision', 'listEpoch', 'restoreEpoch',
   'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent'];

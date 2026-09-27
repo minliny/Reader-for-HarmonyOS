@@ -20,13 +20,14 @@ for (const scheme of ['day', 'night']) {
       const { owner } = createReaderBuilderProbe(card, ['resultBody', 'displayIntro', 'coverWidth', 'coverHeight', 'coverErrorHandler'], {
         bookIntroText, bookAuthorLabel, ImageFit: { Cover: 'Cover' }, LengthMetrics: { vp: value => value }, ...tokens,
       });
-      const book = { title: '终宋', author: '作者', sourceId: 'source', sourceName: '实际书源', coverUrl: 'https://example.test/cover', intro: '正文简介', latestChapterTitle: '  ' };
+      const book = { title: '终宋', author: '作者', sourceId: 'source', sourceName: '实际书源', category: 'comic', coverUrl: 'https://example.test/cover', intro: '正文简介', latestChapterTitle: '  ' };
       Object.assign(owner, { group: { book, coverUrl: book.coverUrl, variants: [book], sourceCount: 2, inBookshelf },
         isTablet, cardWidth: width, appThemeScheme: scheme });
       owner.resultBody();
       const nodes = () => [...owner.nodes.values()];
       const tags = () => nodes().filter(n => n.type === 'Text' && n.borderRadius === 4);
-      assert.equal(tags().length, inBookshelf ? 3 : 2);
+      assert.equal(tags().length, inBookshelf ? 4 : 3);
+      assert.ok(tags().some(n => n.create === '漫画'), 'type label comes from admitted category');
       for (const tag of tags()) {
         assert.deepEqual([tag.fontFamily, tag.fontWeight, tag.fontSize, tag.lineHeight], ['ReaderInter', 'FontWeight.Bold', 10, 15]);
         assert.deepEqual(tag.padding, { left: 6, right: 6, top: 2, bottom: 2 });
