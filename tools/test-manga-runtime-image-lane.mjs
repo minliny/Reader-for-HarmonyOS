@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+const manifest = {chapter:{sourceId:'s',bookId:'b',chapterId:'chapter'},sourceRuleVersion:'rules',manifestVersion:'v',decodeRevision:'bytes-v1',pages:[{ordinal:0,pageId:'page',resourceRef:'page'}]};
 const file = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 const methods = ['loadReadingImage', 'loadReadingImageOwned', 'prefetchReadingImage',
   'prefetchReadingImageOwned', 'runMangaImageWork', 'prepareReadingImageBytes',
@@ -40,14 +41,14 @@ function fixture() {
   owner.resolveReadingImageRequest=async(_sourceId,imageUrl)=>({bookId:imageUrl});
   owner.readingImageDiskCache={
     captureValidity(_sourceId,bookId,current) { const generation=generations.get(bookId)??0;return ()=>owner.state==='ready'&&(generations.get(bookId)??0)===generation&&current?.()!==false; },
-    async loadResource(identity,current) { assert.equal(current(),true);events.push(['read',key(identity)]);return cached.get(key(identity)); },
+    async loadResource(identity,current) { if(identity.resourceRef!==undefined)assert.equal(identity.mangaDecodeRevision,manifest.decodeRevision);assert.equal(current(),true);events.push(['read',key(identity)]);return cached.get(key(identity)); },
     async storeResource(identity,bytes,current) { events.push(['store-start',key(identity)]);await stores.get(key(identity))?.promise;if(!current())throw Error('stale store');events.push(['store-end',key(identity)]); },
     async removeResource(identity){events.push(['remove',key(identity)]);},
     async markChapterComplete(chapter,resources,current) { assert.equal(current(),true);events.push(['seal-start',key(chapter),resources[0]?.resourceRef]);await seals.get(key(chapter))?.promise;if(!current())throw Error('stale seal');events.push(['seal-end',key(chapter)]); },
     async isChapterComplete(chapter) { events.push(['check-start',key(chapter)]);await checks.get(key(chapter))?.promise;events.push(['check-end',key(chapter)]);return true; }
   };
-  const load=(bookId,current=()=>true,allowNetwork=true)=>owner.loadReadingImage('s',bookId,0,'v','image','chapter',allowNetwork,current,'page',0,'rules');
-  const prefetch=(bookId,current=()=>true)=>owner.prefetchReadingImage({sourceId:'s',bookId,chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',resourceRef:'page'},current,'rules',true);
+  const load=(bookId,current=()=>true,allowNetwork=true)=>owner.loadReadingImage('s',bookId,0,'v','image','chapter',allowNetwork,current,'page',0,manifest.sourceRuleVersion,false,manifest.decodeRevision);
+  const prefetch=(bookId,current=()=>true)=>owner.prefetchReadingImage({sourceId:'s',bookId,chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision},current,'rules',true);
   return {owner,body,events,failures,released,stores,fetches,generations,cached,seals,checks,load,prefetch,maxReads:()=>maxReads};
 }
 // First-frame completion and owned byte drain are different promises. All manga
@@ -79,7 +80,7 @@ function fixture() {
 // the job read a different book under the original book's validity guard.
 {
   const f=fixture(),gate=deferred();f.stores.set('b1',gate);await f.load('b1');
-  const identity={sourceId:'s',bookId:'b2',chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',resourceRef:'page'};
+  const identity={sourceId:'s',bookId:'b2',chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision};
   const queued=f.owner.prefetchReadingImage(identity,()=>true,'rules',true);
   identity.bookId='mutated';identity.resourceRef='other-page';gate.resolve();await queued;await f.owner.mangaImageTail;
   assert.deepEqual(f.events.filter(x=>x[0]==='read').map(x=>x[1]),['b1','b2']);
@@ -124,7 +125,7 @@ function fixture() {
 {
   const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaResourceGateway.ts',import.meta.url),'utf8');
   const Gateway=new Function(`${stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''))};return MangaResourceGateway;`)();
-  const f=fixture(), gateway=new Gateway(f.owner),scope={sourceId:'s',bookId:'b1',chapterIndex:0,contentVersion:'v',chapterUrl:'chapter',sourceRuleVersion:'rules'},page={url:'image',resourceRef:'page'};
+  const f=fixture(), gateway=new Gateway(f.owner),scope={sourceId:'s',bookId:'b1',chapterIndex:0,contentVersion:'v',chapterUrl:'chapter',sourceRuleVersion:manifest.sourceRuleVersion,decodeRevision:manifest.decodeRevision},page={url:'image',resourceRef:'page'};
   const image=await gateway.loadPage(scope,page,true,()=>true,0);assert.ok(image.fileUri);
   await gateway.prefetchPage({...scope,bookId:'b2'},page,()=>true);await f.owner.mangaImageTail;assert.equal(f.maxReads(),1);
 }
@@ -133,8 +134,8 @@ function fixture() {
 // can allocate another encoded image until that write has drained.
 {
   const f=fixture(),gate=deferred();f.stores.set('b1',gate);await f.load('b1');
-  const chapter={sourceId:'s',bookId:'b2',chapterIndex:0,contentVersion:'v'};
-  const resources=[{...chapter,imageUrl:'image',resourceRef:'page'}];
+  const chapter={sourceId:'s',bookId:'b2',chapterIndex:0,contentVersion:'v',mangaDecodeRevision:manifest.decodeRevision};
+  const resources=[{...chapter,imageUrl:'image',resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision}];
   const seal=f.owner.markOfflineImageChapterComplete(chapter,resources,()=>true);
   const check=f.owner.isOfflineImageChapterComplete({...chapter,bookId:'b3'},true,()=>true);
   chapter.bookId='mutated';resources[0].resourceRef='mutated';await tick();
@@ -146,9 +147,9 @@ function fixture() {
 // The reverse overlap is also prohibited; digest errors release the lane and
 // same-book foreground work finishes without a book-lock/lane-lock inversion.
 for(const operation of ['seal','check']) {
-  const f=fixture(),gate=deferred(),chapter={sourceId:'s',bookId:'b1',chapterIndex:0,contentVersion:'v'};
+  const f=fixture(),gate=deferred(),chapter={sourceId:'s',bookId:'b1',chapterIndex:0,contentVersion:'v',mangaDecodeRevision:manifest.decodeRevision};
   f[operation==='seal'?'seals':'checks'].set('b1',gate);
-  const start=operation==='seal'?f.owner.markOfflineImageChapterComplete(chapter,[{...chapter,imageUrl:'image',resourceRef:'page'}]):f.owner.isOfflineImageChapterComplete(chapter,true);
+  const start=operation==='seal'?f.owner.markOfflineImageChapterComplete(chapter,[{...chapter,imageUrl:'image',resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision}]):f.owner.isOfflineImageChapterComplete(chapter,true);
   const failure=assert.rejects(start,/digest failed/);await tick();
   const same=f.load('b1'),other=f.prefetch('b2');await tick();assert.equal(f.events.filter(x=>x[0]==='read').length,0);
   gate.reject(Error('digest failed'));await Promise.all([failure,same,other]);await f.owner.mangaImageTail;
@@ -158,8 +159,8 @@ for(const operation of ['seal','check']) {
 // disk/hash operation occurs for its obsolete descriptor. Novel calls bypass.
 {
   const f=fixture(),gate=deferred();f.stores.set('b1',gate);await f.load('b1');
-  const chapter=bookId=>({sourceId:'s',bookId,chapterIndex:0,contentVersion:'v'});let current=true;
-  const seal=assert.rejects(f.owner.markOfflineImageChapterComplete(chapter('b2'),[{...chapter('b2'),imageUrl:'image',resourceRef:'page'}],()=>current),/cancelled/);
+  const chapter=bookId=>({sourceId:'s',bookId,chapterIndex:0,contentVersion:'v',...(bookId==='novel'?{}:{mangaDecodeRevision:manifest.decodeRevision})});let current=true;
+  const seal=assert.rejects(f.owner.markOfflineImageChapterComplete(chapter('b2'),[{...chapter('b2'),imageUrl:'image',resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision}],()=>current),/cancelled/);
   const check=assert.rejects(f.owner.isOfflineImageChapterComplete(chapter('b3'),true),/cancelled/);
   current=false;f.generations.set('b3',1);
   await f.owner.markOfflineImageChapterComplete(chapter('novel'),[{...chapter('novel'),imageUrl:'image'}]);

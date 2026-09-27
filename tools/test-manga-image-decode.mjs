@@ -20,6 +20,7 @@ for(const options of [{cancelRead:true},{short:true},{invalid:true},{wrongCount:
 {const f=fixture();await assert.rejects(f.host.handle(f.event({transferId:'forged',resourceRef:'r',stage:'input'},10),f.bridge,f.transport),/OWNER/);}
 console.log('PASS manga asset transfer: bound owner, validation before ack, exact chunks, cancellation, invalid output and release');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const manifest = {chapter:{sourceId:'s',bookId:'b',chapterId:'chapter'},sourceRuleVersion:'rules',manifestVersion:'manifest',decodeRevision:'bytes-v1',pages:[{ordinal:0,pageId:'resource',resourceRef:'resource'}]};
 const ownerFile = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 for(const cached of [false,true]) {
  const calls=[],bytes=new Uint8Array([9,8]);
@@ -30,9 +31,9 @@ for(const cached of [false,true]) {
  });
  const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.assertReadingImageCurrent=()=>{};owner.admitReadingImage=p=>p;
  owner.readingImageCacheIdentity=(sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl)=>({sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl:baseUrl?.split('#')[0]});
- owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return cached?bytes:undefined},async storeResource(i,b){assert.equal(b,bytes);calls.push(['store',i])},async removeResource(){}};
- await owner.loadReadingImage('s','b',3,'v','https://image','https://chapter#part',true,()=>true,'resource',0,'rules');
- await owner.prefetchReadingImage({sourceId:'s',bookId:'b',chapterIndex:3,contentVersion:'v',imageUrl:'https://image',baseUrl:'https://chapter#part',resourceRef:'resource'},()=>true,'rules',true);
+ owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return cached?bytes:undefined},async storeResource(i,b){assert.equal(i.mangaDecodeRevision,manifest.decodeRevision);assert.equal(b,bytes);calls.push(['store',i])},async removeResource(){}};
+ await owner.loadReadingImage('s','b',3,'v','https://image','https://chapter#part',true,()=>true,'resource',0,manifest.sourceRuleVersion,false,manifest.decodeRevision);
+ await owner.prefetchReadingImage({sourceId:'s',bookId:'b',chapterIndex:3,contentVersion:'v',imageUrl:'https://image',baseUrl:'https://chapter#part',resourceRef:'resource',mangaDecodeRevision:manifest.decodeRevision},()=>true,manifest.sourceRuleVersion,true);
  assert.equal(calls.filter(c=>c[0]==='decode').length,cached?0:2);
  if(!cached){assert.equal(calls.find(c=>c[0]==='decode')[1].chapter.chapterId,'https://chapter#part');assert.equal(calls.filter(c=>c[0]==='store').length,2);}
 }
@@ -41,7 +42,7 @@ for(const cached of [false,true]) {
  const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.assertReadingImageCurrent=()=>{};owner.readingImageCacheIdentity=()=>({sourceId:'s',bookId:'b'});
  owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return undefined}};
  owner.prepareReadingImageBytes=()=>{throw Error('network called')};
- await assert.rejects(owner.loadReadingImage('s','b',0,'v','image','chapter',false,()=>true,'r',0,'version'),/NOT_DOWNLOADED/);
+ await assert.rejects(owner.loadReadingImage('s','b',0,'v','image','chapter',false,()=>true,'r',0,'version',false,manifest.decodeRevision),/NOT_DOWNLOADED/);
 }
 console.log('PASS production ReaderRuntimeOwner: cached manga stays offline, decoded bytes persist, exact chapter identity and regional offline validation');
 {
@@ -68,7 +69,7 @@ console.log('PASS manga transfer preserves actionable HTTP failure identity acro
   owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(identity){return persisted.get(JSON.stringify(identity))},async storeResource(identity,bytes){persisted.set(JSON.stringify(identity),bytes)},async removeResource(identity){persisted.delete(JSON.stringify(identity))}};
   return owner;
  };
- const argumentsForOwner=['s','b',0,'manifest','image','chapter',true,()=>true,'resource',0,'rules'];
+ const argumentsForOwner=['s','b',0,'manifest','image','chapter',true,()=>true,'resource',0,manifest.sourceRuleVersion,false,manifest.decodeRevision];
  await createOwner().loadReadingImage(...argumentsForOwner);
  online=false;argumentsForOwner[6]=false;
  await createOwner().loadReadingImage(...argumentsForOwner);

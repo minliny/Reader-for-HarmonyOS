@@ -62,6 +62,7 @@ console.log('PASS unified system/button back: first leaves zoom, second exits wi
 
 assert.match(mangaUserError('MANGA_REGION_ANIMATION_UNSUPPORTED'),/动画/);
 assert.match(mangaUserError('REMOTE_READING_IMAGE_NOT_DOWNLOADED'),/联网/);
+assert.equal(mangaUserError('READING_IMAGE_REPROCESS_REQUIRED'),'图片处理规则已更新，需联网重新下载');
 assert.equal(mangaUserError('UNEXPECTED_DIAGNOSTIC'), 'UNEXPECTED_DIAGNOSTIC','unknown failures must remain observable');
 console.log('PASS targeted manga error messages preserve unknown failures and explain animation/offline recovery');
 
