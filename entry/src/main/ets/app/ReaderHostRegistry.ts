@@ -237,10 +237,10 @@ export class ReaderHostRegistry {
       if (event.params['stage'] === 'inspectInput') return MangaImageMetadataHost.instance.handle(event, this.responseAssetBridge);
       const transport: MangaImageDecodeTransport = {
         graphics: MangaImageGraphicsHost.instance,
-        fetch: (params: JsonObject, current: () => boolean): Promise<Uint8Array> => {
+        fetch: (params: JsonObject, current: () => boolean, maxBytes: number): Promise<Uint8Array> => {
           const dataUri = params['dataUri'];
-          if (typeof dataUri === 'string') return Promise.resolve(ReadingBodyImageHost.instance.readDataUriBytes(dataUri, current));
-          return ReadingBodyImageHost.instance.fetchRequestBytes(params, current);
+          if (typeof dataUri === 'string') return Promise.resolve(ReadingBodyImageHost.instance.readDataUriBytes(dataUri, current, maxBytes));
+          return ReadingBodyImageHost.instance.fetchRequestBytes(params, current, maxBytes);
         },
         validate: async (bytes: Uint8Array, current: () => boolean): Promise<void> => {
           await ReadingBodyImageHost.instance.validateBytes(bytes, current, 0);
