@@ -1,0 +1,37 @@
+{
+  "generator": "libjpeg-turbo cjpeg 3.1.4.1",
+  "command": "cjpeg -progressive -sample 4x2,1x1,1x1 -quality 85",
+  "input": "synthetic RGB constant 1x65500 PPM",
+  "size": [
+    1,
+    65500
+  ],
+  "mode": "RGB",
+  "progressive": 1,
+  "pillowParsedComponents": [
+    [
+      1,
+      4,
+      2,
+      0
+    ],
+    [
+      2,
+      1,
+      1,
+      1
+    ],
+    [
+      3,
+      1,
+      1,
+      1
+    ]
+  ],
+  "encodedBytes": 10764,
+  "sha256": "7d2c82a32f52a967ac7693fdaccf469a5009a86d7b4d8c78b15094de700f62a6",
+  "currentHostEstimate": 4192256,
+  "libjpegCoefficientArrayBytes": 5240320,
+  "calculation": "(4*8188 + 1*4094 + 1*4094) DCT blocks * 64 coefficients * 2 bytes; coefficient allocation rounds width/height blocks by sampling factors",
+  "scope": "Encoder-generated valid fixture and existing Pillow header parser. No target runtime or RSS claim."
+}
