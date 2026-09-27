@@ -1,4 +1,5 @@
 import hilog from '@ohos.hilog';
+import { FrameCallback } from '@kit.ArkUI';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeInsets, type ReaderInsetsVp } from '../common/ReaderWindowMetrics';
@@ -12,6 +13,13 @@ import { PhotoViewScaleModel } from './vendor/photoview/PhotoViewScaleModel';
 import { MangaStripProjection, MangaStripRow } from './MangaStripProjection';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
+
+class MangaLayoutFrame extends FrameCallback {
+  private readonly action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
+}
 
 class MangaStripDataSource implements IDataSource {
   readonly projection: MangaStripProjection = new MangaStripProjection();
@@ -231,7 +239,7 @@ export struct MangaReadingSurface {
     try {
       const changed = this.data.projection.publish(chapter.manifest, (index: number) => this.controller?.pageGeometry(index), this.horizontal ? this.horizontalPage : undefined, this.controller?.totalPages ?? chapter.manifest.pages.length, (ordinal: number) => this.controller?.pageAt(ordinal));
       this.title = chapter.chapterTitle;
-      this.data.notify(changed, this.first, this.last);
+      this.data.notify(changed, this.first, this.requestedLast());
       if (changed && this.opened && anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
     } catch (error) { this.error = error instanceof Error ? error.message : '漫画布局失败'; }
   }
@@ -262,12 +270,45 @@ export struct MangaReadingSurface {
     setTimeout((): void => {
       if (!this.mounted || generation !== this.layoutGeneration) return;
       const index = this.data.projection.index(ordinal, y);
+      // Seed before scrolling: a synchronous onScrollIndex owns the measured
+      // range, and restoring the same first row must not erase its visible tail.
+      if (this.first !== index) this.last = index;
+      this.first = index;
       this.scroller.scrollToIndex(index, false, ScrollAlign.START);
       const row = this.data.getData(index);
       if (row.known) this.scroller.scrollBy(0, Math.max(0, y * row.sourceHeight - row.sourceY) * this.rowDisplayWidth(row) / row.width + (y > 0 ? this.rowDisplayTop(row) : 0));
       this.horizontalScroller.scrollTo({ xOffset: x * this.rowDisplayWidth(row) + this.rowDisplayLeft(row), yOffset: 0, animation: false });
-      this.first = index; this.last = index; this.restoringAnchor = false; this.updateViewport();
+      this.restoringAnchor = false; this.updateViewport();
+      const layout = this.layoutGeneration;
+      this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
+        if (!this.mounted || layout !== this.layoutGeneration) return;
+        this.measureVisibleWindow();
+      }));
     }, 0);
+  }
+  private requestedLast(): number {
+    return Math.min(this.data.totalCount() - 1, this.last + 1, this.first + 7);
+  }
+  private measureVisibleWindow(): void {
+    if (this.viewportHeight <= 1 || this.data.totalCount() === 0) return;
+    try {
+      const first = this.scroller.getItemIndex(0.5, 0.5);
+      if (!Number.isSafeInteger(first) || first < 0 || first >= this.data.totalCount()) return;
+      let last = this.scroller.getItemIndex(0.5, this.viewportHeight - 0.5);
+      if (!Number.isSafeInteger(last) || last < first || last >= this.data.totalCount()) {
+        // A short chapter can end above the bottom probe. Only inspect the
+        // existing bounded tile window; never scan the chapter to find an end.
+        last = first;
+        for (let index = first + 1; index <= Math.min(this.data.totalCount() - 1, first + 7); index++) {
+          const rect = this.scroller.getItemRect(index);
+          if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0 ||
+            rect.y >= this.viewportHeight || rect.y + rect.height <= 0) break;
+          last = index;
+        }
+      }
+      if (this.first === first && this.last === last) return;
+      this.first = first; this.last = last; this.updateViewport();
+    } catch (_error) { /* Unmounted geometry leaves the last observed range intact. */ }
   }
   private async updateViewport(): Promise<void> {
     const controller = this.controller;
@@ -278,7 +319,7 @@ export struct MangaReadingSurface {
       await controller.setVisible(row.ordinal);
       if (!this.mounted || generation !== this.viewportGeneration) return;
       const requested: MangaTileRequest[] = [];
-      for (let index = this.first; index <= Math.min(this.data.totalCount() - 1, this.last + 1, this.first + 7); index++) {
+      for (let index = this.first; index <= this.requestedLast(); index++) {
         const item = this.data.getData(index);
         if (item.known) requested.push({ ordinal: item.ordinal, tileIndex: item.tileIndex });
       }
@@ -500,7 +541,11 @@ export struct MangaReadingSurface {
       }.height('100%').width(this.viewportWidth * this.zoom).cachedCount(0)
         .onScroll((): void => { this.rememberVisible(); })
         .onScrollIndex((first: number, last: number): void => {
-          this.layoutGeneration++; this.first = first; this.last = last; this.updateViewport();
+          this.first = first; this.last = last;
+          if (!this.restoringAnchor) { this.layoutGeneration++; this.updateViewport(); }
+        })
+        .onTouch((event: TouchEvent): void => {
+          if (event.type === TouchType.Down) { this.layoutGeneration++; this.restoringAnchor = false; }
         })
         .onScrollStop((): void => { this.saveVisible(); })
       }.layoutWeight(1).width('100%').scrollable(ScrollDirection.Horizontal)
