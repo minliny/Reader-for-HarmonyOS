@@ -35,7 +35,7 @@ function fixture() {
   const projection = new Projection(); projection.publish(f.controller.chapter.manifest, i => f.controller.pageGeometry(i), undefined, 1, i => f.controller.pageAt(i));
   const commits = [];
   const surface = Object.assign(new Surface(), { controller: f.controller, data: { totalCount: () => projection.totalCount(), getData: i => projection.row(i) },
-    mounted: true, first: 3, last: 3, viewportGeneration: 0, chapterCommitted: false, error: '', onChapterCommitted: (...args) => commits.push(args) });
+    mounted: true, opened: true, first: 3, last: 3, viewportGeneration: 0, chapterCommitted: false, error: '', onChapterCommitted: (...args) => commits.push(args) });
   const first = surface.updateViewport(); await tick();
   let latestDone = false; const latest = surface.updateViewport().then(() => { latestDone = true; }); await tick();
   assert.equal(latestDone, false, 'latest viewport must join the current pending tile');
@@ -53,7 +53,7 @@ console.log('PASS actual double Surface viewport joins one tile decode and lates
   const projection = new Projection(); projection.publish(f.controller.chapter.manifest, i => f.controller.pageGeometry(i), undefined, 1, i => f.controller.pageAt(i));
   const surface = Object.assign(new Surface(), { controller: f.controller,
     data: { totalCount: () => projection.totalCount(), getData: i => projection.row(i) },
-    mounted: true, first: 0, last: 0, viewportGeneration: 0, chapterCommitted: true, error: '' });
+    mounted: true, opened: true, first: 0, last: 0, viewportGeneration: 0, chapterCommitted: true, error: '' });
   const initial = surface.updateViewport(); await tick();
   assert.equal(f.pending.length, 1);
   f.pending[0].gate.resolve(); await initial;
