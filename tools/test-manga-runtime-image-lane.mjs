@@ -5,11 +5,12 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 const methods = ['loadReadingImage', 'loadReadingImageOwned', 'prefetchReadingImage',
   'prefetchReadingImageOwned', 'runMangaImageWork', 'prepareReadingImageBytes',
-  'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage'];
+  'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage',
+  'markOfflineImageChapterComplete', 'isOfflineImageChapterComplete'];
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function fixture() {
-  const events = [], failures = [], released = [], stores = new Map(), fetches = new Map(), generations = new Map(), cached = new Map();
+  const events = [], failures = [], released = [], stores = new Map(), fetches = new Map(), generations = new Map(), cached = new Map(), seals = new Map(), checks = new Map();
   let liveReads=0, maxReads=0;
   const key = identity => identity.bookId;
   const body = {
@@ -41,11 +42,13 @@ function fixture() {
     captureValidity(_sourceId,bookId,current) { const generation=generations.get(bookId)??0;return ()=>owner.state==='ready'&&(generations.get(bookId)??0)===generation&&current?.()!==false; },
     async loadResource(identity,current) { assert.equal(current(),true);events.push(['read',key(identity)]);return cached.get(key(identity)); },
     async storeResource(identity,bytes,current) { events.push(['store-start',key(identity)]);await stores.get(key(identity))?.promise;if(!current())throw Error('stale store');events.push(['store-end',key(identity)]); },
-    async removeResource(identity){events.push(['remove',key(identity)]);}
+    async removeResource(identity){events.push(['remove',key(identity)]);},
+    async markChapterComplete(chapter,resources,current) { assert.equal(current(),true);events.push(['seal-start',key(chapter),resources[0]?.resourceRef]);await seals.get(key(chapter))?.promise;if(!current())throw Error('stale seal');events.push(['seal-end',key(chapter)]); },
+    async isChapterComplete(chapter) { events.push(['check-start',key(chapter)]);await checks.get(key(chapter))?.promise;events.push(['check-end',key(chapter)]);return true; }
   };
   const load=(bookId,current=()=>true,allowNetwork=true)=>owner.loadReadingImage('s',bookId,0,'v','image','chapter',allowNetwork,current,'page',0,'rules');
   const prefetch=(bookId,current=()=>true)=>owner.prefetchReadingImage({sourceId:'s',bookId,chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',resourceRef:'page'},current,'rules',true);
-  return {owner,body,events,failures,released,stores,fetches,generations,cached,load,prefetch,maxReads:()=>maxReads};
+  return {owner,body,events,failures,released,stores,fetches,generations,cached,seals,checks,load,prefetch,maxReads:()=>maxReads};
 }
 // First-frame completion and owned byte drain are different promises. All manga
 // paths wait before cache reads/HTTP, but a novel call retains existing behavior.
@@ -125,4 +128,47 @@ function fixture() {
   const image=await gateway.loadPage(scope,page,true,()=>true,0);assert.ok(image.fileUri);
   await gateway.prefetchPage({...scope,bookId:'b2'},page,()=>true);await f.owner.mangaImageTail;assert.equal(f.maxReads(),1);
 }
-console.log('PASS production manga Runtime lane: foreground/cache-only/adjacent/offline serialization before I/O, nested validation, early first frame with owned store drain, unrelated novel writes, queue bounds, cancellation/generation/teardown fencing and failure recovery.');
+// Completion reads/hash operations own the same lane before book mutation locks.
+// A blocked image write may publish first paint, but neither seal nor checksum
+// can allocate another encoded image until that write has drained.
+{
+  const f=fixture(),gate=deferred();f.stores.set('b1',gate);await f.load('b1');
+  const chapter={sourceId:'s',bookId:'b2',chapterIndex:0,contentVersion:'v'};
+  const resources=[{...chapter,imageUrl:'image',resourceRef:'page'}];
+  const seal=f.owner.markOfflineImageChapterComplete(chapter,resources,()=>true);
+  const check=f.owner.isOfflineImageChapterComplete({...chapter,bookId:'b3'},true,()=>true);
+  chapter.bookId='mutated';resources[0].resourceRef='mutated';await tick();
+  assert.ok(!f.events.some(x=>x[0]==='seal-start'||x[0]==='check-start'),'completion reads wait for owned bytes');
+  gate.resolve();await Promise.all([seal,check]);await f.owner.mangaImageTail;
+  assert.deepEqual(f.events.filter(x=>x[0]==='seal-start'),[['seal-start','b2','page']]);
+  assert.deepEqual(f.events.filter(x=>x[0]==='check-start'),[['check-start','b3']]);
+}
+// The reverse overlap is also prohibited; digest errors release the lane and
+// same-book foreground work finishes without a book-lock/lane-lock inversion.
+for(const operation of ['seal','check']) {
+  const f=fixture(),gate=deferred(),chapter={sourceId:'s',bookId:'b1',chapterIndex:0,contentVersion:'v'};
+  f[operation==='seal'?'seals':'checks'].set('b1',gate);
+  const start=operation==='seal'?f.owner.markOfflineImageChapterComplete(chapter,[{...chapter,imageUrl:'image',resourceRef:'page'}]):f.owner.isOfflineImageChapterComplete(chapter,true);
+  const failure=assert.rejects(start,/digest failed/);await tick();
+  const same=f.load('b1'),other=f.prefetch('b2');await tick();assert.equal(f.events.filter(x=>x[0]==='read').length,0);
+  gate.reject(Error('digest failed'));await Promise.all([failure,same,other]);await f.owner.mangaImageTail;
+  assert.equal(f.owner.mangaImagePending,0);assert.deepEqual(f.events.filter(x=>x[0]==='read').map(x=>x[1]),['b1','b2']);
+}
+// Queued completion cannot survive cancellation, book clear, or teardown; no
+// disk/hash operation occurs for its obsolete descriptor. Novel calls bypass.
+{
+  const f=fixture(),gate=deferred();f.stores.set('b1',gate);await f.load('b1');
+  const chapter=bookId=>({sourceId:'s',bookId,chapterIndex:0,contentVersion:'v'});let current=true;
+  const seal=assert.rejects(f.owner.markOfflineImageChapterComplete(chapter('b2'),[{...chapter('b2'),imageUrl:'image',resourceRef:'page'}],()=>current),/cancelled/);
+  const check=assert.rejects(f.owner.isOfflineImageChapterComplete(chapter('b3'),true),/cancelled/);
+  current=false;f.generations.set('b3',1);
+  await f.owner.markOfflineImageChapterComplete(chapter('novel'),[{...chapter('novel'),imageUrl:'image'}]);
+  assert.equal(await f.owner.isOfflineImageChapterComplete(chapter('novel')),true);
+  gate.resolve();await Promise.all([seal,check]);await f.owner.mangaImageTail;
+  assert.deepEqual(f.events.filter(x=>x[0]==='seal-start'||x[0]==='check-start').map(x=>x[1]),['novel','novel']);
+  const gate2=deferred();f.stores.set('b4',gate2);await f.load('b4');
+  const closing=assert.rejects(f.owner.isOfflineImageChapterComplete(chapter('b5'),true),/cancelled|teardown/);
+  f.owner.state='closing';gate2.resolve();await closing;await f.owner.mangaImageTail;
+  assert.ok(!f.events.some(x=>x[0]==='check-start'&&x[1]==='b5'));
+}
+console.log('PASS production manga Runtime lane: foreground/cache-only/adjacent/offline/seal/checksum serialization before I/O, nested validation, early first frame with owned store drain, unrelated novel writes, queue bounds, cancellation/generation/teardown fencing and failure recovery.');

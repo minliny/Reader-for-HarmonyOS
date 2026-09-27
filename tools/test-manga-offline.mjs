@@ -14,7 +14,7 @@ function fixture(){
  assert.equal(method,'cache.book.status');return {data:{sourceId:'s',bookId:'b',chapters:[{chapterIndex:0,state,cachedBytes:0,mangaManifestVersion:'version'}]}};},
  async prefetchReadingImage(identity,current,version,allowNetwork){assert.equal(version,'rules');assert.equal(current(),true);calls.push(`image:${identity.resourceRef}`);if(stored.has(identity.resourceRef))return;if(stored.size===fail)throw Error('network failed');assert.equal(allowNetwork,true);assert.ok(identity.imageUrl.includes('POST'));stored.add(identity.resourceRef);bytes++;if(cancel)valid=false;},
  async markOfflineImageChapterComplete(identity,resources,current){assert.equal(current(),true);assert.equal(identity.contentVersion,'version');assert.equal(resources.length,3);assert.equal(stored.size,3);calls.push('mark');complete=true;},
- async isOfflineImageChapterComplete(identity){assert.equal(identity.contentVersion,'version');calls.push('verify');return complete;}};
+ async isOfflineImageChapterComplete(identity,manga,current){assert.equal(manga,true,'both manga projection and seal verification opt into the image lane');assert.notEqual(current?.(),false);assert.equal(identity.contentVersion,'version');calls.push('verify');return complete;}};
  return {gateway:new ReadingOfflineGateway(runtime),runtime,calls,stored,reports,get bytes(){return bytes},setFail:n=>fail=n,cancelAfterImage:()=>cancel=true,damage:()=>complete=false};
 }
 {
