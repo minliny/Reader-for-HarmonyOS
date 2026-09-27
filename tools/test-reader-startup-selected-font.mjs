@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readerMangaOfflineProbeScope } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
 import { createDefaultReaderAppearanceSnapshot, setReaderAppearanceFont, setReaderAppearanceCustomFont,
@@ -129,7 +130,7 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
   const Ability = productionMotionMethods(path, ['onCreate', 'prepareSelectedReadingFont', 'sameSelectedReadingFont'], {
     DEBUG: false, BUILD_MODE_NAME: 'release', DOMAIN: 0,
     ReaderStartupTrace: {install: () => ({mark() {}, measure: (_stage, task) => task()})}, readerMotionNowMs: () => 0,
-    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false,
+    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope,
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: {install: () => owner},
     ReaderSystemFileOpenHost: {install() {}, receive() {}}, AppStorage: {setOrCreate() {}},
     WebDavCredentialStore: {instance: {attachContext() {}, loadBookshelfViewMode: async () => 'cover'}},
