@@ -100,6 +100,9 @@ export struct MangaReadingSurface {
   private appliedLayoutGeneration: number = -1;
   private publishedManifestVersion: string = '';
   private restoringAnchor: boolean = false;
+  private pendingTurnOrdinal: number | undefined;
+  private mountedTurnRowKey: string = '';
+  private exiting: boolean = false;
 
   aboutToAppear(): void {
     if (this.runtime === undefined) { this.error = 'MANGA_RESOURCE_HOST_UNAVAILABLE'; return; }
@@ -107,7 +110,7 @@ export struct MangaReadingSurface {
     this.horizontal = this.settingsGateway?.current()?.mangaDirection === 'horizontal';
     this.fitPreference = this.settingsGateway?.current()?.mangaFit ?? 'source';
     this.onExitRequestHandler((): void => {
-      if (this.mounted) this.handleBack();
+      if (this.mounted) void this.handleBack();
     });
     const controller = new MangaSessionController(this.runtime);
     this.controller = controller;
@@ -117,6 +120,7 @@ export struct MangaReadingSurface {
   aboutToDisappear(): void {
     this.mounted = false; this.layoutGeneration++; this.viewportGeneration++; this.loginGeneration++; this.presentationGeneration++;
     this.confirmedPosition = undefined;
+    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     if (this.controller !== undefined) { this.controller.onChange = undefined; this.controller.close(); }
     this.runtime?.finishMangaOfflineProbe?.(this.sourceId, this.bookId);
     this.detachOfflineProbe?.(); this.detachOfflineProbe = undefined;
@@ -236,6 +240,7 @@ export struct MangaReadingSurface {
       this.layoutGeneration++; this.viewportGeneration++;
       // Manifest layout is separate from newer user presentation intent.
       this.confirmedPosition = undefined;
+      this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
       this.recovering = this.controller.recoveryRequired;
       const ordinal = this.controller.displayedOrdinal;
       const saved = this.recovering ? null : this.controller.savedLocation;
@@ -252,6 +257,7 @@ export struct MangaReadingSurface {
       this.horizontalPageCount = this.controller?.totalPages ?? 0;
       this.title = chapter.chapterTitle;
       this.data.notify(changed, this.first, this.requestedLast());
+      if (this.mountedTurnRowKey.length > 0 && this.data.totalCount() > 0) this.confirmMountedTurn(this.data.getData(0));
       if (changed && this.opened && anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
     } catch (error) { this.error = error instanceof Error ? error.message : '漫画布局失败'; }
   }
@@ -328,6 +334,7 @@ export struct MangaReadingSurface {
   }
   private onViewportTouch(): void {
     this.presentationGeneration++;
+    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     const generation = ++this.layoutGeneration;
     if (this.restoringAnchor) {
       // Cancel the queued scroll, but do not declare the new geometry stable.
@@ -341,6 +348,10 @@ export struct MangaReadingSurface {
   private onRowAppear(index: number): void {
     if (!this.mounted || index < 0 || index >= this.data.totalCount()) return;
     const row = this.data.getData(index);
+    if (this.horizontal && this.pendingTurnOrdinal === row.ordinal && row.tileIndex === 0) {
+      this.mountedTurnRowKey = row.key;
+      this.confirmMountedTurn(row);
+    }
     if (!row.known || this.controller?.tile(row.ordinal, row.tileIndex) !== undefined) return;
     // A native List item can mount before its range callback reports the new
     // layout (especially while restoring an anchor). Demand the mounted tile
@@ -348,6 +359,22 @@ export struct MangaReadingSurface {
     if (index < this.first || index > this.first + 7) { this.first = index; this.last = index; }
     else this.last = Math.max(this.last, index);
     void this.updateViewport();
+  }
+  private confirmMountedTurn(row: MangaStripRow): void {
+    const controller = this.controller;
+    const manifest = controller?.chapter?.manifest;
+    if (!this.mounted || !this.horizontal || controller === undefined || manifest === undefined || !row.known ||
+      row.tileIndex !== 0 || row.ordinal !== this.horizontalPage || row.ordinal !== this.pendingTurnOrdinal ||
+      row.key !== this.mountedTurnRowKey || controller.tile(row.ordinal, 0)?.image === undefined) return;
+    const identity = this.positionIdentity(row.ordinal);
+    if (identity.length === 0) return;
+    // The selected ListItem has mounted with its decoded image. It is safe to
+    // retain the page start while native geometry is still settling; a later
+    // measured rectangle may refine the x/y coordinate.
+    const anchor: MangaViewportAnchor = { ordinal: row.ordinal, y: 0, x: 0 };
+    this.visibleAnchor = anchor;
+    this.confirmedPosition = { controller, manifest, identity, anchor };
+    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
   }
   private measureVisibleWindow(): boolean {
     if (this.viewportHeight <= 1 || this.data.totalCount() === 0) return false;
@@ -399,7 +426,8 @@ export struct MangaReadingSurface {
       const confirmed = this.confirmedPosition;
       if (confirmed === undefined || confirmed.controller !== this.controller ||
         confirmed.manifest !== this.controller.chapter?.manifest ||
-        confirmed.identity !== this.positionIdentity(confirmed.anchor.ordinal)) return;
+        confirmed.identity !== this.positionIdentity(confirmed.anchor.ordinal) ||
+        (this.horizontal && confirmed.anchor.ordinal !== this.horizontalPage)) return;
       const anchor = confirmed.anchor;
       await this.controller.savePosition(anchor.ordinal, anchor.x ?? 0, anchor.y).catch((error: Error): void => {
         if (error.message !== 'MANGA_POSITION_NOT_VISIBLE') {
@@ -427,6 +455,7 @@ export struct MangaReadingSurface {
     return Math.max(0, Math.min(1, (this.horizontalScroller.currentOffset().xOffset - this.rowDisplayLeft(row)) / this.rowDisplayWidth(row)));
   }
   private async changeFit(): Promise<void> {
+    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     this.rememberVisible();
     const anchor = this.visibleAnchor;
     // Freeze the accepted old tile before preview mode releases its lease.
@@ -466,6 +495,7 @@ export struct MangaReadingSurface {
     finally { if (this.mounted && generation === this.loginGeneration) this.loggingIn = false; }
   }
   private async refreshImages(): Promise<void> {
+    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     const controller = this.controller;
     if (controller === undefined) return;
     const generation = ++this.presentationGeneration;
@@ -513,14 +543,17 @@ export struct MangaReadingSurface {
     return JSON.stringify([row.key, row.known, row.width, row.height, row.sourceY, row.sourceHeight,
       tile?.image?.fileUri ?? '', tile?.image?.revision ?? '', tile?.error ?? pageError ?? '']);
   }
-  private handleBack(): void {
+  private async handleBack(): Promise<void> {
     if (this.zoom > 1) { this.changeZoom(1); return; }
-    void this.saveVisible();
-    this.onBack();
+    if (this.exiting) return;
+    this.exiting = true;
+    await this.saveVisible();
+    if (this.mounted) this.onBack();
   }
   private changeZoom(scale: number): void {
     if (!Number.isFinite(scale) || scale <= 0) return;
     this.presentationGeneration++;
+    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     if (this.pinchAnchor === undefined) this.rememberVisible();
     const anchor = this.pinchAnchor ?? this.visibleAnchor;
     this.scalePolicy.setScale(scale, false);
@@ -529,6 +562,7 @@ export struct MangaReadingSurface {
   }
   private toggleDirection(): void {
     this.presentationGeneration++;
+    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     this.rememberVisible();
     const anchor = this.visibleAnchor;
     this.horizontalPage = anchor?.ordinal ?? 0;
@@ -553,6 +587,7 @@ export struct MangaReadingSurface {
     if (!this.mounted || this.controller !== controller || controller.chapter !== chapter ||
       generation !== this.presentationGeneration || !this.horizontal || this.horizontalPage !== previous) return;
     this.horizontalPage = next;
+    this.pendingTurnOrdinal = next; this.mountedTurnRowKey = '';
     this.visibleAnchor = undefined;
     this.first = 0; this.last = 0;
     this.data.projection.publish(chapter.manifest, (index: number) => controller.pageGeometry(index), next, controller.totalPages, (ordinal: number) => controller.pageAt(ordinal));
@@ -577,7 +612,7 @@ export struct MangaReadingSurface {
   build() {
     Column() {
       Row() {
-        Button('返回').onClick((): void => this.handleBack())
+        Button('返回').onClick((): void => { void this.handleBack(); })
         Text(this.title).maxLines(1).layoutWeight(1).fontColor(this.mangaForegroundColor)
       }.width('100%')
       if (this.offlineProbeStatus.length > 0) {

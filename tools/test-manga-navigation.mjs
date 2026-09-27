@@ -73,12 +73,13 @@ assert.equal(setReaderPageTurnStyle(prefs,'scroll').mangaDirection,'horizontal')
 assert.equal(prefs.navigationMode,'paged','manga preference cannot change text mode');
 console.log('PASS production long-image horizontal projection, bounded upstream zoom, delayed gesture layout anchor, both-axis save, page boundaries and independent reading preferences');
 
-let backCount=0,saveCount=0;owner.onBack=()=>backCount++;owner.saveVisible=()=>{saveCount++;return new Promise(()=>{});};
-owner.zoom=2;owner.handleBack();assert.equal(owner.zoom,1);assert.equal(backCount,0);assert.equal(saveCount,0);
-owner.handleBack();assert.equal(backCount,1);assert.equal(saveCount,1,'unzoomed back must not await network persistence');
+let backCount=0,saveCount=0,finishBackSave;owner.onBack=()=>backCount++;owner.saveVisible=()=>{saveCount++;return new Promise(resolve=>{finishBackSave=resolve;});};
+owner.zoom=2;await owner.handleBack();assert.equal(owner.zoom,1);assert.equal(backCount,0);assert.equal(saveCount,0);
+const leaving=owner.handleBack();assert.equal(backCount,0);assert.equal(saveCount,1,'unzoomed back retains the reader until progress settles');
+finishBackSave();await leaving;assert.equal(backCount,1);
 assert.match(surfaceSource,/onExitRequestHandler\([\s\S]*?this\.handleBack\(\)/);
 assert.match(surfaceSource,/Button\('返回'\)\.onClick\([^\n]*this\.handleBack\(\)/);
-console.log('PASS unified system/button back: first leaves zoom, second exits without waiting for progress I/O');
+console.log('PASS unified system/button back: first leaves zoom, second awaits accepted progress before exit');
 
 assert.match(mangaUserError('MANGA_REGION_ANIMATION_UNSUPPORTED'),/动画/);
 assert.match(mangaUserError('REMOTE_READING_IMAGE_NOT_DOWNLOADED'),/联网/);

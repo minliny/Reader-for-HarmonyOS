@@ -36,7 +36,7 @@ assert.equal(stopCallbacks.length, 2);
 function stop(owner, index) {
   new Function(`${stripTypeScriptTypes(`const callback = ${stopCallbacks[index]};`)}\nreturn callback;`).call(owner)();
 }
-const methods = ['publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'onViewportTouch', 'measureVisibleWindow', 'changeFit', 'toggleDirection', 'turnPage', 'refreshImages', 'aboutToDisappear'];
+const methods = ['publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'onViewportTouch', 'measureVisibleWindow', 'onRowAppear', 'confirmMountedTurn', 'changeFit', 'toggleDirection', 'turnPage', 'handleBack', 'refreshImages', 'aboutToDisappear'];
 const timers = [];
 // Optional baseline path executes the pre-fix methods against the same assertions.
 const Surface = productionMotionMethods(surfaceURL, methods.filter(name => memberNames.has(name)), {
@@ -160,11 +160,58 @@ for (const mutation of ['direction', 'direction-round-trip', 'zoom', 'chapter', 
 }
 console.log('PASS delayed turn CAS: direction, A→B→A, zoom, chapter replacement, refresh intent and exit all fence obsolete publication');
 
+{
+  const f = await fixture(true);
+  await f.surface.turnPage(1);
+  assert.equal(f.surface.horizontalPage, 2);
+  assert.ok(f.controller.tile(2, 0)?.image, 'the second image is decoded before its native ListItem appears');
+  f.surface.onRowAppear(0); // Actual LazyForEach/ListItem callback for selected image, before delayed restore geometry.
+  assert.equal(f.surface.confirmedPosition?.anchor.ordinal, 2, 'mounted decoded row confirms the selected page start');
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'ready');
+  f.surface.zoom = 1; // The observed VM return was at 100%, rather than the fixture's zoom=2 default.
+  f.surface.onBack = () => f.surface.aboutToDisappear();
+  await f.surface.handleBack();
+  await tick();
+  assert.deepEqual(f.failures, [], 'confirmed page save must not be rejected by Core or its CAS lane');
+  assert.deepEqual(f.writes.map(write => write.location.pageOrdinalFallback), [1, 2],
+    'a mounted, decoded second image must be saved on return, not the old confirmed first image');
+  f.close();
+}
+console.log('PASS mounted decoded horizontal image is the saved return position even before native geometry settles');
+
+{
+  const f = await fixture(true);
+  await f.surface.turnPage(1);
+  f.surface.publishedManifestVersion = 'v';
+  const tile = f.controller.tile(2, 0);
+  assert.ok(tile?.image);
+  const image = tile.image;
+  tile.image = undefined; // The selected ListItem first mounts with a spinner.
+  f.surface.onRowAppear(0);
+  assert.equal(f.surface.confirmedPosition?.anchor.ordinal, 1, 'spinner does not confirm an image position');
+  tile.image = image;
+  f.surface.publish(); // Real controller onChange after the first tile is decoded.
+  assert.equal(f.surface.confirmedPosition?.anchor.ordinal, 2, 'same mounted row confirms when its decoded tile arrives');
+  const held = deferred();
+  f.holdSave(held.promise);
+  f.surface.zoom = 1;
+  let exited = false;
+  f.surface.onBack = () => { exited = true; f.surface.aboutToDisappear(); };
+  const leaving = f.surface.handleBack(); await tick();
+  assert.equal(exited, false, 'the owner must retain the session while the accepted CAS is pending');
+  held.resolve(); await leaving;
+  assert.equal(exited, true);
+  assert.deepEqual(f.writes.map(write => write.location.pageOrdinalFallback), [1, 2]);
+  f.close();
+}
+console.log('PASS mounted spinner then decoded tile confirms the page; return awaits its CAS before closing');
+
 const target = await fixture(true);
 await target.surface.turnPage(1);
 assert.equal(target.surface.horizontalPage, 2);
 await target.surface.saveVisible();
-assert.deepEqual(target.writes.map(write => write.location.pageOrdinalFallback), [1, 1], 'an unlaid-out turn target must never become persisted progress');
+assert.deepEqual(target.writes.map(write => write.location.pageOrdinalFallback), [1],
+  'an unmounted turn target must never persist, nor may an old confirmed image be saved as its replacement');
 const beforeReplacement = target.writes.length;
 await target.controller.openPrepared(structuredClone(entry), true);
 await target.controller.setTileWindow([{ordinal: 1, tileIndex: 5}]);
