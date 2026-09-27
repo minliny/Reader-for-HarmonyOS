@@ -1,6 +1,6 @@
 import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import { MangaSessionGateway } from '../manga/MangaSessionGateway';
-import type { MangaChapterResult } from '../manga/MangaContract';
+import type { MangaChapterResult, MangaPreparedEntry } from '../manga/MangaContract';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import type { LocalReadingDownloadState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import {
@@ -102,8 +102,23 @@ export class ReadingOfflineGateway {
         this.assertCurrent(isCurrent);
         const entry = entries[position];
         const version = statuses.find(status => status.chapterIndex === entry.index)?.mangaManifestVersion;
-        const materialized = session.contentKind === 'manga' ? (version !== undefined && await this.runtime.isOfflineImageChapterComplete!({
-          sourceId: session.identity.sourceId, bookId: session.identity.bookId, chapterIndex: entry.index, contentVersion: version,
+        // The old status DTO carries only manifestVersion. Read the existing
+        // bounded cached entry for its decode fact; this command cannot fetch.
+        let prepared: MangaPreparedEntry | null = null;
+        if (session.contentKind === 'manga' && version !== undefined) {
+          try {
+            prepared = await new MangaSessionGateway(this.runtime).entry(session.identity.sourceId, session.identity.bookId,
+              entry.index, isCurrent ?? ((): boolean => true));
+          } catch (_) {
+            // An unavailable/replaced legacy entry downgrades only this row.
+            // Cancellation still aborts the caller's projection.
+            this.assertCurrent(isCurrent);
+          }
+        }
+        const materialized = session.contentKind === 'manga' ? (prepared !== null &&
+          prepared.chapter.manifest.manifestVersion === version && await this.runtime.isOfflineImageChapterComplete!({
+          sourceId: session.identity.sourceId, bookId: session.identity.bookId, chapterIndex: entry.index, contentVersion: version!,
+          mangaDecodeRevision: prepared.chapter.manifest.decodeRevision,
         }, true, isCurrent)) : await this.runtime.isOfflineImageChapterMaterialized!(
           session.identity.sourceId,
           session.identity.bookId,
@@ -252,14 +267,14 @@ export class ReadingOfflineGateway {
         this.assertCurrent(isCurrent);
         const request = data.resources.find(resource => resource.resourceRef === page.resourceRef)?.request;
         const identity: ReadingGatewayImageCacheIdentity = { sourceId: manifest.chapter.sourceId, bookId: manifest.chapter.bookId,
-          chapterIndex: data.chapterIndex, contentVersion: manifest.manifestVersion, resourceRef: page.resourceRef,
+          chapterIndex: data.chapterIndex, contentVersion: manifest.manifestVersion, mangaDecodeRevision: manifest.decodeRevision, resourceRef: page.resourceRef,
           imageUrl: request?.requestRule ?? request?.url ?? page.resourceRef, baseUrl: manifest.chapter.chapterId };
         await this.runtime.prefetchReadingImage(identity, isCurrent, manifest.sourceRuleVersion, request !== undefined);
         identities.push(identity);
       }
       this.assertCurrent(isCurrent);
       const chapter: ReadingGatewayImageChapterIdentity = { sourceId: manifest.chapter.sourceId, bookId: manifest.chapter.bookId,
-        chapterIndex: data.chapterIndex, contentVersion: manifest.manifestVersion };
+        chapterIndex: data.chapterIndex, contentVersion: manifest.manifestVersion, mangaDecodeRevision: manifest.decodeRevision };
       await this.runtime.markOfflineImageChapterComplete(chapter, identities, isCurrent);
       if (!(await this.runtime.isOfflineImageChapterComplete(chapter, true, isCurrent))) throw new Error('MANGA_OFFLINE_MANIFEST_MISSING');
       this.assertCurrent(isCurrent);

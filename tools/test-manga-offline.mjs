@@ -6,15 +6,17 @@ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.m
 const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},sourceRuleVersion:'rules',manifestVersion:'version',decodeRevision:'identity-v1',pages:Array.from({length:3},(_,ordinal)=>{const pageId=`mp1:${String(ordinal).padStart(64,'0')}`;return {ordinal,pageId,resourceRef:`manga:${pageId}`};})};
 const chapter={manifest,chapterIndex:0,chapterTitle:'C',cached:false,resources:manifest.pages.map(page=>({resourceRef:page.resourceRef,request:{url:'https://images.test/repeated',requestRule:'https://images.test/repeated,{"method":"POST","body":"page"}'}}))};
 const session={contentKind:'manga',sourceVersion:'rules',identity:{sourceId:'s',bookId:'b'},entries:[{index:0,title:'C',url:'/c'}]};
-function fixture(){
+function fixture(decodeRevision='identity-v1'){
+ const fixtureChapter=structuredClone(chapter);fixtureChapter.manifest.decodeRevision=decodeRevision;
  const calls=[],stored=new Set(),reports=[];let state='missing',complete=false,valid=true,fail=-1,bytes=0,cancel=false;
  const runtime={supportsCoreCapability:()=>true,captureReadingContentValidity:()=>()=>valid,
- async request(method,params){calls.push(method);if(method==='cache.book.prefetch'){assert.equal(params.contentKind,'manga');state='inProgress';return {data:{sourceId:'s',bookId:'b',chapterRange:[0,1],chapterCount:1,prefetchedCount:1,queuedIndexes:[0],alreadyQueuedIndexes:[],skippedCachedIndexes:[],materializations:[{chapterIndex:0,token:'opaque',manga:structuredClone(chapter)}]}};}
+ async request(method,params){calls.push(method);if(method==='cache.book.prefetch'){assert.equal(params.contentKind,'manga');state='inProgress';return {data:{sourceId:'s',bookId:'b',chapterRange:[0,1],chapterCount:1,prefetchedCount:1,queuedIndexes:[0],alreadyQueuedIndexes:[],skippedCachedIndexes:[],materializations:[{chapterIndex:0,token:'opaque',manga:structuredClone(fixtureChapter)}]}};}
+ if(method==='manga.entry.get'){assert.deepEqual(params,{sourceId:'s',bookId:'b',chapterIndex:0});return {data:{entry:{chapter:{...structuredClone(fixtureChapter),cached:true,resources:[],pageStart:0,totalPages:3},targetOrdinal:0,recoveryRequired:false,progress:{token:{epoch:1,revision:0},location:null}}}};}
  if(method==='cache.chapter.materialization.report'){reports.push(params);assert.deepEqual(params.manga.resourceRefs,manifest.pages.map(p=>p.resourceRef));if(params.outcome==='completed')assert.equal(complete,true);state=params.outcome;return {data:{sourceId:'s',bookId:'b',chapterIndex:0,state,retainedCachedBody:false}};}
  assert.equal(method,'cache.book.status');return {data:{sourceId:'s',bookId:'b',chapters:[{chapterIndex:0,state,cachedBytes:0,mangaManifestVersion:'version'}]}};},
- async prefetchReadingImage(identity,current,version,allowNetwork){assert.equal(version,'rules');assert.equal(current(),true);calls.push(`image:${identity.resourceRef}`);if(stored.has(identity.resourceRef))return;if(stored.size===fail)throw Error('network failed');assert.equal(allowNetwork,true);assert.ok(identity.imageUrl.includes('POST'));stored.add(identity.resourceRef);bytes++;if(cancel)valid=false;},
- async markOfflineImageChapterComplete(identity,resources,current){assert.equal(current(),true);assert.equal(identity.contentVersion,'version');assert.equal(resources.length,3);assert.equal(stored.size,3);calls.push('mark');complete=true;},
- async isOfflineImageChapterComplete(identity,manga,current){assert.equal(manga,true,'both manga projection and seal verification opt into the image lane');assert.notEqual(current?.(),false);assert.equal(identity.contentVersion,'version');calls.push('verify');return complete;}};
+ async prefetchReadingImage(identity,current,version,allowNetwork){assert.equal(identity.mangaDecodeRevision,decodeRevision);assert.equal(version,'rules');assert.equal(current(),true);calls.push(`image:${identity.resourceRef}`);if(stored.has(identity.resourceRef))return;if(stored.size===fail)throw Error('network failed');assert.equal(allowNetwork,true);assert.ok(identity.imageUrl.includes('POST'));stored.add(identity.resourceRef);bytes++;if(cancel)valid=false;},
+ async markOfflineImageChapterComplete(identity,resources,current){assert.equal(identity.mangaDecodeRevision,decodeRevision);assert.equal(current(),true);assert.equal(identity.contentVersion,'version');assert.equal(resources.length,3);assert.equal(stored.size,3);calls.push('mark');complete=true;},
+ async isOfflineImageChapterComplete(identity,manga,current){assert.equal(identity.mangaDecodeRevision,decodeRevision);assert.equal(manga,true,'both manga projection and seal verification opt into the image lane');assert.notEqual(current?.(),false);assert.equal(identity.contentVersion,'version');calls.push('verify');return complete;}};
  return {gateway:new ReadingOfflineGateway(runtime),runtime,calls,stored,reports,get bytes(){return bytes},setFail:n=>fail=n,cancelAfterImage:()=>cancel=true,damage:()=>complete=false};
 }
 {
@@ -101,3 +103,37 @@ console.log('PASS changed manga source refreshes acquisition once, fences cancel
  assert.equal(groups.calls.includes('cache.book.prefetch'),false);
 }
 console.log('PASS mixed manga offline range materializes only readable chapters; groups are projected and readable-to-group refresh rejects before claim');
+
+// Completion must obtain the actual stored decode fact without transport URLs,
+// changing manifest/page identities or touching progress.
+{
+ const f=fixture('bytes-v1');await f.gateway.prefetchChapter(session,0,()=>true);
+ const prior=f.calls.length;assert.equal((await f.gateway.loadProjection(session))[0].downloadState,'completed');
+ assert.deepEqual(f.calls.slice(prior),['cache.book.status','manga.entry.get','verify']);
+ const request=f.runtime.request;f.runtime.request=async(method,params)=>{const value=await request(method,params);if(method==='manga.entry.get')value.data.entry.chapter.manifest.manifestVersion='superseded';return value;};
+ assert.equal((await f.gateway.loadProjection(session))[0].downloadState,'cached','current Core version is checked before Host completion');
+ f.runtime.request=async(method,params)=>{const value=await request(method,params);if(method==='manga.entry.get')delete value.data.entry.chapter.manifest.decodeRevision;return value;};
+ assert.equal((await f.gateway.loadProjection(session))[0].downloadState,'cached','missing revision cannot default to identity-v1 or abort unrelated rows');
+ f.runtime.request=async(method,params)=>{const value=await request(method,params);if(method==='manga.entry.get')value.data.entry.chapter.manifest.decodeRevision='future-v2';return value;};
+ const beforeUnknown=f.calls.filter(c=>c==='verify').length;
+ assert.equal((await f.gateway.loadProjection(session))[0].downloadState,'cached','unknown nonempty revision is rejected inside the per-chapter entry boundary');
+ assert.equal(f.calls.filter(c=>c==='verify').length,beforeUnknown,'unknown profile never reaches Host completion');
+}
+console.log('PASS offline projection reads the bounded cold manifest decode fact, passes scripted profile, rejects missing revision and downgrades changed versions without any online/progress command');
+
+{
+ const f=fixture();await f.gateway.prefetchChapter(session,0,()=>true);
+ const request=f.runtime.request;
+ f.runtime.request=async(method,params)=>{
+   if(method==='manga.entry.get' && params.chapterIndex===1)throw Error('missing chapter entry');
+   const result=await request(method,params);
+   if(method==='cache.book.status')result.data.chapters.push({chapterIndex:1,state:'completed',cachedBytes:0,mangaManifestVersion:'missing'});
+   return result;
+ };
+ const entries=await f.gateway.loadProjection({...session,entries:[...session.entries,{index:1,title:'Missing',url:'/missing'}]});
+ assert.deepEqual(entries.map(e=>e.downloadState),['completed','cached']);
+ let current=true;
+ f.runtime.request=async(method,params)=>{if(method==='manga.entry.get'){current=false;throw Error('late entry');}return request(method,params);};
+ await assert.rejects(f.gateway.loadProjection(session,()=>current),/superseded/);
+}
+console.log('PASS a missing cold entry downgrades only its chapter; cancellation is not swallowed by per-chapter completion recovery');

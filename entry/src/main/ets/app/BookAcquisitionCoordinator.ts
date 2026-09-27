@@ -596,10 +596,10 @@ export class BookAcquisitionCoordinator {
         this.request(method, params, { ...requestOptions, canContinue: current, canDispatch: options.canDispatch }, priority),
       loadReadingImage: async (sourceId: string, bookId: string, chapterIndex: number, contentVersion: string,
         imageUrl: string, baseUrl: string | undefined, allowNetwork: boolean, isCurrent?: () => boolean,
-        resourceRef?: string, mangaPosition?: number, expectedSourceVersion?: string, mangaPreview?: boolean): Promise<ReadingGatewayImage> => {
+        resourceRef?: string, mangaPosition?: number, expectedSourceVersion?: string, mangaPreview?: boolean, mangaDecodeRevision?: string): Promise<ReadingGatewayImage> => {
         if (owner.loadReadingImage === undefined) throw new Error('MANGA_RESOURCE_HOST_UNAVAILABLE');
         return owner.loadReadingImage(sourceId, bookId, chapterIndex, contentVersion, imageUrl, baseUrl,
-          allowNetwork, isCurrent, resourceRef, mangaPosition, expectedSourceVersion, mangaPreview);
+          allowNetwork, isCurrent, resourceRef, mangaPosition, expectedSourceVersion, mangaPreview, mangaDecodeRevision);
       },
       releaseReadingImage: (fileUri: string, pixelMap?: image.PixelMap): void => owner.releaseReadingImage?.(fileUri, pixelMap),
     });
