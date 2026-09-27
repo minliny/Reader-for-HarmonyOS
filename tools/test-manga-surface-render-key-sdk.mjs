@@ -72,6 +72,7 @@ const pendingKey=frame().key;
 geometry.set(0,{width:600,height:1800,tileHeight:600});pages.set(0,{ordinal:0,status:'ready'});notify();
 assert.notEqual(frame().key,pendingKey,'placeholder to real geometry must replace a retained same-key item');
 assert.equal(frame().known,true);assert.equal(frame().listItem.height,300,'the actual SDK ListItem uses the new row geometry');
+assert.equal(typeof frame().listItem.onAppear,'function','mounted tiles register the native appear admission callback');
 assert.ok(has('LoadingProgress'),'geometry can precede its tile lease');
 const geometryKey=frame().key;
 tiles.set('0:0',{image:{fileUri:'file://lease-a.png',revision:'image-r1'}});notify();
