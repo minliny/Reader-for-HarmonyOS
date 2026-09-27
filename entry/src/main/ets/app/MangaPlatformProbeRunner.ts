@@ -23,6 +23,7 @@ export interface MangaProbeReceipt {
   releaseErrors?: number; displayCallback?: boolean; retainedDisplayLeases?: number;
   regionY?: number; observedAtMs?: number; checkResult?: boolean;
   sourceProfileFormat?: string; sourceAllocationClass?: string; sourceEncodedWidth?: number; sourceEncodedHeight?: number;
+  pixelFormat?: string;
   presentationEvidence: boolean;
 }
 const PREFIX = 'manga-platform-probe-v1/';
@@ -111,8 +112,8 @@ export class MangaPlatformProbeRunner {
       if ((event.width ?? 0) <= 0 || (event.height ?? 0) <= 0 || (event.width ?? 0) * (event.height ?? 0) > MAX_FIXTURE_PIXELS) this.observationErrors++;
     }
     if (event.event === 'pre-encode') {
-      // This fixture is 8*103 RGBA pixels. Never copy arbitrary production bytes.
-      if (event.pixels?.length !== 8 * 103 * 4) this.observationErrors++;
+      // This fixture is 8*103 BGRA pixels. Never copy arbitrary production bytes.
+      if (event.pixels?.length !== 8 * 103 * 4 || event.pixelFormat !== 'bgra8888') this.observationErrors++;
       else this.preEncoded = event.pixels.slice();
     }
     if (this.cancelAtPixel && event.event === 'open' && event.resource === 'pixel') this.nativeCancelled = true;
@@ -241,6 +242,7 @@ export class MangaPlatformProbeRunner {
     const f = MANGA_PLATFORM_GRAPHICS;
     const encoded = await this.bytes(f.file, f.sha256);
     const expected = await this.bytes(f.expectedFile, f.expectedSha256);
+    const expectedBgra = await this.bytes(f.preEncodedFile, f.preEncodedSha256);
     const planBytes = await this.bytes(f.planFile, f.planSha256);
     const plan = JSON.parse(new util.TextDecoder().decodeWithStream(planBytes)) as JsonObject;
     await this.body.validateBytes(encoded, this.current, 0);
@@ -249,9 +251,9 @@ export class MangaPlatformProbeRunner {
     const jpeg = await this.graphics.transform(encoded, plan, this.current);
     const pixels = this.preEncoded;
     this.check(pixels !== undefined, 'MANGA_PROBE_PREENCODE_MISSING');
-    const error = mangaProbeDifference(pixels!, expected);
+    const error = mangaProbeDifference(pixels!, expectedBgra);
     this.report({ caseId: 'graphics-14-strips', phase: 'pre-encode', pass: error.maximum === 0,
-      sha256: await digest(pixels!), expectedSha256: f.expectedSha256, maximum: error.maximum, mean: error.mean, presentationEvidence: false });
+      sha256: await digest(pixels!), expectedSha256: f.preEncodedSha256, pixelFormat: 'bgra8888', maximum: error.maximum, mean: error.mean, presentationEvidence: false });
     const output = await readPixels(image.createImageSource(jpeg.buffer as ArrayBuffer));
     const lossy = mangaProbeDifference(output.rgba, expected);
     // RGB565 plus JPEG90 is deliberately lossy. Geometry is asserted exactly

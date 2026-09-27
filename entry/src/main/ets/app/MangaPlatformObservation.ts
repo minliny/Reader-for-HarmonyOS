@@ -10,6 +10,7 @@ export interface MangaPlatformObservation {
   orientation?: number;
   format?: string; allocationClass?: string; encodedWidth?: number; encodedHeight?: number;
   pixels?: Uint8Array;
+  pixelFormat?: 'bgra8888';
 }
 export type MangaPlatformObserver = (event: MangaPlatformObservation) => void;
 export interface MangaBodyDiagnosticState {

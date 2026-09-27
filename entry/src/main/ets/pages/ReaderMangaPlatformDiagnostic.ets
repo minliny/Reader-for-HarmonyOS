@@ -40,7 +40,7 @@ export struct ReaderMangaPlatformDiagnostic {
     });
   }
   private receipt(value: MangaProbeReceipt): void {
-    value.runId = this.receiptRunId; value.seq = ++this.receiptSequence; value.fixtureRevision = 'manga-platform-probe-v2-large';
+    value.runId = this.receiptRunId; value.seq = ++this.receiptSequence; value.fixtureRevision = 'manga-platform-probe-v3-bgra';
     hilog.info(0x5244, 'ReaderMangaProbe', 'READER_MANGA_PLATFORM %{public}s', JSON.stringify(value));
     if (!this.mounted) return;
     if (value.checkResult !== false) { if (value.pass) this.passed++; else this.failed++; }
