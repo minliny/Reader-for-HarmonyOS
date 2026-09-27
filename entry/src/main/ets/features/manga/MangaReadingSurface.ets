@@ -400,7 +400,10 @@ export struct MangaReadingSurface {
   }
   private async updateViewport(): Promise<void> {
     const controller = this.controller;
-    if (!this.mounted || controller === undefined || this.data.totalCount() === 0) return;
+    // The initial projection can mount rows while openPrepared() is still
+    // admitting the saved page. Native callbacks must not supersede that
+    // selection before the opening transaction completes.
+    if (!this.mounted || !this.opened || controller === undefined || this.data.totalCount() === 0) return;
     const generation = ++this.viewportGeneration;
     const row = this.data.getData(Math.min(this.first, this.data.totalCount() - 1));
     try {
@@ -417,7 +420,13 @@ export struct MangaReadingSurface {
         this.chapterCommitted = true;
         this.onChapterCommitted(controller.chapter.chapterIndex, controller.chapter.chapterTitle);
       }
-    } catch (error) { if (this.mounted && generation === this.viewportGeneration) this.error = error instanceof Error ? error.message : '图片加载失败'; }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '图片加载失败';
+      // A newer controller selection can cancel this window before its own
+      // viewport callback runs. Cancellation is not a failure of visible pixels.
+      if (message !== 'MANGA_SESSION_CANCELLED' && this.mounted && generation === this.viewportGeneration)
+        this.error = message;
+    }
   }
   private async saveVisible(): Promise<void> {
     if (!this.opened || this.recovering || this.controller === undefined || this.data.totalCount() <= this.first) return;
@@ -429,8 +438,20 @@ export struct MangaReadingSurface {
         confirmed.identity !== this.positionIdentity(confirmed.anchor.ordinal) ||
         (this.horizontal && confirmed.anchor.ordinal !== this.horizontalPage)) return;
       const anchor = confirmed.anchor;
+      const presentationGeneration = this.presentationGeneration;
       await this.controller.savePosition(anchor.ordinal, anchor.x ?? 0, anchor.y).catch((error: Error): void => {
         if (error.message !== 'MANGA_POSITION_NOT_VISIBLE') {
+          // The old page's content fence may be revoked while a later image is
+          // already mounted. Do not attribute that cancellation to the new page.
+          if (error.message === 'MANGA_SESSION_CANCELLED' &&
+            (!this.mounted || this.controller !== confirmed.controller ||
+              this.presentationGeneration !== presentationGeneration || this.confirmedPosition !== confirmed ||
+              (this.horizontal && this.horizontalPage !== anchor.ordinal))) {
+            // The CAS receipt may still be uncertain. Keep the owner's failure
+            // record even though the old page cannot own the current banner.
+            this.onSaveFailure(error.message);
+            return;
+          }
           if (this.mounted) this.error = error.message;
           this.onSaveFailure(error.message);
         }
