@@ -1,5 +1,7 @@
 import hilog from '@ohos.hilog';
 import type { JsonObject } from '@reader/core-harmony';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerInteractiveSafeInsets, type ReaderInsetsVp } from '../common/ReaderWindowMetrics';
 import { mangaUserError } from './MangaUserError';
 import type { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
@@ -31,6 +33,7 @@ class MangaStripDataSource implements IDataSource {
 /** Native virtual list; a tile is a temporary presentation of one logical page. */
 @Component
 export struct MangaReadingSurface {
+  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   settingsGateway: ReaderSettingsGateway | undefined = undefined;
   runtime: ReadingGatewayRuntime | undefined = undefined;
   sourceId: string = '';
@@ -431,6 +434,9 @@ export struct MangaReadingSurface {
     const task = row.known ? this.controller?.retryTile(row.ordinal, row.tileIndex) : this.controller?.retry(row.ordinal);
     task?.then((): void => { this.updateViewport(); }).catch((error: Error): void => { if (this.mounted) this.error = error.message; });
   }
+  private interactiveInsets(_revision: number): ReaderInsetsVp {
+    return readerInteractiveSafeInsets(ReaderWindowCoordinator.metrics());
+  }
   build() {
     Column() {
       Row() {
@@ -512,5 +518,7 @@ export struct MangaReadingSurface {
         Button('下一章').onClick((): void => { this.saveVisible().then((): void => this.onChapter(1)); })
       }.width('100%').justifyContent(FlexAlign.SpaceBetween)
     }.width('100%').height('100%').backgroundColor(this.mangaBackgroundColor)
+      // Shell owns the full-window background; this content owns its safe rect.
+      .padding(this.interactiveInsets(this.windowMetricsRevision))
   }
 }
