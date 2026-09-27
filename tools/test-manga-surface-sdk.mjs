@@ -62,10 +62,10 @@ assert.deepEqual({...root.padding},{left:0,top:0,right:0,bottom:0},
 assert.deepEqual([...owner.nodes.keys()],nodeIds,'metrics changes update the mounted owner without remounting');
 console.log('PASS actual SDK root padding + live window revision: portrait status/gesture, asymmetric landscape and cleared insets (native layout not tested)');
 owner.mounted=true;owner.opened=true;owner.viewportWidth=500;
-const manifest={pages:[{ordinal:0,pageId:'a'}]};
+const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},manifestVersion:'sdk-v1',pages:[{ordinal:0,pageId:'a'}]};
 owner.data.projection.publish(manifest,()=>({width:1000,height:4000,tileHeight:1000}));
 let resolve;let saved;
-owner.controller={savePosition:async(...args)=>{saved=args;await new Promise(r=>resolve=r);}};
+owner.controller={chapter:{manifest},pageAt:ordinal=>manifest.pages[ordinal],savePosition:async(...args)=>{saved=args;await new Promise(r=>resolve=r);}};
 let completed=false;const saving=owner.saveVisible().then(()=>{completed=true;});
 await new Promise(r=>setImmediate(r));assert.equal(completed,false);assert.deepEqual(saved,[0,0,0.05]);
 resolve();await saving;assert.equal(completed,true);

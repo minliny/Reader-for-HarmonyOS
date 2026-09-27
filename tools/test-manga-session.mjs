@@ -286,11 +286,11 @@ for (const mappingStatus of ['exact','unresolved']) {
  else await assert.rejects(c.savePosition(target,0,0),/RECOVERY_REQUIRED/);
  // Execute the actual ArkUI publication method after the internal recovery.
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['publish']);
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['publish','requestedLast']);
  const Projection=load('MangaStripProjection');const projection=new Projection();
  projection.publish(old.manifest,()=>({width:600,height:800,tileHeight:800}),5);
  const restored=[];const surface=Object.assign(new Surface(),{controller:c,mounted:true,opened:true,horizontal:true,horizontalPage:5,publishedManifestVersion:'v',layoutGeneration:0,viewportGeneration:0,first:0,last:0,
-  visibleAnchor:{ordinal:5,x:0.9,y:0.9},data:{projection,notify:()=>{}},rememberVisible:()=>{throw Error('old viewport geometry cannot anchor a new manifest');},restore:(...args)=>restored.push(args)});
+  visibleAnchor:{ordinal:5,x:0.9,y:0.9},data:{projection,totalCount:()=>projection.totalCount(),notify:()=>{}},rememberVisible:()=>{throw Error('old viewport geometry cannot anchor a new manifest');},restore:(...args)=>restored.push(args)});
  surface.publish();assert.equal(surface.horizontalPage,target);assert.equal(projection.row(0).ordinal,target);assert.deepEqual(restored,[[target,0,0]]);assert.equal(surface.recovering,mappingStatus!=='exact');
  c.close();
 }

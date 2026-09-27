@@ -11,7 +11,7 @@ const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
 const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
 const Projection = load('MangaStripProjection');
-const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport']);
+const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast']);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 const pageId = `mp1:${'a'.repeat(64)}`;
