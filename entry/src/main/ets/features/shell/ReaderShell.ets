@@ -324,6 +324,7 @@ export struct ReaderShell {
   private mangaSurface() {
     ForEach([this.mangaIdentityKey()], (_identity: string) => {
       MangaReadingSurface({
+        offline: ReaderRuntimeOwner.current().mangaOfflineProbeFor?.(this.sourceId, this.bookId) === true || this.remoteSession?.acquisitionMode === 'offline',
         settingsGateway: this.mangaSettingsGateway,
         mangaBackgroundColor: readerAppColor('app.window.background', this.appThemeScheme),
         mangaForegroundColor: readerAppColor('app.window.foreground', this.appThemeScheme),

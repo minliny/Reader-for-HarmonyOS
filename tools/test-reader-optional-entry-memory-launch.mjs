@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
+import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
+import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
 import { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } from '../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts';
 import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
@@ -23,7 +24,7 @@ const selected=new Set(['instance','state','abilityLeases','coreCapabilities','e
 const members=ownerClass.members.filter(n=>ts.isConstructorDeclaration(n)||selected.has(n.name?.getText(tree))).map(n=>n.getText(tree)).join('\n');
 function runtimeType() {
   class PlatformHost {}
-  const dependencies={ReadingEntryPreparation,releaseReadingEntryMemory,
+  const dependencies={ReadingEntryPreparation,releaseReadingEntryMemory,MangaOfflineNetworkProbe,LOG_DOMAIN:0x5244,hilog:{info(){}},
     ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,HarmonySystemTtsHost:PlatformHost,HarmonyHttpTtsHost:PlatformHost,
     HarmonyTtsMediaSession:PlatformHost,HarmonyTtsBackgroundSession:PlatformHost,LocalEpubResourceHost:PlatformHost,
     ReadingImageDiskCache:PlatformHost,ReadingBodyImageHost:{setDisplayCacheDir(){}}};
@@ -51,7 +52,7 @@ for(const [debug,mode,value,disabled] of [[true,'debug',true,true],[true,'releas
       assert.equal(enabled,debug===true&&mode==='debug','only debug builds enable startup diagnostics');
       return ReaderStartupTrace.install(clock,record,enabled);
     }},readerMotionNowMs:()=>performance.now(),
-    DEBUG:debug,BUILD_MODE_NAME:mode,readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,
+    DEBUG:debug,BUILD_MODE_NAME:mode,readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerMangaOfflineProbeScope,
     readerEventLoopProbeEnabled:()=>false,ReaderRuntimeOwner:Runtime,
     ReaderSystemFileOpenHost:{install(){},receive(){}},
     AppStorage:{setOrCreate:(...args)=>writes.push(args)},WebDavCredentialStore:{instance:{attachContext(){},loadBookshelfViewMode:async()=>null}},
@@ -61,10 +62,13 @@ for(const [debug,mode,value,disabled] of [[true,'debug',true,true],[true,'releas
     DOMAIN:0x5244,hilog:{error(){}}});
   Runtime.prototype.getAppearanceStore=()=>({current:()=>({font:'serif'})});
   const ability=Object.assign(new Ability(),{context});
-  ability.onCreate({parameters:{readerDisableOptionalEntryMemory:value}},{});
+  ability.onCreate({parameters:{readerDisableOptionalEntryMemory:value,readerMangaOfflineProbe:value,
+    readerMangaOfflineSourceId:'source',readerMangaOfflineBookId:'book'}},{});
   await ability.recoveryReady;
   assert.equal(ability.coldStartPage,'pages/Index','cold diagnostic does not divert normal Index/reader route');
   assert.equal(ability.runtimeOwner.optionalReadingEntryMemoryEnabled(),!disabled);
+  assert.equal(ability.runtimeOwner.mangaOfflineProbe!==undefined,disabled,'actual cold Want exact debug flag controls scoped probe construction');
+  if(disabled)assert.equal(ability.runtimeOwner.mangaOfflineProbe.ownsCommand('book.toc',{sourceId:'source',bookId:'book'}),true,'cold Want is armed before a shelf click');
   assert.deepEqual(writes,[['readerAppForeground',true]],'diagnostic flag is not stored in settings or AppStorage');
 }
 const warmWantBody=abilitySource.slice(abilitySource.indexOf('  onNewWant('),abilitySource.indexOf('  private async prepareSelectedReadingFont'));

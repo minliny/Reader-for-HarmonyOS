@@ -2741,6 +2741,7 @@ struct Index {
   }
 
   private openShelfBook(selection: ShelfBook): void {
+    ReaderRuntimeOwner.current().selectMangaOfflineProbe?.(selection.sourceId, selection.bookId, selection.contentKind === 'manga');
     if (this.route === 'bookshelf') {
       this.beginReadingStartupTrace?.();
       this.shelfEntryTraceAttempt += 1;
@@ -2753,7 +2754,8 @@ struct Index {
       this.openLocalBookDetail(selection, true);
       return;
     }
-    ReaderRuntimeOwner.current().noteReadingPreparationIntent(selection.sourceId, selection.bookId);
+    if (ReaderRuntimeOwner.current().mangaOfflineProbeFor?.(selection.sourceId, selection.bookId) !== true)
+      ReaderRuntimeOwner.current().noteReadingPreparationIntent(selection.sourceId, selection.bookId);
     this.openRemoteBookDetail({
       contentKind: selection.contentKind,
       sourceId: selection.sourceId,

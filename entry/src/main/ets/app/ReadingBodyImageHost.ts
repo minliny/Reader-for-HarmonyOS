@@ -128,9 +128,11 @@ export class ReadingBodyImageHost {
     request: JsonObject,
     isCurrent?: () => boolean,
     maxBytes: number = MAX_READING_IMAGE_BYTES,
+    beforeHttp?: () => void,
   ): Promise<Uint8Array> {
     this.assertCurrent(isCurrent);
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_READING_IMAGE_BYTES) throw new Error('READING_IMAGE_DECODE_BUDGET');
+    beforeHttp?.();
     const response = await HttpExecuteHost.instance.executeBytes(
       request,
       maxBytes,

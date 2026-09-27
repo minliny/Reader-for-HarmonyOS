@@ -1,3 +1,5 @@
+import type { MangaOfflineProbeScope } from './MangaOfflineNetworkProbe';
+
 /**
  * Production EntryAbility has one default cold-start page. Diagnostic pages
  * are admitted only for an exact debug cold start used by the local VM probe.
@@ -26,4 +28,14 @@ export function readerControlVerificationColdStartPage(debug: boolean,
 export function readerDisableOptionalEntryMemory(debug: boolean, buildModeName: string,
   parameterValue: Object | undefined): boolean {
   return debug === true && buildModeName === 'debug' && parameterValue === true;
+}
+
+/** Exact cold Want only. Never persists or accepts a warm route parameter. */
+export function readerMangaOfflineProbeScope(debug: boolean, buildModeName: string,
+  enabled: Object | undefined, sourceId: Object | undefined, bookId: Object | undefined): MangaOfflineProbeScope | undefined {
+  if (debug !== true || buildModeName !== 'debug' || enabled !== true ||
+    typeof sourceId !== 'string' || typeof bookId !== 'string' || sourceId.length === 0 || bookId.length === 0 ||
+    sourceId.length > 8192 || bookId.length > 8192 || sourceId.trim() !== sourceId || bookId.trim() !== bookId ||
+    /[\u0000-\u001f\u007f]/.test(sourceId) || /[\u0000-\u001f\u007f]/.test(bookId)) return undefined;
+  return { sourceId, bookId };
 }

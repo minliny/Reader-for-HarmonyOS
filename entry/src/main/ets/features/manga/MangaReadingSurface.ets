@@ -3,7 +3,7 @@ import type { JsonObject } from '@reader/core-harmony';
 import { mangaUserError } from './MangaUserError';
 import type { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
-import type { RemoteReadingBookSeed, RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
+import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 import { MangaSessionGateway } from './MangaSessionGateway';
 import { MangaSessionController, MangaTileRequest } from './MangaSessionController';
 import { PhotoViewScaleModel } from './vendor/photoview/PhotoViewScaleModel';
@@ -53,6 +53,8 @@ export struct MangaReadingSurface {
   onExitRequestHandler: (exit: () => void) => void = (): void => {};
   onChapter: (direction: number) => void = (_direction: number): void => {};
   @State private error: string = '';
+  @State private offlineProbeStatus: string = '';
+  private detachOfflineProbe: (() => void) | undefined;
   @State private title: string = '';
   @State private recovering: boolean = false;
   @State private opened: boolean = false;
@@ -98,9 +100,14 @@ export struct MangaReadingSurface {
   aboutToDisappear(): void {
     this.mounted = false; this.layoutGeneration++; this.viewportGeneration++; this.loginGeneration++;
     if (this.controller !== undefined) { this.controller.onChange = undefined; this.controller.close(); }
+    this.runtime?.finishMangaOfflineProbe?.(this.sourceId, this.bookId);
+    this.detachOfflineProbe?.(); this.detachOfflineProbe = undefined;
   }
   private async open(controller: MangaSessionController): Promise<void> {
     try {
+      this.detachOfflineProbe = this.offline ? this.runtime?.subscribeMangaOfflineProbe?.((state: string): void => {
+        if (this.mounted) this.offlineProbeStatus = state;
+      }) : undefined;
       const current = (): boolean => this.mounted && this.controller === controller;
       let index = this.chapterIndex;
       let session = this.remoteSession;
@@ -125,8 +132,8 @@ export struct MangaReadingSurface {
             this.configureAdjacentChapter(session, controller); this.onRemoteSessionReady(session);
           }
           else if (this.remoteBookSeed !== undefined) {
-            void this.runtime.bookAcquisitions?.().acquireBook(this.remoteBookSeed, { isCurrent: current }).then((catalog: RemoteReadingSession): void => {
-              if (current() && catalog.identity.sourceId === this.sourceId && catalog.identity.bookId === this.bookId && catalog.contentKind === 'manga') {
+            void this.acquireCatalog(current).then((catalog: RemoteReadingSession | undefined): void => {
+              if (catalog !== undefined && current() && catalog.identity.sourceId === this.sourceId && catalog.identity.bookId === this.bookId && catalog.contentKind === 'manga') {
                 this.configureAdjacentChapter(catalog, controller); this.onRemoteSessionReady(catalog);
               }
             }).catch((): void => {});
@@ -135,7 +142,7 @@ export struct MangaReadingSurface {
         }
       }
       if (session === undefined && this.remoteBookSeed !== undefined) {
-        session = await this.runtime?.bookAcquisitions?.().acquireBook(this.remoteBookSeed, { isCurrent: current });
+        session = await this.acquireCatalog(current);
       }
       if (!current()) return;
       if (session !== undefined) {
@@ -169,7 +176,21 @@ export struct MangaReadingSurface {
           this.restore(ordinal, saved.y, saved.x);
         }
       } else this.updateViewport();
-    } catch (error) { if (this.mounted) this.error = error instanceof Error ? error.message : '漫画加载失败'; }
+    } catch (error) {
+      if (this.mounted) this.error = error instanceof Error ? error.message : '漫画加载失败';
+      if (this.offline) { controller.close(); this.runtime?.finishMangaOfflineProbe?.(this.sourceId, this.bookId); }
+    }
+  }
+
+  private async acquireCatalog(current: () => boolean): Promise<RemoteReadingSession | undefined> {
+    if (this.runtime === undefined || this.remoteBookSeed === undefined) return undefined;
+    if (this.offline) {
+      // Already admitted manga identity; only read Core's durable catalog. A
+      // missing/invalid cached catalog must never fall through to online acquire.
+      const cached = await new RemoteReadingFlowGateway(this.runtime).openCachedSession(this.remoteBookSeed, current);
+      return { ...cached, contentKind: 'manga' };
+    }
+    return this.runtime.bookAcquisitions?.().acquireBook(this.remoteBookSeed, { isCurrent: current });
   }
   private configureAdjacentChapter(session: RemoteReadingSession, controller: MangaSessionController): void {
     const chapter = controller.chapter;
@@ -415,6 +436,9 @@ export struct MangaReadingSurface {
         Button('返回').onClick((): void => this.handleBack())
         Text(this.title).maxLines(1).layoutWeight(1).fontColor(this.mangaForegroundColor)
       }.width('100%')
+      if (this.offlineProbeStatus.length > 0) {
+        Text(this.offlineProbeStatus).fontSize(10).maxLines(4).fontColor(this.mangaForegroundColor).id('reader-manga-offline-probe-status')
+      }
       Row() {
         Button('目录与下载').onClick((): void => { void this.openDirectory(); })
         Button('换源').onClick((): void => { void this.openSourceSwitch(); })

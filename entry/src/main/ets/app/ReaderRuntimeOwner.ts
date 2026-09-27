@@ -50,6 +50,7 @@ import { ReadingEntryPreparation } from '../features/reading/ReadingEntryPrepara
 import { releaseReadingEntryMemory } from '../features/reading/ReadingEntryHandoff';
 import { ReaderPreparationNetworkHost } from './ReaderPreparationNetworkHost';
 import { ReaderStartupTrace } from './ReaderStartupTrace';
+import { MangaOfflineNetworkProbe, type MangaOfflineProbeScope } from './MangaOfflineNetworkProbe';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -99,6 +100,7 @@ export class ReaderRuntimeOwner {
   private readonly ttsHost: HarmonyTtsHostRouter;
   private readonly localEpubResourceHost: LocalEpubResourceHost;
   private readonly readingImageDiskCache: ReadingImageDiskCache;
+  private readonly mangaOfflineProbe: MangaOfflineNetworkProbe | undefined;
   private runtime: ReaderCoreRuntime | undefined = undefined;
   private appearanceStore: ReaderAppearanceStore | undefined = undefined;
   private startup: Promise<void> | undefined = undefined;
@@ -131,10 +133,12 @@ export class ReaderRuntimeOwner {
   private readonly optionalEntryMemoryEnabled: boolean;
 
   private constructor(context: common.UIAbilityContext, predecessorClose: Promise<void> = Promise.resolve(),
-    disableOptionalEntryMemory: boolean = false) {
+    disableOptionalEntryMemory: boolean = false, mangaOfflineScope?: MangaOfflineProbeScope) {
     this.predecessorClose = predecessorClose;
     this.optionalEntryMemoryEnabled = !disableOptionalEntryMemory;
-    this.host = new ReaderHostRegistry(context);
+    this.mangaOfflineProbe = mangaOfflineScope === undefined ? undefined : new MangaOfflineNetworkProbe(mangaOfflineScope,
+      (state: string): void => hilog.info(LOG_DOMAIN, 'Reader', 'MANGA_OFFLINE_PROBE %{public}s', state));
+    this.host = new ReaderHostRegistry(context, this.mangaOfflineProbe);
     this.ttsHost = new HarmonyTtsHostRouter(
       new HarmonySystemTtsHost(),
       new HarmonyHttpTtsHost(this),
@@ -146,16 +150,27 @@ export class ReaderRuntimeOwner {
     ReadingBodyImageHost.setDisplayCacheDir(context.cacheDir);
   }
 
-  static install(context: common.UIAbilityContext, disableOptionalEntryMemory: boolean = false): ReaderRuntimeOwner {
+  static install(context: common.UIAbilityContext, disableOptionalEntryMemory: boolean = false,
+    mangaOfflineScope?: MangaOfflineProbeScope): ReaderRuntimeOwner {
     const current = ReaderRuntimeOwner.instance;
     if (current === undefined || current.state === 'closing' || current.state === 'closed') {
       const predecessorClose = current?.closeTask ?? Promise.resolve();
-      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory);
+      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory, mangaOfflineScope);
       if (disableOptionalEntryMemory) ReaderRuntimeOwner.instance.releaseOptionalReadingEntryMemory();
-    }
+    } else current.mangaOfflineProbe?.release('ability-reinstalled');
     ReaderRuntimeOwner.instance.abilityLeases += 1;
     return ReaderRuntimeOwner.instance;
   }
+
+  selectMangaOfflineProbe(sourceId: string, bookId: string, manga: boolean): void {
+    this.mangaOfflineProbe?.select(sourceId, bookId, manga);
+  }
+  mangaOfflineProbeFor(sourceId: string, bookId: string): boolean { return this.mangaOfflineProbe?.matches(sourceId, bookId) === true; }
+  subscribeMangaOfflineProbe(listener: (state: string) => void): () => void {
+    return this.mangaOfflineProbe?.subscribe(listener) ?? ((): void => {});
+  }
+  finishMangaOfflineProbe(sourceId: string, bookId: string): void { this.mangaOfflineProbe?.finish(sourceId, bookId); }
+  releaseMangaOfflineProbe(): void { this.mangaOfflineProbe?.release('ability-background'); }
 
   static current(): ReaderRuntimeOwner {
     if (ReaderRuntimeOwner.instance === undefined) {
@@ -318,6 +333,21 @@ export class ReaderRuntimeOwner {
       const runtime = this.runtime;
       if (runtime === undefined) {
         throw new Error('Reader Core runtime did not become ready');
+      }
+      const probe = this.mangaOfflineProbe;
+      if (probe?.ownsCommand(method, params) === true) {
+        // SDK request is send + waitForResult. Register before any Host dispatch;
+        // the Registry uses this exact id, never a URL or source-only guess.
+        probe.assertCapacity();
+        const requestId = runtime.send(method, params);
+        probe.track(requestId);
+        try {
+          return await runtime.waitForResult(requestId, { ...options,
+            timeoutMs: options.timeoutMs ?? DEFAULT_CORE_REQUEST_TIMEOUT_MS,
+            shouldCancel: (): boolean => options.shouldCancel?.() === true ||
+              (method !== 'reading.progress.update' && !probe.current(requestId)),
+          });
+        } finally { probe.settle(requestId); }
       }
       if (options.timeoutMs !== undefined) {
         return await runtime.request(method, params, options);
@@ -779,6 +809,7 @@ export class ReaderRuntimeOwner {
   }
 
   async close(): Promise<void> {
+    this.mangaOfflineProbe?.release('runtime-close');
     this.preparationForeground = false;
     this.preparationNetwork?.close();
     if (this.preparationWakeTimer >= 0) clearTimeout(this.preparationWakeTimer);
