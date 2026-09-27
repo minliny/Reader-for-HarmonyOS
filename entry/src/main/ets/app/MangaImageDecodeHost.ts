@@ -11,12 +11,13 @@ interface DecodeTransfer {
   requestId?: number;
   bytes?: Uint8Array;
   inputReceived: boolean;
+  maxBytes?: number;
   failure?: Error;
   graphicsRequested?: boolean;
 }
 export interface MangaImageDecodeTransport {
   graphics?: MangaImageGraphicsAdapter;
-  fetch(request: JsonObject, current: () => boolean): Promise<Uint8Array>;
+  fetch(request: JsonObject, current: () => boolean, maxBytes: number): Promise<Uint8Array>;
   validate(bytes: Uint8Array, current: () => boolean): Promise<void>;
 }
 
@@ -38,6 +39,8 @@ export class MangaImageDecodeHost {
     this.transfers.set(transferId, transfer);
     try {
       const result = await request({ ...params, transferId });
+      const preparedBytes = result.data['bytes'];
+      if (transfer.maxBytes !== undefined && typeof preparedBytes === 'number' && preparedBytes > transfer.maxBytes) this.rejectBudget(transfer);
       if (!current() || result.data['prepared'] !== true || result.data['transferId'] !== transferId ||
         result.data['resourceRef'] !== resourceRef || result.requestId !== transfer.requestId || transfer.bytes === undefined ||
         result.data['bytes'] !== transfer.bytes.length) {
@@ -49,6 +52,7 @@ export class MangaImageDecodeHost {
       // Online keys and libraries use Core's existing HTTP bridge. Keep their
       // typed status visible to the same login/retry flow as image requests.
       const details = error instanceof Error ? (error as DecodeRequestError).event?.error.details : undefined;
+      if (details?.['reason'] === 'imageDecodeBudget') throw new Error('READING_IMAGE_DECODE_BUDGET');
       const status = details?.['httpStatus'];
       if (details?.['category'] === 'SOURCE_HTTP_FAILED' && typeof status === 'number') {
         if (status === 401) throw new Error('READING_IMAGE_AUTH_REQUIRED');
@@ -76,17 +80,22 @@ export class MangaImageDecodeHost {
     const current = (): boolean => typeof id === 'string' && this.transfers.get(id) === transfer && transfer.current();
     if (!current()) throw new Error('MANGA_DECODE_CANCELLED');
     if (event.params['stage'] === 'input') {
-      if (transfer.inputReceived || event.params['maxBytes'] !== MAX_BYTES) throw new Error('MANGA_DECODE_STAGE');
+      const maxBytes = event.params['maxBytes'];
+      if (transfer.inputReceived || transfer.maxBytes !== undefined ||
+        (maxBytes !== 8 * 1024 * 1024 && maxBytes !== MAX_BYTES)) throw new Error('MANGA_DECODE_STAGE');
+      transfer.maxBytes = maxBytes;
       const descriptor = event.params['request'];
       if (descriptor === null || typeof descriptor !== 'object' || Array.isArray(descriptor)) throw new Error('MANGA_DECODE_REQUEST');
       let bytes: Uint8Array;
-      try { bytes = await transport.fetch(descriptor as JsonObject, current); }
+      try { bytes = await transport.fetch(descriptor as JsonObject, current, maxBytes); }
       catch (error) { transfer.failure = error instanceof Error ? error : new Error(String(error)); throw error; }
+      if (!current() || bytes.length < 1) throw new Error('MANGA_DECODE_INPUT');
+      if (bytes.length > maxBytes) this.rejectBudget(transfer);
       const inspect = event.params['inspectGraphics'] === true;
       if (inspect && transport.graphics === undefined) throw new Error('MANGA_GRAPHICS_UNAVAILABLE');
       const dimensions = inspect ? await transport.graphics?.inspect(bytes, current) : undefined;
       transfer.graphicsRequested = inspect;
-      if (!current() || bytes.length < 1 || bytes.length > MAX_BYTES) throw new Error('MANGA_DECODE_INPUT');
+      if (!current() || bytes.length < 1 || bytes.length > maxBytes) throw new Error('MANGA_DECODE_INPUT');
       const assetId = bridge.begin(event.requestId, event.operationId, bytes.length);
       try {
         for (let offset = 0; offset < bytes.length; offset += CHUNK_BYTES) {
@@ -106,8 +115,8 @@ export class MangaImageDecodeHost {
     const assetId = this.positiveInteger(event.params['assetId']);
     const operationId = this.positiveInteger(event.params['operationId']);
     const count = this.positiveInteger(event.params['bytes']);
-    if (count > MAX_BYTES) throw new Error('MANGA_DECODE_OUTPUT_BUDGET');
     try {
+      if (transfer.maxBytes === undefined || count > transfer.maxBytes) this.rejectBudget(transfer);
       const bytes = new Uint8Array(count);
       for (let offset = 0; offset < count;) {
         if (!current()) throw new Error('MANGA_DECODE_CANCELLED');
@@ -122,13 +131,20 @@ export class MangaImageDecodeHost {
       if (plan !== undefined && plan !== null) {
         if (!transfer.graphicsRequested || transport.graphics === undefined || typeof plan !== 'object' || Array.isArray(plan)) throw new Error('MANGA_GRAPHICS_STAGE');
         prepared = await transport.graphics.transform(bytes, plan as JsonObject, current);
-        if (!current() || prepared.length < 1 || prepared.length > MAX_BYTES) throw new Error('MANGA_GRAPHICS_OUTPUT_BUDGET');
+        if (!current() || prepared.length < 1) throw new Error('MANGA_GRAPHICS_OUTPUT_BUDGET');
+        if (prepared.length > transfer.maxBytes) this.rejectBudget(transfer);
       }
       await transport.validate(prepared, current);
       if (!current()) throw new Error('MANGA_DECODE_CANCELLED');
       transfer.bytes = prepared;
       return { consumed: true, assetId, bytes: count, preparedBytes: prepared.length };
     } finally { bridge.release(event.requestId, operationId, assetId); }
+  }
+
+  private rejectBudget(transfer: DecodeTransfer): never {
+    const failure = new Error('READING_IMAGE_DECODE_BUDGET');
+    transfer.failure = failure;
+    throw failure;
   }
 
   private positiveInteger(value: unknown): number {

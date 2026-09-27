@@ -13,6 +13,7 @@ export function mangaUserError(code: string): string {
     case 'MANGA_LOGIN_IN_PROGRESS': return '登录验证正在进行，请完成后再重试图片。';
     case 'MANGA_REGION_METADATA_UNAVAILABLE': return '无法确认这张图片的显示方向，暂时无法安全显示。可尝试重新获取图片或更换书源。';
     case 'MANGA_REGION_OUT_OF_RANGE': return '这张图片的尺寸超出当前阅读支持范围，暂时无法显示。可尝试其他书源。';
+    case 'READING_IMAGE_DECODE_BUDGET': return '这张图片超出当前图片处理的大小或内存限制，暂时无法显示。可尝试其他章节或书源。';
     case 'MANGA_REGION_MEMORY_BUDGET':
     case 'MANGA_GRAPHICS_MEMORY_BUDGET': return '这张图片解码需要的内存超出当前支持范围，暂时无法显示。可尝试其他章节或书源。';
     case 'MANGA_REGION_DECODE_MISMATCH': return '设备未能正确解码这张长图。请重试，或尝试其他书源。';

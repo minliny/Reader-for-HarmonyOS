@@ -86,3 +86,75 @@ for(const [status,code] of [[401,'READING_IMAGE_AUTH_REQUIRED'],[403,'READING_IM
  await assert.rejects(host.prepare({resourceRef:'r'},async()=>{throw unrelated},()=>true),error=>error===unrelated);
 }
 console.log('PASS nested online key/library typed HTTP status shares image login/retry classification; unrelated rule failures retain identity');
+
+// The Core-advertised bound belongs to one transfer, including graphics output.
+for(const maxBytes of [8*1024*1024,16*1024*1024]) {
+ const f=fixture();let inspections=0;
+ f.transport.fetch=async(_request,_current,limit)=>{assert.equal(limit,maxBytes);return new Uint8Array([1,2,3]);};
+ f.transport.graphics={async inspect(){inspections++;return {width:2,height:2};},async transform(bytes){return bytes;}};
+ const result=await f.host.prepare({resourceRef:'r'},async params=>{
+  await f.host.handle(f.event({...params,stage:'input',maxBytes,request:{},inspectGraphics:true},10),f.bridge,f.transport);
+  f.bridge.read=async()=>new Uint8Array([1,2,3]);
+  await f.host.handle(f.event({...params,stage:'output',assetId:44,operationId:10,bytes:3},11),f.bridge,f.transport);
+  return {requestId:7,data:{...params,prepared:true,bytes:3}};
+ },f.current);assert.equal(result.length,3);assert.equal(inspections,1);
+}
+for(const stage of ['input','output','prepared']) {
+ const f=fixture(),limit=8*1024*1024;let inspected=0,read=0,validated=0;
+ f.transport.fetch=async()=>new Uint8Array(stage==='input'?limit+1:3);
+ f.transport.graphics={async inspect(){inspected++;return {width:2,height:2};},async transform(){return new Uint8Array(limit+1);}};
+ f.transport.validate=async()=>{validated++;};f.bridge.read=async()=>{read++;return new Uint8Array([1,2,3]);};
+ await assert.rejects(f.host.prepare({resourceRef:'r'},async params=>{
+  try {
+   await f.host.handle(f.event({...params,stage:'input',maxBytes:limit,request:{},inspectGraphics:true},10),f.bridge,f.transport);
+   await f.host.handle(f.event({...params,stage:'output',assetId:44,operationId:10,bytes:stage==='output'?limit+1:3,...(stage==='prepared'?{graphicsPlan:{}}:{})},11),f.bridge,f.transport);
+  } catch { throw Error('Core generic host failure'); }
+ },f.current),error=>error.message==='READING_IMAGE_DECODE_BUDGET');
+ assert.equal(inspected,stage==='input'?0:1);assert.equal(read,stage==='prepared'?1:0);assert.equal(validated,0);
+ if(stage!=='input')assert.ok(f.released.includes(44));assert.equal(f.host.transfers.size,0);
+}
+for(const maxBytes of [0,7*1024*1024,8*1024*1024+1,17*1024*1024,undefined]) {
+ const f=fixture();f.transport.fetch=async()=>assert.fail('invalid advertisement must not fetch');
+ await assert.rejects(f.host.prepare({resourceRef:'r'},params=>f.host.handle(f.event({...params,stage:'input',maxBytes,request:{}},10),f.bridge,f.transport),f.current),/STAGE/);
+}
+for(const budgetStage of ['input','output','heap','resident']) {
+ const f=fixture();const failure=Object.assign(new Error('manga resource preparation rejected'),{event:{error:{details:{reason:'imageDecodeBudget',budgetStage}}}});
+ await assert.rejects(f.host.prepare({resourceRef:'r'},async()=>{throw failure;},f.current),error=>error.message==='READING_IMAGE_DECODE_BUDGET');
+ assert.equal(f.host.transfers.size,0);
+}
+console.log('PASS Core advertised 8/16MiB binds fetch/input/graphics/output/receipt; oversize rejects before inspect/read/validate, invalid advertisements do not fetch, native budget classification never falls back to original bytes');
+
+// Execute the actual thin Body transport methods. HTTP receives the advertised
+// limit; base64 rejects an over-limit string before invoking its native decoder.
+{
+ let receivedLimit,decodeCalls=0;let responseBytes=new Uint8Array([1]);
+ const Body=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts',import.meta.url),['fetchRequestBytes','readDataUriBytes','assertCurrent'],{
+  MAX_READING_IMAGE_BYTES:16*1024*1024,MAX_READING_IMAGE_DATA_URI_CHARS:Math.ceil(16*1024*1024/3)*4+4096,
+  HttpExecuteHost:{instance:{async executeBytes(_request,limit,_requestId,cancelled){assert.equal(cancelled(),false);receivedLimit=limit;return {status:200,headers:{},bytes:responseBytes};}}},
+  readingImageHttpError:()=>Error('http status'),util:{Type:{MIME:1},Base64Helper:class{decodeSync(text){decodeCalls++;return new Uint8Array(Buffer.from(text,'base64'));}}}
+ });
+ const body=new Body(),limit=8*1024*1024;
+ await body.fetchRequestBytes({},()=>true,limit);assert.equal(receivedLimit,limit);
+ await body.fetchRequestBytes({},()=>true);assert.equal(receivedLimit,16*1024*1024,'ordinary image default stays 16MiB');
+ responseBytes=new Uint8Array(limit+1);await assert.rejects(body.fetchRequestBytes({},()=>true,limit),/READING_IMAGE_DECODE_BUDGET/);
+ assert.throws(()=>body.readDataUriBytes('data:image/png;base64,'+'A'.repeat(Math.ceil(limit/3)*4+4097),()=>true,limit),/READING_IMAGE_DECODE_BUDGET/);
+ assert.equal(decodeCalls,0,'oversize base64 never reaches the platform decoder');
+ assert.deepEqual(body.readDataUriBytes('data:image/png;base64,AQID',()=>true,limit),new Uint8Array([1,2,3]));
+ for(const bad of [0,NaN,17*1024*1024]) {
+  receivedLimit=undefined;await assert.rejects(body.fetchRequestBytes({},()=>true,bad),/READING_IMAGE_DECODE_BUDGET/);assert.equal(receivedLimit,undefined);
+  assert.throws(()=>body.readDataUriBytes('data:image/png;base64,AQID',()=>true,bad),/READING_IMAGE_DECODE_BUDGET/);
+ }
+}
+console.log('PASS actual Body transport applies Core limit to HTTP and before base64 decode; ordinary images retain 16MiB and invalid limits have no transport side effects');
+
+{
+ const f=fixture(),limit=8*1024*1024;
+ await assert.rejects(f.host.prepare({resourceRef:'r'},async params=>{
+  await f.host.handle(f.event({...params,stage:'input',maxBytes:limit,request:{}},10),f.bridge,f.transport);
+  f.bridge.read=async()=>new Uint8Array([1,2,3]);
+  await f.host.handle(f.event({...params,stage:'output',assetId:44,operationId:10,bytes:3},11),f.bridge,f.transport);
+  return {requestId:7,data:{...params,prepared:true,bytes:limit+1}};
+ },f.current),error=>error.message==='READING_IMAGE_DECODE_BUDGET');
+ assert.equal(f.host.transfers.size,0);
+}
+console.log('PASS final prepared receipt cannot advertise bytes above its accepted input transfer limit');

@@ -127,11 +127,13 @@ export class ReadingBodyImageHost {
   async fetchRequestBytes(
     request: JsonObject,
     isCurrent?: () => boolean,
+    maxBytes: number = MAX_READING_IMAGE_BYTES,
   ): Promise<Uint8Array> {
     this.assertCurrent(isCurrent);
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_READING_IMAGE_BYTES) throw new Error('READING_IMAGE_DECODE_BUDGET');
     const response = await HttpExecuteHost.instance.executeBytes(
       request,
-      MAX_READING_IMAGE_BYTES,
+      maxBytes,
       undefined,
       (): boolean => isCurrent !== undefined && !isCurrent(),
     );
@@ -143,8 +145,9 @@ export class ReadingBodyImageHost {
     }
     const bytes = response.bytes;
     this.assertCurrent(isCurrent);
-    if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) {
-      throw new Error(`reading body image must contain 1..${MAX_READING_IMAGE_BYTES} bytes`);
+    if (bytes.length > maxBytes && maxBytes < MAX_READING_IMAGE_BYTES) throw new Error('READING_IMAGE_DECODE_BUDGET');
+    if (bytes.length === 0 || bytes.length > maxBytes) {
+      throw new Error(`reading body image must contain 1..${maxBytes} bytes`);
     }
     return bytes;
   }
@@ -153,21 +156,25 @@ export class ReadingBodyImageHost {
     return this.decodeBytes(this.readDataUriBytes(value, isCurrent), isCurrent);
   }
 
-  readDataUriBytes(value: string, isCurrent?: () => boolean): Uint8Array {
+  readDataUriBytes(value: string, isCurrent?: () => boolean, maxBytes: number = MAX_READING_IMAGE_BYTES): Uint8Array {
     this.assertCurrent(isCurrent);
-    if (value.length > MAX_READING_IMAGE_DATA_URI_CHARS) {
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_READING_IMAGE_BYTES) throw new Error('READING_IMAGE_DECODE_BUDGET');
+    const maxChars = Math.min(MAX_READING_IMAGE_DATA_URI_CHARS, Math.ceil(maxBytes / 3) * 4 + 4096);
+    if (value.length > maxChars && maxBytes < MAX_READING_IMAGE_BYTES) throw new Error('READING_IMAGE_DECODE_BUDGET');
+    if (value.length > maxChars) {
       throw new Error(`reading body image data URI exceeds ${MAX_READING_IMAGE_BYTES} byte limit`);
     }
     const match = /^data:(image\/[a-z0-9.+-]+);base64,([\s\S]+)$/i.exec(value.trim());
     if (match === null) {
       throw new Error('reading body image data URI must be base64 image data');
     }
-    if (match[2].length > MAX_READING_IMAGE_DATA_URI_CHARS) {
+    if (match[2].length > maxChars) {
       throw new Error(`reading body image data URI exceeds ${MAX_READING_IMAGE_BYTES} byte limit`);
     }
     const bytes = new util.Base64Helper().decodeSync(match[2], util.Type.MIME);
     this.assertCurrent(isCurrent);
-    if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) throw new Error('reading body image data URI byte limit');
+    if (bytes.length > maxBytes && maxBytes < MAX_READING_IMAGE_BYTES) throw new Error('READING_IMAGE_DECODE_BUDGET');
+    if (bytes.length === 0 || bytes.length > maxBytes) throw new Error('reading body image data URI byte limit');
     return bytes;
   }
 

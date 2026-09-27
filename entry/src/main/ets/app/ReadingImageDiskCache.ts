@@ -13,6 +13,7 @@ import {
 const CACHE_FORMAT_VERSION = 2;
 const LEGACY_CACHE_FORMAT_VERSION = 1;
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
+const READING_IMAGE_WRITE_CHUNK_BYTES = 1024 * 1024;
 const MIN_READING_IMAGE_FREE_RESERVE_BYTES = 16 * 1024 * 1024;
 const FILE_SYSTEM_NO_SPACE_ERROR = 13900025;
 
@@ -504,7 +505,10 @@ export class ReadingImageDiskCache {
       try {
         let writtenBytes = 0;
         while (writtenBytes < bytes.byteLength) {
-          const chunk = bytes.slice(writtenBytes);
+          this.assertCurrent(isCurrent);
+          // FileIO has no source-buffer offset; reuse the bounded chunk pattern
+          // of book/font staging and retry partial writes from the next byte.
+          const chunk = bytes.slice(writtenBytes, Math.min(bytes.byteLength, writtenBytes + READING_IMAGE_WRITE_CHUNK_BYTES));
           const written = await fileIo.write(file.fd, chunk.buffer);
           if (!Number.isSafeInteger(written) || written <= 0 || written > chunk.byteLength) {
             throw new Error('offline reading image destination stopped accepting bytes');

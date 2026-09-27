@@ -18,6 +18,9 @@ let failUnlink = () => false;
 let nanosecondStats = true;
 let resourceReads = 0;
 let beforeSync = async () => {};
+let beforeWrite = async () => {};
+let writeLimit = Infinity;
+const writeSizes = [];
 const io = {
   OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 },
   access: async path => fs.access(path).then(() => true, () => false),
@@ -39,7 +42,10 @@ const io = {
     handles.set(handle.fd, handle);
     return handle;
   },
-  write: async (fd, bytes) => (await handles.get(fd).write(new Uint8Array(bytes))).bytesWritten,
+  write: async (fd, bytes) => {
+    writeSizes.push(bytes.byteLength);await beforeWrite(bytes);
+    return (await handles.get(fd).write(new Uint8Array(bytes,0,Math.min(bytes.byteLength,writeLimit)))).bytesWritten;
+  },
   fsync: async fd => { await beforeSync(); await handles.get(fd).sync(); },
   close: async handle => { handles.delete(handle.fd); await handle.close(); },
   rename: async (from, to) => {
@@ -87,6 +93,27 @@ async function seedLegacy(identity, override = {}) {
   return directory;
 }
 try {
+  // >2MiB and a nonzero view prevent an accidental whole-backing-buffer write.
+  // Partial writes must preserve all bytes while each platform call is <=1MiB.
+  const chunked={...image,bookId:'bounded-write'};
+  const backing=new Uint8Array(2*1024*1024+173);for(let i=0;i<backing.length;i++)backing[i]=(i*13)%251;
+  const window=backing.subarray(19,backing.length-37),expected=window.slice();
+  writeSizes.length=0;writeLimit=333333;
+  const storing=cache.storeResource(chunked,window);window.fill(7);await storing;writeLimit=Infinity;
+  assert.deepEqual(await cache.loadResource(chunked),expected,'store snapshot isolates caller mutation and respects the input view');
+  assert.ok(writeSizes.length>3);assert.ok(Math.max(...writeSizes)<=1024*1024,'every platform write uses at most a 1MiB source window');
+  const stablePath=await cache.resourcePath(chunked);let live=true,writes=0;writeSizes.length=0;
+  beforeWrite=async()=>{writes++;live=false;};
+  await assert.rejects(cache.storeResource(chunked,expected,()=>live),/superseded/);beforeWrite=async()=>{};
+  assert.equal(writes,1,'cancellation is checked before the next byte window');
+  assert.deepEqual(new Uint8Array(await fs.readFile(stablePath)),expected,'cancelled replacement preserves the previous file');
+  assert.equal((await fs.readdir(dirname(stablePath))).some(name=>name.includes('.tmp-')),false,'cancelled temporary output is removed');
+  assert.equal(handles.size,0,'cancelled write closes its descriptor');
+  beforeWrite=async()=>{throw Object.assign(Error('injected disk full'),{code:13900025});};
+  await assert.rejects(cache.storeResource(chunked,expected),/storage_full/);beforeWrite=async()=>{};
+  assert.deepEqual(new Uint8Array(await fs.readFile(stablePath)),expected);
+  assert.equal(handles.size,0);assert.equal((await fs.readdir(dirname(stablePath))).some(name=>name.includes('.tmp-')),false);
+  pass('1MiB partial-write windows preserve nonzero-view snapshots; cancellation and ENOSPC keep old bytes and close/delete partial output');
   const manga = { ...image, contentVersion: 'manga-v1', resourceRef: `manga:mp1:${'a'.repeat(64)}` };
   await cache.storeResource(manga, bytes);
   const renewed = { ...manga, imageUrl: 'https://new-cdn/image?signature=renewed', baseUrl: 'https://new-cdn/' };
