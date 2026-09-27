@@ -10,7 +10,7 @@ const owner=Object.assign(new Surface(),{viewportWidth:500,viewportHeight:800,zo
  controller:{setPreviewMode:async()=>{},chapter,displayedOrdinal:8,savedLocation:{pageOrdinalFallback:8,x:0.1,y:0.6},recoveryRequired:false,
   tile:()=>({error:fail}),visiblePages:()=>[],retryTile:async(...args)=>retries.push(args),refreshChapter:async()=>{}},
  saveVisible:async()=>{},rememberVisible:()=>{},visibleAnchor:{ordinal:8,x:0.25,y:0.55},restore:(...args)=>restored.push(args),settingsGateway:{updateMangaFit:async fit=>settings.push(fit)},
- data:{totalCount:()=>10,getData:()=>row},first:1,last:1,opened:true,mounted:true,error:'',loggingIn:false,loginGeneration:0,updateViewport:async()=>{},publish:()=>{}});
+ data:{totalCount:()=>10,getData:()=>row},first:1,last:1,opened:true,mounted:true,presentationGeneration:0,layoutGeneration:0,error:'',loggingIn:false,loginGeneration:0,updateViewport:async()=>{},publish:()=>{}});
 assert.equal(owner.rowDisplayWidth(row),200,'SINGLE contain must fit the whole logical image, not each crop');
 assert.equal(owner.rowDisplayLeft(row),150);assert.equal(owner.visibleX(row),0);
 await owner.changeFit();assert.equal(owner.fitPreference,'width');assert.equal(owner.rowDisplayWidth(row),500);assert.deepEqual(restored.at(-1),[8,0.55,0.25]);

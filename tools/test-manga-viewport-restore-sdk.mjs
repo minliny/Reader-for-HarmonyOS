@@ -47,7 +47,7 @@ function fixture({tiles=12,height=750}={}) {
   },properties.hooks);
   owner.initialRender();
   const list=[...owner.nodes.values()].find(n=>n.type==='List');assert.ok(list?.onScrollIndex,'use the real SDK-generated List callback');
-  const manifest={manifestVersion:'v1',pages:[{ordinal:0,pageId:'p0'}]};
+  const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},manifestVersion:'v1',pages:[{ordinal:0,pageId:'p0'}]};
   const geometry={width:300,height:tiles*300,tileHeight:300};
   owner.controller={
     chapter:{manifest,chapterTitle:'c',chapterIndex:0},totalPages:1,displayedOrdinal:0,
@@ -119,21 +119,30 @@ console.log('PASS invalid indices, unavailable rectangles and unmeasured height 
   const f=fixture();f.owner.restore(0,0);
   f.list.onScrollIndex(0,1);assert.equal(f.owner.restoringAnchor,true);
   f.runTimer();await tick();assert.ok(f.scrolls.length,'native layout callback must not cancel its own pending restore');
-  assert.deepEqual([f.owner.first,f.owner.last],[0,1]);assert.equal(f.owner.restoringAnchor,false);
+  assert.deepEqual([f.owner.first,f.owner.last],[0,1]);assert.equal(f.owner.restoringAnchor,true,'timer application alone is not confirmed native layout');
+  f.runFrame();assert.equal(f.owner.restoringAnchor,false);
 }
 {
   const f=fixture();f.owner.restore(0,0);f.owner.restore(0,0.5);
   f.runTimer();assert.equal(f.scrolls.length,0);assert.equal(f.owner.restoringAnchor,true,'obsolete restore cannot clear the newer restoration flag');
-  f.runTimer();assert.equal(f.owner.first,6);assert.equal(f.owner.restoringAnchor,false);
+  f.runTimer();assert.equal(f.owner.first,6);assert.equal(f.owner.restoringAnchor,true);
+  f.owner.scroller.indexAt=()=>6;f.owner.scroller.rectAt=()=>({x:0,y:0,width:300,height:300});
+  f.runFrame();assert.equal(f.owner.first,6);assert.equal(f.owner.restoringAnchor,false);
 }
 {
   const f=fixture();f.owner.restore(0,0);f.runTimer();await tick();
+  f.list.onTouch({type:0});
+  f.owner.scroller.indexAt=(_x,y)=>y<1?4:5;
+  f.owner.scroller.rectAt=()=>({x:0,y:0,width:300,height:300});
   f.list.onScrollIndex(4,5);await tick();const queries=f.queries.length;
   f.runFrame();await tick();assert.deepEqual([f.owner.first,f.owner.last],[4,5]);assert.equal(f.queries.length,queries,'old frame cannot query over later user/native scroll state');
+  f.runFrame();assert.deepEqual([f.owner.first,f.owner.last],[4,5]);
 }
 {
   const f=fixture();f.owner.restore(0,0);assert.ok(f.list.onTouch,'real touch callback fences explicit user input');
-  f.list.onTouch({type:0});f.runTimer();assert.equal(f.scrolls.length,0);assert.equal(f.owner.restoringAnchor,false);
+  f.list.onTouch({type:0});f.runTimer();assert.equal(f.scrolls.length,0);
+  assert.equal(f.owner.restoringAnchor,true,'touch cancels the old scroll without inventing stable geometry');
+  f.runFrame();assert.equal(f.owner.restoringAnchor,false);assert.equal(f.scrolls.length,0);
 }
 {
   const f=fixture();f.owner.restore(0,0);f.runTimer();await tick();
