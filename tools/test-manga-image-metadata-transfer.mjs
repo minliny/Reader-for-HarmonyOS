@@ -16,3 +16,19 @@ for(const invalid of [false,true]){
 }
 {const host=new MangaImageMetadataHost();await assert.rejects(host.handle({requestId:2,operationId:3,params:{stage:'inspectInput',transferId:'forged'}},{}),/OWNER/);}
 console.log('PASS metadata asset adapter: exact bytes/hash, owner, cancellation and no transport or imageDecode');
+
+async function profileReceipt(decodeProfile){
+ const host=new MangaImageMetadataHost();const bridge={begin:()=>1,write:(_r,_o,_a,b)=>b.length,commit:()=>3,release(){}};
+ return host.inspect(bytes,sha256,async params=>{await host.handle({requestId:7,operationId:11,params:{...params,stage:'inspectInput',maxBytes:16777216}},bridge);return {requestId:7,data:{...params,status:'absent',orientation:null,decodeProfile}}},()=>true);
+}
+for(const profile of [
+ {format:'png',encodedWidth:1024,encodedHeight:32768,allocationClass:'scanline'},
+ {format:'png',encodedWidth:4096,encodedHeight:4096,allocationClass:'pngInterlaced'},
+ {format:'jpeg',encodedWidth:1200,encodedHeight:1906,allocationClass:'scanline'},
+ {format:'jpeg',encodedWidth:800,encodedHeight:1270,allocationClass:'fullFrame'},
+ {format:'webp',allocationClass:'fullFrame'}
+]){const actual=(await profileReceipt(profile)).decodeProfile;for(const [key,value] of Object.entries(profile))assert.equal(actual[key],value);}
+assert.equal((await profileReceipt(undefined)).decodeProfile,undefined,'old proof stays absent for conservative Host admission, never promoted to scanline');
+for(const profile of [null,[],123,{format:'jpeg',allocationClass:'scanline'},{format:'png',encodedWidth:0,encodedHeight:4,allocationClass:'scanline'},{format:'png',encodedWidth:3,encodedHeight:4.5,allocationClass:'fullFrame'},
+ {format:'webp',allocationClass:'scanline'},{format:'jpeg',encodedWidth:3,encodedHeight:4,allocationClass:'pngInterlaced'},{format:'png',encodedWidth:3,encodedHeight:4,allocationClass:'unknown'},{format:'webp',encodedWidth:'4',allocationClass:'fullFrame'}])await assert.rejects(profileReceipt(profile),/RECEIPT/);
+console.log('PASS exact Core decodeProfile transfer; valid scanline/interlace/full-frame, absent legacy proof, malformed types/geometry/class mismatch rejected.');

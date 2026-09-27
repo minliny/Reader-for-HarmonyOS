@@ -1,4 +1,3 @@
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import type { MangaPlatformObservation, MangaPlatformObserver, MangaBodyDiagnosticState } from './MangaPlatformObservation';
 import hilog from '@ohos.hilog';
 import { image } from '@kit.ImageKit';
@@ -9,8 +8,12 @@ import type { JsonObject } from '@reader/core-harmony';
 import { HttpExecuteHost } from './HttpExecuteHost';
 import { readingImageHttpError } from './ReadingImageHttpError';
 
+export interface MangaImageDecodeProfile {
+  format: 'jpeg' | 'png' | 'webp'; encodedWidth?: number; encodedHeight?: number;
+  allocationClass: 'scanline' | 'pngInterlaced' | 'fullFrame';
+}
 export interface MangaImageMetadataProof {
-  status: 'present' | 'absent'; orientation: number | null; sha256: string; bytes: number; transferId?: string;
+  status: 'present' | 'absent'; orientation: number | null; sha256: string; bytes: number; transferId?: string; decodeProfile?: MangaImageDecodeProfile;
 }
 export type MangaImageMetadataInspector = (bytes: Uint8Array, sha256: string, current: () => boolean) => Promise<MangaImageMetadataProof>;
 
@@ -46,6 +49,10 @@ const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
 // or the synchronous platform decoder sees a source-controlled string.
 const MAX_READING_IMAGE_DATA_URI_CHARS = Math.ceil(MAX_READING_IMAGE_BYTES / 3) * 4 + 4096;
 const MAX_READING_IMAGE_PIXELS = 4 * 1024 * 1024;
+// Conservative codec-surface admission, independently tunable from the fixed
+// 1Mi-pixel manga output budget. This is not a total-process memory guarantee.
+const MAX_MANGA_DECODE_WORKING_BYTES = 4 * 1024 * 1024;
+const MAX_MANGA_OUTPUT_BYTES = 4 * 1024 * 1024;
 const MAX_READING_IMAGE_DIMENSION = 4096;
 const MAX_READING_DISPLAY_FILE_BYTES = 32 * 1024 * 1024;
 const DISPLAY_CACHE_DIRECTORY = 'reader-body-display-v1';
@@ -65,13 +72,13 @@ const LEGACY_DISPLAY_TEMP_PREFIX = '.reading-body-tmp-';
  */
 export class ReadingBodyImageHost {
   private diagnosticObserver: MangaPlatformObserver | undefined;
-  attachDiagnosticObserver(observer: MangaPlatformObserver): () => void {
-    if (DEBUG !== true || BUILD_MODE_NAME !== 'debug' || this.diagnosticObserver !== undefined) throw new Error('MANGA_DIAGNOSTIC_UNAVAILABLE');
+  attachDiagnosticObserver(observer: MangaPlatformObserver, debug: boolean = false, buildMode: string = ''): () => void {
+    if (debug !== true || buildMode !== 'debug' || this.diagnosticObserver !== undefined) throw new Error('MANGA_DIAGNOSTIC_UNAVAILABLE');
     this.diagnosticObserver = observer;
     return (): void => { if (this.diagnosticObserver === observer) this.diagnosticObserver = undefined; };
   }
-  diagnosticState(): MangaBodyDiagnosticState {
-    if (DEBUG !== true || BUILD_MODE_NAME !== 'debug') throw new Error('MANGA_DIAGNOSTIC_UNAVAILABLE');
+  diagnosticState(debug: boolean = false, buildMode: string = ''): MangaBodyDiagnosticState {
+    if (debug !== true || buildMode !== 'debug') throw new Error('MANGA_DIAGNOSTIC_UNAVAILABLE');
     let leases = 0;
     for (const value of this.displayFileReferences.values()) leases += value;
     return { files: this.displayFileReferences.size, leases, writes: this.displayFileWrites.size,
@@ -320,7 +327,7 @@ export class ReadingBodyImageHost {
    * malformed EXIF and cannot safely be treated as "no orientation".
    */
   private async assertMangaImageMetadata(source: image.ImageSource, mimeType: string, bytes: Uint8Array,
-    sha256: string, isCurrent?: () => boolean): Promise<number> {
+    sha256: string, isCurrent?: () => boolean): Promise<MangaImageMetadataProof> {
     if (mimeType !== 'image/jpeg' && mimeType !== 'image/png' && mimeType !== 'image/webp') throw new Error('MANGA_REGION_FORMAT_UNSUPPORTED');
     let frames: number;
     try {
@@ -348,7 +355,7 @@ export class ReadingBodyImageHost {
           (proof.orientation !== null && (!Number.isSafeInteger(proof.orientation) || proof.orientation < 1 || proof.orientation > 8))) throw new Error('MANGA_METADATA_PROOF_INVALID');
         this.mangaMetadataProofs?.put(key, proof);
       }
-      return proof.orientation ?? 1;
+      return proof;
     } catch (error) {
       this.assertCurrent(current);
       hilog.warn(0x5244, 'Reader', 'Manga metadata inspection failed: %{private}s', error instanceof Error ? error.message : String(error));
@@ -390,8 +397,9 @@ export class ReadingBodyImageHost {
     let pixelMap: image.PixelMap | undefined = undefined;
     try {
       const info = await imageSource.getImageInfo(0);
-      const orientation = mangaPosition === undefined ? 1 : await this.assertMangaImageMetadata(imageSource, info.mimeType, bytes, byteHash ?? await this.sha256(bytes), isCurrent);
-      if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'metadata', orientation });
+      const metadata = mangaPosition === undefined ? undefined : await this.assertMangaImageMetadata(imageSource, info.mimeType, bytes, byteHash ?? await this.sha256(bytes), isCurrent);
+      const orientation = metadata?.orientation ?? 1;
+      if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'metadata', orientation, format: metadata?.decodeProfile?.format, allocationClass: metadata?.decodeProfile?.allocationClass, encodedWidth: metadata?.decodeProfile?.encodedWidth, encodedHeight: metadata?.decodeProfile?.encodedHeight });
       const sourceWidth = info.size.width;
       const sourceHeight = info.size.height;
       if (!Number.isSafeInteger(sourceWidth) || sourceWidth <= 0 ||
@@ -403,8 +411,12 @@ export class ReadingBodyImageHost {
       const swapsAxes = orientation >= 5;
       const intrinsicWidth = swapsAxes ? sourceHeight : sourceWidth;
       const intrinsicHeight = swapsAxes ? sourceWidth : sourceHeight;
-      const target = mangaPreview ? this.boundedDecodeSize(intrinsicWidth, intrinsicHeight, 1024 * 1024, 2048) : this.boundedDecodeSize(intrinsicWidth, intrinsicHeight);
+      let target = mangaPreview ? this.boundedDecodeSize(intrinsicWidth, intrinsicHeight, 1024 * 1024, 2048) : this.boundedDecodeSize(intrinsicWidth, intrinsicHeight);
       const options: image.DecodingOptions = { editable: orientation !== 1 };
+      if (mangaPosition !== undefined) {
+        options.desiredPixelFormat = image.PixelMapFormat.RGBA_8888;
+        options.desiredDynamicRange = image.DecodingDynamicRange.SDR;
+      }
       let regionY: number | undefined = undefined;
       let regionHeight: number | undefined = undefined;
       if (mangaPosition !== undefined) {
@@ -415,6 +427,29 @@ export class ReadingBodyImageHost {
           // Request a bounded native thumbnail before allocating any pixels.
           // The codec owns scaling; source bytes and normalized geometry stay intact.
           options.desiredSize = swapsAxes ? { width: target.height, height: target.width } : target;
+          if (metadata?.decodeProfile?.allocationClass === 'scanline') {
+            const requested = options.desiredSize;
+            let accepted = false;
+            // Match the platform's discrete native sampling, keeping the
+            // largest fitting contain size without enlarging the output budget.
+            for (const bucket of [1, 2, 4, 8]) {
+              const candidate = { width: Math.min(requested.width, Math.max(1, Math.floor(sourceWidth / bucket))),
+                height: Math.min(requested.height, Math.max(1, Math.floor(sourceHeight / bucket))) };
+              const scale = Math.max(candidate.width / sourceWidth, candidate.height / sourceHeight);
+              const actualBucket = scale > 0.5 ? 1 : scale > 0.25 ? 2 : scale > 0.125 ? 4 : 8;
+              const workingBytes = Math.ceil(sourceWidth / actualBucket) * Math.ceil(sourceHeight / actualBucket) * 4;
+              if (Number.isSafeInteger(workingBytes) && workingBytes <= MAX_MANGA_DECODE_WORKING_BYTES) {
+                options.desiredSize = candidate;
+                target = swapsAxes ? { width: candidate.height, height: candidate.width } : candidate;
+                accepted = true; break;
+              }
+            }
+            if (!accepted) throw new Error('MANGA_REGION_MEMORY_BUDGET');
+          }
+          if (info.mimeType === 'image/jpeg' || info.mimeType === 'image/png') {
+            options.desiredRegion = { x: 0, y: 0, size: { width: sourceWidth, height: sourceHeight } };
+            options.cropAndScaleStrategy = image.CropAndScaleStrategy.CROP_FIRST;
+          }
         } else {
           const tileHeight = Math.min(intrinsicHeight, 2048, Math.max(1, Math.floor(1024 * 1024 / intrinsicWidth)));
           const targetY = Math.min(intrinsicHeight - 1, Math.floor(mangaPosition * intrinsicHeight + 0.000001));
@@ -427,9 +462,46 @@ export class ReadingBodyImageHost {
             const y = orientation === 3 || orientation === 4 ? sourceHeight - regionY - regionHeight : regionY;
             options.desiredRegion = { x: 0, y, size: { width: sourceWidth, height: regionHeight } };
           }
+          // The native codec only takes its crop-first path when both fields
+          // are supplied. The size is in encoded coordinates, before EXIF.
+          if (info.mimeType === 'image/jpeg' || info.mimeType === 'image/png') {
+            options.desiredSize = { width: options.desiredRegion.size.width, height: options.desiredRegion.size.height };
+            options.cropAndScaleStrategy = image.CropAndScaleStrategy.CROP_FIRST;
+          }
         }
       } else if (target.width !== intrinsicWidth || target.height !== intrinsicHeight) {
         options.desiredSize = target;
+      }
+      if (mangaPosition !== undefined) {
+        const profile = metadata?.decodeProfile;
+        const format = info.mimeType.slice('image/'.length);
+        if (profile !== undefined && (profile.format !== format ||
+          (profile.allocationClass !== 'scanline' && profile.allocationClass !== 'pngInterlaced' && profile.allocationClass !== 'fullFrame') ||
+          (profile.format === 'webp' && profile.allocationClass !== 'fullFrame') ||
+          (profile.allocationClass === 'pngInterlaced' && profile.format !== 'png') ||
+          ((profile.format === 'jpeg' || profile.format === 'png') &&
+            (profile.encodedWidth !== sourceWidth || profile.encodedHeight !== sourceHeight)))) throw new Error('MANGA_REGION_METADATA_UNAVAILABLE');
+        // This constrains known codec working surfaces, not total process/codec
+        // peak memory. Missing older metadata never grants scanline admission.
+        let intermediateBytes = sourceWidth * sourceHeight * (format === 'webp' ? 4 : 8);
+        // JPEG component arrays also round to maximum sampling-factor (4) MCU blocks.
+        if (format === 'jpeg') intermediateBytes = Math.ceil(sourceWidth / 32) * 32 * Math.ceil(sourceHeight / 32) * 32 * 8;
+        if (profile?.allocationClass === 'pngInterlaced') {
+          intermediateBytes = sourceWidth * (options.desiredRegion?.size.height ?? sourceHeight) * 4;
+        } else if (profile?.allocationClass === 'scanline') {
+          const region = options.desiredRegion!;
+          if (mangaPreview) {
+            // Native CROP_FIRST only offers 1/2/4/8 intermediate sampling;
+            // a much smaller requested thumbnail does not remove that surface.
+            const size = options.desiredSize!;
+            const scale = Math.max(size.width / sourceWidth, size.height / sourceHeight);
+            const sample = scale > 0.5 ? 1 : scale > 0.25 ? 2 : scale > 0.125 ? 4 : 8;
+            intermediateBytes = Math.ceil(sourceWidth / sample) * Math.ceil(sourceHeight / sample) * 4;
+          } else intermediateBytes = region.size.width * region.size.height * 4;
+          // Scanline storage still contains an original-width row.
+          intermediateBytes = Math.max(intermediateBytes, sourceWidth * 4);
+        }
+        if (!Number.isSafeInteger(intermediateBytes) || intermediateBytes <= 0 || intermediateBytes > MAX_MANGA_DECODE_WORKING_BYTES) throw new Error('MANGA_REGION_MEMORY_BUDGET');
       }
       this.assertCurrent(isCurrent);
       if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'region',
@@ -439,7 +511,8 @@ export class ReadingBodyImageHost {
       if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'body', event: 'open', resource: 'pixel' });
       this.assertCurrent(isCurrent);
       const rawInfo = await pixelMap.getImageInfo();
-      if (options.desiredRegion !== undefined && (rawInfo.size.width !== options.desiredRegion.size.width || rawInfo.size.height !== options.desiredRegion.size.height)) {
+      if (mangaPosition !== undefined) this.assertMangaPixelBudget(pixelMap, rawInfo);
+      if (!mangaPreview && options.desiredRegion !== undefined && (rawInfo.size.width !== options.desiredRegion.size.width || rawInfo.size.height !== options.desiredRegion.size.height)) {
         throw new Error('MANGA_REGION_DECODE_MISMATCH');
       }
       if (mangaPreview && options.desiredSize !== undefined && (rawInfo.size.width !== options.desiredSize.width || rawInfo.size.height !== options.desiredSize.height)) throw new Error('MANGA_REGION_DECODE_MISMATCH');
@@ -458,6 +531,7 @@ export class ReadingBodyImageHost {
       const width = decodedInfo.size.width;
       const height = decodedInfo.size.height;
       const decodedPixels = width * height;
+      if (mangaPosition !== undefined) this.assertMangaPixelBudget(pixelMap, decodedInfo);
       if (!Number.isSafeInteger(width) || width <= 0 || width > MAX_READING_IMAGE_DIMENSION ||
         !Number.isSafeInteger(height) || height <= 0 || height > MAX_READING_IMAGE_DIMENSION ||
         !Number.isSafeInteger(decodedPixels) || decodedPixels > MAX_READING_IMAGE_PIXELS) {
@@ -605,6 +679,18 @@ export class ReadingBodyImageHost {
       if (this.displayFileRemovals.get(path) === removal) this.displayFileRemovals.delete(path);
     });
     return removal;
+  }
+
+  private assertMangaPixelBudget(map: image.PixelMap, info: image.ImageInfo): void {
+    const rowBytes = map.getBytesNumberPerRow();
+    const bytes = map.getPixelBytesNumber();
+    const minimumRow = info.size.width * 4;
+    if (info.pixelFormat !== image.PixelMapFormat.RGBA_8888 ||
+      !Number.isSafeInteger(rowBytes) || rowBytes < minimumRow ||
+      !Number.isSafeInteger(bytes) || bytes < minimumRow * info.size.height ||
+      !Number.isSafeInteger(rowBytes * info.size.height) || rowBytes * info.size.height > MAX_MANGA_OUTPUT_BYTES || bytes > MAX_MANGA_OUTPUT_BYTES) {
+      throw new Error('MANGA_REGION_MEMORY_BUDGET');
+    }
   }
 
   private boundedDecodeSize(width: number, height: number, pixelBudget: number = MAX_READING_IMAGE_PIXELS, dimensionLimit: number = MAX_READING_IMAGE_DIMENSION): image.Size {

@@ -8,6 +8,7 @@ export interface MangaPlatformObservation {
   height?: number;
   regionY?: number;
   orientation?: number;
+  format?: string; allocationClass?: string; encodedWidth?: number; encodedHeight?: number;
   pixels?: Uint8Array;
 }
 export type MangaPlatformObserver = (event: MangaPlatformObservation) => void;

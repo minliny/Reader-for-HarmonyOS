@@ -1,5 +1,5 @@
 import type { JsonObject, ReaderCoreAssetBridge, ReaderCoreHostRequestEvent, ReaderCoreResultEvent } from '@reader/core-harmony';
-import type { MangaImageMetadataProof } from './ReadingBodyImageHost';
+import type { MangaImageMetadataProof, MangaImageDecodeProfile } from './ReadingBodyImageHost';
 interface MetadataTransfer {
   bytes: Uint8Array;
   sha256: string;
@@ -32,7 +32,27 @@ export class MangaImageMetadataHost {
         (status === 'present' && (typeof orientation !== 'number' || !Number.isSafeInteger(orientation) || orientation < 1 || orientation > 8))) {
         throw new Error('MANGA_INSPECT_RECEIPT');
       }
-      return { status: status as 'present' | 'absent', orientation: orientation as number | null, sha256, bytes: bytes.length, transferId };
+      const raw = data['decodeProfile'];
+      let decodeProfile: MangaImageDecodeProfile | undefined;
+      if (raw !== undefined) {
+        if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('MANGA_INSPECT_RECEIPT');
+        const profile = raw as JsonObject;
+        const format = profile['format'];
+        const allocationClass = profile['allocationClass'];
+        const width = profile['encodedWidth'];
+        const height = profile['encodedHeight'];
+        if ((format !== 'jpeg' && format !== 'png' && format !== 'webp') ||
+          (allocationClass !== 'scanline' && allocationClass !== 'pngInterlaced' && allocationClass !== 'fullFrame') ||
+          (format === 'webp' && allocationClass !== 'fullFrame') ||
+          (allocationClass === 'pngInterlaced' && format !== 'png') ||
+          (width !== undefined && (typeof width !== 'number' || !Number.isSafeInteger(width) || width <= 0)) ||
+          (height !== undefined && (typeof height !== 'number' || !Number.isSafeInteger(height) || height <= 0)) ||
+          ((format === 'jpeg' || format === 'png') &&
+            (typeof width !== 'number' || !Number.isSafeInteger(width) || width <= 0 || typeof height !== 'number' || !Number.isSafeInteger(height) || height <= 0))) throw new Error('MANGA_INSPECT_RECEIPT');
+        decodeProfile = { format: format as 'jpeg' | 'png' | 'webp', allocationClass: allocationClass as 'scanline' | 'pngInterlaced' | 'fullFrame',
+          encodedWidth: typeof width === 'number' ? width : undefined, encodedHeight: typeof height === 'number' ? height : undefined };
+      }
+      return { status: status as 'present' | 'absent', orientation: orientation as number | null, sha256, bytes: bytes.length, transferId, decodeProfile };
     } finally { this.transfers.delete(transferId); }
   }
   cancel(event: ReaderCoreHostRequestEvent): void {
