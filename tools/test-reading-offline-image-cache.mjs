@@ -24,7 +24,13 @@ assert.match(cache, /bookHash[\s\S]*return this\.sha256\(JSON\.stringify\(\[sour
   'book paths must use opaque hashes rather than source URLs or credentials');
 assert.match(cache, /new fileIo\.AtomicFile\(path\)/);
 assert.match(cache, /manifest cannot reference missing bytes/);
-assert.match(cache, /writeAtomicBytes\(`\$\{directory\}\/manifest\.json`, manifestBytes, isCurrent\)/);
+const Paths=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts',import.meta.url),['manifestPath','mangaCacheProfile'],{MANGA_SCRIPT_CACHE_PROFILE:'script-bgra-v2'});
+const paths=new Paths();
+assert.equal(paths.manifestPath('/chapter',paths.mangaCacheProfile('identity-v1')),'/chapter/manifest.json');
+assert.equal(paths.manifestPath('/chapter',paths.mangaCacheProfile('bytes-v1')),'/chapter/manifest-script-bgra-v2.json');
+assert.throws(()=>paths.mangaCacheProfile('unknown'),/MANGA_CACHE_PROFILE_REQUIRED/);
+assert.match(cache, /writeAtomicBytes\(this\.manifestPath\(directory, profile\), manifestBytes, isCurrent\)/,
+  'profile-specific completion must still publish via the same atomic writer');
 assert.match(
   cache,
   /performAtomicWrite[\s\S]*await fileIo\.open\([\s\S]*await fileIo\.write\([\s\S]*await fileIo\.fsync[\s\S]*await fileIo\.rename\(tmpPath, path\)[\s\S]*await fileIo\.unlink\(tmpPath\)/,

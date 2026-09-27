@@ -83,7 +83,7 @@ for(const fault of ['cancel','read','pack','animated','stride','output-format','
  owner.assertReadingImageCurrent=()=>{};
  owner.request=async(method,params)=>{requests++;assert.equal(method,'manga.resource.prepare');return request(params)};
  owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return stored},async storeResource(identity,bytes){stored=bytes},async removeResource(){stored=undefined}};
- const identity={sourceId:'s',bookId:'b',chapterIndex:0,contentVersion:'v',resourceRef:'page',baseUrl:'chapter',imageUrl:'image'};
+ const identity={sourceId:'s',bookId:'b',chapterIndex:0,contentVersion:'v',resourceRef:'page',mangaDecodeRevision:'bytes-v1',baseUrl:'chapter',imageUrl:'image'};
  await owner.prefetchReadingImage(identity,()=>true,'rules',true);
  assert.deepEqual(stored,jpeg);assert.notDeepEqual(stored,encoded);assert.equal(requests,1);
  await owner.prefetchReadingImage(identity,()=>true,'rules',false);

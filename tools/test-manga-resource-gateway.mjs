@@ -11,8 +11,10 @@ assert.deepEqual(fixture, JSON.parse(readFileSync(resolve(repo,
 const source = readFileSync(resolve(repo, 'entry/src/main/ets/features/manga/MangaResourceGateway.ts'), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 const Gateway = new Function(`${executable}\nreturn MangaResourceGateway;`)();
+const manifest = { chapter: {sourceId:fixture.sourceId,bookId:fixture.bookId,chapterId:'https://books.example.test/chapter/1'},
+  sourceRuleVersion:'source-version-1',manifestVersion:'manifest-1',decodeRevision:'identity-v1',pages:fixture.pages };
 const scope = { sourceId: fixture.sourceId, bookId: fixture.bookId, chapterIndex: 2,
-  sourceRuleVersion: 'source-version-1',
+  sourceRuleVersion: manifest.sourceRuleVersion, decodeRevision: manifest.decodeRevision,
   contentVersion: 'manifest-1', chapterUrl: 'https://books.example.test/chapter/1' };
 const image = { fileUri: 'file://owned-image', width: 900, height: 1200, revision: 'pixels-1' };
 const calls = [], released = [];
@@ -26,6 +28,10 @@ assert.equal(calls[0][4], fixture.pages[0].requestRule);
 assert.equal(calls[0][3], 'manifest-1');
 assert.equal(calls[0][5], scope.chapterUrl);
 assert.equal(calls[0][10], scope.sourceRuleVersion);
+assert.equal(calls[0][12], manifest.decodeRevision, 'the cache receives the manifest decode fact');
+for(const revision of [undefined,'','unknown-profile']) await assert.rejects(
+  gateway.loadPage({...scope,decodeRevision:revision},fixture.pages[0],true,valid),/MANGA_CACHE_PROFILE_REQUIRED/);
+assert.equal(calls.length,1,'missing or unknown decode fact cannot reach image I/O');
 await assert.rejects(gateway.loadPage({ ...scope, sourceRuleVersion: '' }, fixture.pages[1], true, valid), /IDENTITY_INVALID/);
 assert.equal(calls[0][7], valid);
 await gateway.loadPage(scope, fixture.pages[1], false, valid);
@@ -50,3 +56,7 @@ const failure = new Error('source HTTP 403');
 load = async () => { throw failure; };
 await assert.rejects(gateway.loadPage(scope, fixture.pages[1], true, valid), error => error === failure);
 console.log('PASS manga resource gateway: contract parity, request semantics, offline, duplicate pages, identity, cancellation, lease release, invalid image and error propagation');
+
+const profiledCalls=[];const profiled=new Gateway({loadReadingImage:async(...args)=>{profiledCalls.push(args);return image;},releaseReadingImage(){},prefetchReadingImage:async identity=>{profiledCalls.push(identity);}});
+for(const decodeRevision of ['identity-v1','bytes-v1']){const currentScope={...scope,decodeRevision};await profiled.loadPage(currentScope,fixture.pages[0],false,()=>true);assert.equal(profiledCalls.at(-1)[12],decodeRevision);await profiled.prefetchPage(currentScope,{...fixture.pages[0],resourceRef:'manga:mp1:'+ 'a'.repeat(64)},()=>true);assert.equal(profiledCalls.at(-1).mangaDecodeRevision,decodeRevision);}
+console.log('PASS manifest decode revision reaches foreground/cache-only and adjacent prefetch; missing and unknown revisions reject before I/O');

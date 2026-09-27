@@ -6,16 +6,16 @@ const pageId=`mp1:${'a'.repeat(64)}`;
 const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/chapter'},sourceRuleVersion:'v',manifestVersion:'m',decodeRevision:'identity-v1',pages:[{ordinal:0,pageId,resourceRef:`manga:${pageId}`}]};
 const session={contentKind:'manga',sourceVersion:'v',identity:{sourceId:'s',bookId:'b'},entries:[{index:4,url:'/chapter'}]};
 const book={sourceId:'s',bookId:'b',title:'Book',author:'Author'};
-function fixture(){const calls=[],released=[];let current=true,failImage=false,failAdd=false;
+function fixture(selectedManifest=manifest){const calls=[],released=[];let current=true,failImage=false,failAdd=false;
  const runtime={supportsCoreCapability:()=>true,async request(method,params,options){calls.push([method,params]);
-   if(method==='manga.chapter.get')return {data:{manifest,chapterIndex:4,chapterTitle:'Chapter',cached:false,resources:[{resourceRef:manifest.pages[0].resourceRef,request:{url:'https://image.test/p'}}]}};
+   if(method==='manga.chapter.get')return {data:{manifest:selectedManifest,chapterIndex:4,chapterTitle:'Chapter',cached:false,resources:[{resourceRef:selectedManifest.pages[0].resourceRef,request:{url:'https://image.test/p'}}]}};
    assert.equal(method,'bookshelf.add');assert.equal(options.shouldCancel(),false);if(failAdd)throw Error('ADD_FAILED');return {data:{created:true,sourceId:'s',bookId:'b'}};},
    async loadReadingImage(...args){calls.push(['image',args]);if(failImage)throw Error('IMAGE_FAILED');return {fileUri:'file://first',width:600,height:800,revision:'pixels'};},
    releaseReadingImage(uri){released.push(uri);}};
  return {calls,released,runtime,gateway:new MangaAdmissionGateway(runtime),current:()=>current,cancel:()=>{current=false;},failImage:()=>{failImage=true;},failAdd:()=>{failAdd=true;}};
 }
 {const f=fixture();await f.gateway.admit(session,book,7,f.current);assert.deepEqual(f.calls.map(c=>c[0]),['manga.chapter.get','image','bookshelf.add']);
-assert.equal(f.calls[0][1].preparationRevision,7);assert.equal(f.calls[1][1][10],'v');const add=f.calls[2][1];assert.equal(add.requireReadable,true);assert.equal(add.preparationRevision,7);assert.equal(add.mangaFirstImage.pageId,pageId);assert.equal(add.mangaFirstImage.manifestVersion,'m');assert.deepEqual(f.released,['file://first']);}
+assert.equal(f.calls[0][1].preparationRevision,7);assert.equal(f.calls[1][1][10],'v');assert.equal(f.calls[1][1][12],manifest.decodeRevision,'admission preserves the actual manifest decode fact');const add=f.calls[2][1];assert.equal(add.requireReadable,true);assert.equal(add.preparationRevision,7);assert.equal(add.mangaFirstImage.pageId,pageId);assert.equal(add.mangaFirstImage.manifestVersion,'m');assert.deepEqual(f.released,['file://first']);}
 {const f=fixture();f.failImage();await assert.rejects(f.gateway.admit(session,book,7,f.current),/IMAGE_FAILED/);assert.equal(f.calls.some(c=>c[0]==='bookshelf.add'),false);}
 {const f=fixture();f.failAdd();await assert.rejects(f.gateway.admit(session,book,7,f.current),/ADD_FAILED/);assert.deepEqual(f.released,['file://first']);}
 {const f=fixture();f.cancel();await assert.rejects(f.gateway.admit(session,book,7,f.current),/CANCELLED/);assert.equal(f.calls.length,0);}
@@ -62,3 +62,19 @@ console.log('PASS manga detail rejects legacy text download actions before queue
  assert.equal(empty.calls.length,0);
 }
 console.log('PASS manga admission skips non-readable groups even with URLs and refuses group-only catalogs before side effects');
+
+// The real coordinator wrapper is part of admission. A direct Admission mock
+// alone would miss an optional tail argument dropped by that wrapper.
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+for(const decodeRevision of ['identity-v1','bytes-v1']) {
+ const selectedManifest={...manifest,decodeRevision},f=fixture(selectedManifest);
+ const coordinator=new BookAcquisitionCoordinator((...args)=>f.runtime.request(...args),()=>true,f.runtime);
+ try {
+  await coordinator.mangaGateway({},'foreground',f.current).admit(session,book,7,f.current);
+  const images=f.calls.filter(c=>c[0]==='image');assert.equal(images.length,1);
+  assert.equal(images[0][1][12],selectedManifest.decodeRevision,
+   'actual coordinator -> Admission -> resource gateway -> Runtime owner preserves manifest decode profile');
+  assert.equal(f.calls.find(c=>c[0]==='bookshelf.add')[1].mangaFirstImage.decodeRevision,selectedManifest.decodeRevision);
+ } finally {coordinator.close();}
+}
+console.log('PASS actual BookAcquisitionCoordinator manga admission wrapper preserves both manifest decode revisions to owner argument 13 and admission receipt');
