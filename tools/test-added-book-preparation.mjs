@@ -307,6 +307,108 @@ for (const variant of ['core', 'sdkTimeout', 'networkEnvironment']) {
   f.gates.delete('cache.book.prefetch:b'); allowed = true; await f.runtime.resumeReadingPreparations(() => allowed);
   assert.ok(f.store.raw.has('b:4')); f.runtime.close();
 }
+// A confirmed cancellation may arrive after a transient foreground/visibility
+// pause has ended. The old pass stays retired until an explicit resume.
+for (const interruption of ['foreground', 'visibility']) {
+  const pending = deferred(), foreground = deferred(), requests = [];
+  const row = { schemaVersion: 1, sourceId: 's', bookId: 'b', revision: 1,
+    sourceVersion: 'v1', reason: 'read', state: 'active', updatedAt: 1 };
+  let allowed = true, available = false, backgroundOptions;
+  const runtime = new BookAcquisitionCoordinator(async (method, params, options) => {
+    requests.push({ method, params });
+    if (method === 'reading.preparation') {
+      if (params.action === 'block') row.state = 'blocked';
+      return { data: { intents: [{ ...row }] } };
+    }
+    if (method === 'reading.entry.prepare') return { data: { sourceId: 's', bookId: 'b', chapterIndex: 4,
+      kind: available ? 'ready' : 'missing', reason: available ? 'alreadyPrepared' : 'contentMissing' } };
+    assert.ok(method === 'cache.book.prefetch' || method === 'chapter.content');
+    if (params.preparationRevision !== undefined) { backgroundOptions = options; return pending.promise; }
+    return foreground.promise;
+  }, capability => capability === 'reading.preparation.v1');
+  const preparing = runtime.resumeReadingPreparations(() => allowed);
+  await until(() => backgroundOptions !== undefined);
+  assert.equal(backgroundOptions.shouldCancel(), false);
+  const manual = interruption === 'foreground' ? runtime.request('chapter.content', {
+    sourceId: 's', bookId: 'b', chapterIndex: 4,
+  }, { shouldCancel: () => false, timeoutMs: 300000 }) : undefined;
+  if (interruption === 'visibility') allowed = false;
+  assert.equal(backgroundOptions.shouldCancel(), true, `${interruption}: cancellation is observed`);
+  // The foreground/visibility condition recovers before the old SDK result.
+  if (manual !== undefined) { foreground.resolve({ data: {} }); await manual; }
+  else allowed = true;
+  pending.reject(Error('Reader-Core request cancelled by caller: 1'));
+  await preparing;
+  assert.equal(row.state, 'active', `${interruption}: late cancellation cannot block the durable intent`);
+  assert.equal(requests.filter(call => call.params.action === 'block').length, 0);
+  available = true;
+  await runtime.resumeReadingPreparations(() => allowed);
+  assert.equal(requests.filter(call => call.params.action === 'list').length, 2,
+    'a later explicit resume owns a fresh pass');
+  runtime.close();
+}
+console.log('PASS preparation cancellation remains retired after foreground/visibility recovers; explicit resume remains available');
+
+// Core owns the queue claim until the cancelled background RPC terminates.
+// A manual prefetch dispatched earlier would skip the still InProgress row.
+for (const uncertain of [false, true]) {
+  const release = deferred(), requests = [];
+  const row = { schemaVersion: 1, sourceId: 's', bookId: 'b', revision: 1,
+    sourceVersion: 'v1', reason: 'read', state: 'active', updatedAt: 1 };
+  let claimed = false, available = false, backgroundOptions;
+  const runtime = new BookAcquisitionCoordinator(async (method, params, options) => {
+    requests.push({ method, params });
+    if (method === 'reading.preparation') return { data: { intents: [{ ...row }] } };
+    if (method === 'reading.entry.prepare') return { data: { sourceId: 's', bookId: 'b', chapterIndex: 4,
+      kind: available ? 'ready' : 'missing', reason: available ? 'alreadyPrepared' : 'contentMissing' } };
+    assert.equal(method, 'cache.book.prefetch');
+    if (params.preparationRevision !== undefined) {
+      claimed = true; backgroundOptions = options;
+      await release.promise;
+      if (uncertain) throw Error('native cancellation transport unavailable');
+      claimed = false;
+      throw Error('Reader-Core request cancelled by caller: 1');
+    }
+    assert.equal(options.shouldCancel(), false);
+    assert.equal(options.timeoutMs, 300000);
+    return { data: { prefetchedCount: claimed ? 0 : 1, alreadyQueuedIndexes: claimed ? [4] : [] } };
+  }, capability => capability === 'reading.preparation.v1');
+  const preparing = runtime.resumeReadingPreparations(() => true);
+  await until(() => backgroundOptions !== undefined);
+  const manual = runtime.request('cache.book.prefetch', {
+    sourceId: 's', bookId: 'b', chapterRange: [4, 5], priority: 0, requestedAt: 1,
+  }, { shouldCancel: () => false, timeoutMs: 300000 });
+  const result = uncertain ? assert.rejects(manual, /尚未确认终止/) : manual;
+  await tick();
+  assert.equal(backgroundOptions.shouldCancel(), true);
+  assert.equal(requests.filter(call => call.method === 'cache.book.prefetch').length, 1,
+    'manual admission waits for the existing queue owner to retire');
+  release.resolve();
+  const completed = await result;
+  await preparing;
+    if (!uncertain) {
+    assert.equal(completed.data.prefetchedCount, 1, 'the same range is acquired in this manual run');
+    assert.deepEqual(completed.data.alreadyQueuedIndexes, []);
+    available = true;
+    await runtime.resumeReadingPreparations(() => true);
+    assert.equal(requests.filter(call => call.params.action === 'list').length, 2,
+      'explicit resume recovers after the download suspended the old run');
+  } else assert.equal(requests.filter(call => call.method === 'cache.book.prefetch').length, 1,
+    'an uncertain cancellation is not a queue release receipt');
+  runtime.close();
+}
+console.log('PASS explicit download waits for cancelled preparation claims; ordinary foreground reading stays immediate');
+
+{
+  const calls = [];
+  const runtime = new BookAcquisitionCoordinator(async (method, params) => {
+    calls.push(method); return { data: { chapterRange: params.chapterRange } };
+  });
+  await runtime.request('cache.book.prefetch', { sourceId: 's', bookId: 'b', chapterRange: [0, 1] });
+  assert.deepEqual(calls, ['cache.book.prefetch'], 'no background request means no additional Core work');
+  runtime.close();
+}
+
 // Core CAS protects late completion even when cancellation happens through a
 // separate caller and the Host's visibility callback stays true.
 {

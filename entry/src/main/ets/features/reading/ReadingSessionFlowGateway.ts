@@ -31,7 +31,7 @@ import { materializeReadingDocument } from './ReadingDocumentProjection';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { readingSessionProgressOwner, ReadingSessionProgressOwner, type ReadingSessionProgressAccess } from './ReadingSessionProgressOwner';
 import type { image } from '@kit.ImageKit';
-import { preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches } from './RemoteReadingEvidence';
+import { canAppendRemoteReadingCatalog, sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches } from './RemoteReadingEvidence';
 import { classifyRemoteReadingCommandFailure } from './RemoteReadingContract';
 
 /**
@@ -357,6 +357,31 @@ export class ReadingSessionFlowGateway {
     return (): void => { if (source.onSessionReady === observer) source.onSessionReady = undefined; };
   }
 
+  /** A live catalog append can extend navigation without replacing the page,
+   * its progress owner, or any admitted body. Existing request identities must
+   * remain exact; a reordered/retargeted catalog needs a fresh reader admission. */
+  admitRemoteCatalog(session: RemoteReadingSession): boolean {
+    if (this.source.kind !== 'remote' || this.hasPendingSourceSwitch() ||
+      session.identity.sourceId !== this.sourceId || session.identity.bookId !== this.bookId) return false;
+    const previous = this.source.session;
+    if (previous === undefined) return false;
+    if (sameRemoteSessionEvidence(previous, session)) {
+      // A cold reader can still own a shorter local navigation projection even
+      // though acquisition already installed this session before its observer.
+      // Its current/in-flight immutable page stays with the view; unrelated
+      // cached bodies gain no new request-context proof from this first session.
+      const valid = this.runtimeOwner.captureReadingContentValidity?.(this.sourceId, this.bookId);
+      if (valid !== undefined) readingSessionDocuments(this.runtimeOwner).configureOwnedCatalogWithoutBodies(
+        this.sourceId, this.bookId, session.entries.filter((entry): boolean => entry.url.trim().length > 0)
+          .map((entry): number => entry.index), valid);
+      return true;
+    } else if (!canAppendRemoteReadingCatalog(previous, session)) return false;
+    this.source.session = session;
+    this.configureDocuments(session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
+      title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' })));
+    return true;
+  }
+
   async ensureRemoteSession(isCurrent?: () => boolean,
     priority: BookRequestPriority = 'foreground'): Promise<RemoteReadingSession> {
     if (this.source.kind !== 'remote') throw new Error('local reader has no remote acquisition');
@@ -372,6 +397,9 @@ export class ReadingSessionFlowGateway {
     // background neighbour must not cancel a foreground caller joining later.
     const admission = await acquisition.acquireBookWithBackgroundRefresh(seed, { isCurrent }, priority);
     if (isCurrent?.() === false) throw new Error('reading acquisition cancelled');
+    // A newer published catalog may have arrived while this older acquisition
+    // was awaiting I/O. Never downgrade it with the late result.
+    if (source.session !== undefined) return source.session;
     const session = admission.session;
     if (session.identity.sourceId !== this.sourceId || session.identity.bookId !== this.bookId) throw new Error('READING_SESSION_IDENTITY_MISMATCH');
     if (source.session !== session) {

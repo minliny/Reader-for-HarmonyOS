@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const index = read('entry/src/main/ets/pages/Index.ets');
@@ -30,8 +31,20 @@ assert.match(read('entry/src/main/ets/app/ReaderCoreGateway.ts'), /\.addReadable
   'remote shelf success requires the selected-source durable readable admission');
 assert.match(index, /private applyReadingCommit\([\s\S]*this\.prefetchReadingWindow\(session, commit\.chapterIndex\)/,
   'each durable reading commit must maintain the rolling cache window');
-assert.match(index, /session\.entries\.length - commit\.chapterIndex - 1 <= CATALOG_REFRESH_NEAR_END/,
+assert.match(index, /if \(this\.isRemoteCatalogNearEnd\(session, commit\.chapterIndex\)\) \{\s*this\.refreshRemoteCatalogNearEnd\(session\);/,
   'reading near the current end must trigger a throttled TOC refresh');
+const CatalogBoundary = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
+  ['isRemoteCatalogNearEnd'], { CATALOG_REFRESH_NEAR_END: 3 });
+const catalogBoundary = new CatalogBoundary();
+const sparseCatalog = { entries: [10, 20, 30, 40, 50, 60, 70].map((chapterIndex, position) =>
+  ({ index: chapterIndex, url: position < 5 ? `https://source.invalid/${chapterIndex}` : '' })) };
+assert.equal(catalogBoundary.isRemoteCatalogNearEnd(sparseCatalog, 10), false,
+  'four remaining readable chapters are outside the refresh boundary regardless of ordinal gaps');
+for (const chapterIndex of [20, 30, 40, 50]) {
+  assert.equal(catalogBoundary.isRemoteCatalogNearEnd(sparseCatalog, chapterIndex), true,
+    'the last three readable successors ignore trailing volume headings');
+}
+for (const chapterIndex of [60, 99]) assert.equal(catalogBoundary.isRemoteCatalogNearEnd(sparseCatalog, chapterIndex), false);
 assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
   'bookshelf updates must use a bounded two-book batch');
 // PH116 explicitly keeps failures and recovery in the normal reading page.
