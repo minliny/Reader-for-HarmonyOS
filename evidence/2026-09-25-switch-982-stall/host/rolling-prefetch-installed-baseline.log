@@ -1,0 +1,16 @@
+{
+  "mode": "baseline",
+  "chapters": 1370,
+  "pageCommits": 4,
+  "prefetchCalls": 4,
+  "bodyReads": 5480,
+  "manifestChecks": 5480,
+  "peakBodyRequests": 32,
+  "peakPrefetchCommands": 4,
+  "fullTocPublications": 4,
+  "materializedBodyChars": 38360000,
+  "hostProbeElapsedMs": 242.63,
+  "indexSha256": "59116a5c3574698e13283aae4bfb0be48b0f3464a060cf76b1ff80a6c6b2f082"
+}
+(node:22741) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

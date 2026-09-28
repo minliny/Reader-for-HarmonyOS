@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "status": "physical-install-and-launch-pass",
+  "completedAt": "2026-09-24T08:56:19.510Z",
+  "targetKind": "physical",
+  "targetRef": "b1f20b88963d",
+  "source": {
+    "core": {
+      "commit": "733fbff024bede636924c511faca4abb42206ded",
+      "dirty": true
+    },
+    "harmony": {
+      "commit": "e976b35da4288e3bf77e51b5ca4e1bb362dd6c10",
+      "dirty": true
+    }
+  },
+  "artifact": {
+    "runId": "20260924T051150Z-e976b35d-501a09bf",
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260924T051150Z-e976b35d-501a09bf/manifest.json",
+    "buildClass": "iteration",
+    "acceptanceEligible": false,
+    "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260924T051150Z-e976b35d-501a09bf/entry-default-signed.hap",
+    "sha256": "1dd2971ca66673cdc59cf7b9d8cd9cbd25a1f2e1882d3e546b0e05a14872f046",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 16273848,
+      "sha256": "963c8d75fb3a772dca3a517a9c1bcea4ef94d1b07c2f145e56f22a7b13f78881"
+    }
+  },
+  "deployment": {
+    "receipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260924T051150Z-e976b35d-501a09bf/deploy-physical-b1f20b88963d-20260924T085619Z.json",
+    "sha256": "a4384769266da5c66da4b4068f74efaf124b8be428e19c37db00fca30fcb6417",
+    "install": "PASS",
+    "launch": "PASS",
+    "dataPolicy": "preserve",
+    "prePostIdentityMatch": true
+  },
+  "evidence": [
+    "readiness-reconnected.json",
+    "inspect-reconnected.json",
+    "install.log",
+    "connection-stop.json"
+  ],
+  "limits": [
+    "Signed iteration; acceptanceEligible=false",
+    "No feature interaction or full-book download was performed during deployment",
+    "Physical cold-start performance, full-book download behavior, and user acceptance remain OPEN"
+  ],
+  "historicalResult": "../result.json"
+}

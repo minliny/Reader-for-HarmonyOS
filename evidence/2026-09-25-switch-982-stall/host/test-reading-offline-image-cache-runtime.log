@@ -1,0 +1,16 @@
+(node:22231) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "status": "PASS",
+  "productionSourceSha256": "b39654546c7215e9a9936cb95286310045e19ebde7e9c439f9553f569e863ba1",
+  "checks": [
+    "old/new versions and late old manifest coexist; completeness requires exact identity",
+    "zero-length/missing resources cannot certify completion or harm another version",
+    "legacy migration requires exact identity/version; neither ordinal nor delimiter collision is trusted",
+    "failed manifest rename/crash temp cannot complete a chapter or replace the prior version",
+    "a request captured before clear cannot republish; a fresh request can",
+    "clear during fsync invalidates publication before rename and preserves unrelated books",
+    "failed clear survives restart, denies reads until cleanup completes, and permanently revokes v1 fallback",
+    "runtime close invalidates queued and newly requested cache operations"
+  ]
+}

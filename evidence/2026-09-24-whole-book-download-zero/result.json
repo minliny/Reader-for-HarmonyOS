@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "status": "source-local-tests-signed-iteration-complete",
+  "issue": "终宋 Popofree download-all repeatedly reports 0 chapters",
+  "userConfirmation": "Uncached chapters open normally",
+  "source": {
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "commit": "733fbff024bede636924c511faca4abb42206ded",
+      "dirty": true,
+      "status": [
+        "M crates/reader-runtime/src/remote.rs",
+        " M crates/reader-runtime/tests/cache_commands.rs",
+        " M crates/reader-storage/src/lib.rs",
+        " M crates/reader-storage/src/sqlite_backend/reading_preparation.rs",
+        "?? evidence/2026-09-24-zhongsong-download/"
+      ]
+    },
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "commit": "e976b35da4288e3bf77e51b5ca4e1bb362dd6c10",
+      "dirty": true,
+      "status": [
+        "M entry/libs/arm64-v8a/libreader_core_napi.so",
+        " M entry/src/main/ets/app/BookAcquisitionCoordinator.ts",
+        " M entry/src/main/ets/app/ReaderRuntimeOwner.ts",
+        " M entry/src/main/ets/app/ReadingImageDiskCache.ts",
+        " M entry/src/main/ets/app/ReadingPreparationRunner.ts",
+        " M entry/src/main/ets/features/reading/ReadingGatewayRuntime.ts",
+        " M entry/src/main/ets/features/reading/ReadingOfflineGateway.ts",
+        " M entry/src/main/ets/pages/Index.ets",
+        " M tools/test-added-book-preparation.mjs",
+        " M tools/test-reading-offline-gateway.mjs",
+        " M tools/test-reading-offline-image-cache-runtime.mjs",
+        " M tools/test-reading-phone-tablet-shared-architecture.mjs",
+        "?? evidence/2026-09-24-whole-book-download-zero/",
+        "?? tools/test-reading-offline-completion.mjs"
+      ]
+    },
+    "buildInputs": {
+      "fingerprint": "501a09bf579dcec8d2364056cbcbf0e63209e55a56284511274c4a394db6ccd3",
+      "fileCount": 1688,
+      "snapshot": "source-snapshot.json"
+    }
+  },
+  "repairs": [
+    "Exact current chapter contentVersion and disk manifest completion; remove ordinal-only interface",
+    "Processed/completed/cached/failed facts and safe failure reasons; suppress unchanged progress toasts",
+    "Background canonical text completion does not acquire an unconsumed Host resource lease",
+    "Cancelled claim release uses full queue generation and preparation fence; refund attempt without reusing generation",
+    "Durable startup recovers orphan queue rows with body existence checks and preserves preparation authorization",
+    "Manual offline acquisition waits for confirmed preparation cancellation; ordinary chapter entry unchanged"
+  ],
+  "verification": {
+    "core": {
+      "passed": 4151,
+      "skipped": 5,
+      "conformancePassed": 210,
+      "strictDrift": "pass",
+      "cAbiSmoke": "pass"
+    },
+    "harmony": {
+      "passed": 370,
+      "arkTs": "pass"
+    },
+    "native": {
+      "desktopRealModule": "pass",
+      "ohos": "pass",
+      "sdkPassed": 62,
+      "unstrippedSha256": "21cf667a642b027209867c7ce8a2f23b7ba019ddaf03cc97b3f46f86e80281c8"
+    },
+    "sourceReplay": "../../../Reader-Core-Native/evidence/2026-09-24-zhongsong-download/result.json",
+    "host": "host/final-receipt.json",
+    "initialWorkspaceRun": {
+      "exitCode": 1,
+      "reason": "obsolete private helper name assertion; replaced by existing real request-range tests",
+      "correctedArchitectureTest": "pass",
+      "finalHarmonyGate": "pass"
+    },
+    "hapVerify": {
+      "exitCode": 0,
+      "output": "{\"status\":\"PASS\",\"runId\":\"20260924T051150Z-e976b35d-501a09bf\",\"artifacts\":[{\"kind\":\"signed\",\"path\":\"entry-default-signed.hap\",\"sha256\":\"1dd2971ca66673cdc59cf7b9d8cd9cbd25a1f2e1882d3e546b0e05a14872f046\",\"signature\":{\"status\":\"signed\",\"verified\":true,\"profileType\":\"debug\",\"appIdSha256\":\"b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf\",\"appIdentifierSha256\":\"8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b\",\"certificateSha256\":\"9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5\"}},{\"kind\":\"unsigned\",\"path\":\"entry-default-unsigned.hap\",\"sha256\":\"8136bc5621650fb8e8ce45e35ec8ce2b727b086f9fe768b0896b359ab6734b3e\",\"signature\":{\"status\":\"unsigned\",\"verified\":false,\"profileType\":\"none\"}}]}"
+    }
+  },
+  "artifact": {
+    "runId": "20260924T051150Z-e976b35d-501a09bf",
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260924T051150Z-e976b35d-501a09bf/manifest.json",
+    "buildClass": "iteration",
+    "acceptanceEligible": false,
+    "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260924T051150Z-e976b35d-501a09bf/entry-default-signed.hap",
+    "sha256": "1dd2971ca66673cdc59cf7b9d8cd9cbd25a1f2e1882d3e546b0e05a14872f046",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 16273848,
+      "sha256": "963c8d75fb3a772dca3a517a9c1bcea4ef94d1b07c2f145e56f22a7b13f78881"
+    }
+  },
+  "limits": [
+    "Independent directory completion projection still verifies each completed local chapter once (O(N)); no claim of whole-shelf cold-start latency closure",
+    "No device accessed or installed; VM/physical/user acceptance OPEN",
+    "Current public first-two-chapter replay and prior 14-chapter fixtures do not prove target-device full-book transport"
+  ],
+  "evidence": [
+    {
+      "path": "workspace-gate.log",
+      "bytes": 629587,
+      "sha256": "1d75038d4f4f9a779a16f0e078ac6d49f0dc74dc1ab94b49feb98f2293d13edd"
+    },
+    {
+      "path": "shared-architecture-regression.log",
+      "bytes": 64,
+      "sha256": "15c093f5583f3fc6bd630053a785fc0438730e29afe8ea5ae9e498bf06734f65"
+    },
+    {
+      "path": "native-build.log",
+      "bytes": 4633,
+      "sha256": "bf5a79db4e44147029e5eecfca4cc441d1f51331cd2f38ea11d764c8b7078fa4"
+    },
+    {
+      "path": "native-consumer-sync.json",
+      "bytes": 1424,
+      "sha256": "212cd97c7ce62121d6e2fb0ffee2562368008677db6c723390317c8dbf5f2bba"
+    },
+    {
+      "path": "hap-build.log",
+      "bytes": 214299,
+      "sha256": "7e27709faafff3bef647cf30a043943b89f51a8c916e6dce0afcec93365111dc"
+    },
+    {
+      "path": "hap-verify.json",
+      "bytes": 736,
+      "sha256": "337c989d069eca45a642aed90b0179def6f035f0ca3e7cabd6b32854d119e402"
+    },
+    {
+      "path": "host/final-receipt.json",
+      "bytes": 3003,
+      "sha256": "98589c0c8c5cb53795a93956479f90c4d7560239c6160f73071b512e62cd9b4d"
+    }
+  ]
+}

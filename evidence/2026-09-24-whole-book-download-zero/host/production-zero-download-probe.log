@@ -1,0 +1,65 @@
+(node:65213) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+{
+  "pass": true,
+  "scenarios": [
+    {
+      "mode": "body",
+      "progress": [
+        {
+          "reportedCompleted": 20,
+          "total": 25,
+          "actuallyCompleted": 0
+        },
+        {
+          "reportedCompleted": 25,
+          "total": 25,
+          "actuallyCompleted": 0
+        }
+      ],
+      "messages": [
+        "开始下载 25 章，可在目录查看进度",
+        "已下载 0/25 章，未完成的章节可重试",
+        "开始下载 25 章，可在目录查看进度",
+        "已下载 0/25 章，未完成的章节可重试"
+      ],
+      "errors": []
+    },
+    {
+      "mode": "manifest",
+      "progress": [
+        {
+          "reportedCompleted": 3,
+          "total": 3,
+          "actuallyCompleted": 0
+        }
+      ],
+      "messages": [
+        "开始下载 3 章，可在目录查看进度",
+        "已下载 0/3 章，未完成的章节可重试"
+      ],
+      "errors": []
+    },
+    {
+      "mode": "success",
+      "progress": [
+        {
+          "reportedCompleted": 3,
+          "total": 3,
+          "actuallyCompleted": 3
+        }
+      ],
+      "messages": [
+        "开始下载 3 章，可在目录查看进度",
+        "全部 3 章下载完成"
+      ],
+      "errors": []
+    }
+  ]
+}

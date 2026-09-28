@@ -1,0 +1,11 @@
+(node:64753) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+entry window: narrow first chapter, global count, stale entry and deferred last-intent selection PASS
+partial catalog: body-only entry, true/unknown edges and deferred manual/auto resume with stale owner rejection PASS
+chapter controls: pending catalog resumes newest step only; stale ownership, errors and real boundaries do not select PASS
+PASS narrow prepared entry handoff and latest in-memory progress precedence
+PASS presented paged entry schedules no automatic full chapter read
+explicit complete-text consumer: post-frame expansion, in-flight save ownership, native page retention, queued turn resume, stale lifecycle/layout rejection and no false EOF/title PASS
+entry range interaction: paged turns prepare/use adjacent facts without full hydration; TTS explicitly awaits complete text and respects cancelled play intent PASS
+PASS expansion atomic admission and cancellation during cooperative indexing
+PASS continuous window initial-restore fence and no false chapter-boundary navigation

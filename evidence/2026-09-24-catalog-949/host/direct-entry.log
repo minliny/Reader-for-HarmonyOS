@@ -1,0 +1,3 @@
+(node:64748) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH116 actual entry/recovery/source-switch methods: immediate local/remote routes, exact target session reuse, scoped callbacks/retries, retained failed transaction, semantic reader identity PASS

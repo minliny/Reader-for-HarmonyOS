@@ -1,0 +1,36 @@
+(node:75508) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "productionClasses": [
+    "ReadingImageDiskCache",
+    "ReaderRuntimeOwner exact forwarding methods",
+    "ReadingOfflineGateway",
+    "Index download methods"
+  ],
+  "platformBoundary": "real temporary filesystem, Harmony API adapters from existing disk cache runtime test; synthetic Core successful text response; no device or network",
+  "coreState": "completed",
+  "exactIdentity": {
+    "sourceId": "https://m.popofree.com#🎃",
+    "bookId": "/novel/100749/",
+    "chapterIndex": 0,
+    "contentVersion": "reader-content-v1:utf16=25:fnv=108beead:mix=8498d099"
+  },
+  "exactManifestComplete": true,
+  "ordinalMaterialized": false,
+  "gatewayProjection": [
+    {
+      "index": 0,
+      "title": "正文",
+      "downloadState": "cached",
+      "navigable": true
+    }
+  ],
+  "progress": [
+    1
+  ],
+  "messages": [
+    "开始下载 1 章，可在目录查看进度",
+    "已下载 0/1 章，未完成的章节可重试"
+  ],
+  "errors": []
+}

@@ -1,0 +1,19 @@
+(node:22229) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS near-end force refresh bypasses prepared/durable catalogs, singleflights and appends chapter 950 in same mounted reader
+PASS actual coordinator re-admits v6 durable catalog under current v8 before safe refresh
+PASS failed refresh preserves old catalog/page, uses short retry backoff and never marks freshness
+PASS late refresh cannot overwrite a same-book reentry or newer catalog evidence
+PASS cold cached entry acquires only after full catalog near end, and later cached pages trigger the same path
+PASS cold first acquisition joins real coordinator refresh1370; same gateway evidence still extends old mounted navigation
+PASS first-session navigation only evicts its own process bodies and preserves an admitted dragging page
+PASS cold near-end acquisition failures retain the visible page, singleflight and retry only after backoff
+PASS a cancelled old flight cannot clear a replacement flight or publish its result
+PASS parent and mounted gateway both reject incompatible refreshed catalog identities
+PASS old catalog hydration cannot shrink a just-admitted append
+PASS append and full hydration preserve in-flight page measurement generation; production completion still releases its lane
+PASS source/book/rule/reordered/retargeted or variable-mutated catalogs cannot reuse the mounted bodies
+PASS catalog compatibility uses effective merged variables, protects shared context/title and accepts shadowed/reordered variables
+PASS an older concurrent acquisition cannot downgrade an adopted session
+PASS full catalog pagination crosses 949/950/1000 to 1370 and respects revision changes
+{"checks":16,"status":"PASS"}

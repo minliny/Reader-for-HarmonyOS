@@ -51,7 +51,7 @@ console.log('entry window: narrow first chapter, global count, stale entry and d
 
 const Edges = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
  ['isUnknownCatalogEdge','knownPageTurnBoundary','turnNextPage','performContinuousPageTurn','hydrateEntryCatalog'],
- {hilog:{warn(){}},errorMessageOf:e=>e.message});
+ {LOCAL_READING_SOURCE_ID:'local',hilog:{warn(){}},errorMessageOf:e=>e.message});
 function edgeFixture(){
  let requests=0;
  const chapter={chapterIndex:40,content:'body',images:[]}, page={startScalar:0,endScalar:4,fragments:[]};
@@ -81,10 +81,10 @@ for(const stale of [false,true]){
   chapterWindow:{retainedChapterIndexes:()=>[],configure(){events.push('configure');},setCurrent(){}},
   admitTocEntries(entries){this.tocEntries=entries;},readingTocEntries(){return this.tocEntries;},
   releaseUnretainedReadingImages(){},onDirectoryProjectionChanged(){events.push('directory');},
-  schedulePageTurnPreparation(){events.push('prepare');},drainRapidPageTurn(){events.push('rapid');},resumePendingAutoPageTurn(){events.push('auto');}});
+  queuePageTurnPreparation(direction){events.push(`prepare-${direction}`);},drainRapidPageTurn(){events.push('rapid');},resumePendingAutoPageTurn(){events.push('auto');}});
  const work=f.owner.hydrateEntryCatalog();pending.resolve({entries:[{index:40},{index:50}]});await work;
  assert.equal(f.owner.entryCatalogPending,stale);assert.equal(f.owner.entryCatalogHydration,undefined);
- assert.deepEqual(events,stale?[]:['configure','directory','prepare','rapid','auto']);
+ assert.deepEqual(events,stale?[]:['configure','directory','prepare-next','prepare-previous','rapid','auto']);
 }
 console.log('partial catalog: body-only entry, true/unknown edges and deferred manual/auto resume with stale owner rejection PASS');
 

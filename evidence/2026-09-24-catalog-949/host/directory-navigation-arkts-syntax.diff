@@ -1,0 +1,49 @@
+--- entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets (before)
++++ entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets (after)
+@@ -10,6 +10,11 @@
+   key: string;
+   node?: ReaderDirectoryNavigationNode;
+   index: number;
++}
++
++interface ReaderDirectoryNavigationPendingPage {
++  offset: number;
++  page: ReaderDirectoryNavigationPage;
+ }
+ 
+ class ReaderDirectoryNavigationDataSource implements IDataSource {
+@@ -57,10 +62,10 @@
+   failed(offset: number): void { this.pending.delete(offset); }
+   changedChapters(chapters: Set<number>): void {
+     if (chapters.size === 0) return;
+-    for (const [position, node] of this.nodes) {
+-      if (node.chapterIndex === undefined || !chapters.has(node.chapterIndex)) continue;
++    this.nodes.forEach((node: ReaderDirectoryNavigationNode, position: number): void => {
++      if (node.chapterIndex === undefined || !chapters.has(node.chapterIndex)) return;
+       for (const listener of this.listeners) listener.onDataChanged(position);
+-    }
++    });
+   }
+ }
+ 
+@@ -98,7 +103,7 @@
+   private chapterSource: LocalReadingTocEntry[] | undefined = undefined;
+   private initialPositionPending: boolean = true;
+   private selectionGeneration: number = 0;
+-  private pendingPages: Array<{ offset: number; page: ReaderDirectoryNavigationPage }> = [];
++  private pendingPages: ReaderDirectoryNavigationPendingPage[] = [];
+ 
+   aboutToAppear(): void {
+     this.mounted = true;
+@@ -203,7 +208,10 @@
+         .then((page: ReaderDirectoryNavigationPage): void => {
+           if (!this.mounted || generation !== this.generation || viewId !== this.view.viewId) return;
+           if (this.interactionEnabled) this.dataSource.admit(offset, page);
+-          else this.pendingPages.push({ offset, page });
++          else {
++            const pending: ReaderDirectoryNavigationPendingPage = { offset, page };
++            this.pendingPages.push(pending);
++          }
+         }).catch((_error: Error): void => {
+           this.dataSource.failed(offset);
+           if (this.mounted && generation === this.generation && viewId === this.view.viewId) this.onInvalidated();
