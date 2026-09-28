@@ -36,6 +36,7 @@ import {
   type ReaderBookmarkRowModel,
 } from './ReaderBookmarkProjection';
 import { ReaderDirectoryList } from './ReaderDirectoryList';
+import { ReaderDirectoryNavigationSurface } from './ReaderDirectoryNavigationSurface';
 import { ReaderBookmarkList } from './ReaderBookmarkList';
 import { ReaderBookmarkEmptyState } from './ReaderBookmarkEmptyState';
 import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
@@ -121,6 +122,8 @@ export struct FullDirectoryPanel {
   @State private searchQuery: string = '';
   @State private ascending: boolean = true;
   @State private projectedEntries: LocalReadingTocEntry[] = [];
+  @State private navigationInteracted: boolean = false;
+  @State private navigationActive: boolean = false;
   @State private projectedBookmarks: ReaderBookmarkRowModel[] = [];
   @State private bookmarkTabLoading: boolean = false;
   // Optional stable book identity supplied by the owner. Undefined keeps the
@@ -188,6 +191,8 @@ export struct FullDirectoryPanel {
   // R-LOCAL-TOC-01: allow the owning flow to react to a chapter tap so the
   // full-directory can be wired back into the actual reading flow.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   // The marker is chapter-level while Core identities are bookmark-level.
   // Forward every existing identity represented by the marker so the owner
@@ -203,6 +208,8 @@ export struct FullDirectoryPanel {
   onExit: () => void = (): void => {};
 
   aboutToAppear(): void {
+    this.navigationInteracted = false;
+    this.navigationActive = false;
     // Invalidate callbacks left by a previous retained instance before
     // admitting the new session's source snapshot.
     this.deferredLifecycleGeneration += 1;
@@ -422,7 +429,7 @@ export struct FullDirectoryPanel {
       } else {
         Stack({ alignContent: Alignment.Center }) {
           this.chapterList();
-          if (this.projectedEntries.length === 0) {
+          if (this.projectedEntries.length === 0 && !this.navigationActive) {
             Text(this.catalogEmptyMessage())
               .fontSize(13)
               .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
@@ -626,7 +633,49 @@ export struct FullDirectoryPanel {
     // Quick viewport moves every row below the Stage's Quick clip.
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        ReaderDirectoryList({
+        if (this.bookmarkIdentity?.sourceId === 'local') {
+          ReaderDirectoryNavigationSurface({
+            bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
+            currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey,
+            interacted: this.navigationInteracted, rowHeight: this.directoryListRowHeight(),
+            interactionEnabled: !this.motionActive,
+            listPaddingX: this.directoryListPaddingX(), listPaddingY: this.embeddedInControl ? 0 : 5,
+            edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
+            chapterEntries: this.admittedEntries,
+            chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+            fallbackBuilder: (): void => { this.flatChapterList(); },
+            onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void => {
+              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope);
+            },
+            onFirstLayout: (): void => this.onListFirstLayout(),
+            onUserScrollIntent: (): void => this.onListUserScroll(),
+            onTreeStateChange: (active: boolean): void => {
+              this.navigationActive = active;
+              if (active) this.initialListPositionReady = true;
+            },
+            onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+            onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+              this.onCreateChapterStartBookmark(request),
+          });
+        } else {
+          this.flatChapterList();
+        }
+      }
+      .width(this.directoryListWidth())
+      .height(this.directoryListViewportHeight())
+    }
+    .width('100%')
+    .height(this.chapterListHeight())
+    .clip(true)
+    .opacity(this.projectedEntries.length > 0 || this.navigationActive ? 1 : 0)
+    .enabled(this.initialListPositionReady)
+    .accessibilityLevel(this.initialListPositionReady ? 'auto' : 'no-hide-descendants')
+    .hitTestBehavior(this.initialListPositionReady ? HitTestMode.Default : HitTestMode.None);
+  }
+
+  @Builder
+  private flatChapterList() {
+    ReaderDirectoryList({
         entries: this.projectedEntries,
         deferEntriesDuringMotion: this.embeddedInControl && this.controlProgress() > 0 && this.controlProgress() < 1,
         rowHeight: this.directoryListRowHeight(),
@@ -642,22 +691,7 @@ export struct FullDirectoryPanel {
         rowBuilder: (repeatItem: RepeatItem<LocalReadingTocEntry>) => {
           this.chapterRow(repeatItem);
         },
-        });
-      }
-      .width(this.directoryListWidth())
-      .height(this.directoryListViewportHeight())
-    }
-    .width('100%')
-    .height(this.chapterListHeight())
-    .clip(true)
-    // Chapter rows are persistent Figma actors: they have no opacity track in
-    // either direction.  Keep them painted while the asynchronous centering
-    // command is pending; hiding the whole List here made the Quick directory
-    // look empty and produced the f5->f6 reveal seam during expansion.
-    .opacity(this.projectedEntries.length > 0 ? 1 : 0)
-    .enabled(this.initialListPositionReady)
-    .accessibilityLevel(this.initialListPositionReady ? 'auto' : 'no-hide-descendants')
-    .hitTestBehavior(this.initialListPositionReady ? HitTestMode.Default : HitTestMode.None);
+    });
   }
 
   @Builder
@@ -713,6 +747,7 @@ export struct FullDirectoryPanel {
     this.rebuildProjection(nextTab, this.ascending, this.searchQuery);
     this.beginListPositioning(nextTab);
     this.onTabChange(nextTab);
+    if (nextTab === 'bookmarks') this.navigationActive = false;
   }
 
   private selectBookmark(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
@@ -1077,6 +1112,7 @@ export struct FullDirectoryPanel {
   private onListUserScroll(): void {
     this.listPositioning = markReaderControlListUserScrolled(
       this.listPositioning, this.listPositioning.listOpenRevision);
+    this.navigationInteracted = true;
     this.leadingRowAnchor = undefined;
     this.projectionRestoreOffset = undefined;
     this.awaitingReadingAnchor = false;
@@ -1086,7 +1122,7 @@ export struct FullDirectoryPanel {
   }
 
   private scheduleOpenPositioning(): void {
-    if (!this.positioningMounted || this.listPositioning.status !== 'pending') return;
+    if (!this.positioningMounted || this.navigationActive || this.listPositioning.status !== 'pending') return;
     const openRevision = this.listPositioning.listOpenRevision;
     const generation = this.projectionScrollGeneration;
     setTimeout((): void => {
@@ -1235,7 +1271,7 @@ export struct FullDirectoryPanel {
     const revision = this.motionLayoutRevision;
     const openRevision = this.listPositioning.listOpenRevision;
     setTimeout((): void => {
-      if (!this.positioningMounted || revision !== this.motionLayoutRevision ||
+      if (!this.positioningMounted || this.navigationActive || revision !== this.motionLayoutRevision ||
         openRevision !== this.listPositioning.listOpenRevision) return;
       try {
         // Preserve the same leading row as its layout height changes. This is

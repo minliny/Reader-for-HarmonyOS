@@ -13,6 +13,7 @@ import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
 import { ReaderBookmarkErrorState } from './ReaderBookmarkErrorState';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
 import { ReaderDirectoryChapterRow } from './ReaderDirectoryChapterRow';
+import { ReaderDirectoryNavigationSurface } from './ReaderDirectoryNavigationSurface';
 import { TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
   TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT, TOK_SPACE_SM } from '../common/ReaderTokens';
 
@@ -79,6 +80,8 @@ export struct ReaderControlDirectoryContent {
   @Prop bookmarkLoadMessage: string = '';
   onTabChange: (tab: string) => void = (_tab: string): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
   onSelectBookmark: ((id: string, index: number, offset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined = undefined;
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
@@ -89,6 +92,8 @@ export struct ReaderControlDirectoryContent {
   @State private ascending: boolean = true;
   @State private snapshot: ReaderControlDirectorySnapshot =
     readerControlDirectorySnapshot([], 'directory', '', true, -1);
+  @State private navigationInteracted: boolean = false;
+  @State private navigationActive: boolean = false;
   private query: string = '';
   private pendingCatalogAction: string = '';
   private scroller: Scroller = new Scroller();
@@ -118,6 +123,8 @@ export struct ReaderControlDirectoryContent {
     this.leadingRow = undefined;
     this.leadingKey = undefined;
     this.previousRowHeight = this.rowHeight();
+    this.navigationInteracted = false;
+    this.navigationActive = false;
     this.refreshData();
   }
 
@@ -133,7 +140,7 @@ export struct ReaderControlDirectoryContent {
     }
     this.dataSource.replace(next.rows);
     this.snapshot = next;
-    this.queuePosition();
+    if (!this.navigationActive) this.queuePosition();
     if (this.leadingRow !== undefined) this.queueLeadingCorrection();
     if (this.catalogComplete && this.pendingCatalogAction.length > 0) {
       const lifecycle = this.lifecycle, key = this.sessionKey;
@@ -150,7 +157,7 @@ export struct ReaderControlDirectoryContent {
   }
 
   private queuePosition(): void {
-    if (!this.mounted) return;
+    if (!this.mounted || this.navigationActive) return;
     const lifecycle = this.lifecycle;
     const ticket = this.placement.ticket();
     if (this.positionQueued && this.positionTicket === ticket) return;
@@ -159,6 +166,7 @@ export struct ReaderControlDirectoryContent {
     this.getUIContext().postFrameCallback(new ControlDirectoryFrame((): void => {
       if (!this.mounted || lifecycle !== this.lifecycle || this.positionTicket !== ticket) return;
       this.positionQueued = false;
+      if (this.navigationActive) return;
       const offset = this.placement.offset(this.snapshot, this.listHeight(), this.rowHeight(), ticket);
       if (offset === undefined) return;
       try {
@@ -251,7 +259,13 @@ export struct ReaderControlDirectoryContent {
     }
   }
 
-  private userScroll(): void { this.placement.userScroll(); this.leadingRow = undefined; this.leadingKey = undefined; }
+  private cancelPendingPlacement(): void {
+    this.placement.userScroll(); this.leadingRow = undefined; this.leadingKey = undefined;
+  }
+  private userScroll(): void {
+    this.cancelPendingPlacement();
+    this.navigationInteracted = true;
+  }
   private value(quick: number, full: number): number { return quick + (full - quick) * this.progress; }
   private rowHeight(): number { return this.tab === 'bookmarks' ? this.value(54, 74) : this.value(32, 40); }
   private listTop(): number { return this.tab === 'bookmarks' ? this.value(47, 99) : this.value(48, 99); }
@@ -263,12 +277,12 @@ export struct ReaderControlDirectoryContent {
 
   private search(): void {
     if (this.deferCatalogAction('search')) return;
-    this.query = this.draft.trim(); this.userScroll(); this.refreshData();
+    this.query = this.draft.trim(); this.cancelPendingPlacement(); this.refreshData();
     this.scroller.scrollEdge(Edge.Top);
   }
   private sort(): void {
     if (this.deferCatalogAction('sort')) return;
-    this.ascending = !this.ascending; this.userScroll(); this.refreshData();
+    this.ascending = !this.ascending; this.cancelPendingPlacement(); this.refreshData();
     this.scroller.scrollEdge(Edge.Top);
   }
 
@@ -339,6 +353,31 @@ export struct ReaderControlDirectoryContent {
   }
 
   @Builder
+  private flatList() {
+    List({ scroller: this.scroller }) {
+      LazyForEach(this.dataSource, (row: ReaderControlDirectoryRow) => {
+        ListItem() {
+          if (row.chapter !== undefined) {
+            this.chapterRow(row.chapter);
+          } else if (row.bookmark !== undefined) {
+            ReaderBookmarkRow({ row: row.bookmark, embeddedInControl: true,
+              motionProgress: this.progress, availableWidth: this.rowWidth(),
+              onSelectBookmark: (id: string, chapter: number, offset: number, positionScope?: RemoteReadingPositionScope): void => {
+                if (this.onSelectBookmark !== undefined) this.onSelectBookmark(id, chapter, offset, positionScope);
+              } });
+          }
+        }.width('100%').height(this.rowHeight());
+      }, (row: ReaderControlDirectoryRow): string => row.key);
+    }.width('100%').height('100%').padding({ left: this.rowPadding(), right: this.rowPadding() })
+      .scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring).cachedCount(4)
+      .enableScrollInteraction(this.interactionEnabled)
+      .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): ScrollResult =>
+        ({ offsetRemain: this.interactionEnabled || source === ScrollSource.SCROLLER ? offset : 0 }))
+      .onWillStartDragging((): void => this.userScroll())
+      .onAreaChange((): void => this.queuePosition());
+  }
+
+  @Builder
   private listBody() {
     if (this.tab === 'bookmarks' && this.bookmarkLoadFailed) {
       ReaderBookmarkErrorState({ message: this.bookmarkLoadMessage,
@@ -347,30 +386,39 @@ export struct ReaderControlDirectoryContent {
       ReaderBookmarkLoadingState();
     } else if (this.snapshot.rows.length === 0 && this.tab === 'bookmarks') {
       ReaderBookmarkEmptyState({ onReturnToDirectory: (): void => this.onTabChange('directory') });
-    } else if (this.snapshot.rows.length === 0) {
+    } else if (this.snapshot.rows.length === 0 && !this.navigationActive &&
+      !(this.tab === 'directory' && this.bookmarkIdentity?.sourceId === 'local')) {
       Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(12);
     } else {
-      List({ scroller: this.scroller }) {
-        LazyForEach(this.dataSource, (row: ReaderControlDirectoryRow) => {
-          ListItem() {
-            if (row.chapter !== undefined) {
-              this.chapterRow(row.chapter);
-            } else if (row.bookmark !== undefined) {
-              ReaderBookmarkRow({ row: row.bookmark, embeddedInControl: true,
-                motionProgress: this.progress, availableWidth: this.rowWidth(),
-                onSelectBookmark: (id: string, chapter: number, offset: number, positionScope?: RemoteReadingPositionScope): void => {
-                  if (this.onSelectBookmark !== undefined) this.onSelectBookmark(id, chapter, offset, positionScope);
-                } });
+      if (this.tab === 'directory' && this.bookmarkIdentity?.sourceId === 'local') {
+        ReaderDirectoryNavigationSurface({
+          bookId: this.bookmarkIdentity.bookId, query: this.query, ascending: this.ascending,
+          currentChapterIndex: this.currentChapterIndex, openRevision: this.sessionKey,
+          interacted: this.navigationInteracted, rowHeight: this.rowHeight(),
+          listPaddingX: this.rowPadding(), listPaddingY: 0,
+          edgeEffectMode: EdgeEffect.Spring, interactionEnabled: this.interactionEnabled,
+          chapterEntries: this.entries,
+          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          scroller: this.scroller, fallbackBuilder: (): void => {
+            if (this.snapshot.rows.length === 0) {
+              Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(12);
+            } else {
+              this.flatList();
             }
-          }.width('100%').height(this.rowHeight());
-        }, (row: ReaderControlDirectoryRow): string => row.key);
-      }.width('100%').height('100%').padding({ left: this.rowPadding(), right: this.rowPadding() })
-        .scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring).cachedCount(4)
-        .enableScrollInteraction(this.interactionEnabled)
-        .onWillScroll((offset: number, _state: ScrollState, source: ScrollSource): ScrollResult =>
-          ({ offsetRemain: this.interactionEnabled || source === ScrollSource.SCROLLER ? offset : 0 }))
-        .onWillStartDragging((): void => this.userScroll())
-        .onAreaChange((): void => this.queuePosition());
+          },
+          onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void => {
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope);
+          },
+          onUserScrollIntent: (): void => this.userScroll(),
+          onFirstLayout: (): void => this.queuePosition(),
+          onTreeStateChange: (active: boolean): void => { this.navigationActive = active; },
+          onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+            this.onCreateChapterStartBookmark(request),
+        });
+      } else {
+        this.flatList();
+      }
     }
   }
 

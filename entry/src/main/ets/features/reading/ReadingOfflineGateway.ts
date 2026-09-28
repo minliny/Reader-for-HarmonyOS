@@ -11,6 +11,7 @@ import type {
   ReadingGatewayRuntime,
 } from './ReadingGatewayRuntime';
 import type { ReadingSessionChapter, ReadingSessionImage } from './ReadingChapterWindow';
+import { materializeReadingDocument } from './ReadingDocumentProjection';
 import {
   normalizeReadingOfflineMaterializationError,
   ReadingOfflineMaterializationError,
@@ -23,6 +24,7 @@ type CacheChapterProjection = {
   chapterIndex: number;
   state: LocalReadingDownloadState;
   cachedBytes: number;
+  lastError?: string;
 };
 
 type CacheChapterMaterializationLease = {
@@ -31,9 +33,18 @@ type CacheChapterMaterializationLease = {
 };
 
 export type ReadingOfflineBookProgress = {
+  processedChapters: number;
   completedChapters: number;
+  cachedChapters: number;
+  failedChapters: number;
+  firstFailure?: { chapterIndex: number; reason: string };
   totalChapters: number;
   entries: LocalReadingTocEntry[];
+};
+
+type OfflineChapterProof = {
+  identity: ReadingGatewayImageChapterIdentity;
+  isCurrent: () => boolean;
 };
 
 const READER_OFFLINE_BOOK_CHUNK_SIZE = 20;
@@ -62,7 +73,19 @@ export class ReadingOfflineGateway {
     session: RemoteReadingSession,
     isCurrent?: OfflineRequestGuard,
   ): Promise<LocalReadingTocEntry[]> {
-    const statuses = await this.loadCoreStatuses(session, isCurrent);
+    return (await this.loadProjectionResult(session, isCurrent)).entries;
+  }
+
+  private async loadProjectionResult(
+    session: RemoteReadingSession,
+    isCurrent?: OfflineRequestGuard,
+    proofs?: Map<string, OfflineChapterProof>,
+  ): Promise<ReadingOfflineBookProgress> {
+    // A mutation after an early worker finishes must invalidate the whole
+    // returned projection, including its already checked chapters.
+    const current = this.contentGuard(session, isCurrent);
+    this.assertCurrent(current);
+    const statuses = await this.loadCoreStatuses(session, current);
     const stateByChapter = new Map<number, LocalReadingDownloadState>();
     for (const status of statuses) {
       // A failed/cancelled image materialization must not hide the already
@@ -73,15 +96,17 @@ export class ReadingOfflineGateway {
     }
     const entries: LocalReadingTocEntry[] = [];
     const manifestChecks: number[] = [];
+    const readableIndexes = new Set<number>();
     for (let position = 0; position < session.entries.length; position += 1) {
       const tocEntry = session.entries[position];
       if (tocEntry.url.trim().length === 0) {
         entries.push({ index: tocEntry.index, title: tocEntry.title, downloadState: 'unknown', navigable: false });
         continue;
       }
+      readableIndexes.add(tocEntry.index);
       let state: LocalReadingDownloadState = stateByChapter.get(tocEntry.index) ?? 'missing';
       if (state === 'completed' &&
-        this.runtime.isOfflineImageChapterMaterialized !== undefined) {
+        this.runtime.isOfflineImageChapterComplete !== undefined) {
         manifestChecks.push(position);
       } else if (state === 'completed') {
         // Core completion proves the body transaction only. Without the Host
@@ -92,17 +117,101 @@ export class ReadingOfflineGateway {
     }
     await this.forEachConcurrent(manifestChecks, READER_OFFLINE_MANIFEST_CONCURRENCY,
       async (position: number): Promise<void> => {
-        this.assertCurrent(isCurrent);
+        this.assertCurrent(current);
         const entry = entries[position];
-        const materialized = await this.runtime.isOfflineImageChapterMaterialized!(
-          session.identity.sourceId,
-          session.identity.bookId,
-          entry.index,
-        );
-        this.assertCurrent(isCurrent);
+        const key = this.proofKey(session, entry.index);
+        const saved = proofs?.get(key);
+        const identity = saved !== undefined && saved.isCurrent() ? saved.identity :
+          await this.currentChapterIdentity(session, position, current);
+        this.assertCurrent(current);
+        if (identity === undefined) {
+          entry.downloadState = 'cached';
+          return;
+        }
+        const materialized = await this.runtime.isOfflineImageChapterComplete!(identity);
+        this.assertCurrent(current);
+        if (saved !== undefined && identity === saved.identity) this.assertCurrent(saved.isCurrent);
+        // The map belongs only to this explicit download. Every use still
+        // checks the exact manifest and resource files; no completion is cached.
+        proofs?.set(key, { identity, isCurrent: current });
         entry.downloadState = materialized ? 'completed' : 'cached';
       });
-    return entries;
+    this.assertCurrent(current);
+    const failures = statuses.filter(status => status.state === 'failed' && readableIndexes.has(status.chapterIndex));
+    const first = failures[0];
+    return {
+      processedChapters: 0,
+      completedChapters: entries.filter(entry => entry.downloadState === 'completed').length,
+      cachedChapters: entries.filter(entry => entry.downloadState === 'cached').length,
+      failedChapters: failures.length,
+      firstFailure: first === undefined ? undefined : {
+        chapterIndex: first.chapterIndex, reason: this.failureReason(first.lastError),
+      },
+      totalChapters: entries.filter(entry => entry.navigable !== false).length,
+      entries,
+    };
+  }
+
+  private async currentChapterIdentity(
+    session: RemoteReadingSession,
+    position: number,
+    current: OfflineRequestGuard,
+  ): Promise<ReadingGatewayImageChapterIdentity | undefined> {
+    // An older Core must never turn an unrecognized cacheOnly projection into
+    // transport. Keep its body-only state until the exact read is supported.
+    if (this.runtime.supportsCoreCapability?.('chapter.content.cacheOnly.v1') !== true) return undefined;
+    const chapter = session.entries[position];
+    this.assertCurrent(current);
+    // Never use online loadChapter here: this is a read-only projection, even
+    // when a body disappears after cache.book.status. Core enforces cacheOnly.
+    const result = await this.runtime.request('chapter.content', {
+      sourceId: session.identity.sourceId, bookId: session.identity.bookId,
+      chapterIndex: chapter.index, chapterTitle: chapter.title, chapterUrl: chapter.url,
+      cacheOnly: true,
+    }, this.requestOptions(current));
+    this.assertCurrent(current);
+    if (result.data['sourceId'] !== session.identity.sourceId || result.data['bookId'] !== session.identity.bookId) {
+      throw new Error('offline chapter projection returned a mismatched book identity');
+    }
+    const http = result.data['http'];
+    let baseUrl = chapter.url;
+    if (http !== undefined && http !== null) {
+      const finalUrl = this.requireObject(http, 'chapter.content http')['finalUrl'];
+      if (finalUrl !== undefined && finalUrl !== null) {
+        if (typeof finalUrl !== 'string') throw new Error('chapter.content returned invalid finalUrl');
+        baseUrl = finalUrl;
+      }
+    }
+    // Use exactly the same canonical content/image identity as loadChapter and
+    // markOfflineImageChapterComplete, including redirect base URL and geometry.
+    const document = await materializeReadingDocument(result.data, session.identity.sourceId,
+      baseUrl, this.runtime, current);
+    this.assertCurrent(current);
+    return { sourceId: session.identity.sourceId, bookId: session.identity.bookId,
+      chapterIndex: chapter.index, contentVersion: document.contentVersion };
+  }
+
+  private contentGuard(session: RemoteReadingSession, isCurrent?: OfflineRequestGuard): OfflineRequestGuard {
+    const contentCurrent = this.runtime.captureReadingContentValidity?.(session.identity.sourceId, session.identity.bookId);
+    return (): boolean => isCurrent?.() !== false && contentCurrent?.() !== false;
+  }
+
+  private proofKey(session: RemoteReadingSession, chapterIndex: number): string {
+    return JSON.stringify([session.identity.sourceId, session.identity.bookId, chapterIndex]);
+  }
+
+  private failureReason(error: string | undefined): string {
+    if (error === 'storage_full') return '存储空间不足';
+    const status = /\bHTTP(?:\s+status)?\s+([1-5][0-9]{2})\b/i.exec(error ?? '');
+    if (status !== null) return `书源返回 HTTP ${status[1]}`;
+    switch (diagnosticCodeOf(error ?? '')) {
+      case 'CANCELLED': return '下载已取消';
+      case 'TIMEOUT': return '请求超时';
+      case 'NO_SPACE': return '存储空间不足';
+      case 'NETWORK': return '网络请求失败';
+      case 'INVALID_DATA': return '正文或图片解析失败';
+      default: return '正文或图片处理失败';
+    }
   }
 
   async prefetchChapter(
@@ -129,17 +238,21 @@ export class ReadingOfflineGateway {
       return this.loadProjection(session, isCurrent);
     }
     let projection: LocalReadingTocEntry[] = [];
-    let completedChapters = 0;
+    let processedChapters = 0;
+    // Without a content lifetime fence, exact identities are never reused
+    // across asynchronous batches. Production ReaderRuntimeOwner provides it.
+    const proofs = this.runtime.captureReadingContentValidity === undefined ? undefined : new Map<string, OfflineChapterProof>();
     for (let startInclusive = 0; startInclusive < session.entries.length;
       startInclusive += READER_OFFLINE_BOOK_CHUNK_SIZE) {
       const endExclusive = Math.min(session.entries.length, startInclusive + READER_OFFLINE_BOOK_CHUNK_SIZE);
-      projection = await this.prefetchRange(session, startInclusive, endExclusive, isCurrent);
+      const result = await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs);
+      projection = result.entries;
       this.assertCurrent(isCurrent);
-      completedChapters += session.entries.slice(startInclusive, endExclusive).filter(entry => entry.url.trim().length > 0).length;
+      processedChapters += session.entries.slice(startInclusive, endExclusive).filter(entry => entry.url.trim().length > 0).length;
       onProgress?.({
-        completedChapters,
+        ...result,
+        processedChapters,
         totalChapters,
-        entries: projection,
       });
     }
     return projection;
@@ -151,10 +264,21 @@ export class ReadingOfflineGateway {
     endExclusive: number,
     isCurrent?: OfflineRequestGuard,
   ): Promise<LocalReadingTocEntry[]> {
+    const proofs = this.runtime.captureReadingContentValidity === undefined ? undefined : new Map<string, OfflineChapterProof>();
+    return (await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs)).entries;
+  }
+
+  private async prefetchRangeResult(
+    session: RemoteReadingSession,
+    startInclusive: number,
+    endExclusive: number,
+    isCurrent?: OfflineRequestGuard,
+    proofs?: Map<string, OfflineChapterProof>,
+  ): Promise<ReadingOfflineBookProgress> {
     this.assertRange(session, startInclusive, endExclusive);
     this.assertCurrent(isCurrent);
     if (!session.entries.some(entry => entry.index >= startInclusive && entry.index < endExclusive && entry.url.trim().length > 0)) {
-      return this.loadProjection(session, isCurrent);
+      return this.loadProjectionResult(session, isCurrent, proofs);
     }
     const result = await this.runtime.request('cache.book.prefetch', {
       sourceId: session.identity.sourceId,
@@ -173,31 +297,36 @@ export class ReadingOfflineGateway {
 
     await this.forEachConcurrent(materializations, READER_OFFLINE_CHAPTER_CONCURRENCY,
       async (materialization: CacheChapterMaterializationLease): Promise<void> => {
-        await this.materializeChapter(session, materialization, isCurrent);
+        await this.materializeChapter(session, materialization, isCurrent, proofs);
       });
-    return this.loadProjection(session, isCurrent);
+    return this.loadProjectionResult(session, isCurrent, proofs);
   }
 
   private async materializeChapter(
     session: RemoteReadingSession,
     materialization: CacheChapterMaterializationLease,
     isCurrent?: OfflineRequestGuard,
+    proofs?: Map<string, OfflineChapterProof>,
   ): Promise<void> {
+    const current = this.contentGuard(session, isCurrent);
+    let identity: ReadingGatewayImageChapterIdentity | undefined = undefined;
     try {
-      const chapter = await this.remote.loadChapter(session, materialization.chapterIndex, isCurrent);
-      this.assertCurrent(isCurrent);
+      this.assertCurrent(current);
+      const chapter = await this.remote.loadChapter(session, materialization.chapterIndex, current);
+      this.assertCurrent(current);
+      identity = this.chapterIdentity(chapter);
       const resources = this.imageResources(chapter);
       if (resources.length > 0) {
         this.requireImagePersistenceCapabilities();
       }
       await this.forEachConcurrent(resources, READER_OFFLINE_IMAGE_CONCURRENCY,
         async (resource: ReadingGatewayImageCacheIdentity): Promise<void> => {
-          await this.runtime.prefetchReadingImage!(resource, isCurrent);
-          this.assertCurrent(isCurrent);
+          await this.runtime.prefetchReadingImage!(resource, current);
+          this.assertCurrent(current);
         });
       if (this.runtime.markOfflineImageChapterComplete !== undefined) {
-        await this.runtime.markOfflineImageChapterComplete(this.chapterIdentity(chapter), resources);
-        this.assertCurrent(isCurrent);
+        await this.runtime.markOfflineImageChapterComplete(identity, resources);
+        this.assertCurrent(current);
       }
     } catch (error) {
       const failure = normalizeReadingOfflineMaterializationError(error as Error);
@@ -216,6 +345,8 @@ export class ReadingOfflineGateway {
       return;
     }
     await this.reportMaterialization(session, materialization, 'completed');
+    this.assertCurrent(current);
+    if (identity !== undefined) proofs?.set(this.proofKey(session, materialization.chapterIndex), { identity, isCurrent: current });
   }
 
   private async forEachConcurrent<T>(
@@ -298,6 +429,7 @@ export class ReadingOfflineGateway {
         chapterIndex,
         state: this.requireDownloadState(raw['state']),
         cachedBytes: this.requireNonNegativeInteger(raw['cachedBytes'] ?? 0, 'cachedBytes'),
+        lastError: typeof raw['lastError'] === 'string' ? raw['lastError'] : undefined,
       });
     }
     return statuses;
@@ -427,7 +559,7 @@ export class ReadingOfflineGateway {
   private requireImagePersistenceCapabilities(): void {
     if (this.runtime.prefetchReadingImage === undefined ||
       this.runtime.markOfflineImageChapterComplete === undefined ||
-      this.runtime.isOfflineImageChapterMaterialized === undefined) {
+      this.runtime.isOfflineImageChapterComplete === undefined) {
       throw new Error('offline reading image persistence capability is unavailable');
     }
   }

@@ -43,8 +43,9 @@ assert.doesNotMatch(sessionGateway, /isTablet|TabletExpanded|deviceForm/,
   'Core command routing must not fork by device form');
 assert.doesNotMatch(offline, /isTablet|TabletExpanded|deviceForm/,
   'download/offline orchestration must not fork by device form');
-assert.match(offline, /prefetchBook\([\s\S]*?this\.prefetchRange\(/,
-  'whole-book download must reuse the existing bounded range path');
+// The real Core request ranges are asserted by test-reading-offline-gateway
+// and test-reading-offline-completion; a private helper's spelling is not a
+// Phone/Tablet architecture boundary.
 assert.doesNotMatch(offline, /class .*Queue|new .*Queue|AppStorage/,
   'Harmony must not create a second durable download queue');
 assert.doesNotMatch(sourceSwitch, /isTablet|TabletExpanded|deviceForm/,

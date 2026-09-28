@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
-import { readerControlDirectorySnapshot } from '../entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts';
+import { readerControlDirectorySnapshot, ReaderControlDirectoryPosition } from '../entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const source=new URL('../entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets',import.meta.url);
-const Owner=productionMotionMethods(source,['refreshData','search','sort','deferCatalogAction','scrollCatalogEdge'],{
+const Owner=productionMotionMethods(source,['refreshData','search','sort','deferCatalogAction','scrollCatalogEdge','cancelPendingPlacement'],{
  readerControlDirectorySnapshot,ControlDirectoryFrame:class{constructor(action){this.action=action;}},Edge:{Top:'top',Bottom:'bottom'},
 });
 const entries=Array.from({length:1368},(_,index)=>({index,title:`第${index+1}章`,downloadState:'cached'}));
 function owner(){const callbacks=[],scrolls=[];let requests=0;const o=Object.assign(new Owner(),{
  entries:entries.slice(697,704),catalogComplete:false,catalogChapterCount:1368,catalogCurrentPosition:700,
  currentChapterIndex:700,tab:'directory',query:'',draft:'',ascending:true,sessionKey:'book:1',lifecycle:1,mounted:true,
- pendingCatalogAction:'',dataSource:{replace(rows){o.rows=rows;}},scroller:{scrollEdge(edge){scrolls.push(edge);}},
+ pendingCatalogAction:'',placement:new ReaderControlDirectoryPosition(),dataSource:{replace(rows){o.rows=rows;}},scroller:{scrollEdge(edge){scrolls.push(edge);}},
  getUIContext:()=>({postFrameCallback(frame){callbacks.push(frame.action);}}),queuePosition(){},queueLeadingCorrection(){},userScroll(){},
  onRequireCompleteCatalog(){requests++;},
  });return {o,scrolls,callbacks,requests:()=>requests,flush(){while(callbacks.length)callbacks.shift()();}};}

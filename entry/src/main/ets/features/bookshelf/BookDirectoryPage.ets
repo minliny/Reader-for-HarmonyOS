@@ -12,6 +12,8 @@ import { projectReaderDirectoryEntries } from '../reading/ReaderDirectoryProject
 import { ReaderDirectoryToolbar } from '../reading/ReaderDirectoryToolbar';
 import { ReaderDirectoryChapterRow } from '../reading/ReaderDirectoryChapterRow';
 import { ReaderDirectoryList } from '../reading/ReaderDirectoryList';
+import { ReaderDirectoryNavigationSurface } from '../reading/ReaderDirectoryNavigationSurface';
+import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 
 /** Detail-owned catalog. Reuses the control's toolbar/rows, never its sheet or reading session. */
 @Component
@@ -25,6 +27,8 @@ export struct BookDirectoryPage {
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   onBack: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
@@ -34,6 +38,8 @@ export struct BookDirectoryPage {
   @State private ascending: boolean = true;
   @State private projectedEntries: LocalReadingTocEntry[] = [];
   @State private viewportWidth: number = 0;
+  @State private navigationInteracted: boolean = false;
+  @State private navigationActive: boolean = false;
   private admittedEntries: LocalReadingTocEntry[] = [];
   @State private admittedIdentity: string = '';
   private mounted: boolean = false;
@@ -79,19 +85,35 @@ export struct BookDirectoryPage {
           // Only a different book replaces the List. Filtering, sorting and
           // projection refreshes keep its native owner and use original indexes.
           ForEach([this.admittedIdentity], (identity: string) => {
-            ReaderDirectoryList({
-              entries: this.projectedEntries,
-              rowHeight: 40,
-              listPaddingX: 10,
-              listPaddingY: 5,
-              edgeEffectMode: EdgeEffect.Spring,
-              scroller: this.listScroller,
-              onFirstLayout: (): void => this.onListFirstLayout(identity),
-              onUserScrollIntent: (): void => this.onListUserScroll(),
-              rowBuilder: (item: RepeatItem<LocalReadingTocEntry>) => { this.chapterRow(item, identity); },
-            }).width('100%').height('100%');
+            if (this.sourceId === 'local') {
+              ReaderDirectoryNavigationSurface({
+                bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
+                currentChapterIndex: -1, openRevision: identity,
+                interacted: this.navigationInteracted,
+                rowHeight: 40, listPaddingX: 10, listPaddingY: 5,
+                edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
+                chapterEntries: this.admittedEntries,
+                chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+                fallbackBuilder: (): void => { this.flatList(identity); },
+                onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void => {
+                  if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
+                    this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope);
+                },
+                onFirstLayout: (): void => this.onListFirstLayout(identity),
+                onUserScrollIntent: (): void => this.onListUserScroll(),
+                onTreeStateChange: (active: boolean): void => {
+                  this.navigationActive = active;
+                  this.listReady = false;
+                },
+                onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+                onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+                  this.onCreateChapterStartBookmark(request),
+              }).width('100%').height('100%');
+            } else {
+              this.flatList(identity);
+            }
           }, (identity: string): string => identity);
-          if (this.projectedEntries.length === 0) {
+          if (this.projectedEntries.length === 0 && !this.navigationActive) {
             Text(this.emptyMessage())
               .width('100%').height('100%').padding(20)
               .fontFamily('ReaderNotoSansSC').fontSize(14)
@@ -113,6 +135,21 @@ export struct BookDirectoryPage {
         this.viewportWidth = width;
       }
     });
+  }
+
+  @Builder
+  private flatList(identity: string) {
+    ReaderDirectoryList({
+      entries: this.projectedEntries,
+      rowHeight: 40,
+      listPaddingX: 10,
+      listPaddingY: 5,
+      edgeEffectMode: EdgeEffect.Spring,
+      scroller: this.listScroller,
+      onFirstLayout: (): void => this.onListFirstLayout(identity),
+      onUserScrollIntent: (): void => this.onListUserScroll(),
+      rowBuilder: (item: RepeatItem<LocalReadingTocEntry>) => { this.chapterRow(item, identity); },
+    }).width('100%').height('100%');
   }
 
   @Builder
@@ -171,6 +208,8 @@ export struct BookDirectoryPage {
       this.searchQuery = '';
       this.ascending = true;
       this.listReady = false;
+      this.navigationInteracted = false;
+      this.navigationActive = false;
     }
     this.admittedIdentity = this.identity();
     this.admittedEntries = snapshotReaderDirectoryData(this.entries);
@@ -222,11 +261,13 @@ export struct BookDirectoryPage {
   private onListUserScroll(): void {
     this.scrollGeneration += 1;
     this.pendingScrollEdge = undefined;
+    this.navigationInteracted = true;
   }
 
   private flushPendingScroll(): void {
     const edge = this.pendingScrollEdge;
-    if (!this.mounted || !this.listReady || this.projectedEntries.length === 0 || edge === undefined) return;
+    if (!this.mounted || !this.listReady ||
+      (this.projectedEntries.length === 0 && !this.navigationActive) || edge === undefined) return;
     this.pendingScrollEdge = undefined;
     this.listScroller.scrollEdge(edge);
   }

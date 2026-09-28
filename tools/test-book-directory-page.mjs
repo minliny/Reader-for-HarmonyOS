@@ -91,6 +91,18 @@ function flush() { while (pending.length) pending.shift()(); }
   page.toggleSort(); page.onListUserScroll(); flush(); assert.equal(edges.length, 3, 'user scroll cancels pending sort positioning');
   page.aboutToDisappear();
 }
+{
+  const { page } = fixture();
+  page.sourceId = 'local';
+  page.aboutToAppear(); flush();
+  page.searchDraft = 'group only'; page.applySearch();
+  page.toggleSort();
+  assert.equal(page.navigationInteracted, false,
+    'search and sort before initial Core tree answer keep the current generation eligible for tree adoption');
+  page.onListUserScroll();
+  assert.equal(page.navigationInteracted, true, 'real user scrolling still prevents a late tree insertion');
+  page.aboutToDisappear();
+}
 
 // Exercise the SDK-emitted Builder callbacks, not an independently rewritten UI.
 const require = createRequire(import.meta.url);
@@ -98,14 +110,17 @@ const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.a
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 for (const [name, props] of Object.entries({ PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
   ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'edgeEffectMode'],
+  ReaderDirectoryNavigationSurface: ['bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
+    'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'edgeEffectMode', 'scroller'],
   ReaderDirectoryChapterRow: ['entry', 'rowHeight', 'currentChapterIndex', 'chapterDownloadEnabled', 'chapterStartBookmarkCreationEnabled'] })) {
   syntax.componentCollection.customComponents.add(name); syntax.propCollection.set(name, new Set(props));
 }
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 {
   const result = fixture(); result.page.aboutToAppear(); flush(); result.page.onListFirstLayout(result.page.identity());
-  const { owner, output } = createReaderBuilderProbe(source, ['build', 'chapterRow'], {
-    ...deps, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child, ReaderDirectoryChapterRow: Child });
+  const { owner, output } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
+    ...deps, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
+    ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
   for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
   owner.initialRender();
