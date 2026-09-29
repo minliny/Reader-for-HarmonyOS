@@ -279,7 +279,7 @@ const checkGateway = new SourceGateway({
         results: [{
           sourceId: single.bookSourceUrl,
           available: true,
-          levelsPassed: ['L1', 'L2', 'L3', 'L4', 'L5'],
+          levelsPassed: params.levels,
           durationMs: 88,
           debugLogs: [{
             state: 1,
@@ -314,6 +314,9 @@ const checkGateway = new SourceGateway({
 });
 const checked = await checkGateway.checkSource(single.bookSourceUrl, () => true, '读者');
 assert.equal(checkParams.keyword, '读者');
+assert.equal(checkParams.mode, 'search');
+assert.deepEqual(checkParams.levels, ['L1', 'L2']);
+assert.equal(checked.capabilities.find(row => row.level === 'L5').state, 'notRequested');
 assert.equal(checked.available, true);
 assert.equal(checked.traceId, 'source.check.run:91:1');
 assert.equal(checked.hostEvidenceCount, 1);
@@ -322,6 +325,17 @@ assert.match(checked.logs[0].message, /\[Core\] L2 搜索解析完成/);
 assert.equal(checked.logs[0].extractedCount, 1);
 assert.match(checked.logs[2].message, /\[Host\] L2 GET https:\/\/source-a\.example\/search → HTTP 200/);
 assert.ok(checked.logs.every((log) => log.traceId === checked.traceId));
+await checkGateway.checkSource(single.bookSourceUrl, () => true, '读者', 'explore', ['L1', 'L2', 'L3']);
+assert.equal(checkParams.mode, 'explore');
+assert.deepEqual(checkParams.levels, ['L1', 'L2', 'L3']);
+await assert.rejects(() => checkGateway.checkSource(single.bookSourceUrl, () => true, '', 'search', ['unknown']), /known selected levels/);
+const incompleteGateway = new SourceGateway({
+  request: async () => ({ requestId: 1, data: { traceId: 'test', results: [{
+    sourceId: single.bookSourceUrl, available: true, levelsPassed: ['L1'], durationMs: 1,
+  }] } }),
+  takeSourceHttpDiagnostics: () => [],
+});
+await assert.rejects(() => incompleteGateway.checkSource(single.bookSourceUrl), /incomplete selected capabilities/);
 
 const mismatchGateway = new SourceGateway({
   request: async () => ({

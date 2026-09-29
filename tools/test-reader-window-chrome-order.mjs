@@ -9,7 +9,7 @@ import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
 const require=createRequire(import.meta.url);
-const ts=require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
+const ts=require(((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader/node_modules/typescript'));
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function settle(){for(let i=0;i<8;i++)await tick();}

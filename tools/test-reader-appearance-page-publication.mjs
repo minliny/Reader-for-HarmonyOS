@@ -1,6 +1,8 @@
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -256,10 +258,15 @@ const bad = stageProbe(oldBinding);
 assert.throws(() => assert.deepEqual(bad.fonts(), [20, 19]), /deep-equal/);
 assert.deepEqual(bad.fonts(), [21, 21], 'negative control reproduces new-font/old-lines mismatch');
 const oldPublication = lreSource.replace('if (measuredLayoutSignature !== this.paginationLayoutSignature()) {', 'if (false) {');
-const mutantFile = '/private/tmp/reader-appearance-obsolete-page-publication.ets'; writeFileSync(mutantFile, oldPublication);
+const scratch = mkdtempSync(join(tmpdir(), 'reader-appearance-'));
+try {
+const mutantFile = join(scratch, 'obsolete-page-publication.ets'); writeFileSync(mutantFile, oldPublication);
 const stale = fixture({ file: mutantFile }); stale.start(21); const pending = stale.finish(21); await settle(); stale.start(22); stale.ack(); await pending;
 assert.notEqual(stale.owner.visiblePage, stale.old, 'negative control exposes obsolete page publication');
 assert.equal(stale.owner.visiblePage.measuredAppearance.fontSize, 21);
+} finally {
+  rmSync(scratch, { recursive: true, force: true });
+}
 cases.push('negative:old-stage-binding', 'negative:obsolete-ACK-publication');
 console.log(JSON.stringify({ passed: true, scenarios: cases.length, cases,
   boundary: 'Actual production methods/classes and SDK Builder closure inputs with controlled Core receipts; no assertion of native reactive scheduling, paint frames, device flicker or user acceptance.' }));

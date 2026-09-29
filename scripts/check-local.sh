@@ -12,6 +12,8 @@ if [[ "$#" -ne 0 ]]; then
   exit 2
 fi
 
+node tools/generate-theme-registry.mjs --check
+
 test_count=0
 while IFS= read -r test_file; do
   node "$test_file"

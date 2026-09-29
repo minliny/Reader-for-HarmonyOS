@@ -7,7 +7,7 @@ const read=name=>readFileSync(new URL(name,app),'utf8');
 const policy=stripTypeScriptTypes(read('HttpTransportPolicy.ts')).replace(/^export /gm,'');
 const routeProduction=stripTypeScriptTypes(read('NetworkRoutePolicy.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const NetworkEnvironmentError=new Function('connection',policy+routeProduction+';return NetworkEnvironmentError;')({});
-const WebNetErrorList=Object.fromEntries([...readFileSync('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/api/@ohos.web.netErrorList.d.ts','utf8').matchAll(/^\s+(ERR_\w+) = (-?\d+),/gm)].map(match=>[match[1],Number(match[2])]));
+const WebNetErrorList=Object.fromEntries([...readFileSync(((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/api/@ohos.web.netErrorList.d.ts'),'utf8').matchAll(/^\s+(ERR_\w+) = (-?\d+),/gm)].map(match=>[match[1],Number(match[2])]));
 assert.equal(WebNetErrorList.ERR_PROXY_CONNECTION_FAILED,-130);
 const production=stripTypeScriptTypes(read('ArkWebExecutor.ts').replace(/^import[\s\S]*?;\n/gm,'')).replace('export class','class');
 const ticks=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};

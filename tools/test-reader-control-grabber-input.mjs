@@ -23,7 +23,7 @@ const Host = productionMotionMethods(
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader');
 const ts = require(`${sdk}/node_modules/typescript`), syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const children = ['topBar', 'controlContent', 'controlHeader', 'brightnessRail', 'moduleNavBar', 'readerMoreMenu', 'launchSourceContent'];
 const TouchType = { Down: 0, Move: 1, Up: 2, Cancel: 3 };

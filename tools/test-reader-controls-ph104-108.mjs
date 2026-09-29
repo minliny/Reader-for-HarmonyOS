@@ -14,8 +14,8 @@ import { createReaderControlSessionState } from '../entry/src/main/ets/features/
 import { readerWidthClass } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 
 const require = createRequire(import.meta.url);
-const ts = require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
-const syntax = require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/lib/validate_ui_syntax.js');
+const ts = require(((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader/node_modules/typescript'));
+const syntax = require(((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader/lib/validate_ui_syntax.js'));
 const statusPaperSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderStatusBarPaper.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper', new Set([...statusPaperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));

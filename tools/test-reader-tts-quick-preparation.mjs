@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
@@ -63,11 +65,16 @@ function readySchedulesAfterObservers(file = lre) {
 }
 // Negative control reconstructs the installed omission: ready never scheduled
 // preparation. This must fail the same production-method assertion.
-const mutant = '/private/tmp/reader-ph44-no-ready-preparation.ets';
+const scratch = mkdtempSync(join(tmpdir(), 'reader-tts-preparation-'));
+try {
+const mutant = join(scratch, 'no-ready-preparation.ets');
 const warmupCall = 'this.scheduleTtsPresentationWarmup();';
 assert.equal(source.split(warmupCall).length, 2, 'the negative control removes the one production scheduling call');
 writeFileSync(mutant, source.replace(warmupCall, 'void 0;'));
 assert.throws(() => readySchedulesAfterObservers(mutant), /ready schedules one deferred TTS preflight/);
+} finally {
+  rmSync(scratch, { recursive: true, force: true });
+}
 
 {
   const f = readySchedulesAfterObservers();

@@ -58,6 +58,8 @@ export interface SourceToolsSnapshot {
   editorText: string;
   debugSourceId: string;
   debugKey: string;
+  checkMode: 'search' | 'explore';
+  checkDepth: number;
   debugLogs: SourceDebugLog[];
   batchCheck: SourceBatchCheckProgress;
   busy: boolean;
@@ -74,6 +76,8 @@ interface SourceToolsPatch {
   editorText?: string;
   debugSourceId?: string;
   debugKey?: string;
+  checkMode?: 'search' | 'explore';
+  checkDepth?: number;
   debugLogs?: SourceDebugLog[];
   batchCheck?: SourceBatchCheckProgress;
   busy?: boolean;
@@ -90,6 +94,8 @@ export const EMPTY_SOURCE_TOOLS_SNAPSHOT: SourceToolsSnapshot = {
   editorText: '',
   debugSourceId: '',
   debugKey: '我的',
+  checkMode: 'search',
+  checkDepth: 2,
   debugLogs: [],
   batchCheck: EMPTY_BATCH_CHECK_PROGRESS,
   busy: false,
@@ -291,6 +297,8 @@ export class SourceToolsOrchestrator {
               sourceId,
               (): boolean => this.isBatchCheckCurrent(session, run),
               key,
+              this.snapshot.checkMode,
+              this.selectedCheckLevels(),
             );
             if (!this.isCurrentSession(session) || this.batchCheckRun !== run) {
               return;
@@ -306,7 +314,7 @@ export class SourceToolsOrchestrator {
               batchCheck: progress.snapshot(),
               statusMessage: stopping ?
                 `已完成 ${progress.completed}/${selection.length}：${sourceName}；正在停止…` :
-                `已完成 ${progress.completed}/${selection.length}：${sourceName}${outcome.available ? '可用' : '不可用'}`,
+                `已完成 ${progress.completed}/${selection.length}：${sourceName}${outcome.available ? '所选项通过' : '所选项未通过'}`,
             });
           } catch (error) {
             if (!this.isCurrentSession(session) || this.batchCheckRun !== run) {
@@ -345,8 +353,8 @@ export class SourceToolsOrchestrator {
             batchCheck: progress.snapshot(),
             busy: false,
             statusMessage: stopped ?
-              `已停止检测：完成 ${progress.completed}/${selection.length}，可用 ${progress.passed}，不可用 ${progress.failed}，检测错误 ${progress.errors}` :
-              `批量检测完成：可用 ${progress.passed}，不可用 ${progress.failed}，检测错误 ${progress.errors}`,
+              `已停止检测：完成 ${progress.completed}/${selection.length}，所选项通过 ${progress.passed}，未通过 ${progress.failed}，检测错误 ${progress.errors}` :
+              `批量检测完成：所选项通过 ${progress.passed}，未通过 ${progress.failed}，检测错误 ${progress.errors}`,
           });
         }
       } catch (error) {
@@ -474,6 +482,16 @@ export class SourceToolsOrchestrator {
     }
   }
 
+  updateCheckSelection(mode: 'search' | 'explore', depth: number): void {
+    if (!this.snapshot.busy && this.pendingOperations === 0 && Number.isInteger(depth) && depth >= 2 && depth <= 5) {
+      this.publish({ checkMode: mode, checkDepth: depth });
+    }
+  }
+
+  private selectedCheckLevels(): string[] {
+    return ['L1', 'L2', 'L3', 'L4', 'L5'].slice(0, this.snapshot.checkDepth);
+  }
+
   debugSource(sourceId: string): void {
     const session = this.session;
     const key = this.snapshot.debugKey.trim();
@@ -482,13 +500,15 @@ export class SourceToolsOrchestrator {
         busy: true,
         debugSourceId: sourceId,
         debugLogs: [],
-        statusMessage: '正在执行真实 L1–L5 检测与 Core 调试…',
+        statusMessage: '正在检测所选能力…',
       });
       try {
         const health = await this.gateway.checkSource(
           sourceId,
           (): boolean => this.isCurrentSession(session),
           key,
+          this.snapshot.checkMode,
+          this.selectedCheckLevels(),
         );
         if (!this.isCurrentSession(session)) {
           return;
@@ -505,13 +525,14 @@ export class SourceToolsOrchestrator {
   }
 
   private debugSummary(health: SourceCheckOutcome): string {
+    const mode = health.mode === 'explore' ? '发现' : '搜索';
     const levels = health.levelsPassed.length === 0 ? '无通过级别' : health.levelsPassed.join('、');
     if (!health.available) {
       const evidence = health.hostEvidenceCount === 0 ? 'Core 在发起网络前结束' :
         `${health.hostEvidenceCount} 条同次 Host 网络证据`;
-      return `真实检测未通过（${levels}，${evidence}）：${health.failureReason ?? '未知错误'}`;
+      return `${mode}检测未通过（${levels}，${evidence}）：${health.failureReason ?? '未知错误'}`;
     }
-    return `真实检测 ${levels} 通过（${health.durationMs}ms）；trace=${health.traceId}，` +
+    return `${mode}检测 ${levels} 通过（${health.durationMs}ms）；trace=${health.traceId}，` +
       `${health.hostEvidenceCount} 条同次 Host 网络证据`;
   }
 
@@ -525,14 +546,15 @@ export class SourceToolsOrchestrator {
   }
 
   private batchResult(sourceName: string, outcome: SourceCheckOutcome): SourceBatchCheckResult {
+    const mode = outcome.mode === 'explore' ? '发现' : '搜索';
     const levels = outcome.levelsPassed.length === 0 ? '无通过级别' : outcome.levelsPassed.join('、');
     return {
       sourceId: outcome.sourceId,
       sourceName,
       state: outcome.available ? 'passed' : 'failed',
       levelsPassed: outcome.levelsPassed.slice(),
-      message: outcome.available ? `${levels} 通过，${outcome.durationMs}ms` :
-        `${levels}：${outcome.failureReason ?? '未知错误'}`,
+      message: outcome.available ? `${mode} ${levels} 通过，${outcome.durationMs}ms` :
+        `${mode} ${levels}：${outcome.failureReason ?? '未知错误'}`,
       durationMs: outcome.durationMs,
       traceId: outcome.traceId,
     };
@@ -602,6 +624,8 @@ export class SourceToolsOrchestrator {
       editorText: patch.editorText ?? this.snapshot.editorText,
       debugSourceId: patch.debugSourceId ?? this.snapshot.debugSourceId,
       debugKey: patch.debugKey ?? this.snapshot.debugKey,
+      checkMode: patch.checkMode ?? this.snapshot.checkMode,
+      checkDepth: patch.checkDepth ?? this.snapshot.checkDepth,
       debugLogs: patch.debugLogs ?? this.snapshot.debugLogs,
       batchCheck: patch.batchCheck ?? this.snapshot.batchCheck,
       busy: patch.busy ?? this.snapshot.busy,
@@ -623,6 +647,8 @@ export class SourceToolsOrchestrator {
       editorText: source.editorText,
       debugSourceId: source.debugSourceId,
       debugKey: source.debugKey,
+      checkMode: source.checkMode,
+      checkDepth: source.checkDepth,
       debugLogs: source.debugLogs.slice(),
       batchCheck: {
         phase: source.batchCheck.phase,

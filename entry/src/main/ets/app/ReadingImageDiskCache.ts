@@ -234,18 +234,6 @@ export class ReadingImageDiskCache {
     return complete;
   }
 
-  /** An ordinal without a body version cannot prove the current catalog's assets. */
-  async isChapterMaterialized(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean> {
-    this.assertNonBlank(sourceId, 'sourceId');
-    this.assertNonBlank(bookId, 'bookId');
-    if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) {
-      throw new Error('chapterIndex must be a non-negative safe integer');
-    }
-    // Core must supply its stable chapter/body scope before this projection
-    // can report completeness. Exact version checks remain available above.
-    return false;
-  }
-
   private async readValidManifest(directory: string, formatVersion: number): Promise<ReadingImageChapterManifest | undefined> {
     try {
       const value = await this.readManifestIdentity(directory, formatVersion);

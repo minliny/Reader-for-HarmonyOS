@@ -106,8 +106,8 @@ assert.match(page,
   /批量管理（已选 \$\{this\.snapshot\.selectedSourceCount\}\/\$\{this\.snapshot\.sources\.length\}）/);
 assert.match(page, /private batchCheckCard\(\)/);
 assert.match(page, /检测进度 \$\{this\.snapshot\.batchCheck\.completed\}/);
-assert.match(page, /可用 \$\{this\.snapshot\.batchCheck\.passed\}/);
-assert.match(page, /不可用 \$\{this\.snapshot\.batchCheck\.failed\}/);
+assert.match(page, /所选项通过 \$\{this\.snapshot\.batchCheck\.passed\}/);
+assert.match(page, /所选项未通过 \$\{this\.snapshot\.batchCheck\.failed\}/);
 assert.match(page, /检测错误 \$\{this\.snapshot\.batchCheck\.errors\}/);
 assert.match(page, /this\.snapshot\.batchCheck\.total - this\.snapshot\.batchCheck\.completed/);
 assert.match(page, /实时结果（最新在前）/);

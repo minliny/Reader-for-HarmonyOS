@@ -49,7 +49,7 @@ for(const extended of [false,true])for(const scale of [1,1.5]){
 }
 const source=readFileSync(lre,'utf8');
 const require=createRequire(import.meta.url);
-const syntax=require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/lib/validate_ui_syntax.js');
+const syntax=require(((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader/lib/validate_ui_syntax.js'));
 const paperSource=readFileSync(file('features/reading/ReaderStatusBarPaper.ets'),'utf8');
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper',new Set([...paperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));

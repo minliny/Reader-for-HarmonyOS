@@ -95,7 +95,7 @@ const pickSource = index.slice(pickStart, pickEnd);
 assert.match(pickSource,
   /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)[\s\S]*sourceSwitchCandidateKey\(book\.sourceId, book\.bookId\)/,
   'click admission must reject only the exact current (sourceId, bookUrl) tuple');
-assert.match(pickSource, /new RemoteReadingFlowGateway\(ReaderRuntimeOwner\.current\(\)\)[\s\S]*loadProgress\(/,
+assert.match(pickSource, /new RemoteReadingFlowGateway\(owner\)[\s\S]*loadProgress\(/,
   'source switch must read the Core canonical progress instead of a detail UI field');
 assert.match(pickSource, /buildSourceSwitchCommitParams\([\s\S]*anchor\.chapterTitle,[\s\S]*anchor\.chapterIndex/);
 assert.match(index, /private async reconcilePendingSourceSwitches\(\): Promise<void>/);

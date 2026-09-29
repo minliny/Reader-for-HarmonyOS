@@ -4,8 +4,8 @@
 //
 // Pure CPU test: no SDK, no emulator, no hdc. Build & run:
 //   cd entry/src/main/cpp
-//   clang++ -std=c++17 -Wall -Wextra -Werror -I bookturn \
-//       tests/bookturn_motion_test.cpp bookturn/bookturn_motion.cpp \
+//   clang++ -std=c++17 -Wall -Wextra -Werror -I bookturn
+//       tests/bookturn_motion_test.cpp bookturn/bookturn_motion.cpp
 //       bookturn/bookturn_solver.cpp -o /tmp/v2_motion_test
 //   /tmp/v2_motion_test
 //

@@ -45,6 +45,7 @@ import {
   type ReadingSessionSource,
 } from './ReadingSessionFlowGateway';
 import { RemoteChapterCacheRefreshError, type RemoteReadingSession, type RemoteReadingBookSeed } from './RemoteReadingFlowGateway';
+import { sameRemoteSessionEvidence } from './RemoteReadingEvidence';
 import type { ReadingEntrySnapshot } from './ReadingEntryPreparation';
 import {
   RemoteReadingSourceError,
@@ -1030,7 +1031,7 @@ export struct ReadingExperience {
   @Prop sourceId: string = LOCAL_READING_SOURCE_ID;
   @Prop bookId: string;
   @Prop bookKind: string | undefined = undefined;
-  @Prop remoteSession: RemoteReadingSession | undefined = undefined;
+  @Prop @Watch('onRemoteCatalogChanged') remoteSession: RemoteReadingSession | undefined = undefined;
   @Prop remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
   isReaderIdentityCurrent: () => boolean = (): boolean => true;
   @Prop sourceSwitchFailureMessage: string = '';
@@ -1304,6 +1305,10 @@ export struct ReadingExperience {
   private fullTtsMorphSource: ReaderSessionMorphSourceMeasurement | undefined = undefined;
 
   private sessionGateway: ReadingSessionFlowGateway | undefined = undefined;
+  private remoteCatalogAdmissionRevision: number = 0;
+  private remoteCatalogSessionPreparation: Promise<void> | undefined = undefined;
+  private remoteCatalogSessionAttemptKey: string = '';
+  private remoteCatalogSessionAttemptAt: number = 0;
   private preparedReadingEntry: ReadingEntrySnapshot | undefined = undefined;
   entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
   private readonly replaceGateway: ReaderControlReplaceGateway =
@@ -3825,7 +3830,9 @@ export struct ReadingExperience {
     if (this.entryCatalogHydration !== undefined) return this.entryCatalogHydration;
     const lifecycleToken = this.lifecycleToken;
     const sourceId = this.sourceId, bookId = this.bookId;
-    const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) && sourceId === this.sourceId && bookId === this.bookId;
+    const admissionRevision = this.remoteCatalogAdmissionRevision;
+    const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) && sourceId === this.sourceId && bookId === this.bookId &&
+      admissionRevision === this.remoteCatalogAdmissionRevision;
     const operation = this.activeGateway().loadToc(bookId, isCurrent).then((toc: LocalReadingToc): void => {
       if (!isCurrent()) return;
       const current = this.pageTurnPreparation?.origin.chapter ?? this.chapter;
@@ -3842,6 +3849,7 @@ export struct ReadingExperience {
       }
       this.releaseUnretainedReadingImages();
       this.onDirectoryProjectionChanged(toc.entries);
+      this.prepareRemoteCatalogNearEnd();
     });
     this.entryCatalogHydration = operation;
     try { await operation; }
@@ -3856,10 +3864,99 @@ export struct ReadingExperience {
     }
     finally { if (this.entryCatalogHydration === operation) this.entryCatalogHydration = undefined; }
     if (isCurrent()) {
-      this.schedulePageTurnPreparation();
+      this.queuePageTurnPreparation('next');
+      this.queuePageTurnPreparation('previous');
       this.drainRapidPageTurn();
       this.resumePendingAutoPageTurn();
     }
+  }
+
+  private onRemoteCatalogChanged(): void {
+    const session = this.remoteSession;
+    const gateway = this.sessionGateway;
+    const current = this.pageTurnPreparation?.origin.chapter ?? this.chapter;
+    if (!this.isSessionActive(this.lifecycleToken) || session === undefined || gateway === undefined ||
+      current === undefined || session.identity.sourceId !== this.sourceId || session.identity.bookId !== this.bookId) return;
+    const alreadyInstalled = sameRemoteSessionEvidence(gateway.remoteSession(), session);
+    // Session acquisition precedes its observer. Matching gateway evidence does
+    // not mean that this mounted reader's older local TOC has been extended.
+    if (alreadyInstalled && !this.entryCatalogPending && this.tocEntries.length === session.entries.length) return;
+    if (alreadyInstalled) {
+      if (this.tocEntries.length > session.entries.length) return;
+      for (let position = 0; position < this.tocEntries.length; position += 1) {
+        const before = this.tocEntries[position];
+        const after = this.entryCatalogPending ? session.entries.find((item): boolean => item.index === before.index) : session.entries[position];
+        if (after === undefined || before.index !== after.index || before.title !== after.title ||
+          (before.navigable !== false) !== (after.url.trim().length > 0)) return;
+      }
+    }
+    const admittedGesture = this.activePagePointerId >= 0 ? this.pageTurnAdmittedPrepared : undefined;
+    const protectedBodies = [current, this.chapter, this.adjacentMeasurementContext?.chapter,
+      admittedGesture?.context.chapter, this.pageTurnSettlingPrepared?.context.chapter, this.pendingControlSelectionOrigin?.context.chapter,
+      this.pendingControlSelectionCandidate?.context.chapter];
+    const protectedIndexes = new Set<number>();
+    for (const body of protectedBodies) {
+      if (body === undefined) continue;
+      const entry = session.entries.find((item): boolean => item.index === body.chapterIndex);
+      if (body.sourceId !== this.sourceId || body.bookId !== this.bookId || entry === undefined ||
+        entry.url.trim().length === 0 || body.chapterUrl !== entry.url ||
+        (alreadyInstalled && body.chapterTitle !== entry.title)) return;
+      protectedIndexes.add(body.chapterIndex);
+    }
+    if (!gateway.admitRemoteCatalog(session)) return;
+    const retained = this.chapterWindow.retainedChapterIndexes()
+      .filter((index: number): boolean => !alreadyInstalled || protectedIndexes.has(index))
+      .map((index: number): ReadingSessionChapter | undefined => this.chapterWindow.get(index));
+    if (alreadyInstalled) {
+      if (this.preparedPreviousPage !== this.pageTurnSettlingPrepared && this.preparedPreviousPage !== admittedGesture)
+        this.preparedPreviousPage = undefined;
+      if (this.preparedNextPage !== this.pageTurnSettlingPrepared && this.preparedNextPage !== admittedGesture)
+        this.preparedNextPage = undefined;
+    }
+    this.remoteCatalogAdmissionRevision += 1;
+    this.entryCatalogNavigation = undefined;
+    this.entryCatalogPending = false;
+    this.admitTocEntries(session.entries.map((item): LocalReadingTocEntry => ({ index: item.index,
+      title: item.title, navigable: item.url.trim().length > 0, downloadState: 'unknown' })));
+    this.chapterWindow.configure(this.sourceId, this.bookId, this.readingTocEntries().map((item): number => item.index));
+    this.chapterWindow.setCurrent(current);
+    for (const chapter of retained) {
+      if (chapter !== undefined && chapter.chapterIndex !== current.chapterIndex) this.chapterWindow.admitNeighbour(chapter);
+    }
+    this.releaseUnretainedReadingImages();
+    // Appending does not invalidate an in-flight neighbouring-page measure or
+    // its generation. Queue the new edge through the existing ownership lane.
+    this.queuePageTurnPreparation('next');
+    this.queuePageTurnPreparation('previous');
+    this.drainRapidPageTurn();
+    this.resumePendingAutoPageTurn();
+  }
+
+  /** A cached cold entry can reach the old catalog end without ever needing
+   * a network-capable session. Acquire it only after its visible full-catalog
+   * admission; the parent's existing near-end refresh owns the HTTP retry. */
+  private prepareRemoteCatalogNearEnd(): void {
+    const gateway = this.sessionGateway;
+    const current = this.pageTurnPreparation?.origin.chapter ?? this.chapter;
+    if (this.sourceId === LOCAL_READING_SOURCE_ID || this.phase !== 'ready' || this.entryCatalogPending ||
+      gateway === undefined || gateway.remoteSession() !== undefined || current === undefined ||
+      this.remoteCatalogSessionPreparation !== undefined) return;
+    const entries = this.readingTocEntries();
+    const position = this.chapterWindow.position(current.chapterIndex);
+    if (position < 0 || entries.length - position - 1 > 3) return;
+    const lifecycle = this.lifecycleToken, sourceId = this.sourceId, bookId = this.bookId;
+    const attemptKey = JSON.stringify([sourceId, bookId, lifecycle]);
+    if (this.remoteCatalogSessionAttemptKey === attemptKey && Date.now() - this.remoteCatalogSessionAttemptAt < 30 * 1000) return;
+    this.remoteCatalogSessionAttemptKey = attemptKey;
+    this.remoteCatalogSessionAttemptAt = Date.now();
+    const isCurrent = (): boolean => this.isSessionActive(lifecycle) && this.sessionGateway === gateway &&
+      this.sourceId === sourceId && this.bookId === bookId;
+    const operation = gateway.ensureRemoteSession(isCurrent, 'background').then((): void => {}).catch((error: Error): void => {
+      if (isCurrent()) hilog.warn(0x5244, 'Reader', 'Near-end session preparation: %{private}s', errorMessageOf(error));
+    }).finally((): void => {
+      if (this.remoteCatalogSessionPreparation === operation) this.remoteCatalogSessionPreparation = undefined;
+    });
+    this.remoteCatalogSessionPreparation = operation;
   }
 
   private entryChapterPosition(chapterIndex: number): number | undefined {
@@ -11412,6 +11509,7 @@ export struct ReadingExperience {
     try { this.onReadingReady(chapter.chapterIndex); }
     catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience ready observer failed: ${this.errorMessage(error as Error)}`); }
     if (!isCurrent()) return false;
+    this.prepareRemoteCatalogNearEnd?.();
     this.ttsFollowPositioning = undefined;
     this.scheduleTtsPageFollowResume?.();
     try { this.scheduleTtsPresentationWarmup(); }

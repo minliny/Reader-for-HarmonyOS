@@ -154,7 +154,7 @@ const utd=JSON.parse(read('entry/src/main/resources/rawfile/arkdata/utd/utd.json
 assert.deepEqual(utd.UniformDataTypeDeclarations[0].FilenameExtensions,['.kf8']);
 assert.deepEqual(utd.UniformDataTypeDeclarations[0].BelongingToTypes,['com.amazon.azw3']);
 assert.ok(uris.some(x=>x.type===utd.UniformDataTypeDeclarations[0].TypeId));
-const sdk='/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony';
+const sdk=((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony');
 const require=createRequire(import.meta.url),Ajv=require(sdk+'/ets/build-tools/ets-loader/node_modules/ajv');
 const ajv=new Ajv({strict:false,allErrors:true});
 const moduleSchema=JSON.parse(readFileSync(sdk+'/toolchains/modulecheck/module.json','utf8'));

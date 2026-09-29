@@ -414,7 +414,7 @@ function validateLocalSigningProfile(path) {
 function parseBuildProfile(path) {
   // Use the JSON5 parser bundled with the official build tools, including
   // DevEco's comments/trailing commas; never echo parser excerpts of secrets.
-  const plugin = '/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/package.json';
+  const plugin = process.env.READER_HVIGOR_PLUGIN_PACKAGE || '/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/package.json';
   try { return createRequire(plugin)('json5').parse(readFileSync(path, 'utf8')); }
   catch { fail('signing build profile could not be parsed; no secret content was logged'); }
 }
@@ -606,7 +606,7 @@ function build(options) {
   const coreGit = gitRecord(CORE_ROOT);
   requireCleanAcceptance(buildClass, harmonyGit, coreGit, signingMode);
 
-  const lockDir = '/private/tmp/reader-harmony-hap-build.lock';
+  const lockDir = join(process.platform === 'darwin' ? '/private/tmp' : tmpdir(), 'reader-harmony-hap-build.lock');
   acquireLock(lockDir, {
     pid: process.pid,
     repo: REPO_ROOT,
@@ -1063,7 +1063,7 @@ function installDeployment(options) {
   const target = requiredOption(options, '--target');
   const targetKind = requiredOption(options, '--target-kind');
   const targetRef = targetReference(target);
-  const lockDir = `/private/tmp/reader-harmony-target-${targetRef}.lock`;
+  const lockDir = join(process.platform === 'darwin' ? '/private/tmp' : tmpdir(), `reader-harmony-target-${targetRef}.lock`);
   acquireLock(lockDir, {
     pid: process.pid,
     targetKind,

@@ -13,7 +13,7 @@ registerHooks({ resolve(specifier, context, next) {
 } });
 const { ReaderStatusBarMeasurement } = await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
 const require = createRequire(import.meta.url);
-const ts = require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
+const ts = require(((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader/node_modules/typescript'));
 const source = readFileSync(new URL('../entry/src/main/ets/app/ReaderWindowCoordinator.ts', import.meta.url), 'utf8');
 const output = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS },

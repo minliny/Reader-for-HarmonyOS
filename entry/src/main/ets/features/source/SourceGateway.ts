@@ -47,6 +47,14 @@ export type SourceCheckOutcome = {
   durationMs: number;
   hostEvidenceCount: number;
   logs: SourceDebugLog[];
+  mode?: 'search' | 'explore';
+  requestedLevels?: string[];
+  capabilities?: SourceCapabilityCheck[];
+};
+
+export type SourceCapabilityCheck = {
+  level: string;
+  state: 'passed' | 'failed' | 'blocked' | 'notRequested';
 };
 
 export type SourceExportResult = {
@@ -390,7 +398,7 @@ export class SourceGateway {
   }
 
   /**
-   * Run the persisted source through Core's production L1-L5 pipeline. Core
+   * Run selected capabilities through Core's production pipeline. Core
    * resolves `ruleSearch.checkKeyWord` per source (falling back to Legado's
    * global "我的"); the page never owns rule semantics or sample keywords.
    */
@@ -398,14 +406,22 @@ export class SourceGateway {
     sourceId: string,
     shouldContinue: () => boolean = (): boolean => true,
     keyword?: string,
+    mode: 'search' | 'explore' = 'search',
+    levels: string[] = ['L1', 'L2'],
   ): Promise<SourceCheckOutcome> {
     if (sourceId.trim().length === 0) {
       throw new Error('source.check.run requires a non-empty sourceId');
     }
+    const selectedLevels = Array.from(new Set(levels));
+    if (selectedLevels.length === 0 || selectedLevels.some((level: string): boolean =>
+      !['L1', 'L2', 'L3', 'L4', 'L5'].includes(level))) {
+      throw new Error('source.check.run requires known selected levels');
+    }
     const params: JsonObject = {
       sourceIds: [sourceId],
       timeoutMs: 180000,
-      levels: ['L1', 'L2', 'L3', 'L4', 'L5'],
+      mode,
+      levels: selectedLevels,
     };
     const normalizedKeyword = keyword?.trim();
     if (normalizedKeyword !== undefined && normalizedKeyword.length > 0) {
@@ -429,22 +445,22 @@ export class SourceGateway {
     const outcome = raw as JsonObject;
     const echoedSourceId = this.optionalString(outcome, 'sourceId');
     const available = outcome['available'];
-    const levels = outcome['levelsPassed'];
+    const rawLevels = outcome['levelsPassed'];
     const failureReason = this.optionalString(outcome, 'failureReason');
     const durationMs = outcome['durationMs'];
     if (echoedSourceId !== sourceId || typeof available !== 'boolean' ||
-      !Array.isArray(levels) || typeof durationMs !== 'number' || !Number.isFinite(durationMs)) {
+      !Array.isArray(rawLevels) || typeof durationMs !== 'number' || !Number.isFinite(durationMs)) {
       throw new Error('source.check.run returned invalid or mismatched data');
     }
     const levelsPassed: string[] = [];
-    for (const level of levels) {
-      if (typeof level !== 'string') {
+    for (const level of rawLevels) {
+      if (typeof level !== 'string' || !selectedLevels.includes(level) || levelsPassed.includes(level)) {
         throw new Error('source.check.run returned an invalid level');
       }
       levelsPassed.push(level);
     }
-    if (available && levelsPassed.length !== 5) {
-      throw new Error('source.check.run marked an incomplete L1-L5 result available');
+    if (available && selectedLevels.some((level: string): boolean => !levelsPassed.includes(level))) {
+      throw new Error('source.check.run marked incomplete selected capabilities available');
     }
     if (!available && (failureReason === undefined || failureReason.trim().length === 0)) {
       throw new Error('source.check.run failed without a failure reason');
@@ -517,6 +533,14 @@ export class SourceGateway {
       traceId,
       available,
       levelsPassed,
+      mode,
+      requestedLevels: selectedLevels,
+      capabilities: ['L1', 'L2', 'L3', 'L4', 'L5'].map((level: string): SourceCapabilityCheck => ({
+        level,
+        state: !selectedLevels.includes(level) ? 'notRequested' :
+          levelsPassed.includes(level) ? 'passed' :
+          failureReason?.startsWith(`${level}:`) === true ? 'failed' : 'blocked',
+      })),
       failureReason,
       durationMs,
       hostEvidenceCount: hostLogs.length,

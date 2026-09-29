@@ -189,12 +189,7 @@ export class BookAcquisitionCoordinator {
     let foregroundRequest = false;
     try {
       if (changesAddedBook) {
-        if (this.preparationRetirementError !== undefined) throw this.preparationRetirementError;
-        try { await this.scheduler.settleCancelledRequests(Array.from(this.preparationRequests)); }
-        catch (_) {
-          this.preparationRetirementError = new Error('后台书籍请求尚未确认终止，已保留数据，请重新打开应用后重试清理');
-          throw this.preparationRetirementError;
-        }
+        await this.settleCancelledPreparations();
       }
       const sourceId = typeof params['sourceId'] === 'string' ? params['sourceId'] as string : '';
       const network = method === 'book.search' || method === 'book.detail' || method === 'book.toc' ||
@@ -205,6 +200,15 @@ export class BookAcquisitionCoordinator {
         this.foregroundRequests += 1;
         const bookId = params['bookId'] ?? objectValue(params['book'])?.['bookId'];
         this.preemptBackgroundAcquisitions(sourceId, typeof bookId === 'string' ? bookId : '');
+        if (method === 'cache.book.prefetch' && params['preparationRevision'] === undefined) {
+          // A manual range must enter Core after the cancelled preparation
+          // releases its InProgress claim, or Core legitimately skips it as
+          // already queued. This fence belongs to explicit offline download;
+          // ordinary chapter reads never wait for background retirement.
+          this.readingPreparations.suspend();
+          this.scheduler.visibilityChanged();
+          await this.settleCancelledPreparations();
+        }
       }
       // Cached-only preparation also consumes the single Core/SQLite resource.
       // A background label must reach the scheduler, not bypass it merely
@@ -274,6 +278,15 @@ export class BookAcquisitionCoordinator {
       }
       if (changesProjection) this.projectionRevision += 1;
       if (changesSources) { this.invalidateSourceRegistry(); this.changed(true); }
+    }
+  }
+
+  private async settleCancelledPreparations(): Promise<void> {
+    if (this.preparationRetirementError !== undefined) throw this.preparationRetirementError;
+    try { await this.scheduler.settleCancelledRequests(Array.from(this.preparationRequests)); }
+    catch (_) {
+      this.preparationRetirementError = new Error('后台书籍请求尚未确认终止，已保留数据，请重新打开应用后重试');
+      throw this.preparationRetirementError;
     }
   }
 

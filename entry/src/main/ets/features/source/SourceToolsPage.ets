@@ -163,6 +163,7 @@ export struct SourceToolsPage {
   onExportSelected: (sourceIds: string[]) => void = (_sourceIds: string[]): void => {};
   onCheckSelected: (sourceIds: string[]) => void = (_sourceIds: string[]): void => {};
   onStopCheck: () => void = (): void => {};
+  onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number) => void = (): void => {};
   onSetSelectedEnabled: (sourceIds: string[], enabled: boolean) => void =
     (_sourceIds: string[], _enabled: boolean): void => {};
   onDeleteSelected: (sourceIds: string[]) => void = (_sourceIds: string[]): void => {};
@@ -321,7 +322,7 @@ export struct SourceToolsPage {
       .borderRadius(4);
       if (this.snapshot.batchCheck.currentSourceName.length > 0) {
         Text(`当前 ${this.snapshot.batchCheck.currentIndex}/${this.snapshot.batchCheck.total}：` +
-          `${this.snapshot.batchCheck.currentSourceName}（执行真实 L1–L5 检测）`)
+          `${this.snapshot.batchCheck.currentSourceName}（检测所选能力）`)
           .width('100%')
           .fontFamily('ReaderNotoSansSC')
           .fontSize(11)
@@ -331,8 +332,8 @@ export struct SourceToolsPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }
       Row({ space: TOK_SPACE_XS }) {
-        this.batchCounter(`可用 ${this.snapshot.batchCheck.passed}`, readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
-        this.batchCounter(`不可用 ${this.snapshot.batchCheck.failed}`, readerAppColor('app.SourceToolsPage.batchCheckCard.batchCounter.FFA8584D', this.appThemeScheme));
+        this.batchCounter(`所选项通过 ${this.snapshot.batchCheck.passed}`, readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
+        this.batchCounter(`所选项未通过 ${this.snapshot.batchCheck.failed}`, readerAppColor('app.SourceToolsPage.batchCheckCard.batchCounter.FFA8584D', this.appThemeScheme));
         this.batchCounter(`检测错误 ${this.snapshot.batchCheck.errors}`, readerAppColor('app.SourceToolsPage.batchCheckCard.batchCounter.FF9A6A1F', this.appThemeScheme));
         this.batchCounter(`剩余 ${Math.max(0,
           this.snapshot.batchCheck.total - this.snapshot.batchCheck.completed)}`, readerAppColor('TOK_MUTED', this.appThemeScheme));
@@ -548,6 +549,19 @@ export struct SourceToolsPage {
   private debugCard() {
     Column({ space: TOK_SPACE_SM }) {
       this.heading(this.snapshot.debugSourceId.length > 0 ? '最近一次检测详情' : '书源调试');
+      Row({ space: TOK_SPACE_SM }) {
+        Select([{ value: '搜索' }, { value: '发现' }])
+          .selected(this.snapshot.checkMode === 'explore' ? 1 : 0)
+          .value(this.snapshot.checkMode === 'explore' ? '发现' : '搜索')
+          .enabled(!this.snapshot.busy)
+          .onSelect((index: number): void => this.onCheckSelectionChanged(
+            index === 1 ? 'explore' : 'search', this.snapshot.checkDepth));
+        Select([{ value: '列表' }, { value: '详情' }, { value: '目录' }, { value: '正文' }])
+          .selected(this.snapshot.checkDepth - 2)
+          .value(['列表', '详情', '目录', '正文'][this.snapshot.checkDepth - 2])
+          .enabled(!this.snapshot.busy)
+          .onSelect((index: number): void => this.onCheckSelectionChanged(this.snapshot.checkMode, index + 2));
+      }.width('100%');
       TextInput({ text: this.snapshot.debugKey, placeholder: '检测关键词（留空时使用 Core 默认“我的”）' })
         .width('100%')
         .height(40)
@@ -790,9 +804,9 @@ export struct SourceToolsPage {
 
   private batchResultLabel(result: SourceBatchCheckResult): string {
     if (result.state === 'passed') {
-      return '可用';
+      return '所选项通过';
     }
-    return result.state === 'failed' ? '不可用' : '检测错误';
+    return result.state === 'failed' ? '所选项未通过' : '检测错误';
   }
 
 }

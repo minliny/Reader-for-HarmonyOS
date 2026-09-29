@@ -432,7 +432,7 @@ export class SourceOrchestrator {
         outcome.sourceId,
         'passed',
         outcome.levelsPassed,
-        `L1–L5 通过 · ${outcome.durationMs}ms`,
+        `搜索检测通过 · ${outcome.durationMs}ms`,
       );
       return;
     }

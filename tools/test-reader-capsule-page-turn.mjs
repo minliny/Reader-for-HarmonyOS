@@ -11,7 +11,7 @@ import { deriveReaderSessionCapsule } from '../entry/src/main/ets/features/readi
 import { completeReaderPageGestureSettlement } from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
 
 const require = createRequire(import.meta.url);
-const sdk = '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader');
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const baseline = process.env.READER_CAPSULE_BASELINE;

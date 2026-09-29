@@ -73,7 +73,7 @@ function rawSource(item) {
 
 function checkEnvelope(sourceId, available, requestId) {
   const durationMs = available ? 24 : 19;
-  const levelsPassed = available ? ['L1', 'L2', 'L3', 'L4', 'L5'] : ['L1'];
+  const levelsPassed = available ? ['L1', 'L2'] : ['L1'];
   const result = {
     sourceId,
     available,
@@ -208,6 +208,23 @@ function privateMethod(sourceText, signature, nextSignature) {
   assert.equal(completed.batchCheck.results.length, 3);
   assert.deepEqual(owner.state.calls, selectedIds, 'a failed item must not abort the remaining selection');
   assert.deepEqual(completed.selectedSourceIds, selectedIds, 'completed checks retain the selected scope');
+}
+
+for (const mode of ['search', 'explore']) {
+  const sources = [source('mode-check', 'Mode')];
+  const owner = controlledOwner(sources);
+  const { orchestrator, snapshots } = capture(owner);
+  await openReady(orchestrator, snapshots, sources);
+  orchestrator.updateCheckSelection(mode, 2);
+  orchestrator.checkSelected(['mode-check']);
+  await waitUntil(() => owner.state.pending.has('mode-check'), `${mode} check to start`);
+  owner.state.pending.get('mode-check').resolve(checkEnvelope('mode-check', true, 120));
+  await waitUntil(() => latest(snapshots)?.batchCheck.phase === 'completed', `${mode} check to finish`);
+  const message = latest(snapshots).batchCheck.results[0].message;
+  assert.match(message, mode === 'explore' ? /^发现 / : /^搜索 /);
+  orchestrator.updateCheckSelection(mode === 'explore' ? 'search' : 'explore', 5);
+  assert.equal(latest(snapshots).batchCheck.results[0].message, message,
+    'a later selection cannot relabel the completed capability evidence');
 }
 
 // Stopping cancels the in-flight request through the real shouldContinue /
