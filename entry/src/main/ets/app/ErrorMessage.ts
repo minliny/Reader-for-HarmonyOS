@@ -125,7 +125,9 @@ function networkEnvironmentEnvelope(value: Object, depth: number, phase?: string
   if (depth > 6 || value === null || typeof value !== 'object' || Array.isArray(value)) return false;
   const raw = value as Record<string, Object>;
   if (raw['category'] === 'NETWORK_ENVIRONMENT' && (phase === undefined || raw['phase'] === phase)) return true;
-  for (const key of ['details', 'host', 'diagnostics', 'event', 'error', 'causeValue']) {
+  // Native failHostRequest retains the original Host details in Core's cause
+  // envelope; only category is promoted alongside host metadata.
+  for (const key of ['details', 'host', 'diagnostics', 'event', 'error', 'cause', 'causeValue']) {
     const nested = raw[key];
     if (nested !== undefined && networkEnvironmentEnvelope(nested, depth + 1, phase)) return true;
   }

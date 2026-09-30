@@ -77,6 +77,19 @@ const executable = stripTypeScriptTypes(
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
 const { SourceSwitchGateway, sourceSwitchCandidateKey, buildSourceSwitchCommitParams } = await import(moduleUrl);
+const sdkSource = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/vendor/core-harmony/sdk/reader_core.ts'), 'utf8'));
+const { ReaderCoreRequestError } = await import(`data:text/javascript;base64,${Buffer.from(sdkSource).toString('base64')}`);
+function networkFailure(phase, envelope) {
+  const details = { category:'NETWORK_ENVIRONMENT', phase, hostErrorCode:'NETWORK_ERROR' };
+  // Native failHostRequest supplies CoreError without HostErrorDiagnostics.
+  // Core host_error_with_identity promotes category and nests the rest in cause.
+  return new ReaderCoreRequestError({ protocolVersion:1, type:'error', requestId:2,
+    error:{code:'INTERNAL', message:phase==='dns'
+      ?'当前网络无法解析书源域名，请检查代理或网络连接后重试':'代理路由失败', retryable:true,
+      details:envelope==='native-cause'
+        ?{category:'NETWORK_ENVIRONMENT',cause:details,host:{operationId:1,requestId:2,capability:'http.execute'}}
+        :{category:'NETWORK_ENVIRONMENT',host:{diagnostics:{details}}}} });
+}
 const transactionId = 'ss-core-owned-transaction';
 
 assert.notEqual(
@@ -164,10 +177,9 @@ assert.deepEqual(
   const result = await run;
   assert.deepEqual(result.candidates.map(item => item.sourceId), Array.from({ length: 12 }, (_, i) => `s${i}`));
 }
-{
+for (const envelope of ['host-diagnostics','native-cause']) {
   const requests = [];
-  const environment = Object.assign(new Error('代理路由失败'), { event: { error: { code: 'HOST_ERROR',
-    details: { host: { diagnostics: { details: { category: 'NETWORK_ENVIRONMENT' } } } } } } });
+  const environment = networkFailure('route', envelope);
   const gateway = new SourceSwitchGateway({ request: async (method, params) => {
     if (method === 'source.list') return { data: { sources: Array.from({ length: 20 }, (_, i) =>
       ({ sourceId: `proxy${i}`, name: `proxy${i}`, enabled: true })) } };
@@ -180,13 +192,10 @@ assert.deepEqual(
 
 // A per-domain DNS rejection is not evidence that every enabled source or the
 // device network is unavailable. Exercise the real batch and worker cursor.
+for (const envelope of ['host-diagnostics','native-cause']) {
 for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
   const requests=[];
-  const dns=Object.assign(new Error('当前网络无法解析书源域名，请检查代理或网络连接后重试'),{
-    event:{error:{code:'HOST_ERROR',details:{category:'NETWORK_ENVIRONMENT',host:{diagnostics:{details:{
-      category:'NETWORK_ENVIRONMENT',phase:'dns',
-    }}}}}},
-  });
+  const dns=networkFailure('dns', envelope);
   const gateway=new SourceSwitchGateway({async request(method,params){
     if(method==='source.list') return {data:{sources:Array.from({length:12},(_,i)=>({sourceId:`dns-${i}`,enabled:true}))}};
     assert.equal(params.sourceId,'unresolvable-old-source');assert.equal(params.keyword,'终宋');
@@ -206,6 +215,7 @@ for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
     assert.ok(result.candidates.some(item=>item.sourceId==='dns-11'),'DNS cannot stop undispatched candidates');
   }
   assert.equal(requests.length,12,'each enabled candidate is tried once, without automatic retries');
+}
 }
 
 const identityRuntime = {

@@ -94,3 +94,15 @@ Core Native 重新构建通过（ARM64 release 编译 4 分 07 秒；Host 真 NA
 Harmony `13e59f1b` 的两轮 gate 均在 120 秒硬上限取消，分别为 264 PASS / 121 cancelled、338 PASS / 47 cancelled，断言失败均为 0；两轮均未打包或发布 HAP。首次耗时突增后已只读检查系统负载，第二次后停止原执行方式。
 
 代码审计找到 `test-reader-book-turn-host-runtime.mjs` 与专门的 `test-reader-book-turn-present-barrier.mjs` 重复编译执行完全相同的 7 个 C++ 源文件、编译选项和 23 场景/754 断言。保留专门测试，删除前者重复执行；motion/render_state 的 1435 项断言定向验证通过。根据 10 物理核、当时仍有空闲 CPU 且 4 worker 持续饱和的证据，把并发上限调整为 6，继续保留 process isolation、全部 385 文件和 120 秒硬上限，不提升为 8/10，也不延长截止时间。低余量内存仍可能影响耗时，不能预先宣称修正后的门禁通过。
+
+## 修复包正常入口验证及查源失败分类
+
+调整后 385 项全部通过，耗时 108.999 秒；ArkTS 编译/签名通过（51.344 秒）。`0acd14d4` run `20260930T155652Z-0acd14d4-6ca438f9` 的 signed HAP SHA-256 为 `8c57da04f6ac8521f357d8c69fbfc316c4d7b10065834bae09629257b77e698f`。预检、保数据覆盖安装和普通启动通过，详见 [real-page-fixed-build-result.json](real-page-fixed-build-result.json)。
+
+同一 VM 正常搜索“斗破苍穹”后打开详情，目录成功显示第一章“陨落的天才”等真实章节，没有再出现此前的准入失败；原“更换书源”入口显示 21 个真实候选。
+
+2026-10-01 00:02:56 发现刷新立即终止并提示域名无法解析，旧候选保留、延迟显示待重测。源码确认原本已处理单源 DNS 隔离，但 `ErrorMessage` 的结构化遍历遗漏了 Core `host_error_with_identity` 实际使用的 `details.cause`：外层只保留 category，phase 在 cause 内，因此 DNS 被误判成整机网络环境失败。现场版本为上述 `0acd14d4` HAP，记录于本地 `fixed-switch-searching.json` 和受限 `fixed-process-log.txt`；待补真实 Core 包装形状的回归及该受信字段的最小修复，不依赖中文文本匹配。
+
+该分类缺口已由真实 SDK `ReaderCoreRequestError` 加 Core `details.cause` 形状在本地复现。修复只增加受信 `cause` 遍历，保持深度 6、有 category 与 phase 的同对象证据，不遍历任意响应体、不匹配中文文案。ErrorMessage 与 Gateway 两项回归先失败再通过，覆盖单源 DNS 后继续全部 12 个来源、全部 DNS、DNS 混合空结果、晚到 DNS，以及代理路由错误仍停止未调度来源。Native 输入未改，需再构建最终 Harmony 包。
+
+此前 `0acd14d4` VM 点选真实“66书吧-起点”候选后进入阅读流程，该源正文返回 HTTP 403；从阅读错误页“切换书源”成功进入同一全页组件。两个真实入口已实测接线，正文成功仍 OPEN，不能把进入阅读路由等同于第一屏正文成功。

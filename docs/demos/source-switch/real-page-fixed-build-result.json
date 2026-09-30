@@ -1,0 +1,150 @@
+{
+  "runId": "20260930T155652Z-0acd14d4-6ca438f9",
+  "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-artifacts/hap/20260930T155652Z-0acd14d4-6ca438f9/manifest.json",
+  "buildClass": "iteration",
+  "gates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "fc4a7c7f7df3f6a1561bec42363c1fec64ca3cc8b3bc00ae0dcfce2e2a0d06c2",
+      "fileCount": 465,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "ea84ff230ea893da0293578f23147358de44b34129ae79b832a59b5602bacbdb",
+      "fileCount": 15,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "signedArtifact": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 178195712,
+    "sha256": "8c57da04f6ac8521f357d8c69fbfc316c4d7b10065834bae09629257b77e698f",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+      "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01",
+      "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 16867016,
+      "sha256": "4ea7f5e465c7a6d700d94d1d0e4badc3ab3e10623a9892a686c1927f887c8a45"
+    }
+  },
+  "contractTests": {
+    "passed": 385,
+    "failed": 0,
+    "cancelled": 0,
+    "elapsedSeconds": 108.999
+  },
+  "compileSignElapsedSeconds": 51.344,
+  "nativeSdkTests": {
+    "passed": 65,
+    "failed": 0
+  },
+  "targetedCoreSearchTests": {
+    "passed": 5,
+    "failed": 0
+  },
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+      "commit": "0acd14d46b797f8309e61aefd51cc06fc85869a6",
+      "dirty": false,
+      "status": []
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-Core-Native",
+      "commit": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+      "dirty": true,
+      "status": [
+        "M Cargo.lock",
+        " M bindings/harmony/STATUS.md",
+        " M bindings/harmony/oh-package.json5",
+        " M bindings/harmony/sdk/reader_core.test.ts",
+        " M bindings/harmony/sdk/reader_core.ts",
+        " M crates/reader-content/Cargo.toml",
+        " M crates/reader-content/src/lib.rs",
+        " M crates/reader-html/Cargo.toml",
+        " M crates/reader-js/Cargo.toml",
+        " M crates/reader-local-book/Cargo.toml",
+        " M crates/reader-local-book/src/epub/image_style.rs",
+        " M crates/reader-local-book/src/lib.rs",
+        " M crates/reader-rss/Cargo.toml",
+        " M crates/reader-rule/Cargo.toml",
+        " M crates/reader-rule/src/lib.rs",
+        " M crates/reader-runtime/src/remote.rs",
+        " M crates/reader-runtime/src/runtime.rs",
+        " M crates/reader-storage/src/lib.rs",
+        " M scripts/build-harmony-napi.sh",
+        " M scripts/check-harmony-napi-host.sh",
+        " M scripts/ffi-smoke.sh",
+        " M tools/reader-cli/Cargo.toml",
+        " M tools/reader-cli/src/test_source.rs",
+        "?? .github/workflows/linux.yml",
+        "?? crates/reader-content/src/lib_tests.rs",
+        "?? crates/reader-local-book/src/lib_tests.rs",
+        "?? crates/reader-rule/src/lib_cached_split_rule_tests.rs",
+        "?? crates/reader-rule/src/lib_legado_css_attr_tests.rs",
+        "?? crates/reader-rule/src/lib_rule_input_session_tests.rs",
+        "?? crates/reader-runtime/src/remote_local_book_catalog_bounds_tests.rs",
+        "?? crates/reader-runtime/src/remote_required_chapter_admission_tests.rs",
+        "?? crates/reader-runtime/src/remote_source_cookie_session_tests.rs",
+        "?? crates/reader-runtime/src/remote_source_fetch_and_catalog_tests.rs",
+        "?? crates/reader-runtime/src/remote_source_webview_plan_tests.rs",
+        "?? crates/reader-runtime/src/remote_tests.rs",
+        "?? crates/reader-runtime/src/remote_webdav_legacy_theme_tests.rs",
+        "?? crates/reader-runtime/src/remote_webdav_restore_receipt_regressions.rs",
+        "?? crates/reader-runtime/src/runtime_prepared_entry_tests.rs",
+        "?? crates/reader-runtime/src/runtime_tests.rs",
+        "?? crates/reader-storage/src/lib_tests.rs",
+        "?? scripts/core-source-snapshot.mjs"
+      ]
+    },
+    "buildInputs": {
+      "fingerprint": "6ca438f9e55eeb9c4a16a36ca1ecd3aa4697e8cbb777d740b81ac2fdeaaeff79",
+      "fileCount": 1691,
+      "snapshot": "source-snapshot.json"
+    },
+    "effectiveBuildProfile": {
+      "mode": "local",
+      "bytes": 1636,
+      "sha256": "8210a4220e94d28009fa093c58107c8cd44808c04008a8f434fc8ce24ba6ce0c",
+      "secretMaterialArchived": false
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 21875232,
+      "sha256": "6b09806856bcae6260cb5bfc3bbe57775134813c7f8f358d9038bd735e8c5707"
+    },
+    "compiledCoreInputs": {
+      "fingerprint": "4c77f6b85e0e3c2e17d1a96f48d8e0ca1763620f213d9acd1a8669e0e8c42f98",
+      "fileCount": 868,
+      "buildId": "40d7f66d9e8cd24448ceb2accc9e903eda9f37230951353b78155b53cc4fa1d7",
+      "nativeSha256": "6b09806856bcae6260cb5bfc3bbe57775134813c7f8f358d9038bd735e8c5707",
+      "snapshot": {
+        "path": "core-source-snapshot.json",
+        "bytes": 166259,
+        "sha256": "519d98ebafd4c18ff69bf5ca5f7233779572bbd1c91a3b295a61c3bddacbcee2"
+      }
+    }
+  }
+}
