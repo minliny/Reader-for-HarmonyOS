@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "completedAt": "2026-09-24T17:20:48.121Z",
+  "status": "SOURCE_SIGNED_ITERATION_ARTIFACT_PHYSICAL_INSTALL_LAUNCH_PASS_FEATURE_OPEN",
+  "issue": "终宋 / 佩蒲裴榕：第949章目录不全无法继续",
+  "findings": [
+    "near-end acquisition could reuse stale cached catalog",
+    "mounted navigation could remain shorter than the parent/gateway catalog",
+    "cold cached entry could reach the old end without creating a remote session",
+    "full catalog hydration could strand an in-flight page measurement"
+  ],
+  "sourceReplay": {
+    "path": "/Users/minliny/Documents/Reader/Reader-Core-Native/evidence/2026-09-24-zhongsong-catalog/result.json",
+    "catalogEntries": 1370,
+    "chapter949Index": 955,
+    "chapter950Index": 956,
+    "chapter949And950Extracted": true,
+    "sourceRuleChanged": false,
+    "userDeviceInitialCatalogCause": "UNCONFIRMED"
+  },
+  "validation": {
+    "hostBehaviorGroups": 16,
+    "associatedSuites": 5,
+    "independentReview": "PASS",
+    "harmonyContractScripts": 375,
+    "arkTs": "PASS",
+    "signedBuild": "PASS",
+    "independentManifestVerify": "PASS",
+    "verifyLog": "hap-verify.log",
+    "catalogAppendDataPreservation": {
+      "status": "PASS",
+      "oldEntries": 956,
+      "newEntries": 1370,
+      "scope": "temporary SQLite with recorded preexisting CLI; user device data was not accessed",
+      "evidence": "/Users/minliny/Documents/Reader/Reader-Core-Native/evidence/2026-09-24-zhongsong-catalog/preservation-result.json"
+    }
+  },
+  "artifact": {
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260924T171826Z-2124c753-8d92d05f/manifest.json",
+    "manifestSha256": "d28921e41ae81894fd65a9cd24c5dd71d99e3a78fc4a660589e99d7b51213de3",
+    "runId": "20260924T171826Z-2124c753-8d92d05f",
+    "buildClass": "iteration",
+    "acceptanceEligible": false,
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 177503351,
+    "sha256": "ac34e4b916eeef72081e2570904eeb7de0ebc58ead9c0edb01ecc19169c16fd2",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 16273848,
+      "sha256": "963c8d75fb3a772dca3a517a9c1bcea4ef94d1b07c2f145e56f22a7b13f78881"
+    }
+  },
+  "source": {
+    "harmony": {
+      "commit": "2124c7535717b7ce9f80e1e03a7bd204f346667b",
+      "dirty": true,
+      "repo": "/Users/minliny/Documents/Reader/.reader-isolated/catalog-949-20260925/Reader-for-HarmonyOS"
+    },
+    "core": {
+      "commit": "ed057323c13954a347310db0d458574f61390d78",
+      "dirty": true,
+      "repo": "/Users/minliny/Documents/Reader/.reader-isolated/catalog-949-20260925/Reader-Core-Native"
+    },
+    "buildInputs": {
+      "fingerprint": "8d92d05f2ba6ccef6351026d0ba3518bf0be9993b422c4147a340bc43300fd95",
+      "fileCount": 1691,
+      "snapshot": "source-snapshot.json"
+    },
+    "controllerInputs": {
+      "fingerprint": "182a511d9e8a3eeb8037327e088fd8e62347bd14ac7730b2db15bab957cb2dfc",
+      "fileCount": 449,
+      "snapshot": "controller-snapshot.json"
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 21182264,
+      "sha256": "21cf667a642b027209867c7ce8a2f23b7ba019ddaf03cc97b3f46f86e80281c8"
+    },
+    "reusedNativeIdentity": {
+      "schemaVersion": 1,
+      "buildId": "30b046df5a67a508fb8be49c5e258a1007fdf974b994300d023094b3be3e81b7",
+      "gitCommit": "733fbff024bede636924c511faca4abb42206ded",
+      "gitDirty": true,
+      "cargoLockSha256": "a4276d113f8fc99a65f0118ed50d31cee1dc06e35123fdca0c5f166ba983853f",
+      "protocolSha256": "37a6e701965b04284df59886863e62c135973d6da57383e886a46c4247b0bf3e",
+      "rustProfile": "release"
+    }
+  },
+  "boundaries": {
+    "isolatedSnapshot": "isolation.json",
+    "snapshotDoesNotIncludeLaterOriginalWorkspaceEdits": true,
+    "coreNotRebuiltThisIssue": true,
+    "existingBuildWarnings": true,
+    "deviceAccessedThisIssue": true,
+    "physicalInstall": "PASS",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN",
+    "coldStartPixelLatency": "OPEN",
+    "physicalLaunch": "PASS",
+    "deviceAccessScope": "readiness, signature identity preflight, preserve-data replacement install, post-install identity verification and launch only"
+  },
+  "evidence": {
+    "hostReceipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-09-24-catalog-949/host/receipt.json",
+    "codeFindings": "code-findings.json",
+    "finalBuildLog": "hap-build-isolated-final.log",
+    "physicalResult": "physical/result.json",
+    "physicalDeploymentReceipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260924T171826Z-2124c753-8d92d05f/deploy-physical-b1f20b88963d-20260924T181159Z.json"
+  },
+  "deploymentCompletedAt": "2026-09-24T18:11:59.810Z"
+}

@@ -1,0 +1,361 @@
+{
+  "sourceHashes": {
+    "ReadingOfflineGateway": "24280a6e8259b0f00c909f18bc924e14d1d0297e66cba2186efa08284f4a84e5",
+    "Index": "f97ec971a1802febd57e768738485c273d82fc68692c08ef12abff9c6b8f87c3"
+  },
+  "evidenceBoundary": "Actual unchanged Host Gateway and Index methods with synthetic Core/Host I/O; no network/device. Fixture HTTP 403 is illustrative, not attribution of the user incident.",
+  "results": [
+    {
+      "mode": "body",
+      "progress": [
+        {
+          "reportedCompleted": 20,
+          "total": 25,
+          "actuallyCompleted": 0
+        },
+        {
+          "reportedCompleted": 25,
+          "total": 25,
+          "actuallyCompleted": 0
+        }
+      ],
+      "projection": [
+        {
+          "index": 0,
+          "state": "failed"
+        },
+        {
+          "index": 1,
+          "state": "failed"
+        },
+        {
+          "index": 2,
+          "state": "failed"
+        },
+        {
+          "index": 3,
+          "state": "failed"
+        },
+        {
+          "index": 4,
+          "state": "failed"
+        },
+        {
+          "index": 5,
+          "state": "failed"
+        },
+        {
+          "index": 6,
+          "state": "failed"
+        },
+        {
+          "index": 7,
+          "state": "failed"
+        },
+        {
+          "index": 8,
+          "state": "failed"
+        },
+        {
+          "index": 9,
+          "state": "failed"
+        },
+        {
+          "index": 10,
+          "state": "failed"
+        },
+        {
+          "index": 11,
+          "state": "failed"
+        },
+        {
+          "index": 12,
+          "state": "failed"
+        },
+        {
+          "index": 13,
+          "state": "failed"
+        },
+        {
+          "index": 14,
+          "state": "failed"
+        },
+        {
+          "index": 15,
+          "state": "failed"
+        },
+        {
+          "index": 16,
+          "state": "failed"
+        },
+        {
+          "index": 17,
+          "state": "failed"
+        },
+        {
+          "index": 18,
+          "state": "failed"
+        },
+        {
+          "index": 19,
+          "state": "failed"
+        },
+        {
+          "index": 20,
+          "state": "failed"
+        },
+        {
+          "index": 21,
+          "state": "failed"
+        },
+        {
+          "index": 22,
+          "state": "failed"
+        },
+        {
+          "index": 23,
+          "state": "failed"
+        },
+        {
+          "index": 24,
+          "state": "failed"
+        }
+      ],
+      "messages": [
+        "开始下载 25 章，可在目录查看进度",
+        "已下载 0/25 章，未完成的章节可重试",
+        "开始下载 25 章，可在目录查看进度",
+        "已下载 0/25 章，未完成的章节可重试"
+      ],
+      "errors": [],
+      "lastErrors": [
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403",
+        "fixture transport HTTP 403"
+      ],
+      "cachedBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "requestMethods": [
+        "cache.book.prefetch",
+        "cache.book.status",
+        "cache.book.prefetch",
+        "cache.book.status",
+        "cache.book.prefetch",
+        "cache.book.status",
+        "cache.book.prefetch",
+        "cache.book.status",
+        "cache.book.prefetch",
+        "cache.book.status",
+        "cache.book.prefetch",
+        "cache.book.status"
+      ],
+      "prefetchRanges": [
+        [
+          0,
+          20
+        ],
+        [
+          20,
+          25
+        ],
+        [
+          0,
+          20
+        ],
+        [
+          20,
+          25
+        ],
+        [
+          0,
+          20
+        ],
+        [
+          20,
+          25
+        ]
+      ]
+    },
+    {
+      "mode": "manifest",
+      "progress": [
+        {
+          "reportedCompleted": 3,
+          "total": 3,
+          "actuallyCompleted": 0
+        }
+      ],
+      "projection": [
+        {
+          "index": 0,
+          "state": "cached"
+        },
+        {
+          "index": 1,
+          "state": "cached"
+        },
+        {
+          "index": 2,
+          "state": "cached"
+        }
+      ],
+      "messages": [
+        "开始下载 3 章，可在目录查看进度",
+        "已下载 0/3 章，未完成的章节可重试"
+      ],
+      "errors": [],
+      "lastErrors": [
+        "storage_full",
+        "storage_full",
+        "storage_full"
+      ],
+      "cachedBytes": [
+        90,
+        90,
+        90
+      ],
+      "requestMethods": [
+        "cache.book.prefetch",
+        "chapter.content",
+        "chapter.content",
+        "cache.chapter.materialization.report",
+        "cache.chapter.materialization.report",
+        "chapter.content",
+        "cache.chapter.materialization.report",
+        "cache.book.status",
+        "cache.book.prefetch",
+        "chapter.content",
+        "chapter.content",
+        "cache.chapter.materialization.report",
+        "cache.chapter.materialization.report",
+        "chapter.content",
+        "cache.chapter.materialization.report",
+        "cache.book.status"
+      ],
+      "prefetchRanges": [
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "mode": "success",
+      "progress": [
+        {
+          "reportedCompleted": 3,
+          "total": 3,
+          "actuallyCompleted": 3
+        }
+      ],
+      "projection": [
+        {
+          "index": 0,
+          "state": "completed"
+        },
+        {
+          "index": 1,
+          "state": "completed"
+        },
+        {
+          "index": 2,
+          "state": "completed"
+        }
+      ],
+      "messages": [
+        "开始下载 3 章，可在目录查看进度",
+        "全部 3 章下载完成"
+      ],
+      "errors": [],
+      "lastErrors": [
+        null,
+        null,
+        null
+      ],
+      "cachedBytes": [
+        90,
+        90,
+        90
+      ],
+      "requestMethods": [
+        "cache.book.prefetch",
+        "chapter.content",
+        "chapter.content",
+        "cache.chapter.materialization.report",
+        "cache.chapter.materialization.report",
+        "chapter.content",
+        "cache.chapter.materialization.report",
+        "cache.book.status",
+        "cache.book.prefetch",
+        "chapter.content",
+        "chapter.content",
+        "cache.chapter.materialization.report",
+        "cache.chapter.materialization.report",
+        "chapter.content",
+        "cache.chapter.materialization.report",
+        "cache.book.status"
+      ],
+      "prefetchRanges": [
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          3
+        ]
+      ]
+    }
+  ]
+}

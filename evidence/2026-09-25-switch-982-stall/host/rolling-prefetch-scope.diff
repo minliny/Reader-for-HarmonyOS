@@ -1,0 +1,245 @@
+--- installed/entry/src/main/ets/features/reading/ReadingOfflineGateway.ts
++++ current/entry/src/main/ets/features/reading/ReadingOfflineGateway.ts
+@@ -1,4 +1,5 @@
+ import { diagnosticCodeOf } from '../../app/LogPrivacy';
++import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordinator';
+ import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
+ import type { LocalReadingDownloadState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
+ import {
+@@ -76,10 +77,20 @@
+     return (await this.loadProjectionResult(session, isCurrent)).entries;
+   }
+ 
++  /** A directory needs durable body availability, not a whole-book image
++   * verification. Exact completion is checked by explicit download actions. */
++  async loadDirectoryProjection(
++    session: RemoteReadingSession,
++    isCurrent?: OfflineRequestGuard,
++  ): Promise<LocalReadingTocEntry[]> {
++    return (await this.loadProjectionResult(session, isCurrent, undefined, false)).entries;
++  }
++
+   private async loadProjectionResult(
+     session: RemoteReadingSession,
+     isCurrent?: OfflineRequestGuard,
+     proofs?: Map<string, OfflineChapterProof>,
++    verifyImages: boolean = true,
+   ): Promise<ReadingOfflineBookProgress> {
+     // A mutation after an early worker finishes must invalidate the whole
+     // returned projection, including its already checked chapters.
+@@ -105,7 +116,7 @@
+       }
+       readableIndexes.add(tocEntry.index);
+       let state: LocalReadingDownloadState = stateByChapter.get(tocEntry.index) ?? 'missing';
+-      if (state === 'completed' &&
++      if (state === 'completed' && verifyImages &&
+         this.runtime.isOfflineImageChapterComplete !== undefined) {
+         manifestChecks.push(position);
+       } else if (state === 'completed') {
+@@ -268,17 +279,54 @@
+     return (await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs)).entries;
+   }
+ 
+-  private async prefetchRangeResult(
++  /** Rolling reader work verifies only its requested window. A full directory
++   * or explicit download still uses the complete projection above. */
++  async prefetchWindow(
+     session: RemoteReadingSession,
+     startInclusive: number,
+     endExclusive: number,
+     isCurrent?: OfflineRequestGuard,
++  ): Promise<ReadingOfflineBookProgress> {
++    const runtime = this.runtime;
++    const coordinator = runtime.bookAcquisitions?.();
++    // Rolling work must not enter the manual-download foreground fence or
++    // occupy the foreground's reserved request lane. Keep terminal lease
++    // reports unguarded, exactly as in the explicit download path.
++    const background: ReadingGatewayRuntime = coordinator === undefined ? runtime : {
++      bookAcquisitions: (): BookAcquisitionCoordinator => coordinator,
++      captureReadingContentValidity: runtime.captureReadingContentValidity === undefined ? undefined :
++        (sourceId: string, bookId: string): (() => boolean) => runtime.captureReadingContentValidity!(sourceId, bookId),
++      supportsCoreCapability: (capability: string): boolean => runtime.supportsCoreCapability?.(capability) === true,
++      request: (method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> =>
++        coordinator.request(method, params, options, 'background'),
++      prefetchReadingImage: runtime.prefetchReadingImage === undefined ? undefined :
++        (identity: ReadingGatewayImageCacheIdentity, current?: OfflineRequestGuard): Promise<void> => runtime.prefetchReadingImage!(identity, current),
++      markOfflineImageChapterComplete: runtime.markOfflineImageChapterComplete === undefined ? undefined :
++        (identity: ReadingGatewayImageChapterIdentity, resources: ReadingGatewayImageCacheIdentity[]): Promise<void> =>
++          runtime.markOfflineImageChapterComplete!(identity, resources),
++      isOfflineImageChapterComplete: runtime.isOfflineImageChapterComplete === undefined ? undefined :
++        (identity: ReadingGatewayImageChapterIdentity): Promise<boolean> => runtime.isOfflineImageChapterComplete!(identity),
++    };
++    const proofs = runtime.captureReadingContentValidity === undefined ? undefined : new Map<string, OfflineChapterProof>();
++    return new ReadingOfflineGateway(background)
++      .prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs, true);
++  }
++
++  private async prefetchRangeResult(
++    session: RemoteReadingSession,
++    startInclusive: number,
++    endExclusive: number,
++    isCurrent?: OfflineRequestGuard,
+     proofs?: Map<string, OfflineChapterProof>,
++    projectWindowOnly: boolean = false,
+   ): Promise<ReadingOfflineBookProgress> {
+     this.assertRange(session, startInclusive, endExclusive);
+     this.assertCurrent(isCurrent);
++    const projectionSession: RemoteReadingSession = projectWindowOnly ? {
++      ...session, entries: session.entries.slice(startInclusive, endExclusive), preparedChapter: undefined,
++    } : session;
+     if (!session.entries.some(entry => entry.index >= startInclusive && entry.index < endExclusive && entry.url.trim().length > 0)) {
+-      return this.loadProjectionResult(session, isCurrent, proofs);
++      return this.loadProjectionResult(projectionSession, isCurrent, proofs);
+     }
+     const result = await this.runtime.request('cache.book.prefetch', {
+       sourceId: session.identity.sourceId,
+@@ -293,13 +341,18 @@
+       startInclusive,
+       endExclusive,
+     );
+-    this.assertCurrent(isCurrent);
+-
++    let materializationError: Error | undefined;
+     await this.forEachConcurrent(materializations, READER_OFFLINE_CHAPTER_CONCURRENCY,
+       async (materialization: CacheChapterMaterializationLease): Promise<void> => {
+-        await this.materializeChapter(session, materialization, isCurrent, proofs);
++        // Core already granted these leases. Even if the caller leaves, every
++        // lease must reach its guarded materialization or cancellation report;
++        // one rejected worker must not strand the unclaimed remainder.
++        try { await this.materializeChapter(session, materialization, isCurrent, proofs); }
++        catch (error) { if (materializationError === undefined) materializationError = error as Error; }
+       });
+-    return this.loadProjectionResult(session, isCurrent, proofs);
++    if (materializationError !== undefined) throw materializationError;
++    this.assertCurrent(isCurrent);
++    return this.loadProjectionResult(projectionSession, isCurrent, proofs);
+   }
+ 
+   private async materializeChapter(
+--- installed/Index.ets::loadRemoteDirectoryProjection
++++ current/Index.ets::loadRemoteDirectoryProjection
+@@ -11,7 +11,7 @@
+       downloadState: 'unknown',
+     }));
+     try {
+-      entries = await offline.loadProjection(session, isCurrent);
++      entries = await offline.loadDirectoryProjection(session, isCurrent);
+     } catch (error) {
+       hilog.error(DOMAIN, 'Reader', 'Remote download projection failed: %{private}s',
+         (error as Error).message);
+--- installed/Index.ets::prefetchReadingWindow
++++ current/Index.ets::prefetchReadingWindow
+@@ -2,19 +2,87 @@
+     session: RemoteReadingSession,
+     preferredChapterIndex: number | undefined = undefined,
+   ): Promise<void> {
++    const owner = ReaderRuntimeOwner.current();
++    const navigation = this.navigationGeneration;
++    const contentCurrent = owner.captureReadingContentValidity?.(session.identity.sourceId, session.identity.bookId);
++    const readerOwned = preferredChapterIndex !== undefined;
++    const ownerCurrent = (): boolean => ReaderRuntimeOwner.current() === owner &&
++      navigation === this.navigationGeneration && contentCurrent?.() !== false &&
++      (!readerOwned || (this.readingSessionActive && sameRemoteSessionEvidence(this.remoteReadingSession, session)));
++    if (!ownerCurrent() || session.entries.length === 0) return;
+     let chapterIndex = preferredChapterIndex;
+     if (chapterIndex === undefined) {
+-      const progress = await new RemoteReadingFlowGateway(ReaderRuntimeOwner.current())
++      const progress = await new RemoteReadingFlowGateway(owner)
+         .loadProgress(session.identity);
++      if (!ownerCurrent()) return;
+       chapterIndex = progress.kind === 'restored' ? progress.progress.chapterIndex : 0;
+     }
+     const boundedIndex = Math.min(Math.max(chapterIndex, 0), session.entries.length - 1);
+     const startInclusive = Math.max(0, boundedIndex - READING_CACHE_BEFORE);
+     const endExclusive = Math.min(session.entries.length, boundedIndex + READING_CACHE_AFTER + 1);
+-    const entries = await new ReadingOfflineGateway(ReaderRuntimeOwner.current())
+-      .prefetchRange(session, startInclusive, endExclusive);
+-    if (sameRemoteSessionEvidence(this.remoteReadingSession, session)) {
+-      this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
++    const publish = (entries: LocalReadingTocEntry[], intended: RemoteReadingSession, current: () => boolean): void => {
++      if (!current() || !sameRemoteSessionEvidence(this.remoteReadingSession, intended)) return;
++      let next: LocalReadingTocEntry[] | undefined;
++      for (const entry of entries) {
++        const position = this.detailToc.findIndex((item: LocalReadingTocEntry): boolean => item.index === entry.index);
++        if (position < 0 || this.detailToc[position].downloadState === entry.downloadState) continue;
++        if (next === undefined) next = this.detailToc.slice();
++        next[position] = { ...this.detailToc[position], downloadState: entry.downloadState };
++      }
++      if (next !== undefined) this.detailToc = next;
++    };
++    // Explicit shelf-update requests retain their separate per-book work.
++    if (!readerOwned) {
++      const result = await new ReadingOfflineGateway(owner).prefetchWindow(session, startInclusive, endExclusive, ownerCurrent);
++      publish(result.entries, session, ownerCurrent);
++      return;
+     }
++    const key = JSON.stringify([session.identity.sourceId, session.identity.bookId, session.sourceVersion,
++      session.catalogVersion, session.contextVersion, navigation, startInclusive, endExclusive]);
++    const completed = this.readingWindowPrefetchCompleted;
++    if (completed?.key === key && completed.isCurrent() &&
++      (completed.retryAfter === undefined || Date.now() < completed.retryAfter)) return;
++    const pending = this.readingWindowPrefetchPending;
++    const active = this.readingWindowPrefetchActive;
++    if ((pending?.key === key && pending.isCurrent()) || (active?.key === key && active.isCurrent()))
++      return this.readingWindowPrefetchTask;
++    this.readingWindowPrefetchRequestedKey = key;
++    const intent: ReadingWindowPrefetchIntent = { key, owner, session, startInclusive, endExclusive,
++      isCurrent: (): boolean => ownerCurrent() && this.readingWindowPrefetchRequestedKey === key };
++    this.readingWindowPrefetchPending = intent;
++    if (this.readingWindowPrefetchTask !== undefined) return this.readingWindowPrefetchTask;
++    const task = (async (): Promise<void> => {
++      // Publish the single task before inspecting a potentially cancelled
++      // intent, and coalesce same-turn commits before dispatching optional I/O.
++      await Promise.resolve();
++      try {
++        while (this.readingWindowPrefetchPending !== undefined) {
++          const work = this.readingWindowPrefetchPending;
++          this.readingWindowPrefetchPending = undefined;
++          this.readingWindowPrefetchActive = work;
++          let incomplete = true;
++          try {
++            if (!work.isCurrent()) continue;
++            const result = await new ReadingOfflineGateway(work.owner).prefetchWindow(
++              work.session, work.startInclusive, work.endExclusive, work.isCurrent);
++            incomplete = result.failedChapters > 0 || result.entries.some((entry: LocalReadingTocEntry): boolean =>
++              entry.navigable !== false && entry.downloadState !== 'completed');
++            publish(result.entries, work.session, work.isCurrent);
++          } catch (error) {
++            if (work.isCurrent()) hilog.warn(DOMAIN, 'Reader', 'Rolling chapter cache incomplete: %{private}s', (error as Error).message);
++          } finally {
++            // Successful windows coalesce every page commit. Incomplete work
++            // may retry after a short delay without a per-page request storm.
++            if (work.isCurrent()) this.readingWindowPrefetchCompleted = { ...work,
++              retryAfter: incomplete ? Date.now() + CATALOG_REFRESH_RETRY_INTERVAL_MS : undefined };
++            this.readingWindowPrefetchActive = undefined;
++          }
++        }
++      } finally {
++        this.readingWindowPrefetchTask = undefined;
++      }
++    })();
++    this.readingWindowPrefetchTask = task;
++    return task;
+   }
+ 
+--- installed/Index.ets::intent
++++ current/Index.ets::intent
+@@ -0,0 +1,10 @@
++interface ReadingWindowPrefetchIntent {
++  key: string;
++  owner: ReaderRuntimeOwner;
++  session: RemoteReadingSession;
++  startInclusive: number;
++  endExclusive: number;
++  isCurrent: () => boolean;
++  retryAfter?: number;
++}
++
+--- installed/Index.ets::state
++++ current/Index.ets::state
+@@ -0,0 +1,5 @@
++  private readingWindowPrefetchRequestedKey: string = '';
++  private readingWindowPrefetchPending: ReadingWindowPrefetchIntent | undefined = undefined;
++  private readingWindowPrefetchActive: ReadingWindowPrefetchIntent | undefined = undefined;
++  private readingWindowPrefetchCompleted: ReadingWindowPrefetchIntent | undefined = undefined;
++  private readingWindowPrefetchTask: Promise<void> | undefined = undefined;

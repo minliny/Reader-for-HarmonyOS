@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-09-25T04:38:19.799903+00:00",
+  "isolation": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-982-20260925/isolation.json",
+  "source": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/libs/arm64-v8a/libreader_core_napi.so",
+  "sourceMainHostModified": false,
+  "copies": [
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-982-20260925/Reader-for-HarmonyOS/entry/libs/arm64-v8a/libreader_core_napi.so",
+      "previousSha256": "24660d9d7e36d702b2164679ba973b7ec6fda75d32b9554a9ae6af54667f5b52",
+      "sha256": "aabd261c9ed8db573ac76bfe647aa3f5676bd505d2f3f0ad3ff096593931b48a"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-982-20260925/Reader-for-HarmonyOS/entry/vendor/core-harmony/libs/arm64-v8a/libreader_core_napi.so",
+      "previousSha256": "21cf667a642b027209867c7ce8a2f23b7ba019ddaf03cc97b3f46f86e80281c8",
+      "sha256": "aabd261c9ed8db573ac76bfe647aa3f5676bd505d2f3f0ad3ff096593931b48a"
+    }
+  ],
+  "coreBuildIdentity": {
+    "schemaVersion": 1,
+    "buildId": "b2dc4ddba6f0c122d6f35476cb41fb402dd63cd81e93ffcb0c18d0d61e6cec3d",
+    "gitCommit": "071f5de8f8de022735379e8aba807c364c1383cf",
+    "gitDirty": true,
+    "cargoLockSha256": "f7940c658f515a8bfd86d18eeb6957798aac3bd114e952568cd2af8240ce2b3f",
+    "protocolSha256": "45cfe649f9421d96b722bc89f973d72afb23238f52e33ef4687318b7dad7b6d2",
+    "rustProfile": "release"
+  }
+}

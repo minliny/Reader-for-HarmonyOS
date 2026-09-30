@@ -1,0 +1,83 @@
+(node:65770) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "calls": [
+    {
+      "method": "reading.preparation",
+      "params": {
+        "action": "list",
+        "offset": 0,
+        "limit": 100
+      },
+      "timeout": 30000
+    },
+    {
+      "method": "reading.entry.prepare",
+      "params": {
+        "sourceId": "s",
+        "bookId": "b",
+        "neighborOffset": 0
+      },
+      "timeout": 30000
+    },
+    {
+      "method": "cache.book.prefetch",
+      "params": {
+        "sourceId": "s",
+        "bookId": "b",
+        "preparationRevision": 1,
+        "chapterRange": [
+          0,
+          1
+        ]
+      },
+      "timeout": 30000
+    },
+    {
+      "method": "cache.book.prefetch",
+      "params": {
+        "sourceId": "s",
+        "bookId": "b",
+        "chapterRange": [
+          0,
+          8
+        ],
+        "priority": 0,
+        "requestedAt": 1
+      },
+      "timeout": 300000
+    },
+    {
+      "method": "reading.preparation",
+      "params": {
+        "action": "block",
+        "sourceId": "s",
+        "bookId": "b",
+        "revision": 1,
+        "blockReason": "Reader-Core request cancelled by caller: 1"
+      },
+      "timeout": 30000
+    }
+  ],
+  "state": "blocked"
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: transient foreground preemption must not block durable preparation
++ actual - expected
+
++ 'blocked'
+- 'active'
+
+    at file:///private/tmp/reader-download-host-review.mjs:39:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'blocked',
+  expected: 'active',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

@@ -1,0 +1,4 @@
+PASS preparation cancellation remains retired after foreground/visibility recovers; explicit resume remains available
+PASS explicit download waits for cancelled preparation claims; ordinary foreground reading stays immediate
+PASS durable reading preparation: strict first-readable add, search-body reuse, restart resume, 50-book fairness/current±3, raw-only rebuild, pause/403/resource boundaries, unchanged progress and real RPC cleanup fence
+PASS cancel readable add: pre-dispatch/in-flight begin fences, prompt HTTP cancellation, per-book isolation, resumed task guard, newer attempt ownership and strict-add CAS race

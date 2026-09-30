@@ -1,0 +1,23 @@
+(node:22224) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+ReadingOfflineGateway image materialization incomplete: OPERATION_FAILED
+{
+  "pass": true,
+  "checks": [
+    "whole production DiskCache/Owner/Gateway/Index confirms completion, redirects and image geometry; linear body reads",
+    "empty and whitespace finalUrl match the existing loadChapter identity semantics",
+    "a body/version invalidation discards existing proof before exact local revalidation",
+    "proof reuse never caches completion: deleted image bytes revoke exact manifest completion",
+    "missing lifetime guard disables reuse; unsupported cacheOnly remains cached without body request",
+    "mutation after an early worker completes rejects the entire parallel projection",
+    "proof fence is captured before body read, not minted after a stale response",
+    "processed is separate from completed; failure counts/reason/title survive while secret error text does not",
+    "resource failure reports cached body and failed materialization together without hiding durable bytes",
+    "processed-only updates cannot repeatedly toast unchanged zero/completion counts"
+  ]
+}

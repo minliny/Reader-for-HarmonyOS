@@ -1,0 +1,4 @@
+(node:64754) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Index→LRE→Core progress/body: one authoritative progress read and body request, current offset wins over stale shelf projection
+PASS committed-first-page optional projection, late bookmark preservation, cancellation and refresh revision ownership; no native timing claims

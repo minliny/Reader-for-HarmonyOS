@@ -1,0 +1,42 @@
+{
+  "sdkConsumersMatch": [
+    {
+      "from": "Index.ets",
+      "to": "entry/vendor/core-harmony/Index.ts",
+      "equal": true
+    },
+    {
+      "from": "sdk/reader_core.ts",
+      "to": "entry/vendor/core-harmony/sdk/reader_core.ts",
+      "equal": true
+    },
+    {
+      "from": "sdk/smoke_report.ts",
+      "to": "entry/vendor/core-harmony/sdk/smoke_report.ts",
+      "equal": true
+    }
+  ],
+  "native": [
+    {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "beforeSha256": "17b4d1f1443a895efea68915c8dfd4528fbdaadd2424e8ccb718cae70255b94a",
+      "afterSha256": "21cf667a642b027209867c7ce8a2f23b7ba019ddaf03cc97b3f46f86e80281c8",
+      "bytes": 21182264
+    },
+    {
+      "path": "entry/vendor/core-harmony/libs/arm64-v8a/libreader_core_napi.so",
+      "beforeSha256": "17b4d1f1443a895efea68915c8dfd4528fbdaadd2424e8ccb718cae70255b94a",
+      "afterSha256": "21cf667a642b027209867c7ce8a2f23b7ba019ddaf03cc97b3f46f86e80281c8",
+      "bytes": 21182264
+    }
+  ],
+  "coreBuildIdentity": {
+    "schemaVersion": 1,
+    "buildId": "30b046df5a67a508fb8be49c5e258a1007fdf974b994300d023094b3be3e81b7",
+    "gitCommit": "733fbff024bede636924c511faca4abb42206ded",
+    "gitDirty": true,
+    "cargoLockSha256": "a4276d113f8fc99a65f0118ed50d31cee1dc06e35123fdca0c5f166ba983853f",
+    "protocolSha256": "37a6e701965b04284df59886863e62c135973d6da57383e886a46c4247b0bf3e",
+    "rustProfile": "release"
+  }
+}

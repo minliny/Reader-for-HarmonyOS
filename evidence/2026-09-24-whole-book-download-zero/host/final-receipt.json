@@ -1,0 +1,54 @@
+{
+  "issue": "whole-book download reports zero despite persisted successful completion",
+  "baselineHead": "e976b35da4288e3bf77e51b5ca4e1bb362dd6c10",
+  "baseline": "production-diskcache-zero-probe.json",
+  "rootCause": "ReadingOfflineGateway used an ordinal-only completion method that deliberately always returned false, downgrading every completed Core chapter to cached",
+  "changes": [
+    "exact contentVersion plus exact manifest verification; remove ordinal production API",
+    "download-local identity proofs protected by content lifetime guard, no stored body or cached completion boolean",
+    "processed/completed/cached/failed facts separated; finite safe first failure message and actual TOC title",
+    "suppress repeated feedback without completion/cache/failure progress"
+  ],
+  "currentSourceHashes": {
+    "entry/src/main/ets/features/reading/ReadingOfflineGateway.ts": "237d5d3cf36df4b55c1d9b27d7e75ebb1b24974b1f5a32a3e41e849c5cc4f76c",
+    "entry/src/main/ets/features/reading/ReadingGatewayRuntime.ts": "3960d5d2aa78e3bfd0c4fb03ae51bfa7ba9bc15420bee3b5751479b0c99bb537",
+    "entry/src/main/ets/app/ReaderRuntimeOwner.ts": "16802a317f8105927fcbd7ca0291aabdc0476f54cacfa19eedb94199240a72fe",
+    "entry/src/main/ets/app/ReadingImageDiskCache.ts": "b39654546c7215e9a9936cb95286310045e19ebde7e9c439f9553f569e863ba1",
+    "entry/src/main/ets/pages/Index.ets": "43739d9be02813422ac22bee9629d5fe193eab8685c45aff70fff246f7e5aafa",
+    "tools/test-reading-offline-completion.mjs": "a68cf7393e4fe69a71fbaaf27bd746f957ab2dde0558fdc7f06406b33062276e",
+    "tools/test-reading-offline-gateway.mjs": "9e1b600c4da9a2d09e214cecc978253dcbb8af5b1b3539da9046f252900202b6",
+    "tools/test-reading-offline-image-cache-runtime.mjs": "a189c0e6efa9f06c12a845069805bb010511fa3d37a2d266970dda95b2c2b021"
+  },
+  "tests": [
+    {
+      "tool": "tools/test-reading-offline-completion.mjs",
+      "log": "production-completion-regression-final.log",
+      "passedChecks": 10,
+      "exitCode": 0
+    },
+    {
+      "tool": "tools/test-reading-offline-gateway.mjs",
+      "log": "gateway-regression.log",
+      "exitCode": 0
+    },
+    {
+      "tool": "tools/test-reading-offline-image-cache-runtime.mjs",
+      "log": "diskcache-regression.log",
+      "exitCode": 0
+    },
+    {
+      "tool": "tools/test-reader-controls-ph104-108.mjs",
+      "log": "controls-regression.log",
+      "exitCode": 0
+    }
+  ],
+  "performanceEvidence": {
+    "newDownloadChapters": 45,
+    "wholeBookBodyReads": 45,
+    "wholeBookProjectionExtraBodyReads": 0,
+    "independentProjectionCacheOnlyBodyReads": 45,
+    "boundary": "new independent projection still verifies completed bodies once (O(N)); within one download batches reuse identities only under a valid content fence. Exact manifests/resource files are checked each time."
+  },
+  "validationBoundary": "local whole-production-class filesystem/Host method integration and synthetic Core I/O, plus separate parent Core replay; no device acceptance",
+  "diffCheck": 0
+}

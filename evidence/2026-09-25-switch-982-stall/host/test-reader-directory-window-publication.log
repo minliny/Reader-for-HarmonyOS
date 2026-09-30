@@ -1,0 +1,3 @@
+PASS production directory: immediate 7-row window, true 1368 total/global position; full search/sort/edges deferred; old lifecycle rejected
+(node:22233) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

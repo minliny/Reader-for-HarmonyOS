@@ -459,14 +459,6 @@ export class ReaderRuntimeOwner {
     return this.readingImageDiskCache.isChapterComplete(chapter);
   }
 
-  async isOfflineImageChapterMaterialized(
-    sourceId: string,
-    bookId: string,
-    chapterIndex: number,
-  ): Promise<boolean> {
-    return this.readingImageDiskCache.isChapterMaterialized(sourceId, bookId, chapterIndex);
-  }
-
   async clearOfflineBookImages(sourceId: string, bookId: string): Promise<void> {
     await this.readingImageDiskCache.clearBook(sourceId, bookId);
   }

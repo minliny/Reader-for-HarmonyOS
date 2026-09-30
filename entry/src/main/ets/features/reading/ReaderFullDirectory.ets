@@ -61,6 +61,8 @@ export struct ReaderFullDirectory {
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
   // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
   // chapter-start fallback, so this stays a zero-regression opt-in.
   onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
@@ -128,6 +130,8 @@ export struct ReaderFullDirectory {
           panelWidthOverride: this.panelWidth(),
           panelHeightOverride: this.fullPanelHeight(),
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void =>
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope),
           onSelectBookmark: this.onSelectBookmark,
           bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: (index: number): void => this.onDownloadChapter(index),

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-24T05:47:47.443Z",
+  "status": "STOP_BEFORE_INSTALL",
+  "targetKind": "physical",
+  "targetRef": "b1f20b88963d",
+  "artifactRunId": "20260924T051150Z-e976b35d-501a09bf",
+  "artifactSha256": "1dd2971ca66673cdc59cf7b9d8cd9cbd25a1f2e1882d3e546b0e05a14872f046",
+  "initialReadiness": "readiness.json",
+  "inspect": {
+    "exitCode": 1,
+    "error": "the exact HDC target is not connected"
+  },
+  "rediscovery": {
+    "transport": "USB",
+    "status": "Offline"
+  },
+  "installAttempted": false,
+  "conclusion": "USB device went offline between initial readiness and pipeline inspect; reconnect required",
+  "nextStep": "Rediscover exact phone, repeat readiness and canonical inspect, then preserve-data install if admitted"
+}

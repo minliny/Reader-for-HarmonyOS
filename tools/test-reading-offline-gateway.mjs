@@ -62,6 +62,7 @@ const session = {
 };
 
 class FakeRuntime {
+  supportsCoreCapability(capability) { return capability === 'chapter.content.cacheOnly.v1'; }
   async request(method, params = {}, options = {}) {
     calls.push({ method, params, options });
     if (method !== 'cache.chapter.materialization.report') {
@@ -162,8 +163,8 @@ class FakeRuntime {
     completedManifests.add(chapter.chapterIndex);
   }
 
-  async isOfflineImageChapterMaterialized(_sourceId, _bookId, chapterIndex) {
-    return completedManifests.has(chapterIndex);
+  async isOfflineImageChapterComplete(chapter) {
+    return completedManifests.has(chapter.chapterIndex);
   }
 
   async clearOfflineBookImages(sourceId, bookId) {
@@ -318,11 +319,12 @@ const wholeBookRuntime = {
 const wholeBookProjection = await new ReadingOfflineGateway(wholeBookRuntime).prefetchBook(
   wholeBookSession,
   () => true,
-  progress => wholeBookProgress.push([progress.completedChapters, progress.totalChapters]),
+  progress => wholeBookProgress.push([progress.processedChapters, progress.completedChapters, progress.totalChapters]),
 );
 assert.deepEqual(wholeBookRanges, [[0, 20], [20, 40], [40, 45]],
   'whole-book download must reuse the bounded Core range command');
-assert.deepEqual(wholeBookProgress, [[20, 45], [40, 45], [45, 45]]);
+assert.deepEqual(wholeBookProgress, [[20, 0, 45], [40, 0, 45], [45, 0, 45]],
+  'processed ranges must never be counted as completed chapters');
 assert.equal(wholeBookProjection.length, wholeBookChapterCount);
 assert.ok(wholeBookProjection.every(entry => entry.downloadState === 'cached'));
 
@@ -376,14 +378,14 @@ console.log('reading offline gateway deterministic runtime: PASS');
     if (method === 'cache.book.prefetch') return { data: { sourceId: SOURCE_ID, bookId: BOOK_ID,
       chapterRange: params.chapterRange, materializations: maliciousLease ? [{ chapterIndex: 0, token: 'invalid-volume' }] : [] } };
     throw Error('unexpected materialization');
-  }, isOfflineImageChapterMaterialized: async () => { throw Error('volume must not request a manifest'); } };
+  }, isOfflineImageChapterComplete: async () => { throw Error('volume must not request a manifest'); } };
   const gateway = new ReadingOfflineGateway(runtime);
   const projection = await gateway.loadProjection(volumeSession);
   assert.deepEqual(projection.map(e => [e.index, e.navigable, e.downloadState]), [[0, false, 'unknown'], [1, true, 'missing'], [2, false, 'unknown']]);
   await gateway.prefetchRange(volumeSession, 0, 1);
   assert.equal(requests.filter(r => r.method === 'cache.book.prefetch').length, 0);
-  await gateway.prefetchBook(volumeSession, undefined, p => progress.push([p.completedChapters, p.totalChapters]));
-  assert.deepEqual(progress, [[1, 1]]);
+  await gateway.prefetchBook(volumeSession, undefined, p => progress.push([p.processedChapters, p.completedChapters, p.totalChapters]));
+  assert.deepEqual(progress, [[1, 0, 1]]);
   maliciousLease = true;
   await assert.rejects(gateway.prefetchRange(volumeSession, 0, 3), /invalid materialization lease/);
 }

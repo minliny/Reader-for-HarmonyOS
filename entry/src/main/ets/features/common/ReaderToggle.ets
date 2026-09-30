@@ -1,4 +1,5 @@
 import { readerAppColor } from './ReaderThemeRegistry';
+import { ReaderPressFeedback } from './ReaderPressFeedback';
 import {
   TOK_BORDER,
   TOK_PRIMARY_DARK,
@@ -26,8 +27,9 @@ export struct ReaderToggle {
     }
     .width(44)
     .height(24)
-    .borderRadius(this.radius)
-    .backgroundColor(this.value ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('app.toggle.offTrack', this.appThemeScheme))
+    .attributeModifier(new ReaderPressFeedback(this.value ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) :
+      readerAppColor('app.toggle.offTrack', this.appThemeScheme), this.appThemeScheme, this.radius, 12))
+    .responseRegion({ x: 0, y: -10, width: 44, height: 44 })
     .onClick((): void => this.onToggle());
   }
 }

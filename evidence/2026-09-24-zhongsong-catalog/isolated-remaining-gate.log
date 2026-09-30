@@ -1,0 +1,35 @@
+
+TEST test-theme-dynamic-icons.mjs
+PASS dynamic theme icons: 6 computed $r sites, 101 actual state/paint cases, retained SDK Builders and all resource geometry/alpha.
+(node:30245) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+TEST test-theme-local-consumers.mjs
+PASS 76 local-color bindings / 46 roles: authored Day and alpha, reactive App scope, distinct production status states and action foregrounds.
+(node:30452) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+TEST test-theme-primary-text.mjs
+PASS Night primary text: 41 production AST foregrounds, 21 retained Builder states; Day/solid fill/alpha/layout retained.
+(node:30696) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+TEST test-toc-repair-regressions.mjs
+durable catalog admission, source isolation and protected failures: PASS
+
+TEST test-transient-transport-acquisition.mjs
+PASS actual SDK normalization/classifier/Coordinator: unknown HTTP remains transient, fallback/retry continues, no failed writer or prior-evidence loss; known rule and HTTP status errors stay distinct
+PASS actual readable-candidate verification: transient body failure preserves catalog and does not create a failed body verdict
+(node:30747) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS legacy/confirmed/HTTP acquisition: raw facts unchanged, only causal parser failures downgrade; unknown attempts get one visible preparation retry and generic previous-failure copy
+
+TEST test-webdav-credential-queue.mjs
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+(node:30750) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+TEST test-window-flicker-dedup.mjs
+window flicker dedup contracts: PASS
+(node:30781) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

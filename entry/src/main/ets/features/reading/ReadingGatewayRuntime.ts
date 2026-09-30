@@ -80,8 +80,6 @@ export interface ReadingGatewayRuntime {
 
   isOfflineImageChapterComplete?(chapter: ReadingGatewayImageChapterIdentity): Promise<boolean>;
 
-  isOfflineImageChapterMaterialized?(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean>;
-
   clearOfflineBookImages?(sourceId: string, bookId: string): Promise<void>;
 
   /** Releases one display file/native fallback after the chapter window evicts it. */

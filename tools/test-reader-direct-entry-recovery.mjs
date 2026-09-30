@@ -1,9 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderCoreRequestError } from '../entry/vendor/core-harmony/sdk/reader_core.ts';
+
+registerHooks({ resolve(specifier, context, next) {
+  try { return next(specifier, context); } catch (error) {
+    if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context);
+    throw error;
+  }
+} });
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 
 const file = name => fileURLToPath(new URL(`../entry/src/main/ets/${name}`, import.meta.url));
 const source = readFileSync(file('pages/Index.ets'),'utf8');
@@ -30,7 +38,7 @@ const Host = productionMotionMethods(file('pages/Index.ets'),[
   'preparePendingSourceSwitchForNextChoice','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches',
   'dismissSourceSwitchFailure','applyReadingCommit','onSearchResultSelected','consumeSystemFileOpen',
 ],{LOCAL_SOURCE_ID:'local',DOMAIN:0,ReaderRuntimeOwner:{current:()=>runtime},
-  LocalReadingFlowGateway:LocalGateway,RemoteReadingFlowGateway:RemoteGateway,
+  LocalReadingFlowGateway:LocalGateway,RemoteReadingFlowGateway:RemoteGateway,ReadingSessionFlowGateway,
   ReadingOfflineGateway:class {async clearBookIdentity(sourceId,bookId){cleared.push([sourceId,bookId]);}},
   ReaderCoreRequestError,ReaderCoreGateway:class {async loadShelfBook(){return canonicalShelf;}},
   errorMessageOf:error=>error.message,remoteReadingFailureKindOf:error=>error.kind,

@@ -1,0 +1,12 @@
+{
+  "targetKind": "physical",
+  "targetRef": "b1f20b88963d",
+  "observedAt": "2026-09-24T05:44:26.460Z",
+  "discoveredTransport": "USB",
+  "checks": {
+    "boot": "true",
+    "deviceType": "phone",
+    "model": "VYG-AL30",
+    "sceneBoard": "4526"
+  }
+}

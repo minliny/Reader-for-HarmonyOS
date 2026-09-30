@@ -88,8 +88,8 @@ try {
   assert.deepEqual(await cache.loadResource(image), bytes);
   assert.deepEqual(await cache.loadResource(second), new Uint8Array([4, 5]));
   assert.notEqual(await cache.chapterDirectory(image), await cache.chapterDirectory(second));
-  assert.equal(await cache.isChapterMaterialized('source', 'book', 1), false);
-  pass('old/new versions and late old manifest coexist; ordinal alone does not prove completion');
+  assert.equal(typeof cache.isChapterMaterialized, 'undefined');
+  pass('old/new versions and late old manifest coexist; completeness requires exact identity');
 
   const corrupt = { ...image, contentVersion: 'corrupt' };
   const corruptPath = await cache.resourcePath(corrupt);

@@ -301,6 +301,8 @@ export struct ReaderControlPanel {
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
   // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
   // chapter-start fallback, so this stays a zero-regression opt-in.
   onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
@@ -1220,6 +1222,8 @@ export struct ReaderControlPanel {
               tab === 'bookmarks' ? 'bookmarks' : 'directory'));
           },
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void =>
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope),
           onSelectBookmark: this.onSelectBookmark,
           onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
           onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),

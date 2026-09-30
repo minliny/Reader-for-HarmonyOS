@@ -1,0 +1,12 @@
+{
+  "failureLog": "hap-build.log",
+  "sourceGateBeforeFix": 379,
+  "failure": "ArkTS no-spread at Index 5946 and 5992",
+  "fix": "Explicit typed records for TOC download-state patch and completed-window owner; preserve all LocalReadingTocEntry optional fields",
+  "sourceSha256": "3360a116cc967707a6ba0b521b4864ea02af551b1316d5ab7abf132ed1d619be",
+  "paths": [
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+    "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-982-20260925/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets"
+  ],
+  "newHapPublished": false
+}

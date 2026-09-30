@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-24T16:43:00.792Z",
+  "files": [
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "sha256": "c0adfb45ad35199d1004aac9a1a07d730f4e72fc490071d1c4a3249696cc69c3"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "sha256": "e2501eb9d22c6e04050163e89995812e4581ef7f6086500ea26e7c4f9102b939"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+      "sha256": "140c0d303e562027b89ed0b88eb93d6adb43dd159a001ec551b0431fcaea8316"
+    },
+    {
+      "path": "tools/test-detail-external-directory.mjs",
+      "sha256": "9c32c7ca6b852032a37e854e245a157f7e0acf8b92562c4c62907d61d54eb090"
+    },
+    {
+      "path": "tools/test-reader-directory-backfill-after-frame.mjs",
+      "sha256": "a36ec23dd27ade34321170dac5f0a3d579b7ac45dfb4a9782a065be93023b40b"
+    }
+  ]
+}
