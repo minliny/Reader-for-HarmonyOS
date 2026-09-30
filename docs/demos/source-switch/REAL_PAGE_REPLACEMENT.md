@@ -1,6 +1,6 @@
 # 换源真实页面替换：根因与纠偏记录
 
-日期：2026-09-30。状态：本地分支纠偏实施中；真实页面尚未获得本轮 HAP、VM 或用户验收。
+日期：2026-09-30。状态：真实页面已通过本轮 signed HAP 构建并从正常入口在 VM 显示；真实数据链路发现 Core 请求准入故障，正在代码侧修复，完整换源和用户验收仍未通过。
 
 ## 问题与根因
 
@@ -62,3 +62,27 @@
 ## 编译检查（99849860）
 
 修复上述两项后，385 个合同全部通过（92.96 秒）。正式 ArkTS 编译发现 Index 新增的两处候选对象 spread 不符合 `.ets` 的 `arkts-no-spread` 限制（4896、4907），32.31 秒后终止，未发布产物。修复为由既有 Gateway 的 `.ts` 层复制并清空搜索计时，Index 仅消费该结果；不修改原候选对象和其它上下文字段。需重跑定向语义检查、合同及规范打包。
+
+## 真实页面构建与入口验证（7b921b74）
+
+385 个合同全部通过（93.49 秒），正式编译和签名完成（32.879 秒）。产物 run 为 `20260930T151426Z-7b921b74-1c1ed497`，signed HAP SHA-256 为 `426fc4e029bb071cb400d406f7f3494c76c3ba5b54009d6cb7faf2f100bc9b50`；详见 [real-page-build-result.json](real-page-build-result.json)。Harmony 输入 clean；Core 为 `e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f` 的既有 dirty 快照，属于 iteration，不能作为 acceptance。
+
+规范 inspect 确认签名身份匹配，随后覆盖安装及普通启动成功，回执记录保留应用数据。没有使用独立 demo 启动参数。VM 普通搜索“斗破苍穹”→真实结果详情→原有“更换书源”入口，打开新的全页界面并显示 12 个真实候选。该证据只证明真实入口和数据展示接线；尚未证明刷新、选源、进入正文的完整旅程。
+
+## 真实链路故障：Core command was not admitted
+
+- 现象：搜索返回部分真实结果后，详情目录与换源候选更新出现 `Reader-Core command was not admitted`，后续请求持续失败。
+- 触发及版本：上述 `7b921b74` manifest-bound HAP 的正常搜索和详情入口；日志从 23:20:14 起连续出现拒绝，23:20:32 详情、23:21:18 候选更新仍失败。
+- 已有证据：当前包内 Core build ID 为 `40d7f66d9e8cd24448ceb2accc9e903eda9f37230951353b78155b53cc4fa1d7`。错误原文仅由 NAPI 对 `RC_SEND_BUSY` / `RC_SEND_RESOURCE_EXHAUSTED` 的映射产生，不是 SDK 方法白名单拒绝。原始日志含网络 URL 和头字段，只保留于忽略目录。
+- 代码定位：容量管理在 explicitAck 模式发现终端事件超过预留预算时会将 runtime 隔离，之后非控制请求持续 BUSY。`book.search` 发布存储结果之前没有为任意大小终端结果预留预算，存在可由大搜索结果触发的缺口。需通过本地行为回归复现，再修复发布前预算；单纯重试 BUSY 不能修复隔离状态。
+- 未决点：VM 旧日志没有记录具体 Core lastError，尚不能把上述缺口等同为该次 VM 的已证根因。修复还需新 Native/HAP 身份链及同一正常入口的最小 VM 验证。完整换源、正文和用户验收保持 OPEN。
+
+## Core 定向修复及本地回归
+
+`book.search` 先组装完整结果、预留结果及 HTTP diagnostics 预算，再发布搜索事实，继续保留原始存储字段和展示归一化的差别。新行为测试覆盖大于 64 KiB 的搜索结果消费与 ack 后仍可准入，以及预算不足时不发布任何搜索书数据。修复前两项均失败；修复后在隔离 target 内运行搜索相关 5 项测试全部通过（15.2 秒）。一次加强断言时漏传 `export_snapshot` 的时间参数导致编译失败，补为 `0` 后重新编译通过，未跳过测试。
+
+SDK 对同步发送拒绝立即读取 Core `lastError`，只附加已审计的固定容量原因，保留原错误对象及 code。没有自动重试、没有重发已受理写入、没有记录请求参数。整份 SDK 测试 40 项通过。相对于恢复用 WIP 快照 `98a0df4a6984b3e35e86566fd1a46fe4845365d5` 的本轮四文件改动保存于 [core-admission-fix.patch](core-admission-fix.patch)，原 Core dirty 输入保持不变。
+
+构建使用 Rust/Cargo 1.97.1。首次红测曾写入主 Core 的 Cargo target 缓存（没有改主 Core 源码）；之后将其 `deps`、`build`、`.fingerprint` 以独立 CoW 副本复制到隔离 Core，绿测和后续 Native 构建均使用隔离 target。缓存不是新的产物证据，正式 Native 必须重新通过构建和源码身份校验。
+
+窄审计确认 `book.toc` 已有发布前预留；`book.detail` 的大返回结果仍有同类预算缺口，本轮尚未复现或修复，作为独立未决记录，不将正常小详情一次成功升级为该边界通过。

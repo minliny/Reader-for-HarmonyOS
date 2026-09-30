@@ -50,6 +50,17 @@ export type NativeReaderCoreModule = {
 
 export type ReaderCoreLastError = { code: number; message: string };
 
+// Fixed, non-content-bearing admission diagnostics from capacity.rs/runtime.rs.
+// Do not forward arbitrary native error text: it can contain command data.
+const SAFE_ADMISSION_REASONS = new Set<string>([
+  "command exceeds the wire byte limit",
+  "runtime input byte budget is occupied",
+  "runtime result reservation contract failed; drain and recreate",
+  "runtime input class byte budget is occupied",
+  "runtime request or terminal budget is occupied",
+  "runtime lane is occupied",
+]);
+
 export type ReaderCoreCommand = {
   protocolVersion: 1;
   requestId: number;
@@ -397,7 +408,28 @@ export class ReaderCoreRuntime {
       params,
     };
     this.abandonedRequestIds.delete(requestId);
-    this.native.sendCommand(this.runtime, command);
+    try {
+      this.native.sendCommand(this.runtime, command);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Reader-Core command was not admitted") {
+        const code = (error as Error & { code?: string }).code;
+        if (code === "BUSY" || code === "RESOURCE_EXHAUSTED") {
+          try {
+            // Peek immediately, on the throwing thread, before any other
+            // native call can clear its errno-style diagnostic slot.
+            const detail = this.native.lastError();
+            // ABI v1 structured error codes, not RC_SEND_* return statuses.
+            if (detail.code === (code === "BUSY" ? 9 : 10) && SAFE_ADMISSION_REASONS.has(detail.message)) {
+              error.message += `: ${detail.message}`;
+            }
+          } catch (_) {
+            // Older/malformed bridges and failed diagnostics keep the exact
+            // original error. No retry and no fabricated acceptance/result.
+          }
+        }
+      }
+      throw error;
+    }
     if (this.deliveryMode === "explicitAck") this.acceptedRequestIds.add(requestId);
     return requestId;
   }

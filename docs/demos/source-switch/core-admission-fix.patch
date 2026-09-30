@@ -1,0 +1,339 @@
+--- a/bindings/harmony/sdk/reader_core.ts
++++ b/bindings/harmony/sdk/reader_core.ts
+@@ -50,6 +50,17 @@
+ 
+ export type ReaderCoreLastError = { code: number; message: string };
+ 
++// Fixed, non-content-bearing admission diagnostics from capacity.rs/runtime.rs.
++// Do not forward arbitrary native error text: it can contain command data.
++const SAFE_ADMISSION_REASONS = new Set<string>([
++  "command exceeds the wire byte limit",
++  "runtime input byte budget is occupied",
++  "runtime result reservation contract failed; drain and recreate",
++  "runtime input class byte budget is occupied",
++  "runtime request or terminal budget is occupied",
++  "runtime lane is occupied",
++]);
++
+ export type ReaderCoreCommand = {
+   protocolVersion: 1;
+   requestId: number;
+@@ -397,7 +408,28 @@
+       params,
+     };
+     this.abandonedRequestIds.delete(requestId);
+-    this.native.sendCommand(this.runtime, command);
++    try {
++      this.native.sendCommand(this.runtime, command);
++    } catch (error) {
++      if (error instanceof Error && error.message === "Reader-Core command was not admitted") {
++        const code = (error as Error & { code?: string }).code;
++        if (code === "BUSY" || code === "RESOURCE_EXHAUSTED") {
++          try {
++            // Peek immediately, on the throwing thread, before any other
++            // native call can clear its errno-style diagnostic slot.
++            const detail = this.native.lastError();
++            // ABI v1 structured error codes, not RC_SEND_* return statuses.
++            if (detail.code === (code === "BUSY" ? 9 : 10) && SAFE_ADMISSION_REASONS.has(detail.message)) {
++              error.message += `: ${detail.message}`;
++            }
++          } catch (_) {
++            // Older/malformed bridges and failed diagnostics keep the exact
++            // original error. No retry and no fabricated acceptance/result.
++          }
++        }
++      }
++      throw error;
++    }
+     if (this.deliveryMode === "explicitAck") this.acceptedRequestIds.add(requestId);
+     return requestId;
+   }
+--- a/bindings/harmony/sdk/reader_core.test.ts
++++ b/bindings/harmony/sdk/reader_core.test.ts
+@@ -262,6 +262,80 @@
+     return raw === null ? null : JSON.stringify({ ...JSON.parse(raw), deliveryId: this.nextDelivery++ });
+   }
+ }
++
++describe("synchronous native admission diagnostics", () => {
++  test("peeks immediately, preserves native code and never accepts or retries rejected commands", async () => {
++    for (const detail of [
++      { code: "BUSY", nativeCode: 9, reason: "runtime request or terminal budget is occupied" },
++      { code: "RESOURCE_EXHAUSTED", nativeCode: 10, reason: "command exceeds the wire byte limit" },
++    ]) {
++      const calls: string[] = [];
++      const error = Object.assign(new Error("Reader-Core command was not admitted"), { code: detail.code });
++      const native = Object.assign(new ReceiptNativeReaderCore(), {
++        sendCommand: (): void => { calls.push("send"); throw error; },
++        lastError: (): { code: number; message: string } => {
++          calls.push("lastError"); return { code: detail.nativeCode, message: detail.reason };
++        },
++      });
++      const runtime = new ReaderCoreRuntime(native);
++      let caught: unknown;
++      try { runtime.send("runtime.ping", { privateToken: "do-not-expose" }, 37); } catch (value) { caught = value; }
++      expect(caught).toBe(error);
++      expect(error.code).toBe(detail.code);
++      expect(error.message).toBe(`Reader-Core command was not admitted: ${detail.reason}`);
++      expect(error.message).not.toContain("do-not-expose");
++      expect(calls).toEqual(["send", "lastError"]);
++      await expect(runtime.waitForResult(37)).rejects.toThrow("request was not admitted by this SDK runtime");
++      expect(native.readTimeouts).toEqual([]);
++      expect(native.acknowledged).toEqual([]);
++      runtime.close();
++    }
++  });
++
++  test("missing, failed, mismatched or non-allowlisted diagnostics preserve the original error", () => {
++    const diagnosticReaders = [
++      undefined,
++      (): { code: number; message: string } => { throw new Error("diagnostic failure"); },
++      (): { code: number; message: string } => ({ code: 10, message: "runtime lane is occupied" }),
++      (): { code: number; message: string } => ({ code: 9, message: "capacity: private-token=do-not-expose" }),
++      (): { code: number; message: string } => ({ code: 0, message: "" }),
++    ];
++    for (const read of diagnosticReaders) {
++      const error = Object.assign(new Error("Reader-Core command was not admitted"), { code: "BUSY" });
++      const native = new FakeNativeReaderCore();
++      native.sendCommand = (): void => { throw error; };
++      Object.defineProperty(native, "lastError", { value: read });
++      const runtime = new ReaderCoreRuntime(native);
++      let caught: unknown;
++      try { runtime.send("runtime.ping"); } catch (value) { caught = value; }
++      expect(caught).toBe(error);
++      expect(error.code).toBe("BUSY");
++      expect(error.message).toBe("Reader-Core command was not admitted");
++      runtime.close();
++    }
++  });
++
++  test("unrelated native failures and accepted requests never peek lastError", async () => {
++    const native = new FakeNativeReaderCore();
++    let peeks = 0;
++    native.lastError = (): { code: number; message: string } => {
++      peeks += 1; return { code: 9, message: "runtime lane is occupied" };
++    };
++    const runtime = new ReaderCoreRuntime(native);
++    expect((await runtime.ping()).data.pong).toBe(true);
++    for (const error of [
++      Object.assign(new Error("Reader-Core command was not admitted"), { code: "INTERNAL" }),
++      Object.assign(new Error("another busy operation"), { code: "BUSY" }),
++    ]) {
++      native.sendCommand = (): void => { throw error; };
++      let caught: unknown;
++      try { runtime.send("runtime.ping"); } catch (value) { caught = value; }
++      expect(caught).toBe(error);
++    }
++    expect(peeks).toBe(0);
++    runtime.close();
++  });
++});
+ 
+ describe("delivery receipt ownership", () => {
+   test("moving an unrelated terminal into SDK retains its receipt until consumption", async () => {
+--- a/crates/reader-runtime/src/remote.rs
++++ b/crates/reader-runtime/src/remote.rs
+@@ -6404,9 +6404,9 @@
+     let _publication = state.source_publication_guard();
+     check_request_budget()?;
+     ensure_source_version_unchanged(state, &meta, &params.source_id, &params.source)?;
+-    acquisition::publish_search_books(state, &source, &books, &meta)?;
+-    let books = books
+-        .into_iter()
++    let display_books = books
++        .iter()
++        .cloned()
+         .map(|mut book| {
+             book.intro = book
+                 .intro
+@@ -6415,21 +6415,26 @@
+             book
+         })
+         .collect::<Vec<_>>();
+-    let mut result = serde_json::json!({ "sourceId": params.source_id, "books": books });
+-    if let Some(version) = meta.expected_source_version {
++    let mut result = serde_json::json!({ "sourceId": params.source_id, "books": display_books });
++    if let Some(version) = meta.expected_source_version.as_ref() {
+         let policy = acquisition::AuthorRulePolicy::new(&source);
+         if let Some(books) = result["books"].as_array_mut() {
+             for book in books {
+                 if let Some(proof) = book["author"]
+                     .as_str()
+-                    .and_then(|raw| policy.evidence(raw, &version, false))
++                    .and_then(|raw| policy.evidence(raw, version, false))
+                 {
+                     book["authorIdentity"] = proof;
+                 }
+             }
+         }
+-        result["sourceVersion"] = version.into();
+-    }
++        result["sourceVersion"] = version.clone().into();
++    }
++    // Search publishes durable facts even though its result is displayed as
++    // a read. Reserve the complete terminal (including Host diagnostics from
++    // the active overhead scope) before that publication can commit.
++    state.reserve_current_result_value(&result)?;
++    acquisition::publish_search_books(state, &source, &books, &meta)?;
+     Ok(result)
+ }
+ 
+--- a/crates/reader-runtime/src/runtime_tests.rs
++++ b/crates/reader-runtime/src/runtime_tests.rs
+@@ -4015,6 +4015,156 @@
+         }
+         other => panic!("expected remote result after host completion, got {other:?}"),
+     }
++}
++
++#[test]
++fn book_search_large_host_result_preserves_explicit_ack_admission() {
++    let sink = Arc::new(ReceiptSink::default());
++    let runtime = Runtime::new(sink.clone());
++    runtime.enable_event_acknowledgements().unwrap();
++    let (host_receipt, operation_id) = start_capacity_search(&runtime, &sink, 21);
++    assert!(runtime.acknowledge_event(host_receipt));
++    complete_capacity_search(&runtime, 22, operation_id);
++
++    let (receipt, event) = wait_capacity_receipt(&sink, 21, true);
++    let Event::Result { data, .. } = &event else {
++        panic!("expected large search result, got {event:?}");
++    };
++    assert!(crate::capacity::json_size(&event).unwrap() > crate::capacity::DEFAULT_RESULT_BYTES);
++    assert_eq!(data["books"][0]["title"].as_str().unwrap().len(), 80 * 1024);
++    assert_eq!(
++        data["http"]["headers"]["x-padding"].as_str().unwrap().len(),
++        16 * 1024
++    );
++    assert!(!runtime.delivery_contract_fault());
++    assert!(runtime.acknowledge_event(receipt));
++    runtime
++        .send(Command::new(
++            23,
++            methods::SEARCH_BOOK_LIST,
++            serde_json::json!({}),
++        ))
++        .unwrap();
++    let (receipt, event) = wait_capacity_receipt(&sink, 23, true);
++    assert!(matches!(event, Event::Result { .. }));
++    assert!(runtime.acknowledge_event(receipt));
++    assert!(!runtime.delivery_contract_fault());
++}
++
++#[test]
++fn book_search_large_host_result_budget_rejection_does_not_publish_books() {
++    let sink = Arc::new(ReceiptSink::default());
++    let runtime = Runtime::new(sink.clone());
++    runtime.enable_event_acknowledgements().unwrap();
++    // Keep two already-delivered requests unconsumed and reserve their full
++    // budgets. This models a slow consumer without allocating 256 MiB.
++    for id in [1001, 1002] {
++        runtime
++            .send(Command::new(id, "capacity.held", serde_json::json!({})))
++            .unwrap();
++        wait_capacity_receipt(&sink, id, true);
++    }
++    runtime
++        .capacity
++        .reserve_result(1001, crate::capacity::MAX_SINGLE_RESULT_BYTES)
++        .unwrap();
++    runtime
++        .capacity
++        .reserve_result(
++            1002,
++            crate::capacity::MAX_SINGLE_RESULT_BYTES - crate::capacity::DEFAULT_RESULT_BYTES,
++        )
++        .unwrap();
++    let (host_receipt, operation_id) = start_capacity_search(&runtime, &sink, 21);
++    assert!(runtime.acknowledge_event(host_receipt));
++    complete_capacity_search(&runtime, 22, operation_id);
++
++    let (receipt, event) = wait_capacity_receipt(&sink, 21, true);
++    assert!(matches!(event, Event::Error { ref error, .. } if error.code == ErrorCode::Busy));
++    assert!(runtime
++        .remote_state()
++        .storage()
++        .export_snapshot(0)
++        .unwrap()
++        .source_books
++        .is_empty());
++    assert!(!runtime.delivery_contract_fault());
++    assert!(runtime.acknowledge_event(receipt));
++    for id in [1001, 1002] {
++        assert!(runtime.acknowledge_event(wait_capacity_receipt(&sink, id, true).0));
++    }
++    runtime
++        .send(Command::new(
++            23,
++            methods::SEARCH_BOOK_LIST,
++            serde_json::json!({}),
++        ))
++        .unwrap();
++    let (receipt, event) = wait_capacity_receipt(&sink, 23, true);
++    assert!(matches!(event, Event::Result { .. }));
++    assert!(runtime.acknowledge_event(receipt));
++}
++
++fn wait_capacity_receipt(sink: &ReceiptSink, id: u64, terminal: bool) -> (u64, Event) {
++    let deadline = Instant::now() + Duration::from_secs(2);
++    loop {
++        if let Some(found) = sink
++            .events
++            .lock()
++            .unwrap()
++            .iter()
++            .find(|(_, event)| {
++                event_request_id(event) == Some(id)
++                    && matches!(event, Event::Result { .. } | Event::Error { .. }) == terminal
++            })
++            .cloned()
++        {
++            return found;
++        }
++        assert!(
++            Instant::now() < deadline,
++            "missing capacity test event for {id}"
++        );
++        thread::sleep(Duration::from_millis(1));
++    }
++}
++
++fn start_capacity_search(runtime: &Runtime, sink: &ReceiptSink, id: u64) -> (u64, u64) {
++    runtime
++        .send(Command::new(
++            id,
++            methods::BOOK_SEARCH,
++            serde_json::json!({
++                "sourceId": "vtest-src",
++                "source": vertical_source(),
++                "searchRequest": { "url": "https://books.example.test/search" }
++            }),
++        ))
++        .unwrap();
++    let (receipt, event) = wait_capacity_receipt(sink, id, false);
++    let Event::HostRequest { operation_id, .. } = event else {
++        panic!("expected search Host request");
++    };
++    (receipt, operation_id)
++}
++
++fn complete_capacity_search(runtime: &Runtime, id: u64, operation_id: u64) {
++    runtime
++        .send(Command::new(
++            id,
++            methods::HOST_COMPLETE,
++            serde_json::json!({
++                "operationId": operation_id,
++                "result": {
++                    "status": 200,
++                    "headers": { "x-padding": "h".repeat(16 * 1024) },
++                    "body": serde_json::json!({ "books": [{
++                        "bookId": "large-result", "title": "t".repeat(80 * 1024), "author": "Test"
++                    }] }).to_string()
++                }
++            }),
++        ))
++        .unwrap();
+ }
+ 
+ #[test]
