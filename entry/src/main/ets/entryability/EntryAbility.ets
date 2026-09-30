@@ -23,7 +23,6 @@ const DOMAIN = 0x5244;
 export default class EntryAbility extends UIAbility {
   private windowStageGeneration: number = 0;
   private coldStartPage: string = 'pages/Index';
-  private sourceSwitchDemo: boolean = false;
   private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;
   private themeReady: Promise<void> = Promise.resolve();
   private recoveryReady: Promise<void> = Promise.resolve();
@@ -45,9 +44,7 @@ export default class EntryAbility extends UIAbility {
       BUILD_MODE_NAME,
       want.parameters?.readerControlMotionVerification,
       want.parameters?.readerOpenSourcePilot,
-      want.parameters?.readerSourceSwitchDemo,
     );
-    this.sourceSwitchDemo = 'pages/SourceSwitchDemo' === this.coldStartPage;
     if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerEventLoopProbe)) {
       this.eventLoopProbe = new ReaderEventLoopProbe(readerMotionNowMs,
         (sample: ReaderEventLoopSample): void => {
@@ -55,16 +52,6 @@ export default class EntryAbility extends UIAbility {
         });
     }
     AppStorage.setOrCreate('readerAppForeground', true);
-    if (this.sourceSwitchDemo) {
-      // This local visual demo owns only in-memory state. Do not attach the
-      // real bookshelf, settings, Core, recovery journals or import queue.
-      AppStorage.setOrCreate('readerAppScheme', 'day');
-      this.shelfFontsReady = trace.measure('startup.demo-fonts', (): Promise<void> => prepareReaderShelfFonts())
-        .catch((error: Error): void => {
-          hilog.error(DOMAIN, 'Reader', 'Demo font preparation failed: %{private}s', error.message);
-        });
-      return;
-    }
     WebDavCredentialStore.instance.attachContext(this.context);
     this.bookshelfModeReady = trace.measure('startup.bookshelf-mode',
       (): Promise<'cover' | 'list'> => WebDavCredentialStore.instance.loadBookshelfViewMode())
@@ -121,7 +108,6 @@ export default class EntryAbility extends UIAbility {
   }
 
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
-    if (this.sourceSwitchDemo) return;
     // Never reload the window or route directly; Index saves the active
     // reading session before presenting a successfully imported file.
     ReaderSystemFileOpenHost.receive(want);
@@ -200,11 +186,6 @@ export default class EntryAbility extends UIAbility {
   }
 
   onConfigurationUpdate(newConfig: Configuration): void {
-    if (this.sourceSwitchDemo) {
-      // Keep the VM-reference day-paper demo without writing a theme preference.
-      ReaderWindowCoordinator.refreshConfiguration();
-      return;
-    }
     if (newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ||
         newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT) {
       void ReaderThemeHost.systemChanged(newConfig.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day')
@@ -238,12 +219,12 @@ export default class EntryAbility extends UIAbility {
 
   onDestroy(): void {
     this.eventLoopProbe?.stop('destroyed');
-    if (!this.sourceSwitchDemo) ReaderThemeHost.detach();
+    ReaderThemeHost.detach();
     this.windowStageGeneration += 1;
     ReaderWindowCoordinator.detach();
     AppStorage.setOrCreate('readerAppForeground', false);
     const owner = this.runtimeOwner;
-    if (!this.sourceSwitchDemo) ReaderSystemFileOpenHost.detach(owner);
+    ReaderSystemFileOpenHost.detach(owner);
     this.runtimeOwner = undefined;
     owner?.release().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core close failed: %{private}s', error.message);

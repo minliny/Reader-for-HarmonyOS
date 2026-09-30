@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const executable = async source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
@@ -12,10 +13,9 @@ const { SourceSwitchGateway, sourceSwitchCandidateKey, sourceSwitchSourceCount }
 const page = read('features/search/SearchPage.ets');
 const groupSource = page.slice(page.indexOf('class SearchBookGroup'), page.indexOf('class SearchResultDataSource'));
 const window = read('features/source/SourceSwitchWindow.ets');
-const footer = window.slice(window.indexOf('  private footerText()'), window.indexOf('  private horizontalFrame()'));
-const { SearchBookGroup, FooterProbe } = await executable(`${groupSource}
-  ${switchSource.slice(switchSource.indexOf('export function sourceSwitchSourceCount'), switchSource.indexOf('function deduplicateSourceSwitchCandidates'))}
-  class FooterProbe { ${footer} } export { SearchBookGroup, FooterProbe };`);
+const { SearchBookGroup } = await executable(`${groupSource}\nexport { SearchBookGroup };`);
+const FooterProbe = productionMotionMethods(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets', import.meta.url),
+  ['statusText', 'isSweeping', 'busy', 'errorText'], { sourceSwitchSourceCount });
 
 // Both production gateways receive the exact same immutable Core snapshot.
 // 55 sources, 56 URLs, renamed detail, stale/failure facts and excluded records.
@@ -89,11 +89,14 @@ assert.equal(group.sourceCount, 55);
 assert.equal(sourceSwitchSourceCount(candidates), group.sourceCount);
 const panel = new FooterProbe();
 panel.state = { kind: 'candidates', candidates };
-assert.equal(panel.footerText(), `共 ${group.sourceCount} 个书源`);
+panel.displayedCandidates = candidates;
+panel.selectionPending = false;
+assert.equal(panel.statusText(), `查找完成 · ${group.sourceCount} 个来源`);
 panel.state.refreshing = true;
-assert.equal(panel.footerText(), `正在刷新 · 已有 ${group.sourceCount} 个书源`);
+assert.equal(panel.statusText(), `正在查找 · ${group.sourceCount} 个来源`);
 panel.state.refreshError = '网络不可用';
-assert.equal(panel.footerText(), '刷新失败 · 已保留 56 个本地记录', 'record count is explicitly labelled as records');
+assert.equal(panel.errorText(), '网络不可用');
+assert.equal(panel.displayedCandidates.length, 56, 'refresh errors preserve every alternate record');
 assert.equal(candidates.find(row => row.sourceId === 'source-1').acquisitionState, 'failed');
 for(const sourceId of ['source-3','source-4']) {
   assert.equal(candidates.find(row => row.sourceId === sourceId).acquisitionState,'attemptFailed');

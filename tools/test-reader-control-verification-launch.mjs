@@ -7,7 +7,6 @@ import {
 const normal = 'pages/Index';
 const diagnostic = 'pages/ReaderControlMotionVerification';
 const rendererPilot = 'pages/ReaderRendererPilot';
-const sourceSwitchDemo = 'pages/SourceSwitchDemo';
 const candidateValues = [undefined, null, false, 0, 1, '', 'true', 'TRUE', '1',
   diagnostic, rendererPilot, { readerControlMotionVerification: true }, { route: diagnostic },
   [true], new Boolean(true)];
@@ -17,8 +16,6 @@ for (const debug of [false, true]) {
       const expected = debug === true && mode === 'debug' && value === true ? diagnostic : normal;
       assert.equal(readerControlVerificationColdStartPage(debug, mode, value, undefined), expected,
         'renderer pilot requires exact debug cold-start admission');
-      assert.equal(readerControlVerificationColdStartPage(debug, mode, undefined, undefined, value), normal,
-        'non-boolean demo parameters never activate a source-switch demo');
     }
   }
 }
@@ -26,17 +23,6 @@ assert.equal(readerControlVerificationColdStartPage(true, 'debug', true, undefin
 assert.equal(readerControlVerificationColdStartPage(true, 'debug', undefined, true), rendererPilot);
 assert.equal(readerControlVerificationColdStartPage(true, 'debug', true, true), normal,
   'conflicting diagnostic requests fall back to the normal reader');
-for (const debug of [true, false, 1, 'true', new Boolean(true)]) {
-  for (const mode of ['debug', 'release', 'DEBUG', 'debug ', '']) {
-    assert.equal(readerControlVerificationColdStartPage(debug, mode, undefined, undefined, true),
-      debug === true && mode === 'debug' ? sourceSwitchDemo : normal,
-      'demo requires both exact debug build fields');
-  }
-}
-for (const [motion, renderer] of [[true, undefined], [undefined, true], [true, true]]) {
-  assert.equal(readerControlVerificationColdStartPage(true, 'debug', motion, renderer, true), normal,
-    'source-switch demo cannot override a conflicting diagnostic request');
-}
 
 // Supplemental integration guards: not a claim of compiled/device behavior.
 const ability = await readFile(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url), 'utf8');
@@ -44,7 +30,6 @@ assert.match(ability, /private coldStartPage: string = 'pages\/Index'/);
 assert.match(ability, /windowStage\.loadContent\(this\.coldStartPage,/);
 assert.match(ability, /readerControlVerificationColdStartPage\(/);
 assert.match(ability, /want\.parameters\?\.readerOpenSourcePilot/);
-assert.match(ability, /want\.parameters\?\.readerSourceSwitchDemo/);
 assert.equal([...ability.matchAll(/this\.coldStartPage\s*=/g)].length, 1,
   'only onCreate admits a cold-start destination');
 assert.match(ability, /onNewWant\(want: Want,[\s\S]*?ReaderSystemFileOpenHost\.receive\(want\);\s*\}/,
@@ -56,7 +41,7 @@ assert.match(ability, /this\.runtimeOwner\?\.flush\(\)/);
 assert.match(ability, /owner\?\.release\(\)/);
 
 const pages = JSON.parse(await readFile(new URL('../entry/src/main/resources/base/profile/main_pages.json', import.meta.url), 'utf8'));
-assert.deepEqual(pages.src, [normal, diagnostic, rendererPilot, sourceSwitchDemo], 'diagnostics are registered for guarded debug cold starts');
+assert.deepEqual(pages.src, [normal, diagnostic, rendererPilot], 'diagnostics are registered for guarded debug cold starts');
 const renderer = await readFile(new URL('../entry/src/main/ets/pages/ReaderRendererPilot.ets', import.meta.url), 'utf8');
 assert.match(renderer, /\$rawfile\('reader-oss-pilot\/index\.html'\)/);
 assert.match(renderer, /\.fileAccess\(false\)/);

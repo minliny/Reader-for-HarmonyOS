@@ -1113,6 +1113,8 @@ struct Index {
         ReaderShell({
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
+          bookAuthor: this.detailBook.author,
+          bookCoverUrl: this.detailBook.coverUrl ?? '',
           sourceId: this.detailBook.sourceId,
           sourceName: this.detailBook.sourceName,
           bookKind: this.detailBook.kind,
@@ -1187,21 +1189,24 @@ struct Index {
           onCloseSourceSwitch: (): void => this.closeSourceSwitch(),
           onRetrySourceSwitch: (): void => this.retrySourceSwitch(),
           onRefreshSourceSwitch: (): void => this.refreshSourceSwitch(),
+          onStopSourceSwitch: (): void => this.stopSourceDiscovery(),
           onPickSource: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
           onRollbackSourceSwitch: (): void => this.onRollbackSourceSwitch(),
         });
       }
       if ((this.route === 'detail' || this.route === 'bookshelf') &&
         !this.readingSessionActive && this.sourceSwitchVisible && this.detailBook !== undefined) {
-        Stack({ alignContent: Alignment.Center }) {
-          Stack()
-            .width('100%')
-            .height('100%')
-            .backgroundColor(readerAppColor('app.Index.build.backgroundColor.40FFFFFF', this.appThemeScheme))
-            .onClick((): void => this.closeSourceSwitch());
+        Stack({ alignContent: Alignment.TopStart }) {
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.detailBook.sourceId,
+            bookTitle: this.detailBook.title,
+            author: this.detailBook.author,
+            coverUrl: this.detailBook.coverUrl ?? '',
+            currentSourceName: this.detailBook.sourceName,
+            consumeTopInset: false,
+            reduceMotion: this.settingsSnapshot.reduceMotion,
+            onStop: (): void => this.stopSourceDiscovery(),
             onClose: (): void => this.closeSourceSwitch(),
             onRetry: (): void => this.retrySourceSwitch(),
             onRefresh: (): void => this.refreshSourceSwitch(),
@@ -4761,8 +4766,8 @@ struct Index {
     }
     const generation = this.nextNavigationGeneration();
     this.exitToDetailOriginAfterReader = false;
-    // SS-SOURCE-SWITCH-01: the window floats over the reading surface (Figma
-    // 3572:41345), so close the directory and let the surface be the backdrop.
+    // Keep the reading owner mounted underneath the full-page source picker;
+    // closing it restores the same session and reading position.
     this.preparedReaderRoute = 'reading';
     this.route = 'reading';
     this.sourceSwitchVisible = true;
@@ -4784,8 +4789,9 @@ struct Index {
   }
 
   private retrySourceSwitch(): void {
-    const kind = this.sourceSwitchState.kind;
-    if (!this.sourceSwitchVisible || (kind !== 'discoveryError' && kind !== 'empty')) {
+    const state = this.sourceSwitchState;
+    const retryableFailure = state.kind === 'failure' && state.transactionId === undefined;
+    if (!this.sourceSwitchVisible || (state.kind !== 'discoveryError' && state.kind !== 'empty' && !retryableFailure)) {
       return;
     }
     const generation = this.nextNavigationGeneration();
@@ -4800,6 +4806,20 @@ struct Index {
     }
     const generation = this.nextNavigationGeneration();
     this.startSourceDiscovery(generation, false, true);
+  }
+
+  private stopSourceDiscovery(): void {
+    const state = this.sourceSwitchState;
+    if (!this.sourceSwitchVisible || (state.kind !== 'discovering' &&
+      !(state.kind === 'candidates' && state.refreshing === true))) return;
+    // Revoke this discovery owner before unsubscribing so late completions
+    // cannot reorder or replace the rows the user is about to select.
+    this.nextNavigationGeneration();
+    this.sourceSwitchUnsubscribe?.();
+    this.sourceSwitchUnsubscribe = undefined;
+    this.sourceSwitchState = state.kind === 'candidates'
+      ? { kind: 'candidates', candidates: state.candidates, refreshing: false, stopped: true }
+      : { kind: 'empty', stopped: true };
   }
 
   private startSourceDiscovery(
@@ -4845,7 +4865,8 @@ struct Index {
       const batch: BookAcquisitionChange = { reset: projectionReset, identities: Array.from(projectionDirty.values()) };
       projectionReset = false;
       projectionDirty.clear();
-      void gateway.loadCachedCandidates(query, isCurrent, known, batch).then((candidates: SourceSwitchCandidate[]): void => {
+      const liveKnown = this.sourceSwitchState.kind === 'candidates' ? this.sourceSwitchState.candidates : known;
+      void gateway.loadCachedCandidates(query, isCurrent, liveKnown, batch).then((candidates: SourceSwitchCandidate[]): void => {
         if (!isCurrent()) return;
         if (candidates.length > 0) this.sourceSwitchState = { kind: 'candidates', candidates,
           refreshing: this.sourceSwitchState.kind === 'candidates' && this.sourceSwitchState.refreshing === true };
@@ -4870,16 +4891,30 @@ struct Index {
       ? this.sourceSwitchState.candidates
       : [];
     if (forceRefresh && previousCandidates.length > 0) {
-      this.sourceSwitchState = { kind: 'candidates', candidates: previousCandidates, refreshing: true };
+      this.sourceSwitchState = { kind: 'candidates', candidates: previousCandidates.map(
+        (candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
+          ({ ...candidate, latencyMs: undefined, latencyKind: undefined })), refreshing: true };
     }
+    const publishProgress = (candidates: SourceSwitchCandidate[]): void => {
+      if (!isCurrent() || candidates.length === 0) return;
+      const incomingKeys = new Set(candidates.map((candidate: SourceSwitchCandidate): string =>
+        sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
+      // A partial refresh cannot delete still-visible results. The final
+      // complete relation owns membership; old search timings are not reused.
+      const retained = forceRefresh ? previousCandidates.filter((candidate: SourceSwitchCandidate): boolean =>
+        !incomingKeys.has(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)))
+        .map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
+          ({ ...candidate, latencyMs: undefined, latencyKind: undefined })) : [];
+      this.sourceSwitchState = { kind: 'candidates', candidates: [...candidates, ...retained], refreshing: true };
+    };
     const load = forceRefresh
-      ? gateway.refreshCandidates(query, isCurrent)
+      ? gateway.refreshCandidates(query, isCurrent, [], publishProgress)
       : gateway.loadCachedCandidates(query, isCurrent, known)
         .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> |
           SourceSwitchDiscoveryOutcome => cached.length > 0
           ? { kind: 'sources', candidates: cached }
           : gateway.refreshCandidates(query, isCurrent,
-            this.detailReturnRoute === 'search' ? this.searchOrchestrator?.searchedSourceIds() ?? [] : []));
+            this.detailReturnRoute === 'search' ? this.searchOrchestrator?.searchedSourceIds() ?? [] : [], publishProgress));
     load
       .then((outcome: SourceSwitchDiscoveryOutcome): void => {
         if (!isCurrent()) {
@@ -4905,10 +4940,12 @@ struct Index {
         // change.bookSource is remote. Any Host transport constraint is
         // surfaced through the admitted discovery failure state.
         hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: candidate discovery failed: %{private}s', error.message);
-        if (forceRefresh && previousCandidates.length > 0) {
+        const retainedCandidates = this.sourceSwitchState.kind === 'candidates'
+          ? this.sourceSwitchState.candidates : previousCandidates;
+        if (retainedCandidates.length > 0) {
           this.sourceSwitchState = {
             kind: 'candidates',
-            candidates: previousCandidates,
+            candidates: retainedCandidates,
             refreshing: false,
             refreshError: error.message,
           };

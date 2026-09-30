@@ -68,8 +68,10 @@ assert.match(rss,
   /private contentFrame\(\): SurfaceHorizontalFrame[\s\S]*readerVisualSafeLeft\(metrics\) - railWidth[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
   'RSS content width must be bounded by the live viewport after horizontal insets');
 
-assert.match(switchWindow, /private loadingBody[\s\S]*LoadingProgress\(\)[\s\S]*enableLoading\(true\)/,
-  'source-switch loading must render one animated indicator');
+assert.equal((switchWindow.match(/SearchSpinner\(\{/g) ?? []).length, 1,
+  'source switching keeps one search spinner mounted through streaming states');
+assert.match(switchWindow, /SearchSpinner\(\{ active: this\.isSweeping\(\) && this\.foreground, diameter: 13, reduceMotion: this\.reduceMotion/,
+  'source switching uses the real search spinner and honors background/reduced motion');
 assert.doesNotMatch(switchWindow, /importing_spinner_(track|arc)/,
   'source-switch loading must not stack two spinner circles');
 

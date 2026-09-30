@@ -4,8 +4,9 @@ import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { ReaderRectVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { readerAppearanceThemeStyle } from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+import { readerAppearanceThemeStyle, readerAppearanceChromeTone } from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import { readerWidthClass } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const read = file => readFileSync(new URL(`../entry/src/main/ets/${file}`, import.meta.url), 'utf8');
 const paperSource = read('features/reading/ReaderPaperBackground.ets');
@@ -106,15 +107,21 @@ for (const theme of ['', 'missing-theme']) {
     'unknown owner theme keeps the requested opaque underlay; never replaces it with default day paper');
 }
 
-for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 'reading']) {
+for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 'reading'])
+  for (const sourceSwitchVisible of [false, true]) {
   let metrics = { windowRect: new ReaderRectVp(0, 0, 390, 844), statusBarRect: new ReaderRectVp(2, 1, 386, 48) };
   const shell = createReaderBuilderProbe(shellSource, ['overlayStatusBarUnderlay', 'chromeMetrics'], {
     ReaderStatusBarPaper: Child, readerWidthClass, ReaderWindowCoordinator: { metrics: () => metrics },
   }).owner;
-  Object.assign(shell, { visible: true, route, sourceSwitchVisible: route === 'reading', isTablet: false,
+  Object.assign(shell, { visible: true, route, sourceSwitchVisible, isTablet: false,
     chromePaperThemeId: theme.id, chromeUnderlayColor: theme.paperStart, windowMetricsRevision: 1 });
   shell.overlayStatusBarUnderlay();
   const wrapper = [...shell.nodes.values()].find(n => n.id === 'reader-overlay-status-bar-underlay');
+  if (sourceSwitchVisible || route !== 'directory') {
+    assert.equal(wrapper, undefined, 'full-page source switching cannot retain a zIndex 10 reader-paper stripe');
+    assert.equal(shell.children.size, 0);
+    continue;
+  }
   assert.equal(wrapper.zIndex, 10); assert.equal(wrapper.hitTestBehavior, 'HitTestMode.None');
   const props = [...shell.children.values()][0].params;
   assert.equal(props.theme, theme.id); assert.deepEqual(props.statusRect, metrics.statusBarRect);
@@ -127,17 +134,17 @@ for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 
   statusGeometry(status(updated), metrics.statusBarRect, [760, 960]);
 }
 
-for (const extend of [false, true]) for (const controls of [false, true]) {
+for (const extend of [false, true]) for (const controls of [false, true]) for (const windowChromeActive of [false, true]) {
   const owner = createReaderBuilderProbe(lreSource, ['readerStatusBarUnderlay', 'readerStatusBarMetrics'], {
     ReaderStatusBarPaper: Child, readerAppearanceThemeStyle,
     ReaderWindowCoordinator: { metrics: () => ({ statusBarRect: new ReaderRectVp(0, 0, 390, 48) }) },
   }).owner;
-  Object.assign(owner, { windowChromeActive: true, readerSettingsSnapshot: { extendIntoCutout: extend },
+  Object.assign(owner, { windowChromeActive, readerSettingsSnapshot: { extendIntoCutout: extend },
     windowControlsPresented: controls, readerWindowMetricsRevision: 1, appearanceSnapshot: { activeTheme: 'paper' },
     readingLayout: () => ({ viewportWidth: 390, viewportHeight: 844, widthClass: 'compact' }) });
   owner.readerStatusBarUnderlay();
-  assert.equal(owner.children.size, controls ? 1 : 0,
-    'both extension modes leave the full moving page exposed when controls are closed');
+  assert.equal(owner.children.size, controls && windowChromeActive ? 1 : 0,
+    'closed controls or App-owned full-page source switching cannot paint the stationary reader paper band');
   if (owner.children.size) {
     const wrapper = [...owner.nodes.values()].find(n => n.id === 'reader-status-bar-underlay');
     assert.equal(wrapper.zIndex, 10, 'only the presented control overlay owns stationary status paper');
@@ -145,6 +152,52 @@ for (const extend of [false, true]) for (const controls of [false, true]) {
   }
 }
 
+// Exercise the existing observed ownership edge, including both color and
+// window policy. The source page releases ownership temporarily; returning to
+// the same reader restores it without modifying persistent immersive settings.
+{
+  const requests = [], memory = new Map();
+  class ChromeStyle {
+    constructor(underlayColor, tone, contentColor, paperThemeId) {
+      Object.assign(this, { underlayColor, tone, contentColor, paperThemeId });
+    }
+  }
+  const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+    ['onWindowChromeActiveChanged', 'applyWindowChrome', 'applyWindowPolicyForChromeOwner'], {
+      readerAppearanceThemeStyle, readerAppearanceChromeTone, ReaderWindowChromeStyle: ChromeStyle,
+      AppStorage: { setOrCreate: (key, value) => memory.set(key, value) },
+      ReaderWindowCoordinator: {
+        requestAppChrome: () => requests.push(['app']),
+        requestReaderChrome: value => requests.push(['reader', value]),
+        requestOverlayChrome: value => requests.push(['overlay', value]),
+        requestAppWindowPolicy: () => { requests.push(['app-policy']); return Promise.resolve(); },
+      },
+    });
+  const settings = Object.freeze({ extendIntoCutout: true, hideNavigationBar: true });
+  const owner = Object.assign(new Owner(), { isReaderIdentityCurrent: () => true,
+    appearanceSnapshot: { activeTheme: 'paperNight' }, readerSettingsSnapshot: settings,
+    onControlInputBoundaryChanged() {}, syncVolumeKeyPolicy() {}, controlsPresentedForWindow: () => true,
+    applyReaderWindowPolicy: (snapshot, showStatus) => {
+      requests.push(['reader-policy', snapshot, showStatus]); return Promise.resolve();
+    },
+  });
+  for (const [active, overlay, expected] of [[true, false, 'reader'], [false, false, 'app'],
+    [true, false, 'reader'], [true, true, 'overlay']]) {
+    requests.length = 0;
+    Object.assign(owner, { windowChromeActive: active, windowChromeOverlayActive: overlay });
+    owner.onWindowChromeActiveChanged();
+    assert.equal(requests[0][0], expected);
+    assert.equal(requests[1][0], active ? 'reader-policy' : 'app-policy');
+    assert.equal(memory.get('readerTopInfoSuppressed'), active);
+    if (active) {
+      assert.equal(requests[0][1].paperThemeId, 'paperNight');
+      assert.equal(requests[0][1].underlayColor, readerAppearanceThemeStyle('paperNight').paperStart);
+      assert.equal(requests[1][1], settings, 'returning to the retained reader restores its same settings snapshot');
+    }
+    assert.deepEqual(settings, { extendIntoCutout: true, hideNavigationBar: true });
+  }
+}
+
 assert.match(surfaceSource, /ReaderPaperBackground\(\{[\s\S]*?theme: this\.appearance\.activeTheme,[\s\S]*?expanded: this\.layout\.widthClass === 'expanded',[\s\S]*?synchronousImages: this\.snapshotSynchronousImages/);
 assert.doesNotMatch(surfaceSource, /backgroundImage\(this\.paperTexture\(/, 'no second page-only paper implementation remains');
-console.log(`PASS PH112: ${cases} actual SDK page/status paper compositions, full-window crops, stable late geometry/theme updates, 16 shell overlays, native visibility gates and opaque unknown-theme fallback. Device pixels are separate evidence.`);
+console.log(`PASS PH112: ${cases} actual SDK page/status paper compositions, full-window crops, stable late geometry/theme updates, directory paper and source-page exclusion, native visibility gates and opaque unknown-theme fallback. Device pixels are separate evidence.`);

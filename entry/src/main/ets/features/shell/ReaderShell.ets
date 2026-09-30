@@ -44,6 +44,8 @@ export struct ReaderShell {
   // 阅读内容。
   @Prop bookId: string = '';
   @Prop bookTitle: string = '';
+  @Prop bookAuthor: string = '';
+  @Prop bookCoverUrl: string = '';
   @Prop sourceId: string = '';
   @Prop sourceName: string = '';
   @Prop bookKind: string | undefined = undefined;
@@ -121,6 +123,7 @@ export struct ReaderShell {
   onCloseSourceSwitch: () => void = (): void => {};
   onRetrySourceSwitch: () => void = (): void => {};
   onRefreshSourceSwitch: () => void = (): void => {};
+  onStopSourceSwitch: () => void = (): void => {};
   onPickSource: (candidate: SourceSwitchCandidate) => void = (_candidate: SourceSwitchCandidate): void => {};
   onRollbackSourceSwitch: () => void = (): void => {};
 
@@ -161,9 +164,9 @@ export struct ReaderShell {
           requestedBookmarkAnchor: this.requestedBookmarkAnchor,
           bookmarkIdentity: this.bookmarkIdentity,
           isTablet: this.isTablet,
-          windowChromeActive: this.visible,
-          windowChromeOverlayActive: this.visible &&
-            (this.route === 'directory' || this.sourceSwitchVisible),
+          windowChromeActive: this.visible && !this.sourceSwitchVisible,
+          windowChromeOverlayActive: this.visible && !this.sourceSwitchVisible &&
+            this.route === 'directory',
           bookTitle: this.bookTitle,
           sourceName: this.sourceName,
           totalChapters: this.totalChapters,
@@ -270,15 +273,17 @@ export struct ReaderShell {
       }
 
       if (this.sourceSwitchVisible) {
-        Stack({ alignContent: Alignment.Center }) {
-          Stack()
-            .width('100%')
-            .height('100%')
-            .backgroundColor(readerAppColor('app.ReaderShell.build.backgroundColor.40FFFFFF', this.appThemeScheme))
-            .onClick((): void => this.onCloseSourceSwitch());
+        Stack({ alignContent: Alignment.TopStart }) {
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.sourceId,
+            bookTitle: this.bookTitle,
+            author: this.bookAuthor,
+            coverUrl: this.bookCoverUrl,
+            currentSourceName: this.sourceName,
+            currentChapterTitle: this.directoryChapterTitle,
+            reduceMotion: this.reduceMotion,
+            onStop: (): void => this.onStopSourceSwitch(),
             onClose: (): void => this.onCloseSourceSwitch(),
             onRetry: (): void => this.onRetrySourceSwitch(),
             onRefresh: (): void => this.onRefreshSourceSwitch(),
@@ -313,10 +318,9 @@ export struct ReaderShell {
 
   @Builder
   private overlayStatusBarUnderlay() {
-    // Sibling directory and source-switch surfaces can paint over the band's
-    // child in ReadingExperience. Repaint above those surfaces with the same
-    // owner-requested color; do not derive an independent application tone.
-    if (this.visible && (this.route === 'directory' || this.sourceSwitchVisible)) {
+    // The directory retains reader paper. The full-page source picker releases
+    // the reader chrome owner and paints its own App-colored safe area.
+    if (this.visible && !this.sourceSwitchVisible && this.route === 'directory') {
       ReaderStatusBarPaper({
         theme: this.chromePaperThemeId,
         fallbackColor: this.chromeUnderlayColor,

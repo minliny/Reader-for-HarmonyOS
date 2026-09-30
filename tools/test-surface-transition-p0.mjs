@@ -46,13 +46,8 @@ const tabletDirectory = resolveHorizontalFrame(
 );
 assert.deepEqual({ ...tabletDirectory }, { left: 27, right: 13, width: 720 });
 
-const safeSourceSwitch = resolveHorizontalFrame(
-  320,
-  8,
-  12,
-  new SurfaceWidthSpec(300, 0, 0, 'center'),
-);
-assert.deepEqual({ ...safeSourceSwitch }, { left: 8, right: 12, width: 300 });
+// Source switching is now an approved full-screen flow. Its parent supplies
+// the full width; only real window safe insets are consumed by the component.
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const detail = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
@@ -75,11 +70,14 @@ assert.match(directory, /readerInteractiveSafeBottom\(ReaderWindowCoordinator\.m
 assert.doesNotMatch(directory, /@Prop isTablet/,
   'Full Directory must select its layout from the live container');
 
-assert.match(sourceSwitch, /\.width\(this\.windowWidth\(\)\)/);
-assert.match(sourceSwitch, /\.height\(this\.windowHeight\(\)\)/);
+assert.match(sourceSwitch, /build\(\)[\s\S]*\.width\('100%'\)\.height\('100%'\)/);
+assert.match(sourceSwitch, /padding\(\{ top: this\.safeTop\(\), bottom: this\.safeBottom\(\), left: this\.safeLeft\(\), right: this\.safeRight\(\)/);
 assert.match(sourceSwitch, /readerInteractiveSafeLeft\(metrics\)/);
-assert.doesNotMatch(sourceSwitch, /\.width\(300\)/,
-  'Source Switch children must follow the clamped live window');
+assert.match(sourceSwitch, /return !this\.consumeTopInset \|\| this\.readerWindowMetricsRevision < 0 \? 0 : readerVisualSafeTop/,
+  'detail host can own the safe top once while the reader overlay consumes it');
+assert.doesNotMatch(sourceSwitch, /new SurfaceWidthSpec\(300|Math\.min\(385|borderRadius\(20\)/,
+  'source switching no longer uses the retired centered 300x385 modal');
+assert.match(sourceSwitchPanel, /consumeTopInset: this\.consumeTopInset/);
 assert.doesNotMatch(sourceSwitchPanel, /@Prop isTablet/);
 
 console.log('surface transition P0: PASS');

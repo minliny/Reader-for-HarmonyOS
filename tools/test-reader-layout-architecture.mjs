@@ -144,8 +144,10 @@ assert.doesNotMatch(shell, /\.padding\(\{ top:/,
 assert.match(shell,
   /expandSafeArea\(\[SafeAreaType\.SYSTEM\], \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\]\)/,
   'the themed reader background must paint continuously behind both system bars');
-assert.match(shell, /windowChromeOverlayActive:[\s\S]*this\.route === 'directory'[\s\S]*this\.sourceSwitchVisible/,
-  'fixed-light reader overlays must explicitly own a dark system-content tone');
+assert.match(shell, /windowChromeActive: this\.visible && !this\.sourceSwitchVisible,/,
+  'full-page source switching releases reader chrome to the application without unmounting the reading session');
+assert.match(shell, /windowChromeOverlayActive: this\.visible && !this\.sourceSwitchVisible &&\s*this\.route === 'directory',/,
+  'only the reader directory keeps inherited reading-paper overlay chrome');
 
 assert.match(experience, /ReaderPageTurnStage\(\{[\s\S]*layout: this\.readingLayout\(\)/,
   'the reading owner must pass its single layout snapshot into the page-turn stage');

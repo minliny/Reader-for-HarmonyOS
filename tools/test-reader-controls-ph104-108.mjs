@@ -86,18 +86,24 @@ await check('PH108: every theme-only change invalidates page textures without re
   }
 });
 
-if (!baseline) await check('PH108: shell repaints the reader band above directory and source-switch overlays', () => {
+if (!baseline) await check('PH108: directory keeps reader paper while the full-page source picker owns its app surface', () => {
   const source = readFileSync(sourcePath('features/shell/ReaderShell.ets'), 'utf8');
-  for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 'reading']) {
+  for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 'reading'])
+    for (const sourceSwitchVisible of [false, true]) {
     const { owner } = createReaderBuilderProbe(source, ['overlayStatusBarUnderlay', 'chromeMetrics'], {
       ReaderStatusBarPaper: StatusPaper, readerWidthClass,
       ReaderWindowCoordinator: { metrics: () => ({ windowRect: { width: 390, height: 844 },
         statusBarRect: { left: 2, top: 1, width: 386, height: 48 }, statusBarHeight: 48 }) },
     });
-    Object.assign(owner, { visible: true, route, sourceSwitchVisible: route === 'reading',
+    Object.assign(owner, { visible: true, route, sourceSwitchVisible,
       chromeUnderlayColor: theme.statusBackground, chromePaperThemeId: theme.id, windowMetricsRevision: 1 });
     owner.overlayStatusBarUnderlay();
     const row = [...owner.nodes.values()].find(row => row.id === 'reader-overlay-status-bar-underlay');
+    if (sourceSwitchVisible || route !== 'directory') {
+      assert.equal(row, undefined, 'app-owned full-page source picker must not be covered by the reader paper band');
+      assert.equal(owner.children.size, 0);
+      continue;
+    }
     const props = [...owner.children.values()][0].params;
     assert.equal(props.fallbackColor, theme.statusBackground);
     assert.equal(props.theme, theme.id); assert.equal(row.zIndex, 10);
