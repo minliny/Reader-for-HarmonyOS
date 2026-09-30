@@ -94,6 +94,19 @@
       "bytes": 49697,
       "sha256": "3132e95f2e9076ef907fac1dd0b71bfb1f6c43c02f8b25c276088ee470381f2f",
       "purpose": "controlled local UI validation fixture; normal import only"
+    },
+    {
+      "name": "UI回归驻留窗口20261001.txt",
+      "scalars": 37211,
+      "bytes": 109229,
+      "sha256": "5b479346ce9a542b218e7b31fdb5ad57eff8b91621f38d88317ad1e7d567470d",
+      "purpose": "one long chapter; normal progress slider exit/reopen only"
     }
-  ]
+  ],
+  "rootFrozenActualSha256": {
+    "tools/test-bookshelf-detail-scroll-layout.mjs": "e6481d17e6b9d9f56d5be5695a37853eb33c1dd2bbe2ceeb1e3a23f3a911cf8a",
+    "tools/test-bookshelf-settings-layout.mjs": "f9ebece8b06c3ebe645d9cefbaabc3a33bdfd05deb271c7fc344bee4e4449d90",
+    "tools/test-bookshelf-shell-states.mjs": "a90336794cad968d5808d3e83fccb7933cfc114b221b6bdbc51338032c279966"
+  },
+  "note": "Agent records are point-in-time snapshots; rootFrozenActualSha256 includes later removal of unused viewport test loop."
 }

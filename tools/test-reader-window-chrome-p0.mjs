@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
@@ -11,8 +14,66 @@ const experience = read('entry/src/main/ets/features/reading/LocalReadingExperie
 
 assert.doesNotMatch(index, /\$r\('app\.color\.reader_surface'\)/,
   'app safe-area root must not paint a fixed day resource behind night window chrome');
-assert.equal((index.match(/backgroundColor\(readerAppColor\('app.window.background', this.appThemeScheme\)\)/g) ?? []).length, 2,
-  'normal and startup-failure roots share the same app palette as ReaderThemeHost window chrome');
+// Read the actual outer Stack modifier chain. A count over the whole Index
+// was accidentally coupled to the old failure branch's duplicate background.
+const require = createRequire(import.meta.url);
+const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+const parse = text => ts.createSourceFile('WindowChromeContract.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = parse(index);
+assert.equal(tree.parseDiagnostics.length, 0);
+const indexType = tree.statements.find(node => node.name?.getText(tree) === 'Index');
+const build = indexType.members.find(node => node.name?.getText(tree) === 'build');
+let rootExpression = build.body.statements[0].expression;
+const rootPaints = [];
+while (ts.isCallExpression(rootExpression) && ts.isPropertyAccessExpression(rootExpression.expression)) {
+  if (rootExpression.expression.name.text === 'backgroundColor') rootPaints.push(rootExpression.arguments[0]);
+  rootExpression = rootExpression.expression.expression;
+}
+assert.equal(rootExpression.expression.getText(tree), 'Stack', 'paint must belong to the actual Index root');
+assert.equal(rootPaints.length, 1, 'the app root has one authoritative window fill');
+const indexPaint = new Function('readerAppColor', `return ${stripTypeScriptTypes(rootPaints[0].getText(tree))};`);
+const mainShell = read('entry/src/main/ets/features/shell/MainTabShell.ets');
+const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
+syntax.componentCollection.customComponents.add('MainTabBar');
+const { owner: sharedShell } = createReaderBuilderProbe(mainShell, ['content','build'], {
+  MainTabBar: class { constructor(owner, params, _storage, id) { Object.assign(this, {owner,params,id}); } },
+});
+Object.assign(sharedShell, { appThemeScheme: 'day', showTabletRail: false, showBottomNav: false, content() {} });
+sharedShell.initialRender();
+const contentRoot = [...sharedShell.nodes.values()].find(node => node.type === 'Column');
+assert.ok(contentRoot, 'normal-flow shared app shell paints beneath failure content');
+for (const scheme of ['day','night','day']) {
+  sharedShell.appThemeScheme = scheme; sharedShell.replay();
+  const windowPaint = readerAppColor('app.window.background', scheme);
+  assert.equal(indexPaint.call({appThemeScheme:scheme}, readerAppColor), windowPaint, 'Index root follows window chrome');
+  assert.equal(contentRoot.backgroundColor, windowPaint, 'shared shelf shell, including failure, follows the same live palette');
+}
+// Verify failure remains inside the common bookshelf content slot, rather than
+// silently regaining a separate page root that this palette check would miss.
+const content = indexType.members.find(node => node.name?.getText(tree) === 'bookshelfContent');
+assert.ok(content);
+const calls = (node, name, sourceTree = tree) => {
+  const result = []; const visit = item => {
+    if ((ts.isCallExpression(item) || ts.isEtsComponentExpression(item)) && item.expression.getText(sourceTree) === name) result.push(item);
+    ts.forEachChild(item, visit);
+  }; visit(node); return result;
+};
+assert.equal(calls(build, 'BookshelfShell').length, 1);
+assert.equal(calls(build, 'this.bookshelfContent').length, 1, 'shared shell receives the readiness content slot');
+const shelfShellTree = parse(read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets'));
+assert.equal(calls(shelfShellTree, 'MainTabShell', shelfShellTree).length, 1, 'bookshelf chrome uses the actual app palette owner');
+const failure = calls(content, 'BookshelfStatusContent'); assert.equal(failure.length, 1);
+const failedProp = failure[0].arguments[0].properties.find(node => node.name?.getText(tree) === 'failed');
+assert.equal(failedProp.initializer.getText(tree), 'this.bookshelfLoadFailed');
+const status = read('entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets');
+syntax.componentCollection.customComponents.add('SearchSpinner');
+const { owner: failureContent } = createReaderBuilderProbe(status, ['build']);
+Object.assign(failureContent, { failed:true, appThemeScheme:'night', onRetry() {} });
+failureContent.initialRender();
+assert.ok([...failureContent.nodes.values()].some(node => node.type === 'Text' && node.create === '书架加载失败'));
+assert.ok([...failureContent.nodes.values()].every(node => node.backgroundColor === undefined || node.type === 'Text'),
+  'failure body inherits shared root paint while retaining the retry button fill');
 
 assert.match(coordinator,
   /class ReaderWindowChromeStyle[\s\S]*underlayColor: string;[\s\S]*tone: ReaderWindowChromeTone;/,

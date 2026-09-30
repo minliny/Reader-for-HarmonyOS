@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
@@ -119,8 +120,41 @@ assert.match(shelf, /ShelfBookPresentation\.visible\(this\.books, '', this\.read
   'SHF-02 revised: the removed group entry cannot leave an unreachable group condition');
 assert.match(shelfMoreMenu, /检查更新/,
   'SHF-03: More must present a manual shelf-wide update entry');
-assert.match(shelf, /onCheckUpdatesRequested/,
-  'SHF-03: the update menu item must emit an intent, not run the sweep itself');
+// SHF-03 moved with the persistent chrome. Execute the actual More -> Shell
+// guard -> Index callback instead of looking for an obsolete Page field.
+const shellFile = new URL('../entry/src/main/ets/features/bookshelf/BookshelfShell.ets', import.meta.url);
+const ShellUpdate = productionMotionMethods(shellFile, ['requestCheckUpdates']);
+const require = createRequire(import.meta.url);
+const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+function suppliedCallback(text, component, property, owner) {
+  const tree = ts.createSourceFile('ShelfUpdateContract.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.equal(tree.parseDiagnostics.length, 0);
+  const calls = [];
+  const visit = node => {
+    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && node.expression.getText(tree) === component) calls.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(tree); assert.equal(calls.length, 1, `one production ${component} owner`);
+  const value = calls[0].arguments[0].properties.find(node => node.name?.getText(tree) === property);
+  assert.ok(value, `${component} forwards ${property}`);
+  return new Function(`return ${stripTypeScriptTypes(value.initializer.getText(tree))};`).call(owner);
+}
+let updateIntents = 0;
+const shellUpdate = Object.assign(new ShellUpdate(), { canCheckUpdates: true, updateRunning: false,
+  backgroundUpdateRunning: false, moreMenuVisible: true,
+  onCheckUpdatesRequested: suppliedCallback(index, 'BookshelfShell', 'onCheckUpdatesRequested', {
+    startManualBookshelfUpdate: () => { updateIntents++; },
+  }),
+});
+const requestUpdate = suppliedCallback(readFileSync(shellFile, 'utf8'), 'BookshelfMoreMenu', 'onCheckUpdates', shellUpdate);
+for (const blocked of ['canCheckUpdates', 'updateRunning', 'backgroundUpdateRunning']) {
+  shellUpdate[blocked] = blocked !== 'canCheckUpdates'; requestUpdate();
+  assert.equal(updateIntents, 0, 'empty/local-only and concurrent sweeps cannot dispatch another update');
+  shellUpdate[blocked] = blocked === 'canCheckUpdates';
+}
+requestUpdate(); assert.equal(updateIntents, 1, 'More delegates the foreground sweep to the existing Index owner');
+assert.equal(shellUpdate.moreMenuVisible, false, 'accepted update closes the menu');
 assert.match(index, /private startManualBookshelfUpdate\(\)/,
   'SHF-03: Index must own the foreground update queue');
 assert.match(index, /onProgress\(completed, books\.length\)/,

@@ -87,3 +87,9 @@
 详情 Scroll 显式顶部对齐；设置页复用 PageBackBar、响应式安全边距和可滚动正文。两项 SDK 回归先红后绿，五项相关回归通过。设置保存/回滚/自动更新回调逐方法保持不变。受控 Phone/Tablet Figma fixture 中详情 bottom=112 明确存在，本轮保留；SDK声明验证不等于原生短/长窗口像素验证。
 
 代码修复和本地行为结果尚不代表新 HAP、安装或用户验收。现有 Mate80Pro VM fresh preflight：target127.0.0.1:5555、Emulator40666、boot=true、SceneBoard1450/start1022、日志末段0风险；安装前正常书架为空。原数据不清除；后续通过正常系统导入使用两本明确标记的UI回归书，记录内容hash及本次新增数据，禁止直接注入Core存储。
+
+## 第一次全量检查（未交付）
+
+源码 `cf5d9c02`：394 文件，391 通过、3 失败、0 skip/cancel；耗时117.714秒，未超120秒且尚未构建HAP。失败分别为旧阅读入口测试的全文件转译未过滤新@Builder、SHF03更新intent断言仍读旧Page owner、window-chrome测试仍计数Index旧失败根。记录见ui-regression-full-gate-first-result.json；只迁移对应测试的生产定位与新共享壳证据，不能删除原产品断言或按局部绿跳过全量失败。
+
+三项测试已分别先复现原失败，再按真实生产owner调整并通过，未改产品：精确SDK AST普通方法提取；真实More→Shell→Index更新intent及并发保护；实际Index根palette与MainTabShell日/夜/日observer及失败slot归属。原阅读/退出、窗口安全区和更新队列断言保留。定向证据见ui-regression-owner-tests-result.json。为实际中段窗口场景另外准备单章37,211 scalar测试TXT，仍只通过正常文件导入、进度拖动及退出重开验证，三本fixture的内容hash分别记录。
