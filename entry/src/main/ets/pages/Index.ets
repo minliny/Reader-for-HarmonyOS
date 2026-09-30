@@ -30,6 +30,7 @@ import {
   type BookshelfRemoveOutcome,
 } from '../features/bookshelf/BookshelfFlowGateway';
 import { BookshelfPage } from '../features/bookshelf/BookshelfPage';
+import { BookRemovalDialog } from '../features/bookshelf/BookRemovalDialog';
 import { BookshelfMultiSelectPage } from '../features/bookshelf/BookshelfMultiSelectPage';
 import { BookshelfManagementPage } from '../features/bookshelf/BookshelfManagementPage';
 import {
@@ -493,6 +494,23 @@ struct Index {
   @State private bookshelfAdditionError: string = '';
   private bookshelfAdditionGeneration: number = 0;
   private bookshelfBatchRemovalGeneration: number = 0;
+  @State private bookRemovalMessage: string = '';
+  private bookRemovalDialogOpen: boolean = false;
+  private bookRemovalConfirmAction: (() => void) | undefined = undefined;
+  private bookRemovalDialogController: CustomDialogController = new CustomDialogController({
+    builder: BookRemovalDialog({
+      message: this.bookRemovalMessage,
+      onCancel: (): void => this.dismissBookRemovalDialog(),
+      onConfirm: (): void => this.confirmBookRemovalDialog(),
+    }),
+    alignment: DialogAlignment.Center,
+    customStyle: true,
+    autoCancel: true,
+    cancel: (): void => {
+      this.bookRemovalDialogOpen = false;
+      this.bookRemovalConfirmAction = undefined;
+    },
+  });
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
   private bookshelfSourceNameRequest: number = 0;
@@ -603,6 +621,7 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.dismissBookRemovalDialog();
     this.navigationBackfillObserverDisposer?.();
     this.navigationBackfillObserverDisposer = undefined;
     this.navigationBackfillObservedKey = '';
@@ -623,6 +642,10 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.bookRemovalDialogOpen) {
+      this.dismissBookRemovalDialog();
+      return true;
+    }
     if (this.jsonImportVisible) {
       this.dismissJsonImport();
       return true;
@@ -3647,6 +3670,32 @@ struct Index {
       });
   }
 
+  private openBookRemovalDialog(message: string, action: () => void): void {
+    if (this.bookRemovalDialogOpen) return;
+    const generation = this.navigationGeneration;
+    this.bookRemovalMessage = message;
+    this.bookRemovalConfirmAction = (): void => {
+      if (generation === this.navigationGeneration) action();
+    };
+    this.bookRemovalDialogOpen = true;
+    this.bookRemovalDialogController.open();
+  }
+
+  private dismissBookRemovalDialog(): void {
+    const wasOpen = this.bookRemovalDialogOpen;
+    this.bookRemovalDialogOpen = false;
+    this.bookRemovalConfirmAction = undefined;
+    if (wasOpen) this.bookRemovalDialogController.close();
+  }
+
+  private confirmBookRemovalDialog(): void {
+    if (!this.bookRemovalDialogOpen) return;
+    const action = this.bookRemovalConfirmAction;
+    // Consume the confirmation before dispatch, including repeated taps.
+    this.dismissBookRemovalDialog();
+    action?.();
+  }
+
   private requestRemoveDetailBook(): void {
     const book = this.detailBook;
     if (book === undefined || !this.canRemoveDetailBook(book)) {
@@ -3655,23 +3704,10 @@ struct Index {
     const message = book.sourceId === LOCAL_SOURCE_ID ?
       `确定将“${book.title}”从书架移除吗？应用内解析内容、阅读进度和离线任务将一并删除；系统中的原始文件不受影响。` :
       `确定将“${book.title}”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。`;
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveDetailBook.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.canRemoveDetailBook(book)) {
-            this.removeDetailBook(book);
-          }
-        },
-      },
+    this.openBookRemovalDialog(message, (): void => {
+      if (this.canRemoveDetailBook(book)) {
+        this.removeDetailBook(book);
+      }
     });
   }
 
@@ -3682,23 +3718,10 @@ struct Index {
     const message = book.sourceId === LOCAL_SOURCE_ID ?
       `确定将“${book.title}”从书架移除吗？应用内解析内容、阅读进度和离线任务将一并删除；系统中的原始文件不受影响。` :
       `确定将“${book.title}”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。`;
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveShelfBook.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.canRemoveShelfBook(book)) {
-            this.removeShelfBook(book);
-          }
-        },
-      },
+    this.openBookRemovalDialog(message, (): void => {
+      if (this.canRemoveShelfBook(book)) {
+        this.removeShelfBook(book);
+      }
     });
   }
 
@@ -3711,23 +3734,10 @@ struct Index {
     if (selected.length === 0) {
       return;
     }
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message: `确定将已选择的 ${selected.length} 本书移出书架吗？本地原始文件不受影响。`,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveShelfBooks.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.route === 'bookshelfMultiSelect' && !this.bookshelfBatchRemovalBusy) {
-            this.removeShelfBooks(selected);
-          }
-        },
-      },
+    this.openBookRemovalDialog(`确定将已选择的 ${selected.length} 本书移出书架吗？本地原始文件不受影响。`, (): void => {
+      if (this.route === 'bookshelfMultiSelect' && !this.bookshelfBatchRemovalBusy) {
+        this.removeShelfBooks(selected);
+      }
     });
   }
 

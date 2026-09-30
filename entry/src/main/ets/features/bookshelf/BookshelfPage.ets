@@ -1,5 +1,6 @@
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
 import { BookshelfViewState } from './BookshelfViewState';
@@ -773,8 +774,8 @@ export struct BookshelfPage {
     }
     .width(34)
     .height(34)
-    .borderRadius(17)
-    .backgroundColor(this.isSectionActionActive(assetName) ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent)
+    .attributeModifier(new ReaderPressFeedback(this.isSectionActionActive(assetName) ?
+      readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent, this.appThemeScheme, 17, 12))
     .border({ width: this.isSectionActionActive(assetName) ? 1 : 0, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     // Figma `Library/SectionAction` (`487:40`) keeps a 34×34 visual actor
     // but expands its transparent hit target by 5vp on every side.

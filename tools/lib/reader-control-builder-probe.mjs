@@ -2,6 +2,7 @@ import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -150,6 +151,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...dependencies };
+  globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
   const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));
   return { owner: new Component(undefined, hooks.initialParams ?? {}), Component, output };
 }

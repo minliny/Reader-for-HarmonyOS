@@ -1,4 +1,5 @@
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
 import {
   TOK_BORDER_W,
   TOK_INK,
@@ -19,7 +20,7 @@ export struct CategoryRow {
 
   @Prop icon: Resource = (this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'));
   @Prop label: string = '';
-  onRowClick: () => void = (): void => {};
+  onRowClick: (() => void) | undefined = undefined;
   @BuilderParam content: () => void;
 
   build() {
@@ -49,6 +50,8 @@ export struct CategoryRow {
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .onClick((): void => this.onRowClick());
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 14,
+      this.onRowClick !== undefined))
+    .onClick((): void => this.onRowClick?.());
   }
 }
