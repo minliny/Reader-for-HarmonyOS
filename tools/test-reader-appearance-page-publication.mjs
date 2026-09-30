@@ -16,6 +16,7 @@ import { ReadingSessionProgressOwner } from '../entry/src/main/ets/features/read
 const lreFile = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const stageFile = new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets', import.meta.url);
 const lreSource = readFileSync(lreFile, 'utf8'), stageSource = readFileSync(stageFile, 'utf8');
+const measurementModelsSource = readFileSync(new URL('ReadingMeasurementModels.ets', lreFile), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -25,7 +26,7 @@ function actualClass(source, name, dependencies = {}) {
   assert.ok(node, name);
   return new Function(...Object.keys(dependencies), stripTypeScriptTypes(node.getText(tree)).replace(/^export /, '') + `;return ${name};`)(...Object.values(dependencies));
 }
-const PhysicalReadingPage = actualClass(lreSource, 'PhysicalReadingPage');
+const PhysicalReadingPage = actualClass(measurementModelsSource, 'PhysicalReadingPage');
 const CoreReadingAnchor = actualClass(lreSource, 'CoreReadingAnchor');
 const ReaderPageTurnRenderPage = actualClass(stageSource, 'ReaderPageTurnRenderPage', { ReaderPageChromeSnapshot });
 const snapshot = size => ({ ...createDefaultReaderAppearanceSnapshot(), fontSize: size });
