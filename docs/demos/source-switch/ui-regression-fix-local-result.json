@@ -1,0 +1,99 @@
+{
+  "scope": "production and SDK/local regression; not artifact/device acceptance",
+  "records": [
+    {
+      "head": "2c04738c534dd9030d31947b459a04b3f6d65278",
+      "files": {
+        "entry/src/main/ets/features/bookshelf/BookshelfShell.ets": "33278cccaeb127f1aeecb864b3963ca219824eb48cc245b7a80cce51428d2749",
+        "entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets": "36325ac60702b77e09c138ad88f73886ab7b0d41cef1403bb09308b082e97aa6",
+        "entry/src/main/ets/features/bookshelf/BookshelfPage.ets": "da3bdacc09386fbbc8e072f0444d361123ac07dddea5fda7acc17b23cc80b6f4",
+        "entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets": "62e6c9bef9a5a9e821baaaa6d8c155a105530f9494019afb86812098e5ff4eb5",
+        "entry/src/main/ets/pages/Index.ets": "47875d6344070167fff90e539e7a938d64b1af1687e4010a223112b664ee4418",
+        "tools/test-bookshelf-shell-states.mjs": "a90336794cad968d5808d3e83fccb7933cfc114b221b6bdbc51338032c279966",
+        "tools/test-bookshelf-physical-feedback.mjs": "eb683c395961318259018627fca2825178705a4c5b78183779b5aeb5e87050e3",
+        "tools/test-bookshelf-filter-responsibilities.mjs": "0f5bdd098c6eaba11adc893b5655ba140f00aa6b05117cf5871b10f5258775af",
+        "tools/test-bookshelf-more-layout.mjs": "27ed25739867f037eb423a71092dfb5461a988654fea548d065f641a66e7e6a7",
+        "tools/test-bookshelf-management.mjs": "d48f4677b18d5a6591c45a9629e4de363adc3ffe567ace7b15bbed1fd1139faf"
+      },
+      "redLog": "/private/tmp/bookshelf-shell-red-20261001.log",
+      "sdkFinal": "/private/tmp/bookshelf-shell-sdk-final-20261001.json",
+      "sdkWithIndex": "/private/tmp/bookshelf-shell-sdk-20261001.json"
+    },
+    {
+      "scope": "SDK declarations and production business methods only; no HAP/VM/pixel validation",
+      "laneHead": "2c04738c534dd9030d31947b459a04b3f6d65278",
+      "files": [
+        {
+          "path": "entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets",
+          "sha256": "feb06b4527b4ca8d5e2cef373060f018fcb7f7a2f3a53aba95e04411843be596"
+        },
+        {
+          "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+          "sha256": "750c8add692141c0b0ead6df8513449c7f82db5f719af935af2fbb25e6b66a12"
+        },
+        {
+          "path": "tools/test-bookshelf-detail-scroll-layout.mjs",
+          "sha256": "e891065a8a66951aa2296124bb79289cbb5eadc17418621e797eeebbba9a6c13"
+        },
+        {
+          "path": "tools/test-bookshelf-settings-layout.mjs",
+          "sha256": "f9ebece8b06c3ebe645d9cefbaabc3a33bdfd05deb271c7fc344bee4e4449d90"
+        }
+      ],
+      "businessMethods": [
+        {
+          "name": "aboutToDisappear",
+          "unchanged": true,
+          "sha256": "bfc87a7926af1f25550a4eade48a7a6d86e7529c075c0be256bd2385def2ea6f"
+        },
+        {
+          "name": "persistRequestedMode",
+          "unchanged": true,
+          "sha256": "a69919095f6a634c26758e750057f694f00ef13f6666350942c040c058f82282"
+        },
+        {
+          "name": "selectMode",
+          "unchanged": true,
+          "sha256": "0d06eb9e2b9597d6a9356a9a5edf90756c37fa007909561b9e3ab3e0edc220d3"
+        }
+      ],
+      "autoUpdateCallbackUnchanged": true,
+      "figmaFixtures": [
+        {
+          "path": "/Users/minliny/Documents/Reader/evidence/2026-09-30-main-ui-figma-audit/measure-detail.json",
+          "sha256": "24099c8a3bede530d3f7f378e58ca08988def6a914de711bc1656487153d06e8"
+        },
+        {
+          "path": "/Users/minliny/Documents/Reader/evidence/2026-09-30-main-ui-figma-audit/measure-book-detail-tablet.json",
+          "sha256": "a3ca8a8a12abf0d7cc95c775b037e03f88b00ad5d53ffe7c2d5ff5a0e2bc5467"
+        },
+        {
+          "path": "/Users/minliny/Documents/Reader/evidence/2026-09-30-main-ui-figma-audit/measure-bookshelf.json",
+          "sha256": "b874235e60d3bca71632ea8ca95c34888415d59054ff6936ff320eb1336dbe83"
+        },
+        {
+          "path": "/Users/minliny/Documents/Reader/evidence/2026-09-30-main-ui-figma-audit/measure-empty-card.json",
+          "sha256": "c5f09267fb717fa7269576617ad0e0cb3f517f9f8a63dfba73343c869172a7bc"
+        }
+      ],
+      "tailGap": {
+        "detail112": "Preserved: controlled Phone/Tablet fixtures explicitly carry bottom 112. Normal-flow 77vp action row means native tail adaptation still requires a specific design decision.",
+        "empty116": "No empty-page footprint in controlled card fixture. Card 350vp is authored, page 116 gap is not validated. Root/shared-shell owner notified."
+      }
+    }
+  ],
+  "controlledFixtures": [
+    {
+      "name": "UI回归短目录20261001.txt",
+      "bytes": 284,
+      "sha256": "07484a96ba0956178bc73064407aa46a0791fb6b3158c308f47806e40deb303a",
+      "purpose": "controlled local UI validation fixture; normal import only"
+    },
+    {
+      "name": "UI回归长目录20261001.txt",
+      "bytes": 49697,
+      "sha256": "3132e95f2e9076ef907fac1dd0b71bfb1f6c43c02f8b25c276088ee470381f2f",
+      "purpose": "controlled local UI validation fixture; normal import only"
+    }
+  ]
+}

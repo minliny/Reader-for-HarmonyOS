@@ -354,8 +354,8 @@ export struct ReadingSurface {
 
       Column({ space: this.layout.titleToBodySpacingVp }) {
         if (this.showChapterTitle) {
-          if (this.pageFragments[0]?.nativeTitle !== undefined) {
-            ReaderNativeParagraphView({ recipe: this.pageFragments[0].nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+          if (this.renderFragments()[0]?.nativeTitle !== undefined) {
+            ReaderNativeParagraphView({ recipe: this.renderFragments()[0].nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
           } else {
           Text(this.chapterTitle)
             .width('100%')
@@ -608,8 +608,11 @@ export struct ReadingSurface {
   private renderFragments(): ReadingSurfacePageFragment[] {
     // Primitive revision invalidates the slot; the provider reads its current
     // owner rather than a complex array copied when the slot first mounted.
+    // Offscreen captures reuse a revision across pages: also observe their
+    // supplied array, while keeping the provider authoritative for content.
+    const publishedFragments = this.pageFragments;
     return this.contentRevision >= 0 && this.fragmentsProvider !== undefined ?
-      this.fragmentsProvider() : this.pageFragments;
+      this.fragmentsProvider() : publishedFragments;
   }
 
   private contentInsets(): Padding {

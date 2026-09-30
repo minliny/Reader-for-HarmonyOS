@@ -26,7 +26,7 @@ assert.equal(books[2].group, '历史');
 
 const shelfSource = source('BookshelfPage');
 const memberNames = ['isFilterSelected','hasActiveFilters','selectFilter','clearFilters',
-  'onShelfFiltersChanged','queueShelfProjection','requestCheckUpdates','isSectionActionActive','sectionActionLabel','sectionActionAsset','canonicalFilterActiveAsset'];
+  'onShelfFiltersChanged','queueShelfProjection','isSectionActionActive','sectionActionLabel','sectionActionAsset','canonicalFilterActiveAsset'];
 const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',...memberNames]);
 Object.assign(shelf, { appThemeScheme:'day', storedSelectedGroup:'', readingFilter:'all',sourceFilter:'all',
   filterRowVisible:true, viewMode:'list', mounted:true,projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
@@ -58,10 +58,12 @@ const invoke = key => new Function(stripTypeScriptTypes(`const action = ${callba
 assert.deepEqual([...callbacks.keys()],['bookshelf_grid','bookshelf_list','bookshelf_filter']);
 invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,true);
 invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,false);
-let updates=0; Object.assign(shelf,{hasOnlineBooks:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
-shelf.requestCheckUpdates(); assert.equal(updates,1);
-shelf.backgroundUpdateRunning=true;shelf.requestCheckUpdates();assert.equal(updates,1);
-shelf.backgroundUpdateRunning=false;shelf.hasOnlineBooks=false;shelf.requestCheckUpdates();assert.equal(updates,1);
+const Shell = productionMotionMethods(path('BookshelfShell'), ['requestCheckUpdates']);
+const shell = new Shell();
+let updates=0; Object.assign(shell,{canCheckUpdates:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
+shell.requestCheckUpdates(); assert.equal(updates,1);
+shell.backgroundUpdateRunning=true;shell.requestCheckUpdates();assert.equal(updates,1);
+shell.backgroundUpdateRunning=false;shell.canCheckUpdates=false;shell.requestCheckUpdates();assert.equal(updates,1);
 assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow()'),shelfSource.indexOf('private filterChip(')).includes('onCheckUpdates'));
 
 const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection','toggleBook','hasBookKey','toggleAll','allSelected'],{ShelfBookPresentation});

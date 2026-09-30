@@ -6,9 +6,6 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
  * pills, and wrong card size). The top bar shares the populated shelf's text
  * title and actions. Empty-state text uses ReaderNotoSansSC per Figma.
  */
-import { MainTabShell } from '../shell/MainTabShell';
-import { AppTopBar } from '../common/AppTopBar';
-import { ReaderIconButton } from '../common/ReaderIconButton';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   SurfaceHorizontalFrame,
@@ -23,136 +20,49 @@ import {
   TOK_CONTENT_MAX_W_PHONE,
   TOK_SCREEN_INSET,
   TOK_SPACE_XS,
+  TOK_SPACE_MD,
 } from '../common/ReaderTokens';
 
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfEmptyCard } from './BookshelfEmptyCard';
-import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 
 @Component
 export struct BookshelfEmptyPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @Prop reduceMotion: boolean = false;
   onImportRequested: () => void = (): void => {};
   onSearchRequested: () => void = (): void => {};
-  onRssRequested: () => void = (): void => {};
-  onSettingsRequested: () => void = (): void => {};
-  onDiscoverRequested: () => void = (): void => {};
-  onBatchManageRequested: () => void = (): void => {};
-  // Keep the menu action on the same semantic settings boundary as the
-  // populated shelf; the host decides the concrete route.
-  onBookshelfSettingsRequested: () => void = (): void => {};
   @State private viewportWidth: number = 0;
-  @State private moreMenuVisible: boolean = false;
-  @State private moreAnchorRight: number = 0;
-  @State private moreAnchorBottom: number = 0;
-  @State private overlayOriginX: number = 0;
-  @State private overlayOriginY: number = 0;
 
   aboutToAppear(): void {
     registerReaderShelfFonts(this.getUIContext().getFont());
   }
 
   build() {
-    MainTabShell({
-      activeTab: 'bookshelf',
-      // Tablet empty has no Figma variant (phone-reuse), so keep the bottom
-      // nav here; BookshelfPage's tablet rail branch does not apply.
-      showBottomNav: true,
-      onMainTab: (key: string): void => this.onMainTab(key),
-    }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        Column() {
-          this.topBar();
-          Scroll() {
-            Column({ space: 9 }) {
-              this.sectionHeader();
-              BookshelfEmptyCard({
-                cardWidth: this.contentFrame().width,
-                onImportRequested: (): void => this.onImportRequested(),
-                onSearchRequested: (): void => this.onSearchRequested(),
-              })
-            }
-            .width(this.contentFrame().width)
-            .padding({ top: TOK_SPACE_XS, bottom: 116 });
-          }
-          .layoutWeight(1)
-          .width('100%')
-          .align(Alignment.Top)
-          .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-          .scrollBar(BarState.Off);
-        }
-        .width('100%')
-        .height('100%');
-
-        if (this.moreMenuVisible) {
-          BookshelfMoreMenu({
-            anchorRight: this.moreAnchorRight - this.overlayOriginX,
-            anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
-            reduceMotion: this.reduceMotion,
-            canCheckUpdates: false,
-            onBatchManage: (): void => {
-              this.moreMenuVisible = false;
-              this.onBatchManageRequested();
-            },
-            onLocalImport: (): void => {
-              this.moreMenuVisible = false;
-              this.onImportRequested();
-            },
-            onBookshelfSettings: (): void => {
-              this.moreMenuVisible = false;
-              this.onBookshelfSettingsRequested();
-            },
-            onDismiss: (): void => {
-              this.moreMenuVisible = false;
-            },
-          });
-        }
-      }
-      .width('100%')
-      .height('100%')
-      .clip(true)
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        const width = this.numericAreaLength(newValue.width);
-        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-          this.viewportWidth = width;
-        }
-        this.overlayOriginX = Number(newValue.globalPosition.x);
-        this.overlayOriginY = Number(newValue.globalPosition.y);
-      });
-    }
-  }
-
-  @Builder
-  private topBar() {
-    AppTopBar({ title: '书架', divider: true }) {
-      Row({ space: 18 }) {
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
-          boxSize: 44,
-          iconSize: 24,
-          radius: 22,
-          onTap: (): void => this.onSearchRequested(),
-        });
-
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
-          boxSize: 44,
-          iconSize: 44,
-          radius: 22,
-          onTap: (): void => {
-            this.moreMenuVisible = true;
-          },
+    Scroll() {
+      Column({ space: 9 }) {
+        this.sectionHeader();
+        BookshelfEmptyCard({
+          cardWidth: this.contentFrame().width,
+          onImportRequested: (): void => this.onImportRequested(),
+          onSearchRequested: (): void => this.onSearchRequested(),
         })
-          .accessibilityText('更多')
-          .onAreaChange((_oldValue: Area, newValue: Area): void => {
-            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
-            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
-          });
       }
+      .width(this.contentFrame().width)
+      .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD });
     }
+    .width('100%')
+    .height('100%')
+    .align(Alignment.Top)
+    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+    .scrollBar(BarState.Off)
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const width = this.numericAreaLength(newValue.width);
+      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+        this.viewportWidth = width;
+      }
+    });
   }
 
   @Builder
@@ -202,17 +112,6 @@ export struct BookshelfEmptyPage {
     .height(34)
     .opacity(0.42)
     .borderRadius(17);
-  }
-
-  private onMainTab(key: string): void {
-    if (key === 'discover') {
-      this.onDiscoverRequested();
-    } else if (key === 'rss') {
-      this.onRssRequested();
-    } else if (key === 'settings') {
-      this.onSettingsRequested();
-    }
-    // 'bookshelf' is this page; MainTabBar suppresses the current tab.
   }
 
   private contentFrame(): SurfaceHorizontalFrame {

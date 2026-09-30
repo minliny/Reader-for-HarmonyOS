@@ -34,5 +34,6 @@ owner.updateRunning=false;owner.backgroundUpdateRunning=true;owner.replay();asse
 owner.backgroundUpdateRunning=false;owner.appThemeScheme='night';owner.replay();assert.equal(text().create,'检查更新');
 const icon=[...owner.nodes.values()].find(n=>n.type==='Image');assert.equal(icon.create,'app.media.settings_gen_refresh_theme_night');
 target().onClick();target().onClick();assert.equal(calls,1,'exactly once dispatch before the menu closes');
-const empty=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets',import.meta.url),'utf8');assert.match(empty,/canCheckUpdates: false/);
+// Actual Index readiness -> shared menu admission is exercised by the SDK shell-state test.
+await import('./test-bookshelf-shell-states.mjs');
 console.log('PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update');

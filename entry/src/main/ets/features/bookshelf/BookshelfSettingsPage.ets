@@ -1,12 +1,21 @@
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { TOK_INK, TOK_MUTED, TOK_GREEN, TOK_CARD_BG, TOK_PAPER, TOK_BORDER } from '../common/ReaderTokens';
+import { PageBackBar } from '../common/PageBackBar';
+import { registerReaderFonts } from '../common/ReaderFonts';
+import { readerVisualSafeLeft, readerVisualSafeRight } from '../common/ReaderWindowMetrics';
+import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
+import {
+  TOK_INK, TOK_MUTED, TOK_GREEN, TOK_CARD_BG, TOK_PAPER, TOK_BORDER,
+  TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SPACE_XS, TOK_SPACE_MD,
+} from '../common/ReaderTokens';
 import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';
 
 /** Persistent bookshelf preferences, shared by More and the settings route. */
 @Component
 export struct BookshelfSettingsPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @StorageLink('readerBookshelfViewMode') private mode: string = 'cover';
   @Prop autoCheckUpdate: boolean = true;
@@ -18,35 +27,52 @@ export struct BookshelfSettingsPage {
   private requestedMode: 'cover' | 'list' = 'cover';
   private mounted: boolean = false;
 
-  aboutToAppear(): void { this.mounted = true; this.confirmed = this.mode; }
+  aboutToAppear(): void {
+    registerReaderFonts(this.getUIContext().getFont());
+    this.mounted = true;
+    this.confirmed = this.mode;
+  }
   aboutToDisappear(): void { this.mounted = false; this.revision += 1; }
 
   build() {
-    Column({ space: 20 }) {
-      Row() {
-        Text('返回').fontSize(14).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).width(54).height(44)
-          .onClick((): void => this.onBack());
-        Text('书架设置').layoutWeight(1).fontSize(20).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      }.width('100%');
-      Column({ space: 16 }) {
-        Row() {
-          Text('自动检查更新').layoutWeight(1).fontSize(15).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          Toggle({ type: ToggleType.Switch, isOn: this.autoCheckUpdate })
-            .selectedColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).onChange((enabled: boolean): void => this.onAutoCheckUpdate(enabled));
-        }.width('100%');
-        Text('自动检查书架中书籍的最新章节').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');
-        Row({ space: 12 }) {
-          Text('显示方式').layoutWeight(1).fontSize(15).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          this.modeOption('cover', '封面');
-          this.modeOption('list', '列表');
-        }.width('100%');
-        if (this.error.length > 0) {
-          Text(this.error).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .onClick((): void => this.selectMode(this.requestedMode));
+    Column() {
+      PageBackBar({ title: '书架设置', onBack: (): void => this.onBack() });
+      Scroll() {
+        Column() {
+          Column({ space: TOK_SPACE_MD }) {
+            Row() {
+              Text('自动检查更新').layoutWeight(1).fontSize(15).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+              Toggle({ type: ToggleType.Switch, isOn: this.autoCheckUpdate })
+                .selectedColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).onChange((enabled: boolean): void => this.onAutoCheckUpdate(enabled));
+            }.width('100%');
+            Text('自动检查书架中书籍的最新章节').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');
+            Row({ space: 12 }) {
+              Text('显示方式').layoutWeight(1).fontSize(15).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+              this.modeOption('cover', '封面');
+              this.modeOption('list', '列表');
+            }.width('100%');
+            if (this.error.length > 0) {
+              Text(this.error).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+                .onClick((): void => this.selectMode(this.requestedMode));
+            }
+          }.padding(TOK_SPACE_MD).width('100%').backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+            .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(12);
         }
-      }.padding(16).width('100%').backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-        .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(12);
-    }.padding(20).width('100%').height('100%').backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+        .width('100%')
+        .padding({ left: this.contentFrame().left, right: this.contentFrame().right,
+          top: TOK_SPACE_XS, bottom: TOK_SPACE_MD });
+      }
+      .layoutWeight(1).width('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+    }.width('100%').height('100%').backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+  }
+
+  private contentFrame(): SurfaceHorizontalFrame {
+    if (this.readerWindowMetricsRevision < 0) {
+      return new SurfaceHorizontalFrame(0, 0, 0);
+    }
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET));
   }
 
   @Builder

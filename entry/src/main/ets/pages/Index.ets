@@ -45,6 +45,8 @@ import {
   type DiscoverPresentation,
 } from '../features/discover/DiscoverOrchestrator';
 import { BookshelfEmptyPage } from '../features/bookshelf/BookshelfEmptyPage';
+import { BookshelfShell } from '../features/bookshelf/BookshelfShell';
+import { BookshelfStatusContent } from '../features/bookshelf/BookshelfStatusContent';
 import { LocalBookDetail } from '../features/bookshelf/LocalBookDetail';
 import {
   LocalImportDialog,
@@ -770,48 +772,82 @@ struct Index {
     return false;
   }
 
+  @Builder
+  private bookshelfContent() {
+    if (this.isBookshelfVisualAdmitted) {
+      BookshelfPage({
+        viewState: this.bookshelfViewState,
+        books: this.shelfBooks,
+        serverFiltered: this.shelfProjectionRevision.length > 0,
+        onNextPageRequested: (): void => this.loadNextShelfPage(),
+        onPreviousPageRequested: (): void => this.loadPreviousShelfPage(),
+        onFilterRequested: (readingState: string, sourceKind: string): void => {
+          this.shelfReadingFilter = readingState; this.shelfSourceFilter = sourceKind;
+          this.bookshelfViewState.anchorKey = ''; this.bookshelfViewState.anchorOffset = 0;
+          this.refreshBookshelf();
+        },
+        continueReading: this.continueReading,
+        reduceMotion: this.settingsSnapshot.reduceMotion,
+        onRssRequested: (): void => this.openRss(),
+        onSettingsRequested: (): void => this.openSettings(),
+        onDiscoverRequested: (): void => this.openDiscover(),
+        onBookSelected: (book: ShelfBook): void => {
+          // Native enabled state updates on the next render. Guard only UI
+          // taps here; a failed source switch still owns its internal reopen.
+          if (!this.shelfReadingPreparation && !this.readingSessionActive) this.openShelfBook(book);
+        },
+        onVisibleBooksChanged: (books: ShelfBook[]): void => this.prepareVisibleReadingBooks(books),
+        onBookMultiSelectRequested: (book: ShelfBook): void => this.openBookshelfMultiSelect(book),
+        onBookInfoRequested: (book: ShelfBook): void => this.openShelfBookInfo(book),
+        onBookGroupRequested: (book: ShelfBook): void => { this.editingShelfGroupBook = book; },
+        onBookRemoveRequested: (book: ShelfBook): void => this.requestRemoveShelfBook(book),
+      })
+        .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
+    } else if (this.isCoreShelfEmpty) {
+      // Core alone admits the true empty shelf. Tablet keeps its phone assembly.
+      BookshelfEmptyPage({
+        onImportRequested: (): void => this.openImportDialog(),
+        onSearchRequested: (): void => this.openSearch(),
+      });
+    } else {
+      BookshelfStatusContent({
+        failed: this.bookshelfLoadFailed,
+        reduceMotion: this.settingsSnapshot.reduceMotion,
+        onRetry: (): void => this.refreshBookshelf(),
+      });
+    }
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.route === 'bookshelf' && this.isBookshelfVisualAdmitted) {
-        BookshelfPage({
-          viewState: this.bookshelfViewState,
-          books: this.shelfBooks,
-          serverFiltered: this.shelfProjectionRevision.length > 0,
-          unfilteredOnlineBooks: this.shelfHasOnlineBooks,
-          onNextPageRequested: (): void => this.loadNextShelfPage(),
-          onPreviousPageRequested: (): void => this.loadPreviousShelfPage(),
-          onFilterRequested: (readingState: string, sourceKind: string): void => {
-            this.shelfReadingFilter = readingState; this.shelfSourceFilter = sourceKind;
-            this.bookshelfViewState.anchorKey = ''; this.bookshelfViewState.anchorOffset = 0;
-            this.refreshBookshelf();
-          },
-          continueReading: this.continueReading,
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          onImportRequested: (): void => this.openImportDialog(),
-          onSearchRequested: (): void => this.openSearch(),
-          onRssRequested: (): void => this.openRss(),
-          onSettingsRequested: (): void => this.openSettings(),
-          onDiscoverRequested: (): void => this.openDiscover(),
-          onManageRequested: (): void => this.openBookshelfManagement(),
-          onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
-          onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
-          onBookSelected: (book: ShelfBook): void => {
-            // Native enabled state updates on the next render. Guard only UI
-            // taps here; a failed source switch still owns its internal reopen.
-            if (!this.shelfReadingPreparation && !this.readingSessionActive) this.openShelfBook(book);
-          },
-          onVisibleBooksChanged: (books: ShelfBook[]): void => this.prepareVisibleReadingBooks(books),
-          onBookMultiSelectRequested: (book: ShelfBook): void => this.openBookshelfMultiSelect(book),
-          onBookInfoRequested: (book: ShelfBook): void => this.openShelfBookInfo(book),
-          onBookGroupRequested: (book: ShelfBook): void => { this.editingShelfGroupBook = book; },
-          onBookRemoveRequested: (book: ShelfBook): void => this.requestRemoveShelfBook(book),
-          onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
-          updateRunning: this.bookshelfUpdateRunning,
-          backgroundUpdateRunning: this.bookshelfBackgroundRefreshRunning,
-          updateProgressDone: this.bookshelfUpdateDone,
-          updateProgressTotal: this.bookshelfUpdateTotal,
-        })
-          .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
+      if (this.route === 'bookshelf') {
+        Stack() {
+          BookshelfShell({
+            populated: this.isBookshelfVisualAdmitted,
+            reduceMotion: this.settingsSnapshot.reduceMotion,
+            canCheckUpdates: this.isBookshelfVisualAdmitted && (this.shelfProjectionRevision.length > 0 ?
+              this.shelfHasOnlineBooks : this.shelfBooks.some((book: ShelfBook): boolean => book.sourceId !== 'local')),
+            updateRunning: this.bookshelfUpdateRunning,
+            backgroundUpdateRunning: this.bookshelfBackgroundRefreshRunning,
+            updateProgressDone: this.bookshelfUpdateDone,
+            updateProgressTotal: this.bookshelfUpdateTotal,
+            onImportRequested: (): void => this.openImportDialog(),
+            onSearchRequested: (): void => this.openSearch(),
+            onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
+            onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
+            onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
+            onMainTab: (key: string): void => {
+              if (key === 'discover') this.openDiscover();
+              else if (key === 'rss') this.openRss();
+              else if (key === 'settings') this.openSettings();
+            },
+          }) {
+            this.bookshelfContent();
+          }
+        }
+        .width('100%')
+        .height('100%')
+        .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
       } else if (this.route === 'bookshelfSettings') {
         BookshelfSettingsPage({
           autoCheckUpdate: this.settingsSnapshot.autoCheckUpdate,
@@ -849,57 +885,6 @@ struct Index {
             this.getBookshelfManagementOrchestrator().updateAssignmentGroup(value),
           onAssignBook: (): void => this.getBookshelfManagementOrchestrator().assignSelectedBook(),
         });
-      } else if (this.route === 'bookshelf' && this.isCoreShelfEmpty) {
-        // H-NOTE-1: Tablet empty has no Figma Final variant. Until Figma
-        // supplies a Tablet-specific empty assembly, mount the Phone
-        // BookshelfEmptyPage on Tablet as well (Figma has not yet defined
-        // the rule, so we reuse the available Phone assembly rather than
-        // leave the Tablet user staring at a blank page).
-        BookshelfEmptyPage({
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          onImportRequested: (): void => this.openImportDialog(),
-          onSearchRequested: (): void => this.openSearch(),
-          onRssRequested: (): void => this.openRss(),
-          onSettingsRequested: (): void => this.openSettings(),
-          onDiscoverRequested: (): void => this.openDiscover(),
-          onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
-          onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
-        });
-      } else if (this.route === 'bookshelf' && this.bookshelfLoadFailed) {
-        // 首次书架加载失败(自动重试一次后仍未成功)的重试入口: 空白首页不可恢复
-        // 不可接受, 该入口常驻直到一次加载成功 (成功即清 bookshelfLoadFailed)。
-        Column({ space: 16 }) {
-          Text('书架加载失败')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(17)
-            .lineHeight(25.5)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .textAlign(TextAlign.Center);
-          Text('无法读取书架内容，请重试。')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(13)
-            .lineHeight(19.5)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .textAlign(TextAlign.Center);
-          Text('重试')
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(13)
-            .lineHeight(13)
-            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-            .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-            .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-            .borderRadius(999)
-            .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-            .onClick((): void => this.refreshBookshelf());
-        }
-        .width('100%')
-        .height('100%')
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-        .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme));
       } else if (this.route === 'search') {
         SearchPage({
           viewState: this.searchViewState,

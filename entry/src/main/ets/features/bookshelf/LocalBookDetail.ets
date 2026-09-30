@@ -144,6 +144,7 @@ export struct LocalBookDetail {
     }
     .layoutWeight(1)
     .width('100%')
+    .align(Alignment.Top)
     .scrollBar(BarState.Off);
   }
 

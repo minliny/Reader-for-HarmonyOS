@@ -19,7 +19,6 @@ for (const name of ['NoCoverCover', 'StatusBadge', 'ReaderToggle']) syntax.compo
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 class HeaderChild extends Child {}
 class IconButtonChild extends Child {}
-class ShellChild extends Child {}
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const [name, path, slot] of [
   ['AppTopBar', 'common/AppTopBar.ets', 'trailing'],
@@ -86,7 +85,7 @@ check('empty shelf uses the same right-aligned three-action header', () => {
   assert.equal(nodes.find(node=>node.type==='Row'&&node.height===34).width,undefined,
     'the tools shrink to their content without reserving the removed gear slot');
 });
-for (const page of ['BookshelfEmptyPage', 'BookshelfPage']) {
+for (const page of ['BookshelfShell']) {
   check(`${page}: actual shared text header keeps search and More hit targets live`, () => {
     const { owner } = createReaderBuilderProbe(read(`bookshelf/${page}.ets`), ['topBar'], {
       AppTopBar: HeaderChild, ReaderIconButton: IconButtonChild,
@@ -98,7 +97,7 @@ for (const page of ['BookshelfEmptyPage', 'BookshelfPage']) {
       onSearchRequested: () => { searches++; } });
     owner.topBar();
     const headers = [...owner.children.values()].filter(child => child instanceof HeaderChild);
-    assert.equal(headers.length, 1, 'both shelf branches must mount the real AppTopBar instead of a title bitmap');
+    assert.equal(headers.length, 1, 'the persistent shelf shell mounts the real AppTopBar instead of a title bitmap');
     assert.equal(headers[0].params.title, '书架');
     assert.equal(headers[0].params.divider, true);
     assert.equal(typeof headers[0].params.trailing, 'function');
@@ -115,6 +114,12 @@ for (const page of ['BookshelfEmptyPage', 'BookshelfPage']) {
     assert.deepEqual(row.padding, { left: 20, right: 20, top: 6 });
     assert.equal(row.height, 58);
     assert.equal(row.border.width.bottom, 1);
+    for (const scheme of ['night', 'day']) {
+      header.appThemeScheme = scheme; header.replay();
+      assert.equal(texts(header).find(node => node.create === '书架'), titles[0], 'theme update retains the title actor');
+      assert.equal(titles[0].fontColor, readerAppColor('TOK_INK', scheme));
+      assert.equal(row.backgroundColor, readerAppColor('TOK_PAPER', scheme));
+    }
     assert.ok(![...owner.nodes.values(), ...header.nodes.values()]
       .some(node => node.type === 'Image' && node.create === 'app.media.bookshelf_title'));
 
@@ -137,19 +142,19 @@ check('empty shelf actual Scroll pins short contents to the viewport top', () =>
   const source = read('bookshelf/BookshelfEmptyPage.ets');
   for (const m of source.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) builders.add(m[1]);
   const { owner } = createReaderBuilderProbe(source, ['build'], {
-    MainTabShell: ShellChild, BookshelfEmptyCard: Child, BookshelfMoreMenu: Child, TOK_SPACE_XS: 8,
+    BookshelfEmptyCard: Child, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
   });
   Object.assign(owner, { appThemeScheme: 'day', moreMenuVisible: false,
     contentFrame: () => ({ width: 327, left: 19, right: 19 }), topBar() {}, sectionHeader() {} });
   owner.initialRender();
-  const shell = [...owner.children.values()].find(child => child instanceof ShellChild);
-  assert.ok(shell); shell.params.content();
   const nodes = [...owner.nodes.values()];
   const scroll = nodes.find(node => node.type === 'Scroll');
   assert.ok(scroll);
   assert.ok(['Alignment.Top', 'Alignment.TopStart'].includes(scroll.align),
     'native Scroll must explicitly avoid vertical centering when the empty card is shorter than its viewport');
-  assert.equal(scroll.layoutWeight, 1);
+  assert.equal(scroll.height, '100%', 'content consumes only the shared shell body');
+  assert.equal(nodes.find(node => node.type === 'Column' && node.width === 327).padding.bottom, 16,
+    'normal-flow navigation needs only the shared body gap, not another bottom-nav spacer');
   assert.equal(nodes.find(node => node.type === 'Column' && node.width === 327).padding.top, 8,
     'the actual empty content keeps only its existing 8vp gap below the header');
 });
