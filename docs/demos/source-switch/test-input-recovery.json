@@ -1,0 +1,118 @@
+{
+  "recordedAt": "2026-09-30T13:39:17.592051+00:00",
+  "phase": "metadataTestVerified",
+  "cli": {
+    "source": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/reader-cli",
+    "destination": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-Core-Native/target/debug/reader-cli",
+    "bytes": 90638840,
+    "sha256": "e51b95e8e00dd4c20e518552799d856a0e4cd1440670a53ed8518bea64f80a85",
+    "sourceUnchanged": true,
+    "mainCoreHeadAtCopy": "bcce4c7a1500c997e9e1a0be6cd8260271a773c5",
+    "mainCoreDirtyAtCopy": false,
+    "embeddedInfo": [
+      {
+        "type": "result",
+        "protocolVersion": 1,
+        "requestId": 1,
+        "data": {
+          "abiVersion": 1,
+          "buildIdentity": {
+            "buildId": "7f36a51faa9d35ef3b7e2a30537105673bee73c2f06db2da21dec4e4ca49d5c9",
+            "cargoLockSha256": "f7940c658f515a8bfd86d18eeb6957798aac3bd114e952568cd2af8240ce2b3f",
+            "gitCommit": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+            "gitDirty": false,
+            "protocolSha256": "45cfe649f9421d96b722bc89f973d72afb23238f52e33ef4687318b7dad7b6d2",
+            "rustProfile": "debug",
+            "schemaVersion": 1
+          },
+          "buildVersion": "reader-core-native 0.1.0",
+          "capabilities": [
+            "core.info",
+            "runtime.ping",
+            "runtime.hostSmoke",
+            "runtime.cancel",
+            "runtime.status",
+            "runtime.storage.restore",
+            "runtime.storage.flush",
+            "runtime.storage.export",
+            "runtime.storage.apply",
+            "runtime.shutdown",
+            "runtime.setHostCapabilities",
+            "host.complete",
+            "host.error",
+            "host.bus.v1",
+            "http.execute",
+            "runtime.config.v1",
+            "remote.reading.v1",
+            "rss.v1",
+            "sync.v1",
+            "local_book.v1",
+            "bookshelf.v1",
+            "search.content.cursor.v1",
+            "chapter.content.cacheOnly.v1",
+            "reading.document.window.v1",
+            "reading.progress.compareAndSet.v1",
+            "reading.catalog.page.v1",
+            "reading.directory.view.v1",
+            "local_book.navigation.v1",
+            "bookshelf.pageProjection.v1",
+            "bookshelf.anchorPage.v1",
+            "reading.preparation.v1",
+            "reading.entry.prepare.v1",
+            "reading.entry.localImageStyle.v1",
+            "reading.entry.snapshot.v1",
+            "reading.entry.firstFrame.v1",
+            "reading.entry.snapshot.window.v1",
+            "source.supply.v1",
+            "source.list.byId.v1"
+          ],
+          "protocolVersion": 1
+        }
+      }
+    ],
+    "role": "Existing offline metadata fixture executor; no CLI rebuild, no live network evidence, not evidence for the HAP native artifact or current Core source compilation",
+    "evidenceBoundary": "Embedded CLI identity is e2a2db0 clean/debug (buildId 7f36a51faa9d35ef3b7e2a30537105673bee73c2f06db2da21dec4e4ca49d5c9); it differs from the separately verified dirty/release Harmony native artifact and is used only for existing offline metadata fixtures."
+  },
+  "readerUi": {
+    "source": "/Users/minliny/Documents/Reader/Reader-UI",
+    "destination": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-UI",
+    "commit": "2c3e4e45595a33e08e93a602ec86a3cbea7555ad",
+    "sourceDirty": false,
+    "detached": true,
+    "dirty": false,
+    "generatorExternalInputs": [
+      {
+        "path": "theme/registry.json",
+        "sha256": "24800a91cb39e4e4f9820e7087a5dcb25233a08beab5b0f904cf84597ab9a084",
+        "bytes": 261763
+      }
+    ],
+    "generatorListReadScope": "External theme/registry.json is read and parsed; remaining --list inputs are current Harmony entry/src/main/ets and entry/src/main/resources/base/media; --list exits before generation/writes",
+    "followupDecision": "Worktree was created before parent identified unnecessary registry read on --list; retained as an isolated fixed-commit checkout, no longer claimed necessary for theme list test. Parent handles generator fix and theme test."
+  },
+  "testResults": {
+    "status": "PASS",
+    "verifiedAt": "2026-09-30T13:40:10.438805+00:00",
+    "command": [
+      "node",
+      "--test",
+      "--test-isolation=process",
+      "--test-concurrency=1",
+      "tools/test-reading-assistant-source.mjs"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 1.435,
+    "stdoutSha256": "0e37a92a10eccd39b4e41fac9222147eba4f6908294ca68802c924f6201b8519",
+    "output": "PASS PH100 source metadata: actual Core offline search/detail fixture; plain intro, separate tags, existing date role and latest retained. Actual RuntimeOwner clean v6→v7, user copy/rule edits and discovery edits/deletions protected; no live/device claim.\n(node:84943) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n✔ tools/test-reading-assistant-source.mjs (1272.158167ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1278.447166\n",
+    "fullGateRun": false,
+    "themeTest": "Delegated to parent; not run in this recovery"
+  },
+  "boundaries": {
+    "testsUnmodified": true,
+    "sharedSourceFilesModified": false,
+    "fullGateExecuted": false,
+    "nativeRebuilt": false,
+    "hapBuild": "OPEN",
+    "vm": "OPEN"
+  }
+}

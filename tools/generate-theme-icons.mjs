@@ -2,9 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 const root=path.resolve(import.meta.dirname,'..');
 const registryPath=path.resolve(root,'../Reader-UI/theme/registry.json');
-const registryRaw=fs.readFileSync(registryPath,'utf8');
-const registry=JSON.parse(registryRaw);
-const registryBefore=JSON.stringify(registry);
 const media=path.join(root,'entry/src/main/resources/base/media');
 const map={ '2D4A3E':'D2BD96','1F3528':'D2BD96','2F6373':'D2BD96','1F1B17':'EADFCE','332C25':'EADFCE','756F69':'BAAD9C','3F372F':'EADFCE','5B5046':'BAAD9C','4D463F':'EADFCE','41484C':'EADFCE','857C70':'BAAD9C','F8F4EC':'24211E','E8E2D9':'51493F','C1C7CD':'5C6065','F0EBE1':'332D27','C4BDB0':'746B60','CCC5B8':'6B6258','D4CEC2':'5D554B','D8D1C4':'514A40','E0D9CC':'463E35','EAE4D8':'3E3730' };
 function rgba(hex){return {r:parseInt(hex.slice(0,2),16),g:parseInt(hex.slice(2,4),16),b:parseInt(hex.slice(4,6),16),a:1};}
@@ -17,6 +14,11 @@ function collect(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true}))
 collect(path.join(root,'entry/src/main/ets'));
 // Read-only discovery receipt, also checked against the live dynamic Builders.
 if(process.argv.includes('--list')){console.log(JSON.stringify([...names].sort()));process.exit(0);}
+// Discovery above only inspects this repository. The cross-repository palette
+// is required when generating/checking colors, not when listing live assets.
+const registryRaw=fs.readFileSync(registryPath,'utf8');
+const registry=JSON.parse(registryRaw);
+const registryBefore=JSON.stringify(registry);
 const manifest=[];
 for(const name of names){const f=path.join(media,name+'.svg');if(!fs.existsSync(f))continue;const original=fs.readFileSync(f,'utf8');let changed=false;
  const night=original.replace(/#[0-9a-f]{6}\b/gi,color=>{const rgb=color.slice(1).toUpperCase();const role='app.icon.'+(name==='reader_page_bookmark_filled'?'reader_directory_marker_bookmark_active':name)+'.'+rgb;let target=map[rgb]||rgb;

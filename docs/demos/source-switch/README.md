@@ -33,7 +33,7 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory demos/source-switch
 - 入口、冷启动准入、隔离真实存储、字体准备等 5 项针对性检查通过；模拟事件和排序的本地检查通过。
 - 原生页面实际 SDK ETS 解析通过；真实方法转换执行的四项检查通过：重排后按 sourceId 恢复可见偏移、新触摸撤销恢复、生命周期 generation 变化撤销恢复、列表顶端展示新最快来源。此 demo 明确使用 70 vp 行高；放大字体和可变行高仍未验收。
 - 当前 Core 产物身份验证和规范 `sync-core` 通过；使用现有 `io.reader.minliny` 包名和用户指定证书的私有配置，`sync-signing` 通过。未生成新证书，私有材料未进入 Git。
-- 规范 signed iteration 构建到 **120 秒上限时仍处于完整合同门禁**，因此停止。未进入 HAP 编译/打包，没有可交付 manifest 或 signed HAP。日志见 `hap-gate-120s.log`。
+- 初次构建被外层 120 秒截止时间中止（`hap-gate-120s.log`）。已改为 Node 内建 4 进程门禁，保留整批 120 秒上限；首轮 384 项在 97.51 秒内全部执行，发现并修复了 3 个隔离输入问题。具体原因和回归见 `BUILD_REPAIR.md`。
 - 正式 ArkTS/Hvigor 编译、VM 安装、原生动效与滚动位置验收仍为 OPEN，不能以 SDK 解析、局部探针或浏览器通过替代。
 - 本次未安装、启动或更改 VM 内应用，也未操作真实设备。
 
@@ -42,5 +42,7 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory demos/source-switch
 首次 checkout 由于缺少 `git-lfs` 失败；分支已创建。第二次仅对该命令关闭历史 evidence 的 LFS 过滤后完成 checkout，post-checkout hook 仍报告缺少 LFS。未改变全局 Git 配置或删除 hook；生产字体/Native 未发现 LFS 指针。
 
 当前主仓尚未提交的包名、签名权威和构建入口更新按最小清单继承，文件哈希见 `setup-provenance.json`；没有复制无关阅读功能改动。Core 通过现有产物校验后规范同步。固定版本 pnpm 10.34.5 安装在本 worktree 的 `.reader-local/hvigor-tools`；首次代理下载中断后，官方 npm 直连安装和版本检查通过。
+
+主工作区切换整合分支后，demo 的 Core 已从链接改为独立 worktree。Git 留存 WIP 的 868 个输入与原包精确一致；恢复和产物身份见 `core-isolation-recovery.json`。离线测试 CLI 的独立输入记录见 `test-input-recovery.json`，不将它当作此次 Native 重新编译的证据。
 
 重复构建需设置 `HVIGOR_SHARED_TOOLS` 指向上述私有目录。本机缺少 Git LFS 时，对此次命令临时设置 `filter.lfs.process`、`filter.lfs.clean` 为空且 `filter.lfs.required=false`，仅用于历史证据目录；不得以此掩盖生产构建输入缺失。

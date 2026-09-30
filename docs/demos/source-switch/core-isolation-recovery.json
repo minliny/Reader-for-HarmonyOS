@@ -1,0 +1,116 @@
+{
+  "recordedAt": "2026-09-30T13:33:55.851870+00:00",
+  "lane": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930",
+  "previousSymlinkTarget": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+  "mainCoreHeadBefore": "bcce4c7a1500c997e9e1a0be6cd8260271a773c5",
+  "originalCompiledCoreHead": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+  "restoredWorkingTreeFrom": "98a0df4a6984b3e35e86566fd1a46fe4845365d5",
+  "verifiedWipSnapshotFiles": 868,
+  "verifiedWipSnapshotMismatches": 0,
+  "phase": "verified",
+  "artifactSource": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a",
+  "artifactDestination": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-Core-Native/target/harmony-napi/arm64-v8a",
+  "copiedArtifactFiles": 12,
+  "copiedArtifactRecords": [
+    {
+      "path": "core-build-identity.json",
+      "bytes": 390,
+      "sha256": "9af28d3d9e007872d98af3d1015c1b66c65b005c2f4c5021efa76a2a7d569453"
+    },
+    {
+      "path": "core-source-snapshot.json",
+      "bytes": 166259,
+      "sha256": "0b2e50b5f10e6e09f27d6750dfc251ba688cf8c63e495c4094c4b9635a6e4953"
+    },
+    {
+      "path": "harmony-napi-build-evidence.txt",
+      "bytes": 2138,
+      "sha256": "f8c44e0a83df325e2f51b331f312f6635ecf5e3e70bbe1178cdac2c5d75ae353"
+    },
+    {
+      "path": "harmony-package-manifest.sha256",
+      "bytes": 629,
+      "sha256": "1aef2f4acc45a933858b1d9b635dd8cd90d085b123dd1eef901fecaf49743a2f"
+    },
+    {
+      "path": "libreader_core_napi.so",
+      "bytes": 21872288,
+      "sha256": "86e4ba5e4614dcc17c56f3c4d604605282d4192fe6ea0f340ee6425e746edadb"
+    },
+    {
+      "path": "package/Index.ts",
+      "bytes": 4281,
+      "sha256": "2406a6f175f27615fba71938a6c8a7b6f320d4c19b4144c286d251dd059a61ac"
+    },
+    {
+      "path": "package/README.md",
+      "bytes": 379,
+      "sha256": "bc38d17933de7f590a505b927643e0845ccc0832fcb9f85d42431149059034cf"
+    },
+    {
+      "path": "package/STATUS.md",
+      "bytes": 811,
+      "sha256": "2289de8440362455788c9f1fa120f745ff4d1d121af827ec7f5459d3b56e4e73"
+    },
+    {
+      "path": "package/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 21872288,
+      "sha256": "86e4ba5e4614dcc17c56f3c4d604605282d4192fe6ea0f340ee6425e746edadb"
+    },
+    {
+      "path": "package/oh-package.json5",
+      "bytes": 202,
+      "sha256": "2e889f9c2867397bbb4cfbfd734fb86ec191b948353a306dcdaea5c592c7be68"
+    },
+    {
+      "path": "package/sdk/reader_core.ts",
+      "bytes": 38116,
+      "sha256": "52ed26e0bbaaa889f22c3e8ccc3c0e04e7058a587d95c22d48a896fb145b1730"
+    },
+    {
+      "path": "package/sdk/smoke_report.ts",
+      "bytes": 6435,
+      "sha256": "a4988e8a5f15f5a7b82cdd9f6888f11c4cbfdf7404b22f9cedad3726943da957"
+    }
+  ],
+  "sourceArtifactUnchanged": true,
+  "verifiedAt": "2026-09-30T13:35:08.133Z",
+  "isolatedCoreHead": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+  "isolatedCoreDetached": true,
+  "isolatedCoreDirty": true,
+  "sourceSnapshot": {
+    "fingerprint": "0e0322642edd0ddffd57fcd2a449647677138d594f9dc755678a12f98c84bfea",
+    "fileCount": 868
+  },
+  "native": {
+    "path": "libs/arm64-v8a/libreader_core_napi.so",
+    "sha256": "86e4ba5e4614dcc17c56f3c4d604605282d4192fe6ea0f340ee6425e746edadb",
+    "bytes": 21872288
+  },
+  "originalBuildIdentity": {
+    "schemaVersion": 1,
+    "buildId": "40d7f66d9e8cd24448ceb2accc9e903eda9f37230951353b78155b53cc4fa1d7",
+    "gitCommit": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+    "gitDirty": true,
+    "cargoLockSha256": "98b983fafb5b8468d3255020d47b677a8e67bddc8feadb67932a65cd474d2025",
+    "protocolSha256": "45cfe649f9421d96b722bc89f973d72afb23238f52e33ef4687318b7dad7b6d2",
+    "rustProfile": "release"
+  },
+  "verifyCorePackage": "PASS",
+  "assertCoreInputs": {
+    "status": "PASS",
+    "fingerprint": "0e0322642edd0ddffd57fcd2a449647677138d594f9dc755678a12f98c84bfea",
+    "fileCount": 868,
+    "buildId": "40d7f66d9e8cd24448ceb2accc9e903eda9f37230951353b78155b53cc4fa1d7",
+    "nativeSha256": "86e4ba5e4614dcc17c56f3c4d604605282d4192fe6ea0f340ee6425e746edadb"
+  },
+  "mainCoreHeadAfter": "bcce4c7a1500c997e9e1a0be6cd8260271a773c5",
+  "mainCoreStatusAfter": "",
+  "evidenceBoundary": {
+    "nativeRebuilt": false,
+    "fullHarmonyGateRun": false,
+    "hapBuild": "OPEN",
+    "vm": "OPEN"
+  },
+  "mainCoreHeadUnchanged": true
+}

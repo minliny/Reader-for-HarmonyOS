@@ -1,6 +1,8 @@
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as selection from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
@@ -210,25 +212,30 @@ assert.equal(source.split(firstNeedle).length,2);
 const firstMutant=source.replace(firstNeedle,'        this.admitCommittedProgress(stored);')
   .replace('        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);',
     '        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);\n        this.schedulePageTurnPreparation();');
-const firstFile='/private/tmp/reader-ready-before-first-publication.ets';writeFileSync(firstFile,firstMutant);
-const firstBad=fixture({file:firstFile});firstBad.owner.visiblePage={startScalar:9,fragments:[]};await firstBad.first();assert.throws(()=>expectPublished(firstBad,'negative first'),/publish revision/);
-// The publication counterfactual still fails above; body-only preparation
-// intentionally has no dependency on texture generation changes.
-const recoverNeedle="    this.phase = 'ready';\n    this.schedulePageTurnPreparation();\n    this.admitCommittedProgress(stored);";
-assert.equal(source.split(recoverNeedle).length,2);
-const recoverMutant=source.replace(recoverNeedle,"    this.phase = 'ready';\n    this.admitCommittedProgress(stored);")
-  .replace('      display.page, ticket.selectionToken, ticket.lifecycleToken)) return;\n    this.releaseUnretainedReadingImages();',
-    '      display.page, ticket.selectionToken, ticket.lifecycleToken)) return;\n    this.schedulePageTurnPreparation();\n    this.releaseUnretainedReadingImages();');
-const recoverFile='/private/tmp/reader-ready-before-recovery-publication.ets';writeFileSync(recoverFile,recoverMutant);
-const recoverBad=fixture({file:recoverFile});await recoverBad.recover('origin');assert.throws(()=>expectPublished(recoverBad,'negative recovery'),/publish revision/);
-const slotLine="    this.pageTurnCurrentSlot = this.pageTurnCurrentSlot === 'a' ? 'b' : 'a';";
-assert.equal(source.split(slotLine).length,2);
-const promoteMutant=source.replace(slotLine,'')
-  .replace('    this.onAutoPagePageCommitted();\n  }\n\n  private requestPageTurn',
-    `    this.onAutoPagePageCommitted();\n${slotLine}\n  }\n\n  private requestPageTurn`);
-const promoteFile='/private/tmp/reader-ready-before-slot-publication.ets';writeFileSync(promoteFile,promoteMutant);
-const promoteBad=fixture({file:promoteFile});promoteBad.promote();
-assert.equal(expectPublished(promoteBad,'negative promotion').slot,'a','negative control exposes the original incomplete slot publication');
+const mutantDirectory=mkdtempSync(join(tmpdir(),'reader-ready-publication-'));
+try {
+  const firstFile=join(mutantDirectory,'before-first-publication.ets');writeFileSync(firstFile,firstMutant);
+  const firstBad=fixture({file:firstFile});firstBad.owner.visiblePage={startScalar:9,fragments:[]};await firstBad.first();assert.throws(()=>expectPublished(firstBad,'negative first'),/publish revision/);
+  // The publication counterfactual still fails above; body-only preparation
+  // intentionally has no dependency on texture generation changes.
+  const recoverNeedle="    this.phase = 'ready';\n    this.schedulePageTurnPreparation();\n    this.admitCommittedProgress(stored);";
+  assert.equal(source.split(recoverNeedle).length,2);
+  const recoverMutant=source.replace(recoverNeedle,"    this.phase = 'ready';\n    this.admitCommittedProgress(stored);")
+    .replace('      display.page, ticket.selectionToken, ticket.lifecycleToken)) return;\n    this.releaseUnretainedReadingImages();',
+      '      display.page, ticket.selectionToken, ticket.lifecycleToken)) return;\n    this.schedulePageTurnPreparation();\n    this.releaseUnretainedReadingImages();');
+  const recoverFile=join(mutantDirectory,'before-recovery-publication.ets');writeFileSync(recoverFile,recoverMutant);
+  const recoverBad=fixture({file:recoverFile});await recoverBad.recover('origin');assert.throws(()=>expectPublished(recoverBad,'negative recovery'),/publish revision/);
+  const slotLine="    this.pageTurnCurrentSlot = this.pageTurnCurrentSlot === 'a' ? 'b' : 'a';";
+  assert.equal(source.split(slotLine).length,2);
+  const promoteMutant=source.replace(slotLine,'')
+    .replace('    this.onAutoPagePageCommitted();\n  }\n\n  private requestPageTurn',
+      `    this.onAutoPagePageCommitted();\n${slotLine}\n  }\n\n  private requestPageTurn`);
+  const promoteFile=join(mutantDirectory,'before-slot-publication.ets');writeFileSync(promoteFile,promoteMutant);
+  const promoteBad=fixture({file:promoteFile});promoteBad.promote();
+  assert.equal(expectPublished(promoteBad,'negative promotion').slot,'a','negative control exposes the original incomplete slot publication');
+} finally {
+  rmSync(mutantDirectory,{recursive:true,force:true});
+}
 report.push('negative:first-order','negative:recovery-order','negative:promotion-slot-order');
 for(const outcome of ['old-success','old-failure','unmount-success','unmount-failure']){
   const f=fixture();f.hold();const writing=f.first();await settle();

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
@@ -121,6 +122,21 @@ const expected = [
 assert.deepEqual(dynamic, expected, 'all current computed resource consumers have explicit production-state coverage');
 const manifest = JSON.parse(readFileSync(path.join(root, 'tools/theme-svg-variants.json'), 'utf8'));
 const discovered = JSON.parse(execFileSync(process.execPath, [path.join(root, 'tools/generate-theme-icons.mjs'), '--list'], { encoding: 'utf8' }));
+// Listing assets is read-only and must work in a standalone Host checkout even
+// when the sibling palette repository has not been prepared.
+const discoveryFixture = mkdtempSync(path.join(tmpdir(), 'reader-icon-discovery-'));
+try {
+  for (const dir of ['tools', 'entry/src/main/ets', 'entry/src/main/resources/base/media']) {
+    mkdirSync(path.join(discoveryFixture, dir), { recursive: true });
+  }
+  const generator = path.join(discoveryFixture, 'tools/generate-theme-icons.mjs');
+  writeFileSync(generator, readFileSync(path.join(root, 'tools/generate-theme-icons.mjs')));
+  writeFileSync(path.join(discoveryFixture, 'entry/src/main/ets/Fixture.ets'), "Image($r('app.media.fixture_icon'))");
+  writeFileSync(path.join(discoveryFixture, 'entry/src/main/resources/base/media/fixture_icon.svg'), '<svg/>');
+  assert.deepEqual(JSON.parse(execFileSync(process.execPath, [generator, '--list'], { encoding: 'utf8' })), ['fixture_icon']);
+} finally {
+  rmSync(discoveryFixture, { recursive: true, force: true });
+}
 for (const n of ['rc_headphones', 'rc_palette', 'rc_settings', 'rc_autopage', 'rc_replace', ...nav.map(n => n[3]),
   ...mainNames.map(n => n + '_outline')]) {
   assert.ok(discovered.includes(n), `actual generator discovers dynamic bare literal: ${n}`);
