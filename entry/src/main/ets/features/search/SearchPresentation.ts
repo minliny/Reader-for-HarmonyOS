@@ -1,5 +1,7 @@
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
 
+export type SearchHistoryStatus = 'loading' | 'ready' | 'loadFailed' | 'clearFailed';
+
 /**
  * The search page's full presentation. The three pre-search surfaces retain
  * recent history even when online sources are unavailable. `keyword` is the
@@ -9,6 +11,7 @@ import type { SearchBook, SearchResultDelta } from './SearchGateway';
 export interface SearchInitialPresentation {
   kind: 'initial';
   history: string[];
+  historyStatus?: SearchHistoryStatus;
 }
 
 export interface SearchLoadingPresentation {
@@ -81,12 +84,14 @@ export interface SearchSourceRequiredPresentation {
   kind: 'sourceRequired';
   reason: 'noSources' | 'allDisabled';
   history: string[];
+  historyStatus?: SearchHistoryStatus;
 }
 
 /** `source.list` itself failed; the search chain never started. */
 export interface SearchSourceLoadErrorPresentation {
   kind: 'sourceLoadError';
   history: string[];
+  historyStatus?: SearchHistoryStatus;
 }
 
 export type SearchPresentation =

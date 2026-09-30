@@ -1,0 +1,56 @@
+name: Reader Candidate
+on:
+  workflow_dispatch:
+    inputs:
+      core_sha:
+        description: Reviewed full Core commit containing the CI integration action
+        required: true
+        type: string
+      ui_sha:
+        description: Reviewed full UI commit
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: reader-candidate
+  cancel-in-progress: false
+env:
+  CARGO_BUILD_JOBS: '2'
+  CARGO_TARGET_DIR: target/ci
+  READER_CORE_SMOKE_PROFILE: smoke
+jobs:
+  unsigned-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Require immutable inputs
+        env:
+          CORE_SHA: ${{ inputs.core_sha }}
+          UI_SHA: ${{ inputs.ui_sha }}
+        run: |
+          [[ "$CORE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$UI_SHA" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: Reader-for-HarmonyOS
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: minliny/Reader-Core-Native
+          ref: ${{ inputs.core_sha }}
+          path: Reader-Core-Native
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: minliny/Reader-UI
+          ref: ${{ inputs.ui_sha }}
+          path: Reader-UI
+          persist-credentials: false
+      - uses: ./Reader-Core-Native/.github/actions/harmony-check
+        with:
+          sdk-url: ${{ vars.HARMONY_CLI_URL }}
+      - name: Candidate boundary (no automatic distribution)
+        run: |
+          echo 'Unsigned build only; not acceptance or a release.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Signed acceptance remains on the approved FnOS pipeline; no device access or automatic publishing.' >> "$GITHUB_STEP_SUMMARY"

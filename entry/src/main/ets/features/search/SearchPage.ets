@@ -316,6 +316,7 @@ export struct SearchPage {
   /** Stop the live sweep, keeping whatever partial results already landed. */
   onStop: () => void = (): void => {};
   onClearHistory: () => void = (): void => {};
+  onRetryHistory: () => void = (): void => {};
   onSelectResult: (book: SearchBook, variants: SearchBook[]) => void =
     (_book: SearchBook, _variants: SearchBook[]): void => {};
   onVisibleGroups: (groups: SearchBook[][]) => void = (_groups: SearchBook[][]): void => {};
@@ -601,6 +602,22 @@ export struct SearchPage {
   @Builder
   private initialContent() {
     Column({ space: 0 }) {
+      if (this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
+        this.presentation.kind === 'sourceLoadError') {
+        if (this.presentation.historyStatus === 'loading') {
+          Text('正在读取搜索历史')
+            .fontFamily('ReaderInter').fontSize(13).lineHeight(20)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        } else if (this.presentation.historyStatus === 'loadFailed' || this.presentation.historyStatus === 'clearFailed') {
+          Column({ space: TOK_SPACE_XS }) {
+            Text(this.presentation.historyStatus === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败')
+              .fontFamily('ReaderInter').fontSize(13).lineHeight(20)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+            this.secondaryPill(this.presentation.historyStatus === 'clearFailed' ? '重试清空' : '重试读取',
+              (): void => this.onRetryHistory());
+          }.width('100%').padding({ bottom: TOK_SPACE_XS });
+        }
+      }
       if ((this.presentation.kind === 'initial' || this.presentation.kind === 'sourceRequired' ||
         this.presentation.kind === 'sourceLoadError') && this.presentation.history.length > 0) {
         Row() {
@@ -617,6 +634,7 @@ export struct SearchPage {
             .fontSize(12)
             .lineHeight(18)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .enabled(this.presentation.historyStatus !== 'loading')
             .onClick((): void => this.onClearHistory());
         }
         .width('100%')
