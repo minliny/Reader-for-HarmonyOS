@@ -120,3 +120,18 @@ DNS 修复后的 `0d2402ce` 门禁再次在 120 秒停止，361 PASS / 24 cancel
 - 工作仍在 `codex/source-switch-demo-20260930`，没有合并到主工作区。
 
 完整安装身份、HAP 哈希、source dirty 状态、回执和未决边界见 [real-page-vm-result.json](real-page-vm-result.json)。遵循 [reader-harmonyos-hap-pipeline](/Users/minliny/Documents/Reader/.agents/skills/reader-harmonyos-hap-pipeline/SKILL.md) 的规则：“The pipeline output is valid only after an immutable schema v2 `manifest.json` exists.” 最后失败构建没有满足此条件，因此未继续安装。
+
+## 书架旧问题再次出现：空态遗漏共享顶栏与顶部对齐
+
+2026-10-01 用户报告：书架顶部标题模糊且位置偏移，顶部与书架列表之间出现不明空隙。开始审计时分支为 `208de7b8`，本任务最后安装的包为上述 `0acd14d4` run；没有把历史部署回执视为当前 VM 身份的独立核验。
+
+代码与历史审计排除了已修提交被换源分支覆盖：安装源码、当前分支与主工作区 `2a21ed02` 的 `BookshelfPage`、`BookshelfEmptyPage`、`AppTopBar`、`MainTabShell`、窗口安全区和字体输入一致。非空书架的共享文本顶栏与固定背景/分隔线修复仍在；遗漏的是空书架独立路径。
+
+- 标题：`BookshelfEmptyPage.topBar` 仍使用 56×28 物理像素的 `bookshelf_title.png`，显示为 56×28 vp；已有 VM 的 3.5 密度会将其放大为 196×98 像素。`layoutWeight(1)` 将图片容器撑宽，Contain 又将标题居中，造成模糊和右移。
+- 空隙：空态 Scroll 没有明确顶部对齐。已有 `real-home.jpeg`、`fixed-home.json`、`real-layout.json` 均属于空书架；Scroll 范围 `[0,339][1280,2496]`，子 Column 范围 `[67,506][1214,2330]`，剩余高度被上下等分，各约 167 px（47.7 vp）。这是短内容居中，不是重复消费 safe-top。
+- 修复范围：空书架复用非空页已有 `AppTopBar` 和按钮组件，Scroll 显式顶部对齐；保留书架数据、菜单回调、空态卡片和导航。补实际 SDK Builder 回归以覆盖空态，避免仅非空书架测试通过掩盖遗漏。
+- 验证边界：当前根因来自现有截图/布局与源码审计。定向回归、新 HAP 和安装后实际像素核验仍待执行；不据此宣称新包已安装或当前非空书架表现通过。
+
+生产修复后，真实 SDK Builder 回归由 18 PASS / 2 FAIL 转为 20/20 PASS（0.76 秒）：空态确实挂载共享原生文字顶栏，Scroll 显式顶部对齐；非空顶栏、58 vp 高度、20 vp 边距、分隔线及两个 44 vp 搜索/更多按钮的实际回调同时保留。`phone-layout-figma-regressions`、`app-shell-safe-geometry`、`bookshelf-more-layout`、`reader-font-demand`、`reader-typography-architecture` 五项通过，diff 空白检查通过。没有修改公共 Builder probe，也没有模拟原生几何来声称像素通过。
+
+本次最小 VM 取证只回答代码无法单独证明的原生字体像素、标题最终坐标及空态 Scroll 实际布局。现有 Mate 80 Pro 实例只读预检：唯一 HDC target、guest boot completed、Emulator 的 Guest OS Boot Completed 日志、SceneBoard PID 1450/start tick 1022 均成立，当前 2000 行日志未发现已知启动循环风险。保持现有实例和数据，构建后按同一签名覆盖安装。

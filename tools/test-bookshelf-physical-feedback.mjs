@@ -17,6 +17,21 @@ const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.a
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 for (const name of ['NoCoverCover', 'StatusBadge', 'ReaderToggle']) syntax.componentCollection.customComponents.add(name);
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+class HeaderChild extends Child {}
+class IconButtonChild extends Child {}
+class ShellChild extends Child {}
+const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
+for (const [name, path, slot] of [
+  ['AppTopBar', 'common/AppTopBar.ets', 'trailing'],
+  ['ReaderIconButton', 'common/ReaderIconButton.ets'],
+  ['MainTabShell', 'shell/MainTabShell.ets', 'content'],
+  ['BookshelfEmptyCard', 'bookshelf/BookshelfEmptyCard.ets'],
+  ['BookshelfMoreMenu', 'bookshelf/BookshelfMoreMenu.ets'],
+]) {
+  syntax.componentCollection.customComponents.add(name);
+  syntax.propCollection.set(name, new Set([...read(path).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+  if (slot) syntax.builderParamObjectCollection.set(name, new Set([slot]));
+}
 const check = (name, action) => {
   try { action(); results.push({ name, passed: true }); }
   catch (error) { results.push({ name, passed: false, message: error.message }); }
@@ -70,6 +85,73 @@ check('empty shelf uses the same right-aligned three-action header', () => {
   assert.deepEqual(actions.map(node=>[node.width,node.height]),[[34,34],[34,34],[34,34]]);
   assert.equal(nodes.find(node=>node.type==='Row'&&node.height===34).width,undefined,
     'the tools shrink to their content without reserving the removed gear slot');
+});
+for (const page of ['BookshelfEmptyPage', 'BookshelfPage']) {
+  check(`${page}: actual shared text header keeps search and More hit targets live`, () => {
+    const { owner } = createReaderBuilderProbe(read(`bookshelf/${page}.ets`), ['topBar'], {
+      AppTopBar: HeaderChild, ReaderIconButton: IconButtonChild,
+      ImageFit: { Contain: 'ImageFit.Contain' },
+    });
+    let searches = 0;
+    Object.assign(owner, { appThemeScheme: 'day', moreMenuVisible: false,
+      topBarLeftInset: () => 20, topBarRightInset: () => 20,
+      onSearchRequested: () => { searches++; } });
+    owner.topBar();
+    const headers = [...owner.children.values()].filter(child => child instanceof HeaderChild);
+    assert.equal(headers.length, 1, 'both shelf branches must mount the real AppTopBar instead of a title bitmap');
+    assert.equal(headers[0].params.title, '书架');
+    assert.equal(headers[0].params.divider, true);
+    assert.equal(typeof headers[0].params.trailing, 'function');
+    const { owner: header } = createReaderBuilderProbe(read('common/AppTopBar.ets'), ['trailing', 'build'], {
+      TYPE_APP_HOME_TITLE: { fontFamily: 'title-role', fontWeight: 700, fontSizeFp: 29, lineHeightFp: 38 },
+    });
+    Object.assign(header, headers[0].params, { appThemeScheme: 'day', leftInset: () => 20, rightInset: () => 20 });
+    header.initialRender();
+    const titles = texts(header).filter(node => node.create === '书架');
+    assert.equal(titles.length, 1, 'one native text actor renders the shared title');
+    assert.equal(titles[0].layoutWeight, 1);
+    assert.equal(titles[0].fontFamily, 'title-role');
+    const row = [...header.nodes.values()].find(node => node.type === 'Row');
+    assert.deepEqual(row.padding, { left: 20, right: 20, top: 6 });
+    assert.equal(row.height, 58);
+    assert.equal(row.border.width.bottom, 1);
+    assert.ok(![...owner.nodes.values(), ...header.nodes.values()]
+      .some(node => node.type === 'Image' && node.create === 'app.media.bookshelf_title'));
+
+    const buttons = [...owner.children.values()].filter(child => child instanceof IconButtonChild);
+    assert.equal(buttons.length, 2);
+    for (const [index, button] of buttons.entries()) {
+      assert.equal(button.params.icon, `app.media.bookshelf_${index === 0 ? 'search' : 'more'}`);
+      const { owner: hitOwner } = createReaderBuilderProbe(read('common/ReaderIconButton.ets'), ['build']);
+      Object.assign(hitOwner, button.params, { appThemeScheme: 'day' });
+      hitOwner.initialRender();
+      const hit = [...hitOwner.nodes.values()].find(node => node.type === 'Stack');
+      assert.deepEqual([hit.width, hit.height], [44, 44]);
+      hit.onClick();
+      assert.equal(searches, 1, 'only the search target dispatches search');
+      assert.equal(owner.moreMenuVisible, index === 1, 'only the More target opens the menu');
+    }
+  });
+}
+check('empty shelf actual Scroll pins short contents to the viewport top', () => {
+  const source = read('bookshelf/BookshelfEmptyPage.ets');
+  for (const m of source.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) builders.add(m[1]);
+  const { owner } = createReaderBuilderProbe(source, ['build'], {
+    MainTabShell: ShellChild, BookshelfEmptyCard: Child, BookshelfMoreMenu: Child, TOK_SPACE_XS: 8,
+  });
+  Object.assign(owner, { appThemeScheme: 'day', moreMenuVisible: false,
+    contentFrame: () => ({ width: 327, left: 19, right: 19 }), topBar() {}, sectionHeader() {} });
+  owner.initialRender();
+  const shell = [...owner.children.values()].find(child => child instanceof ShellChild);
+  assert.ok(shell); shell.params.content();
+  const nodes = [...owner.nodes.values()];
+  const scroll = nodes.find(node => node.type === 'Scroll');
+  assert.ok(scroll);
+  assert.ok(['Alignment.Top', 'Alignment.TopStart'].includes(scroll.align),
+    'native Scroll must explicitly avoid vertical centering when the empty card is shorter than its viewport');
+  assert.equal(scroll.layoutWeight, 1);
+  assert.equal(nodes.find(node => node.type === 'Column' && node.width === 327).padding.top, 8,
+    'the actual empty content keeps only its existing 8vp gap below the header');
 });
 const list = read('bookshelf/ShelfBookListDetails.ets').replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
 check('PH61 progress/source retain equal left/right slots and live progress after row reuse', () => {

@@ -3,10 +3,12 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
  * Empty shelf, rebuilt 2026-08-06 against live Figma node `State/BookshelfEmpty`
  * (`286:31`, icon `Icon/Bookshelf` `271:96`). The 352×350 card replaces the old
  * `574:198` reference geometry (which had swapped action roles, blue icon frame,
- * pills, and wrong card size). Page chrome (top bar, section header, bottom
- * navigation) is unchanged. Empty-state text uses ReaderNotoSansSC per Figma.
+ * pills, and wrong card size). The top bar shares the populated shelf's text
+ * title and actions. Empty-state text uses ReaderNotoSansSC per Figma.
  */
 import { MainTabShell } from '../shell/MainTabShell';
+import { AppTopBar } from '../common/AppTopBar';
+import { ReaderIconButton } from '../common/ReaderIconButton';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   SurfaceHorizontalFrame,
@@ -14,14 +16,11 @@ import {
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
 import {
-  readerInteractiveSafeLeft,
-  readerInteractiveSafeRight,
   readerVisualSafeLeft,
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
 import {
   TOK_CONTENT_MAX_W_PHONE,
-  TOK_INK,
   TOK_SCREEN_INSET,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
@@ -81,6 +80,7 @@ export struct BookshelfEmptyPage {
           }
           .layoutWeight(1)
           .width('100%')
+          .align(Alignment.Top)
           .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
           .scrollBar(BarState.Off);
         }
@@ -127,40 +127,32 @@ export struct BookshelfEmptyPage {
 
   @Builder
   private topBar() {
-    Row({ space: 18 }) {
-      Image($r('app.media.bookshelf_title'))
-        .width(56)
-        .height(28)
-        .objectFit(ImageFit.Contain)
-        .layoutWeight(1);
+    AppTopBar({ title: '书架', divider: true }) {
+      Row({ space: 18 }) {
+        ReaderIconButton({
+          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
+          boxSize: 44,
+          iconSize: 24,
+          radius: 22,
+          onTap: (): void => this.onSearchRequested(),
+        });
 
-      Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search'))).width(24).height(24);
+        ReaderIconButton({
+          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
+          boxSize: 44,
+          iconSize: 44,
+          radius: 22,
+          onTap: (): void => {
+            this.moreMenuVisible = true;
+          },
+        })
+          .accessibilityText('更多')
+          .onAreaChange((_oldValue: Area, newValue: Area): void => {
+            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
+            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
+          });
       }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => this.onSearchRequested());
-
-      Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(24).height(24);
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .accessibilityText('更多')
-      .onClick((): void => {
-        this.moreMenuVisible = true;
-      })
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
-        this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
-      });
     }
-    .width('100%')
-    .height(58)
-    .padding({ left: this.topBarLeftInset(), right: this.topBarRightInset(), top: 6 })
-    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -238,14 +230,6 @@ export struct BookshelfEmptyPage {
       readerVisualSafeRight(metrics),
       new SurfaceWidthSpec(TOK_CONTENT_MAX_W_PHONE, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
     );
-  }
-
-  private topBarLeftInset(): number {
-    return Math.max(20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
-  }
-
-  private topBarRightInset(): number {
-    return Math.max(20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
   }
 
   private numericAreaLength(value: Length): number {
