@@ -64,18 +64,29 @@ function surface(params, source = surfaceSource) {
     TYPE_READER_CHAPTER_TITLE: { fontFamily: 'ReaderNotoSansSC', fontWeight: 500, fontSizeFp: 24 },
     WordBreak: { BREAK_ALL: 'breakAll' }, GradientDirection: { Bottom: 'bottom' },
     Canvas: new Proxy({ name: 'Canvas' }, { get: (target, key) => key === 'name' ? target.name : () => {} }),
-    BlendMode: { SRC_OVER: 'over', MULTIPLY: 'multiply' }, BlendApplyType: { FAST: 'fast' } }).owner;
+    BlendMode: { SRC_OVER: 'over', MULTIPLY: 'multiply' }, BlendApplyType: { FAST: 'fast' } },
+    { allowEmptyBranchAdmission: true }).owner;
   Object.assign(owner, { contentRevision: 1, pageFragments: [], pageParagraphs: [], showChapterTitle: true,
     chapterTitle: 'fallback title', layout, appearance: { activeTheme: 'paper', paragraphSpacing: 16 },
     bottomJustifyGap: 0, staticSnapshotId: '', themeStyle: () => ({ ink: '#222222', sourcePaperLighting: false, paperTexture: false }),
     ...params });
+  // Native ForEach owns current keys; historical probe children include
+  // outgoing actors pending disposal and cannot stand in for the current title.
+  const forEach = owner.forEachUpdateFunction;
+  owner.forEachUpdateFunction = function(id, data, generator, key) {
+    if (data[0]?.nativeTitle !== undefined && key(data[0], 0) === data[0].nativeTitle.key) {
+      this.requestedNativeTitles = data.map(fragment => fragment.nativeTitle);
+    }
+    return forEach.call(this, id, data, generator, key);
+  };
   owner.initialRender();
   return owner;
 }
 function assertMeasuredTitle(owner, expected) {
   const recipes = [...owner.children.values()].filter(child => child.params.recipe !== undefined).map(child => child.params.recipe);
-  assert.equal(recipes[0], expected, 'first emitted title must be the exact recipe that reserved body space');
-  assert.equal(recipes[1]?.text, '正文', 'body follows that same fragment owner');
+  const currentTitle = owner.requestedNativeTitles?.[0] ?? recipes[0];
+  assert.equal(currentTitle, expected, 'current emitted title must be the exact recipe that reserved body space');
+  assert.ok(recipes.some(recipe => recipe.text === '正文'), 'body follows that same fragment owner');
   assert.equal([...owner.nodes.values()].filter(node => node.type === 'Text' && node.create === 'fallback title').length, 0,
     'measured paged title cannot fall back to an independently laid-out Text');
   const content = [...owner.nodes.values()].find(node => node.type === 'Column' && node.create?.space === layout.titleToBodySpacingVp);

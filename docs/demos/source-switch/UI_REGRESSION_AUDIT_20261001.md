@@ -101,3 +101,29 @@
 主机只读资源快照：10逻辑CPU/16GiB内存，空闲约274MiB，压缩器占约6GiB；同时存在其他rustc/clippy编译进程。本任务不停止/占用这些外部工作。保持120秒预算和全部394检查，先校准允许的测试并发、等待代表性探针释放资源，再重跑规范流程。累计swap计数不是本轮峰值，不能据此断言唯一原因。
 
 代表性SDK校准采用同8个文件顺序测6/4/3并发，分别6.594/8.058/9.354秒，均8/8通过；当前证据不支持降并发提速，因此保持既有6。子进程峰值RSS不是同时总RSS，子集通过也不升级为全部394项通过；第三轮仍完整运行并保留原120秒预算。校准证据见ui-regression-concurrency-profile.json。
+
+## VM受控文件入口边界
+
+新包 `86fce31f`/run `20260930T175802Z-86fce31f-6a4cab9e` 已正常启动、保数据覆盖安装。主题日/夜/日与书架设置实图正常。第一次测试书读取尝试使用未带系统URI授权的shell `/data/local/tmp` viewData URI，正常入口回报“导入失败，请重试”，未打开阅读，不能算导入通过或阅读验证。此前代码已明确文件只能按平台可读取URI只读stage，下一步改走既有DocumentViewPicker获得系统授权，不用私有Core存储注入或关闭sandbox绕过。
+
+后续只读确认公共 Download 路径存在，但 HDC send 被平台拒绝；未更改权限或创建文件。改用 HDC 官方 `file send -b io.reader.minliny` 调试应用文件通道，将三个受控 TXT 放入独立 `ui-regression-input-20261001` 目录，再通过正常 `viewData` 自身 file URI 进入 SystemFileOpenHost、只读 stage/hash、LocalBookImportGateway 正常事务。首个错误文件名尝试也记录为导入失败；正确文件的 roundtrip SHA 匹配，短书和长目录书随后导入成功。没有写入 Core 存储。临时本地 HTTP 服务未使用且已停止。
+
+## VM新增发现：继续阅读卡保留旧书
+
+现象：源码 `86fce31f`、signed HAP SHA `7e5fd7f83ab7bbbed9b4fdca49011397c2189a2ebf013ece31c32a0f87ce7937`，先正常导入并阅读短书 A，再导入长目录书 B，翻到第二章后退出。书架 B 已排序第一且显示 4% 进度，而继续阅读卡仍显示 A。证据 `.reader-local/ui-regression-full-vm/ui-full-populated-two.{jpeg,json}`。两书均为本轮受控 fixture，未操作原用户书籍。
+
+代码审计：Index 先返回书架再异步 refresh 可解释短暂旧卡；但同一 applyBookshelfState 已更新列表/进度时，该解释不足。BookshelfFlowGateway/Core 排序与主工作区一致，新共享壳没有保存或转发 continueReading。进一步真实 SDK 专项确切失败：Index @State A→B 自动触发父 Observer，BookshelfPage @Prop 实际已为 B，页面只 mount 一次、21 个 native actor ID 不变，卡标题/作者/封面及点击目标仍为 A。定位到既有 `continueReadingCard(book, isTablet)` 按值 Builder 闭包，主工作区也有相同路径；不是共享壳遗漏数据。
+
+先红证据 `/private/tmp/source-demo-continue-reading-publication-20261001.red.log`，新增专项 `tools/test-bookshelf-continue-reading-publication.mjs`；修复采用现有实时 provider 读取模式，保留 actor 复用，完成后重新全量检查、签名构建和覆盖安装。此节记录新增缺陷与定位，不把尚未修复或重装的结果算通过。
+
+## VM新增发现：长章进度拖动后退出
+
+同一 `86fce31f` 包，正常导入单章 37,211 scalar fixture，在 Reader 原生 Slider 从0%拖至约50%，应用退出至桌面；之后 app-filter dump 只有420 bytes空根，不能算中段恢复成功。已有落盘 `jscrash-io.reader.minliny-20020074-20261001024520927.log` (41,535 bytes) 已只读保存至 `.reader-local/ui-regression-full-vm`，先审计进度回调/异步 seek 和异常栈，暂停该场景的重复设备操作。
+
+取证操作失误单独记录：原拟读取 hilog 尾部的 `hilog -r -n 500` 实际触发了 core/app/only_prerelease 环形 buffer clear；这是错误命令，不是读取，不将此轮 buffer 作为完整历史证据。已先存在的独立 faultlogger 崩溃文件仍保留并成功取回；未清除应用数据、未删除故障文件。后续以本机 SDK/help 明确的只读日志参数取证，禁止继续使用 `-r`。
+
+继续阅读卡本地修复已完成：provider 从实际 @Prop 读取当前书籍，封面/标题/作者/点击实时切换；无书籍时保留点击 no-op。A→B 两种封面变体、同21个 native observer ID/一次挂载、A→undefined→B 合并发布均通过，8项专项及相关回归3.83秒通过，目标SDK semantic/ArkTS0错误（两个既有未解析native/HMS导入仍明确记录，不升级为HAP编译）。完整结果 `continue-reading-publication-red-green.json`。新的设备结果仍须重建重装。
+
+崩溃进一步定位：`ReadingSurface` 标题子 actor 在标题消失后、真实卸载前仍收到属性更新；参数直接取已转为中段的 live fragments，因此给 recipe 传入 undefined，真实 SDK Prop reset 同步触发 production @Watch prepare，读取 key 抛错。`ReaderContinuousReadingStage` 的 titleRecipeProvider 路径存在同类问题。仓库原生 paragraph actor 调用只在这两份生产文件；正文已有按 fragment 绑定的 ForEach，没有本次直接读取可消失标题的路径。
+
+分页和连续模式均用真实 SDK 精确先红（0.47秒/0.45秒、相同 key undefined 栈）后绿；窄修把标题 actor 与有效的自身 recipe/key 绑定，保留 live provider 对当前列表的权威，允许旧 actor 在卸载完成前读自己的有效数据。没有向 ReaderNativeParagraphView.prepare 添加吞错/可空 guard，没有改 seek 或 Core 算法。原有两项标题回归按当前 actor 与历史 actor 的边界增强，相关检查及新包/VM复验结果另记。

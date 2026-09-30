@@ -318,10 +318,10 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private continueReadingCard(book: ShelfBook, isTablet: boolean) {
+  private continueReadingCard(bookProvider: () => ShelfBook | undefined, isTablet: boolean) {
     Row({ space: TOK_SPACE_CARD_PADDING }) {
-      if (this.hasCover(book)) {
-        Image(book.coverUrl as string)
+      if (this.hasCover(bookProvider())) {
+        Image(bookProvider()?.coverUrl ?? '')
           .width(62)
           .height(93)
           .objectFit(ImageFit.Cover)
@@ -346,7 +346,7 @@ export struct BookshelfPage {
 
         Blank().height(6);
 
-        Text(book.title)
+        Text(bookProvider()?.title ?? '')
           .width('100%')
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
@@ -358,7 +358,7 @@ export struct BookshelfPage {
 
         Blank().height(5);
 
-        Text(book.author)
+        Text(bookProvider()?.author ?? '')
           .width('100%')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
@@ -392,7 +392,10 @@ export struct BookshelfPage {
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(8)
-    .onClick((): void => this.onBookSelected(book));
+    .onClick((): void => {
+      const book = bookProvider();
+      if (book !== undefined) this.onBookSelected(book);
+    });
   }
 
   @Builder
@@ -400,7 +403,9 @@ export struct BookshelfPage {
     List({ space: TOK_SPACE_CONTROL_INLINE, scroller: this.shelfScroller }) {
       if (this.continueReading !== undefined) {
         ListItem() {
-          this.continueReadingCard(this.continueReading, isTablet);
+          // Retained Builder observers must read the live Prop instead of
+          // capturing the book that happened to be current when mounted.
+          this.continueReadingCard((): ShelfBook | undefined => this.continueReading, isTablet);
         }
       }
       ListItem() {
@@ -1346,8 +1351,8 @@ export struct BookshelfPage {
     return coverHeight + titleAndAuthor + progress;
   }
 
-  private hasCover(book: ShelfBook): boolean {
-    if (book.coverUrl === undefined) {
+  private hasCover(book: ShelfBook | undefined): boolean {
+    if (book?.coverUrl === undefined) {
       return false;
     }
     return /^(https?:\/\/|data:image\/(png|jpeg|bmp|webp);base64,|file:\/\/)/.test(book.coverUrl.trim());

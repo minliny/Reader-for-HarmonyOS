@@ -230,11 +230,14 @@ export struct ReaderContinuousReadingStage {
           ListItem() {
             Column() {
               if (fragment.id === CONTINUOUS_TITLE_ID) {
-                if (this.titleRecipeProvider() !== undefined) {
-                  ReaderNativeParagraphView({ recipe: this.titleRecipeProvider()!,
+                // A retained outgoing row must keep its own measured title
+                // until native disposal, even after the provider moves on.
+                ForEach(this.titleRecipeProvider() === undefined ? [] : [this.titleRecipeProvider()!],
+                  (recipe: ReaderNativeParagraphRecipe) => {
+                  ReaderNativeParagraphView({ recipe,
                     inkColor: readerAppearanceThemeStyle(this.appearance.activeTheme).ink })
                     .margin({ bottom: this.layout.titleToBodySpacingVp });
-                }
+                }, (recipe: ReaderNativeParagraphRecipe): string => recipe.key);
               } else {
               if ((fragment.continuousSpaceBefore ?? (index > (this.hasTitleItem() ? 1 : 0))) && fragment.isParagraphStart) {
                 Blank().height(this.appearance.paragraphSpacing);
