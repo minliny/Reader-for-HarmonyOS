@@ -30,12 +30,17 @@ const { run } = require('node:test');
 const { spec } = require('node:test/reporters');
 
 const files = process.argv.slice(2);
+const concurrency = Number(process.env.READER_HARMONY_TEST_CONCURRENCY ?? 6);
+if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) {
+  throw new Error('READER_HARMONY_TEST_CONCURRENCY must be an integer from 1 to 8');
+}
+console.log(`Harmony contract gate: ${files.length} files, ${concurrency} workers, 120-second limit`);
 const signal = AbortSignal.timeout(120000);
 signal.addEventListener('abort', () => {
   process.exitCode = 1;
   console.error('Harmony contract gate exceeded its 120-second wall-clock budget');
 }, { once: true });
-const results = run({ files, concurrency: 6, isolation: 'process', signal });
+const results = run({ files, concurrency, isolation: 'process', signal });
 let passedFiles = 0;
 results.on('test:pass', event => {
   if (event.nesting === 0 && !event.skip && !event.todo) passedFiles++;
