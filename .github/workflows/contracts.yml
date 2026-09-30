@@ -1,0 +1,56 @@
+name: Harmony Contracts
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  contract-gate:
+    name: contract-gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: Reader-for-HarmonyOS
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: Reader-for-HarmonyOS
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: minliny/Reader-Core-Native
+          ref: 562f5ee4c44fb6a24adda6cad7e737698cc8f612
+          path: Reader-Core-Native
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: minliny/Reader-UI
+          ref: 7c3a14329088e1aac65e700bc6eff8c50047ba10
+          path: Reader-UI
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.4.2
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
+        with:
+          toolchain: 1.97.1
+      - name: Install native dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev zlib1g-dev unzip
+      - name: Install pinned public Harmony compiler
+        env:
+          HARMONY_CLI_URL: ${{ vars.HARMONY_CLI_URL }}
+        run: bash ../Reader-Core-Native/scripts/ci-install-harmony-sdk.sh
+      - name: Reconstruct controlled workspace
+        run: node ../Reader-Core-Native/scripts/sync-workspace.mjs --write
+      - name: Build real Core CLI
+        working-directory: Reader-Core-Native
+        run: cargo build -p reader-cli --locked
+      - name: Full current Host contract discovery
+        run: |
+          export READER_CORE_CLI="$GITHUB_WORKSPACE/Reader-Core-Native/target/debug/reader-cli"
+          bash scripts/check-local.sh
