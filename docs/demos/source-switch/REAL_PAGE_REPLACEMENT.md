@@ -1,6 +1,6 @@
 # 换源真实页面替换：根因与纠偏记录
 
-日期：2026-09-30。状态：真实页面已通过本轮 signed HAP 构建并从正常入口在 VM 显示；真实数据链路发现 Core 请求准入故障，正在代码侧修复，完整换源和用户验收仍未通过。
+日期：2026-09-30 至 2026-10-01。当前状态：真实页面已替换并安装到 VM，详情和阅读两个原入口均已实测；Core 搜索准入修复已安装。最后一项 DNS 分类修复仅在分支通过定向回归，全量门禁超时，尚未打包/安装。动态刷新完整 VM 验证、正文成功和用户验收保持 OPEN。
 
 ## 问题与根因
 
@@ -108,3 +108,15 @@ Harmony `13e59f1b` 的两轮 gate 均在 120 秒硬上限取消，分别为 264 
 此前 `0acd14d4` VM 点选真实“66书吧-起点”候选后进入阅读流程，该源正文返回 HTTP 403；从阅读错误页“切换书源”成功进入同一全页组件。两个真实入口已实测接线，正文成功仍 OPEN，不能把进入阅读路由等同于第一屏正文成功。
 
 DNS 修复后的 `0d2402ce` 门禁再次在 120 秒停止，361 PASS / 24 cancelled / 0 failed，未发布或安装该源码的包。6 worker 不是此机器负载下稳定的时间保证。保留默认 6，增加仅用于显式本次运行的 `READER_HARMONY_TEST_CONCURRENCY`（整数 1–8，打印实际值），本轮选择 8 个执行槽；全部文件、断言、进程隔离和 120 秒截止时间不变。这个调整修正了前面暂不采用 8 的保守选择，仍不保证通过；不停止其它应用或修改 VM 资源来加速。运行器的完整发现、错误传播和超时子进程清理回归通过。
+
+## 本轮最终边界
+
+8 worker 的 `686bc89b` 全量门禁仍在 120 秒截止：355 PASS / 30 cancelled / 0 failed。停止重复该门禁，不延长时限，不跳过未执行检查，不从共享输出挑包。最后 DNS 修复尚无对应新 manifest/HAP，VM 仍为 `0acd14d4` 的上述 signed run；不能把本地修复当作已安装。
+
+- 已安装：真实换源页面、原有两个入口接线、真实候选列表、Core 大搜索结果预算修复；该安装版本有 385 项门禁通过、正式编译和 debug 签名、身份匹配的保数据覆盖安装/启动证据。
+- 当前 VM 实景：[real-page-vm.jpeg](real-page-vm.jpeg)，原始 1280×2832 像素，从阅读页原换源入口打开，21 个真实来源。
+- 尚未交付：DNS 分类修复（定向回归通过，正式门禁因时限取消）；因此动态查源、延迟更新/排序和停止只记录代码/本地回归，不记录最终 VM 通过。
+- 正文：选源后进入阅读路由，测试源 HTTP 403；成功正文首帧、真机和用户验收仍 OPEN。
+- 工作仍在 `codex/source-switch-demo-20260930`，没有合并到主工作区。
+
+完整安装身份、HAP 哈希、source dirty 状态、回执和未决边界见 [real-page-vm-result.json](real-page-vm-result.json)。遵循 [reader-harmonyos-hap-pipeline](/Users/minliny/Documents/Reader/.agents/skills/reader-harmonyos-hap-pipeline/SKILL.md) 的规则：“The pipeline output is valid only after an immutable schema v2 `manifest.json` exists.” 最后失败构建没有满足此条件，因此未继续安装。
