@@ -1,0 +1,5149 @@
+{
+  "gateLogs": {
+    "first": {
+      "summary": {
+        "tests": "394",
+        "suites": "0",
+        "pass": "391",
+        "fail": "3",
+        "cancelled": "0",
+        "skipped": "0",
+        "todo": "0",
+        "duration_ms": "117714.520459"
+      },
+      "recordedFiles": 394,
+      "statuses": {
+        "pass": 391,
+        "nonpass": 3
+      },
+      "top20": [
+        {
+          "file": "tools/test-reader-book-turn-present-barrier.mjs",
+          "status": "✔",
+          "ms": 22116.557792
+        },
+        {
+          "file": "tools/test-reader-reading-ready-publication.mjs",
+          "status": "✔",
+          "ms": 16031.841709
+        },
+        {
+          "file": "tools/test-reading-entry-preparation.mjs",
+          "status": "✔",
+          "ms": 15142.564458
+        },
+        {
+          "file": "tools/test-reader-book-turn-host-runtime.mjs",
+          "status": "✔",
+          "ms": 10345.5085
+        },
+        {
+          "file": "tools/test-reader-paragraph-diagnostic.mjs",
+          "status": "✔",
+          "ms": 9923.361542
+        },
+        {
+          "file": "tools/test-reader-bookmark-top-info.mjs",
+          "status": "✔",
+          "ms": 8732.360458
+        },
+        {
+          "file": "tools/test-reader-window-chrome-order.mjs",
+          "status": "✔",
+          "ms": 8451.964541
+        },
+        {
+          "file": "tools/test-reader-control-grabber-input.mjs",
+          "status": "✔",
+          "ms": 8196.365375
+        },
+        {
+          "file": "tools/test-search-publication-boundary.mjs",
+          "status": "✔",
+          "ms": 6393.656417
+        },
+        {
+          "file": "tools/test-reader-paper-chrome-composition.mjs",
+          "status": "✔",
+          "ms": 6055.889625
+        },
+        {
+          "file": "tools/test-reader-native-paragraph-owner.mjs",
+          "status": "✔",
+          "ms": 5985.581416
+        },
+        {
+          "file": "tools/test-reader-presented-page-turn.mjs",
+          "status": "✔",
+          "ms": 5822.412583
+        },
+        {
+          "file": "tools/test-reader-tts-quick-preparation.mjs",
+          "status": "✔",
+          "ms": 5798.616917
+        },
+        {
+          "file": "tools/test-reader-native-paragraph-view.mjs",
+          "status": "✔",
+          "ms": 5781.916041
+        },
+        {
+          "file": "tools/test-reader-native-text-measurement.mjs",
+          "status": "✔",
+          "ms": 5610.912791
+        },
+        {
+          "file": "tools/test-search-orchestrator.mjs",
+          "status": "✔",
+          "ms": 5228.775584
+        },
+        {
+          "file": "tools/test-reader-appearance-page-publication.mjs",
+          "status": "✔",
+          "ms": 5196.301083
+        },
+        {
+          "file": "tools/test-reader-textnode-diagnostic.mjs",
+          "status": "✔",
+          "ms": 5036.670667
+        },
+        {
+          "file": "tools/test-reader-physical-reading-repair.mjs",
+          "status": "✔",
+          "ms": 4967.654625
+        },
+        {
+          "file": "tools/test-shelf-resume-handoff.mjs",
+          "status": "✔",
+          "ms": 4933.599458
+        }
+      ],
+      "nonpass": [
+        {
+          "file": "tools/test-bookshelf-reading-entry.mjs",
+          "status": "✖",
+          "ms": 1919.264667
+        },
+        {
+          "file": "tools/test-legado-product-logic.mjs",
+          "status": "✖",
+          "ms": 2470.256417
+        },
+        {
+          "file": "tools/test-reader-window-chrome-p0.mjs",
+          "status": "✖",
+          "ms": 1747.684667
+        }
+      ],
+      "all": [
+        {
+          "file": "tools/test-added-book-preparation.mjs",
+          "status": "✔",
+          "ms": 797.134958
+        },
+        {
+          "file": "tools/test-app-shell-safe-geometry.mjs",
+          "status": "✔",
+          "ms": 218.95325
+        },
+        {
+          "file": "tools/test-arkweb-network-policy.mjs",
+          "status": "✔",
+          "ms": 506.743958
+        },
+        {
+          "file": "tools/test-arkweb-resource-capture.mjs",
+          "status": "✔",
+          "ms": 2766.273042
+        },
+        {
+          "file": "tools/test-arkweb-resource-diagnostic.mjs",
+          "status": "✔",
+          "ms": 2341.489083
+        },
+        {
+          "file": "tools/test-book-acquisition-coordinator.mjs",
+          "status": "✔",
+          "ms": 793.161
+        },
+        {
+          "file": "tools/test-book-author-metadata.mjs",
+          "status": "✔",
+          "ms": 545.672833
+        },
+        {
+          "file": "tools/test-book-directory-page.mjs",
+          "status": "✔",
+          "ms": 2128.671
+        },
+        {
+          "file": "tools/test-book-metadata-presentation.mjs",
+          "status": "✔",
+          "ms": 2144.283333
+        },
+        {
+          "file": "tools/test-book-removal-dialog.mjs",
+          "status": "✔",
+          "ms": 2523.276541
+        },
+        {
+          "file": "tools/test-book-source-import.mjs",
+          "status": "✔",
+          "ms": 888.172417
+        },
+        {
+          "file": "tools/test-bookshelf-detail-control-stability.mjs",
+          "status": "✔",
+          "ms": 2290.390917
+        },
+        {
+          "file": "tools/test-bookshelf-detail-removal.mjs",
+          "status": "✔",
+          "ms": 333.689208
+        },
+        {
+          "file": "tools/test-bookshelf-detail-scroll-layout.mjs",
+          "status": "✔",
+          "ms": 1834.558
+        },
+        {
+          "file": "tools/test-bookshelf-filter-responsibilities.mjs",
+          "status": "✔",
+          "ms": 1917.402625
+        },
+        {
+          "file": "tools/test-bookshelf-management.mjs",
+          "status": "✔",
+          "ms": 262.87
+        },
+        {
+          "file": "tools/test-bookshelf-manual-update.mjs",
+          "status": "✔",
+          "ms": 3670.657459
+        },
+        {
+          "file": "tools/test-bookshelf-more-layout.mjs",
+          "status": "✔",
+          "ms": 4126.9845
+        },
+        {
+          "file": "tools/test-bookshelf-paged-projection.mjs",
+          "status": "✔",
+          "ms": 2463.697292
+        },
+        {
+          "file": "tools/test-bookshelf-physical-feedback.mjs",
+          "status": "✔",
+          "ms": 2500.43275
+        },
+        {
+          "file": "tools/test-bookshelf-reading-entry.mjs",
+          "status": "✖",
+          "ms": 1919.264667
+        },
+        {
+          "file": "tools/test-bookshelf-reading-feedback.mjs",
+          "status": "✔",
+          "ms": 2080.97075
+        },
+        {
+          "file": "tools/test-bookshelf-settings-layout.mjs",
+          "status": "✔",
+          "ms": 1820.747166
+        },
+        {
+          "file": "tools/test-bookshelf-shared-scan.mjs",
+          "status": "✔",
+          "ms": 2263.156875
+        },
+        {
+          "file": "tools/test-bookshelf-shell-states.mjs",
+          "status": "✔",
+          "ms": 3755.71175
+        },
+        {
+          "file": "tools/test-bookshelf-source-name-durability.mjs",
+          "status": "✔",
+          "ms": 1653.324917
+        },
+        {
+          "file": "tools/test-bookshelf-startup-readiness.mjs",
+          "status": "✔",
+          "ms": 1425.574625
+        },
+        {
+          "file": "tools/test-bookshelf-tablet-navigation.mjs",
+          "status": "✔",
+          "ms": 185.281416
+        },
+        {
+          "file": "tools/test-bookshelf-view-and-menu.mjs",
+          "status": "✔",
+          "ms": 2044.95225
+        },
+        {
+          "file": "tools/test-bookshelf-view-handoff.mjs",
+          "status": "✔",
+          "ms": 2513.994
+        },
+        {
+          "file": "tools/test-bookshelf-viewport-return.mjs",
+          "status": "✔",
+          "ms": 1503.968375
+        },
+        {
+          "file": "tools/test-build-input-safety.mjs",
+          "status": "✔",
+          "ms": 2544.446333
+        },
+        {
+          "file": "tools/test-build-provenance-manifest.mjs",
+          "status": "✔",
+          "ms": 232.782916
+        },
+        {
+          "file": "tools/test-bundled-source-host-boundary.mjs",
+          "status": "✔",
+          "ms": 456.3285
+        },
+        {
+          "file": "tools/test-bundled-test-book-sources.mjs",
+          "status": "✔",
+          "ms": 634.266959
+        },
+        {
+          "file": "tools/test-cookie-security-policy.mjs",
+          "status": "✔",
+          "ms": 547.081375
+        },
+        {
+          "file": "tools/test-core-build-identity.mjs",
+          "status": "✔",
+          "ms": 332.704459
+        },
+        {
+          "file": "tools/test-demo-async-recovery.mjs",
+          "status": "✔",
+          "ms": 3056.262791
+        },
+        {
+          "file": "tools/test-detail-acquisition-return-stability.mjs",
+          "status": "✔",
+          "ms": 2878.060625
+        },
+        {
+          "file": "tools/test-detail-external-directory.mjs",
+          "status": "✔",
+          "ms": 2645.7385
+        },
+        {
+          "file": "tools/test-discover-product-flow.mjs",
+          "status": "✔",
+          "ms": 265.91475
+        },
+        {
+          "file": "tools/test-dynamic-list-refresh.mjs",
+          "status": "✔",
+          "ms": 1678.45125
+        },
+        {
+          "file": "tools/test-error-message-conformance.mjs",
+          "status": "✔",
+          "ms": 447.194708
+        },
+        {
+          "file": "tools/test-hap-pipeline-contract.mjs",
+          "status": "✔",
+          "ms": 729.7475
+        },
+        {
+          "file": "tools/test-harmony-tts-host-router.mjs",
+          "status": "✔",
+          "ms": 436.73075
+        },
+        {
+          "file": "tools/test-host-persistence-recovery.mjs",
+          "status": "✔",
+          "ms": 780.283208
+        },
+        {
+          "file": "tools/test-host-stage-recovery-retry.mjs",
+          "status": "✔",
+          "ms": 431.985584
+        },
+        {
+          "file": "tools/test-http-request-payload.mjs",
+          "status": "✔",
+          "ms": 570.845458
+        },
+        {
+          "file": "tools/test-http-response-bytes.mjs",
+          "status": "✔",
+          "ms": 593.277166
+        },
+        {
+          "file": "tools/test-http-transport-conformance.mjs",
+          "status": "✔",
+          "ms": 513.45725
+        },
+        {
+          "file": "tools/test-http-url-normalization.mjs",
+          "status": "✔",
+          "ms": 275.579125
+        },
+        {
+          "file": "tools/test-icon-design-contract.mjs",
+          "status": "✔",
+          "ms": 345.067667
+        },
+        {
+          "file": "tools/test-import-refresh-geometry.mjs",
+          "status": "✔",
+          "ms": 1695.623917
+        },
+        {
+          "file": "tools/test-incremental-bundled-source-supply.mjs",
+          "status": "✔",
+          "ms": 347.234125
+        },
+        {
+          "file": "tools/test-legado-product-logic.mjs",
+          "status": "✖",
+          "ms": 2470.256417
+        },
+        {
+          "file": "tools/test-local-book-format-entry.mjs",
+          "status": "✔",
+          "ms": 390.69225
+        },
+        {
+          "file": "tools/test-local-configuration-reset.mjs",
+          "status": "✔",
+          "ms": 3863.9445
+        },
+        {
+          "file": "tools/test-local-contract-runner.mjs",
+          "status": "✔",
+          "ms": 4687.127417
+        },
+        {
+          "file": "tools/test-local-epub-image-reuse-runtime.mjs",
+          "status": "✔",
+          "ms": 648.856875
+        },
+        {
+          "file": "tools/test-local-epub-resource-architecture.mjs",
+          "status": "✔",
+          "ms": 368.943125
+        },
+        {
+          "file": "tools/test-local-epub-style-preparation.mjs",
+          "status": "✔",
+          "ms": 3563.216916
+        },
+        {
+          "file": "tools/test-local-import-finalize-recovery.mjs",
+          "status": "✔",
+          "ms": 515.139
+        },
+        {
+          "file": "tools/test-local-shelf-entry-projection.mjs",
+          "status": "✔",
+          "ms": 2605.883417
+        },
+        {
+          "file": "tools/test-log-privacy.mjs",
+          "status": "✔",
+          "ms": 433.793792
+        },
+        {
+          "file": "tools/test-navigation-performance.mjs",
+          "status": "✔",
+          "ms": 274.009875
+        },
+        {
+          "file": "tools/test-network-route-policy.mjs",
+          "status": "✔",
+          "ms": 857.767292
+        },
+        {
+          "file": "tools/test-performance-regressions.mjs",
+          "status": "✔",
+          "ms": 393.966084
+        },
+        {
+          "file": "tools/test-phone-layout-figma-regressions.mjs",
+          "status": "✔",
+          "ms": 193.910917
+        },
+        {
+          "file": "tools/test-popofree-source-correction.mjs",
+          "status": "✔",
+          "ms": 1482.536208
+        },
+        {
+          "file": "tools/test-portable-json-import.mjs",
+          "status": "✔",
+          "ms": 336.350625
+        },
+        {
+          "file": "tools/test-reader-appearance-lifecycle.mjs",
+          "status": "✔",
+          "ms": 2740.518584
+        },
+        {
+          "file": "tools/test-reader-appearance-make.mjs",
+          "status": "✔",
+          "ms": 1762.597
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-driver.mjs",
+          "status": "✔",
+          "ms": 278.34325
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-fixture.mjs",
+          "status": "✔",
+          "ms": 190.277
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-gesture.mjs",
+          "status": "✔",
+          "ms": 503.742
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-sampler.mjs",
+          "status": "✔",
+          "ms": 579.362084
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-state.mjs",
+          "status": "✔",
+          "ms": 658.212292
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-tree.mjs",
+          "status": "✔",
+          "ms": 356.305958
+        },
+        {
+          "file": "tools/test-reader-appearance-page-publication.mjs",
+          "status": "✔",
+          "ms": 5196.301083
+        },
+        {
+          "file": "tools/test-reader-appearance-store.mjs",
+          "status": "✔",
+          "ms": 682.161167
+        },
+        {
+          "file": "tools/test-reader-appearance-theme-extension.mjs",
+          "status": "✔",
+          "ms": 1756.4825
+        },
+        {
+          "file": "tools/test-reader-appearance.mjs",
+          "status": "✔",
+          "ms": 642.71825
+        },
+        {
+          "file": "tools/test-reader-auto-page-coordinator.mjs",
+          "status": "✔",
+          "ms": 336.143375
+        },
+        {
+          "file": "tools/test-reader-auto-page-full.mjs",
+          "status": "✔",
+          "ms": 357.318292
+        },
+        {
+          "file": "tools/test-reader-auto-page-native-layout.mjs",
+          "status": "✔",
+          "ms": 1580.89525
+        },
+        {
+          "file": "tools/test-reader-auto-page-state.mjs",
+          "status": "✔",
+          "ms": 272.019333
+        },
+        {
+          "file": "tools/test-reader-auto-timer-native-layout.mjs",
+          "status": "✔",
+          "ms": 1500.630459
+        },
+        {
+          "file": "tools/test-reader-automatic-page-start.mjs",
+          "status": "✔",
+          "ms": 1788.245209
+        },
+        {
+          "file": "tools/test-reader-binary-consumers.mjs",
+          "status": "✔",
+          "ms": 323.599083
+        },
+        {
+          "file": "tools/test-reader-book-turn-architecture.mjs",
+          "status": "✔",
+          "ms": 327.65075
+        },
+        {
+          "file": "tools/test-reader-book-turn-automatic-bridge.mjs",
+          "status": "✔",
+          "ms": 2467.956958
+        },
+        {
+          "file": "tools/test-reader-book-turn-event-dispatch.mjs",
+          "status": "✔",
+          "ms": 1919.986917
+        },
+        {
+          "file": "tools/test-reader-book-turn-host-runtime.mjs",
+          "status": "✔",
+          "ms": 10345.5085
+        },
+        {
+          "file": "tools/test-reader-book-turn-motion.mjs",
+          "status": "✔",
+          "ms": 301.544458
+        },
+        {
+          "file": "tools/test-reader-book-turn-native-core.mjs",
+          "status": "✔",
+          "ms": 3152.870875
+        },
+        {
+          "file": "tools/test-reader-book-turn-present-barrier.mjs",
+          "status": "✔",
+          "ms": 22116.557792
+        },
+        {
+          "file": "tools/test-reader-book-turn-presentation-owner.mjs",
+          "status": "✔",
+          "ms": 1422.853458
+        },
+        {
+          "file": "tools/test-reader-book-turn-surface-recovery.mjs",
+          "status": "✔",
+          "ms": 1526.650125
+        },
+        {
+          "file": "tools/test-reader-bookmark-panels.mjs",
+          "status": "✔",
+          "ms": 165.924084
+        },
+        {
+          "file": "tools/test-reader-bookmark-projection.mjs",
+          "status": "✔",
+          "ms": 242.021708
+        },
+        {
+          "file": "tools/test-reader-bookmark-top-info.mjs",
+          "status": "✔",
+          "ms": 8732.360458
+        },
+        {
+          "file": "tools/test-reader-brightness-cancel-ui.mjs",
+          "status": "✔",
+          "ms": 1724.011708
+        },
+        {
+          "file": "tools/test-reader-brightness-control.mjs",
+          "status": "✔",
+          "ms": 307.645666
+        },
+        {
+          "file": "tools/test-reader-brightness-perception.mjs",
+          "status": "✔",
+          "ms": 2095.94675
+        },
+        {
+          "file": "tools/test-reader-brightness-writer.mjs",
+          "status": "✔",
+          "ms": 579.436792
+        },
+        {
+          "file": "tools/test-reader-cache-only-chapter.mjs",
+          "status": "✔",
+          "ms": 429.965208
+        },
+        {
+          "file": "tools/test-reader-capsule-page-turn.mjs",
+          "status": "✔",
+          "ms": 3278.460333
+        },
+        {
+          "file": "tools/test-reader-chapter-first-title-publication.mjs",
+          "status": "✔",
+          "ms": 3193.651916
+        },
+        {
+          "file": "tools/test-reader-chinese-conversion.mjs",
+          "status": "✔",
+          "ms": 332.438125
+        },
+        {
+          "file": "tools/test-reader-cold-entry-recovery.mjs",
+          "status": "✔",
+          "ms": 385.448125
+        },
+        {
+          "file": "tools/test-reader-content-business.mjs",
+          "status": "✔",
+          "ms": 338.720708
+        },
+        {
+          "file": "tools/test-reader-content-position-boundary.mjs",
+          "status": "✔",
+          "ms": 2667.152834
+        },
+        {
+          "file": "tools/test-reader-content-search-cursor.mjs",
+          "status": "✔",
+          "ms": 412.624541
+        },
+        {
+          "file": "tools/test-reader-content-search-error-boundary.mjs",
+          "status": "✔",
+          "ms": 2397.844708
+        },
+        {
+          "file": "tools/test-reader-content-search-focus.mjs",
+          "status": "✔",
+          "ms": 1823.246917
+        },
+        {
+          "file": "tools/test-reader-content-search-native-list.mjs",
+          "status": "✔",
+          "ms": 2666.552041
+        },
+        {
+          "file": "tools/test-reader-content-search-open-cost.mjs",
+          "status": "✔",
+          "ms": 3509.383375
+        },
+        {
+          "file": "tools/test-reader-content-search-publication.mjs",
+          "status": "✔",
+          "ms": 3553.887291
+        },
+        {
+          "file": "tools/test-reader-continuous-initial-offset.mjs",
+          "status": "✔",
+          "ms": 1874.817542
+        },
+        {
+          "file": "tools/test-reader-continuous-input-runtime.mjs",
+          "status": "✔",
+          "ms": 4526.590792
+        },
+        {
+          "file": "tools/test-reader-continuous-reading.mjs",
+          "status": "✔",
+          "ms": 3040.726625
+        },
+        {
+          "file": "tools/test-reader-control-accessibility.mjs",
+          "status": "✔",
+          "ms": 2530.833875
+        },
+        {
+          "file": "tools/test-reader-control-actor-geometry.mjs",
+          "status": "✔",
+          "ms": 392.501792
+        },
+        {
+          "file": "tools/test-reader-control-appearance-geometry.mjs",
+          "status": "✔",
+          "ms": 700.691875
+        },
+        {
+          "file": "tools/test-reader-control-backdrop-publication.mjs",
+          "status": "✔",
+          "ms": 1981.554459
+        },
+        {
+          "file": "tools/test-reader-control-backdrop-touch.mjs",
+          "status": "✔",
+          "ms": 347.437
+        },
+        {
+          "file": "tools/test-reader-control-bookmark-content.mjs",
+          "status": "✔",
+          "ms": 1956.742709
+        },
+        {
+          "file": "tools/test-reader-control-bookmark-load.mjs",
+          "status": "✔",
+          "ms": 581.151417
+        },
+        {
+          "file": "tools/test-reader-control-bookmark-mutation-recovery.mjs",
+          "status": "✔",
+          "ms": 535.714042
+        },
+        {
+          "file": "tools/test-reader-control-content-surface.mjs",
+          "status": "✔",
+          "ms": 510.983208
+        },
+        {
+          "file": "tools/test-reader-control-device-probe.mjs",
+          "status": "✔",
+          "ms": 514.681833
+        },
+        {
+          "file": "tools/test-reader-control-directory-content.mjs",
+          "status": "✔",
+          "ms": 355.994792
+        },
+        {
+          "file": "tools/test-reader-control-directory-model.mjs",
+          "status": "✔",
+          "ms": 406.109875
+        },
+        {
+          "file": "tools/test-reader-control-geometry.mjs",
+          "status": "✔",
+          "ms": 447.604125
+        },
+        {
+          "file": "tools/test-reader-control-gesture-continuation.mjs",
+          "status": "✔",
+          "ms": 410.288792
+        },
+        {
+          "file": "tools/test-reader-control-gesture-driver.mjs",
+          "status": "✔",
+          "ms": 481.594667
+        },
+        {
+          "file": "tools/test-reader-control-global-presentation.mjs",
+          "status": "✔",
+          "ms": 2191.597625
+        },
+        {
+          "file": "tools/test-reader-control-grabber-input.mjs",
+          "status": "✔",
+          "ms": 8196.365375
+        },
+        {
+          "file": "tools/test-reader-control-header-content.mjs",
+          "status": "✔",
+          "ms": 2745.38025
+        },
+        {
+          "file": "tools/test-reader-control-host-input.mjs",
+          "status": "✔",
+          "ms": 2025.805
+        },
+        {
+          "file": "tools/test-reader-control-host-keyboard.mjs",
+          "status": "✔",
+          "ms": 608.248542
+        },
+        {
+          "file": "tools/test-reader-control-host-session.mjs",
+          "status": "✔",
+          "ms": 518.68475
+        },
+        {
+          "file": "tools/test-reader-control-input-routing.mjs",
+          "status": "✔",
+          "ms": 3372.799583
+        },
+        {
+          "file": "tools/test-reader-control-integration-events.mjs",
+          "status": "✔",
+          "ms": 646.913417
+        },
+        {
+          "file": "tools/test-reader-control-internal-selection.mjs",
+          "status": "✔",
+          "ms": 1478.655583
+        },
+        {
+          "file": "tools/test-reader-control-layout-rebase.mjs",
+          "status": "✔",
+          "ms": 347.772583
+        },
+        {
+          "file": "tools/test-reader-control-list-positioning.mjs",
+          "status": "✔",
+          "ms": 329.752875
+        },
+        {
+          "file": "tools/test-reader-control-morph-scroll.mjs",
+          "status": "✔",
+          "ms": 2342.622416
+        },
+        {
+          "file": "tools/test-reader-control-motion-geometry.mjs",
+          "status": "✔",
+          "ms": 432.150375
+        },
+        {
+          "file": "tools/test-reader-control-motion-policy.mjs",
+          "status": "✔",
+          "ms": 557.458042
+        },
+        {
+          "file": "tools/test-reader-control-motion-presentation.mjs",
+          "status": "✔",
+          "ms": 2269.506625
+        },
+        {
+          "file": "tools/test-reader-control-narrow-widths.mjs",
+          "status": "✔",
+          "ms": 494.514458
+        },
+        {
+          "file": "tools/test-reader-control-option-update.mjs",
+          "status": "✔",
+          "ms": 803.70925
+        },
+        {
+          "file": "tools/test-reader-control-p0.mjs",
+          "status": "✔",
+          "ms": 384.089583
+        },
+        {
+          "file": "tools/test-reader-control-playback-content.mjs",
+          "status": "✔",
+          "ms": 2260.89425
+        },
+        {
+          "file": "tools/test-reader-control-playback-host-intents.mjs",
+          "status": "✔",
+          "ms": 2669.892708
+        },
+        {
+          "file": "tools/test-reader-control-replace-content.mjs",
+          "status": "✔",
+          "ms": 2931.245917
+        },
+        {
+          "file": "tools/test-reader-control-replace-gateway.mjs",
+          "status": "✔",
+          "ms": 376.40775
+        },
+        {
+          "file": "tools/test-reader-control-replace-geometry.mjs",
+          "status": "✔",
+          "ms": 376.915584
+        },
+        {
+          "file": "tools/test-reader-control-replace-host.mjs",
+          "status": "✔",
+          "ms": 1036.7455
+        },
+        {
+          "file": "tools/test-reader-control-replace-state.mjs",
+          "status": "✔",
+          "ms": 383.358375
+        },
+        {
+          "file": "tools/test-reader-control-resume-timing.mjs",
+          "status": "✔",
+          "ms": 406.093459
+        },
+        {
+          "file": "tools/test-reader-control-runtime.mjs",
+          "status": "✔",
+          "ms": 2756.755417
+        },
+        {
+          "file": "tools/test-reader-control-search-scroll.mjs",
+          "status": "✔",
+          "ms": 587.549916
+        },
+        {
+          "file": "tools/test-reader-control-search-settings-content.mjs",
+          "status": "✔",
+          "ms": 2645.756083
+        },
+        {
+          "file": "tools/test-reader-control-selection-recovery.mjs",
+          "status": "✔",
+          "ms": 403.591
+        },
+        {
+          "file": "tools/test-reader-control-selection-transaction.mjs",
+          "status": "✔",
+          "ms": 404.524333
+        },
+        {
+          "file": "tools/test-reader-control-session-state.mjs",
+          "status": "✔",
+          "ms": 773.522125
+        },
+        {
+          "file": "tools/test-reader-control-spatial-path.mjs",
+          "status": "✔",
+          "ms": 532.851417
+        },
+        {
+          "file": "tools/test-reader-control-stage-composition.mjs",
+          "status": "✔",
+          "ms": 309.978834
+        },
+        {
+          "file": "tools/test-reader-control-stage-lifecycle.mjs",
+          "status": "✔",
+          "ms": 842.474917
+        },
+        {
+          "file": "tools/test-reader-control-touch-plan.mjs",
+          "status": "✔",
+          "ms": 1223.933125
+        },
+        {
+          "file": "tools/test-reader-control-tts-make.mjs",
+          "status": "✔",
+          "ms": 2183.463917
+        },
+        {
+          "file": "tools/test-reader-control-verification-launch.mjs",
+          "status": "✔",
+          "ms": 475.945375
+        },
+        {
+          "file": "tools/test-reader-controls-ph104-108.mjs",
+          "status": "✔",
+          "ms": 4611.075584
+        },
+        {
+          "file": "tools/test-reader-custom-font-boundary.mjs",
+          "status": "✔",
+          "ms": 1276.527167
+        },
+        {
+          "file": "tools/test-reader-cutout-body-layout.mjs",
+          "status": "✔",
+          "ms": 2414.697084
+        },
+        {
+          "file": "tools/test-reader-cutout-setting-reflow.mjs",
+          "status": "✔",
+          "ms": 2369.568041
+        },
+        {
+          "file": "tools/test-reader-direct-entry-recovery.mjs",
+          "status": "✔",
+          "ms": 2362.278667
+        },
+        {
+          "file": "tools/test-reader-direct-presented-page.mjs",
+          "status": "✔",
+          "ms": 2713.279792
+        },
+        {
+          "file": "tools/test-reader-directory-backfill-after-frame.mjs",
+          "status": "✔",
+          "ms": 2296.690833
+        },
+        {
+          "file": "tools/test-reader-directory-data-snapshot.mjs",
+          "status": "✔",
+          "ms": 1741.917709
+        },
+        {
+          "file": "tools/test-reader-directory-extent.mjs",
+          "status": "✔",
+          "ms": 476.838167
+        },
+        {
+          "file": "tools/test-reader-directory-hierarchy.mjs",
+          "status": "✔",
+          "ms": 582.582708
+        },
+        {
+          "file": "tools/test-reader-directory-markers.mjs",
+          "status": "✔",
+          "ms": 500.8165
+        },
+        {
+          "file": "tools/test-reader-directory-navigation-ui.mjs",
+          "status": "✔",
+          "ms": 1522.419875
+        },
+        {
+          "file": "tools/test-reader-directory-navigation.mjs",
+          "status": "✔",
+          "ms": 487.6635
+        },
+        {
+          "file": "tools/test-reader-directory-projection.mjs",
+          "status": "✔",
+          "ms": 341.570584
+        },
+        {
+          "file": "tools/test-reader-directory-shared-content.mjs",
+          "status": "✔",
+          "ms": 1640.749208
+        },
+        {
+          "file": "tools/test-reader-directory-viewport.mjs",
+          "status": "✔",
+          "ms": 1365.931
+        },
+        {
+          "file": "tools/test-reader-directory-window-publication.mjs",
+          "status": "✔",
+          "ms": 1316.340625
+        },
+        {
+          "file": "tools/test-reader-drag-follow-gate.mjs",
+          "status": "✔",
+          "ms": 231.815833
+        },
+        {
+          "file": "tools/test-reader-dynamic-highlight.mjs",
+          "status": "✔",
+          "ms": 1503.678834
+        },
+        {
+          "file": "tools/test-reader-entry-handoff.mjs",
+          "status": "✔",
+          "ms": 4029.085375
+        },
+        {
+          "file": "tools/test-reader-entry-phase-timing.mjs",
+          "status": "✔",
+          "ms": 2237.563167
+        },
+        {
+          "file": "tools/test-reader-entry-presentation.mjs",
+          "status": "✔",
+          "ms": 2318.249417
+        },
+        {
+          "file": "tools/test-reader-entry-text-reuse.mjs",
+          "status": "✔",
+          "ms": 496.111458
+        },
+        {
+          "file": "tools/test-reader-entry-window.mjs",
+          "status": "✔",
+          "ms": 3182.301167
+        },
+        {
+          "file": "tools/test-reader-epub-image-width.mjs",
+          "status": "✔",
+          "ms": 2358.690459
+        },
+        {
+          "file": "tools/test-reader-event-loop-probe.mjs",
+          "status": "✔",
+          "ms": 371.701458
+        },
+        {
+          "file": "tools/test-reader-feedback-regressions.mjs",
+          "status": "✔",
+          "ms": 524.619375
+        },
+        {
+          "file": "tools/test-reader-first-page-sdk.mjs",
+          "status": "✔",
+          "ms": 1998.778
+        },
+        {
+          "file": "tools/test-reader-font-demand.mjs",
+          "status": "✔",
+          "ms": 1571.148875
+        },
+        {
+          "file": "tools/test-reader-fragment-authority.mjs",
+          "status": "✔",
+          "ms": 1615.510791
+        },
+        {
+          "file": "tools/test-reader-hdc-lease.mjs",
+          "status": "✔",
+          "ms": 2562.625834
+        },
+        {
+          "file": "tools/test-reader-host-path-boundary.mjs",
+          "status": "✔",
+          "ms": 310.058042
+        },
+        {
+          "file": "tools/test-reader-host-selection-boundary.mjs",
+          "status": "✔",
+          "ms": 274.926833
+        },
+        {
+          "file": "tools/test-reader-http-tts-gateway.mjs",
+          "status": "✔",
+          "ms": 266.870125
+        },
+        {
+          "file": "tools/test-reader-indent-measurement.mjs",
+          "status": "✔",
+          "ms": 364.055833
+        },
+        {
+          "file": "tools/test-reader-initial-layout-overlap.mjs",
+          "status": "✔",
+          "ms": 1591.681333
+        },
+        {
+          "file": "tools/test-reader-known-image-geometry.mjs",
+          "status": "✔",
+          "ms": 1695.053584
+        },
+        {
+          "file": "tools/test-reader-layout-architecture.mjs",
+          "status": "✔",
+          "ms": 361.234834
+        },
+        {
+          "file": "tools/test-reader-local-image-core-contract.mjs",
+          "status": "✔",
+          "ms": 1454.048792
+        },
+        {
+          "file": "tools/test-reader-local-reverse-page.mjs",
+          "status": "✔",
+          "ms": 2756.716917
+        },
+        {
+          "file": "tools/test-reader-measurement-prefix.mjs",
+          "status": "✔",
+          "ms": 2056.632583
+        },
+        {
+          "file": "tools/test-reader-module-selection.mjs",
+          "status": "✔",
+          "ms": 2094.032209
+        },
+        {
+          "file": "tools/test-reader-more-popup.mjs",
+          "status": "✔",
+          "ms": 2460.987542
+        },
+        {
+          "file": "tools/test-reader-motion-repair.mjs",
+          "status": "✔",
+          "ms": 2645.75825
+        },
+        {
+          "file": "tools/test-reader-native-paragraph-owner.mjs",
+          "status": "✔",
+          "ms": 5985.581416
+        },
+        {
+          "file": "tools/test-reader-native-paragraph-view.mjs",
+          "status": "✔",
+          "ms": 5781.916041
+        },
+        {
+          "file": "tools/test-reader-native-text-measurement.mjs",
+          "status": "✔",
+          "ms": 5610.912791
+        },
+        {
+          "file": "tools/test-reader-navigable-toc.mjs",
+          "status": "✔",
+          "ms": 2996.22525
+        },
+        {
+          "file": "tools/test-reader-offscreen-fragment-publication.mjs",
+          "status": "✔",
+          "ms": 4768.881208
+        },
+        {
+          "file": "tools/test-reader-optional-entry-memory-launch.mjs",
+          "status": "✔",
+          "ms": 4718.505375
+        },
+        {
+          "file": "tools/test-reader-page-bottom-justify.mjs",
+          "status": "✔",
+          "ms": 658.661417
+        },
+        {
+          "file": "tools/test-reader-page-chrome.mjs",
+          "status": "✔",
+          "ms": 2342.707667
+        },
+        {
+          "file": "tools/test-reader-page-gesture-state.mjs",
+          "status": "✔",
+          "ms": 599.123042
+        },
+        {
+          "file": "tools/test-reader-page-input-runtime.mjs",
+          "status": "✔",
+          "ms": 360.163375
+        },
+        {
+          "file": "tools/test-reader-page-preparation-runtime.mjs",
+          "status": "✔",
+          "ms": 3453.966917
+        },
+        {
+          "file": "tools/test-reader-page-progress-runtime.mjs",
+          "status": "✔",
+          "ms": 2255.398542
+        },
+        {
+          "file": "tools/test-reader-page-settlement-runtime.mjs",
+          "status": "✔",
+          "ms": 2635.586791
+        },
+        {
+          "file": "tools/test-reader-page-turn-pipeline.mjs",
+          "status": "✔",
+          "ms": 344.433167
+        },
+        {
+          "file": "tools/test-reader-page-turn-stage.mjs",
+          "status": "✔",
+          "ms": 343.271584
+        },
+        {
+          "file": "tools/test-reader-paper-chrome-composition.mjs",
+          "status": "✔",
+          "ms": 6055.889625
+        },
+        {
+          "file": "tools/test-reader-paragraph-diagnostic.mjs",
+          "status": "✔",
+          "ms": 9923.361542
+        },
+        {
+          "file": "tools/test-reader-paragraph-indent.mjs",
+          "status": "✔",
+          "ms": 419.744125
+        },
+        {
+          "file": "tools/test-reader-persisted-first-build.mjs",
+          "status": "✔",
+          "ms": 2883.173042
+        },
+        {
+          "file": "tools/test-reader-physical-control-details.mjs",
+          "status": "✔",
+          "ms": 2094.535416
+        },
+        {
+          "file": "tools/test-reader-physical-reading-repair.mjs",
+          "status": "✔",
+          "ms": 4967.654625
+        },
+        {
+          "file": "tools/test-reader-physical-window-bookmark-refresh.mjs",
+          "status": "✔",
+          "ms": 4591.754
+        },
+        {
+          "file": "tools/test-reader-platform-paragraph-probe.mjs",
+          "status": "✔",
+          "ms": 2737.53425
+        },
+        {
+          "file": "tools/test-reader-position-handoff.mjs",
+          "status": "✔",
+          "ms": 2526.616375
+        },
+        {
+          "file": "tools/test-reader-preparation-network.mjs",
+          "status": "✔",
+          "ms": 366.308208
+        },
+        {
+          "file": "tools/test-reader-preparation-runtime.mjs",
+          "status": "✔",
+          "ms": 1986.991833
+        },
+        {
+          "file": "tools/test-reader-prepared-title-boundary.mjs",
+          "status": "✔",
+          "ms": 2255.321959
+        },
+        {
+          "file": "tools/test-reader-presentation-recovery.mjs",
+          "status": "✔",
+          "ms": 2404.426416
+        },
+        {
+          "file": "tools/test-reader-presented-page-turn.mjs",
+          "status": "✔",
+          "ms": 5822.412583
+        },
+        {
+          "file": "tools/test-reader-presented-progress-owner.mjs",
+          "status": "✔",
+          "ms": 2815.711542
+        },
+        {
+          "file": "tools/test-reader-presented-progress-queue.mjs",
+          "status": "✔",
+          "ms": 553.412208
+        },
+        {
+          "file": "tools/test-reader-press-feedback.mjs",
+          "status": "✔",
+          "ms": 555.589083
+        },
+        {
+          "file": "tools/test-reader-product-scope.mjs",
+          "status": "✔",
+          "ms": 473.053708
+        },
+        {
+          "file": "tools/test-reader-progress-observation.mjs",
+          "status": "✔",
+          "ms": 2159.022708
+        },
+        {
+          "file": "tools/test-reader-quick-search-auto-header.mjs",
+          "status": "✔",
+          "ms": 1937.438625
+        },
+        {
+          "file": "tools/test-reader-rapid-page-turn-state.mjs",
+          "status": "✔",
+          "ms": 411.441041
+        },
+        {
+          "file": "tools/test-reader-reading-ready-publication.mjs",
+          "status": "✔",
+          "ms": 16031.841709
+        },
+        {
+          "file": "tools/test-reader-recoverable-entry.mjs",
+          "status": "✔",
+          "ms": 3836.368375
+        },
+        {
+          "file": "tools/test-reader-refresh-coordination.mjs",
+          "status": "✔",
+          "ms": 2207.384708
+        },
+        {
+          "file": "tools/test-reader-refresh-display-recovery.mjs",
+          "status": "✔",
+          "ms": 2301.500417
+        },
+        {
+          "file": "tools/test-reader-render-work.mjs",
+          "status": "✔",
+          "ms": 2230.84875
+        },
+        {
+          "file": "tools/test-reader-replace-editor-feedback.mjs",
+          "status": "✔",
+          "ms": 2287.211708
+        },
+        {
+          "file": "tools/test-reader-replace-quick.mjs",
+          "status": "✔",
+          "ms": 474.69575
+        },
+        {
+          "file": "tools/test-reader-runtime-owner-lifecycle.mjs",
+          "status": "✔",
+          "ms": 229.931875
+        },
+        {
+          "file": "tools/test-reader-scoped-source-entry.mjs",
+          "status": "✔",
+          "ms": 587.576667
+        },
+        {
+          "file": "tools/test-reader-screen-awake-lease.mjs",
+          "status": "✔",
+          "ms": 339.685917
+        },
+        {
+          "file": "tools/test-reader-search-highlight.mjs",
+          "status": "✔",
+          "ms": 358.04925
+        },
+        {
+          "file": "tools/test-reader-selection-copy.mjs",
+          "status": "✔",
+          "ms": 388.256375
+        },
+        {
+          "file": "tools/test-reader-session-capsule.mjs",
+          "status": "✔",
+          "ms": 301.722917
+        },
+        {
+          "file": "tools/test-reader-session-launch-recovery.mjs",
+          "status": "✔",
+          "ms": 2235.419666
+        },
+        {
+          "file": "tools/test-reader-session-launch.mjs",
+          "status": "✔",
+          "ms": 616.202084
+        },
+        {
+          "file": "tools/test-reader-session-morph-state.mjs",
+          "status": "✔",
+          "ms": 314.471792
+        },
+        {
+          "file": "tools/test-reader-settings-rounded-clip.mjs",
+          "status": "✔",
+          "ms": 1727.284375
+        },
+        {
+          "file": "tools/test-reader-settings.mjs",
+          "status": "✔",
+          "ms": 305.371917
+        },
+        {
+          "file": "tools/test-reader-source-category.mjs",
+          "status": "✔",
+          "ms": 417.162458
+        },
+        {
+          "file": "tools/test-reader-source-correction-window.mjs",
+          "status": "✔",
+          "ms": 1886.137334
+        },
+        {
+          "file": "tools/test-reader-source-failure-p0.mjs",
+          "status": "✔",
+          "ms": 204.323291
+        },
+        {
+          "file": "tools/test-reader-startup-boundaries.mjs",
+          "status": "✔",
+          "ms": 2579.138583
+        },
+        {
+          "file": "tools/test-reader-startup-entry-trace.mjs",
+          "status": "✔",
+          "ms": 2960.933916
+        },
+        {
+          "file": "tools/test-reader-startup-reading-settings.mjs",
+          "status": "✔",
+          "ms": 2519.760042
+        },
+        {
+          "file": "tools/test-reader-startup-selected-font.mjs",
+          "status": "✔",
+          "ms": 2647.502125
+        },
+        {
+          "file": "tools/test-reader-startup-trace.mjs",
+          "status": "✔",
+          "ms": 2417.705583
+        },
+        {
+          "file": "tools/test-reader-status-measurement.mjs",
+          "status": "✔",
+          "ms": 406.361833
+        },
+        {
+          "file": "tools/test-reader-status-underlay-reactivity.mjs",
+          "status": "✔",
+          "ms": 2147.30725
+        },
+        {
+          "file": "tools/test-reader-system-event-host.mjs",
+          "status": "✔",
+          "ms": 235.211625
+        },
+        {
+          "file": "tools/test-reader-system-status-typography.mjs",
+          "status": "✔",
+          "ms": 1424.479417
+        },
+        {
+          "file": "tools/test-reader-text-selection-lifecycle.mjs",
+          "status": "✔",
+          "ms": 356.649834
+        },
+        {
+          "file": "tools/test-reader-textnode-diagnostic.mjs",
+          "status": "✔",
+          "ms": 5036.670667
+        },
+        {
+          "file": "tools/test-reader-theme-host.mjs",
+          "status": "✔",
+          "ms": 360.479292
+        },
+        {
+          "file": "tools/test-reader-theme-paper-origin.mjs",
+          "status": "✔",
+          "ms": 2423.38725
+        },
+        {
+          "file": "tools/test-reader-theme-selection.mjs",
+          "status": "✔",
+          "ms": 433.782333
+        },
+        {
+          "file": "tools/test-reader-tts-audition.mjs",
+          "status": "✔",
+          "ms": 485.333167
+        },
+        {
+          "file": "tools/test-reader-tts-background-admission.mjs",
+          "status": "✔",
+          "ms": 2617.064375
+        },
+        {
+          "file": "tools/test-reader-tts-config-interaction.mjs",
+          "status": "✔",
+          "ms": 2822.202417
+        },
+        {
+          "file": "tools/test-reader-tts-exit-progress.mjs",
+          "status": "✔",
+          "ms": 2809.335834
+        },
+        {
+          "file": "tools/test-reader-tts-gateway.mjs",
+          "status": "✔",
+          "ms": 2291.045
+        },
+        {
+          "file": "tools/test-reader-tts-launch-intent.mjs",
+          "status": "✔",
+          "ms": 469.284125
+        },
+        {
+          "file": "tools/test-reader-tts-navigation-generation.mjs",
+          "status": "✔",
+          "ms": 1804.62975
+        },
+        {
+          "file": "tools/test-reader-tts-page-follow.mjs",
+          "status": "✔",
+          "ms": 2871.821708
+        },
+        {
+          "file": "tools/test-reader-tts-preferences.mjs",
+          "status": "✔",
+          "ms": 350.60125
+        },
+        {
+          "file": "tools/test-reader-tts-product-surface.mjs",
+          "status": "✔",
+          "ms": 356.262791
+        },
+        {
+          "file": "tools/test-reader-tts-quick-preparation.mjs",
+          "status": "✔",
+          "ms": 5798.616917
+        },
+        {
+          "file": "tools/test-reader-tts-session-coordinator.mjs",
+          "status": "✔",
+          "ms": 470.059125
+        },
+        {
+          "file": "tools/test-reader-tts-short-window.mjs",
+          "status": "✔",
+          "ms": 2711.461625
+        },
+        {
+          "file": "tools/test-reader-tts-state-machine.mjs",
+          "status": "✔",
+          "ms": 523.699375
+        },
+        {
+          "file": "tools/test-reader-tts-state.mjs",
+          "status": "✔",
+          "ms": 784.483667
+        },
+        {
+          "file": "tools/test-reader-tts-waveform.mjs",
+          "status": "✔",
+          "ms": 2788.291375
+        },
+        {
+          "file": "tools/test-reader-typography-architecture.mjs",
+          "status": "✔",
+          "ms": 323.684334
+        },
+        {
+          "file": "tools/test-reader-unknown-image-first-build.mjs",
+          "status": "✔",
+          "ms": 2559.881542
+        },
+        {
+          "file": "tools/test-reader-unread-chapter-admission.mjs",
+          "status": "✔",
+          "ms": 2516.193083
+        },
+        {
+          "file": "tools/test-reader-window-chrome-diagnostics.mjs",
+          "status": "✔",
+          "ms": 1803.7905
+        },
+        {
+          "file": "tools/test-reader-window-chrome-order.mjs",
+          "status": "✔",
+          "ms": 8451.964541
+        },
+        {
+          "file": "tools/test-reader-window-chrome-p0.mjs",
+          "status": "✖",
+          "ms": 1747.684667
+        },
+        {
+          "file": "tools/test-reading-assistant-source.mjs",
+          "status": "✔",
+          "ms": 3513.763208
+        },
+        {
+          "file": "tools/test-reading-catalog-refresh.mjs",
+          "status": "✔",
+          "ms": 3397.70625
+        },
+        {
+          "file": "tools/test-reading-chapter-window.mjs",
+          "status": "✔",
+          "ms": 324.095792
+        },
+        {
+          "file": "tools/test-reading-document-projection.mjs",
+          "status": "✔",
+          "ms": 647.907167
+        },
+        {
+          "file": "tools/test-reading-document-window.mjs",
+          "status": "✔",
+          "ms": 687.383541
+        },
+        {
+          "file": "tools/test-reading-entry-preparation.mjs",
+          "status": "✔",
+          "ms": 15142.564458
+        },
+        {
+          "file": "tools/test-reading-entry-priority.mjs",
+          "status": "✔",
+          "ms": 3262.359291
+        },
+        {
+          "file": "tools/test-reading-entry-snapshot.mjs",
+          "status": "✔",
+          "ms": 522.490875
+        },
+        {
+          "file": "tools/test-reading-local-page-facts.mjs",
+          "status": "✔",
+          "ms": 291.353041
+        },
+        {
+          "file": "tools/test-reading-neighbour-preparation.mjs",
+          "status": "✔",
+          "ms": 1686.783792
+        },
+        {
+          "file": "tools/test-reading-offline-completion.mjs",
+          "status": "✔",
+          "ms": 4651.123584
+        },
+        {
+          "file": "tools/test-reading-offline-gateway.mjs",
+          "status": "✔",
+          "ms": 444.782917
+        },
+        {
+          "file": "tools/test-reading-offline-image-cache-runtime.mjs",
+          "status": "✔",
+          "ms": 571.132625
+        },
+        {
+          "file": "tools/test-reading-offline-image-cache.mjs",
+          "status": "✔",
+          "ms": 197.296125
+        },
+        {
+          "file": "tools/test-reading-pagination-index.mjs",
+          "status": "✔",
+          "ms": 477.011208
+        },
+        {
+          "file": "tools/test-reading-pagination-integration.mjs",
+          "status": "✔",
+          "ms": 424.852459
+        },
+        {
+          "file": "tools/test-reading-paragraph-window.mjs",
+          "status": "✔",
+          "ms": 1005.405209
+        },
+        {
+          "file": "tools/test-reading-phone-tablet-shared-architecture.mjs",
+          "status": "✔",
+          "ms": 320.074375
+        },
+        {
+          "file": "tools/test-reading-record-accumulation.mjs",
+          "status": "✔",
+          "ms": 313.880375
+        },
+        {
+          "file": "tools/test-reading-rolling-prefetch.mjs",
+          "status": "✔",
+          "ms": 2040.846083
+        },
+        {
+          "file": "tools/test-reading-session-documents.mjs",
+          "status": "✔",
+          "ms": 662.0285
+        },
+        {
+          "file": "tools/test-reading-session-entry-admission.mjs",
+          "status": "✔",
+          "ms": 555.797541
+        },
+        {
+          "file": "tools/test-reading-session-ownership.mjs",
+          "status": "✔",
+          "ms": 410.922625
+        },
+        {
+          "file": "tools/test-reading-session-routing.mjs",
+          "status": "✔",
+          "ms": 226.751042
+        },
+        {
+          "file": "tools/test-reading-whole-book-progress.mjs",
+          "status": "✔",
+          "ms": 1898.158083
+        },
+        {
+          "file": "tools/test-remote-content-admission.mjs",
+          "status": "✔",
+          "ms": 436.04825
+        },
+        {
+          "file": "tools/test-remote-position-migration.mjs",
+          "status": "✔",
+          "ms": 589.50975
+        },
+        {
+          "file": "tools/test-remote-position-reader.mjs",
+          "status": "✔",
+          "ms": 3339.09875
+        },
+        {
+          "file": "tools/test-remote-reading-evidence.mjs",
+          "status": "✔",
+          "ms": 2178.263291
+        },
+        {
+          "file": "tools/test-remote-reading-flow-gateway.mjs",
+          "status": "✔",
+          "ms": 330.998167
+        },
+        {
+          "file": "tools/test-remote-reading-flow-runtime.mjs",
+          "status": "✔",
+          "ms": 555.819375
+        },
+        {
+          "file": "tools/test-responsive-surface-widths.mjs",
+          "status": "✔",
+          "ms": 230.307958
+        },
+        {
+          "file": "tools/test-rss-discover-responsive-layout.mjs",
+          "status": "✔",
+          "ms": 253.757
+        },
+        {
+          "file": "tools/test-rss-page-architecture.mjs",
+          "status": "✔",
+          "ms": 443.935459
+        },
+        {
+          "file": "tools/test-rss-subscription-management-page.mjs",
+          "status": "✔",
+          "ms": 172.338542
+        },
+        {
+          "file": "tools/test-rule-entity-management.mjs",
+          "status": "✔",
+          "ms": 211.233042
+        },
+        {
+          "file": "tools/test-search-candidate-acquisition.mjs",
+          "status": "✔",
+          "ms": 3118.199375
+        },
+        {
+          "file": "tools/test-search-cover-continuity.mjs",
+          "status": "✔",
+          "ms": 2044.808333
+        },
+        {
+          "file": "tools/test-search-detail-cache-first.mjs",
+          "status": "✔",
+          "ms": 372.114334
+        },
+        {
+          "file": "tools/test-search-gateway.mjs",
+          "status": "✔",
+          "ms": 671.458417
+        },
+        {
+          "file": "tools/test-search-history-layout-lifecycle.mjs",
+          "status": "✔",
+          "ms": 1660.765833
+        },
+        {
+          "file": "tools/test-search-native-focus.mjs",
+          "status": "✔",
+          "ms": 1322.7385
+        },
+        {
+          "file": "tools/test-search-orchestrator.mjs",
+          "status": "✔",
+          "ms": 5228.775584
+        },
+        {
+          "file": "tools/test-search-physical-layout.mjs",
+          "status": "✔",
+          "ms": 1471.55075
+        },
+        {
+          "file": "tools/test-search-publication-boundary.mjs",
+          "status": "✔",
+          "ms": 6393.656417
+        },
+        {
+          "file": "tools/test-search-publication-state.mjs",
+          "status": "✔",
+          "ms": 206.348583
+        },
+        {
+          "file": "tools/test-search-settings-physical-feedback.mjs",
+          "status": "✔",
+          "ms": 2569.805667
+        },
+        {
+          "file": "tools/test-search-shelf-identity.mjs",
+          "status": "✔",
+          "ms": 2471.706291
+        },
+        {
+          "file": "tools/test-search-trial-reading-return.mjs",
+          "status": "✔",
+          "ms": 3450.179667
+        },
+        {
+          "file": "tools/test-search-view-state.mjs",
+          "status": "✔",
+          "ms": 2125.355417
+        },
+        {
+          "file": "tools/test-select-semantics.mjs",
+          "status": "✔",
+          "ms": 455.533292
+        },
+        {
+          "file": "tools/test-settings-cache-cleanup.mjs",
+          "status": "✔",
+          "ms": 325.224125
+        },
+        {
+          "file": "tools/test-settings-select-overlay.mjs",
+          "status": "✔",
+          "ms": 420.526917
+        },
+        {
+          "file": "tools/test-settings-theme-icons.mjs",
+          "status": "✔",
+          "ms": 1907.405875
+        },
+        {
+          "file": "tools/test-shelf-resume-handoff.mjs",
+          "status": "✔",
+          "ms": 4933.599458
+        },
+        {
+          "file": "tools/test-shelf-source-name-resolution.mjs",
+          "status": "✔",
+          "ms": 2803.675792
+        },
+        {
+          "file": "tools/test-signing-authority.mjs",
+          "status": "✔",
+          "ms": 1180.796875
+        },
+        {
+          "file": "tools/test-source-check-progress.mjs",
+          "status": "✔",
+          "ms": 657.579792
+        },
+        {
+          "file": "tools/test-source-content-correction.mjs",
+          "status": "✔",
+          "ms": 2292.703958
+        },
+        {
+          "file": "tools/test-source-product-tools.mjs",
+          "status": "✔",
+          "ms": 347.817708
+        },
+        {
+          "file": "tools/test-source-supply-chain.mjs",
+          "status": "✔",
+          "ms": 2050.395292
+        },
+        {
+          "file": "tools/test-source-switch-catalog-seam.mjs",
+          "status": "✔",
+          "ms": 2212.369
+        },
+        {
+          "file": "tools/test-source-switch-gateway.mjs",
+          "status": "✔",
+          "ms": 2229.819333
+        },
+        {
+          "file": "tools/test-source-switch-live-window.mjs",
+          "status": "✔",
+          "ms": 1569.430792
+        },
+        {
+          "file": "tools/test-source-switch-page-flow.mjs",
+          "status": "✔",
+          "ms": 1563.561083
+        },
+        {
+          "file": "tools/test-source-switch-presented-progress.mjs",
+          "status": "✔",
+          "ms": 2289.244042
+        },
+        {
+          "file": "tools/test-source-switch-transaction.mjs",
+          "status": "✔",
+          "ms": 199.0855
+        },
+        {
+          "file": "tools/test-surface-horizontal-geometry.mjs",
+          "status": "✔",
+          "ms": 255.111167
+        },
+        {
+          "file": "tools/test-surface-repair.mjs",
+          "status": "✔",
+          "ms": 1775.824417
+        },
+        {
+          "file": "tools/test-surface-transition-p0.mjs",
+          "status": "✔",
+          "ms": 294.672625
+        },
+        {
+          "file": "tools/test-svg-provenance.mjs",
+          "status": "✔",
+          "ms": 3488.145792
+        },
+        {
+          "file": "tools/test-sync-host-configuration.mjs",
+          "status": "✔",
+          "ms": 1704.806208
+        },
+        {
+          "file": "tools/test-sync-webdav-product.mjs",
+          "status": "✔",
+          "ms": 380.737833
+        },
+        {
+          "file": "tools/test-system-file-open.mjs",
+          "status": "✔",
+          "ms": 1836.989917
+        },
+        {
+          "file": "tools/test-theme-appearance-controls.mjs",
+          "status": "✔",
+          "ms": 1534.31725
+        },
+        {
+          "file": "tools/test-theme-dynamic-icons.mjs",
+          "status": "✔",
+          "ms": 3197.392792
+        },
+        {
+          "file": "tools/test-theme-local-consumers.mjs",
+          "status": "✔",
+          "ms": 1278.796041
+        },
+        {
+          "file": "tools/test-theme-page-back-bar.mjs",
+          "status": "✔",
+          "ms": 1367.972583
+        },
+        {
+          "file": "tools/test-theme-primary-text.mjs",
+          "status": "✔",
+          "ms": 2672.353958
+        },
+        {
+          "file": "tools/test-toc-repair-regressions.mjs",
+          "status": "✔",
+          "ms": 480.640833
+        },
+        {
+          "file": "tools/test-transient-transport-acquisition.mjs",
+          "status": "✔",
+          "ms": 500.067417
+        },
+        {
+          "file": "tools/test-webdav-credential-queue.mjs",
+          "status": "✔",
+          "ms": 1494.299
+        },
+        {
+          "file": "tools/test-window-flicker-dedup.mjs",
+          "status": "✔",
+          "ms": 1725.384542
+        }
+      ]
+    },
+    "second": {
+      "summary": {
+        "tests": "394",
+        "suites": "0",
+        "pass": "283",
+        "fail": "0",
+        "cancelled": "111",
+        "skipped": "0",
+        "todo": "0",
+        "duration_ms": "120019.569959"
+      },
+      "recordedFiles": 394,
+      "statuses": {
+        "pass": 283,
+        "nonpass": 111
+      },
+      "top20": [
+        {
+          "file": "tools/test-reader-book-turn-present-barrier.mjs",
+          "status": "✔",
+          "ms": 28335.313209
+        },
+        {
+          "file": "tools/test-reader-bookmark-top-info.mjs",
+          "status": "✔",
+          "ms": 19683.318167
+        },
+        {
+          "file": "tools/test-reader-control-grabber-input.mjs",
+          "status": "✔",
+          "ms": 18831.339625
+        },
+        {
+          "file": "tools/test-reader-book-turn-host-runtime.mjs",
+          "status": "✔",
+          "ms": 14506.52875
+        },
+        {
+          "file": "tools/test-reader-paragraph-diagnostic.mjs",
+          "status": "✔",
+          "ms": 11639.184417
+        },
+        {
+          "file": "tools/test-reader-reading-ready-publication.mjs",
+          "status": "✖",
+          "ms": 9953.579333
+        },
+        {
+          "file": "tools/test-reader-native-paragraph-view.mjs",
+          "status": "✔",
+          "ms": 9359.535333
+        },
+        {
+          "file": "tools/test-reader-native-paragraph-owner.mjs",
+          "status": "✔",
+          "ms": 8401.820583
+        },
+        {
+          "file": "tools/test-reader-paper-chrome-composition.mjs",
+          "status": "✔",
+          "ms": 8338.587084
+        },
+        {
+          "file": "tools/test-reader-content-search-publication.mjs",
+          "status": "✔",
+          "ms": 8042.97
+        },
+        {
+          "file": "tools/test-reader-controls-ph104-108.mjs",
+          "status": "✔",
+          "ms": 7990.372958
+        },
+        {
+          "file": "tools/test-reader-native-text-measurement.mjs",
+          "status": "✔",
+          "ms": 7953.927458
+        },
+        {
+          "file": "tools/test-reader-control-input-routing.mjs",
+          "status": "✔",
+          "ms": 7747.838875
+        },
+        {
+          "file": "tools/test-reader-content-search-native-list.mjs",
+          "status": "✔",
+          "ms": 7696.929042
+        },
+        {
+          "file": "tools/test-reader-content-search-open-cost.mjs",
+          "status": "✔",
+          "ms": 7632.657667
+        },
+        {
+          "file": "tools/test-reader-entry-handoff.mjs",
+          "status": "✔",
+          "ms": 7605.759708
+        },
+        {
+          "file": "tools/test-reader-offscreen-fragment-publication.mjs",
+          "status": "✔",
+          "ms": 7170.033667
+        },
+        {
+          "file": "tools/test-reader-content-search-error-boundary.mjs",
+          "status": "✔",
+          "ms": 7090.150208
+        },
+        {
+          "file": "tools/test-reader-continuous-input-runtime.mjs",
+          "status": "✔",
+          "ms": 6902.102417
+        },
+        {
+          "file": "tools/test-reader-page-preparation-runtime.mjs",
+          "status": "✔",
+          "ms": 6793.698833
+        }
+      ],
+      "nonpass": [
+        {
+          "file": "tools/test-reader-reading-ready-publication.mjs",
+          "status": "✖",
+          "ms": 9953.579333
+        },
+        {
+          "file": "tools/test-reader-status-underlay-reactivity.mjs",
+          "status": "✖",
+          "ms": 1422.62475
+        },
+        {
+          "file": "tools/test-reader-system-status-typography.mjs",
+          "status": "✖",
+          "ms": 1000.374583
+        },
+        {
+          "file": "tools/test-reader-textnode-diagnostic.mjs",
+          "status": "✖",
+          "ms": 616.364708
+        },
+        {
+          "file": "tools/test-reader-theme-paper-origin.mjs",
+          "status": "✖",
+          "ms": 484.912833
+        },
+        {
+          "file": "tools/test-reader-theme-selection.mjs",
+          "status": "✖",
+          "ms": 241.339
+        },
+        {
+          "file": "tools/test-reader-tts-audition.mjs",
+          "status": "✖",
+          "ms": 0.009459
+        },
+        {
+          "file": "tools/test-reader-tts-background-admission.mjs",
+          "status": "✖",
+          "ms": 0.001125
+        },
+        {
+          "file": "tools/test-reader-tts-config-interaction.mjs",
+          "status": "✖",
+          "ms": 0.000541
+        },
+        {
+          "file": "tools/test-reader-tts-exit-progress.mjs",
+          "status": "✖",
+          "ms": 0.000417
+        },
+        {
+          "file": "tools/test-reader-tts-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-reader-tts-launch-intent.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-reader-tts-navigation-generation.mjs",
+          "status": "✖",
+          "ms": 0.002458
+        },
+        {
+          "file": "tools/test-reader-tts-page-follow.mjs",
+          "status": "✖",
+          "ms": 0.002167
+        },
+        {
+          "file": "tools/test-reader-tts-preferences.mjs",
+          "status": "✖",
+          "ms": 0.001792
+        },
+        {
+          "file": "tools/test-reader-tts-product-surface.mjs",
+          "status": "✖",
+          "ms": 0.001542
+        },
+        {
+          "file": "tools/test-reader-tts-quick-preparation.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-reader-tts-session-coordinator.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-reader-tts-short-window.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-reader-tts-state-machine.mjs",
+          "status": "✖",
+          "ms": 0.000916
+        },
+        {
+          "file": "tools/test-reader-tts-state.mjs",
+          "status": "✖",
+          "ms": 0.000291
+        },
+        {
+          "file": "tools/test-reader-tts-waveform.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-reader-typography-architecture.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-reader-unknown-image-first-build.mjs",
+          "status": "✖",
+          "ms": 0.001208
+        },
+        {
+          "file": "tools/test-reader-unread-chapter-admission.mjs",
+          "status": "✖",
+          "ms": 0.000459
+        },
+        {
+          "file": "tools/test-reader-window-chrome-diagnostics.mjs",
+          "status": "✖",
+          "ms": 0.000584
+        },
+        {
+          "file": "tools/test-reader-window-chrome-order.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-reader-window-chrome-p0.mjs",
+          "status": "✖",
+          "ms": 0.001667
+        },
+        {
+          "file": "tools/test-reading-assistant-source.mjs",
+          "status": "✖",
+          "ms": 0.000583
+        },
+        {
+          "file": "tools/test-reading-catalog-refresh.mjs",
+          "status": "✖",
+          "ms": 0.000291
+        },
+        {
+          "file": "tools/test-reading-chapter-window.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-reading-document-projection.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-reading-document-window.mjs",
+          "status": "✖",
+          "ms": 0.007125
+        },
+        {
+          "file": "tools/test-reading-entry-preparation.mjs",
+          "status": "✖",
+          "ms": 0.001208
+        },
+        {
+          "file": "tools/test-reading-entry-priority.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-reading-entry-snapshot.mjs",
+          "status": "✖",
+          "ms": 0.00075
+        },
+        {
+          "file": "tools/test-reading-local-page-facts.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-reading-neighbour-preparation.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-reading-offline-completion.mjs",
+          "status": "✖",
+          "ms": 0.000541
+        },
+        {
+          "file": "tools/test-reading-offline-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-reading-offline-image-cache-runtime.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-reading-offline-image-cache.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-reading-pagination-index.mjs",
+          "status": "✖",
+          "ms": 0.001
+        },
+        {
+          "file": "tools/test-reading-pagination-integration.mjs",
+          "status": "✖",
+          "ms": 0.000709
+        },
+        {
+          "file": "tools/test-reading-paragraph-window.mjs",
+          "status": "✖",
+          "ms": 0.000916
+        },
+        {
+          "file": "tools/test-reading-phone-tablet-shared-architecture.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-reading-record-accumulation.mjs",
+          "status": "✖",
+          "ms": 0.000708
+        },
+        {
+          "file": "tools/test-reading-rolling-prefetch.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-reading-session-documents.mjs",
+          "status": "✖",
+          "ms": 0.000708
+        },
+        {
+          "file": "tools/test-reading-session-entry-admission.mjs",
+          "status": "✖",
+          "ms": 0.00075
+        },
+        {
+          "file": "tools/test-reading-session-ownership.mjs",
+          "status": "✖",
+          "ms": 0.00075
+        },
+        {
+          "file": "tools/test-reading-session-routing.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-reading-whole-book-progress.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-remote-content-admission.mjs",
+          "status": "✖",
+          "ms": 0.001042
+        },
+        {
+          "file": "tools/test-remote-position-migration.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-remote-position-reader.mjs",
+          "status": "✖",
+          "ms": 0.000833
+        },
+        {
+          "file": "tools/test-remote-reading-evidence.mjs",
+          "status": "✖",
+          "ms": 0.000459
+        },
+        {
+          "file": "tools/test-remote-reading-flow-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-remote-reading-flow-runtime.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-responsive-surface-widths.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-rss-discover-responsive-layout.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-rss-page-architecture.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-rss-subscription-management-page.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-rule-entity-management.mjs",
+          "status": "✖",
+          "ms": 0.000833
+        },
+        {
+          "file": "tools/test-search-candidate-acquisition.mjs",
+          "status": "✖",
+          "ms": 0.000584
+        },
+        {
+          "file": "tools/test-search-cover-continuity.mjs",
+          "status": "✖",
+          "ms": 0.001375
+        },
+        {
+          "file": "tools/test-search-detail-cache-first.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-search-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000958
+        },
+        {
+          "file": "tools/test-search-history-layout-lifecycle.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-search-native-focus.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-search-orchestrator.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-search-physical-layout.mjs",
+          "status": "✖",
+          "ms": 0.0005
+        },
+        {
+          "file": "tools/test-search-publication-boundary.mjs",
+          "status": "✖",
+          "ms": 0.000583
+        },
+        {
+          "file": "tools/test-search-publication-state.mjs",
+          "status": "✖",
+          "ms": 0.000541
+        },
+        {
+          "file": "tools/test-search-settings-physical-feedback.mjs",
+          "status": "✖",
+          "ms": 0.0005
+        },
+        {
+          "file": "tools/test-search-shelf-identity.mjs",
+          "status": "✖",
+          "ms": 0.000583
+        },
+        {
+          "file": "tools/test-search-trial-reading-return.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-search-view-state.mjs",
+          "status": "✖",
+          "ms": 0.000791
+        },
+        {
+          "file": "tools/test-select-semantics.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-settings-cache-cleanup.mjs",
+          "status": "✖",
+          "ms": 0.000583
+        },
+        {
+          "file": "tools/test-settings-select-overlay.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-settings-theme-icons.mjs",
+          "status": "✖",
+          "ms": 0.0015
+        },
+        {
+          "file": "tools/test-shelf-resume-handoff.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-shelf-source-name-resolution.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-signing-authority.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-source-check-progress.mjs",
+          "status": "✖",
+          "ms": 0.000541
+        },
+        {
+          "file": "tools/test-source-content-correction.mjs",
+          "status": "✖",
+          "ms": 0.000459
+        },
+        {
+          "file": "tools/test-source-product-tools.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-source-supply-chain.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-source-switch-catalog-seam.mjs",
+          "status": "✖",
+          "ms": 0.000417
+        },
+        {
+          "file": "tools/test-source-switch-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000334
+        },
+        {
+          "file": "tools/test-source-switch-live-window.mjs",
+          "status": "✖",
+          "ms": 0.000417
+        },
+        {
+          "file": "tools/test-source-switch-page-flow.mjs",
+          "status": "✖",
+          "ms": 0.000292
+        },
+        {
+          "file": "tools/test-source-switch-presented-progress.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-source-switch-transaction.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-surface-horizontal-geometry.mjs",
+          "status": "✖",
+          "ms": 0.003834
+        },
+        {
+          "file": "tools/test-surface-repair.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-surface-transition-p0.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-svg-provenance.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-sync-host-configuration.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-sync-webdav-product.mjs",
+          "status": "✖",
+          "ms": 0.004333
+        },
+        {
+          "file": "tools/test-system-file-open.mjs",
+          "status": "✖",
+          "ms": 0.004
+        },
+        {
+          "file": "tools/test-theme-appearance-controls.mjs",
+          "status": "✖",
+          "ms": 0.003917
+        },
+        {
+          "file": "tools/test-theme-dynamic-icons.mjs",
+          "status": "✖",
+          "ms": 0.000875
+        },
+        {
+          "file": "tools/test-theme-local-consumers.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-theme-page-back-bar.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-theme-primary-text.mjs",
+          "status": "✖",
+          "ms": 0.001
+        },
+        {
+          "file": "tools/test-toc-repair-regressions.mjs",
+          "status": "✖",
+          "ms": 0.000791
+        },
+        {
+          "file": "tools/test-transient-transport-acquisition.mjs",
+          "status": "✖",
+          "ms": 0.000708
+        },
+        {
+          "file": "tools/test-webdav-credential-queue.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-window-flicker-dedup.mjs",
+          "status": "✖",
+          "ms": 0.002708
+        }
+      ],
+      "all": [
+        {
+          "file": "tools/test-added-book-preparation.mjs",
+          "status": "✔",
+          "ms": 686.968625
+        },
+        {
+          "file": "tools/test-app-shell-safe-geometry.mjs",
+          "status": "✔",
+          "ms": 227.285583
+        },
+        {
+          "file": "tools/test-arkweb-network-policy.mjs",
+          "status": "✔",
+          "ms": 492.557209
+        },
+        {
+          "file": "tools/test-arkweb-resource-capture.mjs",
+          "status": "✔",
+          "ms": 2446.5635
+        },
+        {
+          "file": "tools/test-arkweb-resource-diagnostic.mjs",
+          "status": "✔",
+          "ms": 2034.389042
+        },
+        {
+          "file": "tools/test-book-acquisition-coordinator.mjs",
+          "status": "✔",
+          "ms": 723.247791
+        },
+        {
+          "file": "tools/test-book-author-metadata.mjs",
+          "status": "✔",
+          "ms": 564.231875
+        },
+        {
+          "file": "tools/test-book-directory-page.mjs",
+          "status": "✔",
+          "ms": 1865.099917
+        },
+        {
+          "file": "tools/test-book-metadata-presentation.mjs",
+          "status": "✔",
+          "ms": 1903.178
+        },
+        {
+          "file": "tools/test-book-removal-dialog.mjs",
+          "status": "✔",
+          "ms": 2005.297291
+        },
+        {
+          "file": "tools/test-book-source-import.mjs",
+          "status": "✔",
+          "ms": 633.576375
+        },
+        {
+          "file": "tools/test-bookshelf-detail-control-stability.mjs",
+          "status": "✔",
+          "ms": 2333.313458
+        },
+        {
+          "file": "tools/test-bookshelf-detail-removal.mjs",
+          "status": "✔",
+          "ms": 284.904792
+        },
+        {
+          "file": "tools/test-bookshelf-detail-scroll-layout.mjs",
+          "status": "✔",
+          "ms": 2025.651417
+        },
+        {
+          "file": "tools/test-bookshelf-filter-responsibilities.mjs",
+          "status": "✔",
+          "ms": 2036.8075
+        },
+        {
+          "file": "tools/test-bookshelf-management.mjs",
+          "status": "✔",
+          "ms": 353.590958
+        },
+        {
+          "file": "tools/test-bookshelf-manual-update.mjs",
+          "status": "✔",
+          "ms": 3603.402959
+        },
+        {
+          "file": "tools/test-bookshelf-more-layout.mjs",
+          "status": "✔",
+          "ms": 3854.2195
+        },
+        {
+          "file": "tools/test-bookshelf-paged-projection.mjs",
+          "status": "✔",
+          "ms": 2475.646125
+        },
+        {
+          "file": "tools/test-bookshelf-physical-feedback.mjs",
+          "status": "✔",
+          "ms": 2419.999625
+        },
+        {
+          "file": "tools/test-bookshelf-reading-entry.mjs",
+          "status": "✔",
+          "ms": 3092.313334
+        },
+        {
+          "file": "tools/test-bookshelf-reading-feedback.mjs",
+          "status": "✔",
+          "ms": 1823.478666
+        },
+        {
+          "file": "tools/test-bookshelf-settings-layout.mjs",
+          "status": "✔",
+          "ms": 2123.130834
+        },
+        {
+          "file": "tools/test-bookshelf-shared-scan.mjs",
+          "status": "✔",
+          "ms": 3033.463083
+        },
+        {
+          "file": "tools/test-bookshelf-shell-states.mjs",
+          "status": "✔",
+          "ms": 3986.822
+        },
+        {
+          "file": "tools/test-bookshelf-source-name-durability.mjs",
+          "status": "✔",
+          "ms": 2288.651792
+        },
+        {
+          "file": "tools/test-bookshelf-startup-readiness.mjs",
+          "status": "✔",
+          "ms": 1810.221666
+        },
+        {
+          "file": "tools/test-bookshelf-tablet-navigation.mjs",
+          "status": "✔",
+          "ms": 323.823917
+        },
+        {
+          "file": "tools/test-bookshelf-view-and-menu.mjs",
+          "status": "✔",
+          "ms": 2221.943167
+        },
+        {
+          "file": "tools/test-bookshelf-view-handoff.mjs",
+          "status": "✔",
+          "ms": 2301.300125
+        },
+        {
+          "file": "tools/test-bookshelf-viewport-return.mjs",
+          "status": "✔",
+          "ms": 1650.554625
+        },
+        {
+          "file": "tools/test-build-input-safety.mjs",
+          "status": "✔",
+          "ms": 2151.983375
+        },
+        {
+          "file": "tools/test-build-provenance-manifest.mjs",
+          "status": "✔",
+          "ms": 249.743084
+        },
+        {
+          "file": "tools/test-bundled-source-host-boundary.mjs",
+          "status": "✔",
+          "ms": 317.734375
+        },
+        {
+          "file": "tools/test-bundled-test-book-sources.mjs",
+          "status": "✔",
+          "ms": 464.955292
+        },
+        {
+          "file": "tools/test-cookie-security-policy.mjs",
+          "status": "✔",
+          "ms": 356.462875
+        },
+        {
+          "file": "tools/test-core-build-identity.mjs",
+          "status": "✔",
+          "ms": 221.397708
+        },
+        {
+          "file": "tools/test-demo-async-recovery.mjs",
+          "status": "✔",
+          "ms": 3308.883292
+        },
+        {
+          "file": "tools/test-detail-acquisition-return-stability.mjs",
+          "status": "✔",
+          "ms": 3143.297834
+        },
+        {
+          "file": "tools/test-detail-external-directory.mjs",
+          "status": "✔",
+          "ms": 2911.21375
+        },
+        {
+          "file": "tools/test-discover-product-flow.mjs",
+          "status": "✔",
+          "ms": 195.240208
+        },
+        {
+          "file": "tools/test-dynamic-list-refresh.mjs",
+          "status": "✔",
+          "ms": 2021.321458
+        },
+        {
+          "file": "tools/test-error-message-conformance.mjs",
+          "status": "✔",
+          "ms": 613.584667
+        },
+        {
+          "file": "tools/test-hap-pipeline-contract.mjs",
+          "status": "✔",
+          "ms": 663.46425
+        },
+        {
+          "file": "tools/test-harmony-tts-host-router.mjs",
+          "status": "✔",
+          "ms": 561.081958
+        },
+        {
+          "file": "tools/test-host-persistence-recovery.mjs",
+          "status": "✔",
+          "ms": 776.888542
+        },
+        {
+          "file": "tools/test-host-stage-recovery-retry.mjs",
+          "status": "✔",
+          "ms": 322.392542
+        },
+        {
+          "file": "tools/test-http-request-payload.mjs",
+          "status": "✔",
+          "ms": 645.409792
+        },
+        {
+          "file": "tools/test-http-response-bytes.mjs",
+          "status": "✔",
+          "ms": 551.817667
+        },
+        {
+          "file": "tools/test-http-transport-conformance.mjs",
+          "status": "✔",
+          "ms": 471.654667
+        },
+        {
+          "file": "tools/test-http-url-normalization.mjs",
+          "status": "✔",
+          "ms": 503.251583
+        },
+        {
+          "file": "tools/test-icon-design-contract.mjs",
+          "status": "✔",
+          "ms": 480.301583
+        },
+        {
+          "file": "tools/test-import-refresh-geometry.mjs",
+          "status": "✔",
+          "ms": 1580.747875
+        },
+        {
+          "file": "tools/test-incremental-bundled-source-supply.mjs",
+          "status": "✔",
+          "ms": 418.9895
+        },
+        {
+          "file": "tools/test-legado-product-logic.mjs",
+          "status": "✔",
+          "ms": 2364.620125
+        },
+        {
+          "file": "tools/test-local-book-format-entry.mjs",
+          "status": "✔",
+          "ms": 333.358084
+        },
+        {
+          "file": "tools/test-local-configuration-reset.mjs",
+          "status": "✔",
+          "ms": 3586.42075
+        },
+        {
+          "file": "tools/test-local-contract-runner.mjs",
+          "status": "✔",
+          "ms": 3010.404333
+        },
+        {
+          "file": "tools/test-local-epub-image-reuse-runtime.mjs",
+          "status": "✔",
+          "ms": 438.90625
+        },
+        {
+          "file": "tools/test-local-epub-resource-architecture.mjs",
+          "status": "✔",
+          "ms": 191.546542
+        },
+        {
+          "file": "tools/test-local-epub-style-preparation.mjs",
+          "status": "✔",
+          "ms": 3356.656042
+        },
+        {
+          "file": "tools/test-local-import-finalize-recovery.mjs",
+          "status": "✔",
+          "ms": 344.9735
+        },
+        {
+          "file": "tools/test-local-shelf-entry-projection.mjs",
+          "status": "✔",
+          "ms": 2408.779917
+        },
+        {
+          "file": "tools/test-log-privacy.mjs",
+          "status": "✔",
+          "ms": 299.106917
+        },
+        {
+          "file": "tools/test-navigation-performance.mjs",
+          "status": "✔",
+          "ms": 323.642167
+        },
+        {
+          "file": "tools/test-network-route-policy.mjs",
+          "status": "✔",
+          "ms": 915.684667
+        },
+        {
+          "file": "tools/test-performance-regressions.mjs",
+          "status": "✔",
+          "ms": 257.683667
+        },
+        {
+          "file": "tools/test-phone-layout-figma-regressions.mjs",
+          "status": "✔",
+          "ms": 185.762833
+        },
+        {
+          "file": "tools/test-popofree-source-correction.mjs",
+          "status": "✔",
+          "ms": 1754.607209
+        },
+        {
+          "file": "tools/test-portable-json-import.mjs",
+          "status": "✔",
+          "ms": 299.97975
+        },
+        {
+          "file": "tools/test-reader-appearance-lifecycle.mjs",
+          "status": "✔",
+          "ms": 2983.008875
+        },
+        {
+          "file": "tools/test-reader-appearance-make.mjs",
+          "status": "✔",
+          "ms": 1758.782334
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-driver.mjs",
+          "status": "✔",
+          "ms": 367.253125
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-fixture.mjs",
+          "status": "✔",
+          "ms": 237.178834
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-gesture.mjs",
+          "status": "✔",
+          "ms": 358.905334
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-sampler.mjs",
+          "status": "✔",
+          "ms": 360.90675
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-state.mjs",
+          "status": "✔",
+          "ms": 425.397625
+        },
+        {
+          "file": "tools/test-reader-appearance-motion-tree.mjs",
+          "status": "✔",
+          "ms": 362.732583
+        },
+        {
+          "file": "tools/test-reader-appearance-page-publication.mjs",
+          "status": "✔",
+          "ms": 5638.711833
+        },
+        {
+          "file": "tools/test-reader-appearance-store.mjs",
+          "status": "✔",
+          "ms": 599.693583
+        },
+        {
+          "file": "tools/test-reader-appearance-theme-extension.mjs",
+          "status": "✔",
+          "ms": 2156.450791
+        },
+        {
+          "file": "tools/test-reader-appearance.mjs",
+          "status": "✔",
+          "ms": 554.998917
+        },
+        {
+          "file": "tools/test-reader-auto-page-coordinator.mjs",
+          "status": "✔",
+          "ms": 345.636584
+        },
+        {
+          "file": "tools/test-reader-auto-page-full.mjs",
+          "status": "✔",
+          "ms": 412.867708
+        },
+        {
+          "file": "tools/test-reader-auto-page-native-layout.mjs",
+          "status": "✔",
+          "ms": 2037.012458
+        },
+        {
+          "file": "tools/test-reader-auto-page-state.mjs",
+          "status": "✔",
+          "ms": 401.01175
+        },
+        {
+          "file": "tools/test-reader-auto-timer-native-layout.mjs",
+          "status": "✔",
+          "ms": 2125.025625
+        },
+        {
+          "file": "tools/test-reader-automatic-page-start.mjs",
+          "status": "✔",
+          "ms": 2324.22575
+        },
+        {
+          "file": "tools/test-reader-binary-consumers.mjs",
+          "status": "✔",
+          "ms": 537.063375
+        },
+        {
+          "file": "tools/test-reader-book-turn-architecture.mjs",
+          "status": "✔",
+          "ms": 292.864083
+        },
+        {
+          "file": "tools/test-reader-book-turn-automatic-bridge.mjs",
+          "status": "✔",
+          "ms": 4965.900791
+        },
+        {
+          "file": "tools/test-reader-book-turn-event-dispatch.mjs",
+          "status": "✔",
+          "ms": 4492.961375
+        },
+        {
+          "file": "tools/test-reader-book-turn-host-runtime.mjs",
+          "status": "✔",
+          "ms": 14506.52875
+        },
+        {
+          "file": "tools/test-reader-book-turn-motion.mjs",
+          "status": "✔",
+          "ms": 335.824458
+        },
+        {
+          "file": "tools/test-reader-book-turn-native-core.mjs",
+          "status": "✔",
+          "ms": 3408.520458
+        },
+        {
+          "file": "tools/test-reader-book-turn-present-barrier.mjs",
+          "status": "✔",
+          "ms": 28335.313209
+        },
+        {
+          "file": "tools/test-reader-book-turn-presentation-owner.mjs",
+          "status": "✔",
+          "ms": 1311.734875
+        },
+        {
+          "file": "tools/test-reader-book-turn-surface-recovery.mjs",
+          "status": "✔",
+          "ms": 1800.009833
+        },
+        {
+          "file": "tools/test-reader-bookmark-panels.mjs",
+          "status": "✔",
+          "ms": 238.133166
+        },
+        {
+          "file": "tools/test-reader-bookmark-projection.mjs",
+          "status": "✔",
+          "ms": 360.453875
+        },
+        {
+          "file": "tools/test-reader-bookmark-top-info.mjs",
+          "status": "✔",
+          "ms": 19683.318167
+        },
+        {
+          "file": "tools/test-reader-brightness-cancel-ui.mjs",
+          "status": "✔",
+          "ms": 1991.060292
+        },
+        {
+          "file": "tools/test-reader-brightness-control.mjs",
+          "status": "✔",
+          "ms": 564.957333
+        },
+        {
+          "file": "tools/test-reader-brightness-perception.mjs",
+          "status": "✔",
+          "ms": 2416.469917
+        },
+        {
+          "file": "tools/test-reader-brightness-writer.mjs",
+          "status": "✔",
+          "ms": 468.255917
+        },
+        {
+          "file": "tools/test-reader-cache-only-chapter.mjs",
+          "status": "✔",
+          "ms": 631.823834
+        },
+        {
+          "file": "tools/test-reader-capsule-page-turn.mjs",
+          "status": "✔",
+          "ms": 4611.956916
+        },
+        {
+          "file": "tools/test-reader-chapter-first-title-publication.mjs",
+          "status": "✔",
+          "ms": 6583.241041
+        },
+        {
+          "file": "tools/test-reader-chinese-conversion.mjs",
+          "status": "✔",
+          "ms": 264.573333
+        },
+        {
+          "file": "tools/test-reader-cold-entry-recovery.mjs",
+          "status": "✔",
+          "ms": 292.176916
+        },
+        {
+          "file": "tools/test-reader-content-business.mjs",
+          "status": "✔",
+          "ms": 265.719333
+        },
+        {
+          "file": "tools/test-reader-content-position-boundary.mjs",
+          "status": "✔",
+          "ms": 6094.371542
+        },
+        {
+          "file": "tools/test-reader-content-search-cursor.mjs",
+          "status": "✔",
+          "ms": 1611.523875
+        },
+        {
+          "file": "tools/test-reader-content-search-error-boundary.mjs",
+          "status": "✔",
+          "ms": 7090.150208
+        },
+        {
+          "file": "tools/test-reader-content-search-focus.mjs",
+          "status": "✔",
+          "ms": 4668.397625
+        },
+        {
+          "file": "tools/test-reader-content-search-native-list.mjs",
+          "status": "✔",
+          "ms": 7696.929042
+        },
+        {
+          "file": "tools/test-reader-content-search-open-cost.mjs",
+          "status": "✔",
+          "ms": 7632.657667
+        },
+        {
+          "file": "tools/test-reader-content-search-publication.mjs",
+          "status": "✔",
+          "ms": 8042.97
+        },
+        {
+          "file": "tools/test-reader-continuous-initial-offset.mjs",
+          "status": "✔",
+          "ms": 4114.273917
+        },
+        {
+          "file": "tools/test-reader-continuous-input-runtime.mjs",
+          "status": "✔",
+          "ms": 6902.102417
+        },
+        {
+          "file": "tools/test-reader-continuous-reading.mjs",
+          "status": "✔",
+          "ms": 5342.797875
+        },
+        {
+          "file": "tools/test-reader-control-accessibility.mjs",
+          "status": "✔",
+          "ms": 4061.298584
+        },
+        {
+          "file": "tools/test-reader-control-actor-geometry.mjs",
+          "status": "✔",
+          "ms": 807.273541
+        },
+        {
+          "file": "tools/test-reader-control-appearance-geometry.mjs",
+          "status": "✔",
+          "ms": 961.475375
+        },
+        {
+          "file": "tools/test-reader-control-backdrop-publication.mjs",
+          "status": "✔",
+          "ms": 3011.809375
+        },
+        {
+          "file": "tools/test-reader-control-backdrop-touch.mjs",
+          "status": "✔",
+          "ms": 739.296584
+        },
+        {
+          "file": "tools/test-reader-control-bookmark-content.mjs",
+          "status": "✔",
+          "ms": 3552.315959
+        },
+        {
+          "file": "tools/test-reader-control-bookmark-load.mjs",
+          "status": "✔",
+          "ms": 451.12475
+        },
+        {
+          "file": "tools/test-reader-control-bookmark-mutation-recovery.mjs",
+          "status": "✔",
+          "ms": 495.11825
+        },
+        {
+          "file": "tools/test-reader-control-content-surface.mjs",
+          "status": "✔",
+          "ms": 468.640708
+        },
+        {
+          "file": "tools/test-reader-control-device-probe.mjs",
+          "status": "✔",
+          "ms": 441.961625
+        },
+        {
+          "file": "tools/test-reader-control-directory-content.mjs",
+          "status": "✔",
+          "ms": 513.7345
+        },
+        {
+          "file": "tools/test-reader-control-directory-model.mjs",
+          "status": "✔",
+          "ms": 642.95725
+        },
+        {
+          "file": "tools/test-reader-control-geometry.mjs",
+          "status": "✔",
+          "ms": 585.760875
+        },
+        {
+          "file": "tools/test-reader-control-gesture-continuation.mjs",
+          "status": "✔",
+          "ms": 894.282958
+        },
+        {
+          "file": "tools/test-reader-control-gesture-driver.mjs",
+          "status": "✔",
+          "ms": 793.462167
+        },
+        {
+          "file": "tools/test-reader-control-global-presentation.mjs",
+          "status": "✔",
+          "ms": 4105.455458
+        },
+        {
+          "file": "tools/test-reader-control-grabber-input.mjs",
+          "status": "✔",
+          "ms": 18831.339625
+        },
+        {
+          "file": "tools/test-reader-control-header-content.mjs",
+          "status": "✔",
+          "ms": 5509.740334
+        },
+        {
+          "file": "tools/test-reader-control-host-input.mjs",
+          "status": "✔",
+          "ms": 3269.445541
+        },
+        {
+          "file": "tools/test-reader-control-host-keyboard.mjs",
+          "status": "✔",
+          "ms": 919.009917
+        },
+        {
+          "file": "tools/test-reader-control-host-session.mjs",
+          "status": "✔",
+          "ms": 829.720792
+        },
+        {
+          "file": "tools/test-reader-control-input-routing.mjs",
+          "status": "✔",
+          "ms": 7747.838875
+        },
+        {
+          "file": "tools/test-reader-control-integration-events.mjs",
+          "status": "✔",
+          "ms": 528.822083
+        },
+        {
+          "file": "tools/test-reader-control-internal-selection.mjs",
+          "status": "✔",
+          "ms": 3593.768208
+        },
+        {
+          "file": "tools/test-reader-control-layout-rebase.mjs",
+          "status": "✔",
+          "ms": 905.172042
+        },
+        {
+          "file": "tools/test-reader-control-list-positioning.mjs",
+          "status": "✔",
+          "ms": 773.072875
+        },
+        {
+          "file": "tools/test-reader-control-morph-scroll.mjs",
+          "status": "✔",
+          "ms": 5792.330458
+        },
+        {
+          "file": "tools/test-reader-control-motion-geometry.mjs",
+          "status": "✔",
+          "ms": 1893.634667
+        },
+        {
+          "file": "tools/test-reader-control-motion-policy.mjs",
+          "status": "✔",
+          "ms": 2114.915917
+        },
+        {
+          "file": "tools/test-reader-control-motion-presentation.mjs",
+          "status": "✔",
+          "ms": 5289.55725
+        },
+        {
+          "file": "tools/test-reader-control-narrow-widths.mjs",
+          "status": "✔",
+          "ms": 1404.007375
+        },
+        {
+          "file": "tools/test-reader-control-option-update.mjs",
+          "status": "✔",
+          "ms": 1479.253459
+        },
+        {
+          "file": "tools/test-reader-control-p0.mjs",
+          "status": "✔",
+          "ms": 737.111625
+        },
+        {
+          "file": "tools/test-reader-control-playback-content.mjs",
+          "status": "✔",
+          "ms": 5317.606417
+        },
+        {
+          "file": "tools/test-reader-control-playback-host-intents.mjs",
+          "status": "✔",
+          "ms": 5561.181167
+        },
+        {
+          "file": "tools/test-reader-control-replace-content.mjs",
+          "status": "✔",
+          "ms": 6389.445
+        },
+        {
+          "file": "tools/test-reader-control-replace-gateway.mjs",
+          "status": "✔",
+          "ms": 1393.534084
+        },
+        {
+          "file": "tools/test-reader-control-replace-geometry.mjs",
+          "status": "✔",
+          "ms": 1022.4955
+        },
+        {
+          "file": "tools/test-reader-control-replace-host.mjs",
+          "status": "✔",
+          "ms": 1694.288959
+        },
+        {
+          "file": "tools/test-reader-control-replace-state.mjs",
+          "status": "✔",
+          "ms": 819.664417
+        },
+        {
+          "file": "tools/test-reader-control-resume-timing.mjs",
+          "status": "✔",
+          "ms": 1120.070042
+        },
+        {
+          "file": "tools/test-reader-control-runtime.mjs",
+          "status": "✔",
+          "ms": 4886.389875
+        },
+        {
+          "file": "tools/test-reader-control-search-scroll.mjs",
+          "status": "✔",
+          "ms": 799.731541
+        },
+        {
+          "file": "tools/test-reader-control-search-settings-content.mjs",
+          "status": "✔",
+          "ms": 5238.2665
+        },
+        {
+          "file": "tools/test-reader-control-selection-recovery.mjs",
+          "status": "✔",
+          "ms": 911.804208
+        },
+        {
+          "file": "tools/test-reader-control-selection-transaction.mjs",
+          "status": "✔",
+          "ms": 1029.433833
+        },
+        {
+          "file": "tools/test-reader-control-session-state.mjs",
+          "status": "✔",
+          "ms": 680.179917
+        },
+        {
+          "file": "tools/test-reader-control-spatial-path.mjs",
+          "status": "✔",
+          "ms": 726.168875
+        },
+        {
+          "file": "tools/test-reader-control-stage-composition.mjs",
+          "status": "✔",
+          "ms": 452.589583
+        },
+        {
+          "file": "tools/test-reader-control-stage-lifecycle.mjs",
+          "status": "✔",
+          "ms": 1165.901459
+        },
+        {
+          "file": "tools/test-reader-control-touch-plan.mjs",
+          "status": "✔",
+          "ms": 1323.517375
+        },
+        {
+          "file": "tools/test-reader-control-tts-make.mjs",
+          "status": "✔",
+          "ms": 4447.96925
+        },
+        {
+          "file": "tools/test-reader-control-verification-launch.mjs",
+          "status": "✔",
+          "ms": 737.4455
+        },
+        {
+          "file": "tools/test-reader-controls-ph104-108.mjs",
+          "status": "✔",
+          "ms": 7990.372958
+        },
+        {
+          "file": "tools/test-reader-custom-font-boundary.mjs",
+          "status": "✔",
+          "ms": 2632.879084
+        },
+        {
+          "file": "tools/test-reader-cutout-body-layout.mjs",
+          "status": "✔",
+          "ms": 4159.687125
+        },
+        {
+          "file": "tools/test-reader-cutout-setting-reflow.mjs",
+          "status": "✔",
+          "ms": 4691.838666
+        },
+        {
+          "file": "tools/test-reader-direct-entry-recovery.mjs",
+          "status": "✔",
+          "ms": 4218.058333
+        },
+        {
+          "file": "tools/test-reader-direct-presented-page.mjs",
+          "status": "✔",
+          "ms": 4087.6325
+        },
+        {
+          "file": "tools/test-reader-directory-backfill-after-frame.mjs",
+          "status": "✔",
+          "ms": 3706.973792
+        },
+        {
+          "file": "tools/test-reader-directory-data-snapshot.mjs",
+          "status": "✔",
+          "ms": 3008.944792
+        },
+        {
+          "file": "tools/test-reader-directory-extent.mjs",
+          "status": "✔",
+          "ms": 526.0015
+        },
+        {
+          "file": "tools/test-reader-directory-hierarchy.mjs",
+          "status": "✔",
+          "ms": 495.473041
+        },
+        {
+          "file": "tools/test-reader-directory-markers.mjs",
+          "status": "✔",
+          "ms": 488.919375
+        },
+        {
+          "file": "tools/test-reader-directory-navigation-ui.mjs",
+          "status": "✔",
+          "ms": 2148.933459
+        },
+        {
+          "file": "tools/test-reader-directory-navigation.mjs",
+          "status": "✔",
+          "ms": 422.382041
+        },
+        {
+          "file": "tools/test-reader-directory-projection.mjs",
+          "status": "✔",
+          "ms": 376.458709
+        },
+        {
+          "file": "tools/test-reader-directory-shared-content.mjs",
+          "status": "✔",
+          "ms": 2839.546083
+        },
+        {
+          "file": "tools/test-reader-directory-viewport.mjs",
+          "status": "✔",
+          "ms": 2430.552084
+        },
+        {
+          "file": "tools/test-reader-directory-window-publication.mjs",
+          "status": "✔",
+          "ms": 2663.38875
+        },
+        {
+          "file": "tools/test-reader-drag-follow-gate.mjs",
+          "status": "✔",
+          "ms": 281.9255
+        },
+        {
+          "file": "tools/test-reader-dynamic-highlight.mjs",
+          "status": "✔",
+          "ms": 2643.504458
+        },
+        {
+          "file": "tools/test-reader-entry-handoff.mjs",
+          "status": "✔",
+          "ms": 7605.759708
+        },
+        {
+          "file": "tools/test-reader-entry-phase-timing.mjs",
+          "status": "✔",
+          "ms": 4539.959417
+        },
+        {
+          "file": "tools/test-reader-entry-presentation.mjs",
+          "status": "✔",
+          "ms": 3708.243458
+        },
+        {
+          "file": "tools/test-reader-entry-text-reuse.mjs",
+          "status": "✔",
+          "ms": 1023.340667
+        },
+        {
+          "file": "tools/test-reader-entry-window.mjs",
+          "status": "✔",
+          "ms": 5636.597333
+        },
+        {
+          "file": "tools/test-reader-epub-image-width.mjs",
+          "status": "✔",
+          "ms": 4220.564
+        },
+        {
+          "file": "tools/test-reader-event-loop-probe.mjs",
+          "status": "✔",
+          "ms": 864.753959
+        },
+        {
+          "file": "tools/test-reader-feedback-regressions.mjs",
+          "status": "✔",
+          "ms": 494.988459
+        },
+        {
+          "file": "tools/test-reader-first-page-sdk.mjs",
+          "status": "✔",
+          "ms": 3515.2525
+        },
+        {
+          "file": "tools/test-reader-font-demand.mjs",
+          "status": "✔",
+          "ms": 2830.390209
+        },
+        {
+          "file": "tools/test-reader-fragment-authority.mjs",
+          "status": "✔",
+          "ms": 3238.563375
+        },
+        {
+          "file": "tools/test-reader-hdc-lease.mjs",
+          "status": "✔",
+          "ms": 2973.601958
+        },
+        {
+          "file": "tools/test-reader-host-path-boundary.mjs",
+          "status": "✔",
+          "ms": 461.553584
+        },
+        {
+          "file": "tools/test-reader-host-selection-boundary.mjs",
+          "status": "✔",
+          "ms": 450.373167
+        },
+        {
+          "file": "tools/test-reader-http-tts-gateway.mjs",
+          "status": "✔",
+          "ms": 478.032834
+        },
+        {
+          "file": "tools/test-reader-indent-measurement.mjs",
+          "status": "✔",
+          "ms": 663.088541
+        },
+        {
+          "file": "tools/test-reader-initial-layout-overlap.mjs",
+          "status": "✔",
+          "ms": 3477.414708
+        },
+        {
+          "file": "tools/test-reader-known-image-geometry.mjs",
+          "status": "✔",
+          "ms": 3894.860709
+        },
+        {
+          "file": "tools/test-reader-layout-architecture.mjs",
+          "status": "✔",
+          "ms": 452.57475
+        },
+        {
+          "file": "tools/test-reader-local-image-core-contract.mjs",
+          "status": "✔",
+          "ms": 2954.114084
+        },
+        {
+          "file": "tools/test-reader-local-reverse-page.mjs",
+          "status": "✔",
+          "ms": 5295.531083
+        },
+        {
+          "file": "tools/test-reader-measurement-prefix.mjs",
+          "status": "✔",
+          "ms": 4153.542416
+        },
+        {
+          "file": "tools/test-reader-module-selection.mjs",
+          "status": "✔",
+          "ms": 3326.375125
+        },
+        {
+          "file": "tools/test-reader-more-popup.mjs",
+          "status": "✔",
+          "ms": 4154.636666
+        },
+        {
+          "file": "tools/test-reader-motion-repair.mjs",
+          "status": "✔",
+          "ms": 4195.904791
+        },
+        {
+          "file": "tools/test-reader-native-paragraph-owner.mjs",
+          "status": "✔",
+          "ms": 8401.820583
+        },
+        {
+          "file": "tools/test-reader-native-paragraph-view.mjs",
+          "status": "✔",
+          "ms": 9359.535333
+        },
+        {
+          "file": "tools/test-reader-native-text-measurement.mjs",
+          "status": "✔",
+          "ms": 7953.927458
+        },
+        {
+          "file": "tools/test-reader-navigable-toc.mjs",
+          "status": "✔",
+          "ms": 3785.314375
+        },
+        {
+          "file": "tools/test-reader-offscreen-fragment-publication.mjs",
+          "status": "✔",
+          "ms": 7170.033667
+        },
+        {
+          "file": "tools/test-reader-optional-entry-memory-launch.mjs",
+          "status": "✔",
+          "ms": 6089.515083
+        },
+        {
+          "file": "tools/test-reader-page-bottom-justify.mjs",
+          "status": "✔",
+          "ms": 347.139917
+        },
+        {
+          "file": "tools/test-reader-page-chrome.mjs",
+          "status": "✔",
+          "ms": 4873.8345
+        },
+        {
+          "file": "tools/test-reader-page-gesture-state.mjs",
+          "status": "✔",
+          "ms": 1121.745334
+        },
+        {
+          "file": "tools/test-reader-page-input-runtime.mjs",
+          "status": "✔",
+          "ms": 1153.860792
+        },
+        {
+          "file": "tools/test-reader-page-preparation-runtime.mjs",
+          "status": "✔",
+          "ms": 6793.698833
+        },
+        {
+          "file": "tools/test-reader-page-progress-runtime.mjs",
+          "status": "✔",
+          "ms": 4552.027833
+        },
+        {
+          "file": "tools/test-reader-page-settlement-runtime.mjs",
+          "status": "✔",
+          "ms": 4752.307791
+        },
+        {
+          "file": "tools/test-reader-page-turn-pipeline.mjs",
+          "status": "✔",
+          "ms": 530.026208
+        },
+        {
+          "file": "tools/test-reader-page-turn-stage.mjs",
+          "status": "✔",
+          "ms": 535.366583
+        },
+        {
+          "file": "tools/test-reader-paper-chrome-composition.mjs",
+          "status": "✔",
+          "ms": 8338.587084
+        },
+        {
+          "file": "tools/test-reader-paragraph-diagnostic.mjs",
+          "status": "✔",
+          "ms": 11639.184417
+        },
+        {
+          "file": "tools/test-reader-paragraph-indent.mjs",
+          "status": "✔",
+          "ms": 845.544625
+        },
+        {
+          "file": "tools/test-reader-persisted-first-build.mjs",
+          "status": "✔",
+          "ms": 4217.52575
+        },
+        {
+          "file": "tools/test-reader-physical-control-details.mjs",
+          "status": "✔",
+          "ms": 2992.965292
+        },
+        {
+          "file": "tools/test-reader-physical-reading-repair.mjs",
+          "status": "✔",
+          "ms": 5063.510333
+        },
+        {
+          "file": "tools/test-reader-physical-window-bookmark-refresh.mjs",
+          "status": "✔",
+          "ms": 4161.085958
+        },
+        {
+          "file": "tools/test-reader-platform-paragraph-probe.mjs",
+          "status": "✔",
+          "ms": 2814.654333
+        },
+        {
+          "file": "tools/test-reader-position-handoff.mjs",
+          "status": "✔",
+          "ms": 1989.707208
+        },
+        {
+          "file": "tools/test-reader-preparation-network.mjs",
+          "status": "✔",
+          "ms": 440.421333
+        },
+        {
+          "file": "tools/test-reader-preparation-runtime.mjs",
+          "status": "✔",
+          "ms": 2167.465125
+        },
+        {
+          "file": "tools/test-reader-prepared-title-boundary.mjs",
+          "status": "✔",
+          "ms": 2385.831833
+        },
+        {
+          "file": "tools/test-reader-presentation-recovery.mjs",
+          "status": "✔",
+          "ms": 2470.119792
+        },
+        {
+          "file": "tools/test-reader-presented-page-turn.mjs",
+          "status": "✔",
+          "ms": 6052.51425
+        },
+        {
+          "file": "tools/test-reader-presented-progress-owner.mjs",
+          "status": "✔",
+          "ms": 2657.302875
+        },
+        {
+          "file": "tools/test-reader-presented-progress-queue.mjs",
+          "status": "✔",
+          "ms": 637.425958
+        },
+        {
+          "file": "tools/test-reader-press-feedback.mjs",
+          "status": "✔",
+          "ms": 420.934458
+        },
+        {
+          "file": "tools/test-reader-product-scope.mjs",
+          "status": "✔",
+          "ms": 286.83875
+        },
+        {
+          "file": "tools/test-reader-progress-observation.mjs",
+          "status": "✔",
+          "ms": 2122.242125
+        },
+        {
+          "file": "tools/test-reader-quick-search-auto-header.mjs",
+          "status": "✔",
+          "ms": 1637.234709
+        },
+        {
+          "file": "tools/test-reader-rapid-page-turn-state.mjs",
+          "status": "✔",
+          "ms": 329.99075
+        },
+        {
+          "file": "tools/test-reader-reading-ready-publication.mjs",
+          "status": "✖",
+          "ms": 9953.579333
+        },
+        {
+          "file": "tools/test-reader-recoverable-entry.mjs",
+          "status": "✔",
+          "ms": 3903.190541
+        },
+        {
+          "file": "tools/test-reader-refresh-coordination.mjs",
+          "status": "✔",
+          "ms": 2559.734083
+        },
+        {
+          "file": "tools/test-reader-refresh-display-recovery.mjs",
+          "status": "✔",
+          "ms": 2992.389
+        },
+        {
+          "file": "tools/test-reader-render-work.mjs",
+          "status": "✔",
+          "ms": 2736.627125
+        },
+        {
+          "file": "tools/test-reader-replace-editor-feedback.mjs",
+          "status": "✔",
+          "ms": 2512.491458
+        },
+        {
+          "file": "tools/test-reader-replace-quick.mjs",
+          "status": "✔",
+          "ms": 909.097083
+        },
+        {
+          "file": "tools/test-reader-runtime-owner-lifecycle.mjs",
+          "status": "✔",
+          "ms": 397.425666
+        },
+        {
+          "file": "tools/test-reader-scoped-source-entry.mjs",
+          "status": "✔",
+          "ms": 509.73175
+        },
+        {
+          "file": "tools/test-reader-screen-awake-lease.mjs",
+          "status": "✔",
+          "ms": 353.546375
+        },
+        {
+          "file": "tools/test-reader-search-highlight.mjs",
+          "status": "✔",
+          "ms": 355.003208
+        },
+        {
+          "file": "tools/test-reader-selection-copy.mjs",
+          "status": "✔",
+          "ms": 387.096584
+        },
+        {
+          "file": "tools/test-reader-session-capsule.mjs",
+          "status": "✔",
+          "ms": 298.93525
+        },
+        {
+          "file": "tools/test-reader-session-launch-recovery.mjs",
+          "status": "✔",
+          "ms": 2807.089417
+        },
+        {
+          "file": "tools/test-reader-session-launch.mjs",
+          "status": "✔",
+          "ms": 575.409583
+        },
+        {
+          "file": "tools/test-reader-session-morph-state.mjs",
+          "status": "✔",
+          "ms": 347.247542
+        },
+        {
+          "file": "tools/test-reader-settings-rounded-clip.mjs",
+          "status": "✔",
+          "ms": 2364.937916
+        },
+        {
+          "file": "tools/test-reader-settings.mjs",
+          "status": "✔",
+          "ms": 458.692583
+        },
+        {
+          "file": "tools/test-reader-source-category.mjs",
+          "status": "✔",
+          "ms": 464.724166
+        },
+        {
+          "file": "tools/test-reader-source-correction-window.mjs",
+          "status": "✔",
+          "ms": 2539.761791
+        },
+        {
+          "file": "tools/test-reader-source-failure-p0.mjs",
+          "status": "✔",
+          "ms": 194.791416
+        },
+        {
+          "file": "tools/test-reader-startup-boundaries.mjs",
+          "status": "✔",
+          "ms": 2639.3355
+        },
+        {
+          "file": "tools/test-reader-startup-entry-trace.mjs",
+          "status": "✔",
+          "ms": 2706.7655
+        },
+        {
+          "file": "tools/test-reader-startup-reading-settings.mjs",
+          "status": "✔",
+          "ms": 1701.652042
+        },
+        {
+          "file": "tools/test-reader-startup-selected-font.mjs",
+          "status": "✔",
+          "ms": 1861.326708
+        },
+        {
+          "file": "tools/test-reader-startup-trace.mjs",
+          "status": "✔",
+          "ms": 1387.320833
+        },
+        {
+          "file": "tools/test-reader-status-measurement.mjs",
+          "status": "✔",
+          "ms": 280.081042
+        },
+        {
+          "file": "tools/test-reader-status-underlay-reactivity.mjs",
+          "status": "✖",
+          "ms": 1422.62475
+        },
+        {
+          "file": "tools/test-reader-system-event-host.mjs",
+          "status": "✔",
+          "ms": 299.427292
+        },
+        {
+          "file": "tools/test-reader-system-status-typography.mjs",
+          "status": "✖",
+          "ms": 1000.374583
+        },
+        {
+          "file": "tools/test-reader-text-selection-lifecycle.mjs",
+          "status": "✔",
+          "ms": 305.989792
+        },
+        {
+          "file": "tools/test-reader-textnode-diagnostic.mjs",
+          "status": "✖",
+          "ms": 616.364708
+        },
+        {
+          "file": "tools/test-reader-theme-host.mjs",
+          "status": "✔",
+          "ms": 351.302625
+        },
+        {
+          "file": "tools/test-reader-theme-paper-origin.mjs",
+          "status": "✖",
+          "ms": 484.912833
+        },
+        {
+          "file": "tools/test-reader-theme-selection.mjs",
+          "status": "✖",
+          "ms": 241.339
+        },
+        {
+          "file": "tools/test-reader-tts-audition.mjs",
+          "status": "✖",
+          "ms": 0.009459
+        },
+        {
+          "file": "tools/test-reader-tts-background-admission.mjs",
+          "status": "✖",
+          "ms": 0.001125
+        },
+        {
+          "file": "tools/test-reader-tts-config-interaction.mjs",
+          "status": "✖",
+          "ms": 0.000541
+        },
+        {
+          "file": "tools/test-reader-tts-exit-progress.mjs",
+          "status": "✖",
+          "ms": 0.000417
+        },
+        {
+          "file": "tools/test-reader-tts-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-reader-tts-launch-intent.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-reader-tts-navigation-generation.mjs",
+          "status": "✖",
+          "ms": 0.002458
+        },
+        {
+          "file": "tools/test-reader-tts-page-follow.mjs",
+          "status": "✖",
+          "ms": 0.002167
+        },
+        {
+          "file": "tools/test-reader-tts-preferences.mjs",
+          "status": "✖",
+          "ms": 0.001792
+        },
+        {
+          "file": "tools/test-reader-tts-product-surface.mjs",
+          "status": "✖",
+          "ms": 0.001542
+        },
+        {
+          "file": "tools/test-reader-tts-quick-preparation.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-reader-tts-session-coordinator.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-reader-tts-short-window.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-reader-tts-state-machine.mjs",
+          "status": "✖",
+          "ms": 0.000916
+        },
+        {
+          "file": "tools/test-reader-tts-state.mjs",
+          "status": "✖",
+          "ms": 0.000291
+        },
+        {
+          "file": "tools/test-reader-tts-waveform.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-reader-typography-architecture.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-reader-unknown-image-first-build.mjs",
+          "status": "✖",
+          "ms": 0.001208
+        },
+        {
+          "file": "tools/test-reader-unread-chapter-admission.mjs",
+          "status": "✖",
+          "ms": 0.000459
+        },
+        {
+          "file": "tools/test-reader-window-chrome-diagnostics.mjs",
+          "status": "✖",
+          "ms": 0.000584
+        },
+        {
+          "file": "tools/test-reader-window-chrome-order.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-reader-window-chrome-p0.mjs",
+          "status": "✖",
+          "ms": 0.001667
+        },
+        {
+          "file": "tools/test-reading-assistant-source.mjs",
+          "status": "✖",
+          "ms": 0.000583
+        },
+        {
+          "file": "tools/test-reading-catalog-refresh.mjs",
+          "status": "✖",
+          "ms": 0.000291
+        },
+        {
+          "file": "tools/test-reading-chapter-window.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-reading-document-projection.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-reading-document-window.mjs",
+          "status": "✖",
+          "ms": 0.007125
+        },
+        {
+          "file": "tools/test-reading-entry-preparation.mjs",
+          "status": "✖",
+          "ms": 0.001208
+        },
+        {
+          "file": "tools/test-reading-entry-priority.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-reading-entry-snapshot.mjs",
+          "status": "✖",
+          "ms": 0.00075
+        },
+        {
+          "file": "tools/test-reading-local-page-facts.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-reading-neighbour-preparation.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-reading-offline-completion.mjs",
+          "status": "✖",
+          "ms": 0.000541
+        },
+        {
+          "file": "tools/test-reading-offline-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-reading-offline-image-cache-runtime.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-reading-offline-image-cache.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-reading-pagination-index.mjs",
+          "status": "✖",
+          "ms": 0.001
+        },
+        {
+          "file": "tools/test-reading-pagination-integration.mjs",
+          "status": "✖",
+          "ms": 0.000709
+        },
+        {
+          "file": "tools/test-reading-paragraph-window.mjs",
+          "status": "✖",
+          "ms": 0.000916
+        },
+        {
+          "file": "tools/test-reading-phone-tablet-shared-architecture.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-reading-record-accumulation.mjs",
+          "status": "✖",
+          "ms": 0.000708
+        },
+        {
+          "file": "tools/test-reading-rolling-prefetch.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-reading-session-documents.mjs",
+          "status": "✖",
+          "ms": 0.000708
+        },
+        {
+          "file": "tools/test-reading-session-entry-admission.mjs",
+          "status": "✖",
+          "ms": 0.00075
+        },
+        {
+          "file": "tools/test-reading-session-ownership.mjs",
+          "status": "✖",
+          "ms": 0.00075
+        },
+        {
+          "file": "tools/test-reading-session-routing.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-reading-whole-book-progress.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-remote-content-admission.mjs",
+          "status": "✖",
+          "ms": 0.001042
+        },
+        {
+          "file": "tools/test-remote-position-migration.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-remote-position-reader.mjs",
+          "status": "✖",
+          "ms": 0.000833
+        },
+        {
+          "file": "tools/test-remote-reading-evidence.mjs",
+          "status": "✖",
+          "ms": 0.000459
+        },
+        {
+          "file": "tools/test-remote-reading-flow-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-remote-reading-flow-runtime.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-responsive-surface-widths.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-rss-discover-responsive-layout.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-rss-page-architecture.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-rss-subscription-management-page.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-rule-entity-management.mjs",
+          "status": "✖",
+          "ms": 0.000833
+        },
+        {
+          "file": "tools/test-search-candidate-acquisition.mjs",
+          "status": "✖",
+          "ms": 0.000584
+        },
+        {
+          "file": "tools/test-search-cover-continuity.mjs",
+          "status": "✖",
+          "ms": 0.001375
+        },
+        {
+          "file": "tools/test-search-detail-cache-first.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-search-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000958
+        },
+        {
+          "file": "tools/test-search-history-layout-lifecycle.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-search-native-focus.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-search-orchestrator.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-search-physical-layout.mjs",
+          "status": "✖",
+          "ms": 0.0005
+        },
+        {
+          "file": "tools/test-search-publication-boundary.mjs",
+          "status": "✖",
+          "ms": 0.000583
+        },
+        {
+          "file": "tools/test-search-publication-state.mjs",
+          "status": "✖",
+          "ms": 0.000541
+        },
+        {
+          "file": "tools/test-search-settings-physical-feedback.mjs",
+          "status": "✖",
+          "ms": 0.0005
+        },
+        {
+          "file": "tools/test-search-shelf-identity.mjs",
+          "status": "✖",
+          "ms": 0.000583
+        },
+        {
+          "file": "tools/test-search-trial-reading-return.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-search-view-state.mjs",
+          "status": "✖",
+          "ms": 0.000791
+        },
+        {
+          "file": "tools/test-select-semantics.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-settings-cache-cleanup.mjs",
+          "status": "✖",
+          "ms": 0.000583
+        },
+        {
+          "file": "tools/test-settings-select-overlay.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-settings-theme-icons.mjs",
+          "status": "✖",
+          "ms": 0.0015
+        },
+        {
+          "file": "tools/test-shelf-resume-handoff.mjs",
+          "status": "✖",
+          "ms": 0.000458
+        },
+        {
+          "file": "tools/test-shelf-source-name-resolution.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-signing-authority.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-source-check-progress.mjs",
+          "status": "✖",
+          "ms": 0.000541
+        },
+        {
+          "file": "tools/test-source-content-correction.mjs",
+          "status": "✖",
+          "ms": 0.000459
+        },
+        {
+          "file": "tools/test-source-product-tools.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-source-supply-chain.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-source-switch-catalog-seam.mjs",
+          "status": "✖",
+          "ms": 0.000417
+        },
+        {
+          "file": "tools/test-source-switch-gateway.mjs",
+          "status": "✖",
+          "ms": 0.000334
+        },
+        {
+          "file": "tools/test-source-switch-live-window.mjs",
+          "status": "✖",
+          "ms": 0.000417
+        },
+        {
+          "file": "tools/test-source-switch-page-flow.mjs",
+          "status": "✖",
+          "ms": 0.000292
+        },
+        {
+          "file": "tools/test-source-switch-presented-progress.mjs",
+          "status": "✖",
+          "ms": 0.000333
+        },
+        {
+          "file": "tools/test-source-switch-transaction.mjs",
+          "status": "✖",
+          "ms": 0.000375
+        },
+        {
+          "file": "tools/test-surface-horizontal-geometry.mjs",
+          "status": "✖",
+          "ms": 0.003834
+        },
+        {
+          "file": "tools/test-surface-repair.mjs",
+          "status": "✖",
+          "ms": 0.000792
+        },
+        {
+          "file": "tools/test-surface-transition-p0.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-svg-provenance.mjs",
+          "status": "✖",
+          "ms": 0.000667
+        },
+        {
+          "file": "tools/test-sync-host-configuration.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-sync-webdav-product.mjs",
+          "status": "✖",
+          "ms": 0.004333
+        },
+        {
+          "file": "tools/test-system-file-open.mjs",
+          "status": "✖",
+          "ms": 0.004
+        },
+        {
+          "file": "tools/test-theme-appearance-controls.mjs",
+          "status": "✖",
+          "ms": 0.003917
+        },
+        {
+          "file": "tools/test-theme-dynamic-icons.mjs",
+          "status": "✖",
+          "ms": 0.000875
+        },
+        {
+          "file": "tools/test-theme-local-consumers.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-theme-page-back-bar.mjs",
+          "status": "✖",
+          "ms": 0.000625
+        },
+        {
+          "file": "tools/test-theme-primary-text.mjs",
+          "status": "✖",
+          "ms": 0.001
+        },
+        {
+          "file": "tools/test-toc-repair-regressions.mjs",
+          "status": "✖",
+          "ms": 0.000791
+        },
+        {
+          "file": "tools/test-transient-transport-acquisition.mjs",
+          "status": "✖",
+          "ms": 0.000708
+        },
+        {
+          "file": "tools/test-webdav-credential-queue.mjs",
+          "status": "✖",
+          "ms": 0.000542
+        },
+        {
+          "file": "tools/test-window-flicker-dedup.mjs",
+          "status": "✖",
+          "ms": 0.002708
+        }
+      ]
+    }
+  },
+  "subsetRuns": [
+    {
+      "concurrency": 6,
+      "wallSeconds": 6.594,
+      "passed": 8,
+      "failed": 0,
+      "cancelled": 0,
+      "childRssPeakMiB": 494.7,
+      "childRssRangeMiB": [
+        287.8,
+        494.7
+      ],
+      "childCpuSecondsSum": 34.792,
+      "rows": [
+        {
+          "status": "pass",
+          "name": "tools/test-reader-bookmark-top-info.mjs",
+          "durationMs": 4343.608167,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-control-grabber-input.mjs",
+          "durationMs": 3758.148375,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-native-paragraph-owner.mjs",
+          "durationMs": 2555.779792,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-native-paragraph-view.mjs",
+          "durationMs": 2709.670667,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-paper-chrome-composition.mjs",
+          "durationMs": 2653.125708,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-paragraph-diagnostic.mjs",
+          "durationMs": 4171.237959,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-reading-ready-publication.mjs",
+          "durationMs": 4028.639375,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-window-chrome-order.mjs",
+          "durationMs": 2894.116417,
+          "cancelled": false
+        }
+      ],
+      "resources": [
+        {
+          "pid": 3428,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-bookmark-top-info.mjs",
+          "maxRssKiB": 459552,
+          "userCpuMicros": 5038344,
+          "systemCpuMicros": 304782
+        },
+        {
+          "pid": 3429,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-control-grabber-input.mjs",
+          "maxRssKiB": 352672,
+          "userCpuMicros": 4177452,
+          "systemCpuMicros": 244716
+        },
+        {
+          "pid": 3430,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-native-paragraph-owner.mjs",
+          "maxRssKiB": 342960,
+          "userCpuMicros": 3036807,
+          "systemCpuMicros": 211797
+        },
+        {
+          "pid": 3431,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-native-paragraph-view.mjs",
+          "maxRssKiB": 336208,
+          "userCpuMicros": 3164936,
+          "systemCpuMicros": 204378
+        },
+        {
+          "pid": 3432,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-paper-chrome-composition.mjs",
+          "maxRssKiB": 301136,
+          "userCpuMicros": 2942361,
+          "systemCpuMicros": 234491
+        },
+        {
+          "pid": 3433,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-paragraph-diagnostic.mjs",
+          "maxRssKiB": 506576,
+          "userCpuMicros": 4856270,
+          "systemCpuMicros": 339947
+        },
+        {
+          "pid": 3475,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-reading-ready-publication.mjs",
+          "maxRssKiB": 294656,
+          "userCpuMicros": 5309752,
+          "systemCpuMicros": 197420
+        },
+        {
+          "pid": 3486,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs",
+          "maxRssKiB": 334000,
+          "userCpuMicros": 4334219,
+          "systemCpuMicros": 194746
+        },
+        {
+          "pid": 3412,
+          "file": "/private/tmp/reader-sdk-profile-subset-20261001.cjs",
+          "maxRssKiB": 52112,
+          "userCpuMicros": 133771,
+          "systemCpuMicros": 66476
+        }
+      ]
+    },
+    {
+      "concurrency": 4,
+      "wallSeconds": 8.058,
+      "passed": 8,
+      "failed": 0,
+      "cancelled": 0,
+      "childRssPeakMiB": 454.7,
+      "childRssRangeMiB": [
+        324.5,
+        454.7
+      ],
+      "childCpuSecondsSum": 35.976,
+      "rows": [
+        {
+          "status": "pass",
+          "name": "tools/test-reader-bookmark-top-info.mjs",
+          "durationMs": 4204.06375,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-control-grabber-input.mjs",
+          "durationMs": 3431.861667,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-native-paragraph-owner.mjs",
+          "durationMs": 2271.5075,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-native-paragraph-view.mjs",
+          "durationMs": 2269.044708,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-paper-chrome-composition.mjs",
+          "durationMs": 2054.373583,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-paragraph-diagnostic.mjs",
+          "durationMs": 3362.994542,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-reading-ready-publication.mjs",
+          "durationMs": 4618.349375,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-window-chrome-order.mjs",
+          "durationMs": 2998.4115,
+          "cancelled": false
+        }
+      ],
+      "resources": [
+        {
+          "pid": 4508,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-bookmark-top-info.mjs",
+          "maxRssKiB": 465632,
+          "userCpuMicros": 5234435,
+          "systemCpuMicros": 321327
+        },
+        {
+          "pid": 4509,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-control-grabber-input.mjs",
+          "maxRssKiB": 362224,
+          "userCpuMicros": 4322458,
+          "systemCpuMicros": 272901
+        },
+        {
+          "pid": 4510,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-native-paragraph-owner.mjs",
+          "maxRssKiB": 351040,
+          "userCpuMicros": 3149578,
+          "systemCpuMicros": 207232
+        },
+        {
+          "pid": 4511,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-native-paragraph-view.mjs",
+          "maxRssKiB": 341856,
+          "userCpuMicros": 3237843,
+          "systemCpuMicros": 201132
+        },
+        {
+          "pid": 4556,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-paper-chrome-composition.mjs",
+          "maxRssKiB": 348608,
+          "userCpuMicros": 2992003,
+          "systemCpuMicros": 201844
+        },
+        {
+          "pid": 4557,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-paragraph-diagnostic.mjs",
+          "maxRssKiB": 413616,
+          "userCpuMicros": 4852560,
+          "systemCpuMicros": 280814
+        },
+        {
+          "pid": 4582,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-reading-ready-publication.mjs",
+          "maxRssKiB": 338160,
+          "userCpuMicros": 5818037,
+          "systemCpuMicros": 220139
+        },
+        {
+          "pid": 4600,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs",
+          "maxRssKiB": 332240,
+          "userCpuMicros": 4455941,
+          "systemCpuMicros": 207600
+        },
+        {
+          "pid": 4487,
+          "file": "/private/tmp/reader-sdk-profile-subset-20261001.cjs",
+          "maxRssKiB": 51856,
+          "userCpuMicros": 119492,
+          "systemCpuMicros": 55048
+        }
+      ]
+    },
+    {
+      "concurrency": 3,
+      "wallSeconds": 9.354,
+      "passed": 8,
+      "failed": 0,
+      "cancelled": 0,
+      "childRssPeakMiB": 470.5,
+      "childRssRangeMiB": [
+        296.0,
+        470.5
+      ],
+      "childCpuSecondsSum": 36.493,
+      "rows": [
+        {
+          "status": "pass",
+          "name": "tools/test-reader-bookmark-top-info.mjs",
+          "durationMs": 3944.074791,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-control-grabber-input.mjs",
+          "durationMs": 3230.882167,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-native-paragraph-owner.mjs",
+          "durationMs": 1951.307125,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-native-paragraph-view.mjs",
+          "durationMs": 2060.123167,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-paper-chrome-composition.mjs",
+          "durationMs": 1936.466667,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-paragraph-diagnostic.mjs",
+          "durationMs": 3538.194333,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-reading-ready-publication.mjs",
+          "durationMs": 5331.748791,
+          "cancelled": false
+        },
+        {
+          "status": "pass",
+          "name": "tools/test-reader-window-chrome-order.mjs",
+          "durationMs": 3540.998042,
+          "cancelled": false
+        }
+      ],
+      "resources": [
+        {
+          "pid": 5176,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-bookmark-top-info.mjs",
+          "maxRssKiB": 394048,
+          "userCpuMicros": 5142693,
+          "systemCpuMicros": 341351
+        },
+        {
+          "pid": 5177,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-control-grabber-input.mjs",
+          "maxRssKiB": 322000,
+          "userCpuMicros": 4255285,
+          "systemCpuMicros": 282463
+        },
+        {
+          "pid": 5178,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-native-paragraph-owner.mjs",
+          "maxRssKiB": 359392,
+          "userCpuMicros": 2993210,
+          "systemCpuMicros": 203397
+        },
+        {
+          "pid": 5224,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-native-paragraph-view.mjs",
+          "maxRssKiB": 353296,
+          "userCpuMicros": 3167514,
+          "systemCpuMicros": 187277
+        },
+        {
+          "pid": 5257,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-paper-chrome-composition.mjs",
+          "maxRssKiB": 337648,
+          "userCpuMicros": 2908975,
+          "systemCpuMicros": 186065
+        },
+        {
+          "pid": 5277,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-paragraph-diagnostic.mjs",
+          "maxRssKiB": 481808,
+          "userCpuMicros": 4923256,
+          "systemCpuMicros": 324846
+        },
+        {
+          "pid": 5280,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-reading-ready-publication.mjs",
+          "maxRssKiB": 303136,
+          "userCpuMicros": 6155512,
+          "systemCpuMicros": 240521
+        },
+        {
+          "pid": 5305,
+          "file": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs",
+          "maxRssKiB": 306096,
+          "userCpuMicros": 4938471,
+          "systemCpuMicros": 241935
+        },
+        {
+          "pid": 5166,
+          "file": "/private/tmp/reader-sdk-profile-subset-20261001.cjs",
+          "maxRssKiB": 52128,
+          "userCpuMicros": 122876,
+          "systemCpuMicros": 55827
+        }
+      ]
+    }
+  ],
+  "matchedCompletedSlowScripts": 147,
+  "medianSecondToFirstDurationRatio": 1.3842722434455395,
+  "boundary": "One same ordered 8-file SDK-heavy subset per concurrency, runs sequential in 6/4/3 order. This excludes the C++ compilation and broader workloads of the 394-file whole gate. resourceUsage maxRSS is each child lifetime peak, not simultaneous aggregate memory; ps/sysctl access unavailable in this sandbox."
+}

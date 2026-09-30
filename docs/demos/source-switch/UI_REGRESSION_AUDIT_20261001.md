@@ -93,3 +93,11 @@
 源码 `cf5d9c02`：394 文件，391 通过、3 失败、0 skip/cancel；耗时117.714秒，未超120秒且尚未构建HAP。失败分别为旧阅读入口测试的全文件转译未过滤新@Builder、SHF03更新intent断言仍读旧Page owner、window-chrome测试仍计数Index旧失败根。记录见ui-regression-full-gate-first-result.json；只迁移对应测试的生产定位与新共享壳证据，不能删除原产品断言或按局部绿跳过全量失败。
 
 三项测试已分别先复现原失败，再按真实生产owner调整并通过，未改产品：精确SDK AST普通方法提取；真实More→Shell→Index更新intent及并发保护；实际Index根palette与MainTabShell日/夜/日observer及失败slot归属。原阅读/退出、窗口安全区和更新队列断言保留。定向证据见ui-regression-owner-tests-result.json。为实际中段窗口场景另外准备单章37,211 scalar测试TXT，仍只通过正常文件导入、进度拖动及退出重开验证，三本fixture的内容hash分别记录。
+
+## 第二次全量检查（超时，未交付）
+
+源码 `1b03aae5`：394文件，283通过、0行为失败、111取消，120秒预算触发，耗时120.020秒。该轮整体失败，不将取消项算通过，未生成HAP。详见ui-regression-full-gate-second-result.json。代码已修且全量未过不能作为设备交付依据。
+
+主机只读资源快照：10逻辑CPU/16GiB内存，空闲约274MiB，压缩器占约6GiB；同时存在其他rustc/clippy编译进程。本任务不停止/占用这些外部工作。保持120秒预算和全部394检查，先校准允许的测试并发、等待代表性探针释放资源，再重跑规范流程。累计swap计数不是本轮峰值，不能据此断言唯一原因。
+
+代表性SDK校准采用同8个文件顺序测6/4/3并发，分别6.594/8.058/9.354秒，均8/8通过；当前证据不支持降并发提速，因此保持既有6。子进程峰值RSS不是同时总RSS，子集通过也不升级为全部394项通过；第三轮仍完整运行并保留原120秒预算。校准证据见ui-regression-concurrency-profile.json。
