@@ -9,7 +9,7 @@
 - HAP SHA256：`f8bc451fb306ad095d0c93b4b9ff580974cd1dbc7c9b61640b45b0382b628559`。
 - 证书：用户指定的 `minliny_HarmonyOS`，Profile 类型 debug；包名 `io.reader.minliny`。
 - 源码身份：Harmony `85bd874a`（构建时 clean），Core `e2a2db0b1`（恢复的已编译 dirty 输入）。这是 iteration 包。
-- [构建结果](signed-build-result.json)；VM 安装、原生动效交互及用户验收仍待完成。
+- [构建结果](signed-build-result.json)；随后用户授权 VM 安装，已于 2026-09-30 完成 Mate 80 Pro VM 安装及 demo 专用入口启动，见 [安装/启动记录](vm-install-result.json) 和 [原生截图](vm-demo.jpeg)。原生动效交互及用户验收仍待完成。
 
 ## 立即试用浏览器版
 
@@ -43,8 +43,8 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory demos/source-switch
 - 原生页面实际 SDK ETS 解析通过；真实方法转换执行的四项检查通过：重排后按 sourceId 恢复可见偏移、新触摸撤销恢复、生命周期 generation 变化撤销恢复、列表顶端展示新最快来源。此 demo 明确使用 70 vp 行高；放大字体和可变行高仍未验收。
 - 当前 Core 产物身份验证和规范 `sync-core` 通过；使用现有 `io.reader.minliny` 包名和用户指定证书的私有配置，`sync-signing` 通过。未生成新证书，私有材料未进入 Git。
 - 初次构建被外层 120 秒截止时间中止（`hap-gate-120s.log`）。已改为 Node 内建 4 进程门禁，保留整批 120 秒上限；首轮 384 项在 97.51 秒内全部执行，发现并修复了 3 个隔离输入问题。具体原因和回归见 `BUILD_REPAIR.md`。
-- 正式 ArkTS/Hvigor 编译及产物校验现已 PASS；VM 安装、原生动效与滚动位置验收仍为 OPEN。
-- 本次只对现有 VM 做了就绪状态的只读检查，未安装、启动或更改 VM 内应用，也未操作真实设备。
+- 正式 ArkTS/Hvigor 编译及产物校验、VM 安装、demo 启动和页面显示均已 PASS；动效与滚动位置交互验收仍为 OPEN。
+- VM 预检确认当前包名尚未安装，规范安装后再次核验应用身份。通过 `readerSourceSwitchDemo=true` 直接冷启动模拟页面，截图显示查找完成 12 个来源。未卸载、清数据、重置 VM，也未操作真实设备。
 
 ## 环境记录
 

@@ -1,0 +1,57 @@
+{
+  "recordedAt": "2026-09-30T14:10:41.625500+00:00",
+  "runId": "20260930T134349Z-85bd874a-be8b8f52",
+  "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-artifacts/hap/20260930T134349Z-85bd874a-be8b8f52/manifest.json",
+  "deploymentReceipt": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-artifacts/hap/20260930T134349Z-85bd874a-be8b8f52/deploy-vm-6460677a198b-20260930T140800Z.json",
+  "artifactSha256": "f8bc451fb306ad095d0c93b4b9ff580974cd1dbc7c9b61640b45b0382b628559",
+  "targetKind": "vm",
+  "targetRef": "6460677a198b",
+  "vmReadiness": {
+    "checkedAt": "2026-09-30T22:06:12.521149+08:00",
+    "vmName": "Mate 80 Pro",
+    "instancePath": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+    "emulatorPid": 40666,
+    "emulatorStartedAt": "2026-09-26 14:26:55 +08:00",
+    "bootCompleted": "true",
+    "sceneBoard": "   PID   PPID     ELAPSED NAME                       \n  1450    138  4-01:53:11 com.ohos.sceneboard\n  2039    138  4-01:53:07 com.ohos.sceneboard:EngineServiceAbility:1\n",
+    "currentBootCompletedLines": [
+      "2026-09-26 14:27:16.510 481281978368 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!"
+    ],
+    "dangerMarkersSinceStart": []
+  },
+  "install": "PASS",
+  "launch": "PASS",
+  "launchPage": "pages/SourceSwitchDemo",
+  "launchWant": {
+    "bundle": "io.reader.minliny",
+    "ability": "EntryAbility",
+    "module": "entry",
+    "parameters": {
+      "readerSourceSwitchDemo": true
+    }
+  },
+  "launchOutput": "start ability successfully.",
+  "launchMethod": "Canonical pipeline install --no-launch for the installation phase, followed by the shared HDC lease and explicit demo cold-start Want. Ordinary Reader startup was not invoked.",
+  "screenshot": {
+    "path": "vm-demo.jpeg",
+    "sha256": "323b0fe5dd2a6b8a6df8a1cf016defe99431f68bbd2dbcfa19196c8bcafc7005",
+    "width": 1280,
+    "height": 2832
+  },
+  "observed": "Native demo visible: 更换书源, 山河入梦, 查找完成 · 12 个; visible latency order 190, 240, 330, 420, 440, 530 ms; demo controls visible.",
+  "captureIssue": {
+    "phenomenon": "snapshot_display rejected .png; this VM tool only accepts .jpeg",
+    "resolution": "Used supported .jpeg and verified the resulting 1280x2832 image",
+    "appFailure": false
+  },
+  "dataPolicy": "preserve; bundle absent before installation; no uninstall, data clearing, certificate change or VM reset",
+  "evidenceBoundary": {
+    "vmInstall": "PASS",
+    "demoLaunch": "PASS",
+    "nativePageVisible": "PASS",
+    "featureInteraction": "OPEN",
+    "motionAndScrollAcceptance": "OPEN",
+    "physicalDevice": "NOT_RUN",
+    "userAcceptance": "OPEN"
+  }
+}
