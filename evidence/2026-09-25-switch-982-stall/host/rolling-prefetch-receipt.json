@@ -1,0 +1,47 @@
+{
+  "time": "2026-09-25T04:25:06.253117+00:00",
+  "state": "frozen",
+  "productionScope": {
+    "ReadingOfflineGateway.ts": [
+      "loadDirectoryProjection metadata-only facade",
+      "loadProjectionResult verifyImages branch",
+      "prefetchWindow bounded projection and background coordinator facade",
+      "prefetchRangeResult complete every returned materialization lease before reject"
+    ],
+    "Index.ets": [
+      "ReadingWindowPrefetchIntent + five private fields",
+      "prefetchReadingWindow current-owner singleflight/latest window/30s incomplete backoff/incremental download state publication",
+      "loadRemoteDirectoryProjection one call change; bookmarks preserved"
+    ]
+  },
+  "hashes": {
+    "entry/src/main/ets/features/reading/ReadingOfflineGateway.ts": "763c31c124d06819f241614a81a88060755c180dc4549ceb7e55ecf3e9c926ab",
+    "entry/src/main/ets/pages/Index.ets": "e3e780733bab405d1ae2df988762f4f81b2b4f3f6292cd73d9fef57d1913b704",
+    "tools/test-reading-rolling-prefetch.mjs": "2cde44981bf49a9547a61cbba5cb49dd339ffd5b47e79ebd8ad20dc6edab3d21"
+  },
+  "baseline": "installed snapshot: four page commits, 5480 body+hash+manifest checks, 32 peak body requests, four complete TOC publications",
+  "fixed": "same commits: 5 body+hash+manifest checks, one prefetch; repeat same chapter no requests; full directory zero body/manifest checks",
+  "testCommand": "/opt/homebrew/bin/node --experimental-strip-types tools/<name>.mjs",
+  "passed": [
+    "test-reading-rolling-prefetch (16 behavior groups)",
+    "test-reading-offline-completion",
+    "test-reading-offline-gateway",
+    "test-reading-offline-image-cache-runtime",
+    "test-bookshelf-manual-update",
+    "test-reading-catalog-refresh (16 groups)",
+    "test-reader-directory-window-publication",
+    "git diff --check"
+  ],
+  "limits": [
+    "Synthetic production-method/real-gateway probes, no device timing claim",
+    "Window status reads existing full-book metadata;正文/hash/manifest work bounded to window",
+    "Explicit full download/completion projection still verifies exact body identity and image files",
+    "Three terminal-report failures surface; unknown terminal lease is not falsely completed"
+  ],
+  "evidence": [
+    "rolling-prefetch-installed-baseline.log",
+    "rolling-prefetch-baseline.log",
+    "rolling-prefetch-regression.log",
+    "rolling-prefetch-scope.diff"
+  ]
+}

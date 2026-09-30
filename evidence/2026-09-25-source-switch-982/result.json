@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "finishedAt": "2026-09-25T08:44:48Z",
+  "status": "SOURCE_LOCAL_REGRESSION_AND_SIGNED_ITERATION_PASS_VM_PARTIAL_PHYSICAL_OPEN",
+  "reportedIssue": {
+    "book": "终宋",
+    "chapter": 982,
+    "sourceUserSpelling": "佩蒲裴榕",
+    "sourceFixtureName": "佩蒲斐榕",
+    "symptoms": [
+      "source switch jumps to chapter18",
+      "slow directory and persistent later stalls"
+    ]
+  },
+  "confirmedCodeFindings": [
+    {
+      "id": "SS982-POSITION",
+      "confirmed": "Actual Index.onPickSource plus production SessionGateway/RemoteGateway/ProgressOwner can pass old index17 while displayed index988 save is pending",
+      "before": "progress-baseline.log",
+      "after": "progress-fixed.log",
+      "fix": "Reuse existing per-book progress serial owner to drain displayed intent before canonical read and source.switch.commit; cancelled or unresolved persistence cannot move source",
+      "deviceTrigger": "UNCONFIRMED"
+    },
+    {
+      "id": "SS982-WORK",
+      "confirmed": "Four page commits in same chapter with1370 completed chapters dispatch4 rolling prefetch tasks,5480 cacheOnly body reads,5480 manifest checks,peak32 reads",
+      "before": "../2026-09-25-switch-982-stall/host/rolling-prefetch-baseline.log",
+      "fix": "Bound automatic projection to current chapter window and coalesce same window; directory uses metadata-only projection with honest cached state; explicit full-download completion still verified",
+      "status": "FIXED_LOCAL_PASS",
+      "after": "../2026-09-25-switch-982-stall/host/rolling-prefetch-receipt.json"
+    },
+    {
+      "id": "SS982-CATALOG",
+      "confirmed": "Source seam publishes new session before clearing old directory index; index988 is near end of990-entry target and triggers redundant forceRefresh",
+      "before": "catalog-seam-baseline.log",
+      "after": "catalog-seam-fixed.log",
+      "fix": "Clear old-source directory position before publishing target session"
+    }
+  ],
+  "fixes": [
+    "Drain presented progress through the existing serialized book owner before authoritative progress read and source-switch commit",
+    "Reject empty normalized titles and conflicting explicit chapter numbers as fuzzy matching evidence",
+    "Coalesce rolling prefetch to one active and latest pending five-chapter window with cancellation, stale-owner fences, retry backoff and terminal lease reports",
+    "Use metadata-only directory projection; retain exact verification for explicit download completion",
+    "Clear old directory position before publishing the new source session to prevent redundant force refresh"
+  ],
+  "localValidation": {
+    "sourceSwitchProgressScenarios": 6,
+    "sharedProgressOwnerScenarios": 19,
+    "catalogSeamSizes": [
+      20,
+      990,
+      1370
+    ],
+    "rollingAndDirectoryScenarios": 16,
+    "coreSourceSwitchTransactionTests": 10,
+    "coreExistingMatcherTests": 8,
+    "coreTrueCatalogReplayScenarios": 6,
+    "coreClippy": "PASS",
+    "independentReview": "PASS after terminal lease cancellation and failure retry fixes",
+    "directory1370": {
+      "statusReads": 1,
+      "bookmarkReads": 1,
+      "bodyReads": 0,
+      "manifestReads": 0
+    },
+    "sameChapter8Commits": {
+      "prefetchWindows": 1,
+      "bodyReads": 5
+    },
+    "boundaries": "production methods and real storage with controlled transport; no device latency measurement",
+    "directoryStatusStoragePath": "cache_book_status -> list_chapter_cache_metadata -> SQLite JOIN chapter_cache_metrics.content_bytes; SELECT does not include chapter body. Still O(chapter metadata), not O(1).",
+    "canonicalHarmonyContractScripts": 379,
+    "arkts": "PASS_WITH_EXISTING_WARNINGS",
+    "fullCoreWorkspaceGate": "NOT_RUN_THIS_TURN"
+  },
+  "core": {
+    "head": "071f5de8f8de022735379e8aba807c364c1383cf",
+    "dirty": true,
+    "transactionTests": 10,
+    "existingMatcherTests": 8,
+    "actualCatalogReplayScenarios": 6,
+    "clippy": "PASS",
+    "fullWorkspaceGate": "NOT_RUN_THIS_TURN",
+    "native": {
+      "status": "pass",
+      "artifact": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/libreader_core_napi.so",
+      "bytes": 21762216,
+      "sha256": "aabd261c9ed8db573ac76bfe647aa3f5676bd505d2f3f0ad3ff096593931b48a",
+      "identity": {
+        "schemaVersion": 1,
+        "buildId": "b2dc4ddba6f0c122d6f35476cb41fb402dd63cd81e93ffcb0c18d0d61e6cec3d",
+        "gitCommit": "071f5de8f8de022735379e8aba807c364c1383cf",
+        "gitDirty": true,
+        "cargoLockSha256": "f7940c658f515a8bfd86d18eeb6957798aac3bd114e952568cd2af8240ce2b3f",
+        "protocolSha256": "45cfe649f9421d96b722bc89f973d72afb23238f52e33ef4687318b7dad7b6d2",
+        "rustProfile": "release"
+      },
+      "inputFingerprint": "f657a888e79ac00fa874e8f6f983c37d2bba2a0620ba12ab259bafee9dd299df",
+      "inputCount": 845,
+      "inputsUnchanged": true,
+      "desktopNapi": "pass",
+      "sdkSmoke": {
+        "passed": 62,
+        "failed": 0,
+        "assertions": 450
+      },
+      "log": "native-build.log",
+      "prebuild": "core-build-inputs-before.json",
+      "postbuild": "core-build-inputs-after.json",
+      "hostVendoredLibraryUpdated": false,
+      "deviceInstalled": true
+    },
+    "cli": {
+      "status": "pass",
+      "artifact": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/reader-cli",
+      "bytes": 90512872,
+      "sha256": "2f417e218744b9a38d484761814a9c1bcdd4d8ac0e804f7b2795909eaace8826",
+      "infoCommand": "pass",
+      "log": "cli-build.log",
+      "info": "cli-info.json",
+      "sourceSnapshot": "core-build-inputs-cli.json",
+      "inputFingerprint": "f657a888e79ac00fa874e8f6f983c37d2bba2a0620ba12ab259bafee9dd299df"
+    }
+  },
+  "build": {
+    "firstAttempt": {
+      "log": "hap-build.log",
+      "contracts": 379,
+      "status": "ARKTS_FAILED",
+      "cause": "Two object spreads in new Index.ets code",
+      "publishedHap": false
+    },
+    "syntaxFix": "arkts-syntax-fix.json",
+    "targetedRerun": "rolling-after-arkts-fix.log",
+    "finalAttempt": {
+      "log": "hap-build-retry.log",
+      "status": "PASS",
+      "contracts": 379,
+      "arkts": "PASS_WITH_EXISTING_WARNINGS",
+      "nonIncremental": true
+    },
+    "independentVerify": {
+      "status": "PASS",
+      "log": "hap-verify.log"
+    },
+    "isolation": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-982-20260925/isolation.json",
+    "nativePackageIdentity": "native-package-identity.json"
+  },
+  "artifact": {
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260925T051002Z-78785620-6f5d5b3c/manifest.json",
+    "runId": "20260925T051002Z-78785620-6f5d5b3c",
+    "buildClass": "iteration",
+    "acceptanceEligible": false,
+    "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260925T051002Z-78785620-6f5d5b3c/entry-default-signed.hap",
+    "sha256": "230ac13e2f79a1a85f2ae1c51a4e477f8fc49405d602dc350f1e21068da15ada",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "b9063d56007d41e2a75024b1c337e1ae6cf2f344b19d473b426e7d3a9fc49abf",
+      "appIdentifierSha256": "8c32879623adf9edc32b24b27309073c498195bd44d653ae5adc27918a13a58b",
+      "certificateSha256": "9575a9891ccd56a278fcb9b881a4304e491319442f72e2530adc65fad248abb5"
+    },
+    "harmony": {
+      "commit": "78785620d2a6729f025b63975fe163173dfea758",
+      "dirty": true
+    },
+    "core": {
+      "commit": "071f5de8f8de022735379e8aba807c364c1383cf",
+      "dirty": true
+    },
+    "sourceFingerprint": "6f5d5b3c47f2fe39278f5585cda121278793818c9d3556b1ea97e9da72ebe251"
+  },
+  "boundaries": {
+    "deviceAccessed": true,
+    "deviceInstalled": true,
+    "userDataTouched": true,
+    "preservation": "VM preserve-data install and launch; reading progress and source switch exercised; original 松鹤阅读 restored to readable 982; no uninstall, cache clear, or database reset. Physical user data untouched.",
+    "physicalInstall": "OPEN",
+    "featureInteraction": "VM_PARTIAL_PASS_982_QQ_AND_BACK",
+    "physicalLatency": "OPEN",
+    "userAcceptance": "OPEN",
+    "userDatabaseExactTrigger": "UNCONFIRMED_PHYSICAL_SOURCE_ABSENT_FROM_VM",
+    "liveSourceRetest": "VM_SAMPLE_5_ALTERNATES_1_READABLE_4_FAILURES",
+    "nearZeroWaitAcceptance": "OPEN"
+  },
+  "evidence": [
+    "intake.json",
+    "code-findings.json",
+    "progress-baseline.log",
+    "progress-fixed.log",
+    "catalog-seam-baseline.log",
+    "catalog-seam-fixed.log",
+    "../2026-09-25-switch-982-stall/host/rolling-prefetch-receipt.json",
+    "../../../Reader-Core-Native/evidence/2026-09-25-zhongsong-source-switch/result.json",
+    "vm/result.json",
+    "vm/source-availability-audit.json",
+    "vm/issue-403.json"
+  ],
+  "receipts": [
+    {
+      "path": "hap-build.log",
+      "bytes": 221716,
+      "sha256": "fcd3750dab43a19a17d78ccd4f790582721705699d8a8d0fd64886e77b138d42"
+    },
+    {
+      "path": "hap-build-retry.log",
+      "bytes": 221582,
+      "sha256": "10cfa636f05d96356ac97a13def4f28c544cddf0d035d21b5763a9ed68434b46"
+    },
+    {
+      "path": "hap-verify.log",
+      "bytes": 736,
+      "sha256": "1c91d793a9b8e7fbe4c6375d1d42d25c960852a8967f08b08441e13d6f7d15fd"
+    },
+    {
+      "path": "native-package-identity.json",
+      "bytes": 1416,
+      "sha256": "8a955986308944d7fe372e8f3f235ef1d9b47881ae2a65c234ba1f4b7d9f82c9"
+    },
+    {
+      "path": "arkts-syntax-fix.json",
+      "bytes": 628,
+      "sha256": "d9cc717a082d30f1eaf612b497377ef1cecb7fdf7ecd0c84879033596f033c89"
+    },
+    {
+      "path": "rolling-after-arkts-fix.log",
+      "bytes": 2106,
+      "sha256": "63d0642a14af3955752a49eb93ba9d84953ffcc7df3b797c48d889e4edda3c66"
+    }
+  ],
+  "vmValidation": {
+    "targetRef": "6460677a198b",
+    "target": "Mate 80 Pro VM",
+    "deploymentReceipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260925T051002Z-78785620-6f5d5b3c/deploy-vm-6460677a198b-20260925T052235Z.json",
+    "dataPolicy": "preserve",
+    "install": "PASS",
+    "launch": "PASS",
+    "book": "终宋",
+    "sourceBaseline": "松鹤阅读",
+    "chapter982ToQQAndBack": "PASS_READABLE_982_BOTH_DIRECTIONS",
+    "qqDirectory982": "VISIBLE_HIGHLIGHTED",
+    "candidateSample": {
+      "attempted": 5,
+      "readable": 1,
+      "failed": 4,
+      "untested": [
+        "百度小说"
+      ]
+    },
+    "userReportedSourcePresent": false,
+    "precisionLatencyMeasurement": "NOT_PERFORMED",
+    "result": "vm/result.json",
+    "availabilityAudit": "vm/source-availability-audit.json"
+  }
+}

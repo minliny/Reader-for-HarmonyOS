@@ -1,0 +1,143 @@
+{
+  "recordedAt": "2026-09-24T12:46:47.663Z",
+  "issue": "Remote catalog cannot continue beyond chapter 949",
+  "confirmed": {
+    "sourceReplay": "../Reader-Core-Native/evidence/2026-09-24-zhongsong-catalog/result.json",
+    "catalogCount": 1370,
+    "currentChapter": {
+      "number": 949,
+      "index": 955
+    },
+    "nextChapter": {
+      "number": 950,
+      "index": 956
+    },
+    "sourceRuleChangeRequired": false
+  },
+  "codeFindings": [
+    {
+      "file": "entry/src/main/ets/pages/Index.ets",
+      "method": "refreshRemoteCatalogNearEnd",
+      "finding": "openSession without forceRefresh can reuse prepared/durable catalog while advancing the 10-minute refresh throttle"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "finding": "parent catalog projection can update controls without updating mounted tocEntries/chapterWindow/gateway source session"
+    },
+    {
+      "file": "entry/src/main/ets/pages/Index.ets",
+      "method": "applyReadingCommit",
+      "finding": "prepared cached chapter path may have no remote session; near-end refresh then never executes"
+    }
+  ],
+  "implementation": "in progress",
+  "unknowns": [
+    "No physical database read; provenance and exact last entry of the user cached directory are not observed",
+    "Screenshot/last visible chapter clarification pending"
+  ],
+  "dataPolicy": "Preserve current body/page/progress and all durable user data; only verified catalog append may update live navigation",
+  "deviceAccess": false,
+  "reviewFindings": [
+    {
+      "file": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "method": "hydrateEntryCatalog",
+      "finding": "Completing full catalog hydration called schedulePageTurnPreparation, incrementing generation while an old pageTurnPreparation remained active; completePreparedPageTurn then returns without releasing its lane",
+      "scope": "Can affect a complete persisted catalog, not only an old shortened catalog"
+    },
+    {
+      "method": "onRemoteCatalogChanged",
+      "finding": "First cold ensureRemoteSession may install a fresh catalog into gateway before notifying parent; comparing only gateway session evidence then skips updating an older mounted navigation",
+      "scope": "Initial fresh acquisition after cached chapter entry"
+    }
+  ],
+  "updatedAt": "2026-09-24T16:08:33.824Z",
+  "repairStatus": "SOURCE_AND_SIGNED_ITERATION_ARTIFACT_PASS_DEVICE_OPEN",
+  "finalHostRegression": {
+    "status": "PASS",
+    "behaviorGroups": 16,
+    "associatedSuites": 5,
+    "receipt": "../2026-09-24-catalog-949/host/receipt.json"
+  },
+  "independentReview": {
+    "status": "PASS",
+    "scope": [
+      "first fresh session synchronizes parent, gateway and mounted 1370-entry navigation",
+      "in-flight measurement can complete after full hydration or append",
+      "active admitted drag page and content identity retained",
+      "speculative body invalidation is scoped to owned source/book"
+    ],
+    "deviceEvidence": false
+  },
+  "fullGateAttempts": [
+    {
+      "log": "hap-build.log",
+      "status": "FAIL",
+      "reason": "Legacy product test locked old ordinal subtraction",
+      "repair": "Preserved call-chain assertion; execute actual near-end method against sparse indices and trailing non-readable entries",
+      "targetedLog": "legacy-gate-regression.log",
+      "targetedExitCode": 0
+    },
+    {
+      "log": "hap-build-retry.log",
+      "status": "FAIL",
+      "reason": "Startup trace probe omitted scheduleNavigationBackfillAfterReady added by concurrent EPUB work",
+      "repair": "Include the unchanged actual helper in the existing trace probe; no production EPUB edit",
+      "targetedLog": "startup-trace-gate-regression.log",
+      "targetedExitCode": 0
+    },
+    {
+      "log": "hap-build-final.log",
+      "status": "FAIL",
+      "harmonyContractTests": 373,
+      "harmonyGate": "PASS",
+      "arkTs": "FAIL",
+      "reason": "Concurrent EPUB ReaderDirectoryNavigationList.ets uses destructuring declaration, inline object type and untyped object literal; no issue-task ArkTS error reported",
+      "publishedArtifact": false
+    },
+    {
+      "log": "hap-build-run4.log",
+      "status": "FAIL",
+      "precedingSyntaxRepair": {
+        "diff": "../2026-09-24-catalog-949/host/directory-navigation-arkts-syntax.diff",
+        "receipt": "../2026-09-24-catalog-949/host/directory-navigation-arkts-syntax.json",
+        "uiRegressionExitCode": 0
+      },
+      "reason": "Concurrent EPUB production callback gained positionScope while its external-directory test was still being updated",
+      "followUp": "Owner subsequently updated its test; rerun passed without an additional task edit",
+      "targetedLog": "concurrent-external-directory-gate.log",
+      "targetedExitCode": 0,
+      "publishedArtifact": false
+    },
+    {
+      "log": "hap-build-run5.log",
+      "status": "FAIL",
+      "sharedInputsStableForThirtySeconds": true,
+      "reason": "Concurrent EPUB directory-search change added cancelPendingPlacement before the existing window-publication test probe loaded that helper",
+      "publishedArtifact": false
+    },
+    {
+      "log": "hap-build-isolated.log",
+      "status": "FAIL",
+      "isolation": "isolation.json",
+      "reason": "Snapshot preparation omitted Reader-UI/theme read indirectly by test-theme-dynamic-icons via generate-theme-icons; explicit frozen theme inputs subsequently copied",
+      "publishedArtifact": false
+    },
+    {
+      "log": "hap-build-isolated-final.log",
+      "status": "PASS",
+      "isolation": "isolation.json",
+      "remainingGatePreflight": {
+        "status": "PASS",
+        "scripts": 7,
+        "log": "isolated-remaining-gate.log"
+      },
+      "harmonyContractTests": 375,
+      "arkTs": "PASS",
+      "signedBuild": "PASS",
+      "independentVerify": "PASS",
+      "runId": "20260924T171826Z-2124c753-8d92d05f"
+    }
+  ],
+  "deliveryPlan": "Freeze current dirty inputs in a separate worktree; preserve original concurrent work and continue the canonical pipeline",
+  "finalResult": "result.json"
+}

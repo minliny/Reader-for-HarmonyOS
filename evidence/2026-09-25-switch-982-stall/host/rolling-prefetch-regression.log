@@ -1,0 +1,39 @@
+{
+  "mode": "regression",
+  "chapters": 1370,
+  "pageCommits": 4,
+  "prefetchCalls": 1,
+  "bodyReads": 5,
+  "manifestChecks": 5,
+  "peakBodyRequests": 5,
+  "peakPrefetchCommands": 1,
+  "fullTocPublications": 0,
+  "materializedBodyChars": 35000,
+  "hostProbeElapsedMs": 13.37,
+  "indexSha256": "e3e780733bab405d1ae2df988762f4f81b2b4f3f6292cd73d9fef57d1913b704"
+}
+(node:23754) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ReadingOfflineGateway image materialization incomplete: CANCELLED
+ReadingOfflineGateway image materialization incomplete: CANCELLED
+{
+  "checks": 16,
+  "passed": [
+    "1370 chapters / eight same-chapter commits use one five-chapter window",
+    "content mutation rechecks identities; missing resource patches only its row and preserves bookmarks",
+    "pending windows coalesce to latest and old window performs no body work",
+    "late body results from old source cannot publish after navigation and session switch",
+    "runtime replacement executes queued work through its current owner",
+    "network failure is retried after short backoff without a per-page storm",
+    "Core failed status remains retryable even when its retained body is cached",
+    "materialized window reuses exact identity once; full explicit projection verifies all chapters",
+    "explicit range retains whole-book completion semantics and missing-resource downgrade",
+    "manual shelf update preserves independent work for each book",
+    "real coordinator runs window in background; explicit downloads retain foreground fence",
+    "cancelled prefetch response closes every returned lease without reading bodies",
+    "mid-materialization cancellation drains unclaimed leases before rejecting",
+    "one terminal report failure is surfaced without stranding other leases",
+    "production Index 1370-entry directory preserves bookmarks with one metadata read and zero body or manifest work",
+    "directory metadata projection rejects content mutation during status read"
+  ]
+}

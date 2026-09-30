@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-25T05:15:53.569Z",
+  "status": "SOURCE_LOCAL_REGRESSION_SIGNED_ITERATION_AND_VERIFY_PASS_DEVICE_OPEN",
+  "installedSnapshotCompared": true,
+  "findings": [
+    {
+      "id": "SS982-POSITION",
+      "confirmed": "Actual Index.onPickSource plus production SessionGateway/RemoteGateway/ProgressOwner can pass old index17 while displayed index988 save is pending",
+      "before": "progress-baseline.log",
+      "after": "progress-fixed.log",
+      "fix": "Reuse existing per-book progress serial owner to drain displayed intent before canonical read and source.switch.commit; cancelled or unresolved persistence cannot move source",
+      "deviceTrigger": "UNCONFIRMED"
+    },
+    {
+      "id": "SS982-WORK",
+      "confirmed": "Four page commits in same chapter with1370 completed chapters dispatch4 rolling prefetch tasks,5480 cacheOnly body reads,5480 manifest checks,peak32 reads",
+      "before": "../2026-09-25-switch-982-stall/host/rolling-prefetch-baseline.log",
+      "fix": "Bound automatic projection to current chapter window and coalesce same window; directory uses metadata-only projection with honest cached state; explicit full-download completion still verified",
+      "status": "FIXED_LOCAL_PASS",
+      "after": "../2026-09-25-switch-982-stall/host/rolling-prefetch-receipt.json"
+    },
+    {
+      "id": "SS982-CATALOG",
+      "confirmed": "Source seam publishes new session before clearing old directory index; index988 is near end of990-entry target and triggers redundant forceRefresh",
+      "before": "catalog-seam-baseline.log",
+      "after": "catalog-seam-fixed.log",
+      "fix": "Clear old-source directory position before publishing target session"
+    }
+  ],
+  "boundaries": {
+    "deviceAccessed": false,
+    "actualUserDatabaseInspected": false,
+    "featureAcceptance": "OPEN",
+    "physicalLatency": "OPEN",
+    "newHap": "PASS_SIGNED_ITERATION"
+  },
+  "validationNotes": [
+    "Initial new progress probe failed because simulated Core write receipt omitted required locationRevision; fixture corrected to actual contract. No production change was made for that fixture failure.",
+    "Existing static source-switch contract expected inline ReaderRuntimeOwner.current(); updated for single captured owner while preserving canonical-read requirement.",
+    "First full HAP attempt passed all 379 Host contract scripts, then failed ArkTS on two object spreads introduced in Index. Replaced with explicit typed fields in original and isolated source; 16 rolling/directory groups passed again, then the full 379 gate and ArkTS passed. First failure log retained as hap-build.log."
+  ],
+  "reuseDecision": {
+    "existingCapabilities": [
+      "ReadingSessionProgressOwner serialized transaction lane and Core CAS",
+      "existing cache.book.status and materialization completion contracts",
+      "existing request scheduler background priority"
+    ],
+    "upstreamReference": {
+      "path": "/Users/minliny/Documents/legado",
+      "commit": "6763d061bc92b2164ac274363a807e4ed4be34e2",
+      "workingTree": "clean at review",
+      "scope": "read-only product semantics; no GPL implementation copied"
+    },
+    "decision": "Fix Reader source/position transaction ownership and bounded projections through existing capabilities. No new general parser, cache or matching engine. Storage matcher change only rejects empty normalized title or explicit chapter-number conflict in existing candidate priority."
+  },
+  "localValidation": {
+    "sourceSwitchProgressScenarios": 6,
+    "sharedProgressOwnerScenarios": 19,
+    "catalogSeamSizes": [
+      20,
+      990,
+      1370
+    ],
+    "rollingAndDirectoryScenarios": 16,
+    "coreSourceSwitchTransactionTests": 10,
+    "coreExistingMatcherTests": 8,
+    "coreTrueCatalogReplayScenarios": 6,
+    "coreClippy": "PASS",
+    "independentReview": "PASS after terminal lease cancellation and failure retry fixes",
+    "directory1370": {
+      "statusReads": 1,
+      "bookmarkReads": 1,
+      "bodyReads": 0,
+      "manifestReads": 0
+    },
+    "sameChapter8Commits": {
+      "prefetchWindows": 1,
+      "bodyReads": 5
+    },
+    "boundaries": "production methods and real storage with controlled transport; no device latency measurement",
+    "directoryStatusStoragePath": "cache_book_status -> list_chapter_cache_metadata -> SQLite JOIN chapter_cache_metrics.content_bytes; SELECT does not include chapter body. Still O(chapter metadata), not O(1).",
+    "canonicalHarmonyContractScripts": 379,
+    "arkts": "PASS_WITH_EXISTING_WARNINGS",
+    "fullCoreWorkspaceGate": "NOT_RUN_THIS_TURN"
+  },
+  "artifactPreparation": {
+    "status": "SIGNED_ITERATION_VERIFIED",
+    "isolatedRoot": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-982-20260925",
+    "isolation": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-982-20260925/isolation.json",
+    "nativeStaging": "native-staging.json",
+    "buildLog": "hap-build-retry.log",
+    "pipeline": "Official PH42 retention implementation at 1cb288a4; source/test business fixes are frozen original worktree",
+    "mainHostNativeChanged": false,
+    "firstAttemptLog": "hap-build.log",
+    "syntaxAdaptation": "arkts-syntax-fix.json",
+    "verificationLog": "hap-verify.log",
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260925T051002Z-78785620-6f5d5b3c/manifest.json",
+    "runId": "20260925T051002Z-78785620-6f5d5b3c",
+    "signedHapSha256": "230ac13e2f79a1a85f2ae1c51a4e477f8fc49405d602dc350f1e21068da15ada",
+    "nativePackageIdentity": "native-package-identity.json"
+  }
+}

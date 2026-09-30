@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-25T04:31:08.108979+00:00",
+  "state": "BUILT_NOT_YET_PACKAGED",
+  "artifact": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/libs/arm64-v8a/libreader_core_napi.so",
+  "sha256": "aabd261c9ed8db573ac76bfe647aa3f5676bd505d2f3f0ad3ff096593931b48a",
+  "bytes": 21762216,
+  "identity": {
+    "schemaVersion": 1,
+    "buildId": "b2dc4ddba6f0c122d6f35476cb41fb402dd63cd81e93ffcb0c18d0d61e6cec3d",
+    "gitCommit": "071f5de8f8de022735379e8aba807c364c1383cf",
+    "gitDirty": true,
+    "cargoLockSha256": "f7940c658f515a8bfd86d18eeb6957798aac3bd114e952568cd2af8240ce2b3f",
+    "protocolSha256": "45cfe649f9421d96b722bc89f973d72afb23238f52e33ef4687318b7dad7b6d2",
+    "rustProfile": "release"
+  },
+  "sdkSmoke": {
+    "pass": 62,
+    "fail": 0,
+    "assertions": 450
+  },
+  "sourceFingerprint": "f657a888e79ac00fa874e8f6f983c37d2bba2a0620ba12ab259bafee9dd299df",
+  "sourceFileCount": 845,
+  "sourceStableThroughBuild": true,
+  "sdkSourcesEqualToHostVendor": true,
+  "vendorAdaptations": "Keep existing Index.ts/oh-package main+types adaptation; all sdk/*.ts byte-identical",
+  "hostMainVendoredBinaryReplaced": false,
+  "evidence": "../../../../Reader-Core-Native/evidence/2026-09-25-zhongsong-source-switch/native-build.log",
+  "cli": {
+    "path": "/Users/minliny/Documents/Reader/Reader-Core-Native/target/debug/reader-cli",
+    "sha256": "2f417e218744b9a38d484761814a9c1bcdd4d8ac0e804f7b2795909eaace8826",
+    "bytes": 90512872,
+    "build": "PASS",
+    "info": "PASS"
+  }
+}

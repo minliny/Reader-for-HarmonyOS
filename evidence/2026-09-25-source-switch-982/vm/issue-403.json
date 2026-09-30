@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-25T08:44:48Z",
+  "id": "SS982-VM-403",
+  "phenomenon": "At chapter 982, selecting the 66书吧-起点 source closes the switching overlay, then the reader shows 正文暂时无法显示 / HTTP status 403 / 0%.",
+  "trigger": "Mate 80 Pro VM; 终宋 at chapter 982 说客 on 松鹤阅读; choose 66书吧-起点 from the source picker.",
+  "artifact": {
+    "runId": "20260925T051002Z-78785620-6f5d5b3c",
+    "signedHapSha256": "230ac13e2f79a1a85f2ae1c51a4e477f8fc49405d602dc350f1e21068da15ada",
+    "harmonyHead": "78785620d2a6729f025b63975fe163173dfea758",
+    "coreHead": "071f5de8f8de022735379e8aba807c364c1383cf",
+    "dirtySources": true
+  },
+  "evidence": [
+    "reader-control-982-reading-target.png",
+    "reader-control-982-picker-at-982.png",
+    "reader-control-982-switch-first.png",
+    "reader-control-982-switch-observed.png",
+    "reader-control-982-switch-observed.json"
+  ],
+  "codeAudit": {
+    "scope": [
+      "Index.ets onPickSource / performSourceSwitchSeam / onReadingFailure",
+      "SourceSwitchGateway.ts fetchTargetToc / commitSwitch",
+      "LocalReadingExperience.ets readingFailureContent"
+    ],
+    "finding": "The target catalog can be fetched and source.switch.commit can enter pending before the target chapter body is fetched. Reader failure displays the returned HTTP error and retains the reading route. The picker subsequently highlighted 66书吧 as current and displayed 目录已就绪. The screenshot does not prove whether the matched chapter was 18 or 982.",
+    "ruledOut": "This screenshot is not evidence of a chapter-18 jump or of a parser failure: the visible error is HTTP 403 from the chosen live source."
+  },
+  "openPoints": [
+    "Determine 66书吧's exact mapped chapter and why its chapter API returned HTTP 403.",
+    "Do not transfer this VM's source availability result to the user's 佩蒲裴榕 source or physical device."
+  ],
+  "subsequentAttempts": [
+    {
+      "candidate": "爱下电子书",
+      "result": "book.toc returned no readable chapters",
+      "evidence": "reader-control-982-switch-second-observed.png",
+      "recovery": "Continue current source returned to readable 第982章 说客 at 71%, recorded in reader-control-982-after-rollback.png"
+    },
+    {
+      "candidate": "精华书阁手机版",
+      "result": "book.toc pagination cycle; directory is incomplete",
+      "evidence": "reader-control-982-switch-third-observed.png",
+      "codeAudit": "reader-runtime/src/remote.rs start_toc_pagination and continue_toc_pagination reject a repeated nextTocUrl with SOURCE_RULE_FAILED/paginationCycle before publishing an incomplete directory. Index.ets presents acquisition failure and offers continuation of the original source.",
+      "recovery": "Continue current source returned to readable 第982章 说客, recorded in reader-control-982-after-third-failure.png"
+    },
+    {
+      "candidate": "漫花小说",
+      "result": "Internal error",
+      "evidence": "reader-control-982-switch-fourth-observed.png",
+      "codeAudit": "The VM UI did not expose the exact request stage; independent Core CLI search had TLS connection reset by peer, which does not prove the VM error cause."
+    },
+    {
+      "candidate": "QQ阅读01",
+      "result": "Readable 第982章 说客; directory highlighted 982; switching back to 松鹤阅读 also retained readable 982",
+      "evidence": "reader-control-982-qq-directory-real.png",
+      "recovery": "Original 松鹤阅读 restored at readable 982"
+    }
+  ]
+}

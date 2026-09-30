@@ -1,0 +1,3 @@
+{"status":"PASS","scenarios":[{"targetSize":20,"oldDisplayedIndex":988,"matchedIndex":17,"detailCallsAfterSeam":1,"tocCallsAfterSeam":1},{"targetSize":990,"oldDisplayedIndex":988,"matchedIndex":17,"detailCallsAfterSeam":1,"tocCallsAfterSeam":1},{"targetSize":1370,"oldDisplayedIndex":988,"matchedIndex":17,"detailCallsAfterSeam":1,"tocCallsAfterSeam":1}],"boundary":"Production source acquisition, coordinator, Index seam/commit/refresh and mounted session gateway; controlled Core I/O, no HTTP timing or device claim."}
+(node:12788) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

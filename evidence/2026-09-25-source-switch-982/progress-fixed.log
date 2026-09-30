@@ -1,0 +1,3 @@
+{"status":"PASS","checks":["pending-982-write-precedes-switch","failed-read-reconciled-at-switch-boundary","unresolved-write-stops-source-mutation","lost-receipt-confirmed-without-rewrite","cancelled-switch-does-not-mutate-source","ordinary-write-cannot-cross-source-transaction"]}
+(node:189) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

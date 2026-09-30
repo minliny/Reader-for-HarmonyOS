@@ -1,0 +1,52 @@
+(node:67554) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "calls": [
+    {
+      "method": "reading.preparation",
+      "params": {
+        "action": "list",
+        "offset": 0,
+        "limit": 100
+      },
+      "timeout": 30000
+    },
+    {
+      "method": "reading.entry.prepare",
+      "params": {
+        "sourceId": "s",
+        "bookId": "b",
+        "neighborOffset": 0
+      },
+      "timeout": 30000
+    },
+    {
+      "method": "cache.book.prefetch",
+      "params": {
+        "sourceId": "s",
+        "bookId": "b",
+        "preparationRevision": 1,
+        "chapterRange": [
+          0,
+          1
+        ]
+      },
+      "timeout": 30000
+    },
+    {
+      "method": "cache.book.prefetch",
+      "params": {
+        "sourceId": "s",
+        "bookId": "b",
+        "chapterRange": [
+          0,
+          8
+        ],
+        "priority": 0,
+        "requestedAt": 1
+      },
+      "timeout": 300000
+    }
+  ],
+  "state": "active"
+}

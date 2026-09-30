@@ -1,0 +1,11 @@
+(node:92076) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"PH108: real SDK If observes the control visibility edge with extension enabled","status":"PASS"}
+{"name":"PH108: every theme-only change invalidates page textures without repagination","status":"PASS"}
+{"name":"PH108: shell repaints the reader band above directory and source-switch overlays","status":"PASS"}
+{"name":"PH104: moving launch blocks native captures and adjacent preparation, hold resumes","status":"PASS"}
+{"name":"PH107: native volume subscriptions are absent in controls, overlays and background","status":"PASS"}
+{"name":"PH107: actual InputKit host releases partial registrations, deduplicates and disposes","status":"PASS"}
+{"name":"PH106: import stays an action; a separate selected custom font survives restore and reorder","status":"PASS"}
+{"name":"PH106: actual font Host registers persisted sandbox font through file URI","status":"PASS"}
+{"name":"PH105: download feedback starts immediately, verifies completion and ignores stale owner","status":"PASS"}

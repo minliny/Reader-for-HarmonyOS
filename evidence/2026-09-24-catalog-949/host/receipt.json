@@ -1,0 +1,82 @@
+{
+  "timestampUtc": "2026-09-24T16:18:51.223217+00:00",
+  "head": "3fdd89d05698e5e4e932e4b2a4f5cd76227da9e5",
+  "status": "PASS",
+  "newBehaviorGroups": 16,
+  "associatedSuites": 5,
+  "productionScope": {
+    "Index.ets": [
+      "catalog refresh constants/maps",
+      "onRemoteSessionReady near-end trigger",
+      "applyReadingCommit near-end predicate",
+      "isRemoteCatalogNearEnd",
+      "refreshRemoteCatalogNearEnd"
+    ],
+    "LocalReadingExperience.ets": [
+      "remoteSession Watch and catalog fields",
+      "hydrateEntryCatalog revision+safe queue",
+      "onRemoteCatalogChanged",
+      "prepareRemoteCatalogNearEnd",
+      "notifyReadingPresentationReady near-end check"
+    ],
+    "ReadingSessionFlowGateway.ts": [
+      "admitRemoteCatalog",
+      "ensureRemoteSession late admission protection"
+    ],
+    "RemoteReadingEvidence.ts": [
+      "canAppendRemoteReadingCatalog"
+    ],
+    "ReadingSessionDocuments.ts": [
+      "configureOwnedCatalogWithoutBodies"
+    ]
+  },
+  "files": {
+    "entry/src/main/ets/pages/Index.ets": "a18fb32c5975717a13f6684e0e3bddfafb1204552afde04ff8256e44bdf26aaf",
+    "entry/src/main/ets/features/reading/LocalReadingExperience.ets": "d1205581b40e2fafdc0b940f049d4dd4876265b40b2320ddf90fea763eed26ab",
+    "entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts": "baaafcaf8167d3ffdf68209094505e9f9c0e3c561ffbf65cda79d4bf36aa3e1d",
+    "entry/src/main/ets/features/reading/RemoteReadingEvidence.ts": "706267de4322e5228ca27aba3d6e831282f9ede2202bf9c99504ce899c92b9fc",
+    "entry/src/main/ets/features/reading/ReadingSessionDocuments.ts": "2388b9ed373fec6b005f04072299ae04c62873c5dfe78c3222336914e0e4e04e",
+    "tools/test-reading-catalog-refresh.mjs": "366754963e3858a79834980246634d8119278720c9b10fb14e98e9f546c6e2a9",
+    "tools/lib/reader-motion-method-probe.mjs": "699bfd1a90eaa15e22fd40c181db67bc889395625cf9149f7249453a259a7a9d",
+    "tools/test-reader-entry-window.mjs": "58fa1d21c7901248dd3771aafffe1a91020041da09b38d510d6a374e0b16947a"
+  },
+  "tests": [
+    {
+      "command": "/opt/homebrew/bin/node --experimental-strip-types tools/test-reading-catalog-refresh.mjs",
+      "exitCode": 0,
+      "log": "regression.log"
+    },
+    {
+      "command": "/opt/homebrew/bin/node --experimental-strip-types tools/test-reader-entry-window.mjs",
+      "exitCode": 0,
+      "log": "entry-window.log"
+    },
+    {
+      "command": "/opt/homebrew/bin/node --experimental-strip-types tools/test-reading-entry-snapshot.mjs",
+      "exitCode": 0,
+      "log": "entry-snapshot.log"
+    },
+    {
+      "command": "/opt/homebrew/bin/node --experimental-strip-types tools/test-reader-direct-entry-recovery.mjs",
+      "exitCode": 0,
+      "log": "direct-entry.log"
+    },
+    {
+      "command": "/opt/homebrew/bin/node --experimental-strip-types tools/test-shelf-resume-handoff.mjs",
+      "exitCode": 0,
+      "log": "handoff.log"
+    },
+    {
+      "command": "/opt/homebrew/bin/node --experimental-strip-types tools/test-toc-repair-regressions.mjs",
+      "exitCode": 0,
+      "log": "toc-repair.log"
+    }
+  ],
+  "diffCheckExitCode": 0,
+  "limits": [
+    "Synthetic catalog preserves incident ordinal shape 949=index955,950=index956,total1370; actual HTTP and extraction evidence owned by parent/content agent.",
+    "No device, install, native build, ArkUI reactive scheduling or measured UI latency acceptance performed by this subtask.",
+    "Unrelated dirty EPUB/download changes retained; Index diff file includes only catalog refresh hunks.",
+    "Previously owned complete remote catalogs require prefix title/index/url/effective variables compatibility for in-place append; incompatible refresh retains old page and requires fresh reader admission."
+  ]
+}

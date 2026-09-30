@@ -1,0 +1,3 @@
+(node:96546) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH119 independent catalog routing, retained detail Builder and exact initial bookmark lifecycle: PASS

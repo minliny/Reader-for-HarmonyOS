@@ -1,0 +1,4 @@
+reading entry snapshot: no acquisition/full TOC/progress prerequisite, one request + retained body, strict identity/scope/navigation, old offline body and cancellation PASS
+PASS separate chapter image layout identity: stable across windows, unchanged position scope, malformed metadata rejected
+bounded catalog: 256-row pages, pinned revision, reject changed and cancelled projections PASS
+lazy session: independent foreground/background consumers, priority and rebound observer ownership PASS

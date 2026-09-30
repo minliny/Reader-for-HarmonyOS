@@ -1,0 +1,20 @@
+{
+  "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+  "beforeSha256": "a6c466e2a05eacf9649e127d4011307417b202bd1fa6c928cd29faf1faae9a64",
+  "afterSha256": "140c0d303e562027b89ed0b88eb93d6adb43dd159a001ec551b0431fcaea8316",
+  "changedByThisTask": true,
+  "productionFilesChanged": 1,
+  "changes": [
+    "explicit pending page interface",
+    "Map.forEach typed callback instead of destructuring declaration",
+    "typed pending object before queue push"
+  ],
+  "canonicalArkTsRerun": "parent-owned",
+  "test": {
+    "command": "/opt/homebrew/bin/node --experimental-strip-types tools/test-reader-directory-navigation-ui.mjs",
+    "exitCode": 0,
+    "result": "PH42 tree bookmark, target validation, rank position and debounced query fencing: PASS",
+    "log": "directory-navigation-ui-after-syntax.log"
+  },
+  "gitDiffCheckExitCode": 0
+}

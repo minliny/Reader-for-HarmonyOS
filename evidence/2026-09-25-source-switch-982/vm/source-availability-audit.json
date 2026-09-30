@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-25T08:44:48Z",
+  "issue": "Several offered sources for 终宋 cannot be read at chapter 982 in the Mate 80 Pro VM",
+  "trigger": "Open the source picker while reading 第982章 说客 on 松鹤阅读 and select alternate candidates",
+  "artifact": {
+    "runId": "20260925T051002Z-78785620-6f5d5b3c",
+    "signedHapSha256": "230ac13e2f79a1a85f2ae1c51a4e477f8fc49405d602dc350f1e21068da15ada",
+    "harmonyHead": "78785620d2a6729f025b63975fe163173dfea758",
+    "coreHead": "071f5de8f8de022735379e8aba807c364c1383cf",
+    "dirtySources": true,
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260925T051002Z-78785620-6f5d5b3c/manifest.json"
+  },
+  "vm": {
+    "targetRef": "6460677a198b",
+    "device": "Mate 80 Pro VM",
+    "dataPolicy": "preserve",
+    "deploymentReceipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260925T051002Z-78785620-6f5d5b3c/deploy-vm-6460677a198b-20260925T052235Z.json",
+    "install": "PASS",
+    "launch": "PASS",
+    "baseline": "终宋 第982章 说客 readable on 松鹤阅读; this VM did not have the user's 佩蒲裴榕 source",
+    "candidatesShown": [
+      "66书吧-起点",
+      "松鹤阅读",
+      "QQ阅读01",
+      "百度小说",
+      "爱下电子书",
+      "漫花小说",
+      "精华书阁手机版"
+    ],
+    "alternateCandidatesAttempted": 5,
+    "alternateCandidatesFailed": 4,
+    "alternateCandidatesReadable": 1,
+    "untestedCandidates": ["百度小说"],
+    "attempts": [
+      {
+        "source": "66书吧-起点",
+        "result": "FAIL",
+        "observed": "正文暂时无法显示 / HTTP status 403 / 0% after source commit",
+        "stage": "chapter body",
+        "conclusion": "The selected chapter request was rejected with HTTP 403. Site rejection policy and exact target chapter identity remain unproven.",
+        "evidence": ["reader-control-982-switch-observed.png", "reader-control-982-after-403-picker.png"]
+      },
+      {
+        "source": "爱下电子书",
+        "result": "FAIL",
+        "observed": "book.toc returned no readable chapters",
+        "stage": "catalog acquisition",
+        "conclusion": "No usable target directory was obtained; whether this is a changed site response, a rule mismatch, or book absence is not proven.",
+        "recovery": "Continue current source returned to readable 982 at 71%.",
+        "evidence": ["reader-control-982-switch-second-observed.png", "reader-control-982-after-rollback.png"]
+      },
+      {
+        "source": "精华书阁手机版",
+        "result": "FAIL",
+        "observed": "book.toc pagination cycle; directory is incomplete",
+        "stage": "catalog pagination",
+        "conclusion": "Core detected a repeated nextTocUrl and rejected publication of the incomplete directory. The originating site response or rule defect still needs a bounded raw-response sample.",
+        "recovery": "Continue current source returned to readable 982.",
+        "evidence": ["reader-control-982-switch-third-observed.png", "reader-control-982-after-third-failure.png"]
+      },
+      {
+        "source": "漫花小说",
+        "result": "FAIL",
+        "observed": "Internal error in VM source switching",
+        "stage": "not established from the VM UI",
+        "conclusion": "The exact VM failure stage is open. An independent current Core CLI search to m.23mhx.com encountered TLS connection reset by peer, which is supporting site or transport instability evidence, not proof of the VM error cause.",
+        "evidence": ["reader-control-982-switch-fourth-observed.png"]
+      },
+      {
+        "source": "QQ阅读01",
+        "result": "PASS",
+        "observed": "Readable 第982章 说客; picker highlights QQ阅读01 as current and says 已验证章节可读; directory highlights 982 with adjacent 980-984",
+        "stage": "catalog, matching, body, directory",
+        "evidence": ["reader-control-982-switch-fifth-observed.png", "reader-control-982-qq-picker.png", "reader-control-982-qq-directory-real.png"]
+      },
+      {
+        "source": "松鹤阅读",
+        "result": "PASS_RESTORE",
+        "observed": "Switching back from QQ retained a readable 第982章 说客; original source highlighted as current",
+        "evidence": ["reader-control-982-restored-source-final.png", "reader-control-982-restore-songhe-result.png"]
+      }
+    ],
+    "finalState": "Original 松鹤阅读 restored; 982 body readable; no uninstall, cache clearing, or database reset",
+    "interactionCaveat": "One intermediate probe click unintentionally paged from 982 to 981 while trying to open the directory. The probe returned to 982, then opened the directory correctly. No precise latency measurement was made."
+  },
+  "codeAudit": {
+    "bundledCollection": "entry/src/main/resources/rawfile/reader-tested-book-source-collection.json",
+    "sourceCount": 1046,
+    "defaultEnabledCount": 158,
+    "defaultEnabledVerifiedDates": {"2026-07-09": 153, "2026-09-04": 5},
+    "testedCandidatesVerifiedAt": "2026-07-09T09:37:16Z",
+    "historicalCorpus": "Reader-Core-Native/reports/tooling/corpus-batch-live-full-1945-v5-2026-07-09.json",
+    "historicalCorpusScope": "Representative 斗破苍穹 search/detail/catalog/one selected chapter, not 终宋 chapter 982 or whole-book availability",
+    "picker": "SourceSwitchGateway.loadCachedCandidates uses durable search-book.related acquisition facts; 24-hour catalog age and source version determine stale state. CandidateRow allows retry of every non-current row, including offline or timeout.",
+    "bodyGap": "Index.onPickSource fetches target catalog, commits source.switch to pending, and opens the target reader before its matched body succeeds. onReadingFailure retains the reading route and does not mark the candidate's cached acquisition as failed. Hence 66书吧 can remain current with 目录已就绪 while the body is HTTP 403.",
+    "paginationProtection": "Reader-Core-Native/crates/reader-runtime/src/remote.rs rejects repeated nextTocUrl as SOURCE_RULE_FAILED/book.toc/paginationCycle before publishing an incomplete directory.",
+    "commonAppOutage": "Not supported: QQ阅读01 and 松鹤阅读 succeeded on the same VM and book."
+  },
+  "conclusion": "The offered sources have different current failure stages. Historical default-enabled admission and cached candidate status do not establish current readability of a particular book and chapter. The source-switch commit-before-body path can expose the failure after leaving the previously readable source.",
+  "openPoints": [
+    "Capture bounded sanitized request/response evidence for the failed sources before changing their rules or disabling them.",
+    "Determine whether 66书吧's HTTP 403 is request policy, access control, or a transient server response.",
+    "Determine why 爱下 has no readable catalog and why 精华 repeats nextTocUrl for this book.",
+    "Correlate 漫花 VM Internal error with request-stage logs; CLI TLS reset alone is not a VM root cause.",
+    "A current health assessment of all 158 default-enabled sources was not performed.",
+    "The physical device's 佩蒲裴榕 source and exact 982→18 report remain outside this VM data condition.",
+    "Near-zero-wait and sustained later-operation performance remain unmeasured on target devices."
+  ]
+}

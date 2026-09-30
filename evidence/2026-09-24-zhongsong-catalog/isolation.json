@@ -1,0 +1,86 @@
+{
+  "at": "2026-09-24T16:58:15.690Z",
+  "root": "/Users/minliny/Documents/Reader/.reader-isolated/catalog-949-20260925",
+  "method": "Local shared Git clones pinned to captured HEAD plus actual current tracked and nonignored untracked files, required ignored vendor/CLI/probe inputs. Real build-contract files copied.",
+  "repositories": [
+    {
+      "name": "Reader-for-HarmonyOS",
+      "head": "2124c7535717b7ce9f80e1e03a7bd204f346667b",
+      "original": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS",
+      "copy": "/Users/minliny/Documents/Reader/.reader-isolated/catalog-949-20260925/Reader-for-HarmonyOS",
+      "copiedGitPaths": 11439,
+      "dirty": true
+    },
+    {
+      "name": "Reader-Core-Native",
+      "head": "ed057323c13954a347310db0d458574f61390d78",
+      "original": "/Users/minliny/Documents/Reader/Reader-Core-Native",
+      "copy": "/Users/minliny/Documents/Reader/.reader-isolated/catalog-949-20260925/Reader-Core-Native",
+      "copiedGitPaths": 4779,
+      "dirty": true
+    }
+  ],
+  "signingMaterialCopied": false,
+  "originalWorktreesModified": false,
+  "initialCheckoutFailure": "git-lfs executable unavailable; local clone-only LFS filters disabled, then actual materialized workspace bytes copied. No commits or global filter changes.",
+  "frozenIdentities": [
+    {
+      "path": "Reader-Core-Native/target/debug/reader-cli",
+      "bytes": 87886648,
+      "sha256": "4528b2816be053877d1d1c31ca08cdf78460ac44cba9f4f8a182a76c72bafcac"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 21182264,
+      "sha256": "21cf667a642b027209867c7ce8a2f23b7ba019ddaf03cc97b3f46f86e80281c8"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts",
+      "bytes": 53870,
+      "sha256": "baaafcaf8167d3ffdf68209094505e9f9c0e3c561ffbf65cda79d4bf36aa3e1d"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/reading/RemoteReadingEvidence.ts",
+      "bytes": 6281,
+      "sha256": "706267de4322e5228ca27aba3d6e831282f9ede2202bf9c99504ce899c92b9fc"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSessionDocuments.ts",
+      "bytes": 5524,
+      "sha256": "2388b9ed373fec6b005f04072299ae04c62873c5dfe78c3222336914e0e4e04e"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "bytes": 688134,
+      "sha256": "e2501eb9d22c6e04050163e89995812e4581ef7f6086500ea26e7c4f9102b939"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+      "bytes": 309762,
+      "sha256": "59116a5c3574698e13283aae4bfb0be48b0f3464a060cf76b1ff80a6c6b2f082"
+    }
+  ],
+  "postCaptureAdaptations": [
+    {
+      "path": "tools/test-reader-directory-window-publication.mjs",
+      "change": "Load actual cancelPendingPlacement and instantiate actual ReaderControlDirectoryPosition; existing behavioral assertions unchanged",
+      "isolatedRegression": "PASS",
+      "originalWorkspaceRegression": "PASS",
+      "originalWorkspaceLog": "window-publication-gate-regression.log"
+    }
+  ],
+  "readerUiTheme": [
+    {
+      "path": "Reader-UI/theme/ReaderThemeRegistry.ts",
+      "sha256": "a5eb4a3f8d62b6e168d14c2e1ba29fa3f244d110b5cc8a00dbcc6077dfb4841e"
+    },
+    {
+      "path": "Reader-UI/theme/ReaderThemeSelection.ts",
+      "sha256": "837a2bde130b41502dd9e378a81e4578db80f8fd68597f8698a2e6e92c42fe3e"
+    },
+    {
+      "path": "Reader-UI/theme/registry.json",
+      "sha256": "24800a91cb39e4e4f9820e7087a5dcb25233a08beab5b0f904cf84597ab9a084"
+    }
+  ]
+}

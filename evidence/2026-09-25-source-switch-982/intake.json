@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-25T03:58:47.412765+00:00",
+  "issue": "终宋第982章切换任意书源跳到18章；目录加载极慢，后续操作持续卡顿",
+  "trigger": "User reports after catalog-949 repair physical install",
+  "installedRun": "20260924T171826Z-2124c753-8d92d05f",
+  "installedHapSha256": "ac34e4b916eeef72081e2570904eeb7de0ebc58ead9c0edb01ecc19169c16fd2",
+  "currentSource": {
+    "harmonyHead": "78785620d2a6729f025b63975fe163173dfea758",
+    "harmonyDirty": true,
+    "coreHead": "071f5de8f8de022735379e8aba807c364c1383cf",
+    "coreDirty": true
+  },
+  "status": "CODE_INVESTIGATION",
+  "evidence": [
+    "User report; no new device interaction or app-data access",
+    "Retained immutable package and frozen source snapshot available"
+  ],
+  "hypotheses": [
+    "stale or window-local chapter index/title used for source-switch anchor",
+    "repeated acquisition/session refresh or background task ownership leak"
+  ],
+  "unknowns": [
+    "exact source-switch params and canonical reading position on user device",
+    "whether subsequent lag is request amplification or UI computation"
+  ],
+  "deviceAccessed": false
+}

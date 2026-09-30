@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-25T08:44:48Z",
+  "status": "VM_INSTALL_LAUNCH_PASS_SOURCE_SWITCH_PARTIAL_PASS_SOURCE_AVAILABILITY_FAILURES",
+  "target": {
+    "kind": "vm",
+    "name": "Mate 80 Pro",
+    "ref": "6460677a198b",
+    "hdcTarget": "127.0.0.1:5555"
+  },
+  "artifact": {
+    "runId": "20260925T051002Z-78785620-6f5d5b3c",
+    "sha256": "230ac13e2f79a1a85f2ae1c51a4e477f8fc49405d602dc350f1e21068da15ada",
+    "manifest": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260925T051002Z-78785620-6f5d5b3c/manifest.json",
+    "deploymentReceipt": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/.reader-artifacts/hap/20260925T051002Z-78785620-6f5d5b3c/deploy-vm-6460677a198b-20260925T052235Z.json",
+    "buildClass": "iteration",
+    "acceptanceEligible": false
+  },
+  "deployment": {
+    "dataPolicy": "preserve",
+    "sameAppIdentityBeforeAfter": true,
+    "install": "PASS",
+    "launch": "PASS"
+  },
+  "book": "终宋",
+  "vmSourceAtStart": "松鹤阅读",
+  "userReportedSourcePresent": false,
+  "chapter982": {
+    "originalReadable": true,
+    "qqSwitchReadableAt982": true,
+    "qqDirectoryHighlights982": true,
+    "returnToOriginalReadableAt982": true,
+    "jumpTo18Observed": false,
+    "evidence": [
+      "reader-control-982-reading-target.png",
+      "reader-control-982-switch-fifth-observed.png",
+      "reader-control-982-qq-directory-real.png",
+      "reader-control-982-restored-source-final.png",
+      "reader-control-982-restore-songhe-result.png"
+    ]
+  },
+  "sourceAvailability": {
+    "alternateCandidatesAttempted": 5,
+    "readable": ["QQ阅读01"],
+    "failed": ["66书吧-起点", "爱下电子书", "精华书阁手机版", "漫花小说"],
+    "untested": ["百度小说"],
+    "details": "source-availability-audit.json"
+  },
+  "finalVmState": "Original 松鹤阅读 restored with readable chapter 982; user data kept",
+  "boundaries": {
+    "physicalDeviceAccessed": false,
+    "physicalUserSourceTested": false,
+    "physical982To18TriggerConfirmed": false,
+    "nearZeroWaitMeasured": false,
+    "sustainedLagMeasured": false,
+    "allEnabledSourcesChecked": false,
+    "userAcceptance": "OPEN"
+  }
+}

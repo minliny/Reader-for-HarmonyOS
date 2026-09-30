@@ -1,0 +1,15 @@
+(node:22226) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manual update bypasses prepared sessions and executes real Gateway detail/TOC","status":"PASS"}
+{"name":"manual update also bypasses durable catalog cache after prepared eviction","status":"PASS"}
+{"name":"manual request waits for a cache-only in-flight acquisition then refreshes","status":"PASS"}
+{"name":"per-book failure/empty results preserve old records, settle flags and continue bounded batch","status":"PASS"}
+{"name":"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions","status":"PASS"}
+{"name":"automatic work waits for settings and yields to reading; manual work stays explicit","status":"PASS"}
+{"name":"paged filtered shelf automatic sweep covers offscreen targets and cancels before network","status":"PASS"}
+{"name":"automatic catalog projection does not rescan its own new revision","status":"PASS"}
+{"name":"multiple force waiters share one refresh after the nonforce admission settles","status":"PASS"}
+{"name":"force waiting revalidates cancel before new network work","status":"PASS"}
+{"name":"force waiting revalidates close before new network work","status":"PASS"}
+{"name":"force waiting revalidates source-delete before new network work","status":"PASS"}
+PH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS

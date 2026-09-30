@@ -1,0 +1,213 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: source switch must read the Core canonical progress instead of a detail UI field
+    at file:///Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-source-switch-transaction.mjs:98:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'private onPickSource(candidate: SourceSwitchCandidate): void {\n' +
+    "    if (this.sourceSwitchState.kind !== 'candidates' || this.detailBook === undefined) {\n" +
+    '      return;\n' +
+    '    }\n' +
+    '    let book = this.detailBook;\n' +
+    '    if (sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) ===\n' +
+    '      sourceSwitchCandidateKey(book.sourceId, book.bookId)) {\n' +
+    '      return;\n' +
+    '    }\n' +
+    '    const generation = this.nextNavigationGeneration();\n' +
+    "    this.sourceSwitchState = { kind: 'switching', targetSourceId: candidate.sourceId };\n" +
+    '    const gateway = this.getSourceSwitchGateway();\n' +
+    '    const isCurrent = (): boolean => this.isSourceSwitchActive(generation);\n' +
+    "    this.sourceSwitchFailureMessage = '';\n" +
+    '    this.failedSourceSwitchCandidate = undefined;\n' +
+    '    let targetSession: RemoteReadingSession | undefined = undefined;\n' +
+    '    let restoredBook: ShelfBook | undefined = undefined;\n' +
+    '    let commitStarted = false;\n' +
+    '    if (!this.detailInBookshelf) {\n' +
+    '      void this.switchPreviewSource(candidate, isCurrent).catch((error: Error): void => {\n' +
+    '        if (isCurrent()) this.presentSourceSwitchAcquisitionFailure(book, candidate, error.message);\n' +
+    '      });\n' +
+    '      return;\n' +
+    '    }\n' +
+    '    this.preparePendingSourceSwitchForNextChoice(book, generation)\n' +
+    '      .then((restored: ShelfBook | undefined): Promise<SourceSwitchTargetToc> => {\n' +
+    "        if (!isCurrent()) throw new Error('source switch aborted');\n" +
+    '        restoredBook = restored;\n' +
+    '        if (restored !== undefined) book = this.readingDetailForShelf(restored);\n' +
+    '        return gateway.fetchTargetToc(candidate.sourceId, candidate.bookUrl, isCurrent, candidate);\n' +
+    '      })\n' +
+    '      .then(async (toc: SourceSwitchTargetToc): Promise<SourceSwitchCommitOutcome> => {\n' +
+    '        if (!isCurrent()) {\n' +
+    "          return Promise.reject(new Error('source switch aborted'));\n" +
+    '        }\n' +
+    '        targetSession = toc.readingSession;\n' +
+    '        // A displayed ordinary page may still be waiting on its CAS receipt.\n' +
+    "        // Share the reader's per-book lane so its latest position is durable\n" +
+    '        // before matching, and cannot cross the source identity transaction.\n' +
+    '        const owner = ReaderRuntimeOwner.current();\n' +
+    '        const progressGateway = new ReadingSessionFlowGateway(book.sourceId, book.bookId,\n' +
+    "          { kind: 'remote' }, owner);\n" +
+    '        let outcome: SourceSwitchCommitOutcome | undefined = undefined;\n' +
+    '        await progressGateway.runProgressCommitSerial(async (): Promise<void> => {\n' +
+    "          if (!isCurrent()) throw new Error('source switch aborted');\n" +
+    '          let anchor: SourceSwitchAnchor;\n' +
+    '          try {\n' +
+    '            const progress = await new RemoteReadingFlowGateway(owner).loadProgress(\n' +
+    '              { sourceId: book.sourceId, bookId: book.bookId }, isCurrent);\n' +
+    "            if (!isCurrent()) throw new Error('source switch aborted');\n" +
+    '            anchor = this.resolveSourceSwitchAnchor(progress, restoredBook);\n' +
+    '          } catch (error) {\n' +
+    "            if (!isCurrent() || remoteReadingFailureKindOf(error) !== 'POSITION_CONTEXT_STALE') throw error as Error;\n" +
+    "            // Switching needs the durable chapter, not an old body's processing\n" +
+    "            // seal or scalar offset. Core's shelf projection exposes that chapter\n" +
+    '            // even when settings made the old precise anchor unavailable.\n' +
+    '            const canonical = await new ReaderCoreGateway(owner)\n' +
+    '              .loadShelfBook(book.sourceId, book.bookId);\n' +
+    "            if (!isCurrent()) throw new Error('source switch aborted');\n" +
+    '            if (canonical?.sourceId !== book.sourceId || canonical.bookId !== book.bookId ||\n' +
+    '              canonical.currentChapterIndex === undefined || !Number.isSafeInteger(canonical.currentChapterIndex) ||\n' +
+    '              canonical.currentChapterIndex < 0) throw error as Error;\n' +
+    '            const entry = this.detailToc.find((item: LocalReadingTocEntry): boolean =>\n' +
+    '              item.index === canonical.currentChapterIndex);\n' +
+    '            // A shelf title can lag its durable chapter. Without an admitted TOC\n' +
+    "            // title, pass empty text so Core's existing index matcher owns fallback.\n" +
+    "            anchor = new SourceSwitchAnchor(canonical.currentChapterIndex, entry?.title ?? '');\n" +
+    '          }\n' +
+    '          const params = buildSourceSwitchCommitParams(\n' +
+    '            { sourceId: book.sourceId, bookId: book.bookId },\n' +
+    '            candidate,\n' +
+    '            toc,\n' +
+    '            anchor.chapterTitle,\n' +
+    '            anchor.chapterIndex,\n' +
+    '            Math.floor(Date.now() / 1000),\n' +
+    '          );\n' +
+    '          commitStarted = true;\n' +
+    '          outcome = await gateway.commitSwitch(params, isCurrent);\n' +
+    '        });\n' +
+    "        if (outcome === undefined) throw new Error('source switch did not produce an outcome');\n" +
+    '        return outcome;\n' +
+    '      })\n' +
+    '      .then((outcome: SourceSwitchCommitOutcome): void => {\n' +
+    '        if (!isCurrent()) {\n' +
+    '          return;\n' +
+    '        }\n' +
+    "        if (outcome.status === 'success') {\n" +
+    '          this.pendingSourceSwitch = new PendingSourceSwitchTransaction(\n' +
+    '            book.sourceId,\n' +
+    '            book.bookId,\n' +
+    '            outcome.book.sourceId,\n' +
+    '            outcome.book.bookId,\n' +
+    '            outcome.matchedChapter.order,\n' +
+    '            outcome.transactionId,\n' +
+    '          );\n' +
+    "          this.sourceSwitchState = { kind: 'success' };\n" +
+    '          this.performSourceSwitchSeam(outcome.book, targetSession, outcome.matchedChapter.order);\n' +
+    '          return;\n' +
+    '        }\n' +
+    '        if (outcome.transactionId !== undefined) {\n' +
+    '          this.sourceSwitchState = {\n' +
+    "            kind: 'failure',\n" +
+    '            message: outcome.error,\n' +
+    '            transactionId: outcome.transactionId,\n' +
+    '          };\n' +
+    '          return;\n' +
+    '        }\n' +
+    '        void this.reconcileUnknownSourceSwitchCommit(book, candidate, outcome.error, generation);\n' +
+    '      })\n' +
+    '      .catch((error: Error): void => {\n' +
+    '        if (!isCurrent()) {\n' +
+    '          return;\n' +
+    '        }\n' +
+    "        hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: source switch failed: %{private}s', error.message);\n" +
+    '        if (commitStarted) {\n' +
+    '          void this.reconcileUnknownSourceSwitchCommit(book, candidate, error.message, generation);\n' +
+    '        } else {\n' +
+    '          this.presentSourceSwitchAcquisitionFailure(book, candidate, error.message);\n' +
+    '        }\n' +
+    '      });\n' +
+    '  }\n' +
+    '\n' +
+    '  private async switchPreviewSource(candidate: SourceSwitchCandidate, isCurrent: () => boolean): Promise<void> {\n' +
+    '    const detailReturnRoute = this.detailReturnRoute;\n' +
+    '    const owner = ReaderRuntimeOwner.current();\n' +
+    '    const seed: RemoteReadingBookSeed = { sourceId: candidate.sourceId, bookId: candidate.bookUrl,\n' +
+    "      detailUrl: candidate.bookUrl, title: candidate.bookName, author: candidate.author ?? '',\n" +
+    '      sourceVersion: candidate.sourceVersion, authorIdentity: candidate.authorIdentity,\n' +
+    '      coverUrl: candidate.coverUrl, searchVariables: candidate.searchVariables };\n' +
+    '    const session = await owner.bookAcquisitions().acquireBook(seed, { isCurrent });\n' +
+    '    if (!isCurrent()) return;\n' +
+    '    this.sourceSwitchUnsubscribe?.();\n' +
+    '    this.sourceSwitchUnsubscribe = undefined;\n' +
+    '    this.sourceSwitchVisible = false;\n' +
+    "    this.sourceSwitchState = { kind: 'discovering' };\n" +
+    '    this.openRemoteBookDetail(seed, candidate.sourceName ?? candidate.sourceId,\n' +
+    '      undefined, true, [], [], detailReturnRoute, session);\n' +
+    '  }\n' +
+    '\n' +
+    '  private presentSourceSwitchAcquisitionFailure(book: ReadingBookDetail,\n' +
+    '    candidate: SourceSwitchCandidate, message: string): void {\n' +
+    '    if (this.detailBook?.sourceId !== book.sourceId || this.detailBook?.bookId !== book.bookId) return;\n' +
+    '    this.sourceSwitchUnsubscribe?.();\n' +
+    '    this.sourceSwitchUnsubscribe = undefined;\n' +
+    '    this.sourceSwitchVisible = false;\n' +
+    "    this.sourceSwitchState = { kind: 'discovering' };\n" +
+    '    this.failedSourceSwitchCandidate = candidate;\n' +
+    '    this.failedSourceSwitchIdentity = `${book.sourceId}\\u0000${book.bookId}`;\n' +
+    '    if (!this.readingSessionActive) this.openReading(undefined);\n' +
+    "    this.route = 'reading';\n" +
+    '    this.sourceSwitchFailureMessage = message;\n' +
+    '  }\n' +
+    '\n' +
+    '  private retryFailedSourceSwitch(): void {\n' +
+    '    const book = this.detailBook;\n' +
+    '    const candidate = this.failedSourceSwitchCandidate;\n' +
+    '    if (book === undefined || candidate === undefined || this.sourceSwitchVisible ||\n' +
+    '      this.failedSourceSwitchIdentity !== `${book.sourceId}\\u0000${book.bookId}`) return;\n' +
+    '    this.sourceSwitchVisible = true;\n' +
+    "    this.sourceSwitchState = { kind: 'candidates', candidates: [candidate] };\n" +
+    '    this.onPickSource(candidate);\n' +
+    '  }\n' +
+    '\n' +
+    '  private dismissSourceSwitchFailure(): void {\n' +
+    "    this.sourceSwitchFailureMessage = '';\n" +
+    '    this.failedSourceSwitchCandidate = undefined;\n' +
+    "    this.failedSourceSwitchIdentity = '';\n" +
+    '  }\n' +
+    '\n' +
+    '  private async preparePendingSourceSwitchForNextChoice(book: ReadingBookDetail,\n' +
+    '    generation: number): Promise<ShelfBook | undefined> {\n' +
+    '    const isCurrent = (): boolean => this.isSourceSwitchActive(generation) &&\n' +
+    '      this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;\n' +
+    '    const gateway = this.getSourceSwitchGateway();\n' +
+    '    let pending = this.pendingSourceSwitch;\n' +
+    '    if (pending?.targetSourceId !== book.sourceId || pending.targetBookId !== book.bookId) {\n' +
+    '      const records = await gateway.listPendingSwitches(isCurrent);\n' +
+    "      if (!isCurrent()) throw new Error('source switch aborted');\n" +
+    '      const matches = records.filter((record: PendingSourceSwitch): boolean =>\n' +
+    '        record.targetSourceId === book.sourceId && record.targetBookId === book.bookId);\n' +
+    "      if (matches.length > 1) throw new Error('当前书籍存在多个未完成的换源记录，请重试');\n" +
+    '      if (matches.length === 0) return undefined;\n' +
+    '      const record = matches[0];\n' +
+    '      pending = new PendingSourceSwitchTransaction(record.fromSourceId, record.fromBookId,\n' +
+    '        record.targetSourceId, record.targetBookId, -1, record.transactionId);\n' +
+    '      this.pendingSourceSwitch = pending;\n' +
+    '    }\n' +
+    '    const transaction = pending;\n' +
+    '    const ownsRollback = (): boolean => isCurrent() && this.pendingSourceSwitch === transaction;\n' +
+    '    let restored: ShelfBook;\n' +
+    '    try {\n' +
+    '      const outcome = await gateway.rollbackSwitch(transaction.transactionId, ownsRollback);\n' +
+    "      if (!ownsRollback()) throw new Error('source switch aborted');\n" +
+    '      restored = outcome.restoredBook;\n' +
+    '    } catch (error) {\n' +
+    '      if (!o'... 3087 more characters,
+  expected: /new RemoteReadingFlowGateway\(ReaderRuntimeOwner\.current\(\)\)[\s\S]*loadProgress\(/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

@@ -1,0 +1,11 @@
+{
+  "capturedAt": "2026-09-24T18:07:41.635Z",
+  "targetRef": "b1f20b88963d",
+  "transport": "USB",
+  "connected": true,
+  "bootCompleted": "true",
+  "deviceType": "phone",
+  "model": "VYG-AL30",
+  "sceneBoardPid": "4526",
+  "ready": true
+}

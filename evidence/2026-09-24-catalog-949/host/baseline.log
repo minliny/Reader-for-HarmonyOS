@@ -1,0 +1,10 @@
+(node:11640) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "indexSha256": "1742648c75e907e7a516325291e455b5dc1a47bb85362dc011618dd40535d334",
+  "cachedChapters": 949,
+  "installedChapters": 949,
+  "coreCalls": [],
+  "refreshMarked": true,
+  "conclusion": "near-end refresh returns prepared old catalog without any HTTP/Core call"
+}
