@@ -1,19 +1,54 @@
-name: Harmony Contracts
+name: Host CI
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: host-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+env:
+  CARGO_BUILD_JOBS: '2'
 jobs:
-  contract-gate:
-    name: contract-gate
+  source-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Independent Host regressions (not the complete gate)
+        run: |
+          node tools/test-cookie-security-policy.mjs
+          node tools/test-reader-product-scope.mjs
+          node tools/test-source-check-progress.mjs
+      - uses: ./.github/actions/source-hygiene
+        if: always()
+        with:
+          directory: .
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}
+  full-contracts:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
       run:
         working-directory: Reader-for-HarmonyOS
     steps:
+      - name: Reject untrusted forks before integration
+        working-directory: .
+        env:
+          FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          if [ "$FORK" = true ]; then
+            echo 'Complete Host validation requires a reviewed trusted branch.'
+            exit 1
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           path: Reader-for-HarmonyOS
@@ -21,6 +56,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: minliny/Reader-Core-Native
+          # Existing private dependency. Authorization is intentionally deferred;
+          # missing access fails this job rather than weakening contract-gate.
           ref: 562f5ee4c44fb6a24adda6cad7e737698cc8f612
           path: Reader-Core-Native
           persist-credentials: false
@@ -54,3 +91,14 @@ jobs:
         run: |
           export READER_CORE_CLI="$GITHUB_WORKSPACE/Reader-Core-Native/target/debug/reader-cli"
           bash scripts/check-local.sh
+  contract-gate:
+    name: contract-gate
+    if: always()
+    needs: [source-check, full-contracts]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          SOURCE: ${{ needs.source-check.result }}
+          FULL: ${{ needs.full-contracts.result }}
+        run: test "$SOURCE" = success && test "$FULL" = success
