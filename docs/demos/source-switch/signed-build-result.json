@@ -1,0 +1,79 @@
+{
+  "status": "PASS",
+  "buildClass": "iteration",
+  "runId": "20260930T134349Z-85bd874a-be8b8f52",
+  "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-artifacts/hap/20260930T134349Z-85bd874a-be8b8f52/manifest.json",
+  "harmony": {
+    "commit": "85bd874af3978fc254b476774a27a16e99c92b4c",
+    "dirty": false
+  },
+  "core": {
+    "commit": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+    "dirty": true,
+    "fingerprint": "0e0322642edd0ddffd57fcd2a449647677138d594f9dc755678a12f98c84bfea",
+    "fileCount": 868,
+    "buildId": "40d7f66d9e8cd24448ceb2accc9e903eda9f37230951353b78155b53cc4fa1d7",
+    "nativeSha256": "86e4ba5e4614dcc17c56f3c4d604605282d4192fe6ea0f340ee6425e746edadb",
+    "snapshot": {
+      "path": "core-source-snapshot.json",
+      "bytes": 166259,
+      "sha256": "0b2e50b5f10e6e09f27d6750dfc251ba688cf8c63e495c4094c4b9635a6e4953"
+    }
+  },
+  "buildInputsFingerprint": "be8b8f52a1df9038dca22776f2e3f240e889dcacabf62e233e989010936eff91",
+  "contracts": {
+    "total": 384,
+    "passed": 384,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "durationMs": 93111.853042,
+    "globalDeadlineMs": 120000
+  },
+  "hvigor": {
+    "version": "6.24.4",
+    "durationMs": 37105,
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS"
+  },
+  "signedArtifact": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 178271130,
+    "sha256": "f8bc451fb306ad095d0c93b4b9ff580974cd1dbc7c9b61640b45b0382b628559",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+      "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01",
+      "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 16863576,
+      "sha256": "fb42e385afbf5ed61c7245a0026f738911314c4522ba4de177a99a7c3db0fa81"
+    }
+  },
+  "localBuildLog": {
+    "path": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-local/source-switch-demo-repair-build.log",
+    "sha256": "470aec60a130c575fd4c7d08d3d999ef9768a5df78f8c696efde9078777cf2ff"
+  },
+  "knownWarnings": [
+    "SourceSwitchDemo.ets:412 ObjectLink row warning; non-fatal, also emitted for existing SearchPage. Native reactive scheduling and pixels remain unverified."
+  ],
+  "boundaries": {
+    "packageBuild": "PASS",
+    "vmInstall": "OPEN",
+    "physicalInstall": "OPEN",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  },
+  "dataPolicy": "No installation, app launch, data modification or physical-device operation in this repair. VM readiness checks were read-only.",
+  "mainWorkspace": "No merge, no push, no main-workspace source edits."
+}

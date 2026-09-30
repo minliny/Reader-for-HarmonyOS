@@ -2,6 +2,15 @@
 
 本地分支：`codex/source-switch-demo-20260930`。基于 `d6c3213c`，独立工作目录，不修改主工作区或合并回 main。
 
+**2026-09-30 构建阻塞已修复，原生签名 demo 已生成。** 384 项合同全部通过（93.11 秒），正式无增量 ArkTS/Hvigor 编译和签名通过（37.11 秒），流水线完整验签后发布。
+
+- Run：`20260930T134349Z-85bd874a-be8b8f52`。
+- [manifest](../../../.reader-artifacts/hap/20260930T134349Z-85bd874a-be8b8f52/manifest.json) 与 [signed HAP](../../../.reader-artifacts/hap/20260930T134349Z-85bd874a-be8b8f52/entry-default-signed.hap)。
+- HAP SHA256：`f8bc451fb306ad095d0c93b4b9ff580974cd1dbc7c9b61640b45b0382b628559`。
+- 证书：用户指定的 `minliny_HarmonyOS`，Profile 类型 debug；包名 `io.reader.minliny`。
+- 源码身份：Harmony `85bd874a`（构建时 clean），Core `e2a2db0b1`（恢复的已编译 dirty 输入）。这是 iteration 包。
+- [构建结果](signed-build-result.json)；VM 安装、原生动效交互及用户验收仍待完成。
+
 ## 立即试用浏览器版
 
 在本仓根目录运行：
@@ -34,14 +43,14 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory demos/source-switch
 - 原生页面实际 SDK ETS 解析通过；真实方法转换执行的四项检查通过：重排后按 sourceId 恢复可见偏移、新触摸撤销恢复、生命周期 generation 变化撤销恢复、列表顶端展示新最快来源。此 demo 明确使用 70 vp 行高；放大字体和可变行高仍未验收。
 - 当前 Core 产物身份验证和规范 `sync-core` 通过；使用现有 `io.reader.minliny` 包名和用户指定证书的私有配置，`sync-signing` 通过。未生成新证书，私有材料未进入 Git。
 - 初次构建被外层 120 秒截止时间中止（`hap-gate-120s.log`）。已改为 Node 内建 4 进程门禁，保留整批 120 秒上限；首轮 384 项在 97.51 秒内全部执行，发现并修复了 3 个隔离输入问题。具体原因和回归见 `BUILD_REPAIR.md`。
-- 正式 ArkTS/Hvigor 编译、VM 安装、原生动效与滚动位置验收仍为 OPEN，不能以 SDK 解析、局部探针或浏览器通过替代。
-- 本次未安装、启动或更改 VM 内应用，也未操作真实设备。
+- 正式 ArkTS/Hvigor 编译及产物校验现已 PASS；VM 安装、原生动效与滚动位置验收仍为 OPEN。
+- 本次只对现有 VM 做了就绪状态的只读检查，未安装、启动或更改 VM 内应用，也未操作真实设备。
 
 ## 环境记录
 
 首次 checkout 由于缺少 `git-lfs` 失败；分支已创建。第二次仅对该命令关闭历史 evidence 的 LFS 过滤后完成 checkout，post-checkout hook 仍报告缺少 LFS。未改变全局 Git 配置或删除 hook；生产字体/Native 未发现 LFS 指针。
 
-当前主仓尚未提交的包名、签名权威和构建入口更新按最小清单继承，文件哈希见 `setup-provenance.json`；没有复制无关阅读功能改动。Core 通过现有产物校验后规范同步。固定版本 pnpm 10.34.5 安装在本 worktree 的 `.reader-local/hvigor-tools`；首次代理下载中断后，官方 npm 直连安装和版本检查通过。
+创建 demo 时主仓尚未提交的包名、签名权威和构建入口更新按最小清单继承，文件哈希见 `setup-provenance.json`；没有复制无关阅读功能改动。Core 通过现有产物校验后规范同步。固定版本 pnpm 10.34.5 安装在本 worktree 的 `.reader-local/hvigor-tools`；首次代理下载中断后，官方 npm 直连安装和版本检查通过。
 
 主工作区切换整合分支后，demo 的 Core 已从链接改为独立 worktree。Git 留存 WIP 的 868 个输入与原包精确一致；恢复和产物身份见 `core-isolation-recovery.json`。离线测试 CLI 的独立输入记录见 `test-input-recovery.json`，不将它当作此次 Native 重新编译的证据。
 

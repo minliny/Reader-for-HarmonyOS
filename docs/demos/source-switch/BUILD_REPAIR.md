@@ -35,3 +35,17 @@
 - 原始失败日志保存在 `.reader-local/source-switch-demo-repair-gate-failed.log`。
 
 三个失败项局部回归均已通过。图标测试另外在没有 sibling Reader-UI 的临时 Host 目录中执行真实 `--list`，验证枚举结果；CLI 已独立复制并记录自身内嵌身份，见 `test-input-recovery.json`。这些修复不删除或跳过原断言。
+
+## 最终结果
+
+修复源码提交 `85bd874af3978fc254b476774a27a16e99c92b4c`；完整规范 signed iteration 流水线通过：
+
+- 384/384 合同通过，0 失败、取消、跳过，93.11 秒。
+- 正式 ArkTS 编译、Native 构建、打包和签名成功，Hvigor 37.11 秒。
+- 输入前后快照、Core Native 来源、包内 Native 集合、书源字节、签名及 manifest 校验全部通过。
+- `minliny_HarmonyOS` 证书 SHA256：`3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4`。
+- Run：`20260930T134349Z-85bd874a-be8b8f52`。可交付 signed HAP 的完整身份见 `signed-build-result.json`。
+
+仍有非阻断编译警告，包括本 demo 的 `ObjectLink row` 警告（现有搜索页也有同类警告）；未把成功编译提升为原生响应式绘制或交互验收。现有 VM 仅完成本轮只读就绪检查，没有安装/启动；VM 视觉、滚动锚点、动效以及用户验收仍 OPEN。
+
+所有修复只在 demo 分支，未合并、推送或修改主工作区。原生签名包的源码身份以 manifest 记录的 `85bd874a` 为准，后续文档提交不改变该产物身份。
