@@ -864,3 +864,13 @@ console.log('PASS: unpersisted selected source preserves exact version/variables
   }
 }
 console.log('PH116 every non-current source row permits a new attempt PASS');
+
+{
+  const original = Object.freeze({ sourceId: 'a', bookUrl: '/b', category: 'novel', bookName: 'name',
+    sourceVersion: 'v1', latencyMs: 42, latencyKind: 'search', searchVariables: [{ name: 'token', value: 'opaque' }] });
+  const gateway = new SourceSwitchGateway({});
+  const [next] = gateway.withoutSearchTiming([original]);
+  assert.notEqual(next, original); assert.equal(original.latencyMs, 42);
+  assert.equal(next.latencyMs, undefined); assert.equal(next.latencyKind, undefined);
+  assert.equal(next.searchVariables, original.searchVariables); assert.equal(next.sourceVersion, 'v1');
+}

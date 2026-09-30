@@ -25,6 +25,7 @@ const Index = productionMotionMethods(indexPath,
 const makePage = cached => {
   const rounds = [];
   const gateway = {
+    withoutSearchTiming: candidates => candidates.map(candidate => ({ ...candidate, latencyMs: undefined, latencyKind: undefined })),
     loadCachedCandidates: async () => cached,
     refreshCandidates: (query, isCurrent, skip, onProgress) => new Promise((resolve, reject) => {
       rounds.push({ query, isCurrent, skip, onProgress, resolve, reject });

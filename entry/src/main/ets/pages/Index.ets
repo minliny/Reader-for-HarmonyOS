@@ -4891,9 +4891,7 @@ struct Index {
       ? this.sourceSwitchState.candidates
       : [];
     if (forceRefresh && previousCandidates.length > 0) {
-      this.sourceSwitchState = { kind: 'candidates', candidates: previousCandidates.map(
-        (candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
-          ({ ...candidate, latencyMs: undefined, latencyKind: undefined })), refreshing: true };
+      this.sourceSwitchState = { kind: 'candidates', candidates: gateway.withoutSearchTiming(previousCandidates), refreshing: true };
     }
     const publishProgress = (candidates: SourceSwitchCandidate[]): void => {
       if (!isCurrent() || candidates.length === 0) return;
@@ -4901,10 +4899,9 @@ struct Index {
         sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
       // A partial refresh cannot delete still-visible results. The final
       // complete relation owns membership; old search timings are not reused.
-      const retained = forceRefresh ? previousCandidates.filter((candidate: SourceSwitchCandidate): boolean =>
-        !incomingKeys.has(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)))
-        .map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
-          ({ ...candidate, latencyMs: undefined, latencyKind: undefined })) : [];
+      const retained = forceRefresh ? gateway.withoutSearchTiming(previousCandidates.filter(
+        (candidate: SourceSwitchCandidate): boolean =>
+          !incomingKeys.has(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)))) : [];
       this.sourceSwitchState = { kind: 'candidates', candidates: [...candidates, ...retained], refreshing: true };
     };
     const load = forceRefresh

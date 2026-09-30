@@ -217,6 +217,12 @@ export class SourceSwitchGateway {
     this.runtimeOwner = runtimeOwner;
   }
 
+  /** A new sweep retains identity/context but must not display an old timing. */
+  withoutSearchTiming(candidates: SourceSwitchCandidate[]): SourceSwitchCandidate[] {
+    return candidates.map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
+      ({ ...candidate, latencyMs: undefined, latencyKind: undefined }));
+  }
+
   /**
    * Legado-compatible first paint: read durable SearchBook rows, hide disabled
    * sources, and retain expired successes with an explicit stale state. No
