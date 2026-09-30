@@ -11,7 +11,8 @@ import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceR
 // owner against explicit native line receipts. No shaping, first paint, Core
 // progress persistence or platform pixel success is claimed by this test.
 const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const text = readFileSync(source, 'utf8');
+const text = readFileSync(source, 'utf8').replace('interface DeferredReadingImagePixels {',
+  readFileSync(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
 function declaration(name, next) {
   const start = text.indexOf(`class ${name} `);
   assert.ok(start >= 0, name);

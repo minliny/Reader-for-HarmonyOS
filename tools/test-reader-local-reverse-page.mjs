@@ -12,7 +12,8 @@ import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceR
 // Execute production page assembly against explicit native metric receipts.
 // These fixtures prove admission/ownership, not platform shaping or pixels.
 const source = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const text = readFileSync(source, 'utf8');
+const text = readFileSync(source, 'utf8').replace('interface DeferredReadingImagePixels {',
+  readFileSync(new URL('ReadingMeasurementModels.ets', source), 'utf8').replaceAll('export class ', 'class ') + '\ninterface DeferredReadingImagePixels {');
 function declaration(name, next) {
   return new Function('ReadingSurfaceLayoutMap', stripTypeScriptTypes(text.slice(text.indexOf(`class ${name} {`), text.indexOf(next, text.indexOf(`class ${name} {`)))) + `; return ${name};`)(ReadingSurfaceLayoutMap);
 }

@@ -197,6 +197,7 @@
     "test-bookshelf-view-and-menu.mjs",
     "test-bookshelf-view-handoff.mjs",
     "test-bookshelf-viewport-return.mjs",
+    "test-build-input-safety.mjs",
     "test-bundled-test-book-sources.mjs",
     "test-core-admission-diagnostics.mjs",
     "test-demo-async-recovery.mjs",

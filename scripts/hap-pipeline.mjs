@@ -1358,7 +1358,7 @@ function usage() {
   node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--signing auto|local|unsigned] [--live-sources] [--keep-runs 10]
   node scripts/hap-pipeline.mjs prune [--artifact-root <directory>] [--keep-runs 10] [--apply]
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
-  node scripts/hap-pipeline.mjs sync-native
+  node scripts/hap-pipeline.mjs sync-native [sync-core alias]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
   node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical
   node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--no-launch]`);
@@ -1373,7 +1373,7 @@ function main() {
   const options = parseOptions(process.argv.slice(3));
   if (command === 'build') build(options);
   else if (command === 'sync-signing') syncSigning(options);
-  else if (command === 'sync-native') withArtifactLock(syncNative);
+  else if (command === 'sync-native' || command === 'sync-core') withArtifactLock(syncNative);
   else if (command === 'verify') {
     const verified = verifyManifest(requiredOption(options, '--manifest'));
     console.log(JSON.stringify({

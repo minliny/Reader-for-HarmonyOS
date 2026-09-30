@@ -11,9 +11,7 @@
 //
 // Standalone evidence tool: NOT part of the HAP build (never referenced from
 // any CMakeLists). Build (from entry/src/main/cpp):
-//   clang++ -std=c++17 -O2 -Wall -Wextra -Werror -I bookturn \
-//       tests/bookturn_chessboard_replay.cpp bookturn/bookturn_solver.cpp \
-//       -o /tmp/bookturn_replay_bin
+//   clang++ -std=c++17 -O2 -Wall -Wextra -Werror -I bookturn tests/bookturn_chessboard_replay.cpp bookturn/bookturn_solver.cpp -o /tmp/bookturn_replay_bin
 // Run:
 //   /tmp/bookturn_replay_bin /tmp/bookturn_replay
 //
