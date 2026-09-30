@@ -10,6 +10,7 @@ import type {
   SearchPresentation,
 } from './SearchPage';
 import type { SearchBookPatch } from './SearchBookProjection';
+import type { SearchHistoryStatus } from './SearchPresentation';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
@@ -123,6 +124,10 @@ export class SearchOrchestrator {
   private presentation: SearchPresentation = { kind: 'initial', history: [] };
   /** Recent searches belong to the entry, independently of source-list state. */
   private entryHistory: string[] = [];
+  private historyStatus: SearchHistoryStatus = 'loading';
+  private historyRevision: number = 0;
+  private historyClearing: boolean = false;
+  private historyClearTask: Promise<void> | undefined = undefined;
   private sources: SearchSource[] = [];
   private unsubscribeBooks: (() => void) | undefined = undefined;
   private refreshPending: boolean = false;
@@ -183,6 +188,8 @@ export class SearchOrchestrator {
     this.work = 0;
     this.sweepAlive = false;
     this.entryHistory = [];
+    this.historyStatus = 'loading';
+    this.historyClearing = false;
     // Source and history are independent Core facts. In particular, a
     // history failure must not make a valid source list disappear, and an
     // early submit must be able to await this very source-list transaction.
@@ -218,22 +225,51 @@ export class SearchOrchestrator {
         }
         this.presentSources([]);
       });
-    this.gateway.loadHistory()
-      .then((history: SearchHistory): void => {
-        // A search that started while history was still loading keeps its
-        // Loading/Results state; every pre-search surface adopts the history.
-        if (!this.isCurrentSession(session)) {
-          return;
-        }
+    this.loadEntryHistory(false);
+  }
+
+  /** Retry only history; do not reset a query, its scope, or source metadata. */
+  retryHistory(): void {
+    if (!this.sessionOpen || this.historyStatus === 'loading') return;
+    this.loadEntryHistory(this.historyStatus === 'clearFailed');
+  }
+
+  private loadEntryHistory(clear: boolean): void {
+    const session = this.session;
+    const revision = ++this.historyRevision;
+    this.historyStatus = 'loading';
+    this.historyClearing = clear;
+    this.presentEntryHistory(this.entryHistory);
+    let cleared = false;
+    const current = (): boolean => this.isCurrentSession(session) && revision === this.historyRevision;
+    const load = async (): Promise<SearchHistory | undefined> => {
+      // A reopened entry must read after an already admitted clear settles.
+      const clearing = this.historyClearTask ?? (clear ? this.gateway.clearHistory() : undefined);
+      if (clearing !== undefined) {
+        this.historyClearTask = clearing;
+        try { await clearing; }
+        finally { if (this.historyClearTask === clearing) this.historyClearTask = undefined; }
+        if (!current()) return undefined;
+        cleared = true;
+        this.presentEntryHistory([]);
+      }
+      return this.gateway.loadHistory();
+    };
+    void load()
+      .then((history: SearchHistory | undefined): void => {
+        if (!current() || history === undefined) return;
+        this.historyStatus = 'ready';
         this.presentEntryHistory(history.keywords);
       })
       .catch((error: Error): void => {
-        if (!this.isCurrentSession(session)) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Search history failed to load: %{private}s', error.message);
-        // An unavailable history has no admitted error state. Keep the empty
-        // Initial Figma state; it must not block a real search.
+        if (!current()) return;
+        this.historyStatus = clear && !cleared ? 'clearFailed' : 'loadFailed';
+        hilog.error(DOMAIN, 'Reader', 'Search history operation failed: %{private}s',
+          this.sanitizedLogText(errorMessageOf(error)));
+        this.presentEntryHistory(this.entryHistory);
+      })
+      .finally((): void => {
+        if (current()) this.historyClearing = false;
       });
   }
 
@@ -546,6 +582,7 @@ export class SearchOrchestrator {
 
   /** Clear recent history without changing the current source-list verdict. */
   clearHistory(): void {
+    if (!this.sessionOpen || this.historyClearing) return;
     this.cancelRunTimer();
     this.run = undefined;
     this.resultIndex.clear(); this.rawIdentityKeys.clear(); this.rawResultsInput = undefined;
@@ -554,23 +591,7 @@ export class SearchOrchestrator {
     this.work += 1;
     this.wakeDispatchers();
     this.sweepAlive = false;
-    const work = this.work;
-    const session = this.session;
-    const gateway = this.gateway;
-    gateway.clearHistory()
-      .then((): Promise<SearchHistory> => gateway.loadHistory())
-      .then((history: SearchHistory): void => {
-        if (!this.isCurrentWork(work, session)) {
-          return;
-        }
-        this.presentEntryHistory(history.keywords);
-      })
-      .catch((error: Error): void => {
-        if (!this.isCurrentWork(work, session)) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Search history clear failed: %{private}s', error.message);
-      });
+    this.loadEntryHistory(true);
   }
 
   private cancelRunTimer(): void {
@@ -862,7 +883,7 @@ export class SearchOrchestrator {
   }
 
   private presentInitial(): void {
-    this.presentation = { kind: 'initial', history: this.entryHistory };
+    this.presentation = { kind: 'initial', history: this.entryHistory, historyStatus: this.historyStatus };
     this.emitPresentation(this.presentation);
   }
 
@@ -875,6 +896,9 @@ export class SearchOrchestrator {
   }
 
   private present(presentation: SearchPresentation, retainShared: boolean = true): void {
+    if (presentation.kind === 'initial' || presentation.kind === 'sourceRequired' || presentation.kind === 'sourceLoadError') {
+      presentation.historyStatus = this.historyStatus;
+    }
     const previous = this.presentation;
     if (presentation.kind === 'results' && presentation.delta !== undefined &&
       (presentation.delta.baseRevision !== this.resultRevision || presentation.delta.revision <= this.resultRevision)) {

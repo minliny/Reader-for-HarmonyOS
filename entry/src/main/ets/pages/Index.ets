@@ -917,6 +917,7 @@ struct Index {
             this.performSearch(keyword, scopeSourceIds),
           onStop: (): void => this.stopSearch(),
           onClearHistory: (): void => this.clearSearchHistory(),
+          onRetryHistory: (): void => this.getSearchOrchestrator().retryHistory(),
           onSelectResult: (book: SearchBook, variants: SearchBook[]): void =>
             this.onSearchResultSelected(book, variants),
           onVisibleGroups: (groups: SearchBook[][]): void => this.scheduleSearchDetailWarmups(groups),

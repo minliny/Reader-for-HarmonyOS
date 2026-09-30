@@ -19,7 +19,7 @@ function check(name, fn) {
   try { fn(); results.push({ name, status: 'PASS' }); }
   catch (error) { results.push({ name, status: 'FAIL', message: error.message }); }
 }
-function fixture(history, { width = 0, tablet = false, kind = 'initial',
+function fixture(history, { width = 0, tablet = false, kind = 'initial', historyStatus,
   measureVp = text => text.length * 13 } = {}) {
   let owner;
   const measurements = [];
@@ -41,7 +41,7 @@ function fixture(history, { width = 0, tablet = false, kind = 'initial',
       FlexAlign: enumValues('FlexAlign'), TOK_BORDER_W: 1, TOK_SPACE_XS: 8,
       TOK_SPACE_CARD_PADDING: 12, TOK_SPACE_ROW_BLOCK: 4 }));
   Object.assign(owner, {
-    presentation: kind === 'sourceRequired' ? { kind, reason: 'noSources', history } : { kind, history },
+    presentation: kind === 'sourceRequired' ? { kind, reason: 'noSources', history, historyStatus } : { kind, history, historyStatus },
     isTablet: tablet,
     historyWidth: width,
     viewState: new SearchViewState(),
@@ -51,6 +51,7 @@ function fixture(history, { width = 0, tablet = false, kind = 'initial',
     onBack: () => actions.push('back'),
     submitSearch: () => actions.push(`search:${owner.keyword}`),
     onClearHistory: () => actions.push('clear'),
+    onRetryHistory: () => actions.push('retry-history'),
     visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) {
       assert.deepEqual(groups, [], 'history view cannot admit online candidate preparation');
     },
@@ -125,6 +126,29 @@ check('fresh-entry focus is consumed once and reset/return cannot recreate it',(
   state.requestInputFocus();assert.equal(state.consumeInputFocusRequest(),true);assert.equal(state.consumeInputFocusRequest(),false);
   state.reset('新查询');assert.equal(state.consumeInputFocusRequest(),false);
   state.requestInputFocus();state.reset();assert.equal(state.consumeInputFocusRequest(),false);
+});
+check('history loading, failure and retry render independently on every entry surface', () => {
+  for (const kind of ['initial', 'sourceRequired', 'sourceLoadError']) {
+    for (const [historyStatus, label, retry] of [
+      ['loading', '正在读取搜索历史', undefined],
+      ['loadFailed', '搜索历史读取失败', '重试读取'],
+      ['clearFailed', '搜索历史清空失败', '重试清空'],
+    ]) {
+      const f = fixture(['保留记录'], { kind, historyStatus });
+      assert.ok(f.nodes().some(node => node.type === 'Text' && node.create === label));
+      assert.ok(f.nodes().some(node => node.type === 'Text' && node.create === '保留记录'));
+      const clear = f.nodes().find(node => node.type === 'Text' && node.create === '清空记录');
+      assert.equal(clear.enabled, historyStatus !== 'loading');
+      if (retry) {
+        f.nodes().find(node => node.type === 'Text' && node.create === retry).onClick();
+        assert.deepEqual(f.actions, ['retry-history']);
+      }
+    }
+    const empty = fixture([], { kind, historyStatus: 'ready' });
+    assert.ok(!empty.nodes().some(node => /搜索历史.*失败|正在读取搜索历史/.test(String(node.create ?? ''))));
+  }
+  const index = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
+  assert.match(index, /onRetryHistory:.*getSearchOrchestrator\(\)\.retryHistory\(\)/);
 });
 check('native focus waits for layout and a removed or returning page never steals it',()=>{
   const path=new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets',import.meta.url);

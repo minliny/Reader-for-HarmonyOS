@@ -157,6 +157,142 @@ async function waitUntil(state, predicate) {
 
 const last = (presentations) => presentations[presentations.length - 1];
 
+// History failures are independent of source availability and search work.
+for (const sources of [[], makeSources(1), [{ ...makeSources(1)[0], enabled: false }]]) {
+  const owner = fakeOwner({ sources, resultsFor: () => [] });
+  const request = owner.request;
+  let failHistory = true, reads = 0;
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list') {
+      reads += 1;
+      if (failHistory) throw Error('history fixture failed https://private.invalid/token');
+    }
+    return request(method, params, options);
+  };
+  owner.state.historyKeywords = ['保留的历史'];
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open();
+  await sleep(20);
+  assert.equal(last(presentations).historyStatus, 'loadFailed');
+  assert.ok(!JSON.stringify(last(presentations)).includes('private.invalid'));
+  search.retryHistory();
+  await sleep(20);
+  assert.equal(last(presentations).historyStatus, 'loadFailed');
+  failHistory = false;
+  const sourceReads = owner.state.sourceLoads, work = search.work;
+  search.retryHistory(); search.retryHistory();
+  await sleep(20);
+  assert.equal(reads, 3, 'repeated retry joins the pending read');
+  assert.equal(last(presentations).historyStatus, 'ready');
+  assert.deepEqual(last(presentations).history, ['保留的历史']);
+  assert.equal(owner.state.sourceLoads, sourceReads);
+  assert.equal(owner.state.historyWrites, 0);
+  assert.equal(search.work, work);
+  search.close();
+}
+{
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  const request = owner.request;
+  let releaseOld, reads = 0;
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list' && ++reads === 1)
+      return new Promise(resolve => { releaseOld = resolve; });
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); await sleep(10);
+  search.clearHistory(); await sleep(10);
+  assert.equal(last(presentations).historyStatus, 'ready');
+  releaseOld({ data: { keywords: ['已清除的旧记录'], count: 1 } });
+  await sleep(10);
+  assert.deepEqual(last(presentations).history, [], 'a pre-clear response must never resurrect cleared history');
+  search.close();
+}
+
+// A stale entry, failed clear and post-clear read failure have different recovery paths.
+{
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  const request = owner.request;
+  let releaseOld, reads = 0, clears = 0, failClear = true, failRead = false;
+  owner.state.historyKeywords = ['历史'];
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list') {
+      if (++reads === 1) return new Promise(resolve => { releaseOld = resolve; });
+      if (failRead) throw Error('read failed');
+    }
+    if (method === 'search.history.clear') {
+      clears += 1;
+      if (failClear) throw Error('clear failed');
+    }
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); search.close(); search.open(); await sleep(20);
+  releaseOld({ data: { keywords: ['旧会话'], count: 1 } }); await sleep(10);
+  assert.deepEqual(last(presentations).history, ['历史']);
+  search.clearHistory(); search.clearHistory(); await sleep(10);
+  assert.equal(clears, 1);
+  assert.equal(last(presentations).historyStatus, 'clearFailed');
+  assert.deepEqual(last(presentations).history, ['历史']);
+  failClear = false; failRead = true;
+  search.retryHistory(); await sleep(10);
+  assert.equal(last(presentations).historyStatus, 'loadFailed', 'successful clear is not repeated after a read failure');
+  assert.deepEqual(last(presentations).history, []);
+  failRead = false; search.retryHistory(); await sleep(10);
+  assert.equal(last(presentations).historyStatus, 'ready');
+  assert.equal(clears, 2);
+  search.close();
+  const count = presentations.length;
+  search.retryHistory(); search.clearHistory(); await sleep(10);
+  assert.equal(presentations.length, count, 'closed entry cannot issue recovery work');
+}
+{
+  const owner = fakeOwner({ sources: makeSources(1), resultsFor: () => [], delayForSource: () => 50 });
+  const request = owner.request;
+  let failed = true;
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list' && failed) throw Error('history unavailable');
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); await sleep(10); search.search('正在搜索', ['source-0']); await sleep(10);
+  const run = search.run, work = search.work, calls = owner.state.calls.length;
+  failed = false; search.retryHistory(); await sleep(10);
+  assert.equal(search.run, run); assert.equal(search.work, work);
+  assert.equal(owner.state.calls.length, calls); assert.equal(owner.state.historyWrites, 1);
+  assert.equal(last(presentations).kind, 'loading', 'history recovery cannot replace an active query');
+  await settle(owner.state, 1); search.close();
+}
+console.log('history failure/retry, source independence, clear ordering, stale sessions and active-query isolation PASS');
+
+{
+  const owner = fakeOwner({ sources: [], resultsFor: () => [] });
+  owner.state.historyKeywords = ['清空前'];
+  const request = owner.request;
+  let releaseClear, reads = 0, clears = 0;
+  owner.request = async (method, params, options) => {
+    if (method === 'search.history.list') reads += 1;
+    if (method === 'search.history.clear') {
+      clears += 1;
+      await new Promise(resolve => { releaseClear = resolve; });
+    }
+    return request(method, params, options);
+  };
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner);
+  search.open(); await sleep(10); search.clearHistory(); search.close(); search.open(); await sleep(10);
+  assert.equal(reads, 1, 'reopened entry waits for the pending durable clear before reading');
+  releaseClear(); await sleep(10);
+  assert.equal(clears, 1); assert.equal(reads, 2);
+  assert.equal(last(presentations).historyStatus, 'ready');
+  assert.deepEqual(last(presentations).history, []);
+  search.close();
+}
+
 // 1. Bounded concurrency, stable source order, first-occurrence dedup.
 {
   const sources = makeSources(8);
